@@ -22,6 +22,20 @@ class Feedback(Model):
     heat_before: int
     heat_committed: int
     committed_revision: int
+    engage_source: str | None = None
+    battle_source: str | None = None
+    dose_source: str | None = None
+    beneath_source: str | None = None
+    refusal_source: str | None = None
+    escape_source: str | None = None
+    pin_source: str | None = None
+    keep_counter_source: str | None = None
+    flirt_counter_source: str | None = None
+    beneath_counter_source: str | None = None
+    advice_source: str | None = None
+    easy_target_source: str | None = None
+    doll_source: str | None = None
+    alpha_source: str | None = None
     phase: Literal["choice", "purpose", "purpose_identity", "child", "resolved", "ended"] = "choice"
     choice: Literal["bond", "purpose", "tear", "die"] | None = None
     target: ActorRef | None = None

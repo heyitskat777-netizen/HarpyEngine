@@ -16,6 +16,7 @@ from girlframe.engine.m3_actors import fingerprint
 from girlframe.engine.m3_girl_runtime_state import has_rule
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_mockingbird import give_tag
+from girlframe.engine.m3_princess_sex import HighDirection
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
@@ -92,6 +93,120 @@ def _oldgen(
     raise WorkflowError("Use an actual owned Oldgen rule or its proven one-use advice lesson")
 
 
+def controlled_advice(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    viewer: GuildViewer,
+    prepared: PlayInput,
+    channel: int,
+    *,
+    action: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    from girlframe.engine import m3_princess_sex as princess
+    from girlframe.services.m3_princess_sex import child_source, pre_roll_child
+
+    if prepared.play != rules.PLAY or not prepared.source_work:
+        return None
+    candidate = next((x for x in princess.directions(state) if x.id == prepared.source_work), None)
+    if candidate is None:
+        return None
+    if candidate.play != rules.PLAY:
+        raise WorkflowError("Use only the actual selected Oldgen advice directive")
+    if action is None:
+        return child_source(game, c, viewer, state, prepared, channel)
+    value = controlled_source(game, c, state, action)
+    if (
+        value is None
+        or value.id != candidate.id
+        or value.completed_event
+        or viewer.user_id != value.author_controller
+        or channel != princess.get(state, value.session).cast.channel
+        or prepared != PlayInput.model_validate(action["data"]["prepared"])
+    ):
+        raise WorkflowError("Reopen the exact directed advice and original Princess author")
+    pre_roll_child(game, c, state, action)
+    return dict(action["data"]["princess_child"])
+
+
+def controlled_source(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any]
+) -> HighDirection | None:
+    meta = action["data"].get("oldgen", {})
+    if not meta.get("princess_direction"):
+        return None
+    from girlframe.services.m3_princess_sex import _bound
+
+    value = _bound(game, c, state, action)
+    if (
+        value is None
+        or value.play != rules.PLAY
+        or value.id != meta["princess_direction"]
+        or meta["actor"] != value.actor.model_dump(mode="json")
+        or value.target is None
+        or meta["target"] != value.target.model_dump(mode="json")
+        or meta["caster"] != value.actor_controller
+        or value.target.kind != "pilot"
+        or meta["counterpart"] != int(value.target.entity)
+    ):
+        raise WorkflowError(
+            "Prove the original native Oldgen, advice recipient and Princess author"
+        )
+    return value
+
+
+def _advice_response(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    choice: str,
+    event: str,
+    owner: int,
+    kind: str,
+) -> ChoiceAnswer:
+    direction = controlled_source(game, c, state, action)
+    if direction is None or kind != "oldgen_write_maxim":
+        return _response(game, c, action["id"], choice, event, owner, kind)
+    from girlframe.services.m3_princess_sex import prove_response_author
+
+    choices, responses = t.m2["m2_choices"], t.m2["m2_responses"]
+    request = (
+        c.execute(
+            sa.select(choices).where(
+                choices.c.campaign_id == game.store.campaign_id,
+                choices.c.id == choice,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    response = (
+        c.execute(
+            sa.select(responses).where(
+                responses.c.campaign_id == game.store.campaign_id,
+                responses.c.choice_id == choice,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    if (
+        request is None
+        or response is None
+        or request["action_id"] != action["id"]
+        or request["kind"] != kind
+        or request["actor_id"] != str(owner)
+        or owner != direction.actor_controller
+        or response["event_id"] != event
+        or response["actor_id"] != str(direction.author_controller)
+        or prove_response_author(game, c, state, action, dict(request), event)
+        != direction.author_controller
+    ):
+        raise WorkflowError("Recover the genuine directed maxim's row and original human author")
+    return ChoiceAnswer.model_validate_json(response["answer_json"])
+
+
 def prepare(
     game: GameService,
     c: Connection,
@@ -103,26 +218,66 @@ def prepare(
     action_id: str | None = None,
 ) -> dict[str, Any]:
     _access(game, c, viewer, rules.ADVICE)
-    actor = current_ref(state, viewer.user_id)
-    _oldgen(game, c, state, actor, rules.ADVICE, action_id=action_id)
+    directed = controlled_advice(
+        game,
+        c,
+        state,
+        viewer,
+        prepared,
+        channel,
+        action=game.action(c, action_id) if action_id else None,
+    )
+    actor = (
+        ActorRef.model_validate(directed["actor"])
+        if directed
+        else current_ref(state, viewer.user_id)
+    )
+    actual = _oldgen(game, c, state, actor, rules.ADVICE, action_id=action_id)
     from girlframe.services.m3_required_plays import direct_nomination
 
     nominated = direct_nomination(game, c, state, actor, prepared, channel)
+    from girlframe.services.m3_alpha_sex import advice_counter
+
+    counter = advice_counter(
+        game,
+        c,
+        state,
+        actor,
+        prepared,
+        channel,
+        game.action(c, action_id) if action_id is not None else None,
+    )
+    if counter is None:
+        from girlframe.services.m3_alpha import advice_counter as brutalize_counter
+
+        counter = brutalize_counter(
+            game,
+            c,
+            state,
+            actor,
+            prepared,
+            channel,
+            game.action(c, action_id) if action_id is not None else None,
+        )
     if (
         prepared.target is None
-        or prepared.target == viewer.user_id
-        or prepared.parent
+        or prepared.target == actual.controller
+        or (prepared.parent and counter is None and directed is None)
         or prepared.off_duty_id
-        or (prepared.source_work and not nominated)
+        or (prepared.source_work and not nominated and directed is None)
     ):
         raise WorkflowError("Give actual advice to another native Girl in the ordinary scene")
     target = current_ref(state, prepared.target)
     other = _native(game, c, state, target)
     cast = _cast(game, c, state, channel)
     handler = active_handler(state)
-    if handler is None or not all(
-        any(x.actor == ref and x.controller == owner for x in cast.roles)
-        for ref, owner in ((actor, viewer.user_id), (target, other.controller))
+    if (
+        handler is None
+        or state.handler is None
+        or not all(
+            any(x.actor == ref and x.controller == owner for x in cast.roles)
+            for ref, owner in ((actor, actual.controller), (target, other.controller))
+        )
     ):
         raise WorkflowError(
             "Use the actual original adviser, recipient and Handler in the real cast"
@@ -130,10 +285,10 @@ def prepare(
     if cast not in state.scene_casts:
         state.scene_casts.append(cast)
     assert game.store.policy.m3_approval is not None
-    return dict(
+    result = dict(
         actor=actor.model_dump(mode="json"),
         target=target.model_dump(mode="json"),
-        caster=viewer.user_id,
+        caster=actual.controller,
         counterpart=other.controller,
         handler_controller=state.handler,
         handler=handler.model_dump(mode="json"),
@@ -143,6 +298,9 @@ def prepare(
         registry=game.store.policy.m3_approval.registry_sha256,
         phase="unrolled",
     )
+    if directed is not None:
+        result["princess_direction"] = directed["direction"]
+    return result
 
 
 def pre_roll(
@@ -297,10 +455,11 @@ def prove_advice(game: GameService, c: Connection, state: GameState, identity: s
     if not prove_consumed(game, c, state, action, rules.ADVICE, rolled):
         _oldgen(game, c, _history(c, game, rolled), value.actor, rules.ADVICE)
     owner = value.counterpart if total <= 7 else value.caster
-    answer = _response(
+    answer = _advice_response(
         game,
         c,
-        identity,
+        state,
+        action,
         value.choice,
         value.event,
         owner,

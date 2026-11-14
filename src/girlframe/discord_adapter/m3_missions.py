@@ -399,7 +399,7 @@ def register_missions(
         except WorkflowError as error:
             await reply(interaction, str(error))
 
-    @group.command(name="npc", description="Explicitly take the role of an introduced NPC")
+    @group.command(name="npc", description="Offer your NPC role to another human for acceptance")
     async def npc_role(interaction: discord.Interaction) -> None:
         from girlframe.discord_adapter.m3_world import open_npc_role
         from girlframe.services.m3_world import WorldService

@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 from alembic import command
 from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import IntegrityError
 
@@ -39,12 +40,22 @@ def test_alembic_migrations_upgrade_check_and_downgrade(
     command.upgrade(config, "head")
     command.upgrade(config, "head")
     command.check(config)
-    command.downgrade(config, "base")
-    assert len(Base.metadata.tables) == 37
     engine = create_database_engine(Settings(database_url=f"sqlite:///{db}"))
     try:
-        assert inspect(engine).get_table_names() == ["alembic_version"]
+        # Verify the actual migrated table set, not a stale historical count.
+        assert set(inspect(engine).get_table_names()) == set(Base.metadata.tables) | {
+            "alembic_version"
+        }
+        expected_tables = set(inspect(engine).get_table_names())
+        # Revision0020 intentionally preserves the canonical draining barrier.
+        # A rejected downgrade must leave the complete migrated schema intact.
+        with pytest.raises(RuntimeError, match="Do not remove the draining barrier"):
+            command.downgrade(config, "base")
+        assert set(inspect(engine).get_table_names()) == expected_tables
     finally:
         engine.dispose()
     with sqlite3.connect(db) as connection:
-        assert connection.execute("SELECT COUNT(*) FROM alembic_version").fetchone() == (0,)
+        assert connection.execute("SELECT version_num FROM alembic_version").fetchone() == (
+            ScriptDirectory.from_config(config).get_current_head(),
+        )
+        assert connection.execute("PRAGMA integrity_check").fetchone() == ("ok",)

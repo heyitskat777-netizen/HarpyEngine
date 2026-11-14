@@ -10,6 +10,7 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_am_sex as learned
+from girlframe.engine import m3_bonded as bonded_rules
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import current_ref, is_helpless
 from girlframe.engine.m3_actor_state import ActorRef
@@ -64,6 +65,7 @@ class SexService:
             if sheet is None:
                 raise WorkflowError("Use the actual original living Girl")
             borrowed_target: ActorRef | None = None
+            learned_parent: bonded_rules.Source | None = None
             if bonded_source is not None:
                 from girlframe.engine import m3_bonded as bonded
                 from girlframe.services.m3_bonded import admit_delegation
@@ -73,6 +75,8 @@ class SexService:
                     raise WorkflowError("Use the actual original counterpart")
                 channel = route.cast.channel
                 borrowed_target = route.target
+                if route.learned_source is not None:
+                    learned_parent = route
                 admit_delegation(
                     self.game,
                     c,
@@ -153,6 +157,13 @@ class SexService:
                 if data.get("receipt"):
                     _roll_source(self.game, c, actual)
                     receipt = data["receipt"]["id"]
+                if learned_parent is not None:
+                    from girlframe.services.m3_learned_bonded_am_counterpart import _source
+
+                    try:
+                        _source(self.game, c, state, learned_parent, actual["id"])
+                    except WorkflowError:
+                        continue
                 sources.append(
                     dict(
                         id=actual["id"],
@@ -169,6 +180,13 @@ class SexService:
                 channel=channel,
                 no_additional_roll=True,
                 bonded_source=bonded_source,
+                **(
+                    {"native_no_roll": True}
+                    if bonded_source is None
+                    and changeling_source is None
+                    and _native_targets(self.game, c, state, actor, channel)
+                    else {}
+                ),
                 **(
                     {"changeling_source": changeling_source}
                     if changeling_source is not None
@@ -233,6 +251,11 @@ class SexService:
                     raise WorkflowError("Preserve the original no-extra-roll counterpart source")
                 return dict(id=source_id, action=action_id)
             event = str(uuid4())
+            learned_proof: dict[str, Any] = {}
+            if value.learned_source is not None:
+                from girlframe.services.m3_learned_bonded_am_counterpart import consume
+
+                learned_proof = consume(self.game, c, state, value, action_id, event)
             bonded.put(
                 state,
                 bonded.Delegation(
@@ -255,6 +278,7 @@ class SexService:
                 event_id=event,
                 source=source_id,
                 action_id=action_id,
+                **learned_proof,
             )
             if action["state"] == "complete":
                 from girlframe.services.m3_bonded import synchronize_delegation
@@ -295,7 +319,15 @@ class SexService:
                     )
             event = str(uuid4())
             source_id = change(c, state, event)
-            self.game.event(c, viewer.user_id, key, name, state, event_id=event, source=source_id)
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                _source_event_name(learned.source(state, source_id), name),
+                state,
+                event_id=event,
+                source=source_id,
+            )
             synchronize_learned(self.game, c, state, source_id, event)
             current = learned.source(load_state(c, self.store.campaign_id), source_id)
             return dict(
@@ -319,16 +351,22 @@ class SexService:
         viewer: GuildViewer,
         channel: int,
         lesson: str | None = None,
+        *,
+        native: bool = False,
     ) -> dict[str, Any]:
         with self.store.engine.connect() as c:
             _access_learned(self.game, c, viewer)
             state = load_state(c, self.store.campaign_id)
             actor = current_ref(state, viewer.user_id)
-            offered = lessons(self.game, c, state, actor)
+            offered = () if native else lessons(self.game, c, state, actor)
+            if native and not _permanent_am(state, actor):
+                raise WorkflowError(
+                    "This entry needs the actual original native or permanent AM rule"
+                )
             if lesson is not None and lesson not in {x["id"] for x in offered}:
                 raise WorkflowError("Reopen your genuine unused no-roll AM lesson")
-            targets = []
-            if offered:
+            targets = _native_targets(self.game, c, state, actor, channel) if native else []
+            if offered and not native:
                 cast = _cast(self.game, c, state, channel)
                 own = _native(self.game, c, state, actor)
                 for role in cast.roles:
@@ -361,6 +399,20 @@ class SexService:
                 tasks=self._tasks(c, viewer),
             )
 
+    def native_menu(self, viewer: GuildViewer, channel: int) -> dict[str, Any]:
+        return self.lesson_menu(viewer, channel, native=True)
+
+    def invite_native(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        channel: int,
+        target: ActorRef,
+        revision: int,
+        account: str,
+    ) -> dict[str, Any]:
+        return self.invite(viewer, key, channel, target, revision, account, native=True)
+
     def invite(
         self,
         viewer: GuildViewer,
@@ -370,13 +422,30 @@ class SexService:
         revision: int,
         account: str,
         *,
-        learned_source: str,
+        learned_source: str | None = None,
+        native: bool = False,
     ) -> dict[str, Any]:
+        # The incoming native entry used no lesson argument. Preserve that API while
+        # validating and recording only the distinct actual native source below.
+        if native is False and learned_source is None:
+            native = True
+
         def change(c: Connection, state: GameState, event: str) -> str:
             actor = current_ref(state, viewer.user_id)
-            offered = lessons(self.game, c, state, actor)
+            offered = () if native else lessons(self.game, c, state, actor)
             if (
-                learned_source not in {x["id"] for x in offered}
+                type(native) is not bool
+                or (
+                    native
+                    and (
+                        learned_source is not None
+                        or target.token
+                        not in {
+                            x["id"] for x in _native_targets(self.game, c, state, actor, channel)
+                        }
+                    )
+                )
+                or (not native and learned_source not in {x["id"] for x in offered})
                 or actor == target
                 or not account.strip()
                 or len(account) > 1200
@@ -391,6 +460,7 @@ class SexService:
             source = learned.Source(
                 id=str(uuid4()),
                 lesson=learned_source,
+                native=True if native else None,
                 actor=actor,
                 target=target,
                 controllers={x.ref.token: x.controller for x in people},
@@ -407,8 +477,9 @@ class SexService:
             _live(self.game, c, state, source)
             if cast not in state.scene_casts:
                 state.scene_casts.append(cast)
-            grant = _grant(self.game, c, state, source)
-            _replace(state, grant.model_copy(update=dict(claimed_source=source.id)))
+            if not native:
+                grant = _grant(self.game, c, state, source)
+                _replace(state, grant.model_copy(update=dict(claimed_source=source.id)))
             learned.put(state, source)
             return source.id
 
@@ -417,12 +488,12 @@ class SexService:
             key,
             None,
             revision,
-            "m3.learned_am_invited",
+            "m3.native_am_invited" if native else "m3.learned_am_invited",
             dict(
                 channel=channel,
                 target=target.model_dump(mode="json"),
                 account=account,
-                lesson=learned_source,
+                **({"native": True} if native else {"lesson": learned_source}),
             ),
             change,
         )
@@ -469,7 +540,7 @@ class SexService:
                     )
                 ),
             )
-            if not accept:
+            if not accept and not source.native:
                 _replace(
                     state,
                     _grant(self.game, c, state, source).model_copy(
@@ -615,8 +686,9 @@ class SexService:
                 raise WorkflowError(
                     "Withdraw only an unused voluntary source; known/performed use is not refunded"
                 )
-            grant = _grant(self.game, c, state, source)
-            _replace(state, grant.model_copy(update=dict(claimed_source=None)))
+            if not source.native:
+                grant = _grant(self.game, c, state, source)
+                _replace(state, grant.model_copy(update=dict(claimed_source=None)))
             learned.put(
                 state,
                 source.model_copy(
@@ -718,6 +790,12 @@ class SexService:
                 and _counterpart_complete(self.game, c, state, value),
             )
 
+    def view_native(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
+        data = self.view_learned(viewer, identity)
+        if data["body"].get("native") is not True:
+            raise WorkflowError("Use the actual original native AM source")
+        return data
+
     def _tasks(self, c: Connection, viewer: GuildViewer) -> list[dict[str, Any]]:
         state = load_state(c, self.store.campaign_id)
         result = []
@@ -776,14 +854,74 @@ class SexService:
                 dict(
                     id=source.id,
                     revision=state.revision,
-                    kind="m3_learned_am",
+                    kind="m3_native_am" if source.native else "m3_learned_am",
                     phase="resolved" if terminal else "pending",
                     pending=bool(pending),
                     waiting=not terminal and not pending,
-                    label="Your actual learned AM no-roll source: " + source.phase,
+                    label=(
+                        "Your actual native AM no-roll source: "
+                        if source.native
+                        else "Your actual learned AM no-roll source: "
+                    )
+                    + source.phase,
                 )
             )
         return result
+
+
+def _source_event_name(source: learned.Source, name: str) -> str:
+    return name.replace("m3.learned_am_", "m3.native_am_", 1) if source.native else name
+
+
+def _permanent_am(state: GameState, actor: ActorRef) -> bool:
+    sheet = state.sheets.get(actor.entity) if actor.kind == "pilot" else None
+    if sheet is None or sheet.character_id != actor.incarnation:
+        return False
+    runtime = sheet.girl_runtime or GirlRuntime()
+    ordinary = sheet.model_copy(
+        update={"girl_runtime": runtime.model_copy(update={"learned_plays": ()})}
+    )
+    return has_rule(ordinary, RULE, "AM")
+
+
+def _native_targets(
+    game: GameService, c: Connection, state: GameState, actor: ActorRef, channel: int
+) -> list[dict[str, Any]]:
+    if not _permanent_am(state, actor):
+        return []
+    try:
+        own = _native(game, c, state, actor)
+    except (ValueError, WorkflowError):
+        return []
+    cast = _cast(game, c, state, channel)
+    if not any(x.actor == actor and x.controller == own.controller for x in cast.roles):
+        return []
+    result = []
+    for role in cast.roles:
+        if role.actor == actor or not _permanent_am(state, role.actor):
+            continue
+        try:
+            other = _native(game, c, state, role.actor)
+        except (ValueError, WorkflowError):
+            continue
+        if (
+            own.inside_frame is False
+            and other.inside_frame is False
+            and own.cell is not None
+            and own.cell == other.cell
+            and all(
+                x.vessel_id is not None
+                and not x.offstage_source
+                and x.custody in (None, "free")
+                and not is_helpless(state, x.ref)
+                for x in (own, other)
+            )
+            and other.controller == role.controller
+        ):
+            result.append(
+                dict(ref=role.actor.model_dump(mode="json"), id=role.actor.token, label=other.label)
+            )
+    return result
 
 
 def _access_learned(game: GameService, c: Connection, viewer: GuildViewer) -> None:
@@ -844,7 +982,9 @@ def _live(game: GameService, c: Connection, state: GameState, source: learned.So
     cast = _cast(game, c, state, source.cast.channel)
     people = [_native(game, c, state, x) for x in (source.actor, source.target)]
     if (
-        cast != source.cast
+        source.native
+        and not all(_permanent_am(state, x) for x in (source.actor, source.target))
+        or cast != source.cast
         or source.actor == source.target
         or source.mode == "both_am"
         and not has_rule(state.sheets[source.target.entity], RULE, "AM")
@@ -891,9 +1031,11 @@ def _counterpart_proof(
     game: GameService,
     c: Connection,
     state: GameState,
-    source: learned.Source,
+    source: learned.Source | bonded_rules.Source,
     identity: str,
 ) -> dict[str, Any]:
+    if source.target is None:
+        raise WorkflowError("Preserve the actual original counterpart")
     action = game.action(c, identity)
     play = action["data"].get("play")
     meta = action["data"].get("mockingbird" if play == "mockingbird_sex" else play, {})
@@ -1011,6 +1153,10 @@ def _use(
 ) -> learned.Source:
     if source.used_event is not None:
         return source
+    if source.native:
+        if not all(_permanent_am(state, x) for x in (source.actor, source.target)):
+            raise WorkflowError("Use only both original people's actual permanent AM rules")
+        return source.model_copy(update=dict(used_event=event))
     grant = _grant(game, c, state, source)
     if (
         grant.claimed_source != source.id
@@ -1055,7 +1201,7 @@ def prove_learned(
         game,
         c,
         source.event,
-        ("m3.learned_am_invited",),
+        (_source_event_name(source, "m3.learned_am_invited"),),
         source.controllers[source.actor.token],
         identity,
     )
@@ -1063,6 +1209,7 @@ def prove_learned(
     stable = (
         "id",
         "lesson",
+        "native",
         "actor",
         "target",
         "controllers",
@@ -1076,7 +1223,7 @@ def prove_learned(
         "kind",
         "action",
     )
-    grant = _grant(game, c, birth, source)
+    grant = None if source.native else _grant(game, c, birth, source)
     if (
         any(getattr(original, k) != getattr(source, k) for k in stable)
         or original.phase != "invited"
@@ -1093,10 +1240,15 @@ def prove_learned(
                 "withdrawn_by",
             )
         )
-        or grant.claimed_source != source.id
-        or grant.used_event is not None
-        or grant.claimed_action is not None
-        or grant.rolled_event is not None
+        or (
+            grant is not None
+            and (
+                grant.claimed_source != source.id
+                or grant.used_event is not None
+                or grant.claimed_action is not None
+                or grant.rolled_event is not None
+            )
+        )
         or source.cast not in birth.scene_casts
         or not source.cast.open
     ):
@@ -1104,7 +1256,9 @@ def prove_learned(
     bindings = snapshot_profiles(c, game.store.campaign_id, birth)
     people = [resolve(birth, x, bindings) for x in (source.actor, source.target)]
     if (
-        source.actor == source.target
+        source.native
+        and not all(_permanent_am(birth, x) for x in (source.actor, source.target))
+        or source.actor == source.target
         or source.cast.adjudicator is not None
         or source.cast.facilitator != birth.handler
         or source.mode == "both_am"
@@ -1133,7 +1287,7 @@ def prove_learned(
             game,
             c,
             source.consent_event,
-            ("m3.learned_am_confirmed",),
+            (_source_event_name(source, "m3.learned_am_confirmed"),),
             source.controllers[source.target.token],
             identity,
         )
@@ -1160,7 +1314,14 @@ def prove_learned(
     if len({x.actor for x in performed}) != len(performed):
         raise WorkflowError("Keep one actual owned performance per original person")
     for item in performed:
-        saved = _audit(game, c, item.event, ("m3.learned_am_performed",), item.controller, identity)
+        saved = _audit(
+            game,
+            c,
+            item.event,
+            (_source_event_name(source, "m3.learned_am_performed"),),
+            item.controller,
+            identity,
+        )
         if (
             item.actor not in (source.actor, source.target)
             or source.controllers[item.actor.token] != item.controller
@@ -1187,7 +1348,7 @@ def prove_learned(
         )
         if (
             row is None
-            or row["kind"] != "m3.learned_am_counterpart_bound"
+            or row["kind"] != _source_event_name(source, "m3.learned_am_counterpart_bound")
             or row["actor_id"] not in {str(x) for x in source.controllers.values()}
             or json.loads(row["payload_json"]).get("source") != identity
             or learned.source(bound, identity).counterpart_action != source.counterpart_action
@@ -1208,9 +1369,13 @@ def prove_learned(
     )
     if source.phase in ("declined", "withdrawn") and released_event is None:
         raise WorkflowError("A released source needs its actual original release event")
-    current = _grant(
-        game, c, _history(c, game, released_event) if released_event else state, source
+    current = (
+        None
+        if source.native
+        else _grant(game, c, _history(c, game, released_event) if released_event else state, source)
     )
+    if source.native and bool(performed) != bool(source.used_event):
+        raise WorkflowError("Retain the actual native source's first factual performance event")
     if source.used_event:
         used = _history(c, game, source.used_event)
         row = (
@@ -1225,16 +1390,33 @@ def prove_learned(
         )
         if (
             row is None
-            or row["kind"] not in ("m3.learned_am_performed", "m3.learned_am_counterpart_bound")
+            or row["kind"]
+            not in (
+                _source_event_name(source, "m3.learned_am_performed"),
+                _source_event_name(source, "m3.learned_am_counterpart_bound"),
+            )
             or row["actor_id"] not in {str(x) for x in source.controllers.values()}
             or json.loads(row["payload_json"]).get("source") != identity
             or learned.source(used, identity).used_event != source.used_event
-            or _grant(game, c, used, source).used_event != source.used_event
-            or current.used_event != source.used_event
-            or current.claimed_source != identity
+            or (
+                not source.native
+                and (
+                    _grant(game, c, used, source).used_event != source.used_event
+                    or current is None
+                    or current.used_event != source.used_event
+                    or current.claimed_source != identity
+                )
+            )
+            or (
+                source.native
+                and not any(
+                    x.source == identity and x.event == source.used_event
+                    for x in learned.performances(used)
+                )
+            )
         ):
             raise WorkflowError("Preserve the real known/performed once-use; never invent a roll")
-    elif current.used_event is not None:
+    elif current is not None and current.used_event is not None:
         raise WorkflowError("Keep the exact original no-roll consumption event")
     if source.effect_event:
         effected = _history(c, game, source.effect_event)
@@ -1264,7 +1446,7 @@ def prove_learned(
             game,
             c,
             source.withdrawn_event,
-            ("m3.learned_am_withdrawn",),
+            (_source_event_name(source, "m3.learned_am_withdrawn"),),
             source.controllers[source.withdrawn_by.token],
             identity,
         )
@@ -1274,19 +1456,25 @@ def prove_learned(
             or source.used_event
             or source.counterpart_action
             or not source.withdrawal_account
-            or current.claimed_source is not None
+            or current is not None
+            and current.claimed_source is not None
             or performed
         ):
             raise WorkflowError("Withdraw only actual unused source, preserving its true history")
     if source.phase == "declined":
         if (
             source.consent_event is None
-            or current.claimed_source is not None
+            or current is not None
+            and current.claimed_source is not None
             or source.used_event is not None
             or performed
         ):
             raise WorkflowError("A refusal creates no performed source or spent use")
-    elif source.phase not in ("withdrawn",) and current.claimed_source != identity:
+    elif (
+        source.phase not in ("withdrawn",)
+        and current is not None
+        and current.claimed_source != identity
+    ):
         raise WorkflowError("Preserve this exact original source reservation")
     if source.completed_event:
         ended = _history(c, game, source.completed_event)
@@ -1304,7 +1492,7 @@ def prove_learned(
 
         if (
             row is None
-            or row["kind"] != "m3.learned_am_completed"
+            or row["kind"] != _source_event_name(source, "m3.learned_am_completed")
             or row["actor_id"] not in {str(x) for x in source.controllers.values()}
             or json.loads(row["payload_json"]).get("source") != identity
             or learned.source(ended, identity) != source
@@ -1348,9 +1536,9 @@ def synchronize_learned(
         or cause["actor_id"] not in {str(x) for x in source.controllers.values()}
         or cause["kind"]
         not in (
-            "m3.learned_am_performed",
-            "m3.learned_am_checked",
-            "m3.learned_am_counterpart_bound",
+            _source_event_name(source, "m3.learned_am_performed"),
+            _source_event_name(source, "m3.learned_am_checked"),
+            _source_event_name(source, "m3.learned_am_counterpart_bound"),
             "m3.unrolled_animal_tag",
         )
     ):
@@ -1373,10 +1561,25 @@ def synchronize_learned(
         c,
         int(cause["actor_id"]),
         cause["command_key"],
-        "m3.learned_am_completed",
+        _source_event_name(source, "m3.learned_am_completed"),
         state,
         event_id=final,
         event_index=0 if index is None else index + 1,
         source=identity,
         source_event=event,
     )
+
+
+def prove_native(
+    game: GameService, c: Connection, state: GameState, identity: str
+) -> learned.Source:
+    if not learned.source(state, identity).native:
+        raise WorkflowError("Use the actual original native AM source")
+    return prove_learned(game, c, state, identity)
+
+
+def synchronize_native(
+    game: GameService, c: Connection, state: GameState, identity: str, event: str
+) -> None:
+    prove_native(game, c, state, identity)
+    synchronize_learned(game, c, state, identity, event)

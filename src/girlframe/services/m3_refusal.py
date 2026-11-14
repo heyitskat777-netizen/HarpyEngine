@@ -100,6 +100,8 @@ def pre_roll(
     viewer: GuildViewer,
     state: GameState,
     action: dict[str, Any],
+    *,
+    commit: bool = True,
 ) -> list[dict[str, Any]]:
     expected = action["data"].get("m3_refusal", [])
     current = prepare(game, c, viewer, state)
@@ -107,6 +109,8 @@ def pre_roll(
         raise WorkflowError(
             "STALE_CONTROL: recover the unrolled refusal and confirm current sources."
         )
+    if not commit:
+        return [{"source": x["source"], "amount": x["amount"]} for x in expected]
     actor = ActorRef(
         kind="pilot",
         entity=action["actor_id"],

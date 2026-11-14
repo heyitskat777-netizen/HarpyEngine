@@ -30,12 +30,21 @@ async def open_alpha(
         if x["phase"] == "invited" and x["counterpart"] == viewer.user_id
     ]
     options += [
+        ("withdraw:" + x["id"], "Withdraw your unused invitation; preserve its source")
+        for x in data["sessions"]
+        if x["can_withdraw"]
+    ]
+    options += [
         ("track:" + x["id"], "Find original counterpart by smell")
         for x in data["sessions"]
         if x["tracking"] and x["caster"] == viewer.user_id
     ]
     if any(x["phase"] == "accepted" and x["caster"] == viewer.user_id for x in data["sessions"]):
         options.append(("play", "Prepare the accepted Alpha Sex Play"))
+    options += [
+        ("source:" + x["id"], "Read your saved source and NPC performance")
+        for x in data["sessions"]
+    ]
     if not options:
         await reply(
             interaction,
@@ -46,6 +55,21 @@ async def open_alpha(
 
     async def choose(current: discord.Interaction, values: dict[str, Any]) -> str | None:
         selected = values["action"][0]
+        if selected.startswith("source:"):
+            await open_consent(current, service, selected.removeprefix("source:"))
+            return None
+        if selected.startswith("withdraw:"):
+            await asyncio.to_thread(
+                service.withdraw,
+                viewer_from_interaction(current),
+                str(current.id),
+                selected.removeprefix("withdraw:"),
+                data["revision"],
+            )
+            return (
+                "Your unused invitation was withdrawn; "
+                "no counterpart answer or performance was recorded."
+            )
         if selected == "play":
             from girlframe.discord_adapter.m2_ui import open_play
 
@@ -73,6 +97,15 @@ async def open_alpha(
                 Field("account", "Your own source confirmation or refusal", paragraph=True),
             ]
 
+            fields.append(
+                Field(
+                    "npc_contact",
+                    "NPC only: actual physical contact outside enclosures",
+                    paragraph=True,
+                    required=False,
+                )
+            )
+
             async def respond(response: discord.Interaction, answer: dict[str, Any]) -> str:
                 await asyncio.to_thread(
                     service.respond,
@@ -82,6 +115,9 @@ async def open_alpha(
                     data["revision"],
                     answer["accept"][0] == "yes",
                     answer["account"],
+                    npc_contact_account=answer.get("npc_contact") or None
+                    if answer["accept"][0] == "yes"
+                    else None,
                 )
                 return "Your own source response is saved. No consent to other actions is inferred."
 
@@ -89,7 +125,9 @@ async def open_alpha(
                 current.user.id,
                 "Your source answer",
                 "Answer only for your "
-                "original character. Safety pause remains available. No reply is fabricated.",
+                "original character. Safety pause remains available. No reply is fabricated. "
+                "NPC high result kills the actual NPC; low NPC Play uses a supported "
+                "job-defined Conversation. Other NPC mechanics remain pending.",
                 fields,
                 respond,
             )
@@ -164,7 +202,19 @@ async def open_consent(
 ) -> None:
     data = await asyncio.to_thread(service.view, viewer_from_interaction(interaction), identity)
     if not data["can_answer"]:
-        await reply(interaction, "This original source is " + data["phase"] + ".")
+        text = "This original source is " + data["phase"] + "."
+        if data.get("npc_performance"):
+            performed = data["npc_performance"]
+            text += (
+                "\nSaved NPC Conversation ("
+                + performed["job"].replace("_", " ")
+                + "): "
+                + performed["move"]
+                + "\n"
+                + performed["rendition"]
+                + "\nThis records the actual performance only; no mechanical effect is implied."
+            )
+        await reply(interaction, text)
         return
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
@@ -228,6 +278,10 @@ async def open_alpha_choice(
         choices = [("pass", "Decline this opportunity")]
         if detail["items"]:
             choices.append(("take", "Take one actual accessible held object"))
+        if detail.get("npc_plays"):
+            choices.append(("play", "Perform an actual NPC job-defined Conversation"))
+        elif detail.get("npc_counter_unsupported"):
+            choices.append(("play", "NPC Play: unsupported mechanics remain pending"))
         if detail["can_counter"]:
             choices.append(("play", "Make a genuine ordinary Play"))
         if detail["can_punish"]:
@@ -249,6 +303,20 @@ async def open_alpha_choice(
                     required=False,
                 ),
             ]
+    elif data["kind"] == "alpha_sex_npc_play":
+        fields = [
+            Field(
+                "job",
+                "Your actual NPC job and Conversation move",
+                tuple(
+                    (x["id"], x["id"].replace("_", " ") + ": " + x["move"])
+                    for x in detail["npc_plays"]
+                ),
+            ),
+            Field(
+                "account", "The NPC's actual performance toward the sleeping Alpha", paragraph=True
+            ),
+        ]
     elif data["kind"] == "alpha_sex_wake":
         fields = [Field("account", "Actually waking from this source sleep", paragraph=True)]
     else:
@@ -257,6 +325,11 @@ async def open_alpha_choice(
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
         if data["kind"] == "alpha_sex_damage":
             answer = ChoiceAnswer(options=(values["asset"][0],))
+        elif data["kind"] == "alpha_sex_npc_play":
+            selected = next(x for x in detail["npc_plays"] if x["id"] == values["job"][0])
+            answer = ChoiceAnswer(
+                options=(selected["id"],), fields={"move": selected["move"]}, text=values["account"]
+            )
         elif data["kind"] == "alpha_sex_wake":
             answer = ChoiceAnswer(options=("wake",), text=values["account"])
         else:
@@ -280,7 +353,8 @@ async def open_alpha_choice(
         viewer.user_id,
         "Alpha: " + data["kind"].replace("alpha_sex_", ""),
         "Only actual source effects apply. Safety pause remains available; no "
-        "objects, answers, movement or reprisal are invented.",
+        "objects, answers, movement or reprisal are invented. NPC Conversation records "
+        "the actual rendition, not damage, healing, Tags or other mechanical effects.",
         fields,
         submit,
     )

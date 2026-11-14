@@ -1,0 +1,28 @@
+F.....                                                                   [100%]
+=================================== FAILURES ===================================
+_ test_transfer_rolls_back_after_event_failure_and_can_withdraw_after_recipient_leaves _
+
+ledger = <girlframe.services.ledger.CampaignLedger object at 0x7f42659998e0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f426974aff0>
+
+    def test_transfer_rolls_back_after_event_failure_and_can_withdraw_after_recipient_leaves(
+        ledger, monkeypatch
+    ):
+        world, game, roles, npc = prepared(ledger)
+        identity = offer(roles, game)
+        before = state(game)
+        original = game.event
+
+        def fail(*args, **kwargs):
+            original(*args, **kwargs)
+            raise RuntimeError("synthetic transfer persistence failure")
+
+        monkeypatch.setattr(game, "event", fail)
+>       with pytest.raises(RuntimeError, match="synthetic"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE RuntimeError
+
+tests/rules/test_npc_control_consent.py:233: Failed
+=========================== short test summary info ============================
+FAILED tests/rules/test_npc_control_consent.py::test_transfer_rolls_back_after_event_failure_and_can_withdraw_after_recipient_leaves
+1 failed, 5 passed in 13.57s

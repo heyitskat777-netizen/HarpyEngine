@@ -3,6 +3,8 @@
 from typing import Literal
 from uuid import NAMESPACE_URL, uuid5
 
+from pydantic import Field
+
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model, SceneCast
 
@@ -20,9 +22,19 @@ class RequiredLink(Model):
     provider: Literal["ankou_nomination"] = "ankou_nomination"
     source: str
     recipe: str
-    rule: Literal["girl.alpha.sex-play", "girl.stim-blissed.dose-up", "girl.oldgen.sex-play"] = (
-        "girl.alpha.sex-play"
-    )
+    rule: Literal[
+        "frame.ankou.processor-core",
+        "girl.mockingbird.bad-at-being-a-person",
+        "girl.mockingbird.sex-play",
+        "girl.alpha.sex-play",
+        "girl.stim-blissed.dose-up",
+        "girl.stim-blissed.sex-play",
+        "girl.princess.sex-play",
+        "girl.oldgen.sex-play",
+        "girl.newgirl.sex-play",
+        "girl.vatgrown.sex-play",
+        "girl.casualty.sex-play",
+    ] = "girl.alpha.sex-play"
     actor: ActorRef
     target: ActorRef
     cast: SceneCast
@@ -32,6 +44,7 @@ class RequiredLink(Model):
     completed_event: str | None = None
     releases: tuple[Release, ...] = ()
     retired_event: str | None = None
+    withdrawn_event: str | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 def identity(source: str, recipe: str, event: str) -> str:

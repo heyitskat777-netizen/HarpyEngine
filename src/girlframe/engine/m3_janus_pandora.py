@@ -135,6 +135,8 @@ def write_child(
     value = get(state, identity)
     if value.phase != "birth_rolled" or value.tier is None or state.world is None or not event:
         raise ValueError("Write the actual known birth result on its existing world")
+    if value.birth_cell is None:
+        raise ValueError("Recover the original recorded birthplace before authoring this child")
     count = {"low": 1, "mid": 2, "high": 3}[value.tier]
     classes = {"low": ("dormant",), "mid": ("benevolent",), "high": ("aggressive", "erratic")}[
         value.tier

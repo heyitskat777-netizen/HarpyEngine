@@ -61,8 +61,18 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
     data = await asyncio.to_thread(game.decision, viewer, identity)
     detail, kind = data["ankou_feedback"], data["kind"]
     if kind == "ankou_feedback_choice":
-        people = tuple((x["token"], x["label"]) for x in detail["people"])
-        assets = tuple((x["id"], x["name"]) for x in detail["assets"] if not x["void"])
+        people = tuple(
+            (
+                x["token"],
+                x["label"] if x["reprisal_supported"] else x["label"] + " (purpose/Bond only)",
+            )
+            for x in detail["people"]
+        )
+        assets = tuple(
+            (x["id"], x["name"])
+            for x in detail["assets"]
+            if not x["void"] and x["tear_accessible"] and x["tear_supported"]
+        )
         fields = [
             Field(
                 "effect",
@@ -75,11 +85,22 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
                 ),
             ),
             Field(
-                "target", "Actual scene person (unless dying)", people, minimum=0, required=False
+                "target",
+                "For purpose or reprisal: actual scene person",
+                people,
+                minimum=0,
+                required=False,
+            ),
+            Field(
+                "bond_target",
+                "For Bond rewrite: eligible actual Bond",
+                tuple((x["token"], x["label"]) for x in detail["people"] if x["bond_rewriteable"]),
+                minimum=0,
+                required=False,
             ),
             Field(
                 "asset",
-                "If tearing: actual physically accessible owned Asset",
+                "If tearing: eligible accessible owned Asset",
                 assets,
                 minimum=0,
                 required=False,
@@ -88,11 +109,7 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
             Field(
                 "replace",
                 "If at Girl Asset cap: replace an eligible Asset",
-                tuple(
-                    (x["id"], x["name"])
-                    for x in detail["assets"]
-                    if x["family"] == "girl" and not x["void"]
-                ),
+                tuple((x["id"], x["name"]) for x in detail["assets"] if x["bond_replaceable"]),
                 minimum=0,
                 required=False,
             ),
@@ -112,7 +129,9 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
             Field(
                 "replace",
                 "Only if at cap: actual ordinary Identity to replace",
-                tuple((x["id"], x["name"]) for x in detail["identities"] if not x["protected"]),
+                tuple(
+                    (x["id"], x["name"]) for x in detail["identities"] if x["purpose_replaceable"]
+                ),
                 minimum=0,
                 required=False,
             )
@@ -120,7 +139,9 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
     else:
         fields = [
             Field(
-                "context", "Your actual immediate Flirt against the source person", paragraph=True
+                "context",
+                "Your actual immediate " + detail["reprisal_play"].title() + " against this person",
+                paragraph=True,
             )
         ]
 
@@ -136,10 +157,11 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
                 data["channel"],
                 detail["sheet_revision"],
                 PlayInput(
-                    play="flirt",
+                    play=detail["reprisal_play"],
                     parent=data["parent"],
                     source_work=detail["id"],
-                    target=int(target.entity),
+                    target=int(target.entity) if target.kind == "pilot" else None,
+                    target_actor=target if target.kind in ("npc", "handler") else None,
                     heat=detail["heat"],
                     context=values["context"],
                     trigger_confirmed=True,
@@ -154,6 +176,7 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
                 {} if choice == "die" else {"target": next(iter(values.get("target", ())), "")}
             )
             if choice == "bond":
+                specific["target"] = next(iter(values.get("bond_target", ())), "")
                 specific["name"] = values.get("name", "")
                 if values.get("replace"):
                     specific["replace"] = values["replace"][0]
@@ -181,6 +204,15 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         "Ankou: " + kind.removeprefix("ankou_feedback_"),
         "The actual mark and Heat were committed before dice. "
         "Use only your own source decisions; safety remains available. "
+        + (
+            "Confirming this reprisal spends all "
+            + str(detail["heat"])
+            + " current Heat on your actual "
+            + detail["reprisal_play"].title()
+            + ". "
+            if kind == "ankou_feedback_child"
+            else ""
+        )
         + (detail.get("request") or "")
         + "\n"
         + (detail["purpose"] or ""),

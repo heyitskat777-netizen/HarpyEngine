@@ -12,6 +12,7 @@ from test_ledger import ledger as ledger_fixture
 from test_m2_game import Gateway, pass_tags, state, tick
 from test_mission_service import service
 from test_world import initial
+from test_world_service import transfer_npc
 
 from girlframe.delivery.m2_worker import GameWorker
 from girlframe.discord_adapter import m3_body_facts as native
@@ -199,7 +200,7 @@ def test_actual_handler_without_girl_and_witnessed_npc_setup_preserve_private_au
         detail="Ordinary existing civilian from the actual saved starting role",
     )
     world.npc(ADMIN, str(uuid4()), state(game).revision, npc)
-    world.claim_npc(OTHER, str(uuid4()), state(game).revision, npc.id)
+    transfer_npc(world, ADMIN, OTHER, npc.id)
     world.import_starting_npc(
         PLAYER, str(uuid4()), state(game).revision, original_role.slot, npc.id
     )

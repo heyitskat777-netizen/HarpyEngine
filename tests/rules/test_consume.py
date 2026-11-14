@@ -346,6 +346,7 @@ def test_real_feral_source_tags_bonuses_and_required_original_owned_continuation
         order = game.issue_order(ADMIN, str(uuid4()), 900, 2, "Actually remain here")
         tick(worker, gateway, 2)
         answer(game, PLAYER, "order_response", options=("disobey",))
+        game.dice.faces = (6, 6)
         refused = game.begin(
             PLAYER,
             str(uuid4()),
@@ -361,8 +362,24 @@ def test_real_feral_source_tags_bonuses_and_required_original_owned_continuation
             ),
         )["action_id"]
         tick(worker, gateway, 3)
-        assert game.inspect(PLAYER, refused)["state"] == "complete"
+        receipt = game.inspect(PLAYER, refused)["receipt"]
+        assert receipt["pre_total"] > 7
+        pass_tags(game)
+        pending = game.inspect(PLAYER, refused)
+        assert pending["state"] == "awaiting_choices"
+        assert pending["result"] is None  # Results remain private until completion.
         assert not any(x["kind"] == "actor_disobey" for x in game.choices(PLAYER))
+        # A low result forbids refusal; it does not invent the Handler's discovery choice.
+        answer(game, ADMIN, "handler_disobey", flag=False)
+        completed = game.inspect(PLAYER, refused)
+        assert completed["state"] == "complete"
+        assert completed["result"]["tier"] == "low"
+        assert completed["result"]["total"] == 7
+        assert completed["result"]["can_disobey"] is False
+        assert completed["receipt"] == receipt
+        assert completed["result"]["handler_knows"] is False
+        assert rules.disobey_low(state(game), actor)
+        assert rules.tag(state(game), actor, fact.tag)
     else:
         assert (
             rules.feral_bonus(state(game), actor, "flirt" if branch == "rabid" else "check_sensors")

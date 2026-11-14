@@ -63,7 +63,7 @@ def interaction(owner=1, channel=900):
     return result
 
 
-def third_draft(store):
+def third_draft(store, *, starting_order=(PLAYER, OTHER, FOUR)):
     seed(store, FOUR, callsign="Actual outsider", notes="OUTSIDER_PRIVATE_NOTES")
     store.save_draft(
         FOUR,
@@ -98,7 +98,7 @@ def third_draft(store):
         handler.roster(ADMIN)["revision"],
         tuple(
             PilotRef(user_id=x.user_id, character_revision=store.draft(x)["revision"])
-            for x in (PLAYER, OTHER, FOUR)
+            for x in starting_order
         ),
     )
 

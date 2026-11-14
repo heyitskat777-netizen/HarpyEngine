@@ -80,6 +80,8 @@ def erase(
     tag: str | None,
     mentor_tags: tuple[TagState, ...],
     source: str,
+    *,
+    duplicates: bool = False,
 ) -> tuple[PilotSheet, IdentityState, TagState | None, IdentityState | None]:
     sheet = PilotSheet.model_validate_json(original.model_dump_json())
     old = next((x for x in sheet.identities if x.id == identity), None)
@@ -100,7 +102,9 @@ def erase(
     if chosen is not None:
         if chosen.rejection_pending:
             raise ValueError("Finish the actual outstanding Tag source before embracing it")
-        if any(x.name.casefold() == chosen.label.casefold() for x in sheet.identities):
+        if not duplicates and any(
+            x.name.casefold() == chosen.label.casefold() for x in sheet.identities
+        ):
             raise ValueError("Duplicate Identity labels need their actual source adapter")
         created = IdentityState(
             id=str(uuid5(NAMESPACE_URL, "trainee:" + source + ":" + chosen.id)),

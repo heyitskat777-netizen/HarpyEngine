@@ -124,6 +124,7 @@ def test_real_low_item_choice_transfers_then_recipient_cap_choice_and_escape_res
     identity = start(game)
     tick(worker, gateway, 3)
     pass_tags(game)
+    receipt = game.inspect(PLAYER, identity)["receipt"]
     answer(game, PLAYER, "enforcer_select", options=("item", "escape"))
     answer(
         game,
@@ -135,13 +136,49 @@ def test_real_low_item_choice_transfers_then_recipient_cap_choice_and_escape_res
     assert asset.id in {x.id for x in state(game).sheets["2"].assets}
     answer(game, OTHER, "enforcer_receive")
     assert asset.id not in {x.id for x in state(game).sheets["2"].assets}
-    assert state(game).item_transfers[-1].recipient == current_ref(before, 3)
+    transferred = state(game)
+    transfer_record = transferred.item_transfers[-1]
+    source, recipient = current_ref(before, 2), current_ref(before, 3)
+    assert transfer_record.source == source and transfer_record.recipient == recipient
+    assert transfer_record.action == identity
+    assert transfer_record.source_kind == "enforcement_initiative"
+    assert transfer_record.removed_asset == asset.id
+    received = next(
+        x for x in transferred.sheets["3"].assets if x.id == transfer_record.received_asset
+    )
+    assert (received.name, received.family, received.damaged, received.void) == (
+        asset.name,
+        asset.family,
+        asset.damaged,
+        asset.void,
+    )
+    item = next(x for x in transferred.held_items if x.id == transfer_record.item)
+    assert item.holder == recipient and item.asset_owner == recipient
+    assert item.asset_id == received.id and item.source_owner == source
+    assert item.state_event == transfer_record.event
+    with ledger.engine.connect() as c:
+        assert prove_item(c, game, transferred, item.id) == item
+    assert game.inspect(PLAYER, identity)["state"] != "complete"
+    assert [x["kind"] for x in game.choices(OTHER)] == ["enforcer_escape"]
+    assert not game.choices(PLAYER)
     answer(
         game,
         OTHER,
         "enforcer_escape",
         text="I slip my glove and escape this attempted grip; same map cell",
     )
+    completed = state(game)
+    assert completed.placements == before.placements
+    assert completed.item_transfers == transferred.item_transfers
+    assert completed.held_items == transferred.held_items
+    escape = next(
+        x
+        for x in completed.facts
+        if x.get("kind") == "enforcer_low_escape" and x.get("action") == identity
+    )
+    assert escape["actor"] == recipient.model_dump_json()
+    assert escape["holder"] == source.model_dump_json()
+    assert game.inspect(PLAYER, identity)["receipt"] == receipt
     assert game.inspect(PLAYER, identity)["state"] == "complete" and game.dice.calls == 1
 
 

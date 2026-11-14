@@ -2549,4 +2549,13 @@ def synchronize(game: GameService, c: Connection, action: dict[str, Any], event:
     if not action["data"].get("prince"):
         return
     state = load_state(c, game.store.campaign_id)
+    if any(value.action == action["id"] for value in rules.records(state, rules.Discipline)):
+        # Choice application creates the source-bound case in the saved state.
+        # Materialize its owned work only after that event exists, before offering
+        # the counterpart controls or considering the original Play complete.
+        from girlframe.services.m3_role_punishments import synchronize as sync_role
+
+        sync_role(game, c, None, event)
+        state = load_state(c, game.store.campaign_id)
+        action = game.action(c, action["id"])
     _finish(game, c, state, action, event)

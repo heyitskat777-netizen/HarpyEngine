@@ -11,7 +11,7 @@ from girlframe.database import tables as t
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import resolve
-from girlframe.engine.m3_bonded import SIDE, Selection, Source, records
+from girlframe.engine.m3_bonded import Selection, Source, records
 from girlframe.engine.m3_intracadre_marriage import status_groups
 from girlframe.engine.m3_item_state import HeldItem
 from girlframe.services.m3_actors import profiles
@@ -55,12 +55,18 @@ def arrive(
     *,
     weapon: bool,
 ) -> None:
-    from girlframe.services.m3_bonded import original_pair
+    from girlframe.services.m2_state import load_state
+    from girlframe.services.m3_bonded import pair_lineage, prove
     from girlframe.services.m3_dose_up import _roll_source
 
     if source.kind != "side" or source.action is None or not account.strip():
         raise WorkflowError("Use the actual original Side source and physical arrival account")
-    actual_pair, pair_event = original_pair(game, c, state, source.actor, SIDE)
+    # Prove the committed original source, not a second entitlement after its
+    # one-use lesson was consumed. Current Pair/body provenance still must hold.
+    saved_source = prove(game, c, load_state(c, game.store.campaign_id), source.id)
+    if saved_source != source:
+        raise WorkflowError("Recover the saved original Side result before arrival")
+    actual_pair, pair_event = pair_lineage(game, c, state, source.actor)
     if actual_pair != source.pair or pair_event != source.pair_source:
         raise WorkflowError("Preserve this source's original Pair rather than a successor account")
     action = game.action(c, source.action)

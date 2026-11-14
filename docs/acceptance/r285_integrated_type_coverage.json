@@ -1,0 +1,190 @@
+{
+  "status": "SOURCE_INTEGRATED_FOCUSED_CHECKS_PASS_RELEASE_PENDING",
+  "baseline": "b265003783c0870c6b8fd855a836010380d11b89",
+  "input_archive_sha256": "e73c7ec7145f6bac848e49188078b187c148ab2f0d6a8649fa82ff85a4f46076",
+  "scope": "10Girl labels +10Frame labels /9official Frame rulesets. JANUS-B is alias. Rows are unequal source groups, not percentages.",
+  "evidence_limits": "Retained focused evidence is historical/package evidence; no whole-type or independent/human acceptance. Current exact integrated smoke is reported separately.",
+  "rows": [
+    {
+      "category": "Girl",
+      "type": "Princess",
+      "implemented_groups": "Standards (three independent choosers), end-mission review/promotion/Permission; Sex; Show Dog",
+      "retained_evidence_and_gaps": "Standards source mapping r265, authored tests not newly run. Sex/Show Dog remain I/U at whole-branch level. Permission timing ruling and genuine approval required; no forced NPC obedience or unrequested identity edits.",
+      "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
+      "independent_review": "pending",
+      "human_acceptance": "pending"
+    },
+    {
+      "category": "Girl",
+      "type": "Mockingbird",
+      "implemented_groups": "Person; Risk Factor cost/result shift; Call classification, cockpit guests, Gorgon relay; Sex/group consent",
+      "retained_evidence_and_gaps": "r267 guest decline; r282 actual Gorgon-controller native reply, privacy/original receipt/one roll FT. Broader mixed-body/copy and group combinations unverified.",
+      "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
+      "independent_review": "pending",
+      "human_acceptance": "pending"
+    },
+    {
+      "category": "Girl",
+      "type": "Stim-Blissed",
+      "implemented_groups": "Dose Up, Disposable Psyche, Malleable, Sex",
+      "retained_evidence_and_gaps": "r285 self-low Handler component selection\u2192real Heat/Tag\u2192two-scene expiry FT; other tiers and Sex/Psyche/Malleable consumers present, not all newly run. Duration/high component/order precedence are delegated interpretations needing approval. Legacy NPC zero-Heat relief is narrow, not general NPC resource support.",
+      "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
+      "independent_review": "pending",
+      "human_acceptance": "pending"
+    },
+    {
+      "category": "Girl",
+      "type": "Newgirl",
+      "implemented_groups": "Easy Target tier-owned reactions/actual children; Trainee/Mentor; Sex tiers/group consent",
+      "retained_evidence_and_gaps": "Native/learned sole-held and native Pair single-child BodyFact recovery FT r272\u2013277; native Bonded unused-child withdrawal FT. Handler/NPC/Clone ordinary native Sex excluded; learned/psychic/group parent-held recovery remains unverified/excluded.",
+      "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
+      "independent_review": "pending",
+      "human_acceptance": "pending"
+    },
+    {
+      "category": "Girl",
+      "type": "Casualty",
+      "implemented_groups": "Body/part damage, Identity\u2192repair, paid broken-part repair, effective-result push, resistance/finder, Sex, supplied component replacement",
+      "retained_evidence_and_gaps": "Genuine Bonded release r259; pilot-to-AM high consequence r274; actual missing-Link supply/install/re-pilot/Keep r283 FT. NPC mandatory high Heat/Asset effects unsupported; optional NPC Identity unmark needs decline; no all-body or full replacement certification.",
+      "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
+      "independent_review": "pending",
+      "human_acceptance": "pending"
+    },
+    {
+      "category": "Girl",
+      "type": "Oldgen",
+      "implemented_groups": "Maxims/advice, one-use rewrite/use, Sex owned consequences",
+      "retained_evidence_and_gaps": "Optional advice UI r271 and optional effects UI plus supported NPC Tag+Bond alternative r275 FT. NPC Status is still unsupported; private ruling request retains pending work, not rank mutation.",
+      "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
+      "independent_review": "pending",
+      "human_acceptance": "pending"
+    },
+    {
+      "category": "Girl",
+      "type": "Vatgrown",
+      "implemented_groups": "DNA/restrictions/travel body, Sex and bounded learned consumers, Unassuming Doll",
+      "retained_evidence_and_gaps": "Alpha low\u2192actual Doll/wake r264; Doll optional neither benefit r268 FT. DNA/travel/restrictions broader reconciliation and learned-source consumers not wholly certified; learned AM eligibility/consumer unresolved. Preserved local multi-party Mock/Newgirl lessons and AM no-roll consumer are integrated in source, not full learnable-rule closure.",
+      "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
+      "independent_review": "pending",
+      "human_acceptance": "pending"
+    },
+    {
+      "category": "Girl",
+      "type": "Alpha",
+      "implemented_groups": "Hound mark/rank consumers, vicious Keep, Brutalize tiers, Sex/Broken/sleep/counter/wake",
+      "retained_evidence_and_gaps": "r284 real Brutalize\u2192Disobey removes Broken with provenance/tombstone, unchanged cadre rank/damage and two receipts FT; native withdrawal and Doll child FT. All counter/body/Handler variants not established.",
+      "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
+      "independent_review": "pending",
+      "human_acceptance": "pending"
+    },
+    {
+      "category": "Girl",
+      "type": "AM",
+      "implemented_groups": "Native Jailbroken/body/circuits, Scrutinized/Limiters/reset, Just Code backup/body/branch/records/operator, body-specific Sex",
+      "retained_evidence_and_gaps": "Native service/test routes exist; fourth-Limiter reset exists despite old conditional error strings. Four native registry entries have pending approval provenance. Jailbroken/AM Sex full branch closure and learned Scrutinized/Just Code eligibility/consumer remain gaps. Native and learned AM are not equivalent. Clone consumption remains unsupported. Current integration preserves separate native and learned no-roll source namespaces, real performances and gifts. Native/learned/Pair counterpart/Court integration checks passed; learned Scrutinized/Just Code and genuine approval remain distinct gaps.",
+      "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
+      "independent_review": "pending",
+      "human_acceptance": "pending"
+    },
+    {
+      "category": "Girl",
+      "type": "Bonded",
+      "implemented_groups": "Pair consent, Always By Her Side, Sex request/response, bounded native/learned delegation/group, source release",
+      "retained_evidence_and_gaps": "Multiple exact refusal/unused-withdrawal routes and Mockingbird group FT. Witnessed-affection Engage/Beneath/Assault/Core r278\u2013281 FT with actual independently owned consequences. Not blanket permission for any basic Play/actor/cast; broader nominations/parents/agency edges remain bounded/unverified. Retained package reciprocal/delegated consumers must keep actual Pair lineage; a private ruling request is not an executed missing effect.",
+      "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
+      "independent_review": "pending",
+      "human_acceptance": "pending"
+    },
+    {
+      "category": "Frame",
+      "type": "Prince",
+      "implemented_groups": "Fanbase/Performer, owned choices, role Punishment, rewards/requisitions",
+      "retained_evidence_and_gaps": "r283 missing required-work synchronization fixed; actual low counterpart Punishment (+7 Heat) closes parent, same receipt FT. Non-action discipline, other branches and full requisitions not freshly certified.",
+      "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
+      "independent_review": "pending",
+      "human_acceptance": "pending"
+    },
+    {
+      "category": "Frame",
+      "type": "CONSUME",
+      "implemented_groups": "Hunger/Starvation, Eat, Feral, Partake/regrowth, actual child/custody consequences",
+      "retained_evidence_and_gaps": "r269 optional Feral Tag decline and r270 real Tag window\u2192Disobey sequence FT. Actual Clone AM body explicitly rejected in current source; death/custody/escape/restore adapter missing.",
+      "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
+      "independent_review": "pending",
+      "human_acceptance": "pending"
+    },
+    {
+      "category": "Frame",
+      "type": "JANUS",
+      "implemented_groups": "Core/control, Living Battery, PANDORA, training/storage/plug/requisitions",
+      "retained_evidence_and_gaps": "r281 last-Tag takeover/all-Frame-Void/owned resistance FT; r277\u2013280 high/low/mid births FT; r279 genuine placement required before roll/birth. JANUS-B is official JANUS alias, not an extra ruleset. Legacy already-born null birthplaces lack evidence for repair; broader child movement/harm/lifecycle unverified.",
+      "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
+      "independent_review": "pending",
+      "human_acceptance": "pending"
+    },
+    {
+      "category": "Frame",
+      "type": "JANUS-B",
+      "implemented_groups": "Official JANUS mechanics with JANUS-B server label; same ruleset.",
+      "retained_evidence_and_gaps": "r281 last-Tag takeover/all-Frame-Void/owned resistance FT; r277\u2013280 high/low/mid births FT; r279 genuine placement required before roll/birth. JANUS-B is official JANUS alias, not an extra ruleset. Legacy already-born null birthplaces lack evidence for repair; broader child movement/harm/lifecycle unverified.",
+      "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
+      "independent_review": "pending",
+      "human_acceptance": "pending"
+    },
+    {
+      "category": "Frame",
+      "type": "DoctorDoctor Mk. II",
+      "implemented_groups": "Pilot Nanobot, Borrowed Wings, Running Ragged, support, Cute Nurse, Metal Angel/replacement",
+      "retained_evidence_and_gaps": "r262 same-original-Frame return and r263 graft Void\u2192resistance\u2192Gorgon FT (loan remains outstanding). New NPC Nanobot pre-roll rejected; mandatory NPC resources absent, legacy positive Heat remains pending. Transformed/missing original Frame hardware return unresolved.",
+      "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
+      "independent_review": "pending",
+      "human_acceptance": "pending"
+    },
+    {
+      "category": "Frame",
+      "type": "Wyvern 0.4",
+      "implemented_groups": "Exploration/actual return, Burden/Rouse, Wraith, Protector, chassis/cargo/combat/requisitions",
+      "retained_evidence_and_gaps": "r282 low exploration\u2192owned danger\u2192real Keep escape\u2192accepted companion return FT. Other ordinary branches source-mapped with authored tests; no all-cargo/body/combat proof. Gorgon Leviathan is not Wyvern Leviathan Chassis.",
+      "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
+      "independent_review": "pending",
+      "human_acceptance": "pending"
+    },
+    {
+      "category": "Frame",
+      "type": "Enforcer",
+      "implemented_groups": "Initiative/grasp/Punishment, Snoop, conditioning, firearm/custody, Firepower, Master's Dog/Pavlov/Virus/rewards",
+      "retained_evidence_and_gaps": "r285 low real item transfer plus target-owned escape FT, below cap only. At-cap/last-Asset Void and wider body/link/death not proved by this fixture; other branches mostly I/U.",
+      "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
+      "independent_review": "pending",
+      "human_acceptance": "pending"
+    },
+    {
+      "category": "Frame",
+      "type": "CHANGELING",
+      "implemented_groups": "Blank Slate, Body of Clay, Strings, identity/body consequences, requisitions",
+      "retained_evidence_and_gaps": "r260/r263 same-copy Clone high/low erasure and reacquisition FT; r264 mid overstepping Status+Tag FT; Newgirl-owned missing BodyFact recovery scoped FT. Clone rule interpretation/approval and broader copy lifecycle/borrowed branches remain pending; no restore certification.",
+      "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
+      "independent_review": "pending",
+      "human_acceptance": "pending"
+    },
+    {
+      "category": "Frame",
+      "type": "Project ANKOU",
+      "implemented_groups": "Processor, Emotional Relay, Feedback/reprisal and actual child consequences",
+      "retained_evidence_and_gaps": "Repeated Identity token fix r268; nomination\u2192real Keep r271; tear\u2192Flirt\u2192Tag completion r273; NPC death\u2192Identity erasure/+4 Heat r274 FT. Multiple bounded physical source/actor/UI guards. Effective-Intense nomination interpretation, independent Clone actors and broader lifecycle remain uncertain/unsupported.",
+      "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
+      "independent_review": "pending",
+      "human_acceptance": "pending"
+    },
+    {
+      "category": "Frame",
+      "type": "Red Queen",
+      "implemented_groups": "Court, AM Transfer, Consult Orders, Panopticon, Memory and Court effects/requisitions",
+      "retained_evidence_and_gaps": "r284 low four separate genuinely followed Orders fixed and FT, original receipt/one roll. Refused/disobeyed sequential advice is fail-closed; corrected legacy low/high fixture not separately run. Other paths I/U, not whole-Court certification.",
+      "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
+      "independent_review": "pending",
+      "human_acceptance": "pending"
+    }
+  ],
+  "integration_evidence": "reports/R285_INTEGRATION.md:19 Check Sensors +10 integrated workflows +2 affected AM consumers +1 failed-only migration retry; not full regression."
+}

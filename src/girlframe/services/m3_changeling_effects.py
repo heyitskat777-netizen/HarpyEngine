@@ -1,5 +1,6 @@
 """Consumed-String opportunities, original eye observations and real incoming child work."""
 
+import json
 from typing import TYPE_CHECKING, Any, Literal, cast
 from uuid import uuid4
 
@@ -10,7 +11,7 @@ from girlframe.database import tables as t
 from girlframe.engine import m3_changeling as rules
 from girlframe.engine.m2 import GameState, PlayInput
 from girlframe.engine.m3_actor_bonds import current_ref, make_helpless
-from girlframe.engine.m3_actor_state import ActorRef, Model
+from girlframe.engine.m3_actor_state import ActorRef, Model, SceneCast
 from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_dose_up import _cast, _roll_source
@@ -50,6 +51,56 @@ def _target(action: dict[str, Any]) -> ActorRef | None:
     return prepared.target_actor
 
 
+def current_eye_scene(
+    game: "GameService", c: Connection, state: GameState, channel: int
+) -> SceneCast:
+    """Read the subject's canonical scene without a caster-facilitator requirement."""
+    from girlframe.services.m3_actors import ActorService
+    from girlframe.services.m3_cast import CastService
+    from girlframe.services.m3_missions import MissionService
+
+    return CastService(ActorService(MissionService(game.store)))._current(c, state, channel)[0]
+
+
+def _sight_scene(
+    game: "GameService", c: Connection, state: GameState, use: rules.Fingers
+) -> SceneCast:
+    """Resolve the eyes' current bound scene, including canonical legacy joins."""
+    table = t.m2["m2_scenes"]
+    query = sa.select(table).where(
+        table.c.campaign_id == game.store.campaign_id, table.c.open.is_(True)
+    )
+    if use.subject_scene is not None:
+        query = query.where(table.c.id == use.subject_scene)
+    scenes = []
+    for row in c.execute(query).mappings():
+        materialized = next(
+            (item for item in state.scene_casts if item.id == row["id"] and item.open), None
+        )
+        if materialized is not None:
+            if not any(
+                role.actor == use.target and role.controller == use.subject.controller
+                for role in materialized.roles
+            ):
+                continue
+        elif use.target.kind != "pilot" or use.subject.controller not in json.loads(
+            row["participants_json"]
+        ):
+            continue
+        # The SQL participant is only a candidate. The canonical cast resolver
+        # proves original bind/join events and the exact joined incarnation.
+        # Do not impose the caster's Handler-only source rules on remote eyes.
+        scene = current_eye_scene(game, c, state, int(row["channel_id"]))
+        if any(
+            role.actor == use.target and role.controller == use.subject.controller
+            for role in scene.roles
+        ):
+            scenes.append(scene)
+    if len(scenes) != 1:
+        raise WorkflowError("Choose the actual original eyes' real current scene")
+    return scenes[0]
+
+
 def fingers_effect(
     game: "GameService",
     c: Connection,
@@ -72,18 +123,7 @@ def fingers_effect(
             ),
         )
     elif use.kind == "sight":
-        scenes = [
-            item
-            for item in state.scene_casts
-            if item.open
-            and any(
-                role.actor == use.target and role.controller == use.subject.controller
-                for role in item.roles
-            )
-            and (use.subject_scene is None or item.id == use.subject_scene)
-        ]
-        if len(scenes) != 1:
-            raise WorkflowError("Choose the actual original eyes' real current scene")
+        scene = _sight_scene(game, c, state, use)
         actual = resolve(
             state, use.target, profiles(c, game.store.campaign_id), require_current_profile=False
         )
@@ -96,7 +136,7 @@ def fingers_effect(
                 use=use.id,
                 actor=use.actor,
                 subject=use.subject,
-                cast=scenes[0],
+                cast=scene,
                 event=event,
             ),
         )
@@ -176,6 +216,26 @@ def effect_complete(
     return True
 
 
+def expire_scene(
+    game: "GameService", c: Connection, state: GameState, scene: str, event: str
+) -> bool:
+    """End the original eyes' scene without inventing observation or reciprocal consent."""
+    from girlframe.services.m3_changeling import _finish_fingers, prove_fingers
+
+    changed = False
+    for value in rules.records(state, rules.EyeView):
+        if value.cast.id != scene or value.ended_event is not None:
+            continue
+        original = _born(game, c, state, rules.EyeView, value.id, {"ended_event"})
+        use = prove_fingers(game, c, state, original.use)
+        rules.put(state, original.model_copy(update=dict(ended_event=event)))
+        # Scene duration is independent of whether anyone supplied an observation.
+        # Pending optional responses, owed answers and work retain their own owners.
+        _finish_fingers(game, c, state, use, event)
+        changed = True
+    return changed
+
+
 def effect_detail(
     game: "GameService",
     c: Connection,
@@ -187,8 +247,22 @@ def effect_detail(
     prove_fingers(game, c, state, use.id)
     if use.kind == "sight":
         value = _born(game, c, state, rules.EyeView, use.id, {"ended_event"})
+        scenes = t.m2["m2_scenes"]
+        active = (
+            value.ended_event is None
+            and c.scalar(
+                sa.select(scenes.c.id).where(
+                    scenes.c.campaign_id == game.store.campaign_id,
+                    scenes.c.id == value.cast.id,
+                    scenes.c.channel_id == str(value.cast.channel),
+                    scenes.c.open.is_(True),
+                )
+            )
+            is not None
+        )
         return dict(
             kind="sight",
+            active=active,
             body=value.model_dump(mode="json"),
             observations=[
                 x.model_dump(mode="json")

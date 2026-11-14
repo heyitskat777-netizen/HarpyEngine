@@ -9,7 +9,7 @@ from girlframe.engine.m3_actor_state import ActorRef, Model
 
 
 class AnimalGift(Model):
-    source_kind: Literal["changeling_am", "bonded_am", "learned_am"] | None = Field(
+    source_kind: Literal["changeling_am", "bonded_am", "learned_am", "native_am"] | None = Field(
         default=None, exclude_if=lambda value: value is None
     )
     id: str

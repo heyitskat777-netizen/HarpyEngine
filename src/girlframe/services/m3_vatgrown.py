@@ -15,6 +15,7 @@ from girlframe.engine.m3_actor_state import ActorRef, SceneCast
 from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_girl_runtime_state import has_rule
 from girlframe.engine.m3_handler_consequences import active_handler
+from girlframe.engine.m3_princess_sex import HighDirection
 from girlframe.services.m2_choices import ChoiceEngine
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
@@ -28,11 +29,37 @@ from girlframe.services.read_only_bot import GuildViewer
 KINDS = ("vat_doll_benefits", "vat_doll_attention", "vat_doll_information")
 
 
+def _selected_benefits(total: int, options: tuple[str, ...]) -> tuple[str, ...]:
+    """Printed mid-result 'may pick 2' permits an explicit all-benefits decline."""
+    if 8 <= total <= 10 and options == ("decline",):
+        return ()
+    count = 2 if 8 <= total <= 10 else 1
+    if (
+        len(options) != count
+        or len(set(options)) != count
+        or not set(options) <= set(rules.BENEFITS)
+    ):
+        raise WorkflowError("Choose the printed Doll benefits, or decline only on an 8–10")
+    return options
+
+
 def _access(game: GameService, c: Connection, viewer: GuildViewer) -> None:
     gate = Access(game.store)
     gate.authorize(c, viewer, "plays", director_response=True)
     assert gate.registry is not None
     gate.registry.require_available(rules.RULE)
+
+
+def _npc_observer(state: GameState, actor: ActorRef, target: ActorRef) -> None:
+    """An ordinary visible NPC may notice; this grants no NPC sheet or contact facts."""
+    if target.kind != "npc":
+        return
+    from girlframe.services.m3_battle import _visible
+    from girlframe.services.m3_npc_flirt import _npc
+
+    _npc(state, target)
+    if not _visible(state, target, int(actor.entity)):
+        raise WorkflowError("Use an actual observer known to the original Vatgrown")
 
 
 def _context(
@@ -44,11 +71,13 @@ def _context(
     channel: int,
 ) -> dict[str, Any]:
     own = _native(game, c, state, actor)
-    if target.kind not in ("pilot", "handler") or target == actor:
+    if target.kind not in ("pilot", "handler", "npc") or target == actor:
         raise WorkflowError(
-            "SOURCE_DOLL_OBSERVER_REQUIRED: use an actual other native Girl or Handler"
+            "SOURCE_DOLL_OBSERVER_REQUIRED: use an actual other native Girl, Handler "
+            "or ordinary NPC"
         )
     other = resolve(state, target, profiles(c, game.store.campaign_id))
+    _npc_observer(state, actor, target)
     cast = _cast(game, c, state, channel)
     handler = active_handler(state)
     if (
@@ -91,6 +120,130 @@ def _context(
     )
 
 
+def controlled_doll(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    viewer: GuildViewer,
+    prepared: PlayInput,
+    channel: int,
+    *,
+    action: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    from girlframe.engine import m3_princess_sex as princess
+    from girlframe.services.m3_princess_sex import child_source, pre_roll_child
+
+    if prepared.play != rules.PLAY or not prepared.source_work:
+        return None
+    candidate = next((x for x in princess.directions(state) if x.id == prepared.source_work), None)
+    if candidate is None:
+        return None
+    if candidate.play != rules.PLAY:
+        raise WorkflowError("Use only the actual selected Unassuming Doll directive")
+    if action is None:
+        return child_source(game, c, viewer, state, prepared, channel)
+    value = controlled_source(game, c, state, action)
+    if (
+        value is None
+        or value.id != candidate.id
+        or value.completed_event
+        or viewer.user_id != value.author_controller
+        or channel != princess.get(state, value.session).cast.channel
+        or prepared != PlayInput.model_validate(action["data"]["prepared"])
+    ):
+        raise WorkflowError("Reopen the exact directed Doll and original Princess author")
+    pre_roll_child(game, c, state, action)
+    return dict(action["data"]["princess_child"])
+
+
+def controlled_source(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any]
+) -> HighDirection | None:
+    meta = action["data"].get("vatgrown", {})
+    if not meta.get("princess_direction"):
+        return None
+    from girlframe.engine import m3_princess_sex as princess
+    from girlframe.services.m3_princess_sex import _bound
+
+    value = _bound(game, c, state, action)
+    if (
+        value is None
+        or value.play != rules.PLAY
+        or value.id != meta["princess_direction"]
+        or meta["actor"] != value.actor.model_dump(mode="json")
+        or value.target is None
+        or meta["target"] != value.target.model_dump(mode="json")
+        or meta["caster"] != value.actor_controller
+        or meta["counterpart"]
+        != next(
+            (
+                x.controller
+                for x in princess.get(state, value.session).cast.roles
+                if x.actor == value.target
+            ),
+            None,
+        )
+    ):
+        raise WorkflowError(
+            "Prove the original native Vatgrown, actual observer and Princess author"
+        )
+    return value
+
+
+def _doll_response(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    choice: str,
+    event: str,
+    owner: int,
+    kind: str,
+) -> ChoiceAnswer:
+    direction = controlled_source(game, c, state, action)
+    if direction is None or owner != direction.actor_controller:
+        return _response(game, c, action["id"], choice, event, owner, kind)
+    from girlframe.services.m3_princess_sex import prove_response_author
+
+    choices, responses = t.m2["m2_choices"], t.m2["m2_responses"]
+    request = (
+        c.execute(
+            sa.select(choices).where(
+                choices.c.campaign_id == game.store.campaign_id,
+                choices.c.id == choice,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    response = (
+        c.execute(
+            sa.select(responses).where(
+                responses.c.campaign_id == game.store.campaign_id,
+                responses.c.choice_id == choice,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    if (
+        request is None
+        or response is None
+        or request["action_id"] != action["id"]
+        or request["kind"] != kind
+        or request["actor_id"] != str(owner)
+        or owner != direction.actor_controller
+        or response["event_id"] != event
+        or response["actor_id"] != str(direction.author_controller)
+        or prove_response_author(game, c, state, action, dict(request), event)
+        != direction.author_controller
+    ):
+        raise WorkflowError(
+            "Recover the genuine directed Doll decision's row and original human author"
+        )
+    return ChoiceAnswer.model_validate_json(response["answer_json"])
+
+
 def prepare(
     game: GameService,
     c: Connection,
@@ -98,23 +251,51 @@ def prepare(
     state: GameState,
     prepared: PlayInput,
     channel: int,
+    *,
+    action_id: str | None = None,
 ) -> dict[str, Any]:
     _access(game, c, viewer)
+    directed = controlled_doll(
+        game,
+        c,
+        state,
+        viewer,
+        prepared,
+        channel,
+        action=game.action(c, action_id) if action_id else None,
+    )
+    actor = (
+        ActorRef.model_validate(directed["actor"])
+        if directed
+        else current_ref(state, viewer.user_id)
+    )
+    from girlframe.services.m3_alpha_doll import counter as alpha_counter
+
+    counter = alpha_counter(
+        game, c, state, actor, prepared, channel, game.action(c, action_id) if action_id else None
+    )
+    from girlframe.services.m3_alpha_sex import doll_counter
+
+    sleeping_counter = doll_counter(
+        game, c, state, actor, prepared, channel, game.action(c, action_id) if action_id else None
+    )
     target = prepared.target_actor
     if target is None and prepared.target is not None and str(prepared.target) in state.sheets:
         target = current_ref(state, prepared.target)
     if (
         target is None
         or (prepared.target_actor is not None and prepared.target is not None)
-        or prepared.parent
-        or prepared.source_work
+        or (prepared.parent and directed is None and counter is None and sleeping_counter is None)
+        or (prepared.source_work and directed is None)
         or prepared.off_duty_id
     ):
         raise WorkflowError(
             "Name the actual person present while your original Vatgrown fades into the background"
         )
-    result = _context(game, c, state, current_ref(state, viewer.user_id), target, channel)
+    result = _context(game, c, state, actor, target, channel)
     result.update(phase="unrolled")
+    if directed is not None:
+        result["princess_direction"] = directed["direction"]
     return result
 
 
@@ -137,6 +318,7 @@ def pre_roll(
         state,
         PlayInput.model_validate_json(json.dumps(action["data"]["prepared"])),
         int(action["channel_id"]),
+        action_id=action["id"],
     )
     saved = action["data"]["vatgrown"]
     if saved.get("phase") != "unrolled" or any(
@@ -280,23 +462,20 @@ def apply_choice(
             action["data"]["vatgrown"]["phase"] = "punishment"
         rules.put(state, value)
     elif row["kind"] == "vat_doll_benefits":
-        count = 2 if 8 <= value.total <= 10 else 1
+        benefits = _selected_benefits(value.total, answer.options)
         if (
             phase != "benefits"
             or int(row["actor_id"]) != value.caster
-            or len(answer.options) != count
-            or len(set(answer.options)) != count
-            or not set(answer.options) <= set(rules.BENEFITS)
-            or (answer.text and "information" not in answer.options)
+            or (answer.text and "information" not in benefits)
         ):
             raise WorkflowError(
                 "Choose the exact printed Doll benefits; only a real question supplies text"
             )
         value = value.model_copy(
-            update=dict(benefit_choice=row["id"], benefit_event=event, benefits=answer.options)
+            update=dict(benefit_choice=row["id"], benefit_event=event, benefits=benefits)
         )
         rules.put(state, value)
-        for kind in answer.options:
+        for kind in benefits:
             _effect(state, value, kind, row["id"], event)
         if value.total >= 11:
             _effect(state, value, "object", row["id"], event)
@@ -444,6 +623,7 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         raise WorkflowError(
             "Recover the exact original native body, observer, scene and genuine Doll roll"
         )
+    _npc_observer(context, original, value.target)
     ready = _event(game, c, value.event, ("m2.choice_resolved", "m3.choice_resolved"))
     payload = json.loads(ready["payload_json"])
     row = (
@@ -462,14 +642,17 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         or row["kind"] not in ("tag_window", "tag_resolution", "tag_marker_agreement")
     ):
         raise WorkflowError("Recover the actual original completed Tag window before Doll outcomes")
-    _response(game, c, identity, row["id"], value.event, int(row["actor_id"]), row["kind"])
+    _doll_response(
+        game, c, state, action, row["id"], value.event, int(row["actor_id"]), row["kind"]
+    )
     if value.attention_choice or value.attention_event:
         if value.total > 7 or not value.attention_choice or not value.attention_event:
             raise WorkflowError("Only the actual low result grants this attention consequence")
-        answer = _response(
+        answer = _doll_response(
             game,
             c,
-            identity,
+            state,
+            action,
             value.attention_choice,
             value.attention_event,
             value.counterpart,
@@ -498,22 +681,20 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
     if value.benefit_choice or value.benefit_event:
         if not value.benefit_choice or not value.benefit_event:
             raise WorkflowError("Recover the exact original benefit choice event")
-        answer = _response(
+        answer = _doll_response(
             game,
             c,
-            identity,
+            state,
+            action,
             value.benefit_choice,
             value.benefit_event,
             value.caster,
             "vat_doll_benefits",
         )
         selected = rules.source(_history(c, game, value.benefit_event), identity)
-        count = 2 if 8 <= value.total <= 10 else 1
         if (
             selected.benefits != value.benefits
-            or answer.options != value.benefits
-            or len(value.benefits) != count
-            or not set(value.benefits) <= set(rules.BENEFITS)
+            or _selected_benefits(value.total, answer.options) != value.benefits
         ):
             raise WorkflowError("Recover the actual printed original Vatgrown benefits")
         if value.total <= 7 and value.attention_event is None:
@@ -827,8 +1008,9 @@ def projection(
             ("quiet", "Avoid notice while quiet or still until you act"),
             ("leave", "Leave this scene without confrontation or interception"),
             ("information", "Get an answer or offered secret"),
-        ),
-        minimum=count,
+        )
+        + ((("decline", "Decline both optional benefits (8–10 only)"),) if count == 2 else ()),
+        minimum=1,
         maximum=count,
         text=True,
         label="If information: your actual question, or leave blank for a secret",
@@ -886,7 +1068,7 @@ class DollService:
                 except (WorkflowError, ValueError):
                     cast = None
                 for role in cast.roles if cast else ():
-                    if role.actor == actor or role.actor.kind not in ("pilot", "handler"):
+                    if role.actor == actor or role.actor.kind not in ("pilot", "handler", "npc"):
                         continue
                     try:
                         _context(self.game, c, state, actor, role.actor, channel)

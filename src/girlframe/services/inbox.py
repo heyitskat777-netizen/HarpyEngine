@@ -989,8 +989,9 @@ class InboxService:
                 # this viewer's own decision; the rule service owns both projections.
                 items.append(
                     InboxItem(
-                        "learned-am:" + encounter["id"],
-                        "learned_am",
+                        ("native-am:" if encounter["kind"] == "m3_native_am" else "learned-am:")
+                        + encounter["id"],
+                        "native_am" if encounter["kind"] == "m3_native_am" else "learned_am",
                         encounter["id"],
                         encounter["revision"],
                         "playbook",
@@ -1004,7 +1005,9 @@ class InboxService:
                         "Read or continue the actual no-roll source and owed gifts.",
                         "Participants own their consent, performance and gifts.",
                         "Open your actual AM source",
-                        task="m3_learned_am",
+                        task="m3_native_am"
+                        if encounter["kind"] == "m3_native_am"
+                        else "m3_learned_am",
                     )
                 )
 

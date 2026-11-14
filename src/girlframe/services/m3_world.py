@@ -429,7 +429,7 @@ class WorldService:
                 raise WorkflowError("Initialize the world before introducing NPCs.")
             if npc.controller != viewer.user_id:
                 raise WorkflowError(
-                    "Introduce the NPC under your control; another human claims their own role."
+                    "Introduce the NPC under your control; invite another human to accept a role."
                 )
             if "director" in npc.jobs and npc.controller == state.handler:
                 raise WorkflowError(
@@ -577,6 +577,10 @@ class WorldService:
                 raise WorkflowError(
                     "The Director must be played by a different human from the Handler."
                 )
+            if any(x.id == identity and x.controller != viewer.user_id for x in world.npcs):
+                raise WorkflowError(
+                    "The current controller must offer this NPC role, then you explicitly accept."
+                )
             state.world = rules.update(
                 world,
                 npcs=tuple(
@@ -607,7 +611,7 @@ class WorldService:
                 "npcs": tuple(
                     (x.id, x.name)
                     for x in state.world.npcs
-                    if x.alive and (x.revealed or viewer.user_id == state.handler)
+                    if x.alive and x.controller == viewer.user_id
                 )
                 if state.world
                 else (),

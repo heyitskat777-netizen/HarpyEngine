@@ -94,7 +94,17 @@ def test_four_real_low_contacts_free_original_core_without_fake_removals_or_stal
     work = next(x for x in game.choices(PLAYER) if x["kind"] == "janus_void_threshold")
     work_id = json.loads(work["body_json"])["work_id"]
     assert VoidService(ledger).get(PLAYER, work_id)["stage"] == "resist_pending"
-    keep(game, worker, gateway, action, work_id)
+    resistance = keep(game, worker, gateway, action, work_id)
+    # Real owned resistance prevents transformation, not the already-earned Core
+    # takeover or physical corruption. These are distinct mandatory outcomes.
+    assert VoidService(ledger).get(PLAYER, work_id)["stage"] == "prevented"
+    assert game.inspect(PLAYER, resistance)["state"] == "complete"
+    resisted = state(game)
+    assert "2" in resisted.sheets
+    assert controller(resisted, caster, frame) == core
+    assert all(x.void for x in resisted.sheets["2"].assets if x.family == "frame")
+    assert not resisted.janus_cores[-1].tags
+    assert game.inspect(PLAYER, action)["state"] != "complete"
     answer(game, PLAYER, "janus_select", options=("heat",), number=1)
     assert game.inspect(PLAYER, action)["state"] == "complete" and game.dice.calls == 5
     tick(worker, gateway, 5)

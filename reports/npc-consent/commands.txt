@@ -1,0 +1,33 @@
+Initial installation:
+UV_OFFLINE=1 bash tools/install.sh
+Outcome: incomplete cache; failed to find mypy-extensions wheel. No source changed.
+bash tools/install.sh
+Outcome: 36 resolved packages, 35 installed packages including editable source.
+
+Primary focused run:
+.venv/bin/pytest -q tests/rules/test_npc_control_consent.py tests/rules/test_world_service.py tests/rules/test_npc_roles.py tests/rules/test_changeling_continuity.py
+Output: focused-tests.txt
+
+Affected normal flows and new failure injection:
+.venv/bin/pytest -q tests/rules/test_npc_control_consent.py::test_transfer_rolls_back_after_event_failure_and_can_withdraw_after_recipient_leaves tests/rules/test_gorgon_service.py::test_stale_target_world_and_conflicting_command_cannot_redirect_an_attack tests/rules/test_body_facts.py::test_actual_handler_without_girl_and_witnessed_npc_setup_preserve_private_authorship tests/rules/test_prisoner_escape.py::test_genuine_npc_custody_native_breakout_actual_movement_then_factual_failure_escalates_once tests/rules/test_npc_flirt.py::test_actual_princess_directed_mid_native_npc_flirt_keeps_people_resources_and_authors 'tests/rules/test_off_duty_handler_scenes.py::test_npc_scene_requires_actual_role_player_and_records_only_its_real_effect[hire-foundation]'
+Output: affected-flow-tests.txt. Five adjacent flows passed; injection test initially targeted the wrong service instance and was corrected.
+
+After correcting the fixture and narrowing transfer invitation previews:
+.venv/bin/pytest -q tests/rules/test_npc_control_consent.py
+Output: final-consent-tests.txt, all six pass.
+
+Changed-production static:
+.venv/bin/mypy src/girlframe/engine/m3_npc_roles.py src/girlframe/engine/m3_world_state.py src/girlframe/services/m3_npc_roles.py src/girlframe/services/m3_world.py src/girlframe/discord_adapter/m3_npc_roles.py src/girlframe/discord_adapter/m3_world.py src/girlframe/discord_adapter/m3_missions.py
+Output: mypy.txt. Initial untyped metadata splat was annotated before successful rerun.
+
+Changed-file lint and formatting:
+.venv/bin/ruff check $(git diff --name-only | grep '\.py$') tests/rules/test_npc_control_consent.py
+.venv/bin/ruff format --check $(git diff --name-only | grep '\.py$') tests/rules/test_npc_control_consent.py
+Output: ruff.txt
+
+git diff --check
+Output: empty, exit 0.
+.venv/bin/python tools/check_repository.py
+Output: repository-check.txt
+
+These are development checks on synthetic fixtures, not a full P1/release/remote-CI or live Discord test.

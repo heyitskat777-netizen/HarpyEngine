@@ -137,15 +137,28 @@ def prepare(
         )
     if prepared.source_work:
         from girlframe.engine import m3_void_frame_entry as entry_rules
+        from girlframe.engine.m3_actor_bonds import current_ref
+        from girlframe.services.m3_ankou_interrupt import prepare_dive as prepare_interrupt
         from girlframe.services.m3_bonded_rejection import prepare_child as prepare_rejection
+        from girlframe.services.m3_required_plays import direct_nomination
 
+        interrupted = prepare_interrupt(game, c, viewer, state, prepared, channel)
+        nominated = not interrupted and direct_nomination(
+            game, c, state, current_ref(state, viewer.user_id), prepared, channel
+        )
+        if nominated and prepared.target_actor is not None:
+            raise WorkflowError(
+                "A nominated Dive keeps the original actor's own link, not a target"
+            )
         rejection = prepare_rejection(game, c, viewer, state, prepared, channel)
         entry = None
         if any(x.id == prepared.source_work for x in entry_rules.records(state, entry_rules.Entry)):
             from girlframe.services.m3_void_frame_entry import prepare_child as prepare_entry_dive
 
             entry = prepare_entry_dive(game, c, viewer, state, prepared, channel)
-        if rejection is not None:
+        if nominated or interrupted:
+            pass  # Exact original Task authority; ordinary Dive validation still applies.
+        elif rejection is not None:
             pass  # The genuine required source is proved; normal Dive validation continues below.
         elif entry is not None:
             pass

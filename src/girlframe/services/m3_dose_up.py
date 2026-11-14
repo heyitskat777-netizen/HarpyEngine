@@ -83,15 +83,29 @@ def _audit(
         raise WorkflowError("Recover the actual original human's canonical Dose Up event")
 
 
+def _recipient(game: GameService, c: Connection, state: GameState, actor: ActorRef) -> Any:
+    if actor.kind == "npc":
+        from girlframe.services.m3_npc_dose import body
+
+        return body(game, c, state, actor)[0]
+    return _native(game, c, state, actor)
+
+
 def _reach(game: GameService, c: Connection, state: GameState, value: rules.Contact) -> None:
     first = _operator(game, c, state, value.actor)
-    other = _native(game, c, state, value.target)
+    other = _recipient(game, c, state, value.target)
+    if value.target.kind == "npc":
+        from girlframe.services.m3_npc_dose import body
+
+        _, fact = body(game, c, state, value.target)
+        if value.npc_cell != other.cell or value.npc_body_fact != fact.id:
+            raise WorkflowError("Re-establish the actual NPC's positive vein-reach evidence")
     if (
         value.actor == value.target
         or value.caster != first.controller
         or value.target_controller != other.controller
         or first.inside_frame is not False
-        or other.inside_frame is not False
+        or (value.target.kind != "npc" and other.inside_frame is not False)
         or first.cell is None
         or first.cell != other.cell
         or first.position_sha256 != value.actor_position
@@ -263,6 +277,12 @@ def prepare(
         from girlframe.services.m3_alpha_sex import self_dose_counter
 
         counter = self_dose_counter(game, c, state, viewer, prepared, channel, action)
+        if counter is None:
+            from girlframe.services.m3_alpha import self_dose_counter as brutalize_dose_counter
+
+            counter = brutalize_dose_counter(
+                game, c, state, current_ref(state, viewer.user_id), prepared, channel, action
+            )
     actor = (
         ActorRef.model_validate(directed["actor"])
         if directed
@@ -311,9 +331,19 @@ def prepare(
             or required_recipe.actor_vessel != vessel
         ):
             raise WorkflowError("Reopen this actual own self-Dose in its original body and scene")
-    other = _native(game, c, state, target)
+    other = _recipient(game, c, state, target)
+    if target.kind == "npc" and (
+        not has_rule(state.sheets[actor.entity], rules.RULE, "STIM-BLISSED")
+        or directed is not None
+        or counter is not None
+    ):
+        raise WorkflowError("This finite NPC source requires the native owned Dose Up rule")
     source_order = (
-        order_source(game, c, state, actor, prepared.order_id) if prepared.order_id else None
+        order_source(
+            game, c, state, actor, prepared.order_id, action=action["id"] if action else None
+        )
+        if prepared.order_id
+        else None
     )
     if source_order is not None and source_order.cast != cast:
         raise WorkflowError("Use the actual followed dosing Order in its original scene")
@@ -340,31 +370,99 @@ def prepare(
     return result
 
 
+FEEDBACK_FIELDS = (
+    "actor",
+    "target",
+    "caster",
+    "target_controller",
+    "handler",
+    "handler_controller",
+    "cast",
+    "table",
+    "contact",
+    "order",
+    "chooser",
+    "required_recipe",
+    "princess_direction",
+)
+
+
+def feedback_source_binding(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any]
+) -> str:
+    """An exact native declaration/body binding, independent of later cocktail choices."""
+    meta = action["data"]["dose_up"]
+    prepared = PlayInput.model_validate(action["data"]["prepared"])
+    actor, target = ActorRef.model_validate(meta["actor"]), ActorRef.model_validate(meta["target"])
+    counter = None
+    if action["data"].get("alpha_counter_source"):
+        from girlframe.services.m3_ankou_alpha_counter import source_binding as counter_binding
+
+        counter = counter_binding(game, c, state, action)
+    if (
+        action.get("parent_id") is not None
+        and counter is None
+        or prepared.parent is not None
+        and counter is None
+        or prepared.play != rules.PLAY
+        or state.sheets[actor.entity].girl != "STIM-BLISSED"
+        or actor != current_ref(state, int(action["actor_id"]))
+        or target.kind != "pilot"
+        or meta.get("required_recipe")
+        or meta.get("princess_direction")
+        or action["data"].get("learned_play")
+    ):
+        raise WorkflowError(
+            "SOURCE_ANKOU_DOSE_PORT_REQUIRED: preserve this specialised dosing source"
+        )
+    first, other = _operator(game, c, state, actor), _native(game, c, state, target)
+    return json.dumps(
+        dict(
+            declaration={key: meta.get(key) for key in FEEDBACK_FIELDS},
+            actor_position=first.position_sha256,
+            actor_vessel=first.vessel_id,
+            target_position=other.position_sha256,
+            target_vessel=other.vessel_id,
+            **({"counter": counter} if counter is not None else {}),
+        ),
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def commit_declaration(state: GameState, action: dict[str, Any]) -> None:
+    """Consume the original Order only once an actual Dose roll will occur."""
+    meta = action["data"]["dose_up"]
+    if meta["order"]:
+        existing = next(
+            (x for x in rules.records(state, rules.OrderUse) if x.id == meta["order"]), None
+        )
+        if existing is not None and existing.action != action["id"]:
+            raise WorkflowError("Preserve the real dosing Order's original consumer")
+        if existing is None:
+            rules.put(state, rules.OrderUse(id=meta["order"], action=action["id"]))
+
+
 def pre_roll(
-    game: GameService, c: Connection, viewer: GuildViewer, state: GameState, action: dict[str, Any]
+    game: GameService,
+    c: Connection,
+    viewer: GuildViewer,
+    state: GameState,
+    action: dict[str, Any],
+    *,
+    commit: bool = True,
 ) -> None:
     prepared = PlayInput.model_validate(action["data"]["prepared"])
     expected = prepare(game, c, viewer, state, prepared, int(action["channel_id"]), action=action)
     meta = action["data"]["dose_up"]
-    if any(
-        meta.get(key) != expected.get(key)
-        for key in (
-            "actor",
-            "target",
-            "caster",
-            "target_controller",
-            "handler",
-            "handler_controller",
-            "cast",
-            "table",
-            "contact",
-            "order",
-            "chooser",
-            "required_recipe",
-            "princess_direction",
-        )
-    ):
+    if any(meta.get(key) != expected.get(key) for key in FEEDBACK_FIELDS):
         raise WorkflowError("Recover the unchanged actual Dose Up source before spending or RNG")
+    if action["data"].get("ankou_feedback"):
+        from girlframe.services.m3_ankou_feedback import prove as prove_feedback
+
+        value = prove_feedback(game, c, state, action["data"]["ankou_feedback"])
+        if value.dose_source != feedback_source_binding(game, c, state, action):
+            raise WorkflowError("Recover the original Dose Up Feedback body and declaration")
     if meta["order"]:
         order_source(
             game,
@@ -374,8 +472,8 @@ def pre_roll(
             meta["order"],
             action=action["id"],
         )
-        if not any(x.id == meta["order"] for x in rules.records(state, rules.OrderUse)):
-            rules.put(state, rules.OrderUse(id=meta["order"], action=action["id"]))
+    if commit:
+        commit_declaration(state, action)
 
 
 def _roll_source(game: GameService, c: Connection, action: dict[str, Any]) -> tuple[str, int]:
@@ -401,6 +499,29 @@ def _roll_source(game: GameService, c: Connection, action: dict[str, Any]) -> tu
         if actual_author is None:
             raise WorkflowError("Recover the genuine scoped self-Dose roll author")
         author = actual_author
+    elif action["data"].get("oldgen", {}).get("princess_direction"):
+        from girlframe.services.m3_oldgen import controlled_source
+
+        direction = controlled_source(game, c, load_state(c, game.store.campaign_id), action)
+        if direction is None:
+            raise WorkflowError("Recover the genuine scoped Oldgen advice roll author")
+        author = direction.author_controller
+    elif action["data"].get("vatgrown", {}).get("princess_direction"):
+        from girlframe.services.m3_vatgrown import controlled_source as controlled_doll_source
+
+        direction = controlled_doll_source(game, c, load_state(c, game.store.campaign_id), action)
+        if direction is None:
+            raise WorkflowError("Recover the genuine scoped Doll roll author")
+        author = direction.author_controller
+    elif action["data"].get("easy_target", {}).get("princess_direction"):
+        from girlframe.services.m3_princess_easy_target import (
+            controlled_source as controlled_easy_source,
+        )
+
+        direction = controlled_easy_source(game, c, load_state(c, game.store.campaign_id), action)
+        if direction is None:
+            raise WorkflowError("Recover the genuine scoped Easy Target roll author")
+        author = direction.author_controller
     event = c.scalar(
         sa.select(t.events.c.id).where(
             t.events.c.campaign_id == game.store.campaign_id,
@@ -588,6 +709,11 @@ def apply_choice(
     if row["kind"] not in KINDS:
         return False
     meta = action["data"]["dose_up"]
+    target_ref = ActorRef.model_validate(meta["target"])
+    if target_ref.kind == "npc":
+        actual = _recipient(game, c, state, target_ref)
+        if actual.controller != meta["target_controller"]:
+            raise WorkflowError("Recover the actual original NPC controller before source choices")
     if (
         answer.denied
         or answer.fields
@@ -655,6 +781,14 @@ def apply_choice(
         _request_components(game, c, action)
         return True
     value = _outcome(game, c, state, action)
+    if value.target.kind == "npc":
+        from girlframe.services.m3_npc_dose import apply
+
+        updated = apply(game, c, state, value)
+        for name in GameState.model_fields:
+            setattr(state, name, getattr(updated, name))
+        _finish(game, c, state, action)
+        return True
     sheet = state.sheets[value.target.entity]
     for part in value.selections:
         for component in part.components:
@@ -1036,7 +1170,12 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         chooser = order.controller
     if value.contact is not None:
         reach = contact(game, c, state, value.contact)
-        if (reach.actor, reach.target, reach.cast) != (value.actor, value.target, value.cast):
+        if (reach.actor, reach.target, reach.cast, reach.target_controller) != (
+            value.actor,
+            value.target,
+            value.cast,
+            value.target_controller,
+        ):
             raise WorkflowError("Recover the original real recipient's vein source")
     elif value.target != actor:
         raise WorkflowError("Recover this actual other body's source contact")
@@ -1061,7 +1200,11 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
     ):
         raise WorkflowError("Only the real other-recipient low result grants this alternative")
     if value.punishment:
-        if value.selections or any(x.dose == identity for x in rules.records(born, rules.DrugTag)):
+        if (
+            value.selections
+            or any(x.dose == identity for x in rules.records(born, rules.DrugTag))
+            or any(x.dose == identity for x in rules.records(born, rules.NpcDrugTag))
+        ):
             raise WorkflowError(
                 "The actual Punishment replaces the dose; it cannot also grant drugs"
             )
@@ -1100,6 +1243,11 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         seen.update(selection.components)
     if value.event != value.selections[-1].event:
         raise WorkflowError("Recover the actual final cocktail application event")
+    if value.target.kind == "npc":
+        from girlframe.services.m3_npc_dose import prove_tags
+
+        prove_tags(born, value, seen)
+        return value
     tags = [x for x in rules.records(born, rules.DrugTag) if x.dose == value.id]
     if {x.component for x in tags} != seen or len(tags) != len(seen):
         raise WorkflowError("Recover every actual source-owned temporary drug Tag")
@@ -1207,11 +1355,39 @@ def expire_scene(
         if any(x.scene == scene["id"] for x in previous):
             continue
         prove(game, c, state, value.id)
-        sheet = state.sheets.get(value.target.entity)
-        if sheet is None or sheet.character_id != value.target.incarnation:
+        npc = value.target.kind == "npc"
+        if npc:
+            actual = _recipient(game, c, state, value.target)
+            reach = contact(game, c, state, value.contact or "")
+            if (
+                actual.vessel_id != reach.target_vessel
+                or actual.controller != value.target_controller
+                or not any(
+                    role.actor == value.target and role.controller == value.target_controller
+                    for role in cast.roles
+                )
+            ):
+                raise WorkflowError(
+                    "Recover the original NPC body/controller before counting its scene"
+                )
+        sheet = state.sheets.get(value.target.entity) if not npc else None
+        if not npc and (sheet is None or sheet.character_id != value.target.incarnation):
             raise WorkflowError("Recover the original drugged body rather than inherit its Tags")
-        tags = {x.id for x in rules.records(state, rules.DrugTag) if x.dose == value.id}
-        if any(x.id in tags and x.rejection_pending for x in sheet.tags):
+        tags = {
+            x.id
+            for x in (
+                rules.records(state, rules.NpcDrugTag)
+                if npc
+                else rules.records(state, rules.DrugTag)
+            )
+            if x.dose == value.id
+        }
+        from girlframe.engine.m3_mockingbird import actor_tags
+
+        if not npc:
+            assert sheet is not None
+        current_tags = actor_tags(state, value.target) if npc else sheet.tags if sheet else ()
+        if any(x.id in tags and x.rejection_pending for x in current_tags):
             raise WorkflowError("Finish the actual pending drug-Tag rejection before scene closure")
         ends = len(previous) + 1 >= value.duration
         record = rules.SceneEnd(
@@ -1224,8 +1400,14 @@ def expire_scene(
         )
         rules.put(state, record)
         if ends:
-            sheet.tags = [x for x in sheet.tags if x.id not in tags]
-            sheet.revision += 1
+            if npc:
+                from girlframe.services.m3_npc_dose import remove
+
+                remove(state, value.target, tags)
+            else:
+                assert sheet is not None
+                sheet.tags = [x for x in sheet.tags if x.id not in tags]
+                sheet.revision += 1
         changed = True
     if changed and legacy:
         state.scene_casts.append(cast)
@@ -1315,9 +1497,11 @@ class DoseUpService:
             actor = current_ref(state, viewer.user_id)
             first, other = (
                 _operator(self.game, c, state, actor),
-                _native(self.game, c, state, target),
+                _recipient(self.game, c, state, target),
             )
             cast = _cast(self.game, c, state, channel)
+            from girlframe.services.m3_npc_dose import body as npc_body
+
             event, identity = str(uuid4()), str(uuid4())
             value = rules.Contact(
                 id=identity,
@@ -1326,6 +1510,10 @@ class DoseUpService:
                 caster=viewer.user_id,
                 target_controller=other.controller,
                 reviewer=viewer.user_id,
+                npc_cell=other.cell if target.kind == "npc" else None,
+                npc_body_fact=npc_body(self.game, c, state, target)[1].id
+                if target.kind == "npc"
+                else None,
                 cast=cast,
                 actor_position=first.position_sha256,
                 target_position=other.position_sha256,
@@ -1380,12 +1568,15 @@ class DoseUpService:
                     x.actor == actor and x.controller == viewer.user_id for x in cast.roles
                 )
                 for role in cast.roles:
-                    if role.actor == actor or role.actor.kind != "pilot":
+                    if role.actor == actor or role.actor.kind not in ("pilot", "npc"):
                         continue
-                    other = _native(self.game, c, state, role.actor)
+                    try:
+                        other = _recipient(self.game, c, state, role.actor)
+                    except (ValueError, WorkflowError):
+                        continue
                     if (
                         own.inside_frame is False
-                        and other.inside_frame is False
+                        and (role.actor.kind == "npc" or other.inside_frame is False)
                         and own.cell is not None
                         and own.cell == other.cell
                     ):
@@ -1406,7 +1597,7 @@ class DoseUpService:
                         dict(
                             id=value.id,
                             target=value.target.model_dump(mode="json"),
-                            label=_native(self.game, c, state, value.target).label,
+                            label=_recipient(self.game, c, state, value.target).label,
                         )
                     )
                 for order in rules.records(state, rules.DoseOrder):
@@ -1453,6 +1644,11 @@ class DoseUpService:
                 components=[
                     rules.LABELS[x.component]
                     for x in rules.records(state, rules.DrugTag)
+                    if x.dose == value.id
+                ]
+                + [
+                    rules.LABELS[x.component]
+                    for x in rules.records(state, rules.NpcDrugTag)
                     if x.dose == value.id
                 ],
                 duration=value.duration,

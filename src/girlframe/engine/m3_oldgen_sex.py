@@ -6,12 +6,27 @@ from pydantic import Field
 
 from girlframe.engine.m2 import GameState, TagState
 from girlframe.engine.m3_actor_state import ActorRef, Model, SceneCast
+from girlframe.engine.m3_world_state import WorldTag
 
 RULE = "girl.oldgen.sex-play"
 PLAY = "oldgen_sex"
 EFFECTS = ("tag", "status", "unmark", "bond", "helpless")
 Role = Literal["caster", "reciprocal", "additional", "creep", "rewrite"]
 EffectKind = Literal["tag", "status", "unmark", "bond", "helpless", "rewrite"]
+
+
+class NpcContact(Model):
+    session: str
+    target: ActorRef
+    actor: ActorRef
+    controller: int
+    vessel: str
+    actor_vessel: str
+    cell: tuple[int, int]
+    cast: SceneCast
+    revision: int
+    event: str
+    account: str = Field(min_length=1, max_length=1200)
 
 
 class Session(Model):
@@ -29,6 +44,7 @@ class Session(Model):
     target_vessel: str
     proposed_event: str
     proposal: str
+    npc_contact: NpcContact | None = Field(default=None, exclude_if=lambda value: value is None)
     consent_event: str | None = None
     consent_account: str = ""
     phase: str = "invited"
@@ -64,6 +80,7 @@ class Effect(Model):
     maxim: str | None = None
     text: str = ""
     tag: TagState | None = None
+    npc_tag: WorldTag | None = Field(default=None, exclude_if=lambda value: value is None)
     before: int | None = None
     after: int | None = None
 

@@ -9,7 +9,7 @@ from girlframe.engine.m3_actor_state import ActorRef, Model, SceneCast
 from girlframe.engine.m3_alpha import conditions, current
 from girlframe.engine.m3_alpha_state import Broken
 
-Origin = Literal["broken", "am_secret", "secretary", "npc_flirt"]
+Origin = Literal["broken", "am_secret", "secretary", "npc_flirt", "stim_sex"]
 
 
 class Order(Model):

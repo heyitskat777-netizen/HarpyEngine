@@ -19,6 +19,20 @@ if TYPE_CHECKING:
 def prepare(
     game: "GameService", c: Connection, previous: GameState, state: GameState, event: str
 ) -> None:
+    # An unadapted NPC death producer must stop before committing its fallout,
+    # just like the existing protected Pilot career-ending guard below.
+    for npc in previous.world.npcs if previous.world else ():
+        patient = ActorRef(kind="npc", entity=npc.id)
+        if (
+            npc.alive
+            and rules.saving_care(previous, patient) is not None
+            and not any(
+                x.id == npc.id and x.alive for x in (state.world.npcs if state.world else ())
+            )
+        ):
+            raise WorkflowError(
+                "This protected NPC death producer must apply Metal Angel before death fallout"
+            )
     for care in rules.values(state, "doctor_care", rules.Care):
         if care.phase not in ("proposal", "active", "recovery"):
             continue
@@ -27,11 +41,16 @@ def prepare(
             current = rules.frame_id(state, care.doctor) == care.frame
         except ValueError:
             current = False
-        if (
-            not current
-            or patient_sheet is None
-            or patient_sheet.character_id != care.patient.incarnation
-        ):
+        patient_current = (
+            (patient_sheet is not None and patient_sheet.character_id == care.patient.incarnation)
+            if care.patient.kind == "pilot"
+            else (
+                care.patient.kind == "npc"
+                and state.world is not None
+                and any(x.id == care.patient.entity and x.alive for x in state.world.npcs)
+            )
+        )
+        if not current or not patient_current:
             rules.put(
                 state,
                 "doctor_care",
@@ -45,11 +64,14 @@ def prepare(
             current = rules.frame_id(state, protection.doctor) == protection.frame
         except ValueError:
             current = False
-        if (
-            not current
-            or protector is None
-            or protector.character_id != protection.protector.incarnation
-        ):
+        protector_current = (
+            protector is not None and protector.character_id == protection.protector.incarnation
+            if protection.protector.kind == "pilot"
+            else protection.protector.kind == "npc"
+            and state.world is not None
+            and any(x.id == protection.protector.entity and x.alive for x in state.world.npcs)
+        )
+        if not current or not protector_current:
             rules.put(
                 state,
                 "doctor_protection",

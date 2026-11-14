@@ -5,14 +5,53 @@ from typing import Literal
 from pydantic import Field
 
 from girlframe.engine.m2 import GameState
-from girlframe.engine.m3_actor_state import ActorRef, Model, SceneCast
+from girlframe.engine.m3_actor_state import ActorRef, CastRole, Model, SceneCast
 from girlframe.engine.m3_alpha import conditions, current
 
 RULE = "girl.alpha.sex-play"
 PLAY = "alpha_sex"
 
 
+class NpcContact(Model):
+    session: str
+    target: ActorRef
+    actor: ActorRef
+    controller: int
+    vessel: str
+    actor_vessel: str
+    cell: tuple[int, int]
+    cast: SceneCast
+    revision: int
+    event: str
+    account: str = Field(min_length=1, max_length=1200)
+
+
+class NpcPerformance(Model):
+    """A genuine job-defined Conversation performed under this one low-result grant."""
+
+    id: str
+    session: str
+    action: str
+    actor: ActorRef
+    controller: int
+    cast: SceneCast
+    recipients: tuple[CastRole, ...]
+    job: str
+    move: str
+    rendition: str = Field(min_length=1, max_length=1200)
+    selection_choice: str
+    selection_event: str
+    choice: str
+    event: str
+
+
 class Session(Model):
+    actor_vessel: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    target_vessel: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    npc_contact: NpcContact | None = Field(default=None, exclude_if=lambda value: value is None)
+    npc_performance: NpcPerformance | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     learned_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
     id: str
     actor: ActorRef
@@ -28,7 +67,7 @@ class Session(Model):
     consent_event: str | None = None
     consent_account: str = Field(default="", max_length=1200)
     phase: Literal[
-        "invited", "accepted", "declined", "active", "sleeping", "waking", "complete"
+        "invited", "accepted", "declined", "withdrawn", "active", "sleeping", "waking", "complete"
     ] = "invited"
     action: str | None = None
     effect_event: str | None = None

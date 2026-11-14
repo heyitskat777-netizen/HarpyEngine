@@ -69,6 +69,12 @@ async def open_start(
     from girlframe.database import tables as t
 
     with game.store.engine.connect() as c:
+        source = game.action(c, decision["parent"])
+        piloting = (
+            decision["kind"] == "beneath_defeat"
+            and source["data"].get("play") == "put_someone_beneath_you"
+            and source["data"]["prepared"]["piloting"] is True
+        )
         table = t.m2["m2_actions"]
         child = c.scalar(
             sa.select(table.c.id)
@@ -114,6 +120,7 @@ async def open_start(
             PlayInput(
                 play="defeat",
                 heat=0,
+                piloting=piloting,
                 context=values["account"],
                 trigger_confirmed=True,
                 parent=decision["parent"],

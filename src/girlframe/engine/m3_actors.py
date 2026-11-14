@@ -543,7 +543,9 @@ def _resolve(
             inside_frame=True,
             piloting=False,
             heat=clone_sheet.heat,
-            identities=identities((copy.identity,)),
+            identities=identities(())
+            if copy.identity_erased_event
+            else identities((copy.identity,)),
             cell=located,
             frame_cell=located,
             offstage_source=original.offstage_source if located is None else None,

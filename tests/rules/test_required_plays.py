@@ -686,3 +686,198 @@ def test_actual_nomination_native_oldgen_source_cancel_relink_results_and_pause_
         assert projection(game, c, task.id)["state"] == "closed"
     assert {key[0] + key[1]: value for key, value in gateway.values.items()} == gateway.original
     assert "PRIVATE_OWN_OLDGEN" not in json.dumps(gateway.messages)
+
+
+@pytest.mark.parametrize("girl", ["PRINCESS", "STIM-BLISSED"])
+def test_actual_nomination_native_princess_or_stim_own_source_and_real_mid_results(
+    ledger, tmp_path, monkeypatch, girl
+):
+    from test_m2_game import answer
+    from test_stim_sex import choose as stim_choose
+
+    from girlframe.discord_adapter.m3_princess_sex import open_princess
+    from girlframe.discord_adapter.m3_stim_sex import open_stim
+    from girlframe.engine import m3_disposable_psyche as psyche
+    from girlframe.engine import m3_dose_up as dose
+    from girlframe.engine import m3_princess_sex as princess
+    from girlframe.engine import m3_stim_sex as stim
+    from girlframe.services.m3_princess_sex import SexService as PrincessSexService
+    from girlframe.services.m3_stim_sex import SexService as StimSexService
+
+    is_princess = girl == "PRINCESS"
+    book = princess if is_princess else stim
+    opener = open_princess if is_princess else open_stim
+    invite_field = "action" if is_princess else "source"
+    _, game = service(ledger, girl=girl, frame=ankou.FRAME)
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(ankou.RELAY, book.RULE) + (() if is_princess else (dose.SELF_RULE, psyche.RULE)),
+    )
+    with ledger.transaction() as c:
+        actual = state(game)
+        actual.world = initial()
+        actual = place(place(actual, 2, mode="outside_frame"), 3, mode="outside_frame")
+        if is_princess:
+            from girlframe.engine.m3_actor_bonds import set_depth
+
+            # Princess's agreed favour does not deepen a Bond. Start with the
+            # real prior synthetic Intense relationship required by this Relay.
+            event = str(uuid4())
+            actual = set_depth(actual, current_ref(actual, 2), current_ref(actual, 3), 2, event)
+            game.event(c, 1, event, "synthetic.actual_prior_intense_relationship", actual)
+        game.event(c, 1, str(uuid4()), "synthetic.actual_nominee_original_bodies", actual)
+    worker, gateway = GameWorker(game), Gateway()
+    sex = PrincessSexService(game) if is_princess else StimSexService(game)
+    controls, required = AnkouService(game), RequiredPlayService(game)
+
+    def finish_invitation(form):
+        submit(
+            form,
+            target=(current_ref(state(game), 3).token,),
+            account="PRIVATE_REQUIRED_SOURCE: genuine original voluntary source",
+        )
+        values = (
+            princess.sessions(state(game))
+            if is_princess
+            else stim.records(state(game), stim.Session)
+        )
+        source = values[-1]
+        native(
+            lambda i: opener(i, sex, source.id),
+            user=3,
+            accept=("yes",),
+            account="My own actual voluntary confirmation, not an inferred performance",
+        )
+        return source
+
+    def finish(action):
+        game.dice.faces = (4, 5)
+        tick(worker, gateway, 3)
+        if game.inspect(PLAYER, action)["state"] == "ready_to_roll":
+            game.roll(PLAYER, str(uuid4()), action)
+        pass_tags(game)
+        receipt = game.inspect(PLAYER, action)["receipt"]
+        if is_princess:
+            answer(
+                game,
+                PLAYER,
+                "princess_sex_favour",
+                text="PRIVATE_REQUIRED_SOURCE: my actual requested favour",
+            )
+            answer(
+                game,
+                OTHER,
+                "princess_sex_favour_reply",
+                options=("agree",),
+                text="PRIVATE_REQUIRED_SOURCE: my own actual agreement",
+            )
+            assert not any(
+                row["kind"] == "princess_sex_optional_tag" for row in game.choices(PLAYER)
+            )  # Only a refused favour offers this optional Tag.
+        else:
+            stim_choose(game, PLAYER, "stim_sex_drug", ("quick",), native=True)
+            stim_choose(game, PLAYER, "stim_sex_effects", ("bond",), native=True)
+        assert game.inspect(PLAYER, action)["state"] == "complete"
+        assert game.inspect(PLAYER, action)["receipt"] == receipt
+        return receipt
+
+    first_form = native(lambda i: opener(i, sex), **{invite_field: ("invite",)})
+    first = finish_invitation(first_form)
+    action = game.begin(
+        PLAYER,
+        str(uuid4()),
+        900,
+        state(game).sheets["2"].revision,
+        PlayInput(
+            play=book.PLAY,
+            source_work=first.id,
+            target_actor=current_ref(state(game), 3),
+            heat=0,
+            context="Our actual first voluntary source",
+            trigger_confirmed=True,
+        ),
+    )["action_id"]
+    finish(action)
+    tick(worker, gateway, 5)
+    actual = state(game)
+    assert depth(actual, current_ref(actual, 2), current_ref(actual, 3)) == 2
+    relay = controls.activate_relay(
+        PLAYER,
+        str(uuid4()),
+        900,
+        actual.revision,
+        ("speech", "touch"),
+        "Actual relay following this real original relationship",
+    )["id"]
+    controls.choose_consequence(
+        ADMIN,
+        str(uuid4()),
+        state(game).revision,
+        relay,
+        "nominees",
+        "The actual Intense partner nominates a real owned Play",
+    )
+    nomination = next(
+        value
+        for value in ankou.records(state(game), ankou.Task)
+        if value.source == relay
+        and value.kind == "nominate"
+        and value.actor == current_ref(state(game), 3)
+    )
+    controls.choose_task(
+        OTHER,
+        str(uuid4()),
+        state(game).revision,
+        nomination.id,
+        book.PLAY,
+        "Nominate her own actual source, preserving everyone's consent and choices",
+    )
+    task = next(
+        value
+        for value in ankou.records(state(game), ankou.Task)
+        if value.source == relay and value.kind == "perform"
+    )
+    asyncio.run(SourcePauseWorker(game).tick(gateway))
+    with ledger.engine.connect() as c:
+        assert projection(game, c, task.id)["state"] == "held"
+    with pytest.raises(WorkflowError):
+        required.menu(OTHER, task.id)
+    source_menu = native(
+        lambda i: open_required(i, game, task.id),
+        operation=("invite_princess" if is_princess else "invite_stim",),
+    )
+    invitation = submit(source_menu, **{invite_field: ("invite",)})
+    source = finish_invitation(invitation)
+    args = PLAYER, str(uuid4()), task.id, source.id, state(game).revision
+    selected = required.link(*args)
+    assert required.link(*args) == selected
+    form = native(lambda i: open_required(i, game, task.id), operation=("play",))
+    submit(
+        form,
+        heat=("0",),
+        gain=("1",),
+        share=("0",),
+        context="PRIVATE_REQUIRED_SOURCE: real nominated source performance",
+    )
+    with ledger.engine.connect() as c:
+        child = game.action(c, game.lock(c, 900)["action_id"])
+        assert child["data"][book.PLAY]["session"] == source.id
+        assert child["data"]["ankou_effect_child"]["required_link"] == selected["id"]
+    calls = game.dice.calls
+    receipt = finish(child["id"])
+    actual = state(game)
+    assert ankou.get(actual, ankou.Task, task.id).completed_event
+    assert required.menu(PLAYER, task.id)["completed"]
+    with ledger.engine.connect() as c:
+        value = prove(game, c, actual, selected["id"])
+        assert value.rule == book.RULE and value.completed_event and value.action == child["id"]
+        assert game.action(c, child["id"])["data"]["receipt"] == receipt
+    assert game.dice.calls == calls + 1
+    tick(worker, gateway, 7)
+    asyncio.run(SourcePauseWorker(game).tick(gateway))
+    with ledger.engine.connect() as c:
+        assert projection(game, c, task.id)["state"] == "closed"
+    assert "PRIVATE_REQUIRED_SOURCE" not in json.dumps(gateway.messages)

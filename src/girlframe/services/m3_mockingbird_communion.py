@@ -554,6 +554,20 @@ class CallService:
         event: str,
         account: str,
     ) -> tuple[CallSession, GameState]:
+        if operation == "decline_effect":
+            # Printed p33 makes the boarded guest's extra choice optional. This is
+            # not invitation refusal: keep the real passenger and their resources.
+            # Only the unapplied effect phase reaches here through guest ownership.
+            if set(data) != {"account"} or value.option is not None or value.effect_json:
+                raise WorkflowError("Decline only an unapplied optional guest choice")
+            return value.model_copy(
+                update={
+                    "phase": "complete",
+                    "answer": account,
+                    "choice_event": event,
+                    "completed_event": event,
+                }
+            ), state
         if operation != "effect" or data.get("option") not in self._options(state, value, action):
             raise WorkflowError("Choose one actually available original guest consequence")
         option = str(data["option"])

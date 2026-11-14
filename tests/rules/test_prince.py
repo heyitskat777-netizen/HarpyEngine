@@ -361,9 +361,19 @@ def test_low_performer_actual_other_person_tag_then_real_punishment_closes_origi
     assert game.inspect(PLAYER, action)["state"] == "complete"
 
     tick(worker, gateway, 5)
-    _, action = perform(game, worker, gateway, controls, (1, 1))
+    source, action = perform(game, worker, gateway, controls, (1, 1))
     answer(game, OTHER, "prince_falter", options=("punish",))
     case = state(game).role_punishments[-1]
+    pending = state(game)
+    assert case.action == action and case.source_kind == "prince"
+    assert case.chooser == case.executor == current_ref(pending, 3)
+    assert case.subject == current_ref(pending, 2)
+    assert not case.effect_event and not case.completion_event
+    assert game.inspect(PLAYER, action)["state"] != "complete"
+    with ledger.engine.connect() as c:
+        result = game.action(c, action)["data"]["result"]
+        receipt = game.action(c, action)["data"]["receipt"]
+        assert not prove_performance(game, c, pending, source).completed_event
     discipline = RolePunishmentService(game)
 
     def change(viewer, **values):
@@ -382,8 +392,21 @@ def test_low_performer_actual_other_person_tag_then_real_punishment_closes_origi
         OTHER, scene="The actual original counterpart performs the source-owned minor Punishment"
     )
     change(PLAYER, attest=True)
+    before_effect = state(game)
+    assert game.inspect(PLAYER, action)["state"] != "complete"
     change(OTHER, execute=True, account="Actual source stimulant injection")
+    final = state(game)
+    completed = next(x for x in final.role_punishments if x.id == case.id)
+    assert completed.effect_event and completed.completion_event
+    assert final.sheets["2"].heat == before_effect.sheets["2"].heat + 7
     assert game.inspect(PLAYER, action)["state"] == "complete"
+    assert game.dice.calls == 2  # One roll for each of the two actual performances.
+    with ledger.engine.connect() as c:
+        assert game.action(c, action)["data"]["result"] == result
+        assert game.action(c, action)["data"]["receipt"] == receipt
+        assert prove_performance(game, c, final, source).completed_event
+    reopened = PrinceService(game)
+    assert reopened.view(PLAYER, source)["record"]["completed_event"]
 
 
 def test_low_performer_counterpart_can_decline_optional_tag_or_punishment(

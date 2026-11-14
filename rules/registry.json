@@ -4489,8 +4489,8 @@
       ],
       "policy_key": "clone_am_additional_sole_identity",
       "clarity_review": true,
-      "revision": 1,
-      "implementation_note": "Adjustable delegated interpretation, requiring printed-rule clarity review. Only supported original-source normal workflows are implemented; missing adapters remain required gaps.",
+      "revision": 2,
+      "implementation_note": "Adjustable delegated interpretation, requiring printed-rule clarity review. Only supported original-source normal workflows are implemented; missing adapters remain required gaps. Blank Slate may erase the current copy Identity as part of the original owner\u2019s selected/all-Identity source. Preserve the same copy and an immutable erased-resource tombstone; do not delete the person, mint Perfect Copy again, or clear Tags/Bonds/residency/shared Heat. The copy has no usable Identity until an actual normal source grants one (e.g. marked-Tag embrace). Requires printed-rule clarity review; does not implement consumption/death or other lifecycle sources.",
       "change_impact": "Native cap/protected obligations/marks unchanged; replay cannot regenerate resources."
     },
     {
@@ -6416,16 +6416,16 @@
       "policy_key": "easy_target_cohort_scope",
       "summary": "Proven cohort assistance exempts both people from matching Easy Target consequences, preserving ordinary child Play costs and unrelated outcomes.",
       "source": "Easy Target PDF41/printed39",
-      "rationale": "This source supplies the exemption; unrelated rules retain their actual effects.",
+      "rationale": "Easy Target PDF41/printed39 allows going along with another person without requiring a roll or Tag modifier. Positive Tag assistance remains evidence for rolled children; actual owned bodily participation is evidence for unrolled NPC protection. Neither route erases earlier consequences.",
       "alternatives": [
         "Interpret neither facing consequences as broad immunity from all child Play results."
       ],
-      "implementation_note": "Require actual positive Tag assistance to the selected primary child; no blanket narrative immunity or erased dice.",
-      "change_impact": "Version future interpretation changes; preserve original people, actual performed sources, old records and consumed entitlements.",
+      "implementation_note": "Revision 2 preserves positive Tag assistance for rolled primary children. For actual unrolled NPC protection, require original Handler-validated primary performance followed by the cohort controller's source-proved participation in the same scene with an available body. Grant only matching Easy Target consequence exemptions, not a bonus, interception or immunity from unrelated outcomes. If protection failed first, record an owned missed-opportunity acknowledgment with no exemption, preserving the actual failure and original Newgirl's Tag choice. Revision 3 allows the original cohort controller to decline after original Handler validation, before or after actual NPC protection but before failure. This closes only that actor's obligation without performance, exemption or a fabricated body. A later failure still grants the original Newgirl her actual optional Tag. After failure the outstanding person must acknowledge missed participation; preserve all earlier immutable answers and historical readback.",
+      "change_impact": "Revision 3 adds source-bound owned protection nonparticipation to the existing unrolled participation and missed-opportunity workflow. Preserve revision 2 response records and prior rolled sources, known receipts and spent choices. No new permission for a facilitator, NPC controller or timeout to answer for another person. Delegated recommendation; printed-rule clarity review remains pending. Original NPC hurt is separately covered by easy_target_hurt_cohort_facts.",
       "provenance": "owner_approved_campaign_ruling",
       "authority": "delegated_recommendation",
       "clarity_review": true,
-      "revision": 1
+      "revision": 3
     },
     {
       "id": "easy-target-protection-failure",
@@ -7230,6 +7230,250 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "easy-target-npc-use-facts",
+      "policy_key": "easy_target_npc_use_facts",
+      "summary": "Actual ordinary NPC use without a triggered Play has a source-owned completed performance followed by the original Newgirl's optional Bond choice.",
+      "source": "Rulebook PDF41/printed39 Easy Target.",
+      "rationale": "The use urge says the Newgirl can deepen the Bond when the other person is finished; it does not require an additional roll for ordinary non-Play use.",
+      "alternatives": [
+        "Require a separate Play even when no printed Play trigger exists."
+      ],
+      "implementation_note": "Require original Handler validation of ordinary non-Play use, actual original living/free co-located NPC and exposed Newgirl, original scene/controllers, and the NPC controller's completed performance. Record immutable source/body/choice proof, then offer only the original Newgirl the existing optional Bond choice. No injury, payment, dialogue, intimacy consent or other mechanical outcome is inferred. Explicitly selected real Plays retain their source workflow. Other performer body kinds remain unsupported. Actual unrolled-use cohorts are covered by easy_target_use_cohort_facts.",
+      "change_impact": "Preserve existing rolled use, NPC hurt/protection and cohort records. This bounded interpretation requires printed-rule clarity review; future changes preserve performed sources and spent choices.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "easy-target-use-cohort-facts",
+      "policy_key": "easy_target_use_cohort_facts",
+      "summary": "Actual participation in ongoing non-Play NPC use exempts both people from the Easy Target Bond consequence.",
+      "source": "Rulebook PDF41/printed39 Easy Target.",
+      "rationale": "The cohort option says neither person faces the consequences. A nomination alone is not actual participation.",
+      "alternatives": [
+        "Treat nomination as completed participation without a performed source."
+      ],
+      "implementation_note": "After original Handler validation, original cohort controllers record actual co-present participation or explicitly decline. The NPC can finish while unanswered cohorts retain an owned missed-participation acknowledgment. Only actual participation exempts the participant and primary; otherwise preserve the original optional Bond. Preserve immutable outcome, response, cast and body proof, original completed records, and other source workflows. No inferred consent, penalty, roll or retroactive exemption.",
+      "change_impact": "Additive to v10 NPC use. Preserve previous factual and rolled sources; no retroactive exemption after completed use.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 2
+    },
+    {
+      "id": "easy-target-hurt-cohort-facts",
+      "policy_key": "easy_target_hurt_cohort_facts",
+      "summary": "Source-proved bodily participation before an actual NPC hurt performance exempts the primary and participant only from their matching Easy Target Punishment consequence.",
+      "source": "Easy Target PDF41/printed39.",
+      "rationale": "Going along does not require an invented roll or Tag modifier. Actual participation, not nomination, establishes the printed exemption; the injury itself remains a real consequence of the physical source.",
+      "alternatives": [
+        "Treat a nomination alone as participation or erase already-performed injury and Punishment."
+      ],
+      "implementation_note": "After original Handler validation, each original cohort controller may record actual co-present bodily participation before the first NPC bodily attempt, or decline. The NPC can perform while others are unanswered; those people retain an owned missed-opportunity acknowledgment with no exemption. The Newgirl owns the actual injury choice and all damage/interception work stays real. Participating obligations finish only after actual harm; no new dice, Heat, consent, defense, or unrelated immunity. Preserve immutable response, scene and body proof; later scene changes cannot replace history.",
+      "change_impact": "Additive NPC hurt source consumer; preserves old rolled, NPC use/protection, and non-cohort hurt sources. No retroactive exemption; unsupported body kinds and unrelated consequences remain unchanged.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "ankou-relay-interruption-dive",
+      "policy_key": "ankou_relay_interruption_dive",
+      "summary": "An actual Emotional Relay interruption can use the original actor's ordinary Dive Deep after the actual acting-person Tag is erased.",
+      "source": "Emotional Relay PDF85/printed83; Dive Deep PDF24/printed22.",
+      "rationale": "The printed interruption chance does not restrict the actor to the six previously exposed basic Plays or require an attack against the incoming person. Dive retains its real trigger and owner-controlled outcomes.",
+      "alternatives": [
+        "Limit interruptions to the six earlier UI options or treat the interrupted person as a target of Dive."
+      ],
+      "implementation_note": "Admit only the genuine original selected interruption Task, active Relay, actual erased Tag, incoming person, held parent and pending child request. Dive uses the original actor's own link, resources and table answers. Resolve the existing interruption only after actual child completion, preserving the parent's known receipt and actual remaining choices. The chance to interrupt is not automatic cancellation or failure of the incoming Play.",
+      "change_impact": "Additive finite Dive adapter only. Preserve historical nominations, other interruptions and all known costs/results. Other special recipes remain source-specific.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "doctor-npc-nanobot-real-removal",
+      "summary": "An ordinary NPC can receive the actual mid Nanobot removal benefit. Preserve the printed Heat gain as source metadata without a nonexistent or controller-proxy pool. The caster selects one current WorldTag or explicit source Helpless record; the original NPC controller confirms actual received care before removal. Low/high resource branches remain pending.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF72/printed70; NPC distinction PDF5; existing npc-beyond-intense-real-heat-only ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "The printed someone includes NPC patients, but does not create Pilot resources. A genuine removable effect is a meaningful mid result; high needs two distinct printed benefits, not two removals or empty sheet choices.",
+      "alternatives": [
+        "Exclude all ordinary NPC patients.",
+        "Invent NPC Heat, Assets or Identities, or count nonexistent resource changes as high-result benefits."
+      ],
+      "policy_key": "doctor_npc_nanobot_real_removal",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Finite current WorldTag and explicit HelplessCondition removal only, with canonical original physical BodyFact and current same-cell/enclosure reach proved at admission and every resumed response. Genuine Wraith minds cannot proxy a body. Removing a drug presentation Tag does not expire its independent physiology or other effects. Unsupported tiers remain visible pending original results; this does not complete ordinary Doctor or P1 coverage.",
+      "change_impact": "Preserve original patient/controller/body, cast, selected-effect fingerprint, receipt and Obsolescence cost. Future effect adapters must preserve their actual source lifetime; never retroactively remove unrelated effects or complete old unsupported results without their real consumer."
+    },
+    {
+      "id": "doctor-npc-stim-helpless-recovery",
+      "summary": "A real mid Nanobot removal may end one source-proved NPC Stim Helpless effect after original controller confirmation, preserving its drug, other effects and actual expiry clock.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Nanobot PDF72/printed70; Stim Sex PDF39/printed37.",
+      "authority": "delegated_recommendation",
+      "rationale": "Nanobot explicitly removes an effect from another playbook. Treating one physiological effect need not remove the whole drug or unrelated effects.",
+      "alternatives": [
+        "Clear all Helpless sources or expire the entire drug instead of treating the selected effect."
+      ],
+      "policy_key": "doctor_npc_stim_helpless_recovery",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Original Stim effect, drug and owned choice prove at selection and NPC confirmation. An immutable effect-specific recovery ends that Helpless consumer only. Original Doctor body/contact, receipt, Heat and Obsolescence remain required.",
+      "change_impact": "Additive NPC mid-result source adapter; preserve original effect/drug history, unrelated effects and real recipient-scene expiry. No NPC pools or low/high resource completion; ordinary Doctor/P1 remains incomplete."
+    },
+    {
+      "id": "alpha-native-brutalize-counter",
+      "summary": "The native original Alpha target can answer a failed Brutalize with her own actual Brutalize against the original attacker. Preserve genuine costs, owned results and mandatory consequences before optional outer Broken and parent closure.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Brutalize PDF52/printed50.",
+      "authority": "delegated_recommendation",
+      "rationale": "The printed opportunity permits a real Play rather than only Keep. Its own normal result and chooser remain authoritative; a low counter does not become automatic success.",
+      "alternatives": [
+        "Treat a selected Play or roll as completion, suppress its actual low result, or admit arbitrary source recipes."
+      ],
+      "policy_key": "alpha_native_brutalize_counter",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Original low receipt, selected opportunity, actor/target/cast, native Alpha rule, held parent, legal target and actual Heat remain required. The actual child owns its result/damage work; its immutable result response and real completion gate the outer opportunity. Existing same-inflictor Broken deduplication remains.",
+      "change_impact": "Additive native Alpha-to-original-attacker adapter. Preserve Keep and Oldgen advice; other NPC, learned, sleeping and Princess-directed recipes require their own source support. RULES_SUBSET and final review gates remain."
+    },
+    {
+      "id": "alpha-native-self-dose-counter",
+      "summary": "The original native Stim target may use her own actual self-Dose in the low Brutalize opportunity. Her genuine costs, printed independent cocktail choosers and actual Tags complete before optional Broken and parent closure.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Brutalize PDF52/printed50; Dose Up PDF38/printed36.",
+      "authority": "delegated_recommendation",
+      "rationale": "The printed counter permits a Play, not only an attack or a successful roll. Actual self-dosing can turn the tables while retaining the real Dose result and Handler decisions.",
+      "alternatives": [
+        "Require an attack on the Alpha, turn self-Dose into an automatic effect, or let the Stim/Alpha supply the Handler-owned component."
+      ],
+      "policy_key": "alpha_native_self_dose_counter",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Admission and pre-roll reprove the original low receipt, selected opportunity, current native Stim, actual scene and owned rule. No contact, Order, lesson or required-recipe shortcut. Final canonical Dose proof and every actual chooser response precede parent completion; native Tag duration remains unchanged.",
+      "change_impact": "Additive native self-Dose adapter only. Existing Keep, advice, own-Brutalize and sleeping counters are retained. Other-performer, learned, NPC and directed source combinations remain explicit; RULES_SUBSET and final review gates remain."
+    },
+    {
+      "id": "doctor-original-npc-support",
+      "summary": "Here for Support accepts a reachable original NPC protector, with its actual controller-owned protection and Bond decision. A high refusal can give that NPC a real Tag; it cannot lower a controller Pilot's Status.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Here for Support PDF73/printed71.",
+      "authority": "delegated_recommendation",
+      "rationale": "The printed trigger is hiding behind someone, not specifically a Pilot. Typed NPC Bonds, Tags and protection can carry the outcome without inventing a sheet or treating the human controller as the person.",
+      "alternatives": [
+        "Reject every NPC despite the printed someone trigger, or use the controller's Pilot Status and resources."
+      ],
+      "policy_key": "doctor_original_npc_support",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Finite visible living ordinary NPC source, actual current body/reach, cast and original controller are validated before costs and responses. Mandatory mid protection survives its real actor lifecycle; high refusal remains owned by the NPC controller and Doctor. Low keeps the actual required Handler Play. No NPC Status resource is created.",
+      "change_impact": "Additive ordinary NPC Here for Support only. Existing Pilot and Nanobot treatment sources remain distinct. Source-created Wraith and other typed counterpart bodies remain explicit; RULES_SUBSET and independent/player/final gates remain pending."
+    },
+    {
+      "id": "alpha-native-easy-target-counter",
+      "summary": "The original native Newgirl may use her actual Easy Target mistake in the failed Brutalize opportunity. Her Heat and roll, other people's owned reactions and real immediate consequences finish before optional outer Broken.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Brutalize PDF52/printed50; Easy Target PDF41/printed39.",
+      "authority": "delegated_recommendation",
+      "rationale": "The printed opportunity permits a Play rather than only an attack or successful roll. A genuine mistake under this pressure may trigger Easy Target, but the counter does not invent a mistake or select another person's reaction.",
+      "alternatives": [
+        "Require an attack-only counter, synthesize an Easy Target result, or let the Newgirl choose the Alpha's reactions and owed judgment."
+      ],
+      "policy_key": "alpha_native_easy_target_counter",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Admission and pre-roll prove the original low receipt, owned selected opportunity, native Newgirl rule, actual available people and cast. The original Easy Target reducer handles every actual chooser and consequence. Canonical response and consequence proof precedes optional Broken and parent closure.",
+      "change_impact": "Additive native Newgirl counter only; no borrowed or NPC performer, Princess proxy, extra action, fabricated Order or generic resolver. Existing source families remain intact; final regression and independent/player review are pending."
+    },
+    {
+      "id": "doctor-player-stim-relief",
+      "summary": "Nanobot Injection can end the original player patient's selected active Stim physiological Helplessness, preserving the drug, its clock, Tags, other effects and immutable source history.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Nanobot Injection PDF72/printed70; original Stim source and existing HelplessRecovery consumer.",
+      "authority": "delegated_recommendation",
+      "rationale": "The printed removal benefit includes an effect from another playbook. Generic clear_helpless does not remove the separate Stim physiological record, so only the source-specific proved effect may be selected for this consumer.",
+      "alternatives": [
+        "Offer generic Helplessness removal for a cause it cannot clear, erase the complete drug or its unrelated effects, or infer advance patient consent from the later response."
+      ],
+      "policy_key": "doctor_player_stim_relief",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Use the original current patient, active drug/effect, immutable source proof and existing per-effect HelplessRecovery record. Preserve existing player-treatment timing: removal occurs at the Doctor's benefit selection, before the separately owned final patient response. That later response is not advance consent and this adapter adds no advance-consent gate. Generic recovery is offered only for actual sources that clear_helpless clears. NPC treatment is unchanged.",
+      "change_impact": "Finite player Stim Helplessness adapter only. Other source-specific Doctor effects and NPC tiers remain separate work. No resource proxy, broader treatment permission or independent/human acceptance is implied; RULES_SUBSET and bot OFF remain."
+    },
+    {
+      "id": "vatgrown-doll-ordinary-npc-observer",
+      "summary": "An actual ordinary NPC can be the native Vatgrown\u2019s Unassuming Doll observer, with real scene/controller ownership and unchanged Heat, receipts and source-owned outcomes.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Unassuming Doll PDF50/printed48; actual ordinary World NPC and existing actor-role social Punishment ports.",
+      "authority": "delegated_recommendation",
+      "rationale": "The printed \u201csomeone\u201d and \u201cthey\u201d do not exclude ordinary NPCs. The existing observer adapter admitted only native Girls and the Handler even though NPC controller-owned information, Tags and social Punishment effects are representable.",
+      "alternatives": [
+        "Exclude all NPC observers, invent their anatomy or resource sheet, supply their answer without their controller, or replace a real low consequence with acknowledgment."
+      ],
+      "policy_key": "vatgrown_doll_ordinary_npc_observer",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Use the actual ordinary World NPC, visible identity, alive/available co-location, source cast and real controller. Preserve the Vatgrown\u2019s own costs/receipt and original NPC role in historical proof, information and Tag provenance. This observation source does not require a fabricated human-body/contact fact. Existing low supported social Punishment, severity-appropriate consultation and actual attendance/effect/completion ports remain authoritative. Currently supported NPC social effects are minor and do not require Handler consultation; the existing mandatory consultation gate is moderate-only.",
+      "change_impact": "Finite ordinary NPC observer support; no NPC roll/resources, generic physical Punishment completion, blanket special-source support, changed consent, deployment, review status or P1 acceptance. Four normal tests authored; worker pytest NOT RUN."
+    },
+    {
+      "id": "vatgrown-doll-mid-optional-benefits",
+      "summary": "The native Unassuming Doll 8\u201310 may-pick-two package can be explicitly declined; accepting it still selects exactly two.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Unassuming Doll PDF50/printed48.",
+      "authority": "delegated_recommendation",
+      "rationale": "May makes taking the benefit package optional. Preserve the existing pick-two cardinality rather than introducing up-to-two while allowing an explicit owner decline.",
+      "alternatives": [
+        "Treat may as mandatory and force two benefits.",
+        "Read may pick two as up to two, including a single benefit; this broader reading remains a printed-clarity question."
+      ],
+      "policy_key": "vatgrown_doll_mid_optional_benefits",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Only an original owned mid decline response normalizes to empty benefits. Preserve costs, receipt, event and exact history proof; create no effects. High and low behavior is unchanged; low can-pick wording is not decided in this ruling.",
+      "change_impact": "Changes campaign ruling digest; final matching approval must be renewed through legitimate review. No independent review status, runtime gate or campaign approval is granted. Focused test authored, worker pytest not run."
+    },
+    {
+      "id": "bonded-low-optional-continuation",
+      "summary": "On low Sex Play, the counterpart may continue without accepting the optional paired benefits; the existing alternative applies both.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Bonded Sex Play PDF59/printed57.",
+      "authority": "delegated_recommendation",
+      "rationale": "The printed can grants optional benefits. Preserve the existing paired benefit route while allowing explicit continuation without benefits.",
+      "alternatives": [
+        "Allow independent selection of Status reduction and Identity unmark.",
+        "Treat both benefits as mandatory for continuing."
+      ],
+      "policy_key": "bonded_low_optional_continuation",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Only the actual counterpart can select continue without benefits. Retain roll, costs, receipt and source history; create no Identity or Status effect. Mid result restrictions are not resolved by this ruling.",
+      "change_impact": "Changes campaign ruling digest; matching legitimate approval and printed clarity review remain pending. No release gate is bypassed."
+    },
+    {
+      "id": "bonded-mid-exhausted-unmarks",
+      "summary": "Mid Sex Play requests remain available when fewer marked Identities exist than requests; unmark all actually available up to the request count.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Bonded Sex Play PDF59/printed57.",
+      "authority": "delegated_recommendation",
+      "rationale": "Printed requests are chosen freely and the unmarks are applied where possible, rather than making absent resources prevent shaping requests.",
+      "alternatives": [
+        "Treat unmarks as required costs that limit requests.",
+        "Treat unmarks as fully optional instead of mandatory where available."
+      ],
+      "policy_key": "bonded_mid_exhausted_unmarks",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Require min(request count, available unlocked marked Identities) distinct actual unmarks, retain counterpart response, genuine effects, source and receipt.",
+      "change_impact": "Changes campaign ruling digest. Printed clarity and legitimate matching approval remain pending; no availability or release gate changed."
     }
   ],
   "entries": [
@@ -8001,7 +8245,9 @@
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_princess_npc_conversation.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -8056,7 +8302,8 @@
         "tests/rules/test_beneath_service.py",
         "tests/rules/test_beneath_permissions.py",
         "tests/rules/test_beneath_discipline.py",
-        "tests/rules/test_beneath_ui.py"
+        "tests/rules/test_beneath_ui.py",
+        "tests/rules/test_alpha_beneath_counter.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -8131,7 +8378,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_npc_flirt.py"
+        "tests/rules/test_npc_flirt.py",
+        "tests/rules/test_alpha_flirt_counter.py"
       ],
       "m2_play_id": "flirt",
       "module": "core"
@@ -8198,7 +8446,8 @@
       "test_evidence": [
         "tests/rules/test_dormant_adjudication.py",
         "tests/rules/test_harpy_ended_director_procedures.py",
-        "tests/rules/test_dive_handler_void.py"
+        "tests/rules/test_dive_handler_void.py",
+        "tests/rules/test_relay_interrupt_dive.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -8577,7 +8826,8 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_princess_sex.py",
-        "tests/rules/test_vatgrown_plays.py::test_actual_learned_princess_sex_invitation_decline_cancel_fresh_consent_favour_and_tag"
+        "tests/rules/test_vatgrown_plays.py::test_actual_learned_princess_sex_invitation_decline_cancel_fresh_consent_favour_and_tag",
+        "tests/rules/test_princess_npc_conversation.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -8991,7 +9241,8 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_dose_up.py",
-        "tests/rules/test_required_plays.py"
+        "tests/rules/test_required_plays.py",
+        "tests/rules/test_alpha_dose_counter.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -9043,7 +9294,8 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_stim_sex.py",
-        "tests/rules/test_vatgrown_plays.py::test_actual_learned_stim_sex_new_source_drug_helpless_real_expiry_and_private_receipt"
+        "tests/rules/test_vatgrown_plays.py::test_actual_learned_stim_sex_new_source_drug_helpless_real_expiry_and_private_receipt",
+        "tests/rules/test_doctor_patient_stim_recovery.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -9092,7 +9344,17 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_easy_target.py",
-        "tests/rules/test_vatgrown_plays.py"
+        "tests/rules/test_vatgrown_plays.py",
+        "tests/rules/test_hurt_cohort.py",
+        "tests/rules/test_protection_cohort_decline.py",
+        "tests/rules/test_alpha_easy_target_counter.py",
+        "tests/rules/test_ankou_easy_target_feedback.py",
+        "tests/rules/test_easy_target_handler_use.py",
+        "tests/rules/test_handler_use_cohort.py",
+        "tests/rules/test_handler_use_participant.py",
+        "tests/rules/test_handler_protection_participant.py",
+        "tests/rules/test_ankou_easy_counter_feedback.py",
+        "tests/rules/test_handler_hurt_participant.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -9394,7 +9656,9 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_oldgen.py",
-        "tests/rules/test_vatgrown_plays.py"
+        "tests/rules/test_vatgrown_plays.py",
+        "tests/rules/test_ankou_advice_feedback.py",
+        "tests/rules/test_ankou_advice_counter_feedback.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -9572,7 +9836,12 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_vatgrown.py",
-        "tests/rules/test_vatgrown_plays.py::test_actual_native_same_book_doll_lesson_history_does_not_stack_or_spend_on_native_use"
+        "tests/rules/test_vatgrown_plays.py::test_actual_native_same_book_doll_lesson_history_does_not_stack_or_spend_on_native_use",
+        "tests/rules/test_alpha_doll_counter.py",
+        "tests/rules/test_vatgrown_npc_observer.py",
+        "tests/rules/test_ankou_doll_feedback.py",
+        "tests/rules/test_ankou_doll_counter_feedback.py",
+        "tests/rules/test_vatgrown_optional_doll.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -9625,7 +9894,19 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_alpha_brutalize.py",
-        "tests/rules/test_npc_broken_orders.py"
+        "tests/rules/test_npc_broken_orders.py",
+        "tests/rules/test_alpha_brutalize_counter.py",
+        "tests/rules/test_alpha_dose_counter.py",
+        "tests/rules/test_alpha_easy_target_counter.py",
+        "tests/rules/test_alpha_doll_counter.py",
+        "tests/rules/test_alpha_flirt_counter.py",
+        "tests/rules/test_alpha_beneath_counter.py",
+        "tests/rules/test_ankou_alpha_feedback.py",
+        "tests/rules/test_ankou_npc_brutalize_feedback.py",
+        "tests/rules/test_ankou_alpha_counter_feedback.py",
+        "tests/rules/test_ankou_doll_counter_feedback.py",
+        "tests/rules/test_ankou_easy_counter_feedback.py",
+        "tests/rules/test_ankou_advice_counter_feedback.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -9959,7 +10240,9 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_bonded.py",
-        "tests/rules/test_bonded_am.py"
+        "tests/rules/test_bonded_am.py",
+        "tests/rules/test_bonded_optional_continuation.py",
+        "tests/rules/test_bonded_mid_unmarked.py"
       ],
       "m2_play_id": "bonded_sex",
       "module": "core"
@@ -10960,7 +11243,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_doctor_runtime.py"
+        "tests/rules/test_doctor_runtime.py",
+        "tests/rules/test_doctor_patient_stim_recovery.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -11072,7 +11356,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_doctor_runtime.py"
+        "tests/rules/test_doctor_runtime.py",
+        "tests/rules/test_doctor_npc_support.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -12317,7 +12602,16 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_ankou_feedback.py"
+        "tests/rules/test_ankou_feedback.py",
+        "tests/rules/test_ankou_advice_feedback.py",
+        "tests/rules/test_ankou_easy_target_feedback.py",
+        "tests/rules/test_ankou_doll_feedback.py",
+        "tests/rules/test_ankou_alpha_feedback.py",
+        "tests/rules/test_ankou_npc_brutalize_feedback.py",
+        "tests/rules/test_ankou_alpha_counter_feedback.py",
+        "tests/rules/test_ankou_doll_counter_feedback.py",
+        "tests/rules/test_ankou_easy_counter_feedback.py",
+        "tests/rules/test_ankou_advice_counter_feedback.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -12404,7 +12698,8 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_ankou.py",
-        "tests/rules/test_required_plays.py"
+        "tests/rules/test_required_plays.py",
+        "tests/rules/test_relay_interrupt_dive.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -19207,7 +19502,7 @@
         "tier_options": {
           "diceless": [
             "Girl/HandlerGirl: actual original owner chooses a real response Play or selects a real intact physically available Asset for the source hit.",
-            "Ordinary NPC: literal actual death; an eligible actual Sprite may shield the original target without retargeting the receipt.",
+            "Ordinary NPC: actual death unless an eligible actual Sprite shields the original target or existing confirmed, still-valid Metal Angel care prevents death; neither exception retargets the receipt.",
             "Normal Handler/accepted Director: actual owned printed damage replacement, including actual injury/death/body ending and source role replacement.",
             "Gorgon/actual Harpy: opposing owner selects real pitted Assets, frozen judge chooses winner/losing Asset, exact resource destroyed with immutable provenance; actual last-Harpy-Frame loss requires true HarpyDefeat."
           ]
@@ -19229,6 +19524,7 @@
           "tests/rules/test_gorgon_attack.py",
           "tests/rules/test_sprite_source.py",
           "tests/rules/test_gorgon_aggressive_source.py",
+          "tests/rules/test_doctor_npc_angel.py",
           "var/m3-physical-battle-world-final.xml"
         ]
       },
@@ -19237,7 +19533,8 @@
         "gorgon.gorgon.class-i-aggressive",
         "gorgon.gorgon.class-ii-dormant",
         "gorgon.gorgon.class-iv-directed",
-        "gorgon.gorgon.class-v-sprite"
+        "gorgon.gorgon.class-v-sprite",
+        "frame.doctordoctor.metal-angel"
       ],
       "test_evidence": [
         "tests/rules/test_gorgon_attack.py",
@@ -19247,6 +19544,7 @@
         "tests/rules/test_gorgon_runtime.py",
         "tests/rules/test_sprite_source.py",
         "tests/rules/test_gorgon_aggressive_source.py",
+        "tests/rules/test_doctor_npc_angel.py",
         "var/m3-physical-battle-world-final.xml"
       ],
       "m2_play_id": null,
@@ -21036,7 +21334,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_alpha_brutalize.py"
+        "tests/rules/test_alpha_brutalize.py",
+        "tests/rules/test_ankou_npc_brutalize_feedback.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -21106,7 +21405,9 @@
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_princess_npc_conversation.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

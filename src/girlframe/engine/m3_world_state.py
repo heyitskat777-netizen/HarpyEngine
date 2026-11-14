@@ -349,6 +349,7 @@ class NpcRoleOffer(Model):
     source_event: str
     state: Literal["pending", "accepted", "declined", "withdrawn"] = "pending"
     response_event: str | None = None
+    transfer: bool = Field(default=False, exclude_if=lambda value: not value)
 
 
 class FieldStudy(Model):
@@ -454,7 +455,9 @@ class World(Model):
         entities = (*self.locations, *self.npcs, *self.gorgons, *self.pilots, *self.factions)
         if len({x.id for x in entities}) != len(entities):
             raise ValueError("World entity IDs are globally distinct within a campaign")
-        candidates = [x.npc for x in self.npc_role_offers if x.state == "pending"]
+        candidates = [
+            x.npc for x in self.npc_role_offers if x.state == "pending" and not x.transfer
+        ]
         if len({x.id for x in self.npc_role_offers}) != len(self.npc_role_offers) or len(
             {x.id for x in (*entities, *candidates)}
         ) != len(entities) + len(candidates):

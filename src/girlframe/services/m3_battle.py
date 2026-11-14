@@ -1,5 +1,6 @@
 """Actual battle effect ports; canonical staging precedes, SQL work follows the real event."""
 
+import hashlib
 import json
 from typing import TYPE_CHECKING, Any
 from uuid import NAMESPACE_URL, uuid4, uuid5
@@ -10,7 +11,7 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_battle as rules
 from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput
-from girlframe.engine.m3_actor_state import ActorRef, SceneCast
+from girlframe.engine.m3_actor_state import ActorRef, ProfileBinding, SceneCast
 from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_battle_state import Context, Declaration, Defense, Required
 from girlframe.engine.m3_choices import CORE_RETALIATION
@@ -315,6 +316,14 @@ def prepare(
         from girlframe.services.m3_easy_target import prepare_child
 
         easy_child = prepare_child(game, c, viewer, state, prepared, int(scene["channel_id"]))
+    # A witnessed-affection child is independently proved, not a free-form
+    # exception for unrelated source_work. Its actual combat declaration still
+    # supplies every opening, asset, controller and stale-state guard below.
+    bonded_child = None
+    if prepared.source_work and prepared.play in ("all_out_assault", "go_for_the_core"):
+        from girlframe.services.m3_bonded import child_source as bonded_source
+
+        bonded_child = bonded_source(game, c, viewer, state, prepared, int(scene["channel_id"]))
     if (
         prepared.target is not None
         or prepared.order_id is not None
@@ -322,6 +331,7 @@ def prepare(
         or prepared.source_work
         and easy_child is None
         and required_child is None
+        and bonded_child is None
         or prepared.witnessed
     ):
         raise WorkflowError(
@@ -341,6 +351,13 @@ def prepare(
     context = Context.model_validate_json(raw["body"])
     _context_proof(game, c, context)
     declaration = context.declaration
+    if bonded_child is not None and (
+        context.source_work is not None
+        or declaration.actor.model_dump(mode="json") != bonded_child["actor"]
+    ):
+        raise WorkflowError(
+            "Use this original witnessed-affection actor's independent battle declaration"
+        )
     if required_child is not None and context.source_work != prepared.source_work:
         raise WorkflowError("Use the declaration bound to this actual original Court command")
     if prepared.parent != context.source_action:
@@ -519,11 +536,58 @@ def prepare(
     )
 
 
-def modifier(state: GameState, action: dict[str, Any]) -> int:
+def modifier(
+    state: GameState, action: dict[str, Any], bindings: tuple[ProfileBinding, ...] = ()
+) -> int:
+    if action["data"].get("ankou_feedback") and action["data"]["play"] == "go_for_the_core":
+        # The original declaration remains immutable. Only pre_roll's proved
+        # Feedback/reprisal changes may have advanced these actual resources.
+        _, target = _refs(action)
+        return -len(rules.intact_assets(state, target, bindings))
     return int(action["data"]["battle"]["modifier"])
 
 
-def pre_roll(game: "GameService", c: Connection, state: GameState, action: dict[str, Any]) -> None:
+def feedback_source_binding(meta: dict[str, Any]) -> str:
+    """Freeze the real initial battle inputs, not later result bookkeeping."""
+    fields = (
+        "firepower",
+        "actor",
+        "target",
+        "attacking_asset",
+        "target_asset",
+        "context",
+        "registry",
+        "handler",
+        "procedural_gm",
+        "judge_actor",
+        "judge_source",
+        "cast_sha256",
+        "appointment",
+        "target_controller",
+        "actor_controller",
+        "table",
+        "target_category",
+        "modifier",
+        "indirect",
+        "source_core",
+        "defense",
+        "dormant_awakened",
+        "dormant_close",
+        "occupancy",
+    )
+    return hashlib.sha256(
+        json.dumps({key: meta[key] for key in fields}, sort_keys=True).encode()
+    ).hexdigest()
+
+
+def pre_roll(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    *,
+    commit: bool = True,
+) -> None:
     meta = action["data"]["battle"]
     fact = next(
         (
@@ -545,10 +609,80 @@ def pre_roll(game: "GameService", c: Connection, state: GameState, action: dict[
     ):
         raise WorkflowError("This declaration already rolled its actual dice.")
     bound = profiles(c, game.store.campaign_id)
+    expected = None
+    if action["data"].get("ankou_feedback"):
+        from girlframe.services.m3_ankou_feedback import engage_history, prove
+        from girlframe.services.m3_disposable_psyche import _before
+
+        feedback = prove(game, c, state, action["data"]["ankou_feedback"])
+        cast = _cast(game, c, state, int(action["channel_id"]))
+        if (
+            feedback.battle_source != feedback_source_binding(meta)
+            or feedback.battle_source is None
+            or feedback.phase != "resolved"
+            or feedback.resolved_event is None
+            or feedback.actor != context.declaration.actor
+            or context.declaration.play not in ("all_out_assault", "go_for_the_core")
+            or context.declaration.play != feedback.prepared.play
+            or context.source_action is not None
+            or cast != feedback.cast
+            or fingerprint(cast) != meta["cast_sha256"]
+            or cast.revision != context.cast_revision
+        ):
+            attack = "Core" if feedback.prepared.play == "go_for_the_core" else "Assault"
+            raise WorkflowError(f"Preserve the resolved original {attack} Feedback and scene cast")
+        original = _before(game, c, feedback.mark_event)
+        for ref, old_sha in (
+            (context.declaration.actor, context.declaration.actor_sha256),
+            (context.declaration.target, context.declaration.target_sha256),
+        ):
+            if rules.resource_sha(original, ref, bound) != old_sha:
+                raise WorkflowError("Preserve the genuine pre-Feedback battle resources")
+        expected = engage_history(
+            game,
+            c,
+            feedback,
+            original,
+            (context.declaration.actor, context.declaration.target),
+            battle=True,
+        )
+        # Feedback cannot replace the original attack or silently substitute a
+        # weapon which its owner just tore off during the real interruption.
+        strike = rules.owned_asset(
+            state,
+            context.declaration.actor,
+            context.declaration.attacking_asset,
+            bound,
+            attacking=True,
+            allow_damaged=context.declaration.play == "go_for_the_core",
+        )
+        if strike.damaged and not context.core_capability_confirmed:
+            raise WorkflowError("Preserve the original damaged-Asset decisive-strike confirmation")
+        if context.declaration.play == "go_for_the_core":
+            for source_state in (original, state):
+                if (
+                    rules.core_available(
+                        source_state, context.declaration.target, context.declaration.actor, bound
+                    )
+                    != context.core_source
+                    or meta["source_core"] != context.core_source
+                ):
+                    raise WorkflowError("STALE_CORE: preserve the original Feedback-held exposure")
+            if meta["modifier"] != -len(
+                rules.intact_assets(original, context.declaration.target, bound)
+            ):
+                raise WorkflowError("Preserve the genuine initial Core Asset penalty")
+        else:
+            assert context.declaration.target_asset is not None
+            rules.owned_asset(
+                state, context.declaration.target, context.declaration.target_asset, bound
+            )
     for ref, old_sha in (
         (context.declaration.actor, context.declaration.actor_sha256),
         (context.declaration.target, context.declaration.target_sha256),
     ):
+        if expected is not None:
+            old_sha = rules.resource_sha(expected, ref, bound)
         if action["data"].get("learned_no_one_better"):
             from girlframe.services.m3_learned_plays import triggered_resource_sha
 
@@ -561,11 +695,23 @@ def pre_roll(game: "GameService", c: Connection, state: GameState, action: dict[
         raise WorkflowError(
             "SOURCE_PORT_REQUIRED: resolve this battle Asset's sabotage before dice"
         )
+    if commit:
+        commit_declaration(state, action)
+
+
+def commit_declaration(state: GameState, action: dict[str, Any]) -> None:
+    """Consume the checked declaration only when this Play proceeds to actual dice."""
+    meta = action["data"]["battle"]
+    if any(
+        x.get("kind") == "battle_context_used" and x.get("context") == meta["context"]
+        for x in state.facts
+    ):
+        raise WorkflowError("This declaration already rolled its actual dice.")
     meta["roll_event"] = str(uuid4())
     state.facts.append(
         dict(
             kind="battle_context_used",
-            context=context.id,
+            context=meta["context"],
             action=action["id"],
             event=meta["roll_event"],
         )
@@ -1205,6 +1351,10 @@ def synchronize(
     viewer: GuildViewer | None,
     key: str,
 ) -> None:
+    if action["data"].get("ankou_feedback") and not action["data"].get("receipt"):
+        # Feedback owns its unrolled refusal/death or exact ready-to-roll state.
+        # A completed purpose is not a completed attack or a battle result.
+        return
     if (
         action["data"].get("result")
         and action["data"]["battle"].get("dormant_awakened")

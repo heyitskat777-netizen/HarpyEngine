@@ -1,6 +1,7 @@
 """Explicit native dispatch to existing source-authenticated Sex consumers."""
 
 import asyncio
+from typing import Any
 
 import discord
 
@@ -197,40 +198,77 @@ async def open_delegated(
 
         controls_newgirl = NewgirlSexService(game)
         if link is None:
-            result = await asyncio.to_thread(
-                controls_newgirl.invite,
-                viewer,
-                str(interaction.id),
-                source.cast.channel,
-                (source.target,),
-                revision,
-                source.account,
-                bonded_source=source_id,
-            )
-            identity = result["id"]
+            await open_newgirl_sex(interaction, controls_newgirl, bonded_source=source_id)
+            return
         else:
             identity = link.session
         await open_newgirl_sex(interaction, controls_newgirl, identity)
     elif rule == "girl.mockingbird.sex-play":
-        from girlframe.discord_adapter.m3_mockingbird import open_mockingbird
+        from girlframe.discord_adapter.m2_forms import Field, NativeForm
+        from girlframe.discord_adapter.m3_mockingbird_plays import open_request
+        from girlframe.engine.m3_actors import resolve
+        from girlframe.services.m3_actors import profiles
         from girlframe.services.m3_mockingbird_plays import MockingbirdService
 
+        controls_mockingbird = MockingbirdService(game)
         if link is None:
-            result = await asyncio.to_thread(
-                MockingbirdService(game).propose,
-                viewer,
-                str(interaction.id),
-                source.cast.channel,
-                source.actor,
-                "mockingbird_sex",
-                (source.target,),
-                source.account,
-                bonded_source=source_id,
-            )
-            identity = result["id"]
-        else:
-            identity = link.session
-        await open_mockingbird(interaction, game, identity)
+            primary = source.target
+            assert primary is not None
+            with game.store.engine.connect() as c:
+                bound = profiles(c, game.store.campaign_id)
+                targets = {
+                    role.actor.token: role.actor
+                    for role in source.cast.roles
+                    if role.actor not in (source.actor, source.target)
+                }
+                labels = tuple(
+                    (token, resolve(state, ref, bound, require_current_profile=False).label)
+                    for token, ref in targets.items()
+                )
+
+            async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+                await asyncio.to_thread(
+                    controls_mockingbird.propose,
+                    viewer_from_interaction(current),
+                    str(current.id),
+                    source.cast.channel,
+                    source.actor,
+                    "mockingbird_sex",
+                    (primary, *(targets[x] for x in values.get("extras", ()))),
+                    values["account"],
+                    primary=primary,
+                    bonded_source=source_id,
+                )
+                return (
+                    "Original Pair-rule child saved. "
+                    "Each actual participant answers separately in requests."
+                )
+
+            await NativeForm(
+                interaction.user.id,
+                "Original Pair Mockingbird Play",
+                "The original parent counterpart stays primary. "
+                "Additional participants do not inherit consent.",
+                (
+                    [
+                        Field(
+                            "extras",
+                            "Optional additional actual participants",
+                            labels,
+                            minimum=0,
+                            maximum=len(labels),
+                            required=False,
+                        )
+                    ]
+                    if labels
+                    else []
+                )
+                + [Field("account", "Describe the actual child trigger", paragraph=True)],
+                submit,
+            ).present(interaction)
+            return
+        identity = link.session
+        await open_request(interaction, controls_mockingbird, identity)
     else:
         await reply(
             interaction,

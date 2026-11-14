@@ -480,16 +480,37 @@ def original_pair(
     state: GameState,
     actor: ActorRef,
     required_rule: str = rules.PAIR,
+    *,
+    historical: bool = False,
 ) -> tuple[ActorRef, str]:
+    sheet = state.sheets.get(actor.entity)
+    if sheet is None or not has_rule(sheet, required_rule, "BONDED"):
+        raise WorkflowError("Use the original current Bonded Girl and actual assigned Pair")
+    return pair_lineage(game, c, state, actor, historical=historical)
+
+
+def pair_lineage(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    actor: ActorRef,
+    *,
+    historical: bool = False,
+) -> tuple[ActorRef, str]:
+    """Original Pair provenance only, never admission to a new Bonded Play.
+
+    Historical callers must supply a verified canonical event snapshot. Its real
+    profile bindings prove source-time people, never present-day authority.
+    Live callers retain current-profile/body checks, including after a lesson is spent.
+    """
     sheet = state.sheets.get(actor.entity)
     if (
         actor.kind != "pilot"
         or sheet is None
         or sheet.character_id != actor.incarnation
-        or not has_rule(sheet, required_rule, "BONDED")
         or sheet.pair is None
     ):
-        raise WorkflowError("Use the original current Bonded Girl and actual assigned Pair")
+        raise WorkflowError("Use the original current actor and actual assigned Pair")
     setup = sheet.girl_runtime.setup if sheet.girl_runtime else None
     if setup is not None and setup.pair is not None:
         original = _history(c, game, setup.source_event).sheets.get(actor.entity)
@@ -549,8 +570,23 @@ def original_pair(
         source = bond["event_id"]
     if actual == actor or actual.entity != str(sheet.pair):
         raise WorkflowError("Preserve the distinct actual assigned Pair")
-    _native(game, c, state, actor)
-    _native(game, c, state, actual)
+    if historical:
+        from girlframe.services.m3_actor_history import snapshot_profiles
+
+        bindings = snapshot_profiles(c, game.store.campaign_id, state)
+        for person in (actor, actual):
+            body = resolve(state, person, bindings)
+            if (
+                person.kind != "pilot"
+                or body.rules != "girl_frame"
+                or body.offstage_source is not None
+                or body.custody not in (None, "free")
+                or state.sheets[person.entity].medical_state != "fit"
+            ):
+                raise WorkflowError("Recover the source-time original native Pair bodies")
+    else:
+        _native(game, c, state, actor)
+        _native(game, c, state, actual)
     return actual, source
 
 
@@ -566,6 +602,21 @@ def _people(value: rules.Source) -> tuple[ActorRef, ...]:
 def _contact(game: GameService, c: Connection, state: GameState, value: rules.Source) -> None:
     from girlframe.services.m3_changeling_sex import admit_contact
 
+    if value.learned_source is not None:
+        from girlframe.services.m3_learned_sex import admit_source
+
+        if (
+            value.kind != "sex"
+            or value.route not in ("pair", "seven", "delegated")
+            or value.target is None
+            or value.target == value.actor
+            or (value.target == value.pair) != (value.route == "pair")
+            or value.changeling_source is not None
+        ):
+            raise WorkflowError("Use only your genuinely learned Pair or non-Pair7 source")
+        admit_source(game, c, state, value.actor, value.target, rules.SEX, value.learned_source)
+        if pair_lineage(game, c, state, value.actor) != (value.pair, value.pair_source):
+            raise WorkflowError("Use your actual unchanged original Pair")
     remote = False
     if value.changeling_source is not None:
         if value.kind != "sex" or value.target is None:
@@ -610,7 +661,7 @@ def _consents(game: GameService, c: Connection, state: GameState, value: rules.S
         ):
             raise WorkflowError("Preserve the actual counterpart's voluntary source response")
         _audit(game, c, item.event, ("m3.bonded_confirmed",), item.controller)
-    if value.phase not in ("invited", "declined") and (
+    if value.phase not in ("invited", "declined", "withdrawn") and (
         len(responses) != 1 or not responses[0].accepted
     ):
         raise WorkflowError("The actual counterpart must confirm their own voluntary intimacy")
@@ -627,6 +678,23 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
             game, c, state, value.changeling_source, value.id, value.actor, value.target, rules.SEX
         )
 
+    if value.learned_source is not None:
+        from girlframe.services.m3_learned_sex import prove as prove_lesson
+
+        lesson = prove_lesson(game, c, state, value.learned_source)
+        if (
+            lesson.session != value.id
+            or lesson.actor != value.actor
+            or lesson.target != value.target
+            or lesson.rule_id != rules.SEX
+            or value.kind != "sex"
+            or value.route not in ("pair", "seven", "delegated")
+            or value.target is None
+            or value.target == value.actor
+            or (value.target == value.pair) != (value.route == "pair")
+            or value.changeling_source is not None
+        ):
+            raise WorkflowError("Preserve the actual learned original Pair/non-Pair source")
     birth = _history(c, game, value.event)
     born = rules.get(birth, identity)
     stable = (
@@ -647,15 +715,23 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         "route",
         "delegated_rule",
         "changeling_source",
+        "learned_source",
     )
     if any(getattr(value, k) != getattr(born, k) for k in stable):
         raise WorkflowError("Preserve the genuine original Bonded source and people")
     rule = dict(side=rules.SIDE, intimacy=rules.INTIMACY, sex=rules.SEX)[value.kind]
-    actual, source = original_pair(game, c, birth, value.actor, rule)
+    actual, source = (
+        pair_lineage(game, c, birth, value.actor, historical=True)
+        if value.learned_source is not None
+        else original_pair(game, c, birth, value.actor, rule, historical=True)
+    )
     if actual != value.pair or source != value.pair_source:
         raise WorkflowError("Preserve the source-time original Pair, not their current account")
     _audit(game, c, value.event, ("m3.bonded_proposed",), int(value.actor.entity))
     _consents(game, c, state, value)
+    from girlframe.services.m3_bonded_delegation_release import prove_release
+
+    prove_release(game, c, state, value)
     actions = c.scalars(
         sa.select(t.m2["m2_actions"].c.id).where(
             t.m2["m2_actions"].c.campaign_id == game.store.campaign_id,
@@ -900,6 +976,7 @@ def prepare(
         raise WorkflowError("Recover the actual original Handler and source table")
     return dict(
         source=value.id,
+        **({"learned_source": value.learned_source} if value.learned_source else {}),
         actor=value.actor.model_dump(mode="json"),
         pair=value.pair.model_dump(mode="json"),
         target=value.target.model_dump(mode="json") if value.target else None,
@@ -1120,12 +1197,17 @@ def _select(
             raise WorkflowError("Ask your Pair when she is coming for you")
         _complete(state, value, event)
     elif kind == "bonded_mid":
-        if len(answer.denied) != len(options) or len(set(answer.denied)) != len(answer.denied):
-            raise WorkflowError("Unmark one distinct actual marked Identity for each chosen option")
         sheet = state.sheets[value.actor.entity]
         marked = {
             x.id: x for x in sheet.identities if x.marked and x.id not in sheet.sedation_locked
         }
+        # The shaping requests are not purchased with marks. Apply every possible
+        # printed unmark, without inventing an Identity when the benefit is exhausted.
+        required_unmarks = min(len(options), len(marked))
+        if len(answer.denied) != required_unmarks or len(set(answer.denied)) != len(answer.denied):
+            raise WorkflowError(
+                "Unmark one distinct available marked Identity per request, up to all available"
+            )
         if any(x not in marked for x in answer.denied):
             raise WorkflowError("Choose actual marked Identities available to unmark")
         for entry in answer.denied:
@@ -1229,6 +1311,9 @@ def _select(
                 raise WorkflowError("Unmark one of your actual available marked Identities")
             selected[0].marked = False
             shift_status(state, int(value.actor.entity), 1)
+        elif options == ("continue_without_benefits",):
+            if answer.denied:
+                raise WorkflowError("Declining the optional benefits does not unmark an Identity")
         elif answer.denied:
             raise WorkflowError("Stopping weakens the real Bond; it does not unmark an Identity")
         else:
@@ -1271,7 +1356,19 @@ def _select(
             )
         elif options == ("child",):
             play = fields.get("play", "")
-            if play not in ("flirt", "brutalize", "snoop") or not fields.get("context", "").strip():
+            if (
+                play
+                not in (
+                    "flirt",
+                    "brutalize",
+                    "snoop",
+                    "engage",
+                    "put_someone_beneath_you",
+                    "all_out_assault",
+                    "go_for_the_core",
+                )
+                or not fields.get("context", "").strip()
+            ):
                 raise WorkflowError(
                     "Describe one actual legal triggered Play against this onlooker"
                 )
@@ -1381,6 +1478,7 @@ def projection_options(state: GameState, value: rules.Source, kind: str) -> dict
     if kind == "bonded_low":
         return {
             "continue": "Keep going, lower her Status and unmark my Identity",
+            "continue_without_benefits": "Keep going without the optional Status/Identity benefits",
             "stop": "Stop and weaken our actual Bond",
         }
     if kind == "bonded_intimacy":
@@ -1775,6 +1873,7 @@ class BondedService:
         apart: bool = False,
         delegated_rule: str | None = None,
         changeling_source: str | None = None,
+        learned_source: str | None = None,
     ) -> dict[str, Any]:
         rule = dict(side=rules.SIDE, intimacy=rules.INTIMACY, sex=rules.SEX).get(kind)
         if rule is None:
@@ -1783,7 +1882,34 @@ class BondedService:
         def operation(c: Connection) -> dict[str, Any]:
             state = load_state(c, self.store.campaign_id)
             actor = current_ref(state, viewer.user_id)
-            actual_pair, lineage = original_pair(self.game, c, state, actor, rule)
+            if learned_source is not None:
+                from girlframe.services.m3_learned_sex import admit_offer
+
+                if (
+                    kind != "sex"
+                    or route not in ("pair", "seven", "delegated")
+                    or route == "delegated"
+                    and delegated_rule
+                    not in (
+                        "girl.mockingbird.sex-play",
+                        "girl.princess.sex-play",
+                        "girl.newgirl.sex-play",
+                        "girl.oldgen.sex-play",
+                        "girl.stim-blissed.sex-play",
+                        "girl.alpha.sex-play",
+                        "girl.vatgrown.sex-play",
+                        "girl.casualty.sex-play",
+                        "girl.am.sex-play",
+                    )
+                    or changeling_source is not None
+                    or not admit_offer(self.game, c, state, actor, rules.SEX, learned_source)
+                ):
+                    raise WorkflowError(
+                        "Select a real unused Pair, non-Pair7 or supported actual Pair rule source"
+                    )
+                actual_pair, lineage = pair_lineage(self.game, c, state, actor)
+            else:
+                actual_pair, lineage = original_pair(self.game, c, state, actor, rule)
             if (
                 state.revision != revision
                 or self.game.pending_actions(c)
@@ -1828,6 +1954,40 @@ class BondedService:
                     delegated = candidates[0]
                 else:
                     raise WorkflowError("Select the actual current Pair Sex source explicitly")
+                if learned_source is not None and delegated not in (
+                    "girl.mockingbird.sex-play",
+                    "girl.princess.sex-play",
+                    "girl.newgirl.sex-play",
+                    "girl.oldgen.sex-play",
+                    "girl.stim-blissed.sex-play",
+                    "girl.alpha.sex-play",
+                    "girl.vatgrown.sex-play",
+                    "girl.casualty.sex-play",
+                    "girl.am.sex-play",
+                ):
+                    raise WorkflowError(
+                        "Only actual Pair Mockingbird, Princess, Newgirl, Oldgen, Stim, Alpha "
+                        "Vatgrown, Casualty or eligible AM delegation is supported"
+                    )
+                from girlframe.services.m3_learned_bonded_am_counterpart import eligible
+
+                if (
+                    learned_source is not None
+                    and delegated == "girl.am.sex-play"
+                    and (
+                        target_ref is None
+                        or not (
+                            has_rule(state.sheets[target_ref.entity], delegated, "AM")
+                            or eligible(state, target_ref)
+                        )
+                    )
+                ):
+                    raise WorkflowError(
+                        "SOURCE_ADAPTER_REQUIRED: learned Bonded AM requires an actual AM or "
+                        "native Mockingbird/Alpha/Oldgen/Princess/Newgirl/Stim/Vatgrown/Casualty "
+                        "counterpart; "
+                        "no borrowed circuits or unsupported source"
+                    )
                 if delegated == rules.SEX:
                     raise WorkflowError(
                         "SOURCE_SEX_ROUTING_CYCLE: use the explicit unrolled7 alternative"
@@ -1858,6 +2018,11 @@ class BondedService:
                 )
             )
             _contact(self.game, c, state, value)
+            if learned_source is not None:
+                from girlframe.services.m3_learned_sex import reserve_invitation
+
+                link = reserve_invitation(self.game, c, state, value, rules.SEX, learned_source)
+                value = value.model_copy(update={"learned_source": link})
             rules.put(state, value)
             if changeling_source is not None:
                 from girlframe.services.m3_changeling_sex import bind_source
@@ -1889,6 +2054,7 @@ class BondedService:
                 route=route,
                 apart=apart,
                 delegated_rule=delegated_rule,
+                **({"learned_source": learned_source} if learned_source is not None else {}),
                 **(
                     {"changeling_source": changeling_source}
                     if changeling_source is not None
@@ -1897,6 +2063,47 @@ class BondedService:
             ),
             operation,
             rule,
+        )
+
+    def withdraw_learned(
+        self, viewer: GuildViewer, key: str, identity: str, revision: int
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            state = load_state(c, self.store.campaign_id)
+            value = prove(self.game, c, state, identity)
+            if (
+                state.revision != revision
+                or value.actor != current_ref(state, viewer.user_id)
+                or value.learned_source is None
+                or value.action is not None
+                or value.phase not in ("invited", "accepted")
+            ):
+                raise WorkflowError(
+                    "Only the original owner may withdraw an unbound learned source"
+                )
+            from girlframe.services.m3_learned_sex import withdraw_invitation
+
+            event = str(uuid4())
+            withdraw_invitation(self.game, c, state, value, event)
+            rules.put(state, value.model_copy(update={"phase": "withdrawn"}))
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.bonded_learned_withdrawn",
+                state,
+                event_id=event,
+                source=identity,
+            )
+            return dict(id=identity, phase="withdrawn")
+
+        return self._write(
+            viewer,
+            key,
+            "m3.bonded_learned_withdrawn",
+            dict(id=identity, revision=revision),
+            operation,
+            rules.SEX,
         )
 
     def confirm(
@@ -1938,8 +2145,18 @@ class BondedService:
                 ),
             )
             rules.put(
-                state, value.model_copy(update=dict(phase="accepted" if accept else "declined"))
+                state,
+                value.model_copy(
+                    update=dict(
+                        phase="accepted" if accept else "declined",
+                        **({"consent_event": event} if value.learned_source else {}),
+                    )
+                ),
             )
+            if value.learned_source is not None:
+                from girlframe.services.m3_learned_sex import record_consent
+
+                record_consent(self.game, c, state, rules.get(state, identity), accept, event)
             self.game.event(
                 c,
                 viewer.user_id,
@@ -2085,6 +2302,10 @@ class BondedService:
                 from girlframe.services.p1_unrolled_sex import offer
 
                 offer(self.game, c, state, rules.get(state, identity), event)
+            if value.learned_source is not None:
+                from girlframe.services.m3_learned_sex import consume_bonded_unrolled
+
+                consume_bonded_unrolled(self.game, c, state, rules.get(state, identity), event)
             self.game.event(
                 c,
                 viewer.user_id,
@@ -2517,6 +2738,11 @@ class BondedService:
             if viewer.user_id not in source.controllers.values():
                 continue
             value = prove(self.game, c, state, source.id)
+            if value.learned_source is not None:
+                from girlframe.services.m3_learned_sex import get as lesson_link
+
+                if lesson_link(state, value.learned_source).released_event is not None:
+                    continue
             chooser: int | None = None
             if value.phase == "invited" and value.target is not None:
                 chooser = value.controllers[value.target.token]
@@ -2561,12 +2787,69 @@ class BondedService:
                     }[value.kind]
                     + " · "
                     + value.phase,
-                    phase="pending" if value.phase not in ("complete", "declined") else "complete",
+                    phase="pending"
+                    if value.phase not in ("complete", "declined", "withdrawn")
+                    else "complete",
                     pending=chooser == viewer.user_id,
                     source_phase=value.phase,
                 )
             )
         return result
+
+    def learned_menu(
+        self, viewer: GuildViewer, lesson: str, channel: int | None = None
+    ) -> dict[str, Any]:
+        with self.store.engine.connect() as c:
+            _access(self.game, c, viewer, rules.SEX)
+            state = load_state(c, self.store.campaign_id)
+            actor = current_ref(state, viewer.user_id)
+            from girlframe.services.m3_learned_sex import admit_offer
+
+            if not admit_offer(self.game, c, state, actor, rules.SEX, lesson):
+                raise WorkflowError("Select your genuine free own-Pair lesson")
+            pair, _ = pair_lineage(self.game, c, state, actor)
+            nonpairs = []
+            if channel is not None:
+                cast = _cast(self.game, c, state, channel)
+                for role in cast.roles:
+                    if role.actor.kind == "pilot" and role.actor not in (actor, pair):
+                        person = _native(self.game, c, state, role.actor)
+                        nonpairs.append(
+                            dict(ref=role.actor.model_dump(mode="json"), label=person.label)
+                        )
+            return dict(
+                revision=state.revision,
+                pair=pair.model_dump(mode="json"),
+                pair_label=state.sheets[pair.entity].callsign,
+                nonpairs=nonpairs,
+                delegated_rules=[
+                    dict(
+                        id=x,
+                        label=rule_book(x)
+                        + (
+                            " source; actual AM performances or "
+                            "native "
+                            "Mockingbird/Alpha/Oldgen/Princess/Newgirl/Stim/Vat"
+                            "grown/Casualty receipt"
+                            if x == "girl.am.sex-play"
+                            else " source; separate consent and roll"
+                        ),
+                    )
+                    for x in current_pair_sex_rules(state, pair)
+                    if x
+                    in (
+                        "girl.mockingbird.sex-play",
+                        "girl.princess.sex-play",
+                        "girl.newgirl.sex-play",
+                        "girl.oldgen.sex-play",
+                        "girl.stim-blissed.sex-play",
+                        "girl.alpha.sex-play",
+                        "girl.vatgrown.sex-play",
+                        "girl.casualty.sex-play",
+                        "girl.am.sex-play",
+                    )
+                ],
+            )
 
     def menu(self, viewer: GuildViewer, channel: int | None = None) -> dict[str, Any]:
         with self.store.engine.connect() as c:
@@ -2587,10 +2870,13 @@ class BondedService:
             if actor is None:
                 return data
             sheet = state.sheets[actor.entity]
-            if not any(has_rule(sheet, rule, "BONDED") for rule in rules.RULES):
+            owned_rule = next(
+                (rule for rule in rules.RULES if has_rule(sheet, rule, "BONDED")), None
+            )
+            if owned_rule is None:
                 return data
-            _access(self.game, c, viewer, rules.PAIR)
-            actual, _ = original_pair(self.game, c, state, actor)
+            _access(self.game, c, viewer, owned_rule)
+            actual, _ = original_pair(self.game, c, state, actor, owned_rule)
             data.update(
                 actor=actor.model_dump(mode="json"),
                 pair=actual.model_dump(mode="json"),
@@ -2764,6 +3050,10 @@ class BondedService:
                 target=value.target.model_dump(mode="json") if value.target else None,
                 channel=value.cast.channel,
                 action=value.action,
+                can_withdraw=value.learned_source is not None
+                and value.action is None
+                and value.phase in ("invited", "accepted")
+                and person == value.actor,
                 can_confirm=value.phase == "invited" and person == value.target,
                 can_roll=value.phase == "accepted"
                 and person == value.actor
@@ -2863,14 +3153,27 @@ def admit_delegation(
         or value.phase not in ("accepted", "bound", "complete")
     ):
         raise WorkflowError("Use the exact original Pair's delegated Sex source and participants")
+    if value.learned_source is not None:
+        from girlframe.services.m3_learned_sex import get as get_lesson
+
+        if get_lesson(state, value.learned_source).released_event is not None:
+            raise WorkflowError("Use a fresh original source after release")
     origin = _history(c, game, value.event)
-    actual_pair, _ = original_pair(game, c, origin, actor, rules.SEX)
+    actual_pair, _ = (
+        pair_lineage(game, c, origin, actor, historical=True)
+        if value.learned_source is not None
+        else original_pair(game, c, origin, actor, rules.SEX, historical=True)
+    )
     if actual_pair != value.pair or not has_rule(
         origin.sheets[actual_pair.entity], rule, rule_book(rule)
     ):
         raise WorkflowError("Preserve the actual source-time Pair's owned Sex rule")
     if value.phase != "complete":
-        current_pair, _ = original_pair(game, c, state, actor, rules.SEX)
+        current_pair, _ = (
+            pair_lineage(game, c, state, actor)
+            if value.learned_source is not None
+            else original_pair(game, c, state, actor, rules.SEX)
+        )
         if current_pair != actual_pair or not has_rule(
             state.sheets[current_pair.entity], rule, rule_book(rule)
         ):

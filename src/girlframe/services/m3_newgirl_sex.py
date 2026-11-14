@@ -8,6 +8,7 @@ import sqlalchemy as sa
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
+from girlframe.engine import m3_bonded as bonded
 from girlframe.engine import m3_newgirl_sex as rules
 from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput, shift_status
 from girlframe.engine.m3_actor_bonds import change, current_ref
@@ -60,7 +61,7 @@ def _contact(
 ) -> None:
     from girlframe.services.m3_bonded import admit_delegation
     from girlframe.services.m3_changeling_sex import admit_contact
-    from girlframe.services.m3_learned_sex import admit_offer, admit_source
+    from girlframe.services.m3_learned_sex import admit_group_source, admit_offer
 
     if (
         sum(
@@ -72,23 +73,17 @@ def _contact(
         raise WorkflowError("Keep actual learned, psychic and Bonded sources separate")
     learned = False
     if value.learned_source is not None:
-        if len(value.partners) != 1:
-            raise WorkflowError(
-                "SOURCE_GROUP_LESSON_REQUIRED: each actual partner needs source proof"
-            )
-        learned = admit_source(
+        learned = admit_group_source(
             game,
             c,
             state,
             value.actor,
-            value.partners[0],
+            value.partners,
             rules.RULE,
             value.learned_source,
             pending_event=pending_event,
         )
     elif lesson_id is not None:
-        if len(value.partners) != 1:
-            raise WorkflowError("SOURCE_GROUP_LESSON_REQUIRED: use one real original partner")
         learned = admit_offer(game, c, state, value.actor, rules.RULE, lesson_id)
     if value.changeling_source is not None and len(value.partners) != 1:
         raise WorkflowError("SOURCE_GROUP_BRAINS_REQUIRED: bind each actual psychic counterpart")
@@ -107,8 +102,7 @@ def _contact(
             (learned or has_rule(state.sheets[value.actor.entity], rules.RULE, "NEWGIRL"))
             if value.bonded_source is None
             else (
-                len(value.partners) == 1
-                and admit_delegation(
+                admit_delegation(
                     game, c, state, value.actor, value.partners[0], rules.RULE, value.bonded_source
                 )
             )
@@ -166,8 +160,10 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         )
 
     from girlframe.services.m3_bonded import prove_delegation
+    from girlframe.services.m3_learned_bonded_newgirl import released_parent
 
-    if value.bonded_source is not None:
+    parent_released = released_parent(game, c, state, value)
+    if value.bonded_source is not None and not parent_released:
         prove_delegation(
             game,
             c,
@@ -182,11 +178,17 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         from girlframe.services.m3_learned_sex import prove as prove_lesson
 
         link = prove_lesson(game, c, state, value.learned_source)
-        if len(value.partners) != 1 or (link.rule_id, link.session, link.actor, link.target) != (
-            rules.RULE,
-            value.id,
-            value.actor,
-            value.partners[0],
+        from girlframe.engine.m3_learned_play_state import sex_party_refs
+
+        if (
+            not value.partners
+            or (link.rule_id, link.session, link.actor)
+            != (
+                rules.RULE,
+                value.id,
+                value.actor,
+            )
+            or sex_party_refs(link) != value.partners
         ):
             raise WorkflowError("Preserve the exact actual learned Newgirl source")
     born = rules.get(_history(c, game, value.proposed_event), identity)
@@ -228,7 +230,18 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
             if any(not x.accepted for x in responses)
             else ("accepted" if {x.person for x in responses} == set(value.partners) else "invited")
         )
-        if value.phase != expected_phase:
+        withdrawn_unused = (
+            value.phase == "withdrawn"
+            and (
+                parent_released
+                or value.learned_source is not None
+                and link.released_kind == "withdrawn"
+                and link.released_event is not None
+            )
+            and value.bound_event is None
+            and value.effect_event is None
+        )
+        if value.phase != expected_phase and not withdrawn_unused:
             raise WorkflowError("Recover the actual independent voluntary confirmation state")
     if value.action:
         if {x.person for x in responses if x.accepted} != set(value.partners) or any(
@@ -487,6 +500,16 @@ def prepare(
     handler = active_handler(state)
     if handler is None:
         raise WorkflowError("Recover the actual original Handler source")
+    # A later independently owned affirmative answer can deepen this Bond.
+    # Body facts cannot be recorded while a Play is pending, so prove the
+    # potential Psychic Strings prerequisite before binding or charging a roll.
+    from girlframe.services.m3_changeling import preflight_deepening
+    from girlframe.services.m3_learned_bonded_newgirl import parent_lesson
+
+    for partner in value.partners:
+        preflight_deepening(game, c, state, value.actor, partner)
+
+    delegated_lesson = parent_lesson(state, value)
     return (
         dict(
             session=value.id,
@@ -503,6 +526,7 @@ def prepare(
         )
         | ({"learned_source": value.learned_source} if value.learned_source is not None else {})
         | ({"bonded_source": value.bonded_source} if value.bonded_source is not None else {})
+        | ({"bonded_lesson": delegated_lesson} if delegated_lesson is not None else {})
         | (
             {"changeling_source": value.changeling_source}
             if value.changeling_source is not None
@@ -1041,6 +1065,80 @@ class NewgirlSexService:
             operation,
         )
 
+    def withdraw(
+        self, viewer: GuildViewer, key: str, identity: str, expected: int
+    ) -> dict[str, Any]:
+        """Owner-only unused source release; never a fictional refusal."""
+
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            state = load_state(c, self.store.campaign_id)
+            value = prove(self.game, c, state, identity)
+
+            if (
+                state.revision != expected
+                or viewer.user_id != int(value.actor.entity)
+                or current_ref(state, viewer.user_id) != value.actor
+                or (value.learned_source is None and value.bonded_source is None)
+                or (
+                    value.bonded_source is not None
+                    and bonded.get(state, value.bonded_source).changeling_source is not None
+                )
+                or value.changeling_source is not None
+                or value.phase not in ("invited", "accepted")
+                or value.action is not None
+                or value.effect_event is not None
+                or value.bound_event is not None
+            ):
+                raise WorkflowError(
+                    "Only the original owner may withdraw this unused original invitation"
+                )
+            actions = t.m2["m2_actions"]
+            if c.scalar(
+                sa.select(actions.c.id).where(
+                    actions.c.campaign_id == self.store.campaign_id,
+                    sa.or_(
+                        sa.func.json_extract(actions.c.body_json, "$.newgirl_sex.session")
+                        == identity,
+                        sa.func.json_extract(actions.c.body_json, "$.prepared.source_work")
+                        == identity,
+                    ),
+                )
+            ):
+                raise WorkflowError(
+                    "Recover the actual original Action; never refund dice or costs"
+                )
+            from girlframe.services.m3_learned_sex import withdraw_invitation
+
+            event = str(uuid4())
+            if value.learned_source is not None:
+                withdraw_invitation(self.game, c, state, value, event)
+            rules.put(state, value.model_copy(update={"phase": "withdrawn"}))
+            if value.bonded_source is not None:
+                from girlframe.services.m3_learned_bonded_newgirl import release
+
+                release(self.game, c, state, identity, viewer.user_id, event)
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.newgirl_sex_withdrawn",
+                state,
+                event_id=event,
+                session=identity,
+            )
+            return dict(id=identity, phase="withdrawn")
+
+        return self.store._write(
+            viewer,
+            key,
+            "m3.newgirl_sex_withdrawn",
+            dict(id=identity, expected=expected),
+            operation,
+            auto_audit=False,
+            authorize=lambda c: _access(self.game, c, viewer),
+        )
+
     def confirm(
         self,
         viewer: GuildViewer,
@@ -1096,6 +1194,14 @@ class NewgirlSexService:
             from girlframe.services.m3_learned_sex import record_partner_consent
 
             record_partner_consent(self.game, c, state, rules.get(state, identity), event)
+            if not accept and value.bonded_source is not None:
+                from girlframe.engine import m3_bonded as bonded
+                from girlframe.services.m3_learned_bonded_newgirl import release
+
+                # Psychic Pair delegation has a separate source lifecycle. Preserve
+                # its actual refusal without claiming this native/learned release.
+                if bonded.get(state, value.bonded_source).changeling_source is None:
+                    release(self.game, c, state, identity, viewer.user_id, event)
             self.game.event(
                 c,
                 viewer.user_id,
@@ -1317,6 +1423,7 @@ class NewgirlSexService:
     def _tasks(self, c: Connection, viewer: GuildViewer) -> list[dict[str, Any]]:
         state = load_state(c, self.store.campaign_id)
         result = []
+        from girlframe.services.m3_learned_bonded_newgirl import parent_lesson
         from girlframe.services.m3_learned_sex import cancelled
 
         for value in rules.records(state, rules.Session):
@@ -1325,7 +1432,9 @@ class NewgirlSexService:
             consented = {
                 x.person for x in rules.records(state, rules.Consent) if x.session == value.id
             }
-            pending = not cancelled(self.game, c, state, value.learned_source) and (
+            pending = not cancelled(
+                self.game, c, state, value.learned_source or parent_lesson(state, value)
+            ) and (
                 value.phase == "invited"
                 and any(
                     x not in consented and value.controllers[x.token] == viewer.user_id
@@ -1339,8 +1448,22 @@ class NewgirlSexService:
                     id=value.id,
                     revision=state.revision,
                     phase="cancelled"
-                    if cancelled(self.game, c, state, value.learned_source)
+                    if cancelled(
+                        self.game, c, state, value.learned_source or parent_lesson(state, value)
+                    )
                     else value.phase,
+                    can_withdraw=(
+                        (
+                            value.learned_source is not None
+                            or (
+                                value.bonded_source is not None
+                                and bonded.get(state, value.bonded_source).changeling_source is None
+                            )
+                        )
+                        and value.phase in ("invited", "accepted")
+                        and value.action is None
+                        and viewer.user_id == int(value.actor.entity)
+                    ),
                     label="Your actual Newgirl intimacy and original Mentor source",
                     pending=pending,
                 )
@@ -1363,7 +1486,9 @@ class NewgirlSexService:
                 )
         return result
 
-    def menu(self, viewer: GuildViewer, channel: int) -> dict[str, Any]:
+    def menu(
+        self, viewer: GuildViewer, channel: int, *, bonded_source: str | None = None
+    ) -> dict[str, Any]:
         with self.store.engine.connect() as c:
             _access(self.game, c, viewer)
             state = load_state(c, self.store.campaign_id)
@@ -1372,8 +1497,21 @@ class NewgirlSexService:
             from girlframe.services.m3_learned_sex import lessons
 
             offered = lessons(self.game, c, state, actor, rules.RULE)
+            required_partner = None
+            if bonded_source is not None:
+                from girlframe.engine import m3_bonded as bonded
+                from girlframe.services.m3_bonded import admit_delegation
+
+                parent = bonded.get(state, bonded_source)
+                if parent.target is None:
+                    raise WorkflowError("Preserve the original delegated counterpart")
+                admit_delegation(self.game, c, state, actor, parent.target, rules.RULE, parent.id)
+                required_partner = parent.target
+                offered = ()
             if actor.kind == "pilot" and (
-                offered or has_rule(state.sheets[actor.entity], rules.RULE, "NEWGIRL")
+                bonded_source is not None
+                or offered
+                or has_rule(state.sheets[actor.entity], rules.RULE, "NEWGIRL")
             ):
                 cast = _cast(self.game, c, state, channel)
                 own = _native(self.game, c, state, actor)
@@ -1397,6 +1535,9 @@ class NewgirlSexService:
             return dict(
                 revision=state.revision,
                 partners=options,
+                required_partner=required_partner.model_dump(mode="json")
+                if required_partner
+                else None,
                 history=self._tasks(c, viewer),
                 lessons=offered,
                 mentors=[x.model_dump(mode="json") for x in active_mentors(state, actor)],
@@ -1439,9 +1580,12 @@ class NewgirlSexService:
                     "Only original actual participants read this private intimacy source"
                 )
             consents = _consents(self.game, c, state, value)
+            from girlframe.services.m3_learned_bonded_newgirl import parent_lesson
             from girlframe.services.m3_learned_sex import cancelled
 
-            ended = cancelled(self.game, c, state, value.learned_source)
+            ended = cancelled(
+                self.game, c, state, value.learned_source or parent_lesson(state, value)
+            )
             discovery_targets = []
             if value.phase == "complete" and viewer.user_id == int(value.actor.entity):
                 try:
@@ -1527,4 +1671,15 @@ def _source_mentors(
     if value.target is None:
         raise WorkflowError("Use the actual delegated counterpart")
     admit_delegation(game, c, state, actor, value.target, rules.RULE, bonded_source)
-    return active_mentors(state, actor), value.event
+    mentors = active_mentors(state, actor)
+    if value.learned_source is not None:
+        from girlframe.engine.m3_mentorship import current_set
+
+        previous = current_set(state, actor)
+        if previous is not None:
+            prove_mentor_set(game, c, state, previous)
+            if mentors != previous.mentors:
+                raise WorkflowError("Preserve the actual learned actor's own Mentor lineage")
+        elif mentors:
+            raise WorkflowError("SOURCE_MENTOR_PROVENANCE_REQUIRED: prove the actual relationship")
+    return mentors, value.event

@@ -341,7 +341,8 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
                 return (
                     "Private NPC role invitation saved. The invited human must answer."
                     if invited
-                    else "NPC introduced. Another human can explicitly claim a revealed NPC's role."
+                    else "NPC introduced under your control. "
+                    "Offer a transfer before another human plays it."
                 )
 
             fields = [
@@ -428,7 +429,10 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
 async def open_npc_role(
     interaction: discord.Interaction, service: WorldService, *, bond: bool
 ) -> None:
+    from girlframe.services.m3_npc_roles import NpcRoleService
+
     viewer = viewer_from_interaction(interaction)
+    roles = NpcRoleService(service)
     data = await asyncio.to_thread(
         service.bond_options if bond else service.control_options, viewer
     )
@@ -438,8 +442,16 @@ async def open_npc_role(
             interaction,
             "No matching unlinked starting NPC Bond."
             if bond
-            else "No revealed living NPC is available.",
+            else "No living NPC is under your control. Ask its controller for a role invitation.",
         )
+        return
+    members = (
+        (await asyncio.to_thread(roles.members, viewer, transfer=True))["members"]
+        if not bond
+        else ()
+    )
+    if not bond and not members:
+        await reply(interaction, "Another joined campaign member is needed for a role transfer.")
         return
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
@@ -458,19 +470,23 @@ async def open_npc_role(
             )
             return "Your own starting NPC Bond is linked. Private feelings remain private."
         await asyncio.to_thread(
-            service.claim_npc,
+            roles.offer_transfer,
             viewer_from_interaction(current),
             str(current.id),
             data["game_revision"],
             selected,
+            int(values["recipient"][0]),
         )
-        return "You now play this NPC. Choose their actions during the conversation."
+        return "Private transfer offered. You keep control until the invited human accepts."
 
     form = NativeForm(
         viewer.user_id,
-        "Link your own starting NPC" if bond else "Play an NPC",
-        "Your confirmation records only this selected role or your own saved starting Bond.",
-        [Field("npc", "Choose an available NPC", tuple(options))],
+        "Link your own starting NPC" if bond else "Offer your NPC role",
+        "Confirm your own starting Bond."
+        if bond
+        else "Offer this exact NPC to one member. They must accept in their requests inbox.",
+        [Field("npc", "Choose your NPC", tuple(options))]
+        + ([Field("recipient", "Invite a campaign member", tuple(members))] if not bond else []),
         submit,
     )
     await reply(interaction, form.text(), form)

@@ -1,0 +1,7 @@
+# Ankou Bond-rewrite Feedback → native pin response
+
+Printed rules checked directly in Girl Frame 2026_09_01 PDF84/printed82: the Pilot may cut off an actual Bond and rewrite it as an Asset. PDF22/printed20: an actual high Beneath pin asks the pinned person how she plays it. The prior standalone pin validator required accepted purpose, incorrectly excluding an already-resolved Bond-rewrite Feedback.
+
+This bounded change admits the actual resolved Bond choice only when its choice and resolution event match, the original Bond was positive and became zero, and the installed psychological Girl Asset is still present. Existing original identities, actors/controllers, cast, receipts, pin, owned response, pending requirement and source guards remain. No tear, unresolved/refused purpose, borrowed, nested Bond-source or piloted scope is added. Existing accepted-purpose behavior is retained.
+
+Authored normal: `tests/rules/test_ankou_bond_pin.py::test_bond_rewrite_feedback_high_pin_continues_owned_keep`. It uses actual UI/worker/source, commits the real Bond Asset, then high pin and independently owned Keep response. It checks missing-Asset rejection, wrong-controller rejection, delayed completion, receipt reuse, restart and privacy. Worker did not run pytest; root runtime and independent review pending. Full regression and other choices/result tiers remain pending. Bot off; no upload/deploy/merge.

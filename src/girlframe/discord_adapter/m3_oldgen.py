@@ -34,6 +34,7 @@ async def open_choice(
                 "Optional actual Identity or maxim to unmark",
                 tuple(detail["unmark"]),
                 minimum=0,
+                required=False,
             )
         )
 

@@ -52,6 +52,19 @@ async def open_malleable(
         return
     data = await asyncio.to_thread(service.menu, viewer, channel)
     options = [("history:" + x["id"], x["label"]) for x in data["history"]]
+    if data.get("own_alteration"):
+        options.append(
+            (
+                "own:alteration",
+                "End my actual altered state"
+                if data["own_alteration"]["active"]
+                else "Record my actual altered state",
+            )
+        )
+    options.extend(
+        ("intoxication:" + x["id"], "Classify my actual Tag: " + x["label"])
+        for x in data.get("intoxication_candidates", [])
+    )
     for npc in data["npcs"]:
         subject = ActorRef.model_validate(npc["ref"])
         active = next((x for x in data["alterations"] if x["subject"] == npc["ref"]), None)
@@ -72,6 +85,68 @@ async def open_malleable(
         action, selected = values["action"][0].split(":", 1)
         if action == "history":
             await open_malleable(current, service, selected)
+            return None
+        if action == "intoxication":
+
+            async def classify(response: discord.Interaction, answer: dict[str, Any]) -> str:
+                await asyncio.to_thread(
+                    service.classify_intoxication_tag,
+                    viewer_from_interaction(response),
+                    str(response.id),
+                    selected,
+                    data["revision"],
+                    answer["account"],
+                )
+                return (
+                    "Your actual Tag classification is recorded; "
+                    "no drug or altered state is inferred."
+                )
+
+            form = NativeForm(
+                current.user.id,
+                "My actual drug or intoxication Tag",
+                "Confirm only if this original Tag represents drugs or intoxication. "
+                "This permits the printed self-mark exception, "
+                "not an automatic condition or effect.",
+                [
+                    Field(
+                        "account",
+                        "How this actual Tag represents drugs or intoxication",
+                        paragraph=True,
+                    )
+                ],
+                classify,
+            )
+            await reply(current, form.text(), form)
+            return None
+        if action == "own":
+            own = data["own_alteration"]
+
+            async def attest(response: discord.Interaction, answer: dict[str, Any]) -> str:
+                await asyncio.to_thread(
+                    service.record_player_alteration,
+                    viewer_from_interaction(response),
+                    str(response.id),
+                    channel,
+                    ActorRef.model_validate(own["ref"]),
+                    data["revision"],
+                    answer["account"],
+                    ending=own["active"],
+                )
+                return (
+                    "Your own actual altered-state fact is recorded; "
+                    "no consent or drug is inferred."
+                )
+
+            form = NativeForm(
+                current.user.id,
+                "My actual altered state",
+                "Describe only your character's actual altered state or its ending. "
+                "This is your attributed source fact, not an automatic drug, consent or outcome.",
+                [Field("account", "My actual condition or ending", paragraph=True)],
+                attest,
+            )
+            await reply(current, form.text(), form)
             return None
         npc = next(x for x in data["npcs"] if ActorRef.model_validate(x["ref"]).token == selected)
         subject = ActorRef.model_validate(npc["ref"])

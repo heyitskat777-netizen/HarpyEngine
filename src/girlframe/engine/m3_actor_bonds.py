@@ -360,6 +360,10 @@ def is_helpless(state: GameState, subject: ActorRef, foe: ActorRef | None = None
 
     if casualty_helpless(state, subject, foe):
         return True
+    from girlframe.engine.m3_changeling import whip_helpless
+
+    if whip_helpless(state, subject):
+        return True
     if any(
         x.active
         and _same_body(state, x.subject, subject)

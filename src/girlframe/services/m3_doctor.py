@@ -10,7 +10,7 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_doctor as rules
 from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput
-from girlframe.engine.m3_actor_bonds import current_ref, is_helpless
+from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.services.m2_state import load_state
@@ -69,7 +69,42 @@ def authorize(
     actor = ActorRef.model_validate(meta["actor"])
     rules.sheet(state, actor, source_frame=meta["frame"] if meta.get("track_event") else None)
     target = ActorRef.model_validate(meta["target"])
-    resolve(state, target, profiles(c, game.store.campaign_id), require_current_profile=False)
+    actual = resolve(
+        state, target, profiles(c, game.store.campaign_id), require_current_profile=False
+    )
+    if target.kind == "npc":
+        from girlframe.services.m3_doctor_npc import contact as npc_contact
+        from girlframe.services.m3_doctor_npc import support_contact
+
+        play = action["data"]["play"]
+        contact = (support_contact if play == "doctor_support" else npc_contact)(
+            game, c, state, actor, target
+        )
+        if (
+            play not in PLAYS
+            or actual.rules != "npc"
+            or actual.controller != meta["target_controller"]
+            or actual.vessel_id != meta.get("target_vessel")
+            or contact != meta.get("npc_contact")
+        ):
+            raise WorkflowError(
+                "Recover the original NPC counterpart, controller and reachable body"
+            )
+
+
+def require_nanobot_patient(target: ActorRef) -> None:
+    """Admission only: retain already rolled NPC choices for truthful recovery.
+
+    Printed p70 requires a real repair on low and Heat on mid/high.  NPC
+    treatment has no complete resource port, even when a removable effect exists.
+    Do not spend Heat/Obsolescence or roll into a known unsupported outcome.
+    """
+    if target.kind == "npc":
+        raise WorkflowError(
+            "NPC Nanobot Injection is unavailable before rolling: required NPC "
+            "repair, Heat and Identity outcomes are not implemented. "
+            "Choose a supported Pilot patient; NPC Here for Support is separate."
+        )
 
 
 def prepare(
@@ -101,7 +136,25 @@ def prepare(
     if prepared.play == "doctor_support" and target == actor:
         raise WorkflowError("Hide behind another actual person")
     actual = resolve(state, target, profiles(c, game.store.campaign_id))
-    if target.kind != "pilot" or actual.rules != "girl_frame":
+    contact = None
+    if target.kind == "npc":
+        from girlframe.services.m3_doctor_care import npc_targets
+        from girlframe.services.m3_doctor_npc import contact as npc_contact
+        from girlframe.services.m3_doctor_npc import support_contact
+
+        if (
+            actual.rules != "npc"
+            or actual.offstage_source
+            or target.token
+            not in {row["token"] for row in npc_targets(game, viewer, channel, state.revision)}
+        ):
+            raise WorkflowError("Choose an actual visible current NPC patient from this scene")
+        contact = (support_contact if prepared.play == "doctor_support" else npc_contact)(
+            game, c, state, actor, target
+        )
+        if prepared.play == "nanobot_injection":
+            require_nanobot_patient(target)
+    elif target.kind != "pilot" or actual.rules != "girl_frame":
         raise WorkflowError("This native medical port requires an actual original Pilot")
     cast = _cast(game, c, state, channel)
     if not any(x.actor == actor and x.controller == viewer.user_id for x in cast.roles) or not any(
@@ -123,6 +176,8 @@ def prepare(
         target=target.model_dump(mode="json"),
         frame=rules.frame_id(state, actor),
         target_controller=actual.controller,
+        target_vessel=actual.vessel_id,
+        npc_contact=contact,
         actor_controller=viewer.user_id,
         judge=controller,
         judge_actor=judge.model_dump(mode="json") if judge else None,
@@ -191,6 +246,29 @@ def results(game: "GameService", c: Connection, state: GameState, action: dict[s
                 dict(may_refuse=level == "high"),
             )
         return
+    if target.kind == "npc":
+        amount = (
+            5
+            if level == "high"
+            else (int(action["data"]["receipt"]["heat"]) if level == "mid" else 0)
+        )
+        action["data"]["result"]["npc_heat"] = dict(
+            printed_gain=amount, applied_gain=0, resource=None
+        )
+        if level == "mid" and effects(state, target, meta["actor_controller"]):
+            game.request(c, action, meta["actor_controller"], "doctor_nanobot_benefits")
+        else:
+            game.request(
+                c,
+                action,
+                meta["target_controller"],
+                "doctor_patient",
+                dict(
+                    unsupported="This NPC Nanobot result needs an actual resource outcome port; "
+                    "the original result remains pending, without invented Assets or Identities."
+                ),
+            )
+        return
     if level == "low":
         game.request(
             c, action, meta["target_controller"], "doctor_patient", dict(repair=1, identity=False)
@@ -206,6 +284,10 @@ def results(game: "GameService", c: Connection, state: GameState, action: dict[s
 
 
 def effects(state: GameState, target: ActorRef, doctor: int) -> list[dict[str, str]]:
+    if target.kind == "npc":
+        from girlframe.services.m3_doctor_npc import effects as npc_effects
+
+        return npc_effects(state, target)
     sheet = state.sheets[target.entity]
     from girlframe.engine.m3_beneath import rejection_blocked
     from girlframe.engine.m3_girl_runtime_state import mentor_tag
@@ -217,8 +299,18 @@ def effects(state: GameState, target: ActorRef, doctor: int) -> list[dict[str, s
         and not mentor_tag(sheet, x, state)
         and not rejection_blocked(state, sheet.owner, x.id)
     ]
-    if is_helpless(state, target):
+    from girlframe.engine.m3_ankou import helpless as ankou_helpless
+    from girlframe.services.m3_doctor_stim import effects as stim_effects
+
+    # Generic recovery only clears these actual sources. Other playbook physiology
+    # needs its own consumer, not a successful response that leaves the effect intact.
+    if (
+        sheet.helpless_against
+        or any(x.active and x.subject == target for x in state.helpless_conditions)
+        or ankou_helpless(state, target)
+    ):
         result.append(dict(id="helpless", label="Remove actual Helplessness"))
+    result.extend(stim_effects(state, target))
     from girlframe.engine.m3_enforcer import conditioning
 
     if conditioning(state, target):
@@ -235,8 +327,26 @@ def projection(
 ) -> dict[str, Any]:
     meta = action["data"]["doctor"]
     target = ActorRef.model_validate(meta["target"])
-    patient = state.sheets[target.entity]
     body = json.loads(row["body_json"])
+    if action["data"]["play"] == "doctor_support":
+        # Protection does not authorize browsing the counterpart's medical effects.
+        return dict(kind=row["kind"], npc=target.kind == "npc")
+    if target.kind == "npc":
+        return dict(
+            kind=row["kind"],
+            minimum=1,
+            maximum=1,
+            effects=effects(state, target, meta["actor_controller"]),
+            assets=[],
+            identities=[],
+            repair=0,
+            modular=[],
+            identity=False,
+            npc=True,
+            effect=body.get("effect"),
+            unsupported=body.get("unsupported"),
+        )
+    patient = state.sheets[target.entity]
     from girlframe.services.m3_modular import repair_options
 
     return dict(
@@ -276,7 +386,15 @@ def apply(
     if row["kind"] == "doctor_handler":
         raise WorkflowError("Complete the actual source-owned Handler Play, not an acknowledgment")
     elif row["kind"] == "doctor_support_response":
-        if answer.options not in (("protect",), ("refuse",)) or set(answer.fields) - {"bond"}:
+        if (
+            answer.options not in (("protect",), ("refuse",))
+            or set(answer.fields) - {"bond"}
+            or answer.denied
+            or answer.number is not None
+            or answer.member is not None
+            or answer.flag is not None
+            or answer.text
+        ):
             raise WorkflowError("Choose the actual protection decision and optional Bond")
         refusing = answer.options == ("refuse",)
         if refusing and action["data"]["result"]["tier"] != "high":
@@ -305,7 +423,15 @@ def apply(
         if refusing:
             game.request(c, action, meta["actor_controller"], "doctor_support_refused")
     elif row["kind"] == "doctor_support_refused":
-        if answer.options == ("status",) and not answer.text:
+        if (
+            answer.denied
+            or answer.fields
+            or answer.number is not None
+            or answer.member is not None
+            or answer.flag is not None
+        ):
+            raise WorkflowError("Choose only the actual original refusal consequence")
+        if answer.options == ("status",) and not answer.text and target.kind == "pilot":
             from girlframe.engine.m2 import shift_status
 
             shift_status(state, int(target.entity), -1)
@@ -313,19 +439,56 @@ def apply(
             from girlframe.engine.m2 import TagState
 
             actor = ActorRef.model_validate(meta["actor"])
-            state.sheets[target.entity].tags.append(
-                TagState(
-                    id="doctor:" + row["id"],
-                    label=answer.text,
-                    giver=int(actor.entity),
-                    giver_actor=actor,
-                    giver_character=actor.incarnation,
-                    observers=tuple(meta["table"]),
+            if target.kind == "npc":
+                from girlframe.engine.m3_mockingbird import give_tag
+
+                _copy(
+                    state,
+                    give_tag(
+                        state,
+                        profiles(c, game.store.campaign_id),
+                        target,
+                        actor,
+                        answer.text,
+                        "doctor:" + row["id"],
+                        event,
+                        tuple(meta["table"]),
+                    ),
                 )
-            )
+            else:
+                state.sheets[target.entity].tags.append(
+                    TagState(
+                        id="doctor:" + row["id"],
+                        label=answer.text,
+                        giver=int(actor.entity),
+                        giver_actor=actor,
+                        giver_character=actor.incarnation,
+                        observers=tuple(meta["table"]),
+                    )
+                )
         else:
-            raise WorkflowError("Choose a real new Tag or lower the actual protector's Status")
+            raise WorkflowError("Give the original NPC a Tag, or lower an actual Pilot's Status")
     elif row["kind"] == "doctor_nanobot_benefits":
+        if target.kind == "npc":
+            from girlframe.services.m3_doctor_npc import select
+
+            if (
+                action["data"]["result"]["tier"] != "mid"
+                or answer.options != ("remove",)
+                or set(answer.fields) != {"effect"}
+                or answer.denied
+                or answer.number is not None
+                or answer.member is not None
+                or answer.flag is not None
+                or answer.text
+            ):
+                raise WorkflowError("Choose the genuine NPC mid-result removal, not sheet benefits")
+            npc_selected = select(game, c, state, target, answer.fields["effect"])
+            meta["choices"] = ["remove"]
+            game.request(
+                c, action, meta["target_controller"], "doctor_patient", dict(effect=npc_selected)
+            )
+            return
         minimum = 2 if action["data"]["result"]["tier"] == "high" else 1
         if (
             len(answer.options) not in range(minimum, 3)
@@ -348,6 +511,10 @@ def apply(
                 patient.tags = [x for x in patient.tags if x.id != selected.removeprefix("tag:")]
                 ChoiceEngine(game).tag_resolved(state, patient.owner, selected.removeprefix("tag:"))
                 patient.revision += 1
+            elif selected.startswith("stim_helpless:"):
+                from girlframe.services.m3_doctor_stim import remove
+
+                remove(game, c, state, target, selected, event, action["id"])
             elif selected == "helpless":
                 from girlframe.engine.m3_actor_bonds import clear_helpless
 
@@ -379,6 +546,52 @@ def apply(
         )
     elif row["kind"] == "doctor_patient":
         body = json.loads(row["body_json"])
+        if target.kind == "npc":
+            from girlframe.services.m3_doctor_npc import remove as remove_npc_drug
+
+            if body.get("unsupported"):
+                raise WorkflowError(body["unsupported"])
+            if (
+                int(row["actor_id"]) != meta["target_controller"]
+                or action["data"]["result"]["tier"] != "mid"
+                or meta["choices"] != ["remove"]
+                or not body.get("effect")
+                or answer.options != ("confirm",)
+                or answer.denied
+                or answer.fields
+                or answer.number is not None
+                or answer.flag is not None
+                or answer.member is not None
+                or answer.text
+            ):
+                raise WorkflowError("Only the original NPC controller confirms this actual removal")
+            remove_npc_drug(game, c, state, target, body["effect"], event, action["id"])
+            action["data"]["result"]["doctor_care"] = dict(
+                patient=target.model_dump(mode="json"),
+                benefits=meta["choices"],
+                effect=body["effect"]["id"],
+                assets=[],
+            )
+            # Legacy actions may have rolled before NPC admission was closed.
+            # Keep their real, confirmed removal, but never certify treatment
+            # while the printed Heat award still has no actual resource port.
+            heat = action["data"]["result"].get("npc_heat", {})
+            required_gain = int(action["data"]["receipt"]["heat"])
+            if required_gain > int(heat.get("applied_gain", 0)):
+                game.request(
+                    c,
+                    action,
+                    meta["target_controller"],
+                    "doctor_patient",
+                    dict(
+                        unsupported="The confirmed NPC effect removal is preserved, but the "
+                        "mandatory Nanobot Heat award remains pending without an actual NPC "
+                        "resource outcome port. Do not repeat the removal or invent Heat."
+                    ),
+                )
+            elif not game.pending(c, action["id"]):
+                ChoiceEngine(game).finish(c, state, action)
+            return
         if (
             answer.denied
             or answer.number is not None
@@ -549,9 +762,13 @@ class DoctorService:
                 track=value.obsolescence_marked,
                 choices=[],
                 targets=[],
+                nurse_targets=[],
                 wings_assets=[],
             )
             from girlframe.services.m3_doctor_requisitions import options
+            from girlframe.services.m3_doctor_wings import replacements
+
+            result["wings_replacements"] = replacements(state, actor)
 
             result["acquisitions"], result["held"] = options(self.game, c, state, actor)
             try:
@@ -566,11 +783,43 @@ class DoctorService:
                     result["choices"].append(dict(id="doctor_support", label="Here for Support"))
             except (WorkflowError, ValueError):
                 pass
+            from girlframe.services.m3_doctor_care import npc_targets
+
+            result["nurse_targets"] = npc_targets(self.game, viewer, channel, state.revision)
+            from girlframe.services.m3_doctor_npc import contact as npc_contact
+            from girlframe.services.m3_doctor_npc import support_contact
+
+            result["npc_nanobot_targets"] = []
+            result["npc_support_targets"] = []
+            for row in result["nurse_targets"]:
+                if rules.SUPPORT in result["held"]:
+                    try:
+                        support_contact(
+                            self.game, c, state, actor, ActorRef.model_validate(row["ref"])
+                        )
+                    except (WorkflowError, ValueError):
+                        pass
+                    else:
+                        result["npc_support_targets"].append(row)
+                try:
+                    npc_contact(self.game, c, state, actor, ActorRef.model_validate(row["ref"]))
+                    require_nanobot_patient(ActorRef.model_validate(row["ref"]))
+                except (WorkflowError, ValueError):
+                    continue
+                result["npc_nanobot_targets"].append(row)
             cast = _cast(self.game, c, state, channel)
             for role in cast.roles:
                 if role.actor.kind != "pilot":
                     continue
                 actual = resolve(state, role.actor, profiles(c, self.store.campaign_id))
+                if role.actor != actor and actual.rules == "girl_frame":
+                    result["nurse_targets"].append(
+                        dict(
+                            ref=role.actor.model_dump(mode="json"),
+                            token=role.actor.token,
+                            label=actual.label,
+                        )
+                    )
                 if actual.rules == "girl_frame":
                     result["targets"].append(
                         dict(

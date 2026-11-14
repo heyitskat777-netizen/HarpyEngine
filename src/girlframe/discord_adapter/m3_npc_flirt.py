@@ -67,7 +67,13 @@ async def open_choice(
                 "text",
                 "What pushes you away?"
                 if data["tier"] == "low"
-                else QUESTIONS.get(data["question"], "Your actual NPC answer and wanted outcome"),
+                else (
+                    QUESTION_TEXT
+                    if data["question"] == QUESTION
+                    else QUESTIONS.get(
+                        data["question"], "Your actual NPC answer and wanted outcome"
+                    )
+                ),
                 paragraph=True,
             )
         ]

@@ -1,7 +1,7 @@
 """Actual owned cocktail choices, vein-contact source and private drug history."""
 
 import asyncio
-from typing import Any
+from typing import Any, Literal, cast
 
 import discord
 
@@ -171,14 +171,53 @@ async def open_dose_up(
             )
         else:
             sheet = await asyncio.to_thread(service.game.sheet, viewer_from_interaction(current))
-            fields = [
-                Field(
-                    "heat",
-                    "Heat actually spent",
-                    tuple((str(x), str(x)) for x in range(sheet["heat"] + 1)),
-                ),
-                Field("account", "Your actual dosing trigger", paragraph=True),
-            ]
+            native_marking = sheet["girl"] == "STIM-BLISSED"
+            fields = []
+            if native_marking:
+                identities = [x for x in sheet["identities"] if not x["marked"]]
+                if identities:
+                    fields.append(
+                        Field(
+                            "identity",
+                            "Optional actual Identity to mark",
+                            tuple((x["id"], x["name"]) for x in identities),
+                            minimum=0,
+                            required=False,
+                        )
+                    )
+                    fields.extend(
+                        [
+                            Field(
+                                "gain",
+                                "Identity Heat gained",
+                                tuple((str(x), str(x)) for x in range(4)),
+                                required=False,
+                            ),
+                            Field(
+                                "disposable_heat",
+                                "Optional actual Identity disposal",
+                                (
+                                    ("0", "Keep the marked Identity"),
+                                    ("3", "Remove it: 3 extra Heat"),
+                                    ("4", "Remove it: 4 extra Heat"),
+                                ),
+                                required=False,
+                            ),
+                        ]
+                    )
+            fields.extend(
+                [
+                    Field(
+                        "heat",
+                        "Heat actually spent",
+                        tuple(
+                            (str(x), str(x))
+                            for x in range(sheet["heat"] + (8 if native_marking else 1))
+                        ),
+                    ),
+                    Field("account", "Your actual dosing trigger", paragraph=True),
+                ]
+            )
             if selected == "self" and data["orders"] and required is None:
                 fields.append(
                     Field(
@@ -201,6 +240,12 @@ async def open_dose_up(
                     PlayInput(
                         play="dose_up",
                         heat=int(answer["heat"][0]),
+                        identity=next(iter(answer.get("identity", ())), None),
+                        gain=int(next(iter(answer.get("gain", ())), "0")),
+                        disposable_heat=cast(
+                            Literal[0, 3, 4],
+                            int(next(iter(answer.get("disposable_heat", ())), "0")),
+                        ),
                         context=answer["account"],
                         trigger_confirmed=True,
                         source_work=required["recipe"]
@@ -219,7 +264,8 @@ async def open_dose_up(
             form = NativeForm(
                 current.user.id,
                 "Dose Up",
-                "Spend actual Heat and make the real Play. "
+                "Spend actual Heat and make the real Play. At five Heat or more, spend all. "
+                "A final Ankou Identity mark resolves Feedback before the roll. "
                 "Drug Tags last two actual recipient-participated scenes, including this scene.",
                 fields,
                 play,

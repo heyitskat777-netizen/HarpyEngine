@@ -310,6 +310,133 @@ def test_sensors_exact_questions_and_human_answers(ledger, faces, count):
     assert game.inspect(PLAYER, action)["state"] == "complete"
 
 
+@pytest.mark.parametrize(
+    "offset", [0, 3], ids=["foundation-and-satellites", "rest-civilians-orders"]
+)
+def test_high_sensors_printed_custom_questions_are_listed(ledger, offset):
+    from girlframe.discord_adapter.m2_ui import choice_fields
+    from girlframe.engine.m2 import QUESTIONS, SENSOR_QUESTION_TEXT
+
+    game, worker, gateway, dice = setup_game(ledger, faces=(6, 6))
+    action = start(game, play="check_sensors")
+    tick(worker, gateway)
+    pass_tags(game)
+    selected_questions = QUESTIONS[offset : offset + 3]
+    answer(
+        game,
+        PLAYER,
+        "actor_sensors",
+        fields={f"q{i}": SENSOR_QUESTION_TEXT[key] for i, key in enumerate(selected_questions, 1)},
+    )
+    pending = next(x for x in game.choices(ADMIN) if x["kind"] == "handler_sensors")
+    decision = game.decision(ADMIN, pending["id"])
+    assert decision["result"]["questions"] == list(selected_questions)
+    assert decision["result"]["off_list"] is False
+    assert [field.key for field in choice_fields(decision)] == [
+        "fields.a1",
+        "fields.a2",
+        "fields.a3",
+    ]
+    answers = {f"a{i}": f"Actual human answer {i}" for i in range(1, 4)}
+    with pytest.raises(WorkflowError):
+        game.respond(
+            PLAYER,
+            "not-the-handler",
+            pending["id"],
+            pending["revision"],
+            ChoiceAnswer(fields=answers),
+        )
+    with pytest.raises(WorkflowError, match="each required answer"):
+        answer(game, ADMIN, "handler_sensors", fields={"a1": "Only the first answer"})
+    answer(game, ADMIN, "handler_sensors", fields=answers)
+    completed = game.inspect(PLAYER, action)
+    assert completed["state"] == "complete"
+    assert completed["result"]["answers"] == answers
+    assert completed["result"]["off_list"] is False
+    assert completed["result"]["consequence"] == []
+    assert not state(game).obligations
+    assert dice.calls == 1
+
+
+def test_sensors_mixed_questions_and_saved_pending_flag_keep_order(ledger):
+    from girlframe.engine.m2 import QUESTIONS, SENSOR_QUESTION_TEXT
+
+    game, worker, gateway, dice = setup_game(ledger, faces=(6, 6))
+    action = start(game, play="check_sensors")
+    tick(worker, gateway)
+    pass_tags(game)
+    custom = {
+        "q3": SENSOR_QUESTION_TEXT[QUESTIONS[2]],
+        "q1": "  What does the Foundation\nwant us to avoid?  ",
+    }
+    answer(game, PLAYER, "actor_sensors", options=(QUESTIONS[0],), fields=custom)
+    pending = next(x for x in game.choices(ADMIN) if x["kind"] == "handler_sensors")
+    assert game.decision(ADMIN, pending["id"])["result"]["questions"] == list(QUESTIONS[:3])
+    # Recreate only the older stored pending representation in this synthetic database.
+    # There is no migration or completed-history rewrite in production.
+    legacy_questions = [QUESTIONS[0], custom["q1"], custom["q3"]]
+    with ledger.transaction() as c:
+        saved = game.action(c, action)
+        saved["data"]["result"].update(questions=legacy_questions, off_list=True)
+        game.save_action(c, saved)
+    with ledger.engine.connect() as c:
+        before = game.action(c, action)
+    restarted = GameService(ledger, dice=dice)
+    decision = restarted.decision(ADMIN, pending["id"])
+    assert decision["result"]["off_list"] is False
+    assert decision["result"]["questions"] == legacy_questions
+    with ledger.engine.connect() as c:
+        assert game.action(c, action) == before
+    answers = {"a1": "Destination", "a2": "Foundation avoidance", "a3": "Satellite report"}
+    answer(restarted, ADMIN, "handler_sensors", fields=answers)
+    result = restarted.inspect(PLAYER, action)["result"]
+    assert result["answers"] == answers and result["questions"] == legacy_questions
+    assert result["off_list"] is False and result["consequence"] == []
+    assert not state(restarted).obligations and dice.calls == 1
+
+
+def test_low_sensors_still_requires_one_listed_question(ledger):
+    game, worker, gateway, dice = setup_game(ledger, faces=(2, 3))
+    action = start(game, play="check_sensors")
+    tick(worker, gateway)
+    pass_tags(game)
+    with pytest.raises(WorkflowError, match="printed question count"):
+        answer(game, PLAYER, "actor_sensors", fields={"q1": "Where can I find a gun?"})
+    with pytest.raises(WorkflowError, match="exact legal options"):
+        answer(
+            game, PLAYER, "actor_sensors", options=("foundation_destination", "foundation_avoid")
+        )
+    # Listed-only is a rule about the question, not the input control used.
+    answer(game, PLAYER, "actor_sensors", fields={"q1": "Where does the Foundation want us to go?"})
+    answer(game, ADMIN, "handler_sensors", fields={"a1": "Human-provided Foundation destination"})
+    assert game.inspect(PLAYER, action)["result"]["questions"] == ["foundation_destination"]
+    assert not state(game).obligations and dice.calls == 1
+
+
+def test_mid_sensors_custom_question_keeps_two_answer_quota_without_consequence(ledger):
+    game, worker, gateway, dice = setup_game(ledger, faces=(4, 5))
+    action = start(game, play="check_sensors")
+    tick(worker, gateway)
+    pass_tags(game)
+    with pytest.raises(WorkflowError, match="printed question count"):
+        answer(game, PLAYER, "actor_sensors", options=("foundation_destination",))
+    answer(
+        game,
+        PLAYER,
+        "actor_sensors",
+        options=("foundation_destination",),
+        fields={"q1": "Where can I find a gun?"},
+    )
+    answers = {"a1": "Foundation destination", "a2": "Actual human answer"}
+    with pytest.raises(WorkflowError, match="No extra consequence"):
+        answer(game, ADMIN, "handler_sensors", fields=answers, options=("punishment_later",))
+    answer(game, ADMIN, "handler_sensors", fields=answers)
+    result = game.inspect(PLAYER, action)["result"]
+    assert result["off_list"] is True and result["consequence"] == []
+    assert result["questions"] == ["foundation_destination", "Where can I find a gun?"]
+    assert not state(game).obligations and dice.calls == 1
+
+
 @pytest.mark.parametrize("depth", [0, 1, 2])
 def test_one_postroll_tag_bond_bonus_and_observer_auth(ledger, depth):
     game, worker, gateway, dice = setup_game(ledger)
@@ -881,16 +1008,25 @@ def test_high_sensors_offlist_requires_real_handler_choice(ledger, consequence):
         game,
         PLAYER,
         "actor_sensors",
+        options=("foundation_destination",),
         fields={
-            "q1": "First custom question",
-            "q2": "Second custom question",
-            "q3": "Third custom question",
+            "q1": "What does the Foundation want us to avoid?",
+            "q2": "Where can I find a gun?",
         },
     )
     answers = {"a1": "First human answer", "a2": "Second human answer", "a3": "Third human answer"}
     with pytest.raises(WorkflowError):
         answer(game, ADMIN, "handler_sensors", fields=answers)
+    with pytest.raises(WorkflowError):
+        answer(
+            game,
+            ADMIN,
+            "handler_sensors",
+            options=("incomplete_information", "punishment_later"),
+            fields=answers,
+        )
     answer(game, ADMIN, "handler_sensors", options=(consequence,), fields=answers)
+    assert game.inspect(PLAYER, action)["result"]["off_list"] is True
     assert game.inspect(PLAYER, action)["result"]["consequence"] == [consequence]
     assert any(x.kind == "punishment" for x in state(game).obligations) == (
         consequence == "punishment_later"

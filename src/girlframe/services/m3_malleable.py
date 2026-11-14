@@ -69,13 +69,23 @@ def _audit(game: GameService, c: Connection, event: str, kind: str, controller: 
         raise WorkflowError("Recover the original human-authored canonical fact")
 
 
+def _alteration_subject(game: GameService, c: Connection, state: GameState, actor: ActorRef) -> Any:
+    if actor.kind == "pilot":
+        actual = _native(game, c, state, actor)
+        if current_ref(state, actual.controller) != actor:
+            raise WorkflowError("Use the actual affected player's current original character")
+        return actual
+    return _npc(game, c, state, actor)
+
+
 def prove_alteration(
     game: GameService, c: Connection, state: GameState, identity: str
 ) -> rules.Alteration:
     value = _record(state, rules.Alteration, identity)
     born = _history(c, game, value.event)
-    _audit(game, c, value.event, "m3.malleable_npc_alteration", value.controller)
-    actual = _npc(game, c, born, value.subject)
+    prefix = "m3.malleable_player" if value.subject.kind == "pilot" else "m3.malleable_npc"
+    _audit(game, c, value.event, prefix + "_alteration", value.controller)
+    actual = _alteration_subject(game, c, born, value.subject)
     if (
         value not in rules.records(born, rules.Alteration)
         or value.cast not in born.scene_casts
@@ -90,11 +100,11 @@ def prove_alteration(
     for end in rules.records(state, rules.AlterationEnd):
         if end.alteration != identity:
             continue
-        _audit(game, c, end.event, "m3.malleable_npc_alteration_end", end.controller)
+        _audit(game, c, end.event, prefix + "_alteration_end", end.controller)
         ended = _history(c, game, end.event)
         if (
             end not in rules.records(ended, rules.AlterationEnd)
-            or _npc(game, c, ended, value.subject).controller != end.controller
+            or _alteration_subject(game, c, ended, value.subject).controller != end.controller
         ):
             raise WorkflowError("Recover the actual current NPC controller's ending fact")
     return value
@@ -102,7 +112,7 @@ def prove_alteration(
 
 def _altered(
     game: GameService, c: Connection, state: GameState, recipient: ActorRef
-) -> tuple[Literal["dose", "stim", "npc"], str] | None:
+) -> tuple[Literal["dose", "stim", "npc", "pilot"], str] | None:
     if recipient.kind == "pilot":
         from girlframe.engine import m3_dose_up as dose
         from girlframe.engine import m3_stim_sex as stim
@@ -123,10 +133,23 @@ def _altered(
                 return "dose", drug.id
         for sex_drug in stim.records(state, stim.Drug):
             if sex_drug.target == recipient and stim.active(state, sex_drug):
+                if not isinstance(sex_drug.tag, TagState):
+                    raise WorkflowError("Preserve the actual Pilot drug Tag type")
                 prove_drug_tag(game, c, state, int(recipient.entity), sex_drug.tag)
                 return "stim", sex_drug.id
-    elif recipient.kind == "npc":
-        actual = _npc(game, c, state, recipient)
+    if recipient.kind == "npc":
+        from girlframe.services.m3_npc_dose import active_drug
+
+        npc_drug = active_drug(game, c, state, recipient)
+        if npc_drug is not None:
+            return "dose", npc_drug
+        from girlframe.services.m3_stim_npc import active_drug as active_stim_drug
+
+        npc_stim = active_stim_drug(game, c, state, recipient)
+        if npc_stim is not None:
+            return "stim", npc_stim
+    if recipient.kind in ("pilot", "npc"):
+        actual = _alteration_subject(game, c, state, recipient)
         for value in rules.records(state, rules.Alteration):
             if (
                 value.subject == recipient
@@ -136,7 +159,7 @@ def _altered(
                 )
             ):
                 prove_alteration(game, c, state, value.id)
-                return "npc", value.id
+                return ("pilot" if recipient.kind == "pilot" else "npc"), value.id
     return None
 
 
@@ -151,6 +174,10 @@ def stage_birth(
     event: str,
 ) -> bool:
     """Called only during a genuine Tag birth, before the canonical event is saved."""
+    from girlframe.engine.m3_ankou_pulse import npc_move
+
+    if npc_move(before, after, recipient, tag_id, event):
+        return False  # This original Tag moved; its setter did not give a new one.
     if tag_id.startswith(("dose-up:", "stim-sex-drug:")):
         return False
     if recipient.kind not in ("pilot", "npc"):
@@ -276,6 +303,13 @@ class MalleableService:
         self.store = store
         self.game = game or GameService(store)
 
+    def classify_intoxication_tag(
+        self, viewer: GuildViewer, key: str, tag: str, expected: int, account: str
+    ) -> dict[str, Any]:
+        from girlframe.services.m3_malleable_self_tag import record
+
+        return record(self.game, viewer, key, tag, expected, account)
+
     def force(
         self, viewer: GuildViewer, key: str, identity: str, replaced: str, expected: int
     ) -> dict[str, Any]:
@@ -335,29 +369,35 @@ class MalleableService:
         account: str,
         *,
         ending: str | None = None,
+        player: bool = False,
     ) -> dict[str, Any]:
         if not account.strip() or len(account) > 1200:
-            raise WorkflowError("Describe the actual NPC altered state or its actual ending")
-        kind = "m3.malleable_npc_alteration_end" if ending else "m3.malleable_npc_alteration"
+            raise WorkflowError("Describe the actual altered state or its actual ending")
+        if (subject.kind == "pilot") != player:
+            raise WorkflowError("Use only the original player or NPC fact producer")
+        prefix = "m3.malleable_player" if player else "m3.malleable_npc"
+        kind = prefix + ("_alteration_end" if ending else "_alteration")
 
         def operation(c: Connection) -> dict[str, Any]:
             self.game.unpaused(c)
             state = load_state(c, self.store.campaign_id)
             if state.revision != expected or self.game.pending_actions(c):
-                raise WorkflowError("Finish pending Plays and reopen the real NPC context")
-            actual = _npc(self.game, c, state, subject)
+                raise WorkflowError("Finish pending Plays and reopen the actual source context")
+            actual = _alteration_subject(self.game, c, state, subject)
             cast = _cast(self.game, c, state, channel)
             if actual.controller != viewer.user_id or not any(
                 x.actor == subject and x.controller == viewer.user_id for x in cast.roles
             ):
-                raise WorkflowError("Only the actual current NPC controller supplies this fact")
+                raise WorkflowError(
+                    "Only the actual affected player or current NPC controller supplies this fact"
+                )
             event, identity = str(uuid4()), str(uuid4())
             if ending:
                 value = prove_alteration(self.game, c, state, ending)
                 if value.subject != subject or any(
                     x.alteration == ending for x in rules.records(state, rules.AlterationEnd)
                 ):
-                    raise WorkflowError("End the actual original still-active NPC alteration")
+                    raise WorkflowError("End the actual original still-active alteration")
                 rules.put(
                     state,
                     rules.AlterationEnd(
@@ -376,7 +416,7 @@ class MalleableService:
                     )
                     for x in rules.records(state, rules.Alteration)
                 ):
-                    raise WorkflowError("End the existing actual NPC altered state first")
+                    raise WorkflowError("End the existing actual altered state first")
                 rules.put(
                     state,
                     rules.Alteration(
@@ -410,6 +450,22 @@ class MalleableService:
             operation,
             auto_audit=False,
             authorize=lambda c: _access(self.game, c, viewer),
+        )
+
+    def record_player_alteration(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        channel: int,
+        subject: ActorRef,
+        expected: int,
+        account: str,
+        *,
+        ending: str | None = None,
+    ) -> dict[str, Any]:
+        """Only the affected human attests their original character's actual condition."""
+        return self._fact(
+            viewer, key, channel, subject, expected, account, ending=ending, player=True
         )
 
     def record_npc_alteration(
@@ -570,8 +626,50 @@ class MalleableService:
                 can_give = True
             except (ValueError, WorkflowError):
                 pass
+            own = None
+            try:
+                actor = current_ref(state, viewer.user_id)
+                actual = _alteration_subject(self.game, c, state, actor)
+                if (
+                    actor.kind == "pilot"
+                    and actual.controller == viewer.user_id
+                    and any(x.actor == actor and x.controller == viewer.user_id for x in cast.roles)
+                ):
+                    active = next(
+                        (
+                            x
+                            for x in rules.records(state, rules.Alteration)
+                            if x.subject == actor
+                            and not any(
+                                y.alteration == x.id
+                                for y in rules.records(state, rules.AlterationEnd)
+                            )
+                        ),
+                        None,
+                    )
+                    if active is not None:
+                        prove_alteration(self.game, c, state, active.id)
+                    own = dict(
+                        ref=actor.model_dump(mode="json"), active=active.id if active else None
+                    )
+            except (ValueError, WorkflowError):
+                pass
+            own_tags = []
+            if can_give:
+                from girlframe.services.m3_malleable_self_tag import origin
+
+                for tag in state.sheets[str(viewer.user_id)].tags:
+                    if any(x.id == tag.id for x in rules.records(state, rules.IntoxicationTag)):
+                        continue
+                    try:
+                        origin(self.game, c, state, viewer.user_id, tag)
+                    except (ValueError, WorkflowError):
+                        continue
+                    own_tags.append(dict(id=tag.id, label=tag.label))
             return dict(
                 revision=state.revision,
+                intoxication_candidates=own_tags,
+                own_alteration=own,
                 npcs=npcs,
                 alterations=alterations,
                 can_give=can_give,

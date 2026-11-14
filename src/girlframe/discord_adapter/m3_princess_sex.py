@@ -19,7 +19,10 @@ DISCLOSURE = (
     "Confirm only your own actual voluntary interaction. On a high result the Princess "
     "chooses one immediately required Play and makes every actor-owned decision for you "
     "during that Play, including the necessary decision fields. Other people's decisions "
-    "and safety controls remain theirs. No reply or further consent is inferred."
+    "and safety controls remain theirs. No reply or further consent is inferred. "
+    "For an NPC counterpart, the Princess can select an available printed job Conversation. "
+    "The original NPC controller records its actual performance without changing that decision. "
+    "Other NPC effects need human adjudication and an actual source adapter; they remain pending."
 )
 
 
@@ -38,12 +41,26 @@ async def open_princess(
             raise WorkflowError("Reopen your actual available learned source")
         options = [("invite", "Propose your actual voluntary source")] if data["targets"] else []
         options += [(x["id"], "Saved interaction: " + x["phase"]) for x in data["sessions"]]
+        options += [
+            ("withdraw:" + x["id"], "Withdraw unused invitation")
+            for x in data["sessions"]
+            if x.get("can_withdraw")
+        ]
         if not options:
             await reply(interaction, "No supported current Princess interaction in this scene.")
             return
 
         async def choose(current: discord.Interaction, values: dict[str, Any]) -> str | None:
             selected = values["action"][0]
+            if selected.startswith("withdraw:"):
+                await asyncio.to_thread(
+                    service.withdraw,
+                    viewer_from_interaction(current),
+                    str(current.id),
+                    selected.removeprefix("withdraw:"),
+                    data["revision"],
+                )
+                return "Unused invitation withdrawn. Original consent remains history."
             if selected != "invite":
                 await open_princess(current, service, selected)
                 return None
@@ -119,6 +136,9 @@ async def open_princess(
                 data["revision"],
                 values["accept"][0] == "yes",
                 values["account"],
+                npc_contact_account=values.get("npc_contact")
+                if values["accept"][0] == "yes"
+                else None,
             )
             return "Your own disclosed source response is saved."
 
@@ -133,6 +153,17 @@ async def open_princess(
                     (("yes", "Confirm"), ("no", "Decline")),
                 ),
                 Field("account", "Your own actual answer", paragraph=True),
+                *(
+                    [
+                        Field(
+                            "npc_contact",
+                            "Actual body contact outside enclosures and rides",
+                            paragraph=True,
+                        )
+                    ]
+                    if data["target"]["kind"] == "npc"
+                    else []
+                ),
             ],
             confirm,
         ).present(interaction)
@@ -197,12 +228,37 @@ async def open_princess(
         (
             x
             for x in choices
-            if x["kind"] == "princess_sex_child" and x["action_id"] == data["action"]
+            if x["kind"]
+            in ("princess_sex_child", "princess_sex_direct", "princess_sex_npc_perform")
+            and x["action_id"] == data["action"]
         ),
         None,
     )
     if row:
         await open_choice(interaction, service.game, row["id"])
+        return
+    if data.get("npc_direction"):
+        from girlframe.discord_adapter.ledger import clean
+        from girlframe.discord_adapter.m3_memory_pages import MemoryHistory
+
+        direction = data["npc_direction"]
+
+        async def authorize_history(current: discord.Interaction) -> None:
+            await asyncio.to_thread(service.view, viewer_from_interaction(current), identity)
+
+        history = MemoryHistory(
+            viewer.user_id,
+            clean(
+                "Princess-directed NPC Conversation\nSelected printed move: "
+                + direction["move"]
+                + "\nActual directive: "
+                + direction["context"]
+                + "\nActual NPC performance: "
+                + (direction["rendition"] or "Still pending")
+            ),
+            authorize_history,
+        )
+        await reply(interaction, history.text(), history)
         return
     await reply(
         interaction,
@@ -222,6 +278,9 @@ async def open_choice(
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(game.decision, viewer, identity)
     kind, detail = data["kind"], data["princess_sex"]
+    if kind == "princess_sex_direct" and detail.get("unsupported_npc"):
+        await reply(interaction, detail["guidance"])
+        return
     service = SexService(game)
     source = await asyncio.to_thread(service.view, viewer, detail["session"])
     if kind == "princess_sex_child":
@@ -344,6 +403,9 @@ async def open_choice(
                     required=False,
                 )
             )
+    elif kind == "princess_sex_npc_perform":
+        direction = source["npc_direction"]
+        fields = [Field("text", "Your NPC's actual performance of the fixed move", paragraph=True)]
     elif kind == "princess_sex_favour_reply":
         fields = [
             Field(
@@ -386,12 +448,12 @@ async def open_choice(
                     target=int(child["target"]["entity"])
                     if child["target"]
                     and child["target"]["kind"] == "pilot"
-                    and child["play"] in ("flirt", "put_someone_beneath_you")
+                    and child["play"] in ("flirt", "put_someone_beneath_you", "old_dog_new_pups")
                     else None,
                     target_actor=ActorRef.model_validate(child["target"])
                     if child["target"]
                     and (
-                        child["play"] == "engage"
+                        child["play"] in ("engage", "brutalize", "unassuming_doll")
                         or child["play"] == "flirt"
                         and child["target"]["kind"] == "npc"
                     )
@@ -420,6 +482,8 @@ async def open_choice(
         options = (
             (values["play"][0],)
             if kind == "princess_sex_direct"
+            else ("perform",)
+            if kind == "princess_sex_npc_perform"
             else tuple(values.get("options", ()))
         )
         text = "" if options == ("decline",) else values.get("text", "")
@@ -446,6 +510,15 @@ async def open_choice(
         else "Princess: " + kind.removeprefix("princess_sex_"),
         "Actual original participants and one scoped child only. "
         + (detail["favour"] or "")
+        + (
+            " Fixed NPC move: "
+            + direction["move"]
+            + ". Princess directive: "
+            + direction["context"]
+            + ". Record the actual performance, not damage, healing, movement or a new choice."
+            if kind == "princess_sex_npc_perform"
+            else ""
+        )
         + (
             " These are the original Stim counterpart's own Heat and Identities; "
             "your source grants its actor choices for this one actual Play."

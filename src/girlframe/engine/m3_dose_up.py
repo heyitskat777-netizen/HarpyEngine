@@ -6,6 +6,7 @@ from pydantic import Field
 
 from girlframe.engine.m2 import GameState, TagState
 from girlframe.engine.m3_actor_state import ActorRef, Model, SceneCast
+from girlframe.engine.m3_world_state import WorldTag
 
 RULE = "girl.stim-blissed.dose-up"
 SELF_RULE = "girl.stim-blissed.malleable-me-malleable-you"
@@ -33,6 +34,8 @@ LIFETIME_VERSION = "dose-up-real-recipient-scenes-v1"
 
 
 class Contact(Model):
+    npc_cell: tuple[int, int] | None = Field(default=None, exclude_if=lambda x: x is None)
+    npc_body_fact: str | None = Field(default=None, exclude_if=lambda x: x is None)
     id: str
     actor: ActorRef
     target: ActorRef
@@ -103,6 +106,15 @@ class DrugTag(Model):
     event: str
 
 
+class NpcDrugTag(Model):
+    id: str
+    dose: str
+    target: ActorRef
+    component: Component
+    tag: WorldTag
+    event: str
+
+
 class SceneEnd(Model):
     id: str
     dose: str
@@ -118,6 +130,7 @@ KINDS: dict[type[Model], str] = {
     OrderUse: "dose_up_order_use",
     Dose: "dose_up_result",
     DrugTag: "dose_up_drug_tag",
+    NpcDrugTag: "dose_up_npc_drug_tag",
     SceneEnd: "dose_up_scene_end",
 }
 

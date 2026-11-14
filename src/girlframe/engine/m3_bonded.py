@@ -63,6 +63,8 @@ def convert_paired_tag(
 
 
 class Source(Model):
+    learned_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    consent_event: str | None = Field(default=None, exclude_if=lambda value: value is None)
     changeling_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
     id: str
     kind: Literal["side", "intimacy", "sex"]
@@ -78,7 +80,9 @@ class Source(Model):
     apart: bool = Field(default=False, exclude_if=lambda value: not value)
     event: str
     account: str = Field(min_length=1, max_length=1200)
-    phase: Literal["invited", "accepted", "declined", "bound", "results", "child", "complete"]
+    phase: Literal[
+        "invited", "accepted", "declined", "bound", "results", "child", "complete", "withdrawn"
+    ]
     route: Literal["pair", "seven", "delegated"] = "pair"
     delegated_rule: str | None = None
     action: str | None = None
@@ -86,6 +90,20 @@ class Source(Model):
     effect_event: str | None = None
     tier: Literal["low", "mid", "high"] | None = None
     completed_event: str | None = None
+
+    @property
+    def proposed_event(self) -> str:
+        return self.event
+
+    @property
+    def counterpart(self) -> int:
+        if self.target is None:
+            raise ValueError("This source has no intimacy counterpart")
+        return self.controllers[self.target.token]
+
+    @property
+    def bonded_source(self) -> None:
+        return None
 
 
 class Consent(Model):
@@ -250,6 +268,16 @@ class Delegation(Model):
     action: str | None = None
 
 
+class DelegationRelease(Model):
+    id: str
+    source: str
+    session: str
+    actor: ActorRef
+    controller: int
+    outcome: Literal["declined", "withdrawn"]
+    event: str
+
+
 class OrderBinding(Model):
     id: str
     detail: str
@@ -262,6 +290,7 @@ class OrderBinding(Model):
 
 KINDS: dict[type[Model], str] = {
     Source: "bonded_source",
+    DelegationRelease: "bonded_delegation_release",
     Consent: "bonded_consent",
     Activation: "bonded_activation",
     NoRollManMark: "bonded_no_roll_man_mark",

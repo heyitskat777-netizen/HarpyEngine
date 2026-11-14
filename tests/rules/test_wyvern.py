@@ -1,7 +1,7 @@
-"""Wyvern's distinct printed normals; only the mid-Roused strike is a work smoke.
+"""Wyvern normals; mid-Roused strike and r282 low escape have focused evidence.
 
-Other normals are deliberately authored for the final P1 selection, not run while
-implementing this unit. All fixtures are offline human-authoritative game facts.
+Other normals remain authored for final P1 selection unless separately documented.
+All fixtures are offline human-authoritative game facts.
 """
 
 from uuid import uuid4
@@ -313,8 +313,15 @@ def test_low_exploration_handler_choice_then_genuine_escape_keep_and_its_real_re
     ledger, tmp_path, monkeypatch
 ):
     game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch)
-    party = declare_party(game, controls)
+    companion = current_ref(state(game), 3)
+    party = declare_party(game, controls, (companion,))
     parent = roll(game, worker, gateway, play="wyvern_explore", source_work=party, faces=(1, 1))
+    guests = [x for x in rules.records(state(game), rules.InteriorGuest) if x.session == parent]
+    assert len(guests) == 2
+    guest = next(x for x in guests if x.actor == companion)
+    assert guest.accepted_event and guest.entered_event and not guest.ended_event
+    assert any(x["kind"] == "wyvern_questions" for x in game.choices(ADMIN))
+    assert not any(x["kind"] == "wyvern_questions" for x in game.choices(PLAYER))
     ask_and_answer(game, controls, parent, questions=("panel",), danger="escape")
     source = rules.records(state(game), rules.Session)[-1]
     assert game.inspect(PLAYER, parent)["state"] != "complete"
@@ -345,10 +352,23 @@ def test_low_exploration_handler_choice_then_genuine_escape_keep_and_its_real_re
         flag=True,
         text="The actual completed escape retains its ordinary consequences",
     )
+    with ledger.engine.connect() as c:
+        result = game.action(c, child)["data"]["result"]
+    assert {"tough", "in_control"} <= set(result["positive"])
+    assert result["negative"] == ["sexy"] and result["enough"] is True
+    assert game.dice.calls == 2
     assert game.inspect(PLAYER, child)["state"] == "complete"
     assert game.inspect(PLAYER, parent)["state"] == "complete"
     danger = next(x for x in rules.records(state(game), rules.Danger) if x.id == source.danger)
     assert danger.child == child and danger.child_completed_event and danger.returned_event
+
+    returned = next(x for x in rules.records(state(game), rules.InteriorGuest) if x.id == guest.id)
+    assert returned.ended_event
+    assert returned.accepted_event == guest.accepted_event
+    assert returned.original_pose == guest.original_pose
+    with ledger.engine.connect() as c:
+        assert resolve(state(game), companion, profiles(c, ledger.campaign_id)).cell == (0, 0)
+    assert controls.view(OTHER, parent)["questions"][0]["text"] == rules.QUESTIONS["panel"]
 
 
 def test_deep_exploration_real_payment_adds_exact_two_source_questions(

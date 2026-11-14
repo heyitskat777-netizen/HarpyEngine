@@ -159,7 +159,7 @@ def test_actual_two_choices_all_first_branches_real_risk_npc_bond_and_private_me
             form.values.update(
                 name="Actual newly created spectator",
                 detail="A real introduced civilian",
-                base=("base0",),
+                location=("base0",),
             )
             response = current(2, 99353)
             await form.confirm.callback(response)

@@ -11,7 +11,7 @@ from girlframe.database import tables as t
 from girlframe.engine import m3_sprite as rules
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, ProfileBinding
-from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_actors import frame_position, resolve
 from girlframe.engine.m3_battle_state import Required
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
@@ -360,6 +360,13 @@ class SpriteService:
             target = resolve(state, blow.target, profiles_for(state), require_current_profile=False)
         except ValueError:
             pass
+        target_cell = (
+            frame_position(state, blow.target, blow.target_frame)
+            if blow.target_frame is not None
+            else target.cell
+            if target is not None
+            else None
+        )
         for candidate in blow.candidates:
             if candidate.controller != owner:
                 continue
@@ -373,8 +380,8 @@ class SpriteService:
                 actual.controller != owner
                 or target is None
                 or actual.cell is None
-                or target.cell is None
-                or actual.cell != target.cell
+                or target_cell is None
+                or actual.cell != target_cell
             ):
                 continue
             available.extend(

@@ -8,6 +8,7 @@ from pydantic import Field, model_validator
 from girlframe.engine.m2 import GameState, IdentityState, PilotSheet
 from girlframe.engine.m3_actor_state import ActorRef, Model, SceneCast
 from girlframe.engine.m3_girl_runtime_state import has_rule
+from girlframe.engine.m3_learned_play_state import LearnedPlayUse
 from girlframe.engine.m3_leviathan_obsession import require_unlocked
 
 BARELY = "girl.casualty.barely-a-girl"
@@ -68,6 +69,7 @@ class PartChange(Model):
 
 
 class Barely(Model):
+    lesson: str | None = Field(default=None, exclude_if=lambda value: value is None)
     id: str
     actor: ActorRef
     vessel: str | None
@@ -165,7 +167,23 @@ class Finder(Model):
     account: str
 
 
+class NpcContact(Model):
+    session: str
+    target: ActorRef
+    actor: ActorRef
+    controller: int
+    vessel: str
+    actor_vessel: str
+    cell: tuple[int, int]
+    cast: SceneCast
+    revision: int
+    event: str
+    account: str = Field(min_length=1, max_length=1200)
+
+
 class SexSession(Model):
+    npc_contact: NpcContact | None = Field(default=None, exclude_if=lambda value: value is None)
+    learned_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
     bonded_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
     changeling_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
     id: str
@@ -321,10 +339,26 @@ def change_part(
     return changed
 
 
-def erase_identity(sheet: PilotSheet, identity: str) -> IdentityState:
+def erase_identity(
+    sheet: PilotSheet, identity: str, *, lesson: LearnedPlayUse | None = None
+) -> IdentityState:
+    # The service proves the acquisition; the pure consumer requires the exact unused grant.
+    permitted = (
+        lesson is not None
+        and lesson.rule_id == BARELY
+        and lesson.actor.kind == "pilot"
+        and lesson.actor.entity == str(sheet.owner)
+        and lesson.actor.incarnation == sheet.character_id
+        and lesson.claimed_action is None
+        and lesson.rolled_event is None
+        and lesson.claimed_source is None
+        and lesson.used_event is None
+        and sheet.girl_runtime is not None
+        and lesson in sheet.girl_runtime.learned_plays
+    )
     entry = next((x for x in sheet.identities if x.id == identity), None)
     if (
-        not has_rule(sheet, BARELY, "CASUALTY")
+        not (has_rule(sheet, BARELY, "CASUALTY") or permitted)
         or entry is None
         or entry.protected
         or entry.paired

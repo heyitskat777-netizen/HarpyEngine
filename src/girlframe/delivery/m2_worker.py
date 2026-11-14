@@ -205,15 +205,19 @@ class GameWorker:
                 return
             table = t.m2["m2_outbox"]
             with self.game.store.transaction() as c:
-                c.execute(
+                result = c.execute(
                     table.update()
                     .where(
                         table.c.campaign_id == self.game.store.campaign_id,
                         table.c.id == job["id"],
+                        table.c.state == "pending",
                         table.c.claim_token == job["claim_token"],
                     )
                     .values(state="sending")
                 )
+                if result.rowcount != 1:
+                    # A stale claim must not publish or rewrite the newer owner's job.
+                    return
             payload["action_id"] = job["action_id"]
             message = (
                 await gateway.publish_private(int(recipient), payload, job["nonce"])

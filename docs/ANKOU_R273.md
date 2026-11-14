@@ -1,0 +1,11 @@
+# ANKOU bounded failure triage — r273
+
+Read-only production review; no production edit and no pytest run by author.
+
+The exact-cadre audit's three original ANKOU failures do not establish production defects. Obsessive Tag failed `_owner_channel` unique open original-participant scene proof before the effect; interrupt failed mandatory all-Heat spend when holding at least five before interruption; standalone tear reached actual Asset loss and +5 Heat, then answered the high Flirt child using an obsolete three-option shape. Current `m2_choices.py` actor_flirt requires one question and a separate `extra` field plus explanation. These are fixture/precondition failures, not blanket workflow passes.
+
+Authored `test_ankou_r273_tear_flirt.py` continues precisely the third case using current structured answers: real Relay Feedback source, owned Asset tear, actual source-bound Flirt, counterpart answer/Tag, child and sequence completion, unchanged receipt and one dice call. Synthetic approvals, original OLDGEN/ANKOU fixture bodies/resources, and deterministic dice remain; this is not exact AM/ANKOU cadre coverage, native UI, live Discord or full regression. Root must execute before citing success. No GM session simulation.
+
+NPC-death branch remains implemented but unverified by focused tests: `m3_ankou.py` state-change hook creates participant-owned Identity erasure plus four Heat while inside Frame, otherwise Helplessness; `choose_task` applies actual effects. A genuine death producer needs separate source-backed setup, not a fabricated mid-test death flag. Prior printed-rule reconciliation r270 cites printed pp83–84 / PDF85–86, authorized rulebook SHA256 0f8dbaae7f0a254cdbfb4856b9f50c44fd31a97b36234062db4ae7f4874b55f0. This review relies on that retained provenance, not a fresh PDF reread. Obsessive nomination eligibility, independent Clone support, other two failed fixture continuations and end-of-scene expiry remain unverified. r271 already focused-tested actual Intense nomination→owned Keep child, so unchanged coverage was not rerun.
+
+Coordinator focused execution: singleton passed 1 in 4.07s. Initial test import/format lint issues corrected without behavior changes; final scoped lint passes. No production ANKOU defect was established.

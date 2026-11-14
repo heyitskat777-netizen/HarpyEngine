@@ -1,8 +1,8 @@
-"""Actual learned AM no-roll sources, never a substitute Action or circuit body."""
+"""Actual AM no-roll sources, never a substitute Action or circuit body."""
 
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model, SceneCast
@@ -12,7 +12,8 @@ RULE = "girl.am.sex-play"
 
 class Source(Model):
     id: str
-    lesson: str
+    lesson: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    native: Literal[True] | None = Field(default=None, exclude_if=lambda value: value is None)
     actor: ActorRef
     target: ActorRef
     controllers: dict[str, int]
@@ -36,6 +37,14 @@ class Source(Model):
     withdrawn_by: ActorRef | None = None
     withdrawal_account: str = ""
 
+    @model_validator(mode="after")
+    def actual_entitlement(self) -> "Source":
+        if bool(self.native) != (self.lesson is None) or self.native and self.mode != "both_am":
+            raise ValueError(
+                "Keep actual native AM ownership separate from one real learned lesson"
+            )
+        return self
+
 
 class Consent(Model):
     id: str
@@ -58,27 +67,39 @@ class Performance(Model):
 
 
 def sources(state: GameState) -> tuple[Source, ...]:
-    return tuple(
-        Source.model_validate_json(x["body"])
-        for x in state.facts
-        if x.get("kind") == "learned_am_source"
-    )
+    result = []
+    for fact in state.facts:
+        if fact.get("kind") not in ("learned_am_source", "native_am_source"):
+            continue
+        value = Source.model_validate_json(fact["body"])
+        if bool(value.native) != (fact["kind"] == "native_am_source"):
+            raise ValueError("Preserve the actual AM source's entitlement namespace")
+        result.append(value)
+    return tuple(result)
 
 
 def performances(state: GameState) -> tuple[Performance, ...]:
-    return tuple(
-        Performance.model_validate_json(x["body"])
-        for x in state.facts
-        if x.get("kind") == "learned_am_performance"
-    )
+    result = []
+    for fact in state.facts:
+        if fact.get("kind") not in ("learned_am_performance", "native_am_performance"):
+            continue
+        value = Performance.model_validate_json(fact["body"])
+        if bool(source(state, value.source).native) != (fact["kind"] == "native_am_performance"):
+            raise ValueError("Preserve the actual performance's original source namespace")
+        result.append(value)
+    return tuple(result)
 
 
 def consents(state: GameState) -> tuple[Consent, ...]:
-    return tuple(
-        Consent.model_validate_json(x["body"])
-        for x in state.facts
-        if x.get("kind") == "learned_am_consent"
-    )
+    result = []
+    for fact in state.facts:
+        if fact.get("kind") not in ("learned_am_consent", "native_am_consent"):
+            continue
+        value = Consent.model_validate_json(fact["body"])
+        if bool(source(state, value.source).native) != (fact["kind"] == "native_am_consent"):
+            raise ValueError("Preserve the actual consent's original source namespace")
+        result.append(value)
+    return tuple(result)
 
 
 def source(state: GameState, identity: str) -> Source:
@@ -89,13 +110,15 @@ def source(state: GameState, identity: str) -> Source:
 
 
 def put(state: GameState, value: Source | Consent | Performance) -> None:
-    kind = (
-        "learned_am_source"
+    suffix = (
+        "source"
         if isinstance(value, Source)
-        else "learned_am_consent"
+        else "consent"
         if isinstance(value, Consent)
-        else "learned_am_performance"
+        else "performance"
     )
+    actual = value if isinstance(value, Source) else source(state, value.source)
+    kind = ("native_am_" if actual.native else "learned_am_") + suffix
     if not isinstance(value, Source) and any(
         x.get("kind") == kind and x.get("id") == value.id for x in state.facts
     ):

@@ -14,6 +14,7 @@ from test_physical_operations import place
 from test_strain_service import prepared
 from test_strain_service import ready as strain_ready
 from test_world import initial
+from test_world_service import transfer_npc
 
 from girlframe.database import tables as t
 from girlframe.delivery.m2_worker import GameWorker
@@ -81,7 +82,7 @@ def ready(store, tmp_path, monkeypatch):
             revealed=True,
         ),
     )
-    world.claim_npc(OTHER, str(uuid4()), state(game).revision, "real-held-prisoner")
+    transfer_npc(world, ADMIN, OTHER, "real-held-prisoner")
     actor = ActorRef(kind="npc", entity="real-held-prisoner")
     casts = CastService(ActorService(strain.missions))
     shown = casts.view(OTHER, 900)

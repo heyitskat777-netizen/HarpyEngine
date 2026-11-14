@@ -34,7 +34,7 @@ class Birth(Model):
     giver_controller: int
     recipient_controller: int
     event: str
-    altered_kind: Literal["dose", "stim", "npc"]
+    altered_kind: Literal["dose", "stim", "npc", "pilot"]
     altered_id: str
     tag: str
 
@@ -47,6 +47,17 @@ class Forced(Model):
     event: str
 
 
+class IntoxicationTag(Model):
+    id: str
+    subject: ActorRef
+    controller: int
+    event: str
+    source_event: str
+    action: str
+    tag: str
+    account: str
+
+
 class Deprogramming(Model):
     id: str
     subject: ActorRef
@@ -56,6 +67,7 @@ class Deprogramming(Model):
 
 
 KINDS: dict[type[Model], str] = {
+    IntoxicationTag: "malleable_intoxication_tag",
     Alteration: "malleable_alteration",
     AlterationEnd: "malleable_alteration_end",
     Birth: "malleable_birth",

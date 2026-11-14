@@ -195,7 +195,16 @@ class Registry(Model):
         if entry.module not in self.enabled_modules:
             raise ValueError("MODULE_DISABLED: this rule belongs to a disabled optional module")
         if not entry.verified:
-            raise ValueError("UNSUPPORTED_RULE: implementation and review are incomplete")
+            # Report only canonical public registry metadata, never the caller's
+            # free-form identity, private action context or reviewer references.
+            # Preserve the prefix consumed by native adapters and keep fail-closed
+            # admission unchanged, including for historical aliases.
+            raise ValueError(
+                "UNSUPPORTED_RULE: implementation and review are incomplete "
+                f"[rule={entry.id}; implementation={entry.implementation}; "
+                f"source_audit={entry.source_audit}; "
+                f"independent_review={entry.independent_review}]"
+            )
         return entry
 
     def entry(self, identity: str) -> Entry:

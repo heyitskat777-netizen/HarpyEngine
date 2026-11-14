@@ -32,7 +32,9 @@ async def open_choice(
     kind = detail["kind"]
     if kind == "easy_target_child":
         work = detail["work"]
-        if work["urge"] == "cohort":
+        if work["urge"] == "cohort" and not any(
+            detail.get(x) for x in ("protection_cohort", "use_cohort", "hurt_cohort")
+        ):
             await reply(
                 interaction,
                 "Actually assist the selected primary's child with your own "
@@ -53,7 +55,21 @@ async def open_choice(
             )
             await open_declaration(interaction, BattleService(game.store), parent=parent)
             return
-        if not detail.get("npc_hurt") and not detail.get("npc_protect"):
+        if not any(
+            detail.get(x)
+            for x in (
+                "npc_hurt",
+                "npc_protect",
+                "npc_use",
+                "pilot_use",
+                "handler_use",
+                "handler_protect",
+                "pilot_protect",
+                "protection_cohort",
+                "use_cohort",
+                "hurt_cohort",
+            )
+        ):
             from girlframe.discord_adapter.m2_ui import open_play
 
             await open_play(interaction, game, parent=decision)
@@ -86,7 +102,7 @@ async def open_choice(
                 ),
                 Field(
                     "play",
-                    "If performing: genuinely triggered Play",
+                    "Triggered Play (blank for ordinary use/protection)",
                     tuple((x, x.replace("_", " ")) for x in PLAY_IDS + ("all_out_assault",)),
                     minimum=0,
                     required=False,
@@ -132,6 +148,24 @@ async def open_choice(
                 ),
             )
         )
+    if kind == "easy_target_child" and any(
+        detail.get(x) for x in ("use_cohort", "hurt_cohort", "protection_cohort")
+    ):
+        fields.append(
+            Field(
+                "outcome",
+                "Your own actual participation",
+                (("missed", "Acknowledge missed participation"),)
+                if any(
+                    detail.get(x)
+                    for x in ("use_cohort_missed", "hurt_cohort_missed", "protection_cohort_missed")
+                )
+                else (
+                    ("participate", "Record actual participation"),
+                    ("decline", "Decline participation"),
+                ),
+            )
+        )
     fields.append(
         Field(
             "account",
@@ -145,6 +179,8 @@ async def open_choice(
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
         assert isinstance(decision, dict)
         options = tuple(values.get("select", values.get("urge", values.get("performance", ()))))
+        if values.get("outcome"):
+            options = tuple(values["outcome"])
         specific = {x: values[x][0] for x in ("primary", "play") if values.get(x)}
         if values.get("context"):
             specific["context"] = values["context"]
@@ -177,7 +213,78 @@ async def open_choice(
         interaction.user.id,
         "Easy Target",
         (
-            "Record the actual NPC's bodily action you performed. The original Newgirl "
+            "The NPC's bodily action was already performed before you participated. "
+            "Acknowledge the missed opportunity without exemption. The actual injury and "
+            "Newgirl's Punishment choice remain unchanged."
+            if kind == "easy_target_child" and detail.get("hurt_cohort_missed")
+            else "After Handler validation and before the NPC performs the bodily action, "
+            "record how your own present body actually goes along, or decline. Actual "
+            "participation exempts both from the matching Easy Target Punishment only. "
+            "The NPC must still perform, and the Newgirl owns the actual injury choice; "
+            "no roll, free defense or immunity from damage is granted."
+            if kind == "easy_target_child" and detail.get("hurt_cohort")
+            else "This protection already failed before your participation was recorded. "
+            "Acknowledge the missed opportunity to close your pending obligation without "
+            "exemption. The original failure and Newgirl's Tag choice remain unchanged."
+            if kind == "easy_target_child" and detail.get("protection_cohort_missed")
+            else "After the original NPC has actually performed protection, record how your own "
+            "person went along. Both avoid Easy Target consequences; this grants no roll, "
+            "bonus, interception or injury. After Handler validation you may instead decline, "
+            "even before the NPC performs, without an exemption. Prior failures cannot be erased."
+            if kind == "easy_target_child" and detail.get("protection_cohort")
+            else "This use has already finished. Acknowledge your own missed participation. "
+            "This grants no exemption and cannot erase the original consequence or Bond choice."
+            if kind == "easy_target_child" and detail.get("use_cohort_missed")
+            else "After Handler validation, record your actual participation while the original "
+            "person's non-Play use is ongoing. That person then records completion; both avoid the "
+            "Easy Target Bond consequence. You may instead decline without an exemption. "
+            "This invents no roll, effect or consent."
+            if kind == "easy_target_child" and detail.get("use_cohort")
+            else "Record your original Handler's actual completed non-Play use. "
+            "The original Newgirl then chooses whether to deepen their Bond unless a cohort "
+            "actually participated. Unanswered cohorts must acknowledge their own missed "
+            "participation after you finish. This invents no roll, payment, injury, consent "
+            "or other mechanical effect. "
+            "A separately triggered Play still requires its actual source."
+            if kind == "easy_target_child" and detail.get("handler_use")
+            else "Validate only the original Handler's ordinary non-Play use. "
+            "This cannot replace consent or any separately triggered Play, payment or injury."
+            if kind == "easy_target_validate" and detail.get("handler_use")
+            else "Record your original Handler's actual protective action. This creates no "
+            "roll, interception, bonus or injury. The original Newgirl owns the optional "
+            "Tag after source-proved failure; separately triggered Plays remain required."
+            if kind == "easy_target_child" and detail.get("handler_protect")
+            else "Validate the original ordinary Handler's actual non-Play protective task. "
+            "Your real present body and original source remain required. This invents no "
+            "free defense, injury or permission to answer the Newgirl's later Tag choice."
+            if kind == "easy_target_validate" and detail.get("handler_protect")
+            else "Record your original Girl's actual protective action. This creates no roll, "
+            "interception, bonus or injury. The original Newgirl owns the optional Tag after "
+            "source-proved failure; separately triggered Plays remain required."
+            if kind == "easy_target_child" and detail.get("pilot_protect")
+            else "Validate the original Girl's actual non-Play protective task and available "
+            "present body. This creates no free defense or injury and does not grant anyone "
+            "else permission to choose her performance or the Newgirl's later Tag."
+            if kind == "easy_target_validate" and detail.get("pilot_protect")
+            else "Record your original Girl's actual completed non-Play use. The original "
+            "Newgirl then owns the optional Bond choice unless a cohort actually participated. "
+            "This creates no roll, injury, payment, consent or other mechanical effect. "
+            "A separately triggered Play still requires its actual source."
+            if kind == "easy_target_child" and detail.get("pilot_use")
+            else "Validate only this original Girl's ordinary non-Play use and actual present "
+            "exterior body. This cannot replace consent, a triggered Play or a required effect."
+            if kind == "easy_target_validate" and detail.get("pilot_use")
+            else "Record the actual completed non-Play use by your NPC. This creates no roll, "
+            "injury, payment, or consent. The original Newgirl then owns the optional Bond "
+            "choice unless a cohort actually participated. Unanswered cohorts remain pending "
+            "for their own missed-participation acknowledgment after you finish. If a Play is "
+            "triggered, use its actual source instead."
+            if kind == "easy_target_child" and detail.get("npc_use")
+            else "Validate only actual ordinary NPC use that triggers no separate Play or "
+            "mechanical effect. This account cannot replace consent, an actual rolled source, "
+            "payment, injury or any other required workflow."
+            if kind == "easy_target_validate" and detail.get("npc_use")
+            else "Record the actual NPC's bodily action you performed. The original Newgirl "
             "then selects the actual Girl Asset injury; physical interception and all "
             "ordinary consequences remain real. This is not a PC Play or a roll."
             if kind == "easy_target_child" and detail.get("npc_hurt")
@@ -272,7 +379,7 @@ async def open_easy_target(
 
             form = MemoryForm(
                 interaction.user.id,
-                "Actual NPC protection failure",
+                "Actual protection failure",
                 "As the original Handler, record the attempted prevention and what actually "
                 "occurred without inventing mechanical harm. This grants only the original "
                 "Newgirl's optional failure Tag; no bodily damage or other outcome is applied."
@@ -299,10 +406,23 @@ async def open_easy_target(
             + ("; actual attempt resolved" if x["completed_event"] else "; pending")
             for x in shown.get("npc_hurt", ())
         )
+        history += "".join(
+            "\nActual Girl use: " + x["account"]
+            for x in shown.get("npc_use", ())
+            if x["actor"]["kind"] == "pilot"
+        )
+        history += "".join(
+            "\nHurt participation: " + x["outcome"] + "\n" + x["account"]
+            for x in shown.get("hurt_cohort", ())
+        )
+        history += "".join(
+            "\nProtection participation: " + x["outcome"] + "\n" + x["account"]
+            for x in shown.get("protection_cohort", ())
+        )
         protection = shown.get("npc_protection")
         failed = shown.get("protection_failure")
         if protection:
-            history += "\nActual NPC protection: " + protection["account"]
+            history += "\nActual protection: " + protection["account"]
         if failed:
             history += "\nAttempted prevention: " + failed["attempt"]
             history += "\nActual occurrence: " + failed["occurred"]

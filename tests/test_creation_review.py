@@ -185,7 +185,9 @@ def ready(
         ADMIN,
         "rank",
         expected,
-        (PilotRef(user_id=2, character_revision=2), PilotRef(user_id=3, character_revision=1)),
+        (PilotRef(user_id=3, character_revision=1), PilotRef(user_id=2, character_revision=2))
+        if other_girl == "PRINCESS"
+        else (PilotRef(user_id=2, character_revision=2), PilotRef(user_id=3, character_revision=1)),
     )
     handler.rulings(ADMIN, "rulings", expected + 1, CreationRulings())
     return CreationReviewService(store), creation, handler

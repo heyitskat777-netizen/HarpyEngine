@@ -14,6 +14,7 @@ from girlframe.engine.m2 import ChoiceAnswer, PlayInput
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_bonded import BondedService
+from girlframe.services.onboarding import WorkflowError
 
 
 def _answer(values: dict[str, Any]) -> ChoiceAnswer:
@@ -48,7 +49,9 @@ def _choice_fields(data: dict[str, Any]) -> list[Field]:
             fields.append(
                 Field(
                     "identities",
-                    "Actual marked Identity cost (one per request / one if continuing)",
+                    "Unmark per request, up to all available marked Identities"
+                    if kind == "bonded_mid"
+                    else "Only if taking the continuing benefits: one marked Identity",
                     tuple((x["id"], x["label"]) for x in data["identities"]),
                     minimum=0,
                     maximum=min(4, len(data["identities"])),
@@ -136,6 +139,7 @@ async def _play(
     context: str,
     target: ActorRef | None = None,
     delegated_target: ActorRef | None = None,
+    source_actor: ActorRef | None = None,
     channel: int | None = None,
     title: str = "Actual Bonded source Play",
 ) -> None:
@@ -169,17 +173,85 @@ async def _play(
                 tuple((str(x), str(x)) for x in range(6)),
             ),
         ]
+    battles: dict[str, Any] = {}
+    combat_actor: dict[str, Any] = {}
+    if play in ("all_out_assault", "go_for_the_core"):
+        from girlframe.services.m3_battle import BattleService
+
+        battle = await asyncio.to_thread(
+            BattleService(game.store).preview,
+            viewer_from_interaction(interaction),
+            channel if channel is not None else int(interaction.channel_id or 0),
+        )
+        combat_actor = next(
+            (
+                x
+                for x in battle["actors"]
+                if source_actor is not None
+                and x["ref"] == source_actor.model_dump(mode="json")
+                and x["owned"]
+            ),
+            {},
+        )
+        battles = {
+            x["id"]: x
+            for x in battle["contexts"]
+            if x["state"] == "confirmed"
+            and x["owner"] == interaction.user.id
+            and not x["source_action"]
+            and not x.get("source_work")
+            and x["declaration"]["play"] == play
+            and x["declaration"]["actor"] == combat_actor.get("ref")
+            and target is not None
+            and x["declaration"]["target"] == target.model_dump(mode="json")
+        }
+        if not battles:
+            await reply(
+                interaction,
+                "Use the Battle controls to declare your actual battle Play against this "
+                "onlooker and obtain the facilitator's opening/reach confirmation, "
+                "then return to this original witnessed-affection child. No roll was made.",
+            )
+            return
+        fields.append(
+            Field(
+                "battle",
+                "Your confirmed battle Play against this onlooker",
+                tuple(
+                    (key, value["declaration"]["account"][:100]) for key, value in battles.items()
+                ),
+            )
+        )
     fields.append(Field("context", "Actual legal trigger / performed source", paragraph=True))
 
     async def start(current: discord.Interaction, values: dict[str, Any]) -> str:
+        combat = {}
+        if play in ("all_out_assault", "go_for_the_core"):
+            chosen = battles.get(values.get("battle", (None,))[0])
+            if chosen is None:
+                raise WorkflowError(
+                    "Choose your confirmed battle Play against this original onlooker"
+                )
+            declared = chosen["declaration"]
+            combat = dict(
+                battle_context=chosen["id"],
+                attacking_asset=declared["attacking_asset"],
+                target_asset=declared["target_asset"],
+                piloting=bool(combat_actor["piloting"]),
+            )
         prepared = PlayInput(
+            **combat,
             play=play,
             source_work=source,
             heat=int(values["heat"][0]),
             identity=values.get("identity", (None,))[0] if values.get("identity") else None,
             gain=int(values.get("gain", ("1",))[0]) if values.get("identity") else 0,
             pair_share=int(values.get("share", ("0",))[0]),
-            target=int(target.entity) if target else None,
+            target=(
+                int(target.entity)
+                if target and play not in ("engage", "all_out_assault", "go_for_the_core")
+                else None
+            ),
             target_actor=delegated_target,
             context=context if target is not None else values["context"],
             trigger_confirmed=True,
@@ -228,10 +300,91 @@ async def open_child(interaction: discord.Interaction, game: GameService, child_
                     source=child_id,
                     context=child["account"],
                     target=ActorRef.model_validate(child["target"]),
+                    delegated_target=(
+                        ActorRef.model_validate(child["target"])
+                        if child["play"] in ("engage", "all_out_assault", "go_for_the_core")
+                        else None
+                    ),
+                    source_actor=ActorRef.model_validate(child["actor"]),
                     channel=data["channel"],
                 )
             return
     await reply(interaction, "Open your original witnessed-affection source first.")
+
+
+async def open_learned_bonded(
+    interaction: discord.Interaction, service: BondedService, lesson: str
+) -> None:
+    data = await asyncio.to_thread(
+        service.learned_menu,
+        viewer_from_interaction(interaction),
+        lesson,
+        int(interaction.channel_id or 0),
+    )
+    pair = ActorRef.model_validate(data["pair"])
+    nonpairs = {ActorRef.model_validate(x["ref"]).token: x for x in data["nonpairs"]}
+
+    async def propose(current: discord.Interaction, values: dict[str, Any]) -> str:
+        target = (
+            ActorRef.model_validate(nonpairs[values["nonpair"][0]]["ref"])
+            if values.get("nonpair")
+            else pair
+        )
+        if values.get("pair_rule") and target == pair:
+            raise WorkflowError("The delegated Pair rule requires an actual non-Pair counterpart")
+        result = await asyncio.to_thread(
+            service.propose,
+            viewer_from_interaction(current),
+            str(current.id),
+            int(interaction.channel_id or 0),
+            data["revision"],
+            "sex",
+            values["account"],
+            target=target,
+            route="delegated" if values.get("pair_rule") else "pair" if target == pair else "seven",
+            delegated_rule=(
+                "girl." + values["pair_rule"][0] + ".sex-play" if values.get("pair_rule") else None
+            ),
+            learned_source=lesson,
+        )
+        return "Invitation saved; the actual counterpart answers independently: " + str(
+            result["id"]
+        )
+
+    form = NativeForm(
+        interaction.user.id,
+        "Learned Bonded source",
+        "Your original Pair: " + data["pair_label"] + ". No new Pair or consent is granted.",
+        [Field("account", "Your actual voluntary source", paragraph=True)]
+        + (
+            [
+                Field(
+                    "nonpair",
+                    "Optional other person: default printed7, no roll (blank uses Pair)",
+                    tuple((key, x["label"]) for key, x in nonpairs.items()),
+                    minimum=0,
+                    required=False,
+                )
+            ]
+            if nonpairs
+            else []
+        )
+        + (
+            [
+                Field(
+                    "pair_rule",
+                    "Optional alternative for non-Pair: actual Pair's rule",
+                    tuple((x["id"].split(".")[1], x["label"]) for x in data["delegated_rules"]),
+                    minimum=0,
+                    required=False,
+                )
+            ]
+            if data.get("delegated_rules") and nonpairs
+            else []
+        ),
+        propose,
+    )
+    await reply(interaction, form.text(), form)
 
 
 async def open_bonded(
@@ -398,6 +551,7 @@ async def open_bonded(
     if paired and paired["can_choose"]:
         options.append(("choose_man_paired", "Your marking-Pair choice: make her Paired Identity"))
     for flag, label in (
+        ("withdraw", "Withdraw your unbound learned invitation; keep the unused lesson"),
         ("confirm", "Your own voluntary participation response"),
         ("roll", "Actual source Play"),
         ("activate", "Record actual performed diceless source"),
@@ -423,6 +577,15 @@ async def open_bonded(
 
     async def operate(current: discord.Interaction, values: dict[str, Any]) -> str | None:
         operation = values["operation"][0]
+        if operation == "withdraw":
+            await asyncio.to_thread(
+                service.withdraw_learned,
+                viewer_from_interaction(current),
+                str(current.id),
+                identity,
+                data["revision"],
+            )
+            return "Invitation withdrawn; the unused lesson is available for a fresh source."
         if operation == "retry_pause":
             from girlframe.services.p1_source_pause import retry
 
@@ -614,7 +777,7 @@ async def open_bonded(
                 fields.append(
                     Field(
                         "identities",
-                        "If continuing: unmark your actual marked Identity",
+                        "Only if taking the continuing benefits: one marked Identity",
                         tuple((x["id"], x["label"]) for x in data["identities"]),
                         minimum=0,
                         required=False,
@@ -626,7 +789,15 @@ async def open_bonded(
                     Field(
                         "play",
                         "If making Play: actual source",
-                        (("flirt", "Flirt"), ("brutalize", "Brutalize"), ("snoop", "Snoop")),
+                        (
+                            ("flirt", "Flirt"),
+                            ("brutalize", "Brutalize"),
+                            ("snoop", "Snoop"),
+                            ("engage", "Engage"),
+                            ("put_someone_beneath_you", "Put Someone Beneath You"),
+                            ("all_out_assault", "All Out Assault"),
+                            ("go_for_the_core", "Go For the Core"),
+                        ),
                         minimum=0,
                         required=False,
                     ),

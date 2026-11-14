@@ -10,6 +10,7 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_alpha as broken
 from girlframe.engine import m3_alpha_sex as rules
+from girlframe.engine import m3_bonded as bonded
 from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput
 from girlframe.engine.m3_actor_bonds import change, current_ref, is_helpless
 from girlframe.engine.m3_actor_state import ActorRef
@@ -27,6 +28,7 @@ KINDS = (
     "alpha_sex_damage",
     "alpha_sex_low",
     "alpha_sex_counter_play",
+    "alpha_sex_npc_play",
     "alpha_sex_punishment",
     "alpha_sex_wake",
 )
@@ -102,6 +104,14 @@ def _contact(
     bound = profiles(c, game.store.campaign_id)
     own, other = resolve(state, actor, bound), resolve(state, target, bound)
     cast = _cast(game, c, state, channel)
+    npc = target.kind == "npc"
+    if npc:
+        from girlframe.services.m3_oldgen_sex import _counterpart, _npc_space
+
+        _counterpart(game, c, state, target)
+        _npc_space(game, c, state, other)
+        if bonded_source is not None or changeling_source is not None:
+            raise WorkflowError("Keep NPC Alpha independent of delegated or psychic sources")
     if (
         actor.kind != "pilot"
         or cast.adjudicator is not None
@@ -109,7 +119,7 @@ def _contact(
         or other.offstage_source is not None
         or own.custody not in (None, "free")
         or other.custody not in (None, "free")
-        or target.kind != "pilot"
+        or target.kind not in ("pilot", "npc")
         or actor == target
         or not (
             (learned or has_rule(state.sheets[actor.entity], rules.RULE, "ALPHA"))
@@ -119,9 +129,9 @@ def _contact(
         or not any(x.actor == actor and x.controller == own.controller for x in cast.roles)
         or not any(x.actor == target and x.controller == other.controller for x in cast.roles)
         or (not remote and own.inside_frame is not False)
-        or (not remote and other.inside_frame is not False)
+        or (not npc and not remote and other.inside_frame is not False)
         or state.sheets[actor.entity].medical_state != "fit"
-        or state.sheets[target.entity].medical_state != "fit"
+        or (not npc and state.sheets[target.entity].medical_state != "fit")
         or is_helpless(state, actor)
         or is_helpless(state, target)
         or (
@@ -130,13 +140,30 @@ def _contact(
             and other.cell is not None
             and own.cell != other.cell
         )
-        or not any(x.family == "girl" and not x.damaged for x in other.assets)
+        or (not npc and not any(x.family == "girl" and not x.damaged for x in other.assets))
     ):
         raise WorkflowError(
             "Choose distinct capable original Girls with actual contact and an intact Girl Asset"
         )
     rules.require_awake(state, actor)
     rules.require_awake(state, target)
+
+
+def _npc_current(game: GameService, c: Connection, state: GameState, value: rules.Session) -> None:
+    if value.target.kind != "npc":
+        return
+    from girlframe.services.m3_alpha_npc import contact
+    from girlframe.services.m3_oldgen_sex import _counterpart
+
+    own = resolve(state, value.actor, profiles(c, game.store.campaign_id))
+    other = _counterpart(game, c, state, value.target)
+    if (
+        own.vessel_id != value.actor_vessel
+        or other.vessel_id != value.target_vessel
+        or other.controller != value.counterpart
+    ):
+        raise WorkflowError("Preserve original NPC controller and actual source bodies")
+    contact(game, c, state, value, own, other)
 
 
 def prove(game: GameService, c: Connection, state: GameState, identity: str) -> rules.Session:
@@ -161,10 +188,12 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
             raise WorkflowError("Preserve the exact actual learned Alpha source")
     original = rules.get(_history(game, c, value.proposed_event), identity)
     from girlframe.services.m3_bonded import prove_delegation
+    from girlframe.services.m3_learned_bonded_alpha import released_parent
 
-    prove_delegation(
-        game, c, state, value.bonded_source, value.id, value.actor, value.target, rules.RULE
-    )
+    if not released_parent(game, c, state, value):
+        prove_delegation(
+            game, c, state, value.bonded_source, value.id, value.actor, value.target, rules.RULE
+        )
     stable = (
         "id",
         "actor",
@@ -178,6 +207,8 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         "bonded_source",
         "changeling_source",
         "learned_source",
+        "actor_vessel",
+        "target_vessel",
     )
     audit = c.execute(
         sa.select(t.events.c.kind, t.events.c.actor_id).where(
@@ -204,6 +235,7 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
             response is None
             or response.kind != "m3.alpha_sex_consent"
             or response.actor_id != str(value.counterpart)
+            or consent.npc_contact != value.npc_contact
             or consent.consent_account != value.consent_account
             or consent.phase not in ("accepted", "declined")
             or consent.actor != value.actor
@@ -212,8 +244,13 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
             raise WorkflowError(
                 "Only the actual counterpart's source answer establishes this interaction"
             )
+    if value.npc_contact is not None:
+        from girlframe.services.m3_alpha_npc import _prove_npc_contact
+
+        _prove_npc_contact(game, c, value)
     if value.effect_event:
-        effect = rules.get(_history(game, c, value.effect_event), value.id)
+        effect_state = _history(game, c, value.effect_event)
+        effect = rules.get(effect_state, value.id)
         actual = game.action(c, value.action or "")
         receipt = c.scalar(
             sa.select(t.m2["m2_receipts"].c.body_json).where(
@@ -232,6 +269,30 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
             or json.loads(receipt) != actual["data"].get("receipt")
         ):
             raise WorkflowError("Recover the actual rolled source before using its effects")
+        if value.target.kind == "npc" and actual["data"]["result"]["tier"] == "high":
+            death = dict(
+                kind="alpha_sex_npc_death",
+                event=value.effect_event,
+                action=value.action,
+                session=value.id,
+                target=value.target.model_dump_json(),
+            )
+            if (
+                death not in effect_state.facts
+                or death not in state.facts
+                or not actual["data"]["result"].get("npc_killed")
+                or effect_state.world is None
+                or not any(
+                    x.id == value.target.entity and not x.alive for x in effect_state.world.npcs
+                )
+            ):
+                raise WorkflowError(
+                    "Recover the actual source-owned NPC death, never an Asset substitute"
+                )
+    if value.npc_performance is not None:
+        from girlframe.services.m3_alpha_npc import prove_performance
+
+        prove_performance(game, c, state, value)
     return value
 
 
@@ -330,10 +391,14 @@ def prepare(
         changeling_source=value.changeling_source,
         learned_source=value.learned_source,
     )
+    _npc_current(game, c, state, value)
     if fingerprint(_cast(game, c, state, channel)) != fingerprint(value.cast):
         raise WorkflowError(
             "The accepted source cast changed; establish the actual interaction again"
         )
+    from girlframe.services.m3_learned_bonded_alpha import parent_lesson
+
+    delegated_lesson = parent_lesson(state, value)
     return (
         dict(
             session=value.id,
@@ -352,6 +417,7 @@ def prepare(
         )
         | ({"learned_source": value.learned_source} if value.learned_source is not None else {})
         | ({"bonded_source": value.bonded_source} if value.bonded_source is not None else {})
+        | ({"bonded_lesson": delegated_lesson} if delegated_lesson is not None else {})
         | (
             {"changeling_source": value.changeling_source}
             if value.changeling_source is not None
@@ -383,6 +449,7 @@ def pre_roll(
         changeling_source=value.changeling_source,
         learned_source=value.learned_source,
     )
+    _npc_current(game, c, state, value)
     if value.effect_event:
         raise WorkflowError("Resume the actual saved source result; do not reroll")
 
@@ -431,7 +498,36 @@ def results(game: GameService, c: Connection, state: GameState, action: dict[str
     rules.put(state, value)
     meta["phase"] = "effects"
     action["data"]["result"].update(bond_deepened=True, broken=True, scent_tracking=True)
-    if level == "high":
+    if level == "high" and value.target.kind == "npc":
+        from girlframe.engine.m3_battle import end_actor_casts
+        from girlframe.engine.m3_physical import interrupt_journeys
+
+        _npc_current(game, c, state, value)
+        assert state.world is not None
+        npc = next(x for x in state.world.npcs if x.id == value.target.entity and x.alive)
+        _copy(state, interrupt_journeys(state, value.target, event, "Actual Alpha source death"))
+        _copy(state, end_actor_casts(state, value.target, event))
+        assert state.world is not None
+        state.world = state.world.model_copy(
+            update={
+                "npcs": tuple(
+                    x.model_copy(update={"alive": False}) if x.id == npc.id else x
+                    for x in state.world.npcs
+                )
+            }
+        )
+        state.facts.append(
+            dict(
+                kind="alpha_sex_npc_death",
+                event=event,
+                action=action["id"],
+                session=value.id,
+                target=value.target.model_dump_json(),
+            )
+        )
+        action["data"]["result"].update(npc_killed=True)
+        _finish(game, c, state, action)
+    elif level == "high":
         game.request(c, action, value.caster, "alpha_sex_damage")
     else:
         _finish(game, c, state, action)
@@ -480,16 +576,20 @@ def projection(
     request: dict[str, Any],
 ) -> dict[str, Any]:
     value = rules.get(state, action["data"]["alpha_sex"]["session"])
+    from girlframe.services.m3_alpha_npc import plays
     from girlframe.services.m3_role_punishments import supported
 
+    npc_plays = plays(game, state, value) if not is_helpless(state, value.target) else []
     return dict(
         assets=[
             dict(id=x.id, label=x.name if not x.concealed else "Undisclosed Girl Asset")
-            for x in state.sheets[value.target.entity].assets
+            for x in resolve(state, value.target, profiles(c, game.store.campaign_id)).assets
             if x.family == "girl" and not x.damaged
         ],
         items=_takeable(game, c, state, value) if request["kind"] == "alpha_sex_low" else [],
-        can_counter=not is_helpless(state, value.target),
+        can_counter=value.target.kind == "pilot" and not is_helpless(state, value.target),
+        npc_plays=npc_plays,
+        npc_counter_unsupported=value.target.kind == "npc" and not npc_plays,
         can_punish=supported(state, value.actor, value.target, profiles(c, game.store.campaign_id)),
         session=value.id,
         asleep=rules.asleep(state, value.actor),
@@ -507,6 +607,7 @@ def apply(
     meta = action["data"]["alpha_sex"]
     value = rules.get(state, meta["session"])
     event = action["data"]["response_event"]
+    _npc_current(game, c, state, value)
     if (
         answer.denied
         or answer.number is not None
@@ -575,8 +676,19 @@ def apply(
         elif choice == "play":
             if is_helpless(state, value.target):
                 raise WorkflowError("The actual counterpart cannot make an ordinary counter")
-            meta["phase"] = "counter"
-            game.request(c, action, value.counterpart, "alpha_sex_counter_play")
+            if value.target.kind == "npc":
+                from girlframe.services.m3_alpha_npc import plays
+
+                if not plays(game, state, value):
+                    raise WorkflowError(
+                        "NPC performer needs a supported job-defined Conversation Play; "
+                        "opportunity remains pending"
+                    )
+                meta["phase"] = "npc_play"
+                game.request(c, action, value.counterpart, "alpha_sex_npc_play")
+            else:
+                meta["phase"] = "counter"
+                game.request(c, action, value.counterpart, "alpha_sex_counter_play")
         else:
             from girlframe.services.m3_role_punishments import open_case
 
@@ -598,6 +710,13 @@ def apply(
             rules.put(state, value.model_copy(update={"case": case}))
             meta.update(phase="punishment", case=case)
             game.request(c, action, value.counterpart, "alpha_sex_punishment", dict(case=case))
+    elif request["kind"] == "alpha_sex_npc_play":
+        from girlframe.services.m3_alpha_npc import perform
+
+        performance = perform(game, c, state, value, action, request, answer)
+        rules.put(state, value.model_copy(update={"npc_performance": performance}))
+        meta["npc_performance"] = performance.id
+        _wake(game, c, state, action)
     elif request["kind"] == "alpha_sex_wake":
         if answer.options != ("wake",) or answer.fields or not answer.text.strip():
             raise WorkflowError("The original Alpha records actually waking from this source sleep")
@@ -642,6 +761,11 @@ def synchronize(game: GameService, c: Connection, action: dict[str, Any], event:
 
                 synchronize_session(game, c, state, value.id, completed)
     game.save_action(c, action)
+    # High-result damage may finish here, after the general response hook checked
+    # the parent. Preserve the native consequences before completing its real link.
+    from girlframe.services.m3_bonded import synchronize_delegation
+
+    synchronize_delegation(game, c, game.action(c, action["id"]), event)
 
 
 def validate_transfer_source(
@@ -669,6 +793,7 @@ def validate_role_case(c: Connection, game: GameService, state: GameState, case:
         raise WorkflowError("Use the actual rolled Alpha opportunity")
     action = game.action(c, case.action)
     value = prove(game, c, state, case.source_work or "")
+    _npc_current(game, c, state, value)
     from girlframe.services.m3_intracadre_marriage import original_offender
 
     offender = original_offender(game, c, state, case.id, case.source_event, case.subject)
@@ -726,26 +851,43 @@ def _close_required(game: GameService, c: Connection, action: dict[str, Any], ki
 def counter_plays(
     game: GameService, c: Connection, state: GameState, parent: dict[str, Any], actor: ActorRef
 ) -> tuple[str, ...]:
-    """Preserve ordinary counters; advertise the actual native Stim's own self-Dose only."""
+    """Offer only these native own recipes with their actual source conditions."""
     from girlframe.engine import m3_dose_up as dose
+    from girlframe.engine import m3_oldgen as oldgen
     from girlframe.services.m3_access import load_registry
-    from girlframe.services.m3_dose_up import _operator
+    from girlframe.services.m3_dose_up import _native, _operator
 
     sheet = state.sheets.get(actor.entity) if actor.kind == "pilot" else None
-    if (
-        sheet is None
-        or sheet.character_id != actor.incarnation
-        or sheet.girl != "STIM-BLISSED"
-        or not has_rule(sheet, dose.RULE, "STIM-BLISSED")
-    ):
+    if sheet is None or sheet.character_id != actor.incarnation:
         return COUNTER_PLAYS
+    extra = []
     try:
         _counter_scope(game, c, state, parent, actor)
-        _operator(game, c, state, actor)
-        load_registry().require_available(dose.RULE)
+        if sheet.girl == "STIM-BLISSED" and has_rule(sheet, dose.RULE, "STIM-BLISSED"):
+            _operator(game, c, state, actor)
+            load_registry().require_available(dose.RULE)
+            extra.append(dose.PLAY)
+        elif sheet.girl == "OLDGEN" and has_rule(sheet, oldgen.ADVICE, "OLDGEN"):
+            _native(game, c, state, actor)
+            load_registry().require_available(oldgen.ADVICE)
+            for role in _cast(game, c, state, int(parent["channel_id"])).roles:
+                if (
+                    role.actor.kind != "pilot"
+                    or role.actor == actor
+                    or rules.asleep(state, role.actor)
+                ):
+                    continue
+                try:
+                    _native(game, c, state, role.actor)
+                except (ValueError, WorkflowError):
+                    continue
+                extra.append(oldgen.PLAY)
+                break
     except (ValueError, WorkflowError):
         return COUNTER_PLAYS
-    return (*COUNTER_PLAYS, dose.PLAY)
+    if doll_observers(game, c, state, parent, actor):
+        extra.append("unassuming_doll")
+    return (*COUNTER_PLAYS, *extra)
 
 
 def _counter_scope(
@@ -792,6 +934,82 @@ def _counter_scope(
     return dict(parent=actual["id"], choice=row["id"], actor=actor.model_dump(mode="json"))
 
 
+def doll_observers(
+    game: GameService, c: Connection, state: GameState, parent: dict[str, Any], actor: ActorRef
+) -> tuple[dict[str, Any], ...]:
+    """Actual awake observers for the native Doll's original sleeping opportunity."""
+    from girlframe.engine import m3_vatgrown as doll
+    from girlframe.services.m3_access import load_registry
+    from girlframe.services.m3_vatgrown import _context
+
+    sheet = state.sheets.get(actor.entity) if actor.kind == "pilot" else None
+    if sheet is None or sheet.girl != "VATGROWN" or not has_rule(sheet, doll.RULE, "VATGROWN"):
+        return ()
+    try:
+        _counter_scope(game, c, state, parent, actor)
+        load_registry().require_available(doll.RULE)
+    except (ValueError, WorkflowError):
+        return ()
+    result = []
+    for role in _cast(game, c, state, int(parent["channel_id"])).roles:
+        if role.actor == actor or rules.asleep(state, role.actor) or is_helpless(state, role.actor):
+            continue
+        try:
+            _context(
+                game, c, state.model_copy(deep=True), actor, role.actor, int(parent["channel_id"])
+            )
+            resolved = resolve(state, role.actor, profiles(c, game.store.campaign_id))
+        except (ValueError, WorkflowError):
+            continue
+        result.append(
+            dict(id=role.actor.token, ref=role.actor.model_dump(mode="json"), label=resolved.label)
+        )
+    return tuple(result)
+
+
+def doll_counter(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    actor: ActorRef,
+    prepared: PlayInput,
+    channel: int,
+    action: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    from girlframe.engine import m3_vatgrown as doll
+
+    if prepared.play != doll.PLAY or prepared.parent is None:
+        return None
+    parent = game.action(c, prepared.parent)
+    if not parent["data"].get("alpha_sex"):
+        return None
+    scope = _counter_scope(game, c, state, parent, actor)
+    observers = doll_observers(game, c, state, parent, actor)
+    if (
+        prepared.target_actor is None
+        or prepared.target_actor.model_dump(mode="json") not in [x["ref"] for x in observers]
+        or prepared.target is not None
+        or prepared.source_work is not None
+        or prepared.order_id is not None
+        or prepared.off_duty_id is not None
+        or not prepared.trigger_confirmed
+        or is_helpless(state, actor)
+        or rules.asleep(state, actor)
+        or channel != int(parent["channel_id"])
+    ):
+        raise WorkflowError(
+            "Use the original native Doll and an actual awake observer in this opportunity"
+        )
+    if action is not None and (
+        action["data"].get("alpha_sex_counter_source") != scope
+        or action["parent_id"] != parent["id"]
+        or action["actor_id"] != actor.entity
+        or action["data"]["prepared"] != prepared.model_dump(mode="json")
+    ):
+        raise WorkflowError("Recover this exact original Doll counter before rolling")
+    return scope
+
+
 def self_dose_counter(
     game: GameService,
     c: Connection,
@@ -834,10 +1052,68 @@ def self_dose_counter(
     return scope
 
 
+def advice_counter(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    actor: ActorRef,
+    prepared: PlayInput,
+    channel: int,
+    action: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """Real Oldgen advice to an awake original person, not speech for the sleeper."""
+    from girlframe.engine import m3_oldgen as oldgen
+    from girlframe.services.m3_dose_up import _native
+
+    if prepared.play != oldgen.PLAY or prepared.parent is None:
+        return None
+    parent = game.action(c, prepared.parent)
+    if not parent["data"].get("alpha_sex"):
+        return None
+    scope = _counter_scope(game, c, state, parent, actor)
+    if (
+        oldgen.PLAY not in counter_plays(game, c, state, parent, actor)
+        or prepared.source_work is not None
+        or prepared.target is None
+        or prepared.target == int(actor.entity)
+        or prepared.target_actor is not None
+        or prepared.order_id
+        or prepared.off_duty_id
+        or is_helpless(state, actor)
+        or int(parent["channel_id"]) != channel
+    ):
+        raise WorkflowError("Use the actual native Oldgen's own advice in her original counter")
+    target = current_ref(state, prepared.target)
+    if rules.asleep(state, target) or not any(
+        role.actor == target and role.controller == prepared.target
+        for role in _cast(game, c, state, channel).roles
+    ):
+        raise WorkflowError("Advise an actual awake original Girl in this counter's scene")
+    _native(game, c, state, target)
+    if action is not None and (
+        action["data"].get("alpha_sex_counter_source") != scope
+        or action["parent_id"] != parent["id"]
+        or action["actor_id"] != actor.entity
+        or action["data"]["prepared"] != prepared.model_dump(mode="json")
+    ):
+        raise WorkflowError("Recover this exact original advice counter Action before rolling")
+    return scope
+
+
 def validate_counter_child(
     game: GameService, c: Connection, parent: dict[str, Any], actor: ActorRef, prepared: PlayInput
 ) -> dict[str, Any]:
     state = load_state(c, game.store.campaign_id)
+    if prepared.play == "unassuming_doll":
+        scope = doll_counter(game, c, state, actor, prepared, int(parent["channel_id"]))
+        if scope is None or scope["parent"] != parent["id"]:
+            raise WorkflowError("Recover this original Doll counter's sleeping parent")
+        return scope
+    if prepared.play == "old_dog_new_pups":
+        scope = advice_counter(game, c, state, actor, prepared, int(parent["channel_id"]))
+        if scope is None or scope["parent"] != parent["id"]:
+            raise WorkflowError("Recover this original Oldgen counter's sleeping parent")
+        return scope
     if prepared.play == "dose_up":
         from girlframe.engine import m3_dose_up as dose
         from girlframe.services.m3_dose_up import _operator
@@ -901,6 +1177,120 @@ def synchronize_counters(game: GameService, c: Connection, event: str) -> GameSt
                 t.m2["m2_responses"].c.actor_id == str(value.counterpart),
             )
         )
+        if child["data"]["play"] == "unassuming_doll":
+            from girlframe.engine import m3_vatgrown as doll
+            from girlframe.services.m3_vatgrown import prove as prove_doll
+
+            original = doll.source(state, identity)
+            # The choice event is saved before its response row. Only defer that
+            # exact in-flight response; the post-response callback proves it fully.
+            if (
+                original.completed_event == event
+                and c.scalar(
+                    sa.select(t.m2["m2_responses"].c.event_id).where(
+                        t.m2["m2_responses"].c.campaign_id == game.store.campaign_id,
+                        t.m2["m2_responses"].c.event_id == event,
+                    )
+                )
+                is None
+            ):
+                incoming = (
+                    c.execute(
+                        sa.select(t.events).where(
+                            t.events.c.campaign_id == game.store.campaign_id, t.events.c.id == event
+                        )
+                    )
+                    .mappings()
+                    .one()
+                )
+                payload = json.loads(incoming["payload_json"])
+                pending_response = (
+                    c.execute(
+                        sa.select(t.m2["m2_choices"]).where(
+                            t.m2["m2_choices"].c.campaign_id == game.store.campaign_id,
+                            t.m2["m2_choices"].c.id == payload.get("choice_id"),
+                        )
+                    )
+                    .mappings()
+                    .first()
+                )
+                if (
+                    incoming["kind"] != "m3.choice_resolved"
+                    or payload.get("action_id") != identity
+                    or pending_response is None
+                    or pending_response["action_id"] != identity
+                    or pending_response["kind"] not in ("vat_doll_benefits", "vat_doll_information")
+                    or incoming["actor_id"] != pending_response["actor_id"]
+                ):
+                    raise WorkflowError("Recover the exact current Doll response event")
+                continue
+            proved = prove_doll(game, c, state, identity)
+            if (
+                not proved.complete
+                or proved.actor != value.target
+                or proved.target == value.actor
+                or proved.cast != value.cast
+                or child["data"].get("learned_play")
+                or child["data"]["vatgrown"].get("princess_direction")
+                or source != _counter_scope(game, c, state, parent, value.target)
+            ):
+                raise WorkflowError(
+                    "Complete the actual original Doll and its mandatory consequences"
+                )
+        if child["data"]["play"] == "old_dog_new_pups":
+            from girlframe.engine import m3_oldgen as oldgen
+            from girlframe.services.m3_oldgen import prove_advice
+
+            advice = oldgen.records(state, oldgen.Advice)
+            advice_source = next((x for x in advice if x.id == identity), None)
+            meta = child["data"].get("oldgen", {})
+            if advice_source is None or meta.get("phase") != "complete":
+                raise WorkflowError("Complete the actual original advice and owned listening")
+            # The current choice event precedes its immutable SQL response insert.
+            # Defer only that exact event; respond calls us again after insertion.
+            choice = meta.get("listen_choice") if advice_source.total >= 8 else advice_source.choice
+            response_event = (
+                meta.get("listen_event") if advice_source.total >= 8 else advice_source.event
+            )
+            chooser = advice_source.counterpart
+            response = c.scalar(
+                sa.select(t.m2["m2_responses"].c.event_id).where(
+                    t.m2["m2_responses"].c.campaign_id == game.store.campaign_id,
+                    t.m2["m2_responses"].c.choice_id == choice,
+                )
+            )
+            if response is None:
+                incoming = (
+                    c.execute(
+                        sa.select(t.events).where(
+                            t.events.c.campaign_id == game.store.campaign_id,
+                            t.events.c.id == event,
+                        )
+                    )
+                    .mappings()
+                    .one()
+                )
+                payload = json.loads(incoming["payload_json"])
+                if (
+                    response_event != event
+                    or incoming["kind"] != "m3.choice_resolved"
+                    or incoming["actor_id"] != str(chooser)
+                    or payload.get("action_id") != identity
+                    or payload.get("choice_id") != choice
+                ):
+                    raise WorkflowError("Recover the exact current advice response event")
+                continue
+            advice_proved = prove_advice(game, c, state, identity)
+            if (
+                advice_proved.actor != value.target
+                or advice_proved.target == value.actor
+                or rules.asleep(state, advice_proved.target)
+                or advice_proved.cast != value.cast
+                or child["data"].get("learned_play")
+                or child["data"]["prepared"].get("source_work") is not None
+                or source != _counter_scope(game, c, state, parent, value.target)
+            ):
+                raise WorkflowError("Preserve this native Oldgen's original source and recipient")
         if child["data"]["play"] == "dose_up":
             from girlframe.services.m3_dose_up import prove as prove_dose
 
@@ -957,7 +1347,8 @@ def synchronize_counters(game: GameService, c: Connection, event: str) -> GameSt
             or selection is None
             or ChoiceAnswer.model_validate_json(selection).options != ("play",)
             or child["actor_id"] != value.target.entity
-            or child["data"]["play"] not in (*COUNTER_PLAYS, "dose_up")
+            or child["data"]["play"]
+            not in (*COUNTER_PLAYS, "dose_up", "old_dog_new_pups", "unassuming_doll")
             or child["data"]["character_ids"].get(value.target.entity) != value.target.incarnation
             or receipt is None
             or json.loads(receipt) != child["data"].get("receipt")
@@ -995,14 +1386,19 @@ class SexService:
             _access(self.game, c, viewer)
             state = load_state(c, self.store.campaign_id)
             cast = _cast(self.game, c, state, channel)
-            actor = current_ref(state, viewer.user_id)
+            actor = (
+                current_ref(state, viewer.user_id) if str(viewer.user_id) in state.sheets else None
+            )
+            from girlframe.services.m3_learned_bonded_alpha import parent_lesson
             from girlframe.services.m3_learned_sex import cancelled, lessons
 
-            offered = lessons(self.game, c, state, actor, rules.RULE)
+            offered = lessons(self.game, c, state, actor, rules.RULE) if actor is not None else ()
             targets = []
-            if has_rule(state.sheets[actor.entity], rules.RULE, "ALPHA") or offered:
+            if actor is not None and (
+                has_rule(state.sheets[actor.entity], rules.RULE, "ALPHA") or offered
+            ):
                 for role in cast.roles:
-                    if role.actor.kind != "pilot" or role.actor == actor:
+                    if role.actor.kind not in ("pilot", "npc") or role.actor == actor:
                         continue
                     try:
                         _contact(
@@ -1032,13 +1428,25 @@ class SexService:
                     dict(
                         id=x.id,
                         phase="cancelled"
-                        if cancelled(self.game, c, state, x.learned_source)
+                        if cancelled(
+                            self.game, c, state, x.learned_source or parent_lesson(state, x)
+                        )
                         else x.phase,
                         actor=x.actor.model_dump(mode="json"),
                         target=x.target.model_dump(mode="json"),
                         caster=x.caster,
                         counterpart=x.counterpart,
                         tracking=rules.tracking(state, x),
+                        can_withdraw=(
+                            x.learned_source is not None
+                            or (
+                                x.bonded_source is not None
+                                and bonded.get(state, x.bonded_source).changeling_source is None
+                            )
+                        )
+                        and x.caster == viewer.user_id
+                        and x.action is None
+                        and x.phase in ("invited", "accepted"),
                     )
                     for x in rules.sessions(state)
                     if viewer.user_id in (x.caster, x.counterpart) and x.cast.channel == channel
@@ -1054,14 +1462,20 @@ class SexService:
                 raise WorkflowError(
                     "Only the actual original participants may read this private source"
                 )
+            from girlframe.services.m3_learned_bonded_alpha import parent_lesson
             from girlframe.services.m3_learned_sex import cancelled
 
-            ended = cancelled(self.game, c, state, value.learned_source)
+            ended = cancelled(
+                self.game, c, state, value.learned_source or parent_lesson(state, value)
+            )
             return dict(
                 id=value.id,
                 revision=state.revision,
                 phase="cancelled" if ended else value.phase,
                 proposal=value.proposal,
+                npc_performance=value.npc_performance.model_dump(mode="json")
+                if value.npc_performance is not None
+                else None,
                 counterpart=value.counterpart,
                 can_answer=not ended
                 and value.phase == "invited"
@@ -1072,6 +1486,7 @@ class SexService:
 
     def _tasks(self, c: Connection, viewer: GuildViewer) -> list[dict[str, Any]]:
         state = load_state(c, self.store.campaign_id)
+        from girlframe.services.m3_learned_bonded_alpha import parent_lesson
         from girlframe.services.m3_learned_sex import cancelled
 
         return [
@@ -1083,7 +1498,7 @@ class SexService:
                 actionable=True,
             )
             for x in rules.sessions(state)
-            if not cancelled(self.game, c, state, x.learned_source)
+            if not cancelled(self.game, c, state, x.learned_source or parent_lesson(state, x))
             and x.phase == "invited"
             and x.counterpart == viewer.user_id
             and broken.current(state, x.actor)
@@ -1135,7 +1550,13 @@ class SexService:
                 changeling_source=changeling_source,
                 target=target,
                 caster=viewer.user_id,
-                counterpart=int(target.entity),
+                counterpart=resolve(state, target, profiles(c, self.store.campaign_id)).controller,
+                actor_vessel=resolve(state, actor, profiles(c, self.store.campaign_id)).vessel_id
+                if target.kind == "npc"
+                else None,
+                target_vessel=resolve(state, target, profiles(c, self.store.campaign_id)).vessel_id
+                if target.kind == "npc"
+                else None,
                 cast=cast,
                 registry=self.store.policy.m3_approval.registry_sha256,
                 proposed_event=event,
@@ -1194,6 +1615,81 @@ class SexService:
             authorize=lambda c: _access(self.game, c, viewer),
         )
 
+    def withdraw(
+        self, viewer: GuildViewer, key: str, identity: str, expected: int
+    ) -> dict[str, Any]:
+        """Owner-only unused source release; never a fictional refusal."""
+
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            state = load_state(c, self.store.campaign_id)
+            value = prove(self.game, c, state, identity)
+
+            if (
+                state.revision != expected
+                or viewer.user_id != value.caster
+                or not broken.current(state, value.actor)
+                or (value.learned_source is None and value.bonded_source is None)
+                or (
+                    value.bonded_source is not None
+                    and bonded.get(state, value.bonded_source).changeling_source is not None
+                )
+                or value.changeling_source is not None
+                or value.phase not in ("invited", "accepted")
+                or value.action is not None
+                or value.effect_event is not None
+                or value.sleep_event is not None
+                or value.wake_event is not None
+            ):
+                raise WorkflowError(
+                    "Only the original owner may withdraw this unused original invitation"
+                )
+            actions = t.m2["m2_actions"]
+            if c.scalar(
+                sa.select(actions.c.id).where(
+                    actions.c.campaign_id == self.store.campaign_id,
+                    sa.or_(
+                        sa.func.json_extract(actions.c.body_json, "$.alpha_sex.session")
+                        == identity,
+                        sa.func.json_extract(actions.c.body_json, "$.prepared.source_work")
+                        == identity,
+                    ),
+                )
+            ):
+                raise WorkflowError(
+                    "Recover the actual original Action; never refund dice or costs"
+                )
+            from girlframe.services.m3_learned_sex import withdraw_invitation
+
+            event = str(uuid4())
+            if value.learned_source is not None:
+                withdraw_invitation(self.game, c, state, value, event)
+            rules.put(state, value.model_copy(update={"phase": "withdrawn"}))
+            if value.bonded_source is not None:
+                from girlframe.services.m3_learned_bonded_alpha import release
+
+                release(self.game, c, state, identity, viewer.user_id, event)
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.alpha_sex_withdrawn",
+                state,
+                event_id=event,
+                session=identity,
+            )
+            return dict(id=identity, phase="withdrawn")
+
+        return self.store._write(
+            viewer,
+            key,
+            "m3.alpha_sex_withdrawn",
+            dict(id=identity, expected=expected),
+            operation,
+            auto_audit=False,
+            authorize=lambda c: _access(self.game, c, viewer),
+        )
+
     def respond(
         self,
         viewer: GuildViewer,
@@ -1202,6 +1698,8 @@ class SexService:
         expected: int,
         accept: bool,
         account: str,
+        *,
+        npc_contact_account: str | None = None,
     ) -> dict[str, Any]:
         if type(accept) is not bool or not account.strip() or len(account) > 1200:
             raise WorkflowError(
@@ -1231,10 +1729,51 @@ class SexService:
                 learned_source=value.learned_source,
             )
             event = str(uuid4())
+            contact = None
+            if value.target.kind == "npc" and accept:
+                from girlframe.services.m3_oldgen_sex import _counterpart
+
+                if (
+                    not npc_contact_account
+                    or not npc_contact_account.strip()
+                    or len(npc_contact_account) > 1200
+                ):
+                    raise WorkflowError(
+                        "Attest actual physical contact outside enclosures for this invitation"
+                    )
+                other = _counterpart(self.game, c, state, value.target)
+                own = resolve(state, value.actor, profiles(c, self.store.campaign_id))
+                if (
+                    other.controller != value.counterpart
+                    or other.vessel_id != value.target_vessel
+                    or own.vessel_id != value.actor_vessel
+                    or own.vessel_id is None
+                    or own.cell is None
+                    or own.cell != other.cell
+                ):
+                    raise WorkflowError("Preserve original NPC controller, bodies and contact cell")
+                contact = rules.NpcContact(
+                    session=value.id,
+                    actor=value.actor,
+                    target=value.target,
+                    controller=value.counterpart,
+                    vessel=other.vessel_id,
+                    actor_vessel=own.vessel_id,
+                    cell=own.cell,
+                    cast=value.cast,
+                    revision=state.revision,
+                    event=event,
+                    account=npc_contact_account,
+                )
+            elif npc_contact_account is not None:
+                raise WorkflowError(
+                    "Contact evidence belongs only to an accepted actual NPC source"
+                )
             rules.put(
                 state,
                 value.model_copy(
                     update=dict(
+                        npc_contact=contact,
                         consent_event=event,
                         consent_account=account,
                         phase="accepted" if accept else "declined",
@@ -1244,6 +1783,12 @@ class SexService:
             from girlframe.services.m3_learned_sex import record_consent
 
             record_consent(self.game, c, state, rules.get(state, identity), accept, event)
+            if not accept and value.bonded_source is not None:
+                from girlframe.engine import m3_bonded as bonded
+                from girlframe.services.m3_learned_bonded_alpha import release
+
+                if bonded.get(state, value.bonded_source).changeling_source is None:
+                    release(self.game, c, state, identity, viewer.user_id, event)
             self.game.event(
                 c,
                 viewer.user_id,
@@ -1263,7 +1808,13 @@ class SexService:
             viewer,
             key,
             "m3.alpha_sex_consent",
-            dict(id=identity, expected=expected, accept=accept, account=account),
+            dict(
+                id=identity,
+                expected=expected,
+                accept=accept,
+                account=account,
+                npc_contact_account=npc_contact_account,
+            ),
             operation,
             auto_audit=False,
             authorize=lambda c: _access(self.game, c, viewer),

@@ -20,10 +20,13 @@ async def open_invitation(
         await reply(interaction, "This NPC role invitation is " + data["state"] + ".")
         return
     recipient = data["recipient"] == viewer.user_id
+    if not recipient and not data["can_withdraw"]:
+        await reply(interaction, "This transfer awaits the invited human's own response.")
+        return
     options = (
         (("accept", "Accept this NPC role"), ("decline", "Decline this role"))
         if recipient
-        else (("withdraw", "Withdraw this introduction"),)
+        else (("withdraw", "Withdraw this role invitation"),)
     )
     npc = data["npc"]
 

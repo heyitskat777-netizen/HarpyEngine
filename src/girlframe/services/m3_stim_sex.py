@@ -16,6 +16,8 @@ from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_dose_up import COMPONENTS, LABELS, SELF_RULE
 from girlframe.engine.m3_girl_runtime_state import has_rule
 from girlframe.engine.m3_handler_consequences import active_handler
+from girlframe.engine.m3_mockingbird import actor_tags, give_tag
+from girlframe.engine.m3_world_state import WorldTag
 from girlframe.services.m2_choices import ChoiceEngine
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
@@ -23,6 +25,7 @@ from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_dose_up import _audit, _cast, _native, _response, _roll_source
 from girlframe.services.m3_handler_advancements import _history
+from girlframe.services.m3_oldgen_sex import _counterpart
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -81,13 +84,18 @@ def _physical_contact(
         for ref in (value.actor, value.target)
     )
     cast = value.cast
+    npc = value.target.kind == "npc"
+    if npc:
+        from girlframe.services.m3_stim_npc import contact
+
+        contact(game, c, state, value, own, other, pending_event=pending_event)
     if (
         any(
             x.rules != "girl_frame" or x.offstage_source or x.custody not in (None, "free")
-            for x in (own, other)
+            for x in ((own,) if npc else (own, other))
         )
         or value.actor.kind != "pilot"
-        or value.target.kind != "pilot"
+        or value.target.kind not in ("pilot", "npc")
         or value.actor == value.target
         or own.controller != value.caster
         or other.controller != value.counterpart
@@ -98,7 +106,11 @@ def _physical_contact(
                 game, c, state, value.actor, value.target, rules.RULE, value.bonded_source
             )
         )
-        or (not remote and any(x.inside_frame is not False or x.cell is None for x in (own, other)))
+        or (
+            not remote
+            and not npc
+            and any(x.inside_frame is not False or x.cell is None for x in (own, other))
+        )
         or (not remote and own.cell != other.cell)
         or own.vessel_id != value.actor_vessel
         or other.vessel_id != value.target_vessel
@@ -121,7 +133,7 @@ def _contact(
     pending_event: str | None = None,
 ) -> None:
     _native(game, c, state, value.actor)
-    _native(game, c, state, value.target)
+    _counterpart(game, c, state, value.target)
     if fingerprint(_cast(game, c, state, value.cast.channel)) != fingerprint(value.cast):
         raise WorkflowError("Recover the original actual voluntary source cast")
     _physical_contact(game, c, state, value, pending_event=pending_event)
@@ -134,7 +146,10 @@ def _selection(game: GameService, c: Connection, state: GameState, value: rules.
         value not in rules.records(born, rules.Selection)
         or answer.options != value.options
         or answer.text != value.text
-        or value.owner != current_ref(born, value.controller)
+        or resolve(
+            born, value.owner, profiles(c, game.store.campaign_id), require_current_profile=False
+        ).controller
+        != value.controller
     ):
         raise WorkflowError("Recover the actual original human's exact Stim choice")
 
@@ -163,10 +178,12 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
     _audit(game, c, value.proposed_event, ("m3.stim_sex_invited",), value.caster)
     first = rules.get(proposed, identity)
     from girlframe.services.m3_bonded import prove_delegation
+    from girlframe.services.m3_learned_bonded_stim import released_parent
 
-    prove_delegation(
-        game, c, state, value.bonded_source, value.id, value.actor, value.target, rules.RULE
-    )
+    if not released_parent(game, c, state, value):
+        prove_delegation(
+            game, c, state, value.bonded_source, value.id, value.actor, value.target, rules.RULE
+        )
     stable = (
         "id",
         "actor",
@@ -197,8 +214,13 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
             saved.consent_account != value.consent_account
             or saved.consent_event != value.consent_event
             or saved.phase not in ("accepted", "declined")
+            or saved.npc_contact != value.npc_contact
         ):
             raise WorkflowError("Recover the actual other human's original source confirmation")
+    if value.npc_contact is not None:
+        from girlframe.services.m3_stim_npc import _prove_npc_contact
+
+        _prove_npc_contact(game, c, value)
     if value.action:
         if not value.bound_event or not value.consent_event:
             raise WorkflowError("Recover the accepted actual source before its genuine Play")
@@ -351,6 +373,9 @@ def prepare(
     handler = active_handler(state)
     if handler is None or value.cast.facilitator is None:
         raise WorkflowError("Use the actual source Handler facilitator")
+    from girlframe.services.m3_learned_bonded_stim import parent_lesson
+
+    delegated_lesson = parent_lesson(state, value)
     return (
         dict(
             session=value.id,
@@ -366,6 +391,7 @@ def prepare(
         )
         | ({"learned_source": value.learned_source} if value.learned_source is not None else {})
         | ({"bonded_source": value.bonded_source} if value.bonded_source is not None else {})
+        | ({"bonded_lesson": delegated_lesson} if delegated_lesson is not None else {})
         | (
             {"changeling_source": value.changeling_source}
             if value.changeling_source is not None
@@ -478,6 +504,67 @@ def _roles(value: rules.Session) -> tuple[ActorRef, ActorRef, int]:
     return giver, target, value.counterpart if counter else value.caster
 
 
+def _make_tag(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    target: ActorRef,
+    giver: ActorRef,
+    owner: int,
+    identity: str,
+    label: str,
+    event: str,
+    table: tuple[int, ...],
+) -> TagState | WorldTag:
+    if target.kind == "npc":
+        _copy(
+            state,
+            give_tag(
+                state,
+                profiles(c, game.store.campaign_id),
+                target,
+                giver,
+                label,
+                identity,
+                event,
+                table,
+            ),
+        )
+        value = next(x for x in actor_tags(state, target) if x.id == identity)
+        assert isinstance(value, WorldTag)
+        return value
+    value = TagState(
+        id=identity,
+        label=label,
+        giver=owner,
+        giver_actor=giver,
+        giver_character=giver.incarnation,
+        observers=table,
+    )
+    state.sheets[target.entity].tags.append(value)
+    state.sheets[target.entity].revision += 1
+    return value
+
+
+def _tag_provenance(
+    tag: TagState | WorldTag,
+    target: ActorRef,
+    giver: ActorRef,
+    owner: int,
+    event: str,
+    table: tuple[int, ...],
+) -> bool:
+    if target.kind == "npc":
+        return isinstance(tag, WorldTag) and tag.giver_entity == giver.model_dump_json()
+    return (
+        isinstance(tag, TagState)
+        and tag.giver == owner
+        and tag.giver_actor == giver
+        and tag.giver_character == giver.incarnation
+        and tag.observers == table
+    )
+
+
 def apply_choice(
     game: GameService,
     c: Connection,
@@ -489,6 +576,10 @@ def apply_choice(
     if row["kind"] not in KINDS:
         return False
     value = rules.get(state, action["data"]["stim_sex"]["session"])
+    if value.target.kind == "npc":
+        actual = _counterpart(game, c, state, value.target)
+        if actual.controller != value.counterpart or actual.vessel_id != value.target_vessel:
+            raise WorkflowError("Recover original NPC controller and body before source choices")
     giver, target, owner = _roles(value)
     if (
         int(row["actor_id"]) != owner
@@ -524,6 +615,11 @@ def apply_choice(
             )
         if len(answer.text) > 120:
             raise WorkflowError("A Tag label has at most120 characters")
+    if row["kind"] == "stim_sex_effects" and "orders" in answer.options and target.kind == "npc":
+        raise WorkflowError(
+            "NPC Orders need human adjudication; this source remains pending, "
+            "with no effect applied"
+        )
     selected = rules.Selection(
         id=row["id"],
         action=action["id"],
@@ -540,16 +636,18 @@ def apply_choice(
     if row["kind"] == "stim_sex_drug":
         component = answer.options[0]
         identity = "stim-sex-drug:" + action["id"] + ":" + target.token
-        tag = TagState(
-            id=identity,
-            label=LABELS[component],
-            giver=owner,
-            giver_actor=giver,
-            giver_character=giver.incarnation,
-            observers=tuple(action["data"]["stim_sex"]["table"]),
+        tag = _make_tag(
+            game,
+            c,
+            state,
+            target,
+            giver,
+            owner,
+            identity,
+            LABELS[component],
+            event,
+            tuple(action["data"]["stim_sex"]["table"]),
         )
-        state.sheets[target.entity].tags.append(tag)
-        state.sheets[target.entity].revision += 1
         drug = rules.Drug.model_validate(
             dict(
                 id=identity,
@@ -596,16 +694,18 @@ def apply_choice(
                 _copy(state, change(state, giver, target, 1, event))
                 new = depth(state, giver, target)
             elif kind == "tag":
-                tag = TagState(
-                    id=identity,
-                    label=answer.text.strip(),
-                    giver=owner,
-                    giver_actor=giver,
-                    giver_character=giver.incarnation,
-                    observers=tuple(action["data"]["stim_sex"]["table"]),
+                tag = _make_tag(
+                    game,
+                    c,
+                    state,
+                    target,
+                    giver,
+                    owner,
+                    identity,
+                    answer.text.strip(),
+                    event,
+                    tuple(action["data"]["stim_sex"]["table"]),
                 )
-                state.sheets[target.entity].tags.append(tag)
-                state.sheets[target.entity].revision += 1
             rules.put(
                 state,
                 rules.Effect.model_validate(
@@ -655,10 +755,16 @@ def projection(
         if value.phase == "actor_effects" and value.tier == "high"
         else 1
     )
+    _, target, _ = _roles(value)
     return dict(
         options=(
             ("helpless", "Helpless while drugged"),
-            ("orders", "Give higher-Status Orders until drugs wear off"),
+            (
+                "orders",
+                "NPC Orders: unsupported; pause for human adjudication"
+                if target.kind == "npc"
+                else "Give higher-Status Orders until drugs wear off",
+            ),
             ("bond", "Deepen your actual Bond"),
             ("tag", "Give an authored Tag"),
         ),
@@ -698,17 +804,24 @@ def _drug(game: GameService, c: Connection, state: GameState, identity: str) -> 
         or drug.tag.id != drug.id
         or drug.id != "stim-sex-drug:" + drug.action + ":" + target.token
         or drug.tag.label != LABELS[drug.component]
-        or drug.tag.giver != owner
-        or drug.tag.giver_actor != giver
-        or drug.tag.giver_character != giver.incarnation
-        or drug.tag.observers
-        != tuple(
-            sorted(
-                {x.controller for x in session.cast.roles}
-                | ({session.cast.facilitator} if session.cast.facilitator is not None else set())
-            )
+        or not _tag_provenance(
+            drug.tag,
+            target,
+            giver,
+            owner,
+            drug.event,
+            tuple(
+                sorted(
+                    {x.controller for x in session.cast.roles}
+                    | (
+                        {session.cast.facilitator}
+                        if session.cast.facilitator is not None
+                        else set()
+                    )
+                )
+            ),
         )
-        or drug.tag not in born.sheets[target.entity].tags
+        or drug.tag not in actor_tags(born, target)
     ):
         raise WorkflowError(
             "Recover the actual original chosen component, body, giver and drug Tag"
@@ -773,8 +886,24 @@ def prove_effect(game: GameService, c: Connection, state: GameState, identity: s
             value.kind != "tag"
             or value.tag.id != value.id
             or value.tag.label != choice.text.strip()
-            or value.tag.giver_actor != giver
-            or value.tag not in born.sheets[target.entity].tags
+            or not _tag_provenance(
+                value.tag,
+                target,
+                giver,
+                owner,
+                value.event,
+                tuple(
+                    sorted(
+                        {x.controller for x in session.cast.roles}
+                        | (
+                            {session.cast.facilitator}
+                            if session.cast.facilitator is not None
+                            else set()
+                        )
+                    )
+                ),
+            )
+            or value.tag not in actor_tags(born, target)
         )
     ):
         raise WorkflowError(
@@ -792,6 +921,7 @@ def prove_drug_tag(
             drug.target != current_ref(state, owner)
             or not rules.active(state, drug)
             or tag.label != drug.tag.label
+            or not isinstance(drug.tag, TagState)
             or tag.giver != drug.tag.giver
             or tag.giver_actor != drug.giver
             or tag.giver_character != drug.tag.giver_character
@@ -851,8 +981,16 @@ def expire_scene(
         before = [x for x in rules.records(state, rules.SceneEnd) if x.drug == drug.id]
         if any(x.scene == scene["id"] for x in before):
             continue
-        sheet = state.sheets.get(drug.target.entity)
-        if (
+        npc = drug.target.kind == "npc"
+        sheet = state.sheets.get(drug.target.entity) if not npc else None
+        if npc:
+            actual = _counterpart(game, c, state, drug.target)
+            session = rules.get(state, drug.session)
+            if actual.vessel_id != drug.vessel or actual.controller != session.counterpart:
+                raise WorkflowError(
+                    "Recover the actual original NPC body and controller before expiry"
+                )
+        if not npc and (
             sheet is None
             or sheet.character_id != drug.target.incarnation
             or resolve(
@@ -864,7 +1002,7 @@ def expire_scene(
             != drug.vessel
         ):
             raise WorkflowError("Recover the actual original drugged body before its scene closes")
-        if any(x.id == drug.id and x.rejection_pending for x in sheet.tags):
+        if any(x.id == drug.id and x.rejection_pending for x in actor_tags(state, drug.target)):
             raise WorkflowError("Finish the actual drug-Tag rejection before expiry")
         ends = len(before) + 1 >= drug.duration
         rules.put(
@@ -879,8 +1017,24 @@ def expire_scene(
             ),
         )
         if ends:
-            sheet.tags = [x for x in sheet.tags if x.id != drug.id]
-            sheet.revision += 1
+            if npc:
+                assert state.world is not None
+                state.world = state.world.model_copy(
+                    update={
+                        "npcs": tuple(
+                            x.model_copy(
+                                update={"tags": tuple(t for t in x.tags if t.id != drug.id)}
+                            )
+                            if x.id == drug.target.entity
+                            else x
+                            for x in state.world.npcs
+                        )
+                    }
+                )
+            else:
+                assert sheet is not None
+                sheet.tags = [x for x in sheet.tags if x.id != drug.id]
+                sheet.revision += 1
         changed = True
     if changed and legacy:
         state.scene_casts.append(cast)
@@ -971,7 +1125,9 @@ class SexService:
             _access(self.game, c, viewer)
             state = load_state(c, self.store.campaign_id)
             targets = []
-            from girlframe.services.m3_learned_sex import lessons
+            from girlframe.engine import m3_bonded as bonded
+            from girlframe.services.m3_learned_bonded_stim import parent_lesson
+            from girlframe.services.m3_learned_sex import cancelled, lessons
 
             learned: tuple[dict[str, str], ...] = ()
             try:
@@ -983,11 +1139,14 @@ class SexService:
                     has_rule(state.sheets[actor.entity], rules.RULE, "STIM-BLISSED") or learned
                 ) and own.inside_frame is False:
                     for role in cast.roles:
-                        if role.actor.kind != "pilot" or role.actor == actor:
+                        if role.actor.kind not in ("pilot", "npc") or role.actor == actor:
                             continue
-                        other = _native(self.game, c, state, role.actor)
+                        try:
+                            other = _counterpart(self.game, c, state, role.actor)
+                        except (ValueError, WorkflowError):
+                            continue
                         if (
-                            other.inside_frame is False
+                            (role.actor.kind == "npc" or other.inside_frame is False)
                             and own.cell is not None
                             and own.cell == other.cell
                         ):
@@ -1001,7 +1160,22 @@ class SexService:
                 lessons=learned,
                 targets=targets,
                 sessions=[
-                    dict(id=x.id, phase=x.phase, caster=x.caster, counterpart=x.counterpart)
+                    dict(
+                        id=x.id,
+                        phase="cancelled"
+                        if cancelled(
+                            self.game, c, state, x.learned_source or parent_lesson(state, x)
+                        )
+                        else x.phase,
+                        caster=x.caster,
+                        counterpart=x.counterpart,
+                        can_withdraw=x.bonded_source is not None
+                        and bonded.get(state, x.bonded_source).changeling_source is None
+                        and x.changeling_source is None
+                        and x.caster == viewer.user_id
+                        and x.action is None
+                        and x.phase in ("invited", "accepted"),
+                    )
                     for x in rules.records(state, rules.Session)
                     if viewer.user_id in (x.caster, x.counterpart)
                 ],
@@ -1009,6 +1183,7 @@ class SexService:
 
     def _tasks(self, c: Connection, viewer: GuildViewer) -> list[dict[str, Any]]:
         state = load_state(c, self.store.campaign_id)
+        from girlframe.services.m3_learned_bonded_stim import parent_lesson
         from girlframe.services.m3_learned_sex import cancelled
 
         return [
@@ -1016,8 +1191,12 @@ class SexService:
                 id=x.id,
                 revision=state.revision,
                 label="Your actual Stim intimacy and drug source",
-                phase="cancelled" if cancelled(self.game, c, state, x.learned_source) else x.phase,
-                pending=not cancelled(self.game, c, state, x.learned_source)
+                phase="cancelled"
+                if cancelled(self.game, c, state, x.learned_source or parent_lesson(state, x))
+                else x.phase,
+                pending=not cancelled(
+                    self.game, c, state, x.learned_source or parent_lesson(state, x)
+                )
                 and (
                     x.phase == "invited"
                     and viewer.user_id == x.counterpart
@@ -1044,10 +1223,23 @@ class SexService:
             for effect in rules.records(state, rules.Effect):
                 if effect.action == value.action:
                     prove_effect(self.game, c, state, effect.id)
+            from girlframe.services.m3_learned_bonded_stim import parent_lesson
             from girlframe.services.m3_learned_sex import cancelled
 
+            npc_order_effect = None
+            if value.target.kind == "npc" and viewer.user_id == value.counterpart:
+                from girlframe.services.m3_stim_npc import order_authority as npc_authority
+
+                authority = npc_authority(
+                    self.game, c, state, value.target, value.actor, session_id=value.id
+                )
+                if authority is not None and authority.action == value.action:
+                    npc_order_effect = authority.id
             return value.model_dump(mode="json", exclude={"cast", "registry"}) | dict(
-                lesson_cancelled=cancelled(self.game, c, state, value.learned_source),
+                npc_order_effect=npc_order_effect,
+                lesson_cancelled=cancelled(
+                    self.game, c, state, value.learned_source or parent_lesson(state, value)
+                ),
                 revision=state.revision,
                 drugs=[
                     dict(
@@ -1092,7 +1284,10 @@ class SexService:
             if state.revision != expected or self.game.pending_actions(c):
                 raise WorkflowError("Finish pending Plays and reopen the current source")
             actor = current_ref(state, viewer.user_id)
-            own, other = _native(self.game, c, state, actor), _native(self.game, c, state, target)
+            own, other = (
+                _native(self.game, c, state, actor),
+                _counterpart(self.game, c, state, target),
+            )
             cast = _cast(self.game, c, state, channel)
             if own.vessel_id is None or other.vessel_id is None:
                 raise WorkflowError("Establish the actual original bodies, not imaginary contact")
@@ -1175,6 +1370,76 @@ class SexService:
             authorize=lambda c: _access(self.game, c, viewer),
         )
 
+    def withdraw(
+        self, viewer: GuildViewer, key: str, identity: str, expected: int
+    ) -> dict[str, Any]:
+        """Owner-only unused delegated reservation release; never a fictional refusal."""
+
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            state = load_state(c, self.store.campaign_id)
+            value = prove(self.game, c, state, identity)
+            from girlframe.engine import m3_bonded as bonded
+
+            delegated = (
+                value.bonded_source is not None
+                and bonded.get(state, value.bonded_source).changeling_source is None
+            )
+            if (
+                state.revision != expected
+                or viewer.user_id != value.caster
+                or current_ref(state, viewer.user_id) != value.actor
+                or not delegated
+                or value.bonded_source is None
+                or value.changeling_source is not None
+                or value.phase not in ("invited", "accepted")
+                or value.action is not None
+                or value.effect_event is not None
+                or value.bound_event is not None
+                or value.completed_event is not None
+            ):
+                raise WorkflowError("Only the original owner may withdraw this unbound invitation")
+            actions = t.m2["m2_actions"]
+            if c.scalar(
+                sa.select(actions.c.id).where(
+                    actions.c.campaign_id == self.store.campaign_id,
+                    sa.or_(
+                        sa.func.json_extract(actions.c.body_json, "$.stim_sex.session") == identity,
+                        sa.func.json_extract(actions.c.body_json, "$.prepared.source_work")
+                        == identity,
+                    ),
+                )
+            ):
+                raise WorkflowError(
+                    "Recover the actual original Action; never refund dice or costs"
+                )
+            event = str(uuid4())
+            rules.put(state, value.model_copy(update={"phase": "withdrawn"}))
+            if delegated:
+                from girlframe.services.m3_learned_bonded_stim import release
+
+                release(self.game, c, state, identity, viewer.user_id, event)
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.stim_sex_withdrawn",
+                state,
+                event_id=event,
+                session=identity,
+            )
+            return dict(id=identity, phase="withdrawn")
+
+        return self.store._write(
+            viewer,
+            key,
+            "m3.stim_sex_withdrawn",
+            dict(id=identity, expected=expected),
+            operation,
+            auto_audit=False,
+            authorize=lambda c: _access(self.game, c, viewer),
+        )
+
     def respond(
         self,
         viewer: GuildViewer,
@@ -1183,6 +1448,8 @@ class SexService:
         expected: int,
         accept: bool,
         account: str,
+        *,
+        npc_contact_account: str | None = None,
     ) -> dict[str, Any]:
         if type(accept) is not bool or not account.strip() or len(account) > 1200:
             raise WorkflowError("Only your own actual source confirmation or decline is accepted")
@@ -1200,10 +1467,38 @@ class SexService:
                 raise WorkflowError("Answer only your own current original invitation")
             _contact(self.game, c, state, value)
             event = str(uuid4())
+            contact = None
+            if value.target.kind == "npc" and accept:
+                if (
+                    not npc_contact_account
+                    or not npc_contact_account.strip()
+                    or len(npc_contact_account) > 1200
+                ):
+                    raise WorkflowError(
+                        "Attest actual physical contact outside enclosures for this invitation"
+                    )
+                other = _counterpart(self.game, c, state, value.target)
+                assert other.cell is not None
+                contact = rules.NpcContact(
+                    session=value.id,
+                    actor=value.actor,
+                    target=value.target,
+                    controller=viewer.user_id,
+                    vessel=value.target_vessel,
+                    actor_vessel=value.actor_vessel,
+                    cell=other.cell,
+                    cast=value.cast,
+                    revision=state.revision,
+                    event=event,
+                    account=npc_contact_account.strip(),
+                )
+            elif npc_contact_account is not None:
+                raise WorkflowError("Only the accepting NPC controller records this contact")
             rules.put(
                 state,
                 value.model_copy(
                     update=dict(
+                        npc_contact=contact,
                         consent_event=event,
                         consent_account=account,
                         phase="accepted" if accept else "declined",
@@ -1213,6 +1508,12 @@ class SexService:
             from girlframe.services.m3_learned_sex import record_consent
 
             record_consent(self.game, c, state, rules.get(state, value.id), accept, event)
+            if not accept and value.bonded_source is not None:
+                from girlframe.engine import m3_bonded as bonded
+                from girlframe.services.m3_learned_bonded_stim import release
+
+                if bonded.get(state, value.bonded_source).changeling_source is None:
+                    release(self.game, c, state, identity, viewer.user_id, event)
             self.game.event(
                 c,
                 viewer.user_id,
@@ -1232,7 +1533,13 @@ class SexService:
             viewer,
             key,
             "m3.stim_sex_consent",
-            dict(id=identity, expected=expected, accept=accept, account=account),
+            dict(
+                id=identity,
+                expected=expected,
+                accept=accept,
+                account=account,
+                npc_contact_account=npc_contact_account,
+            ),
             operation,
             auto_audit=False,
             authorize=lambda c: _access(self.game, c, viewer),

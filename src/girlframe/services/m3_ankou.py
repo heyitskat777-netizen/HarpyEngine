@@ -196,15 +196,34 @@ def prove_obsession(
 
 
 def _positions(
-    game: GameService, c: Connection, state: GameState, people: tuple[ActorRef, ...]
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    people: tuple[ActorRef, ...],
+    *,
+    ordinary_npcs: bool = False,
 ) -> dict[str, str]:
     bound = profiles(c, game.store.campaign_id)
     result = {}
     for actor in people:
         view = resolve(state, actor, bound)
-        if not view.alive or view.offstage_source or view.position_sha256 is None:
+        if not view.alive or view.offstage_source:
             raise WorkflowError("Establish the actual living mind's current physical source")
-        result[actor.token] = view.position_sha256
+        position = view.position_sha256
+        if position is None and ordinary_npcs and actor.kind == "npc" and state.world:
+            npc = next((x for x in state.world.npcs if x.id == actor.entity), None)
+            if (
+                npc is not None
+                and npc.source_kind is None
+                and view.cell is not None
+                and npc.cell == view.cell
+            ):
+                # Use the resolver's existing canonical NPC source fingerprint, not
+                # a fabricated Pilot placement or a new physical identity model.
+                position = view.source_sha256
+        if position is None:
+            raise WorkflowError("Establish the actual living mind's current physical source")
+        result[actor.token] = position
     return result
 
 
@@ -234,7 +253,7 @@ def prepare(
     if (
         not minds
         or minds != value.minds
-        or _positions(game, c, state, (actor, *minds)) != value.positions
+        or _positions(game, c, state, (actor, *minds), ordinary_npcs=True) != value.positions
     ):
         raise WorkflowError("Refresh the actual living processors' range/body source before acting")
     approval = game.store.policy.m3_approval
@@ -284,7 +303,8 @@ def pre_roll(
         fingerprint(cast) != meta["cast_sha256"]
         or support.processor_minds(game, c, state, value.actor, value.exempt_cadre, value.exempt)
         != value.minds
-        or _positions(game, c, state, (value.actor, *value.minds)) != value.positions
+        or _positions(game, c, state, (value.actor, *value.minds), ordinary_npcs=True)
+        != value.positions
     ):
         raise WorkflowError("Refresh the changed actual processor scene/body/range before dice")
     require_rule(game, c, state, value.actor, rules.PROCESSOR)
@@ -344,17 +364,24 @@ def apply_choice(
         raise WorkflowError("The actual original Ankou owner selects these printed results")
     if row["kind"] == KINDS[0]:
         count = 3 if value.total >= 11 else 2 if value.total >= 8 else 1
+        # Preserve global distinct-choice validation while admitting only the
+        # printed repeatable Identity benefit at its exact original slot.
+        benefits: list[str] = []
+        for index, option in enumerate(answer.options):
+            if option == f"identity_repeat_{index}" and "identity" in benefits:
+                option = "identity"
+            benefits.append(option)
         if (
             value.selected_event
-            or len(answer.options) != count
-            or any(x not in rules.PROCESSOR_BENEFITS for x in answer.options)
+            or len(benefits) != count
+            or any(x not in rules.PROCESSOR_BENEFITS for x in benefits)
         ):
             raise WorkflowError("Choose exactly the actual tier's number of printed benefits")
-        if any(answer.options.count(x) > 1 for x in ("champion", "eyes", "will")):
+        if any(benefits.count(x) > 1 for x in ("champion", "eyes", "will")):
             raise WorkflowError("Only the printed Identity benefit can be selected repeatedly")
         assets, tags = [], []
         allowed_fields: set[str] = set()
-        for index, choice in enumerate(answer.options):
+        for index, choice in enumerate(benefits):
             if choice == "identity":
                 fields = {"erase" + str(index), "unmark" + str(index), "gain" + str(index)}
                 allowed_fields.update(fields)
@@ -407,7 +434,7 @@ def apply_choice(
             raise WorkflowError("Use only these actual selected source benefit controls")
         value = value.model_copy(
             update={
-                "benefits": answer.options,
+                "benefits": tuple(benefits),
                 "assets": tuple(assets),
                 "tags": tuple(tags),
                 "selected_event": event,
@@ -459,6 +486,7 @@ def projection(
     if row["kind"] in ("ankou_interrupt", "ankou_interrupt_child"):
         task = prove_task(game, c, state, json.loads(row["body_json"])["task"])
         from girlframe.engine.m3_mockingbird import actor_tags
+        from girlframe.services.m3_ankou_interrupt import options
 
         return dict(
             source=task.id,
@@ -467,14 +495,7 @@ def projection(
             if task.target
             else [],
             child=task.child,
-            plays=(
-                "keep_your_head",
-                "check_sensors",
-                "flirt",
-                "all_out_assault",
-                "engage",
-                "put_someone_beneath_you",
-            ),
+            plays=options(game),
         )
     value = prove_source(game, c, state, action["id"])
     sheet = state.sheets[value.actor.entity]
@@ -630,7 +651,7 @@ class AnkouService:
                     state, handler, profiles(c, self.store.campaign_id)
                 ).controller,
                 minds=minds,
-                positions=_positions(self.game, c, state, (actor, *minds)),
+                positions=_positions(self.game, c, state, (actor, *minds), ordinary_npcs=True),
                 exempt_cadre=exempt_cadre,
                 exempt=exempt,
                 account=support.text(account),
@@ -824,6 +845,12 @@ class AnkouService:
                     raise WorkflowError(
                         "Complete all5 actual Feedback results before replacing this Obsession"
                     )
+                from girlframe.engine.m3_handler_consequences import same_handler_body
+
+                if target == old.target or (
+                    same_handler_body(state, target) and same_handler_body(state, old.target)
+                ):
+                    raise WorkflowError("Choose someone else after the actual Obsession ends")
                 rules.put(state, old.model_copy(update={"replacement_event": event}))
             value = rules.Obsession(
                 id=event, actor=actor, target=target, frame=rules.frame(state, actor), event=event
@@ -866,12 +893,15 @@ class AnkouService:
                 or viewer.user_id not in (own.controller, other.controller)
                 or own.cell is None
                 or own.cell != other.cell
-                or not own.position_sha256
-                or not other.position_sha256
+                or (kind not in ("touch", "seen") and not own.position_sha256)
+                or (kind not in ("touch", "seen") and not other.position_sha256)
             ):
                 raise WorkflowError(
                     "Record a real current co-present interaction between the original people"
                 )
+            positions = _positions(
+                self.game, c, state, (actor, target), ordinary_npcs=kind in ("touch", "seen")
+            )
             if kind == "spy" and (viewer.user_id != other.controller or not thinks_private):
                 raise WorkflowError(
                     "The actual target authors their genuine private-expectation context"
@@ -886,8 +916,8 @@ class AnkouService:
                 target=target,
                 kind=kind,
                 cast=cast,
-                actor_position=own.position_sha256,
-                target_position=other.position_sha256,
+                actor_position=positions[actor.token],
+                target_position=positions[target.token],
                 author=viewer.user_id,
                 account=support.text(account),
                 event=event,
@@ -1002,6 +1032,15 @@ class AnkouService:
                     dict(kind="ankou_disclosure", id=event, body=json.dumps(body, sort_keys=True))
                 )
             elif task.kind == "company":
+                original = _history(c, self.game, task.event)
+                if (
+                    resolve(state, task.actor, profiles(c, self.store.campaign_id)).controller
+                    != task.controller
+                    or task.options != rules.get(original, rules.Task, task.id).options
+                ):
+                    raise WorkflowError(
+                        "Refresh this original person's genuinely changed company authority"
+                    )
                 if choice != "none" and any(x not in task.options for x in choice.split("\n")):
                     raise WorkflowError(
                         "Choose actual source companions from this original factual request"
@@ -1015,7 +1054,13 @@ class AnkouService:
                     set(companions)
                 ) != len(companions):
                     raise WorkflowError("Record the actual distinct original companions")
-                positions = _positions(self.game, c, state, (task.actor, *companions))
+                positions = _positions(
+                    self.game, c, state, (task.actor, *companions), ordinary_npcs=True
+                )
+                if positions != _positions(
+                    self.game, c, original, (task.actor, *companions), ordinary_npcs=True
+                ):
+                    raise WorkflowError("Refresh the genuinely changed original company request")
                 origin = resolve(state, task.actor, profiles(c, self.store.campaign_id))
                 if any(
                     resolve(state, x, profiles(c, self.store.campaign_id)).cell != origin.cell
@@ -1040,9 +1085,11 @@ class AnkouService:
                     raise WorkflowError("Truthfully author your own expectation of privacy")
                 if choice == "yes":
                     actor, other = task.target, task.actor
-                    positions = _positions(self.game, c, state, (actor, other))
+                    positions = _positions(self.game, c, state, (actor, other), ordinary_npcs=True)
                     born = _history(c, self.game, task.event)
-                    if positions != _positions(self.game, c, born, (actor, other)):
+                    if positions != _positions(
+                        self.game, c, born, (actor, other), ordinary_npcs=True
+                    ):
                         raise WorkflowError("Refresh the genuinely changed actual spying context")
                     rules.put(
                         state,
@@ -1377,7 +1424,12 @@ class AnkouService:
                     )
                 disclosed = disclosed_sources(self.game, c, state, viewer, source_person)
                 label = next(
-                    (x["label"] for x in disclosed if x["id"] == (source_identity or source_tag)),
+                    (
+                        x["label"]
+                        for x in disclosed
+                        if x["id"] == (source_identity or source_tag)
+                        and x["kind"] == ("identity" if source_identity else "tag")
+                    ),
                     None,
                 )
                 if label is None:
@@ -1464,6 +1516,12 @@ class AnkouService:
                         disclosed.append(
                             dict(
                                 id=resource["id"],
+                                token=rules.identity(
+                                    "quickchange-source",
+                                    ref.token,
+                                    resource["kind"],
+                                    resource["id"],
+                                ),
                                 label=str(person["label"]) + " — " + resource["label"],
                                 person=person["ref"],
                                 kind=resource.get("kind", "identity"),
@@ -1576,6 +1634,16 @@ class AnkouService:
                         and value.consequence is None
                     )
                 if isinstance(value, rules.Task):
+                    if (
+                        value.kind == "company"
+                        and resolve(
+                            state, value.actor, profiles(c, self.store.campaign_id)
+                        ).controller
+                        != value.controller
+                    ):
+                        raise WorkflowError(
+                            "Refresh this original person's genuinely changed company authority"
+                        )
                     if viewer.user_id != value.controller and value.kind in (
                         "company",
                         "disclosure",
@@ -1679,11 +1747,9 @@ class AnkouService:
                         == viewer.user_id
                     )
                 if isinstance(value, rules.TagUse):
-                    data.update(
-                        can_npc_off_duty=value.kind == "symptom"
-                        and not value.ended_event
-                        and value.target.kind == "npc"
-                    )
+                    # Processor symptoms last until the source Ankou's next Off-Duty,
+                    # not the affected NPC's independently recorded rest.
+                    data.update(can_npc_off_duty=False)
                 if isinstance(value, (rules.FeedbackSequence, rules.FeedbackStep)):
                     from girlframe.services.m3_ankou_feedback_sequences import (
                         projection as feedback_projection,
@@ -1924,7 +1990,13 @@ def prove_encounter(
     if rules.get(born, rules.Encounter, identity) != value:
         raise WorkflowError("Preserve the actual original human factual encounter")
     bound = profiles(c, game.store.campaign_id)
-    if _positions(game, c, state, (value.actor, value.target)) != {
+    if _positions(
+        game,
+        c,
+        state,
+        (value.actor, value.target),
+        ordinary_npcs=value.kind in ("spy", "touch", "seen"),
+    ) != {
         value.actor.token: value.actor_position,
         value.target.token: value.target_position,
     }:
@@ -2041,8 +2113,8 @@ def disclosed_sources(
     bound = profiles(c, game.store.campaign_id)
     other = resolve(state, person, bound)
     if other.controller == viewer.user_id:
-        return [dict(id=x.id, label=x.name) for x in other.identities] + [
-            dict(id=x.id, label=x.label) for x in actor_tags(state, person)
+        return [dict(id=x.id, label=x.name, kind="identity") for x in other.identities] + [
+            dict(id=x.id, label=x.label, kind="tag") for x in actor_tags(state, person)
         ]
     result = []
     for fact in state.facts:
@@ -2052,6 +2124,8 @@ def disclosed_sources(
         if (
             body["recipient"] == viewer.user_id
             and ActorRef.model_validate(body["person"]) == person
+            and body.get("recipient_actor")
+            == current_ref(state, viewer.user_id).model_dump(mode="json")
         ):
             born = support.prove_birth(
                 game,
@@ -2145,7 +2219,9 @@ def observe(
         )
         died = (
             archived
-            or not resolve(after, obsession.target, bound, require_current_profile=False).alive
+            or not resolve(
+                after, obsession.target, bound, require_alive=False, require_current_profile=False
+            ).alive
         )
         if was.alive and died:
             from girlframe.services.m3_ankou_feedback_sequences import start
@@ -2391,9 +2467,14 @@ def off_duty_start(
 
     changed = False
     for use in rules.records(state, rules.TagUse):
-        if use.kind == "symptom" and use.target == actor and not use.ended_event:
-            if any(x.id == use.tag for x in actor_tags(state, actor)):
-                support.remove_tag(state, actor, use.tag)
+        if use.kind == "symptom" and use.actor == actor and not use.ended_event:
+            from girlframe.services.m3_ankou_symptom_expiry import holder
+
+            actual_holder = holder(game, c, state, use)
+            if actual_holder is not None and any(
+                x.id == use.tag for x in actor_tags(state, actual_holder)
+            ):
+                support.remove_tag(state, actual_holder, use.tag)
             rules.put(state, use.model_copy(update={"ended_event": event}))
             changed = True
     return changed
@@ -2473,8 +2554,12 @@ def stalker_view(
         task = prove_task(game, c, state, source.request)
         if task.kind != "company" or task.actor != target or task.target != actor:
             continue
-        if _positions(game, c, state, (target, *source.companions)) != source.positions:
-            continue
+        if (
+            _positions(game, c, state, (target, *source.companions), ordinary_npcs=True)
+            != source.positions
+        ):
+            # The latest answer supersedes earlier ones, even when now stale.
+            break
         company = [
             dict(
                 ref=x.model_dump(mode="json"),
@@ -2642,6 +2727,7 @@ def apply_pulse(
         x.kind == "pulse" and x.source == action["id"] for x in rules.records(state, rules.TagUse)
     ):
         raise WorkflowError("This actual Play already moved its one Amygdala Tag")
+    original_tag = next(x for x in state.sheets[actor.entity].tags if x.id == tag)
     support.move_tag(state, actor, target, tag)
     rules.put(
         state,
@@ -2654,6 +2740,7 @@ def apply_pulse(
             scene=action["scene_id"],
             event=event,
             kind="pulse",
+            original_tag=original_tag.model_copy(deep=True) if target.kind == "npc" else None,
         ),
     )
 
@@ -2686,18 +2773,12 @@ def _interrupt_choice(
             raise WorkflowError("Decline without erasing a Tag or inventing a performance")
         rules.put(state, task.model_copy(update={"completed_event": event, "choice": "declined"}))
         return True
+    from girlframe.services.m3_ankou_interrupt import options
+
     if (
         answer.flag is not True
         or len(answer.options) != 1
-        or answer.options[0]
-        not in (
-            "keep_your_head",
-            "check_sensors",
-            "flirt",
-            "all_out_assault",
-            "engage",
-            "put_someone_beneath_you",
-        )
+        or answer.options[0] not in options(game)
         or set(answer.fields) != {"tag"}
         or task.target is None
     ):
@@ -2764,7 +2845,25 @@ def prove_tag(
         if proof is None:
             raise WorkflowError("Prove the actual original Obsession Tag source")
     elif value.kind == "spy":
-        prove_encounter(game, c, _history(c, game, value.event), value.source)
+        # The Tag itself changes an ordinary NPC's canonical source fingerprint.
+        # Validate its actual contact immediately before this proven Tag write.
+        from girlframe.engine.m3_mockingbird import actor_tags
+        from girlframe.services.m3_asset_loss import snapshots
+
+        before_tag, after_tag = snapshots(game, c, value.event)
+        written = support.prove_birth(
+            game, c, value.event, "m3.ankou_source_tag", int(value.actor.entity)
+        )
+        contact = prove_encounter(game, c, before_tag, value.source)
+        if (
+            written != after_tag
+            or contact.actor != value.actor
+            or contact.target != value.target
+            or not contact.thinks_private
+            or any(x.id == tag for x in actor_tags(before_tag, owner))
+            or not any(x.id == tag for x in actor_tags(after_tag, owner))
+        ):
+            raise WorkflowError("Preserve the exact actual spying contact and canonical Tag birth")
     elif value.kind == "pulse":
         action = game.action(c, value.source)
         actor = support.actual_action_actor(action)
@@ -2783,6 +2882,13 @@ def prove_tag(
             or payload.get("receipt_id") != receipt.get("id")
         ):
             raise WorkflowError("Prove the actual Amygdala move at its canonical real roll/receipt")
+        if owner.kind == "npc":
+            from girlframe.engine.m3_ankou_pulse import npc_move
+            from girlframe.services.m3_asset_loss import snapshots
+
+            before_move, after_move = snapshots(game, c, value.event)
+            if not npc_move(before_move, after_move, owner, tag, value.event):
+                raise WorkflowError("Prove the actual lossless original NPC Tag movement")
     return value
 
 
@@ -2821,6 +2927,10 @@ def request_source(
         support.text(account)
         options: tuple[str, ...] = ()
         if kind == "company":
+            if not rules.effective_intense(state, actor, person):
+                raise WorkflowError(
+                    "Only this actual directional Intense source authorizes Stalker knowledge"
+                )
             options = tuple(
                 x.model_dump_json() for x in support.range_people(game, c, state, person)
             )

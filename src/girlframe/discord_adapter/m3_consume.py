@@ -113,7 +113,7 @@ async def open_choice(
     fields.append(
         Field(
             "account",
-            "Your actual Tag"
+            "Actual Tag, or account if declining"
             if kind == "consume_feral" and data["tier"] == "low"
             else "Your actual source account",
             paragraph=True,

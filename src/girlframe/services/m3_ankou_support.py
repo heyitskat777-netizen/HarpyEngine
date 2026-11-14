@@ -153,8 +153,12 @@ def add_tag(
 ) -> str:
     bound = profiles(c, game.store.campaign_id)
     observers = tuple(sorted({resolve(state, ref, bound).controller for ref in (actor, target)}))
-    tag = rules.identity("tag", source, target.token, kind, event)
-    copy(state, give_tag(state, bound, target, actor, text(label), tag, event, observers))
+    label = text(label)
+    # One high result creates two distinct symptoms for the same person/event.
+    # Historical IDs remain stored as-is; only new symptom births use this discriminator.
+    parts = ("tag", source, target.token, kind, event)
+    tag = rules.identity(*parts, label) if kind == "symptom" else rules.identity(*parts)
+    copy(state, give_tag(state, bound, target, actor, label, tag, event, observers))
     use = rules.TagUse.model_validate(
         dict(
             id=tag,
@@ -201,19 +205,56 @@ def remove_tag(state: GameState, actor: ActorRef, tag: str) -> None:
 
 
 def move_tag(state: GameState, actor: ActorRef, target: ActorRef, tag: str) -> None:
-    if actor.kind != "pilot" or target.kind != "pilot":
+    from girlframe.engine.m3_handler_consequences import same_handler_body
+
+    if actor.kind != "pilot" or target.kind not in ("pilot", "handler", "npc"):
         raise WorkflowError("SOURCE_TAG_MOVE_REQUIRED: use actual native source and recipient")
-    if (
-        current_ref(state, int(actor.entity)) != actor
-        or current_ref(state, int(target.entity)) != target
+    if current_ref(state, int(actor.entity)) != actor or (
+        target.kind == "pilot" and current_ref(state, int(target.entity)) != target
     ):
         raise WorkflowError("Never move a Tag onto an account replacement")
+    if target.kind == "handler" and not same_handler_body(state, target):
+        raise WorkflowError("Move the Tag only onto the actual original Handler body")
     original = next((x for x in state.sheets[actor.entity].tags if x.id == tag), None)
-    if original is None or any(x.id == tag for x in state.sheets[target.entity].tags):
+    if original is None:
+        raise WorkflowError("Move one actual current Tag without duplicating it")
+    if target.kind == "npc":
+        from girlframe.engine.m3_ankou_pulse import world_tag
+
+        npc = (
+            next((x for x in state.world.npcs if x.id == target.entity), None)
+            if state.world
+            else None
+        )
+        if npc is None or not npc.alive or npc.source_kind is not None:
+            raise WorkflowError("Move the Tag only onto the actual living ordinary NPC")
+        if any(x.id == tag for x in npc.tags):
+            raise WorkflowError("Move one actual current Tag without duplicating it")
+        try:
+            moved = world_tag(original)
+        except ValueError as error:
+            raise WorkflowError(str(error)) from None
+        assert state.world is not None
+        changed = state.world.model_copy(
+            update={
+                "npcs": tuple(
+                    x.model_copy(update={"tags": (*x.tags, moved)}) if x.id == npc.id else x
+                    for x in state.world.npcs
+                )
+            }
+        )
+        remove_tag(state, actor, tag)
+        state.world = changed
+        return
+    # Native recipients keep the same TagState. NPC projection provenance is held
+    # by the real source-owned Pulse record written in the same transaction.
+    recipient = state.handler_tags if target.kind == "handler" else state.sheets[target.entity].tags
+    if any(x.id == tag for x in recipient):
         raise WorkflowError("Move one actual current Tag without duplicating it")
     remove_tag(state, actor, tag)
-    state.sheets[target.entity].tags.append(original.model_copy(deep=True))
-    state.sheets[target.entity].revision += 1
+    recipient.append(original.model_copy(deep=True))
+    if target.kind == "pilot":
+        state.sheets[target.entity].revision += 1
 
 
 def temporary_asset(

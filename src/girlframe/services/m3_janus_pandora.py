@@ -128,6 +128,12 @@ def prepare(
     if len(values) != 1 or state.world is None:
         raise WorkflowError("Go Off-Duty with PANDORA and establish the actual world before birth")
     value = prove(game, c, state, values[0].id)
+    actual = resolve(state, actor, profiles(c, game.store.campaign_id))
+    if actual.frame_cell is None:
+        raise WorkflowError(
+            "Establish the original Frame's actual birthplace "
+            "through approved placement before birth"
+        )
     if (
         prepared.target_actor is not None
         or prepared.target is not None
@@ -179,6 +185,11 @@ def pre_roll(
     view = resolve(state, value.actor, profiles(c, game.store.campaign_id))
     if view.frame_instance != value.frame or view.frame_scrapped:
         raise WorkflowError("Birth only from this actual original available implanted Frame")
+    if view.frame_cell is None:
+        raise WorkflowError(
+            "Establish the original Frame's actual birthplace "
+            "through approved placement before birth"
+        )
     event = str(uuid4())
     rules.put(
         state,

@@ -172,3 +172,87 @@ def test_persistent_controls_and_inbox_route_owned_response(ledger):
     assert answer_values(
         {"options": ("pin",), "fields.pin": ("girl:0",), "fields.cover": ("girl:1",)}
     ).fields == {"pin": "girl:0"}
+
+
+def test_sensors_menu_uses_exact_printed_questions_and_conservative_matching():
+    from girlframe.engine.m2 import sensor_question_id
+
+    printed = {
+        "foundation_destination": "Where does the Foundation want us to go?",
+        "foundation_avoid": "What does the Foundation want us to avoid?",
+        "enemy_activity": "What do the satellites say the enemy is doing?",
+        "repair_rest": "Where is a place we can rest and repair?",
+        "civilian_danger": "Where are civilians in danger?",
+        "orders": "What orders do you have for us?",
+    }
+    fields = choice_fields({"kind": "actor_sensors", "own": None, "result": {"tier": "high"}})
+    assert dict(fields[0].options) == printed
+    assert [field.key for field in fields] == ["options", "fields.q1", "fields.q2", "fields.q3"]
+    low = choice_fields({"kind": "actor_sensors", "own": None, "result": {"tier": "low"}})
+    assert len(low) == 1 and low[0].minimum == low[0].maximum == 1
+    for identity, question in printed.items():
+        assert sensor_question_id(identity) == sensor_question_id(question) == identity
+    assert (
+        sensor_question_id(" \tWhat does the Foundation\nwant us to avoid? ") == "foundation_avoid"
+    )
+    assert sensor_question_id("Where should we go?") is None
+    assert sensor_question_id("What is the enemy doing?") is None
+    assert sensor_question_id("where does the Foundation want us to go?") is None
+
+
+def test_pending_sensors_readback_resolves_ids_and_safely_numbers_custom_text():
+    from girlframe.discord_adapter.ledger import clean
+    from girlframe.discord_adapter.m2_ui import open_choice
+
+    async def run():
+        custom = "Where is **my** shelter, @everyone?"
+        decision = {
+            "kind": "handler_sensors",
+            "own": None,
+            "revision": 1,
+            "result": {
+                "tier": "high",
+                "questions": ["foundation_destination", "enemy_activity", custom],
+                "off_list": False,
+            },
+        }
+        game = MagicMock()
+        game.decision.return_value = decision
+        current = interaction(owner=1)
+        await open_choice(current, game, "stored-pending")
+        sent = current.response.send_message.call_args
+        form = sent.kwargs["view"]
+        assert form.instructions.endswith(
+            "Questions:\n1. Where does the Foundation want us to go?"
+            "\n2. What do the satellites say the enemy is doing?\n3. " + clean(custom)
+        )
+        assert "foundation_destination" not in form.instructions
+        assert "enemy_activity" not in form.instructions
+        assert "@everyone" not in form.instructions and custom not in form.instructions
+        assert [field.key for field in form.fields] == [
+            "fields.a1",
+            "fields.a2",
+            "fields.a3",
+            "options",
+        ]
+        assert sent.kwargs["ephemeral"] is True
+        assert game.respond.call_count == 0
+
+    asyncio.run(run())
+
+
+def test_sensors_added_hound_question_is_separate_from_ordinary_classification():
+    from girlframe.engine.m2 import QUESTIONS, sensors_off_list
+
+    questions = list(QUESTIONS[:3]) + ["What can I smell?"]
+    assert sensors_off_list(questions, "high") is False
+    fields = choice_fields(
+        {
+            "kind": "handler_sensors",
+            "own": None,
+            "result": {"tier": "high", "questions": questions, "off_list": True},
+        }
+    )
+    assert [field.key for field in fields] == [f"fields.a{i}" for i in range(1, 5)]
+    # The same text in an ordinary slot has no free Human Hound authority.
+    assert sensors_off_list([*QUESTIONS[:2], "What can I smell?"], "high") is True

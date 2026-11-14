@@ -16,10 +16,12 @@ def held(state: GameState, actor: ActorRef) -> FrameRuleReceipt | None:
 
 
 def target_gave(tag: TagState, target: ActorRef) -> bool:
-    if target.kind != "pilot" or tag.gm_setter_appointment is not None:
+    if target.kind not in ("pilot", "npc") or tag.gm_setter_appointment is not None:
         return False
     if tag.giver_actor is not None:
         return tag.giver_actor == target
+    if target.kind != "pilot":
+        return False
     # The immutable original character field is a legacy source binding, not a current UID lookup.
     return (
         tag.giver_character is not None

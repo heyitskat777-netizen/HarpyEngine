@@ -227,7 +227,9 @@ class CloneService:
                 owned=True,
                 actor=value.ref.model_dump(mode="json"),
                 heat=actual.heat,
-                identity=value.identity.model_dump(mode="json"),
+                identity=None
+                if value.identity_erased_event
+                else value.identity.model_dump(mode="json"),
                 tags=[x.model_dump(mode="json") for x in value.tags],
                 bonds=[
                     dict(

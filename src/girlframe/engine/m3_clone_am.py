@@ -19,6 +19,7 @@ class CloneAM(Model):
     revision: int = 1
     identity: IdentityState
     tags: tuple[TagState, ...] = ()
+    identity_erased_event: str | None = None
 
     @property
     def ref(self) -> ActorRef:
@@ -93,7 +94,8 @@ def additional_identities(state: GameState, owner: int) -> tuple[IdentityState, 
                 current(state, value.ref)
             except ValueError:
                 continue
-            result.append(value.identity)
+            if value.identity_erased_event is None:
+                result.append(value.identity)
     return tuple(result)
 
 
@@ -113,6 +115,7 @@ def mark_additional(
     actual = owner(state, value.ref)
     if (
         actual.character_id != sheet.character_id
+        or value.identity_erased_event is not None
         or value.identity.marked
         or not 1 <= gain <= 3
         or share
@@ -153,6 +156,10 @@ def unmark_additional(
         except ValueError:
             if selected is not None:
                 raise
+            continue
+        if value.identity_erased_event is not None:
+            if selected is not None and value.identity.id in selected:
+                raise ValueError("An erased copy Identity cannot be unmarked")
             continue
         if selected is not None and not value.identity.marked:
             raise ValueError("Unmark only this copy's actual marked Identity")
@@ -240,13 +247,15 @@ def add_tag(
 def embrace(state: GameState, ref: ActorRef, identity: str, replaced: tuple[str, ...]) -> None:
     value = current(state, ref)
     selected = next((x for x in value.tags if x.id == identity and x.marked), None)
-    if selected is None or replaced != (value.identity.id,):
+    expected = () if value.identity_erased_event else (value.identity.id,)
+    if selected is None or replaced != expected:
         raise ValueError("Embrace the actual marked Tag by replacing the copy's sole Identity")
     put(
         state,
         value.model_copy(
             update=dict(
                 identity=IdentityState(id=str(uuid4()), name=selected.label),
+                identity_erased_event=None,
                 tags=tuple(x for x in value.tags if x.id != identity),
                 revision=value.revision + 1,
             )
@@ -294,3 +303,26 @@ def cannot_refuse(state: GameState, ref: ActorRef, other: ActorRef) -> bool:
 def require_play(ref: ActorRef, play: str) -> None:
     if ref.kind == "clone_am" and play == "dive_deep":
         raise ValueError("Clone AM cannot Dive Deep")
+
+
+def erase_identity(state: GameState, ref: ActorRef, identity: str, event: str, source: str) -> None:
+    """Erase only the actual same-copy resource, never the person or its history."""
+    value = current(state, ref)
+    if not event or not source or value.identity_erased_event or value.identity.id != identity:
+        raise ValueError("Erase only this copy's actual current Identity from a real source")
+    from girlframe.engine.m3_leviathan_obsession import require_identity_change
+
+    require_identity_change(state, value.original, (identity,))
+    put(
+        state,
+        value.model_copy(update=dict(identity_erased_event=event, revision=value.revision + 1)),
+    )
+    state.facts.append(
+        dict(
+            kind="clone_identity_erased",
+            actor=ref.model_dump_json(),
+            identity=identity,
+            event=event,
+            source=source,
+        )
+    )

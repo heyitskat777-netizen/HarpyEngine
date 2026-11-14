@@ -4966,3 +4966,1110 @@ minimum smoke outcomes and deferred cases are recorded in
 are not a full regression or player acceptance. The owner now defers most tests
 to the final P1 candidate, including the required exact-integrated-commit
 Deep-Brain-Spikes native/boundary pagination regression. Bot remains OFF.
+
+## NPC control consent repair — isolated 2026-11-09 candidate
+
+Based on published `b265003783c0870c6b8fd855a836010380d11b89`; no active checkout,
+live campaign, deployment, merge or runtime change. Direct `claim_npc` takeover
+now fails closed. Current-owner offer and recipient acceptance reuse durable
+private invitations, preserve Director separation and actual claim-event lineage,
+and invalidate competing/stale transfers. New-NPC invitation acceptance remains
+supported. The actor list follows canonical ownership; a menu is not authority.
+
+Focused evidence: 23 initial consent/world/invitation/Changeling tests passed;
+5 affected normal flows passed; final consent 6/6 passed after minimizing invitation
+previews and correcting one rollback-test injection target. 29 distinct cases,
+not full P1 regression. Changed-file lint/format and seven-module mypy passed;
+repository check 0 findings. An initial rollback test and initial static metadata
+annotation failed, were corrected, and were checked again. Full final-candidate,
+remote CI, independent source and real-player gates remain pending. See
+`docs/NPC_CONTROL_CONSENT_HANDOFF.md` and `reports/npc-consent/` for commands,
+outputs, unchanged boundaries and integration/rollback instructions.
+
+## 2026-11-10: shelving intake only (not player freeze)
+
+Parent-designated v21 baseline: `harpyengine-p1-required-mock-sex-20261110`.
+Additive candidate: `harpyengine-p1-shelving-20261110`.
+
+Private individual requests and current-configured-GM proposals/review now have
+native `/shelving` intake, durable original-actor provenance, owner withdrawal,
+GM decline and idempotent revisioned audit. There is no public absence reason.
+No player is frozen: activation fails closed and the UI explicitly states this.
+No gameplay status, consent, choice, resource, obligation or scene lock is changed.
+The requested safe cohort continuation remains incomplete; the parked-action and
+cross-state/SQL mutation boundaries are documented in `docs/P1_SHELVING_DESIGN.md`.
+
+Worker AST-checked the four changed Python files: passed. Worker ran shared
+`ruff format` on the three new Python files and `ruff check` on all four changed
+Python files: all checks passed. Worker did not run pytest. Parent reported its
+focused `tests/rules/test_shelving_intake.py` run: **3 passed in 2.10s**.
+No full regression, global freeze proof, live Discord validation, deploy, merge,
+independent approval or human acceptance is claimed by this increment.
+
+Independent static intake review identified loss of an explicit player request
+behind a prior GM proposal and cached replay bypassing current-GM authorization.
+Both were corrected; request deduplication now also binds the exact actor incarnation.
+Two additional focused tests were authored (five total); worker Ruff passed after
+these edits. The earlier 3-pass result does not certify this changed source; root
+reverification is pending at this report revision.
+
+Parent reverified the corrected focused file: **5 passed in 2.55s**. This supersedes
+the earlier three-test result for this intake increment only. Static rereview is
+pending; whole-player shelving and safe cohort progression remain unimplemented.
+
+
+### P1 Pilot shelving intake identity source (2026-11-10)
+
+Isolated candidate based on the root-designated v27 actor-freeze package. Existing
+published checkpoint inspected: b265003783c0870c6b8fd855a836010380d11b89; shelving
+intake is package-only at that checkpoint. Request identity now uses the existing
+canonical profile-snapshot/career proof rather than a sheet character-ID assertion.
+Old pending requests stay private and unchanged across a real replacement; an old
+request interaction cannot replay as the new original. Handler intake remains
+under its existing current-body contract. No activation or journal dispatch.
+
+Authored evidence extends the existing five intake tests and the genuine Vatgrown
+death/fresh-review/activation normal with old/new request provenance and privacy.
+The old test's synthetic sheet-ID relabel is now correctly rejected, including
+cached replay, with all-table equality. Worker Ruff check passed and Ruff format
+completed for three changed Python files. Pytest, type checks, migration/global
+checks, full regression, independent review and human acceptance NOT RUN by the
+worker. Root owns focused execution. Bot OFF; no publication/deployment.
+
+Root subsequently ran the five intake tests plus the extended actual Vatgrown
+replacement episode: **6 passed in 7.15s**. No Python changed after that run.
+Independent review and all broader/final gates remain pending.
+
+## P1 Stim NPC source-pane authority scope — 2026-11-11
+
+Isolated candidate `harpyengine-p1-stim-pane-scope-20261111` extends
+`harpyengine-p1-orders-and-expiry-integrated-20261111`. The opened private Stim
+source now restricts eligible NPC Order effects to its own drug/session before
+selecting an authority. Existing original actor, incarnation, body, controller,
+receipt, choice, completion and expiry proofs are unchanged. Generic NPC Order
+preview may still choose the newest legitimate active effect; native source-pane
+issuance continues passing the exact effect ID. No rules interpretation changed.
+Source: Stim-Blissed Sex Play, PDF39/printed37; Dose Up, PDF38/printed36, with the
+existing `stim_order_source_time` and `stim_drug_clock_dose_policy` rulings.
+
+Authored one normal overlapping-source regression:
+`tests/rules/test_stim_npc_orders.py::test_each_stim_pane_keeps_its_original_active_npc_order_source`.
+It creates two genuine sources across real scenes, checks both private panes,
+issues from the older pane, retains its exact NPC/Pilot/controller/effect, then
+expires only that source and rejects fallback to the newer drug. The existing
+single-source native Order/response/expiry test is retained through shared setup.
+
+Executed locally, using the existing adapter-checkpoint Ruff binary:
+- `ruff format src/girlframe/services/m3_stim_npc.py src/girlframe/services/m3_stim_sex.py tests/rules/test_stim_npc_orders.py`: 1 file reformatted, 2 unchanged.
+- `ruff check src/girlframe/services/m3_stim_npc.py src/girlframe/services/m3_stim_sex.py tests/rules/test_stim_npc_orders.py`: all checks passed.
+
+Worker pytest was NOT RUN. Root subsequently ran the new two-source pane node:
+**1 passed in 8.05s**, reported in the task handoff on 2026-11-11. This is focused
+workflow evidence, not a full-regression claim. No install,
+full regression, live Discord, bot start, deployment, merge, publication, migration,
+model call or private-engine write. RULES_SUBSET, independent review and human
+acceptance remain unchanged and pending.
+
+
+## P1: Ankou nomination using the actual Casualty recipe (2026-11-11)
+
+The ordinary Casualty+Project Ankou combination now exposes Casualty Sex in the
+original Emotional Relay nominee's choices, then routes the selected performance
+through the existing voluntarily proposed and independently confirmed Casualty
+source. The link preserves original bodies, actual parts, target/controller,
+receipt, and source-owned effects. An unrolled cancellation restores the accepted
+recipe and retires only that link generation; relinking retains original consent.
+Learned, Bonded and CHANGELING sources do not become native nomination authority.
+
+Source checklist: Emotional Relay PDF85/printed83, Casualty Sex PDF44/printed42.
+The existing typed Casualty source supplies the actual outcomes; this adds no new
+rule or ruling. The source Task and permission hold close only after genuine child
+outcomes finish. Native Ankou task entry now reaches the required-source pane.
+
+Worker checks: Ruff format initially changed two files and left two unchanged;
+Ruff found one test import-order issue, corrected with its import fix. Final Ruff
+check and format checks passed for all five changed Python files. Scoped mypy
+with --follow-imports=silent passed the original three source files, then the
+added native Ankou route file. No worker pytest or test collection was run. Root
+reported the initial normal **1 passed in 5.70s** before the final top-level native
+entry inspection. The updated native entry normal then passed **1 in 5.45s**.
+Both root checks were on the isolated candidate; neither is full regression.
+
+The one new normal covers nomination, independent consent, native source entry,
+unrolled abort/recovery/idempotent cancellation/relink, actual original part
+presentation, optional Identity unmarking, reciprocal Tags, actual parent
+completion and permission restoration without public private-text disclosure.
+Final full regression, affected source consumers, global checks, independent
+review and human testing remain pending. No bot start, live Discord, install,
+migration, deployment, merge, publication, model call or private-engine write.
+
+
+## P1: Native Ankou entry for existing Stim/Princess sources (2026-11-11)
+
+The Ankou task's child dispatcher now recognizes `stim_sex` and `princess_sex`
+and opens the existing required-source pane rather than the generic Play form.
+Their nomination, invitation, independent consent, cost, outcome, cancellation
+and completion services already existed and are unchanged. This is a two-entry
+routing repair, not a new source rule or consent policy.
+
+Sources: Emotional Relay PDF85/printed83; Princess Sex PDF33/printed31;
+Stim-Blissed Sex PDF39/printed37. The existing source providers preserve their
+respective required facts and actual player choices.
+
+One two-case native test creates genuine Relay/nomination Tasks and follows
+the owner-bound Ankou task through its required pane into an actual invitation.
+It verifies original actors/cast, no inferred consent or Play/cost/dice, the still
+owed Task and held scene permissions, and private projection. Existing complete
+provider episodes are preserved without rerunning them.
+
+Worker Ruff check passed both Python files; Ruff format changed the new test
+and left the source unchanged, then format check passed both files. Scoped mypy
+with --follow-imports=silent passed the one changed source file. Worker pytest
+and collection NOT RUN. Root minimum native-route check: **2 passed in 2.93s**
+on the isolated candidate. This is not a full provider regression. Full P1
+regression/static/privacy/restore and independent/human review remain pending.
+No bot start, live Discord, install, migration, deployment, merge, publication,
+model call or private-engine write.
+
+
+## P1 native Princess-directed Oldgen advice — 2026-11-11
+
+Isolated source packet based on `harpyengine-p1-stim-pane-scope-20261111`.
+Princess high-result direction now exposes only the real native Oldgen's
+Old Dog, New Pups alongside existing basic Plays and self-Dose. The original
+Oldgen provides Heat, Identity/resource ownership, Status and one-use maxim;
+the original Princess authors only this child actor's choices. The actual
+advice recipient retains listening and low-result unmark/maxim authorship.
+One child, immutable actual receipt, original target, private history and real
+parent completion are preserved. No new consent, book, anatomy or NPC Play is
+invented. Printed source: Princess PDF33/printed31, Oldgen PDF46/printed44.
+
+Worker authored two native normal episodes: high advice to a third actual
+player, real recipient listening, parent closure and subsequent once-use maxim;
+low advice with recipient-owned optional unmark and maxim. Worker did not run
+pytest or collect tests. Root owns minimum high-path check; low and existing
+consumers remain deferred to final P1.
+
+Static checks use the existing integrated-repairs-20261107 Python environment.
+`python -m ruff check --fix` initially reported13 long lines; format corrected
+three files. Final Ruff check passed on six Python files; final source mypy
+with `--follow-imports=silent` passed on five source files after explicitly
+requiring the existing canonical Handler in advice preparation. First mypy
+attempt reported1 nullable-handler sorted-set error. No source availability,
+consent or author checks were weakened. No full/global/migration/privacy/
+restore check, install, bot, deploy, merge, model call or private-engine write.
+RULES_SUBSET, independent review, human playtest and final gates remain pending.
+
+Root minimum first attempt: **1 failed in 1.60s** during fixture creation,
+before the directed workflow. The synthetic native Oldgen draft omitted the
+printed two starting maxims. Worker corrected the actual pre-activation draft
+with `GirlDetails(maxims=(0, 1))`, matching existing native Oldgen source setup,
+and retained the explicit world subsystem for its three original bodies. Only
+test setup changed; production source and guards unchanged. Ruff on that test
+passed. Root failed-only retry pending; worker did not run pytest.
+
+## P1 Ankou nominated Dive Deep — 2026-11-11 isolated candidate
+
+Baseline: `harpyengine-p1-relay-advice-integrated-20261111`. Candidate:
+`harpyengine-p1-relay-dive-20261111`. This bounded packet makes ordinary Dive Deep
+available to the actual Emotional Relay nominees and accepts only the original
+proved performance Task as its source. Printed sources: Emotional Relay,
+PDF85/printed83; Basic Frame Plays and Dive Deep, PDF24/printed22. Frame Plays
+remain usable outside the Frame unless their own text says otherwise.
+
+The existing immutable Relay/Intense-Bond/nomination proof and original actor,
+channel, cast and no-parent checks remain. The adapter grants no result, Heat,
+Identity, consent or invented target. Ordinary Dive validation, actual table
+choosers, source pause, unrolled recovery and receipt-backed completion remain
+in their existing shared paths. A nominated Dive rejects a foreign target.
+
+Authored one native normal in `tests/rules/test_relay_dive.py`: real nomination,
+wrong actor rejected without state change, unrolled cancellation/retry, actual
+owned Identity removal, every original table human's answer, one receipt,
+private question and restored scene permissions. Worker pytest and collection:
+NOT RUN. Root owns the minimum normal; existing Dive tiers and other sources
+remain deferred to the final P1 candidate.
+
+Changed-file checks only, using the existing regression-20261107 tool binaries:
+Ruff format/check passed on3 Python files; AST parse passed on3 files; mypy
+`--follow-imports=silent` passed on2 source files in7.43s. Initial Ruff lookup
+at the web-helpless environment found no executable. Initial actual Ruff check
+found one unbound test-loop closure; explicitly binding the row corrected it.
+No installs or pytest were used to fix or verify those static issues.
+
+No full regression, global static, migration/privacy/restore acceptance,
+bot start, live Discord, deployment, merge, publication, model call or private
+engine write. RULES_SUBSET; final exact-candidate and human gates remain pending.
+
+
+## P1 actual Ankou Relay interruption Dive — 2026-11-11
+
+Isolated candidate `harpyengine-p1-relay-interrupt-dive-20261111`, based on
+`harpyengine-p1-dive-hurt-integrated-20261111`. Emotional Relay PDF85/printed83
+and Dive Deep PDF24/printed22 support this finite source-local extension.
+
+Completed: native Relay interruption now offers actual Dive Deep when the registry
+avails it. The new positive source adapter proves the original active Relay,
+selected interruption Task, actual prior Tag removal, original incoming person,
+held Action and pending owned child row. The native form preserves own-link Dive
+without copying the incoming person as a target. Existing real Dive costs/results
+and independent table answers complete the child before the unchanged known
+parent receipt can resume. Historical standalone nominated Dive is preserved.
+
+One native normal is authored in `tests/rules/test_relay_interrupt_dive.py`:
+`test_native_interrupt_dive_real_tag_cost_owned_table_answers_and_known_parent`.
+It includes unauthorized selection rejection, exact Tag cost, rejection of a false
+Dive target, actual native child/parent provenance, real Heat/Identity effects,
+independent private table answers, known parent receipt preservation, remaining
+original Keep choices, final permission restoration and public-secret exclusion.
+Worker pytest and collection: NOT RUN. Root owns the one minimum node.
+
+Scoped static commands used the existing
+`harpyengine-integrated-repairs-20261107/.venv/bin` tools, without install:
+- `ruff check` over all five changed Python files: initially one import-order
+  finding in `m3_dive.py`; `ruff check --fix` repaired only that import. Recheck
+  passed. `ruff format --check` reported all five files already formatted.
+- `mypy --follow-imports=silent` over the four changed source files: initially one
+  tuple inference annotation error in the new helper. Explicit tuple annotation
+  repaired it; exact four-file recheck passed with no issues.
+- `ast.parse` over all five changed Python files passed. The final tuple annotation
+  was additionally checked by Ruff/format and mypy.
+
+Remaining: source-specific special interruption recipes, all deferred wider
+source/lifecycle outcomes and final P1 exact-candidate regression/global checks,
+independent review and human playtesting. This is authored/scoped-static evidence,
+not a runtime or whole-Frame/P1 acceptance claim. No bot, live Discord, migration,
+deployment, merge, source publication, model call or private-engine write.
+RULES_SUBSET; bot remains OFF.
+
+- `PYTHONPATH=src <existing-venv>/python tools/check_rules_registry.py` passed:
+  RULES_SUBSET,477entries,440required,0verified. These counts are inventory, not
+  a completion measure. The registry adds only one delegated clarity-review
+  ruling and the authored fixture references; previous rule contracts and gates
+  remain intact.
+
+
+## P1 Doctor Borrowed Wings at cap — 2026-11-11 (local, not published)
+
+Printed p13 requires an explicit non-Void replacement when gaining beyond the
+Asset cap; printed p70 makes Borrowed Wings a paid transfer/repair of actual
+hardware, returned at the next Off-Duty boundary. The native Doctor form now
+captures the Doctor's own current replacement before the original donor confirms.
+Confirmation revalidates the actual cap and source, applies the existing canonical
+install reducer, removes only the selected donor hardware, and pays Heat once.
+Original linked/intrinsic/stored/temporary/borrowed replacement restrictions and
+full-Void fail-closed boundaries remain. No movement or proxy-body authority is added.
+The original procedure retains the chosen replacement, canonical before/after
+states prove its loss, and the existing Loan preserves the actual transferred
+component. Existing serialized procedures omit the additive absent replacement field.
+
+One native normal episode authored in `tests/rules/test_doctor_wings_cap.py` covers
+mandatory owned selection, unchanged pre-consent sheets, original donor authority,
+replay, exact loan/cap effects, scoped public payload privacy and actual Off-Duty
+return without restoring the displaced component. Worker pytest/collection NOT RUN.
+Root's first run failed 1 in 1.98s at an invalid CONSUME selection call after the
+native exchange. CONSUME and Doctor are distinct Frame-gated sources, so that
+speculative dependency/provider and invalid assertion were removed, not enabled
+through a false entitlement. Root corrected Doctor-only native normal passed 1 in 2.97s on this candidate.
+
+Verification: Ruff check and format --check passed all 6 changed Python files;
+scoped mypy with `--follow-imports=silent` passed all 5 changed source files.
+Commands used the existing pinned tool environment. No install, bot start, live
+Discord, deployment, merge, source publication, private-engine mutation or
+full/global checks. Donor/graft full-Void continuation, other Pilot-only Doctor
+targets and finite Nanobot removal scope remain open. Final P1 regression,
+global checks, independent review and human testing remain pending.
+
+## P1 native Dose Up final-Identity Feedback — 2026-11-11
+
+Local isolated candidate: `harpyengine-p1-ankou-dose-feedback-20261111`, based on
+`harpyengine-p1-gorgon-contract-20261111`. Native STIM-BLISSED self-Dose and actual
+native-Pilot vein-contact Dose now hold the real final Ankou Identity/disposal and
+Heat commitment before dice. The original declaration, actors, bodies, cast,
+contact and typed self-Dose Order remain bound. Order use is recorded only when
+the actual roll occurs, not when Feedback begins. Native Dose controls expose
+optional actual Identity/disposal inputs. Existing owned cocktail and reprisal
+consumers provide effects without invented results or repeat charges.
+
+Worker ran no pytest or collection. Root-reported minimum results on this packet:
+- Ordered purpose acceptance: **1 passed in 6.03s**.
+- Refusal plus vein/tear: **1 passed, 1 failed in 6.89s**. Refusal passed; the vein
+  fixture's existing contact helper expected a zero new-source RNG count, but the
+  genuine prerequisite Plays had left one prior call. The contact itself completed.
+- Moved the new-source test Dice counter boundary before contact, after those real
+  prerequisites. No gameplay assertion or mechanic changed. Failed-only vein/tear
+  retry: **1 passed in 5.63s**. Previous successes were not rerun.
+
+Changed-file Ruff check and format check passed (six files). Changed-source
+`mypy --follow-imports=silent` passed (five files). Ordinary mypy traversal initially
+reported eight errors, including three local import-alias errors now corrected;
+five existing imported-module errors remain outside this packet in
+`database/p1_effect_schema.py`, `services/m3_required_mockingbird.py`, and
+`discord_adapter/p1_shelving.py`. No global static or full-regression pass is claimed.
+
+NPC-recipient, directed, borrowed, required-child Dose and other special/child
+final-mark families remain explicit source-specific work; no broad bypass was
+opened. Final exact-candidate full regression, global static/migration/privacy/
+restore checks, independent source review and human acceptance remain pending.
+Bot OFF; no deployment, merge, publication, model call or private-engine mutation.
+
+### P1 ordinary NPC Nanobot effect removal (2026-11-11; authored candidate)
+
+- Source: printed p70 Nanobot; p71 ongoing care context. Actual visible joined
+  ordinary NPCs may receive the mid removal benefit through the existing native
+  roll/choice UI. Doctor selects a current WorldTag or explicit source-owned
+  HelplessCondition; original NPC controller confirms before that exact mutation.
+- Original source cast/body/controller, spent Heat, one Obsolescence mark,
+  selected-effect fingerprint and once-only outcome remain bound. Printed NPC
+  Heat gain is retained with zero applied to a nonexistent pool. No controller
+  Pilot resources are read as the patient's resources.
+- Normal authored episode uses a genuinely performed Dose to create NPC drug
+  Tags, removes one through native Doctor controls, verifies unrelated Tags and
+  original two-scene physiology/expiry, private projections and event rebuild.
+  A separate authored high result remains pending with the original known cost.
+- Worker scoped Ruff check/format passed on four Python files; source types are
+  recorded in the sibling handoff. Pytest/collection NOT RUN by worker; root owns
+  minimum smoke. Full regression, independent review and human playtests pending.
+- Explicit remaining P1 work: NPC low repair/high distinct resource outcomes,
+  other source-specific ongoing effects and physiological Helpless consumers,
+  NPC Here for Support. This bounded port is not whole-Doctor completion. Bot OFF;
+  no deploy, merge, publication, model call or private-engine mutation.
+
+- Independent review found NPC rule mode alone admitted a genuine nonphysical
+  Wyvern Wraith. Corrected admission/menu/resume using canonical original body
+  proof and physical cell/enclosure reach, frozen with the source action and
+  rechecked before cost and confirmation. Genuine physical reset hardware retains
+  its own source; no human reclassification. Added a genuine Wraith-creation/Tag
+  negative. Root revised pair: one normal passed, Wraith setup failed because the
+  second player's draft did not match its saved profile. Corrected via actual
+  creation_review other_frame selection. Failed-only retry then failed at the
+  Wraith cast join (1 failed in 2.93s): the fixture used the Handler rather than
+  the source-assigned controller. The fixture now resolves that actual controller
+  before joining. Corrected failed-only Wraith negative passed: 1 in 3.01s.
+  The hardened normal already passed in the mixed run and was not rerun. Worker
+  did not run pytest. Independent re-review remains pending.
+
+
+### P1 Dose Feedback and NPC Nanobot integration (2026-11-11)
+
+Isolated combined candidate: `harpyengine-p1-dose-nanobot-integrated-20261111`,
+based on `harpyengine-p1-gorgon-contract-20261111`. Both input patch SHA-256s,
+all full-file preimages/postimages and both whole-tree deltas verified. Each
+input patch replayed exactly; the combined patch also replays to the complete
+candidate tree. The only textual overlap was this report: baseline history and
+both exact input suffixes are preserved. All runtime/test postimages remain
+byte-identical to their reviewed packets; no gameplay reconciliation was needed.
+
+Parent-reported integrated minimum: **3 passed in 13.00s**. Nodes were the native
+ordered Dose purpose-acceptance case `[True]`, actual NPC Dose-tag Nanobot removal
+with owned confirmation/expiry/private output/event rebuild, and genuine Wraith
+body exclusion before Nanobot cost. The integration worker ran no pytest or
+collection. These results apply to the unchanged source; this final edit only
+appends the report. Input scoped Ruff/type evidence was reused; all ten changed
+Python files parsed and the changed-path source-privacy check had zero findings.
+
+Other authored branches remain for final P1 regression. Existing NPC low/high
+resource outcomes and unsupported Feedback source families remain explicit.
+RULES_SUBSET; bot OFF. Full final-candidate/global/migration/privacy/restore,
+independent and human acceptance gates remain pending. No deploy, merge,
+publication, model call or private-engine mutation.
+
+
+## 2026-11-11 — Native Core final-Identity Feedback source
+
+Isolated source `harpyengine-p1-ankou-core-feedback-20261111`, based on
+`harpyengine-p1-dose-nanobot-integrated-20261111`. Private official source inspected:
+PDF26/printed24 and PDF84/printed82. No original planning package, migration,
+registry, bot, deployment, merge, environment or private-engine changes.
+
+The finite top-level native Go For the Core port retains its original actual
+Context, exposure, cast, target, owned decisive weapon, initial resources and
+single Identity/Heat commitment. Original damaged-weapon capability confirmation
+is preserved. Actual Feedback/reprisal source history is revalidated before the
+same attack's real roll, using the current true intact-Asset penalty and original
+counterpart outcome ownership. Refusal remains unrolled and unconsumed. No
+synthetic continuation or broad child/special marking bypass is introduced.
+
+Changed Python: `services/m3_ankou_feedback.py`, `services/m3_battle.py`,
+`services/m2_game.py`, and `tests/rules/test_ankou_core_feedback.py` under their
+existing roots. Ruff check passed, Ruff format --check passed (4 files), and
+mypy --follow-imports=silent passed (3 source files), using the existing pinned
+adapter environment. Initial format check required one wrapped raise to be
+formatted; corrected before final static checks. No install repeated.
+
+Root ran the native purpose-acceptance node: **1 passed in 5.57s**. The separate
+refusal and tear/damaged-weapon nodes then passed: **2 passed in 8.55s**. No failed
+gameplay run was reported for this packet. Worker ran no pytest or collection. Existing combat result branches, other source families, full
+regression, global static/migration/privacy/restore, independent review and
+human playtesting remain deferred. RULES_SUBSET; bot OFF.
+
+
+## 2026-11-11 — Core Feedback and NPC Stim relief isolated integration
+
+Candidate `harpyengine-p1-core-stim-relief-integrated-20261111` combines the reviewed
+native Core Feedback and NPC Stim physiological-relief packets on the exact
+`harpyengine-p1-dose-nanobot-integrated-20261111` baseline. Both pinned patch hashes,
+all pre/postimages, complete non-transient source-tree deltas, isolated input
+replays and combined patch replay match. Eleven paths change; no source/test path
+overlaps and every runtime/test postimage remains byte-identical to its packet.
+
+The original acceptance report and exact Core suffix are retained. Stim's
+`doctor-npc-stim-helpless-recovery` ruling is strictly additive with
+`clarity_review: true`; prior rulings, registry entries and certification are
+unchanged. Genuine Stim selection/controller confirmation proves the original
+source twice and records one immutable effect recovery, retaining drug/Tag/other
+effects and the original scene-expiry clock. Native Core retains actual source,
+exposure, weapon/capability confirmation, original cost and owned Feedback choice.
+No replacement state, proxy patient or extra consent is introduced by integration.
+
+Packet Ruff/type evidence is reused because all eight Python postimages are
+unchanged. Integration parses those eight files and checks changed-file source
+privacy with zero findings. This is not the final global/static/privacy gate.
+No pytest or collection ran in the integration worker. Core's earlier packet
+minimums are recorded above; Stim's earlier minimum failed on the reused fixture
+CastService registry cache and its corrected fixture is preserved. Root's
+integrated minimum remains pending until an actual result is recorded.
+
+RULES_SUBSET; bot OFF. Full final-candidate regression/global/migration/privacy/
+restore checks, independent printed-rule clarity review and human acceptance
+remain pending. No bot, deploy, merge, publication, model or private-engine action.
+
+
+### Root minimum results for the integrated Core/Stim candidate
+
+Parent subsequently reported the corrected standalone Stim fixture retry as
+**1 passed in 5.64s**. The earlier failure was fixture CastService registry caching,
+not a relaxed source/permission guard; the corrected test is unchanged here.
+
+Parent ran these two representative nodes on integrated source tree
+`550c3ac5d57d394a10c6aa908313961f8b70dc0271a2041b73d3f7d58ff17120`:
+
+- `tests/rules/test_ankou_core_feedback.py::test_native_core_feedback_purpose_keeps_actual_exposure_or_stops_before_dice[True]`
+- `tests/rules/test_doctor_npc_stim_recovery.py::test_real_npc_nanobot_relief_preserves_stim_drug_other_effect_and_expiry`
+
+Result: **2 passed in 11.74s**, reported by root through the parent collaboration
+message. The integration worker did not execute or collect pytest. Only this
+append-only report evidence changed after that run; all runtime/test postimages
+remain identical. Final patch replay reproduces the complete non-transient tree.
+This focused result does not establish full regression or independent/human
+acceptance, which remain pending. RULES_SUBSET; bot OFF; no deployment or merge.
+
+## P1 native Alpha Brutalize counter — 2026-11-11
+
+Isolated base: `harpyengine-p1-core-stim-relief-integrated-20261111`.
+Source: `harpyengine-p1-alpha-brutalize-counter-20261111`.
+
+Brutalize PDF52/printed50 supports the native original target's own actual
+Brutalize against the original attacker in its low-result opportunity. The
+finite service/native UI addition proves parent receipt and actual owned
+selection, original actor/target/cast, native rule and legal target at admission
+and pre-roll. It uses the existing Action/Heat/receipt/result/damage workflow,
+then requires real owned result response and completion before settling the
+parent's conditional Broken. No generic counter recipe or result bypass.
+
+Root ran:
+`tests/rules/test_alpha_brutalize_counter.py::test_native_alpha_brutalize_counter_spends_once_and_waits_for_actual_mid_damage`
+
+Root reported **1 passed in 3.93s**. It demonstrates native preparation, wrong
+owner/target refusal without mutation, once-only real Heat and dice, actual
+owned Asset damage/Broken, original parent closure/receipt, private context and
+same-receipt reopen. Worker did not run or collect pytest. Authored distinct
+high/Helpless and low/owned-opportunity normals remain NOT RUN.
+
+Worker checks: AST parsing passed for the two runtime files. Focused Ruff check
+and format check passed for both runtime files and the new test. Initial focused
+mypy found two diagnostics caused by reusing the existing UI `options` list name
+for a tuple; renamed the new local tuple to `counter_options` with no behavior
+change after the root run. Focused mypy `--follow-imports=silent` then passed for
+two source files. Runtime and authored tests otherwise match the root-tested
+source. Registry/source notes only were added afterward. No shared GameService,
+engine model, migration or release-policy change.
+
+Bot OFF; RULES_SUBSET. No deployment, merge, publication, AI/model calls, private
+engine writes or full-regression run. Other source recipes and normal NPC/
+learned/sleeping/directive counters remain explicit dependencies, not blanket
+exclusions. Final exact-candidate regression/global static/migration/privacy/
+restore checks, independent clarity review and human acceptance remain pending.
+
+Final packet checks: Registry model validation passed; changed-file source
+privacy inspection reported **7 files, 0 findings**. These scoped checks do not
+replace the final global registry/privacy/source audit. Exact patch replay and
+base/postimage hashes are retained in the handoff manifest outside the source.
+
+
+## 2026-11-11 — Native Alpha counter and ordinary Beneath Feedback integration
+
+Candidate `harpyengine-p1-alpha-beneath-integrated-20261111` combines the reviewed
+native Alpha Brutalize counter and ordinary Pilot-to-Pilot Beneath Feedback
+packets on `harpyengine-p1-core-stim-relief-integrated-20261111`. Both pinned patch
+digests, all twelve pre/postimages, whole non-transient source-tree deltas and
+isolated input replays match. The twelve changed paths are disjoint. All seven
+Python postimages remain byte-identical to their reviewed packets.
+
+The exact baseline acceptance report and Alpha suffix remain, with this additive
+integration note. The separate Beneath source report remains byte-identical.
+Alpha's campaign ruling and queue entries append to the baseline. Registry
+reconciliation preserves every prior ruling, all entry content and certification,
+adding only the delegated native-Alpha-counter ruling with clarity review and its
+test reference. No conflict requires a runtime edit or a replacement state.
+
+Alpha preserves actual original low receipt, target-owned counter selection,
+current original people/cast, native recipe, actual Heat/result chooser and real
+child consequences before outer closure. Beneath preserves its source-bound
+ordinary declaration, original cast and target resource digest, canonical mark,
+owned Feedback/reprisal history and actual final roll/social effects. Child or
+special Beneath sources and arbitrary Alpha recipes remain explicitly unsupported.
+
+Both original packet smoke reports remain distinct: Alpha mid passed once in
+3.93s before the documented local UI variable rename; Beneath initially failed
+three cases at dict/model fingerprint binding, then all three passed in 12.35s
+after its sorted-key JSON binding correction. Integration worker ran no pytest
+or collection. Root's integrated minimum is pending; existing successful packet
+checks are not represented as a new integrated run.
+
+Packet Ruff/type evidence is reused for byte-identical Python postimages.
+Integration AST parsing and changed-file source privacy passed with zero findings;
+this is not final global validation. Exact combined patch replay matches every
+non-transient file. Original baseline, packet source trees and input artifacts
+remain unchanged. Full final-candidate regression/global static/migration/privacy/
+restore, independent clarity review and human acceptance remain pending.
+RULES_SUBSET; bot OFF. No bot, deploy, merge, publication, model or private-engine
+action was performed.
+
+
+### Root integrated minimum — 2026-11-11
+
+The parent reports the two selected integrated normal nodes passed together:
+**2 passed in 10.18s**. Nodes:
+
+- `tests/rules/test_alpha_brutalize_counter.py::test_native_alpha_brutalize_counter_spends_once_and_waits_for_actual_mid_damage`
+- `tests/rules/test_ankou_beneath_feedback.py::test_native_beneath_feedback_purpose_preserves_owned_social_effects_or_refusal[True]`
+
+Tested non-transient tree SHA-256:
+`0b730dcc781440dd46dfed295b8185b7f429200106f5eb99da43952a0f5960a2`.
+This is parent-reported root evidence, not worker-executed pytest. Only this report
+suffix is appended afterward; all source/test bytes remain identical. Final
+patch replay reproduces the complete non-transient tree. This focused result is
+not full regression, independent printed-rule review or human acceptance.
+RULES_SUBSET; bot OFF. All final-candidate gates remain pending.
+
+
+## 2026-11-11 — Princess Alpha Brutalize and ordinary Disobey Feedback integration
+
+Candidate `harpyengine-p1-princess-disobey-integrated-20261111` combines the exact
+reviewed Princess-directed native Alpha Brutalize and native ordinary direct-Order
+Disobey Feedback packets on `harpyengine-p1-alpha-beneath-integrated-20261111`.
+The six Princess frozen source/test hashes and its separate complete report,
+Disobey pinned patch digest and all seven manifest paths match the actual trees.
+Each isolated input replay matches its complete non-transient source tree.
+
+Fourteen disjoint input paths. Princess changes `m2_choices`; Disobey changes
+`m2_game`. All twelve Python source/test postimages remain byte-identical to their
+reviewed inputs. No merge conflict, shared overwrite, runtime repair, synthetic
+state substitution or new combination recipe was required. This acceptance report
+is the exact baseline plus this integration note. Separate input reports/design
+notes remain unchanged; registry, prior queue, planning and instructions remain.
+
+Princess retains the Alpha's actual actor, body, resources, target and source
+parent while the Princess authors the directed decisions. Target-owned low
+counter choices remain independent. Parent completion follows the actual result,
+damage work or completed counter and its immutable receipt, not early selection.
+Disobey binds canonical ordinary issuance, actual receiver-authored refusal,
+original superior/receiver, pending parent, scene and declared refusal bonuses.
+Validation happens before the Feedback hold; bonus consumption is only at the
+original resumed roll. The existing direct-order completion path is preserved.
+Princess-controlled final-mark Feedback is still unsupported: the Feedback gate
+continues to reject `princess_child`, and Brutalize is not added to that allowlist.
+
+Prior packet smoke evidence is separate, parent-reported evidence: Princess mid
+and low, 2 passed in 9.48s; high authored but NOT RUN. Disobey initially 3 failed in
+13.13s at strict stored-JSON parsing; corrected final file 3 passed in 16.02s.
+This integration worker ran no pytest or collection. The optional minimal root
+union selection is Princess actual low counter plus Disobey purpose-given resume;
+other green packet cases need no repeat solely because they were copied.
+
+Executed exact artifact/hash/full-tree replay assertions, twelve changed Python
+AST parses, and the repository's changed-path privacy inspection: zero findings.
+Reused packet Ruff/type evidence for unchanged source bytes; no repeated static
+sweep. All original input artifacts and source trees remain unchanged. Full exact
+final-candidate regression/global static/migration/privacy/restore, independent
+source/clarity review and human acceptance remain pending. This is finite source
+integration, not whole-Girl/Frame, P1 or M3 completion. RULES_SUBSET; bot OFF.
+No bot, deploy, merge, publication, model, migration or private-engine action.
+
+
+## 2026-11-11 — Princess Doll and actual Handler reprisal v3 integration
+
+Candidate `harpyengine-p1-doll-reprisal-integrated-20261111` combines the exact
+reviewed Princess-directed native Vatgrown Doll packet and Handler reprisal v3
+packet on `harpyengine-p1-princess-disobey-integrated-20261111`. The requested
+patch digests, all seven Doll and nine Handler pre/postimages, entire input
+deltas and both full isolated source replays match. Handler v1/v2 are not used.
+
+Sixteen disjoint input paths, including fourteen unchanged reviewed Python
+postimages. Handler alone changes `m2_choices`; Doll continues through its
+existing directed-child path. Both scoped reports remain byte-identical. There
+is no code conflict, repair, synthetic state substitution or new combination
+recipe. The only added integration change is this acceptance-report appendix.
+The registry, queue, prior reports, instructions and original planning remain.
+
+Doll retains the actual native Vatgrown actor, fixed observer/body/cast, real
+performer Heat, original receipt and lasting benefits. The Princess authors only
+performer decisions. Observer-owned Tag/Punishment/information decisions and
+later participant-only Doll history/departure remain independently scoped.
+Pending native consequences continue to block parent completion.
+
+Handler reprisal retains real Handler bodies/cast and surviving usable-Asset
+preflight before loss, actual tear and Heat, original recipient and genuine
+Engage maneuvers/required damage. The canonical-state reload in standalone
+Feedback `complete_child` is exactly the reviewed v3 postimage: a later hook with
+stale in-memory state cannot repeat completion or overwrite newer saved effects.
+The distinct final-mark completion event and original held roll remain intact.
+The source-specific `m2_choices` return does not intercept directed Doll actions.
+Princess-controlled final-mark Feedback remains unsupported; no gate is widened.
+
+Prior packet smoke evidence is separate and parent-reported, not a new integrated
+run: Doll mid passed 1 in 5.99s; high/low authored NOT RUN. Handler v2 two-node
+minimum was 1 passed, 1 failed in 5.63s: final-mark passed and Relay was blocked by
+missing synthetic `world` fixture approval. V3 changes only that fixture scope
+and its report from v2; failed-only Relay then passed 1 in 3.29s, as confirmed by
+root on 2026-11-11. The earlier disconnected attempt has no verified outcome and
+is not counted. No worker pytest or collection ran. The optional two-node root
+union selection is in the sibling manifest; no previously green node must be
+repeated solely because identical bytes were copied.
+
+Executed exact hash/preimage/full-tree replay assertions, fourteen changed Python
+AST parses and repository changed-path privacy inspection: zero findings. Reused
+packet Ruff/compile/type evidence for unchanged bytes; no repeated static sweep.
+Original sources and artifacts were rechecked unchanged. Final exact-candidate
+full regression/global static/migration/privacy/restore and independent/human
+acceptance remain pending. This is finite integration, not whole-type/P1/M3
+completion. RULES_SUBSET; bot OFF. No deploy, merge, publication, live Discord,
+model call, migration or private-engine mutation.
+
+## 2026-11-11 — Actual Flirt escape mandatory Feedback candidate
+
+Isolated from the Doll/Handler-reprisal integrated candidate, the genuine
+high-Flirt target-owned Keep child now retains its original parent receipt,
+owned choices, actual people and single committed last Identity/Heat across
+mandatory Feedback. An unrolled ending cannot claim escape and preserves the
+original Flirt's own Helpless consequence. Other source recipes stay closed.
+See `reports/P1_ANKOU_ESCAPE_FEEDBACK.md` for scope and all seven changed paths.
+Two native normal episodes are authored NOT RUN; worker ran only changed-file
+compilation/Ruff and one-helper type checking. Root owns minimal gameplay and
+final exact-candidate gates. No P1/full-M3/player acceptance; bot OFF.
+
+V2 fixture-only follow-up: root's first two-node run failed both before a valid
+source (2 failed in 4.27s): missing explicit Flirt Heat and a fictional Handler
+joined before an ordinary Pilot-only Play. V2 uses explicit heat=0 and the
+original Pilot purpose counterpart. The mixed-role/cast guards and production
+code are unchanged. Failed-only root retry remains pending; worker did not run
+pytest or collection. Distinct-counterpart behavior is not claimed exercised.
+
+V3 source repair: root's V2 retry was 2 failed in 8.09s. Read-only diagnosis
+of retained synthetic source choices proved strict Python tuple_type failures
+on their JSON-decoded options/denied arrays. The helper now reads the same
+saved ChoiceAnswer through strict model_validate_json, matching canonical
+response decoding. Source/actor/receipt/pending guards are unchanged. V2 tests
+are byte-identical; failed-only root retry pending, no worker pytest.
+
+
+## 2026-11-11 — Princess Easy Target v2 and ANKOU escape Feedback v3 integration
+
+Candidate `harpyengine-p1-easy-escape-integrated-20261111` combines the reviewed
+Princess-directed native Newgirl Easy Target v2 packet and ordinary player Flirt
+escape Feedback v3 packet on `harpyengine-p1-doll-reprisal-integrated-20261111`.
+Both requested patch digests, nine/seven declared pre/postimages, complete input
+deltas and full isolated input replays match. Earlier packet versions are not
+substituted. Original sources and artifacts remain unchanged.
+
+Fifteen changed paths. The only shared code path is `m2_choices.py`; the hunks
+are distinct and apply in either order to the exact same full source tree. The
+Easy Target guard delays generic Princess closure until actual reactions and
+consequences complete. The escape hook records an unperformed Feedback-ended
+Keep as escaped=false and preserves the original Flirt's Helpless consequence.
+Neither hook overwrites the other. All twelve other Python postimages remain
+byte-identical to their reviewed packet. The escape report remains unchanged;
+this appendix follows its complete acceptance text without replacing history.
+
+Easy Target retains the real Newgirl actor/resources/receipt, original Princess
+author and precise suffixed optional Bond ownership. Other people's reactions,
+Tags and judgments and separately requested performance authors remain theirs.
+Directed closure reloads canonical state and proves the real completion event.
+Escape retains its immutable Flirt/choice/people/receipt binding and exact JSON
+validation of saved ChoiceAnswer objects. Its scope excludes Princess children,
+Easy Target children and nested/actor-basic Flirt parents, so this union grants
+no new combined recipe. The modified shared roll-source validator admits only
+the positively proved directed Easy Target author, leaving ordinary escape
+source verification unchanged. No source, private choice or proof is dropped.
+
+Parent-reported prior smoke, not an integrated rerun: the Princess request
+normal passed 1 in 7.11s before v2; after the exact optional Bond ownership repair,
+only the new actual-use Bond normal ran and passed 1 in 7.07s. Escape v3's two
+purpose parameters passed 2 in 9.18s. The frozen escape packet retains prior
+v1 failures (2 in 4.27s) and v2 failures (2 in 8.09s); its historical statement
+that v3 retry was pending is superseded by this root-reported v3 result.
+No worker pytest or collection ran. Optional minimal root seam nodes are in the
+sibling manifest; do not repeat green packet cases solely for identical copying.
+
+Executed pinned hash/preimage/delta verification, exact full input/forward/
+reverse/combined patch replay, thirteen changed Python AST parses and existing
+repository changed-path privacy inspection, zero findings. Reused existing
+packet Ruff/compile/type evidence for original hunks and unchanged postimages;
+no repeated broad static sweep or new runtime acceptance is claimed. Registry,
+queue, original planning and instructions remain unchanged. Final frozen-candidate
+full regression/global static/migration/privacy/restore, independent source and
+clarity review and actual human acceptance remain pending. RULES_SUBSET; bot OFF.
+No deploy, merge, publication, live Discord, model call, migration or private-engine
+mutation. This finite integration does not establish whole-type or P1 completion.
+
+
+### 2026-11-11 P1 native Stim self-Dose counter source
+
+Bounded native self-Dose now answers an original failed Brutalize, with the
+Stim's actual Heat/receipt and ordinary independent component choosers. Final
+canonical Dose proof and every real response gate optional Broken and outer
+completion. The existing temporary Tag lifecycle remains authoritative.
+Three ordinary tier normals authored in `tests/rules/test_alpha_dose_counter.py`;
+worker pytest/collection NOT RUN. Focused Ruff/format and compile passed five
+changed Python files. See `reports/P1_ALPHA_DOSE_COUNTER.md` and companion
+manifest for minimum/root and further scoped evidence. Whole-P1/global/full
+regression, independent review and human acceptance remain pending. Bot OFF; no
+live restart, migration, deployment, publication, AI or private-engine mutation.
+
+Root reported high native normal **1 passed in 6.24s** on the isolated
+execution view; pytest cache/bytecode writes disabled. No source change after
+that run. Additive ruling/registry/report updates followed. Mid/low normals
+NOT RUN; focused mypy passed four changed source files and registry model
+validated. Final full/global gates unchanged.
+
+
+## 2026-11-11: ordinary NPC Here for Support source
+
+Isolated candidate `harpyengine-p1-doctor-npc-support-20261111` adds the actual
+visible ordinary NPC protector to the native Doctor source, preserving original
+actors, one owned cost/receipt, typed Bond/Tag, protection lifetime and private
+owned stop. Source: Here for Support PDF73/printed71. No controller resource
+proxy, fake NPC Status, generic target bypass or expanded Nanobot resources.
+
+Authored two native normal episodes in `tests/rules/test_doctor_npc_support.py`:
+mid protection/Bond/harm guard/owned stop and high refusal/actual NPC Tag. Worker
+ran no pytest or collection. Changed-file Ruff format/check: five reformatted,
+one unchanged; all checks passed. Six changed Python files parse. Root ran the
+native NPC protection/Bond/harm-guard/owned-stop minimum: 1 passed in 5.00s,
+without pytest cache or bytecode. High-refusal Tag normal remains authored,
+unrun. Full regression, broader source/body variants, global
+static/privacy/migration/restore, independent and player acceptance remain pending.
+RULES_SUBSET; bot OFF. No deploy, merge, package/archive copy or publication.
+
+
+## P1 native Newgirl counter and player Stim Nanobot relief — 2026-11-11
+
+Isolated guard-support union preserves all reviewed Python bytes from the native
+Newgirl Easy Target counter and Doctor player Stim relief overlays. Registry,
+rulings and queue evidence are additive. See
+`P1_NEWGIRL_DOCTOR_INTEGRATION.md` for source scope and exact limitations.
+
+Parent-reported pre-integration minimums: Newgirl mid **1/8.57s**, corrected low
+**1/7.53s** after a fixture-only failure **1/7.09s**; Doctor actual relief/expiry/
+rebuild **1/7.18s**. Newgirl smokes used the baseline registry in a Python-only
+view. No test result is claimed on the new union. Both input packets received
+bounded review passes reported by root; global independent and player acceptance
+remain pending. Doctor removal occurs before the separately owned final patient
+response, which is not advance treatment consent.
+
+Integrator: exact preimage/postimage and full source hashing, strict patch replay,
+detached changed inodes, additive document/registry preservation and in-memory
+Python parsing only. No pytest/collection, green rerun, full regression, bot start,
+publication, merge or deployment. Final candidate gates remain pending;
+RULES_SUBSET and bot OFF.
+
+
+## P1 native Doll counter and native Oldgen advice Feedback — 2026-11-11
+
+The isolated Newgirl/Doctor-based union retains all ten reviewed Python paths
+from the disjoint Doll-counter and ANKOU-advice packets. Additive registry
+evidence, queue and reports preserve every prior acceptance field and ruling.
+See `P1_DOLL_ADVICE_INTEGRATION.md` for exact source scope and verification.
+
+Parent-reported pre-union normals: Doll mid **1/7.45s** after initial snapshot-
+mutation failure **1/5.32s** and repair; advice accepted **1/7.41s** and refused
+**1/6.86s**. Root reported bounded input review passes. These are inherited
+results, not union gameplay execution. Doll high/low and other advice branches
+remain deferred; no global independent or human acceptance follows.
+
+Integrator command: `PYTHONDONTWRITEBYTECODE=1 python -B build_doll_advice_union_20261111.py`.
+It verifies strict input/union patch replay, full inventories, pre/post hashes,
+byte/size/mode preservation, detached changed inodes, additive metadata and
+in-memory AST parsing. The final registry model validation is recorded externally.
+No pytest/collection or full regression runs here. RULES_SUBSET; bot OFF; final
+exact-candidate global/static/migration/privacy/restore/review/player gates pending.
+
+
+## P1 ordinary NPC Doll observer and native Easy Target Feedback — 2026-11-11
+
+The isolated Doll/advice-based union preserves all six reviewed/tested Python
+files without edits. The original Doll NPC ruling is retained exactly; registry
+changes append its test reference plus two Easy Target/Feedback references.
+Existing rules, review status and acceptance fields are preserved.
+See `P1_DOLL_EASY_INTEGRATION.md` for exact authority boundaries and limitations.
+
+Root-reported pre-union normals: Doll mid **1/6.28s**; Easy Target accepted
+purpose **1/10.29s** after fixture **1 failed/3.88s** and routing **1 failed/8.82s**
+repairs; actual tear authority guard **1/7.16s**. Both bounded input reviews pass
+per root. These are inherited results, not a union run. Other authored normals
+and final P1 gates remain deferred; no global independent or human acceptance.
+
+Integrator: `PYTHONDONTWRITEBYTECODE=1 python -B build_doll_easy_union_20261111.py`.
+Exact input/union replay, pre/postimage hashes, full inventories, detached changed
+inodes and unchanged hardlinks, additive metadata, and six in-memory AST parses
+are checked. Final registry-model and verification commands are recorded in the
+external evidence folder. Worker pytest/collection and full regression NOT RUN.
+RULES_SUBSET; bot OFF; deployment and acceptance remain separately gated.
+
+## P1 actual Flirt counter source packet, 2026-11-11
+
+Latest local baseline: `harpyengine-p1-doll-easy-integrated-20261111`. Added the original target's source-bound basic Flirt counter with original cost/receipt, actor-owned questions, Alpha-owned answers/consequences, exact durable response proof, optional Broken and later independently confirmed follow-through. See `P1_ALPHA_FLIRT_COUNTER.md` for source and limits. Three normal tests authored; worker pytest/collection NOT RUN. Changed-file project-context `ruff check --no-cache` and `ruff format --no-cache --check` passed on five Python paths; in-memory AST passed. Root reports the final native mid likely-flow smoke **1 passed in 6.06s**. Low/high and final regression remain deferred. No whole-P1, independent/human review or release claim. Bot OFF.
+
+
+## P1 original Flirt counter and native Doll Feedback integration — 2026-11-11
+
+All nine Python paths are unchanged reviewed/tested inputs on the exact frozen
+Doll/Easy baseline. The two packets have no overlapping paths; no gameplay merge
+or authority conflict resolution was needed. Four test references are additive,
+and all prior ruling/status/acceptance fields remain unchanged. Source reports
+are preserved exactly. See `P1_FLIRT_DOLL_FEEDBACK_INTEGRATION.md`.
+
+Root-reported pre-union evidence: native Flirt mid **1 passed in 6.06s**; final
+Doll accepted/refused purposes **2 passed in 11.93s** after historical binding
+repairs. Root confirms the final Doll patch `a612058c` is the exact reviewed
+packet, resolving an earlier short-hash mismatch before integration. Both input
+bounded reviews passed; old pending-review wording remains historical. No new
+union gameplay run or global/human acceptance is claimed.
+
+Build: `PYTHONDONTWRITEBYTECODE=1 python -B build_flirt_doll_feedback_union_20261111.py`.
+Exact input/union patch replay, frozen inventories/preimages, source/execution
+bytes, detached changed files and unchanged hardlinks, nine in-memory AST parses
+and additive metadata are verified. Registry model validation and commands are
+recorded in external integration evidence. Worker pytest/collection and full
+regression NOT RUN. Bot OFF; RULES_SUBSET; final and human gates remain pending.
+
+## P1 Princess NPC Conversation source packet, 2026-11-11
+
+Added actual high-result NPC job selection and original-controller performance, preserving genuine consent/body/cast/receipt, private owned recovery and unsupported-effect escalation. See `P1_PRINCESS_NPC_CONVERSATION.md`. Root corrected native normal passed1/8.92s after escaped-text assertion failure1/7.95s. A later two-line source change preserves surrounding whitespace exactly; root reran its updated normal on final source/test bytes: **1 passed in 8.13s**. Worker pytest/collection NOT RUN. Ruff/format/AST5 and focused mypy4 passed. Full regression/global/migration/privacy/restore, independent source review and human outcomes remain pending. Bot OFF; RULES_SUBSET.
+
+
+## Native original-target Beneath counter integration — 2026-11-11
+
+The exact reviewed Alpha Beneath counter packet is integrated onto the frozen
+Princess/Flirt/Doll candidate. All five Python postimages and the source report
+are unchanged; registry adds only two test references and no status/ruling changes.
+Root reports final frozen-byte high normal **1 passed in 8.28s**, plus bounded
+independent source review PASS. The earlier 1/7.19s normal predates the final-byte
+check. This integrator ran no tests or collection; no joint/runtime pass is added.
+Mid/low, pin-child/Punishment compositions, independent union review, final full
+regression/global static/migration/privacy/restore and human acceptance remain
+pending. Standalone ANKOU Alpha Feedback is separate and not included here.
+See `reports/P1_BENEATH_COUNTER_INTEGRATION.md`. Bot OFF; RULES_SUBSET.
+
+
+### Native Alpha Brutalize Feedback
+
+Actual standalone Alpha Brutalize against an original Pilot now retains its last
+Identity mark and Heat payment through mandatory PROJECT ANKOU Feedback, then
+resumes the same roll and owned real damage, or ends unrolled on refused purpose.
+No central/shared Alpha source change or new authority is needed. Two native
+normal episodes are authored NOT RUN by the worker. See
+`reports/P1_ANKOU_ALPHA_FEEDBACK.md`. NPC-target, directed, learned and child
+Feedback adapters remain source-specific P1 work; final candidate gates remain pending.
+
+
+### Actual ordinary Handler non-Play Easy Target use
+
+The chosen original Handler now records actual ordinary non-Play use before the
+original Newgirl independently chooses whether to deepen their Bond. Real
+identity/controller/body/cast/known position and immutable source performance
+proof remain required; no Pilot proxy, new roll/cost or other effect is invented.
+Root corrected True normal passed 1 in 6.92s; bounded source review PASS is
+reported by root. The first 1/5.48s failure was a test projection-key assertion
+only. All final source/test bytes remain unchanged. See
+`reports/P1_EASY_TARGET_HANDLER_USE.md`. False, Handler hurt/protect/non-Play
+cohorts and Director/converted Handler sources remain deferred or unsupported.
+Integration adds only this evidence and one registry test reference. Final
+P1/global/migration/privacy/restore/independent and human gates remain pending.
+
+
+### Actual NPC Guard Brutalize Feedback
+
+Standalone native Alpha now carries an actual ordinary Guard target and its
+original assessment/controller through mandatory last-Identity ANKOU Feedback.
+Owned real injury/Broken or death follows the unchanged source roll. No NPC Girl
+sheet, invented counter performance or new shared authority. Native mid/high
+normals are authored NOT RUN by worker; see
+`reports/P1_ANKOU_NPC_BRUTALIZE_FEEDBACK.md`. Other source-specific adapters and
+final P1/global/human gates remain pending.
+
+
+Guard Feedback integration evidence: coordinating root reports the final high
+normal passed 1 in 8.84s on the final reviewed source packet, with bounded source
+review PASS. The previous corrected pair was 1 failed/1 passed in 14.04s: mid
+passed, and high exposed the repaired empty native form. Mid was not rerun after
+the high-only UI change. Those are source results, not a new union execution.
+All four Guard Python files and its original report retain exact reviewed bytes.
+The earlier Handler non-Play Easy Target source remains unchanged. The registry
+retains its Handler reference and adds only the three Guard source references.
+Original pending-review wording is preserved as packet history, not a claim
+that the latest source review is still outstanding. Union/runtime review and
+all final P1/global/migration/privacy/restore/human gates remain pending.
+
+
+### Actual owned participation in Handler Easy Target use
+
+The original Handler non-Play use now connects to genuine Pilot or ordinary NPC
+cohort participation, preserving the real Handler persona/controller/body/source,
+original receipt and Heat, independent owned response and actual performance.
+Actual participation suppresses only the matching optional Bond consequence;
+decline or missed participation grants no exemption. Separate Plays/effects,
+Handler hurt/protect, Handler-as-cohort and Director/converted sources remain
+explicit source-specific work. No new ruling or rules-status promotion is added.
+
+Root reports exact frozen participation normal 1 passed in 6.06s and bounded
+independent source review PASS. Decline and missed remain authored NOT RUN.
+See reports/P1_HANDLER_USE_COHORT.md. All five Python files and the source report
+retain reviewed bytes. This integration adds only one registry test reference
+and append-only evidence; prior Guard Feedback and other workflows remain.
+No integrator pytest, collection or source static rerun. New union runtime and
+independent union review remain pending, as do final P1/global static/migration/
+privacy/restore, campaign journey, source/clarity and human/owner acceptance.
+
+
+### Native Alpha counter through mandatory ANKOU Feedback
+
+The genuine low-result Brutalize counter now uses its native Alpha target's
+last Identity through mandatory Feedback, binding the original receipt,
+selection, people, controllers, cast and exact required counter. Actual owned
+counter consequences precede outer completion and optional Broken. Refused
+purpose remains unrolled and closes only after the actual durable response,
+with Helplessness and no invented performance, receipt, damage or Broken.
+Recovery belongs to the original parent scene-lock owner; the corrected test
+preserves descendant-only rejection and committed child Identity/Heat.
+
+Root reports corrected v3 True normal 1 passed in 7.65s, after fixture failures
+of 2.39s and 6.24s, and bounded independent source review PASS. False remains
+authored NOT RUN. The frozen source report's rerun-pending wording is historical.
+See reports/P1_ANKOU_ALPHA_COUNTER_FEEDBACK.md. All seven reviewed source/test/
+report paths retain exact bytes. Only two registry test references and this
+append-only evidence are added; no new ruling or rules-status promotion.
+The prior cohort union had root participation 1 passed in 6.34s and independent
+union review PASS; all its gameplay and metadata are preserved.
+
+Integrator pytest/collection and source-static reruns NOT RUN. New union runtime
+and independent union review remain pending. False, broader/death branches,
+other source families, final P1/global static/migration/privacy/restore,
+campaign journey, source/clarity and human/owner acceptance remain pending.
+Bot OFF; RULES_SUBSET; no archive, Space mutation, publication or deployment.
+
+
+### Original Handler participation and native Doll counter Feedback
+
+The original ordinary Handler may now actually participate in an ordinary NPC's
+non-Play Easy Target use, retaining the original persona/controller, real cell,
+body, owned response and immutable source proof before NPC completion. No Pilot
+placement record, surrogate NPC, extra Action/cost or new authority is invented.
+Handler v2 corrected only the test's assumption about optional position fields;
+both production modules retain v1 bytes. Root reports final normal 1 passed in
+7.09s after the assertion-only failure 1 in 6.42s, with bounded source review PASS.
+
+Native Vatgrown Doll in its genuine failed-Brutalize counter now retains its
+actual final Identity/Heat across mandatory ANKOU Feedback. Accepted purpose
+continues the real Doll outcome and independently owned observer response;
+refusal ends truthfully unrolled without optional Broken. Original parent
+receipt, actors/controllers, owned choice and live source checks remain required.
+Root reports accepted-purpose normal 1 passed in 8.30s and bounded source review
+PASS. Refusal remains authored NOT RUN. Corrected runner selected the existing
+dependency environment; no source/test bytes changed for that runner correction.
+
+All eleven reviewed source/report/test paths remain exact and disjoint. This
+union adds only four registry test references and append-only evidence. Prior
+counter/cohort/Guard workflows remain. No new ruling or status promotion.
+See reports/P1_HANDLER_USE_PARTICIPANT.md and
+reports/P1_ANKOU_DOLL_COUNTER_FEEDBACK.md. No integrator pytest/collection or
+source-static rerun. New union runtime and independent review remain pending.
+Handler decline/missed/hurt/protect, converted/Director and other primaries,
+Doll refusal and other source compositions, final P1/global static/migration/
+privacy/restore, campaign journey, source/clarity and human gates remain pending.
+
+
+### Original Handler protection participation and native Easy counter Feedback
+
+The original ordinary Handler may now actually join an ordinary NPC's genuine
+Easy Target protection, retaining original persona/controller, real cell, free
+living body, owned response and immutable source proof. No Pilot placement,
+surrogate NPC, extra Action/cost or unrelated immunity is invented. Root reports
+the exact source normal 1 passed in 7.05s. Handler primary protection/hurt, hurt
+cohorts, Director/converted sources and other primary kinds remain separate work.
+
+Native Newgirl's genuine failed-Brutalize Easy Target counter now retains its
+last owned Identity/Heat commitment across mandatory ANKOU Feedback. Accepted
+purpose resumes the real Easy Target roll, independently owned Tag/request,
+actual requested Keep, original requester's judgment and Status consequence
+before optional Broken and parent closure. Refusal ends truthfully unrolled
+without invented work or Broken. Original receipt, actors/controllers, owned
+choice and immutable source checks remain required.
+
+Root reports corrected accepted-purpose normal 1 passed in 13.06s, after the
+initial fixture failure 1 in 4.87s. The correction replaces a three-person Tag
+helper with the existing four-person directed helper so the real Mentor answers;
+production bytes did not change. Refusal remains authored NOT RUN. Original
+failure and corrected evidence are preserved separately from this candidate.
+
+Both source packets were independently reviewed per the coordinating root.
+All eleven reviewed source/report/test paths remain exact and disjoint. This
+union adds only four registry test references and append-only evidence. Prior
+Handler-use/Doll/counter/cohort/Guard workflows remain; no new ruling or status
+promotion. See reports/P1_HANDLER_PROTECTION_PARTICIPANT.md and
+reports/P1_ANKOU_EASY_COUNTER_FEEDBACK.md. Earlier pending wording in the frozen
+source packets is historical, superseded only by the attributed named results.
+
+Integrator pytest/collection and source-static reruns NOT RUN. New union runtime
+and independent union review remain pending. Handler decline/missed, Easy refusal,
+other source combinations, final P1/global static/migration/privacy/restore,
+campaign journey, source/clarity and human/owner acceptance remain pending.
+Bot OFF; RULES_SUBSET; no archive, Space mutation, publication or deployment.
+
+
+### Original Handler hurt participation and native Oldgen counter Feedback
+
+The original ordinary Handler may now actually participate in an ordinary NPC's
+genuine Easy Target bodily hurt before its first bodily attempt. Original
+persona/controller, real shared cell, free living body, owned response and
+immutable source proof remain required. The original NPC performs the actual
+bodily action; the Newgirl independently selects her actual injury. The only
+exemption is the matching Easy Target Punishment. No Pilot placement, proxy NPC,
+extra Action/cost or unrelated immunity is invented. Root reports the exact
+source normal 1 passed in 8.30s.
+
+Native Oldgen's genuine failed-Brutalize advice counter retains its last owned
+Identity/Heat through mandatory ANKOU Feedback. Accepted purpose continues the
+actual advice, Status/Maxim and original Alpha's independently owned listening
+before optional Broken and parent closure. Refusal ends truthfully unrolled
+with Helplessness and no invented advice or Broken. Original parent receipt,
+actors/controllers, owned selection and exact required-counter checks remain.
+Root reports accepted-purpose True normal 1 passed in 10.49s. False remains
+authored NOT RUN.
+
+Both source packets were independently reviewed per the coordinating root.
+All eleven reviewed source/report/test paths remain exact and disjoint. This
+union adds only four registry test references and append-only evidence. Prior
+Handler protection/use, Easy/Doll/other counters, cohorts and Guard workflows
+remain. No new ruling or rules-status promotion. See
+reports/P1_HANDLER_HURT_PARTICIPANT.md and
+reports/P1_ANKOU_ADVICE_COUNTER_FEEDBACK.md. Pending wording in frozen source
+packets is historical, superseded only by the attributed named results.
+
+Integrator pytest/collection and source-static reruns NOT RUN. New union runtime
+and independent union review remain pending. Handler decline/missed and primary
+hurt/protection, advice False/other source compositions, final P1/global static/
+migration/privacy/restore, campaign journey, source/clarity and human/owner
+acceptance remain pending. Bot OFF; RULES_SUBSET; no archive, Space mutation,
+publication or deployment.

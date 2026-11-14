@@ -1,5 +1,6 @@
 """Native M2 Play and owned-response wizards; all state changes go through services."""
 
+import logging
 from typing import Any, Literal, cast
 
 import discord
@@ -16,9 +17,12 @@ from girlframe.engine.m2 import (
     MANEUVERS,
     PLAY_IDS,
     QUESTIONS,
+    SENSOR_QUESTION_TEXT,
     TRAITS,
     ChoiceAnswer,
     PlayInput,
+    sensor_question_text,
+    sensors_off_list,
 )
 from girlframe.engine.m3_girl_runtime_state import has_rule, keep_automatic
 from girlframe.engine.m3_plays import HEAT_IDS
@@ -33,12 +37,7 @@ def menu(
     key: str, label: str, values: Any, minimum: int = 1, maximum: int = 1, required: bool = True
 ) -> Field:
     labels = {
-        "foundation_destination": "Where should we go?",
-        "foundation_avoid": "What should we avoid?",
-        "enemy_activity": "What is the enemy doing?",
-        "repair_rest": "Where can we rest and repair?",
-        "civilian_danger": "Where are civilians at risk?",
-        "orders": "What are our orders?",
+        **SENSOR_QUESTION_TEXT,
         "hurt": "Who would you like me to hurt?",
         "be": "Who would you like me to be?",
         "hide": "What would you like me to hide?",
@@ -295,7 +294,7 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
             text("fields.a" + str(i + 1), "Answer " + str(i + 1))
             for i in range(len(result["questions"]))
         ]
-        if level == "high" and result["off_list"]:
+        if level == "high" and sensors_off_list(result["questions"], level):
             fields.append(
                 menu(
                     "options",
@@ -992,7 +991,10 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
                 + clean(proposal["account"])
             )
     if decision["kind"] == "handler_sensors":
-        instructions += "\nQuestions: " + "; ".join(decision["result"]["questions"])
+        instructions += "\nQuestions:\n" + "\n".join(
+            f"{i}. {clean(sensor_question_text(question))}"
+            for i, question in enumerate(decision["result"]["questions"], 1)
+        )
     if decision["kind"] == "harpy_sensor_answers":
         instructions += "\nAnswer these questions honestly: " + clean(
             decision["result"]["questions"]
@@ -1261,6 +1263,25 @@ async def open_play(
 
         rows = await threaded(optional_npc_targets)
         npc_flirt_targets = {"npc:" + x["ref"]["entity"]: x for x in rows}
+    sleeping_doll_targets: dict[str, Any] = {}
+    if parent and parent["kind"] == "alpha_sex_counter_play" and "unassuming_doll" in plays:
+        from girlframe.engine.m3_actor_bonds import current_ref
+        from girlframe.services.m2_state import load_state
+        from girlframe.services.m3_alpha_sex import doll_observers
+
+        def actual_doll_observers() -> tuple[dict[str, Any], ...]:
+            assert parent is not None
+            with game.store.engine.connect() as connection:
+                actual = load_state(connection, game.store.campaign_id)
+                return doll_observers(
+                    game,
+                    connection,
+                    actual,
+                    game.action(connection, parent["parent"]),
+                    current_ref(actual, viewer.user_id),
+                )
+
+        sleeping_doll_targets = {x["id"]: x for x in await threaded(actual_doll_observers)}
     fields = [
         menu("play", "Choose a Play", plays),
         Field(
@@ -1388,6 +1409,17 @@ async def open_play(
                 required=False,
             )
         )
+    if sleeping_doll_targets:
+        fields.append(
+            Field(
+                "sleeping_doll_observer",
+                "Doll: actual awake observer",
+                tuple((key, x["label"]) for key, x in sleeping_doll_targets.items()),
+                minimum=0,
+                maximum=1,
+                required=False,
+            )
+        )
     fields.extend(dampener_controls)
     fields.extend(kicked_controls)
     from girlframe.discord_adapter.m3_ankou_controls import pulse_fields, selected_pulse
@@ -1509,6 +1541,8 @@ async def open_play(
 
             if parent and parent["kind"] == "bonded_rejection_child":
                 target_actor = ActorRef.model_validate(parent["body"]["target_actor"])
+            elif parent and parent["kind"] == "ankou_effect_child" and parent["body"].get("target"):
+                target_actor = ActorRef.model_validate(parent["body"]["target"])
             else:
                 selected = one(values, "engage_target")
                 if selected is None or selected not in engage_targets:
@@ -1528,6 +1562,13 @@ async def open_play(
             if selected is None or selected not in snoop_targets:
                 raise WorkflowError("Choose the actual known original Snoop target")
             target_actor = ActorRef.model_validate(snoop_targets[selected]["ref"])
+        if play == "unassuming_doll" and parent and parent["kind"] == "alpha_sex_counter_play":
+            from girlframe.engine.m3_actor_state import ActorRef
+
+            selected = one(values, "sleeping_doll_observer")
+            if selected not in sleeping_doll_targets:
+                raise WorkflowError("Choose an actual awake observer for this Doll opportunity")
+            target_actor = ActorRef.model_validate(sleeping_doll_targets[selected]["ref"])
         sex_source = None
         if play == "alpha_sex":
             selected = one(values, "alpha_sex_source")
@@ -1546,7 +1587,12 @@ async def open_play(
             code_source = parent["body"]["maintenance"]
             target_actor = ActorRef.model_validate(parent["body"]["target"])
         am_source = None
-        if parent and parent["kind"] == "ankou_effect_child" and parent["body"].get("target"):
+        if (
+            parent
+            and parent["kind"] == "ankou_effect_child"
+            and parent["body"].get("target")
+            and play != "dive_deep"
+        ):
             from girlframe.engine.m3_actor_state import ActorRef
 
             target_actor = ActorRef.model_validate(parent["body"]["target"])
@@ -1904,23 +1950,26 @@ class SceneControls(discord.ui.View):
         await interaction.response.defer(ephemeral=True, thinking=True)
         from girlframe.services.ledger import CampaignLedger
 
-        ledger = CampaignLedger(self.game.store)
         viewer = viewer_from_interaction(interaction)
         try:
+            ledger = CampaignLedger(self.game.store)
             await threaded(
                 lambda: ledger.safety(
                     viewer, str(interaction.id), ledger.status(viewer)["revision"], pause=True
                 )
             )
-            await reply(
-                interaction,
-                (
-                    "Your OOC safety pause is saved. No reason or fictional penalty. "
-                    "/safety resume clears your pause."
-                ),
-            )
         except WorkflowError as error:
-            await reply(interaction, str(error))
+            message = str(error)
+        except Exception:
+            # Storage exceptions may include private SQL parameters; do not log their details.
+            logging.getLogger(__name__).error("Scene safety pause request could not be saved.")
+            message = "Safety request could not be saved. Stop play and contact an administrator."
+        else:
+            message = (
+                "Your OOC safety pause is saved. No reason or fictional penalty. "
+                "/safety resume clears your pause."
+            )
+        await reply(interaction, message)
 
     @discord.ui.button(label="Latest action / recovery", custom_id="m2:scene:recovery", row=0)
     async def recovery(

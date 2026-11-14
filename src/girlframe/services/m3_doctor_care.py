@@ -26,6 +26,24 @@ if TYPE_CHECKING:
     from girlframe.services.m2_game import GameService
 
 
+def npc_targets(
+    game: "GameService", viewer: GuildViewer, channel: int, revision: int
+) -> list[dict[str, Any]]:
+    """Reuse scene knowledge, presentation and stale-role guards without exposing raw NPCs."""
+    from girlframe.services.m3_actors import ActorService
+    from girlframe.services.m3_cast import CastService
+    from girlframe.services.m3_missions import MissionService
+
+    visible = CastService(ActorService(MissionService(game.store))).view(viewer, channel)
+    if visible["game_revision"] != revision:
+        raise WorkflowError("Refresh the actual care scene before selecting a patient")
+    return [
+        dict(ref=row["ref"], token=row["token"], label=row["label"])
+        for row in visible["roles"]
+        if row["ref"]["kind"] == "npc" and not row["stale"]
+    ]
+
+
 class CareService:
     def __init__(self, game: "GameService"):
         self.game, self.store = game, game.store
@@ -79,8 +97,12 @@ class CareService:
                 raise WorkflowError("Refresh the actual care scene before declaring care")
             if not owned(self.game, c, state, actor, rules.ANGEL if angel else rules.NURSE):
                 raise WorkflowError("Acquire the actual medical Requisition first")
-            if actor == patient or patient.kind != "pilot":
-                raise WorkflowError("Record care for another actual original Pilot")
+            if actor == patient or patient.kind not in ("pilot", "npc"):
+                raise WorkflowError("Use an actual other Pilot or NPC patient")
+            if patient.kind == "npc" and patient.token not in {
+                row["token"] for row in npc_targets(self.game, viewer, channel, state.revision)
+            }:
+                raise WorkflowError("Choose an actual visible current NPC patient from this scene")
             cast = _cast(self.game, c, state, channel)
             target = resolve(state, patient, profiles(c, self.store.campaign_id))
             giver = resolve(state, actor, profiles(c, self.store.campaign_id))
@@ -153,7 +175,11 @@ class CareService:
                 self.game, c, state, value.doctor, rules.ANGEL if value.angel else rules.NURSE
             ):
                 raise WorkflowError("Recover the actual care provider and current source ability")
-            resolve(state, value.patient, profiles(c, self.store.campaign_id))
+            patient = resolve(state, value.patient, profiles(c, self.store.campaign_id))
+            if patient.controller != value.patient_controller:
+                raise WorkflowError(
+                    "Recover the original patient controller before confirming care"
+                )
             if rules.frame_id(state, value.doctor) != value.frame:
                 raise WorkflowError("This care belongs to the original Doctor Frame")
             event = str(uuid4())
@@ -213,6 +239,12 @@ class CareService:
                 raise WorkflowError("Use the actual active next Off-Duty care period")
             if not owned(self.game, c, state, value.doctor, rules.ANGEL):
                 raise WorkflowError("The actual source Doctor must still provide this care")
+            if value.patient.kind == "npc":
+                patient_actor = resolve(state, value.patient, profiles(c, self.store.campaign_id))
+                if patient_actor.controller != value.patient_controller:
+                    raise WorkflowError(
+                        "Recover the original NPC patient controller before confirming recovery"
+                    )
             event = str(uuid4())
             confirmations = (*value.confirmations, viewer.user_id)
             complete = set(confirmations) == {int(value.doctor.entity), value.patient_controller}
@@ -234,16 +266,23 @@ class CareService:
                         raise WorkflowError(
                             "Finish the original medical waking before completing this recovery"
                         )
-                patient = state.sheets.get(value.patient.entity)
-                if patient is None or patient.character_id != value.patient.incarnation:
+                patient = (
+                    state.sheets.get(value.patient.entity)
+                    if value.patient.kind == "pilot"
+                    else None
+                )
+                if value.patient.kind == "pilot" and (
+                    patient is None or patient.character_id != value.patient.incarnation
+                ):
                     raise WorkflowError("Care cannot resurrect an already ended original person")
                 placement = next((x for x in state.placements if x.actor == value.patient), None)
                 if placement and placement.subsumed:
                     raise WorkflowError(
                         "Resolve actual locked-cockpit extraction before biological recovery"
                     )
-                patient.medical_state = "fit"
-                patient.revision += 1
+                if patient is not None:
+                    patient.medical_state = "fit"
+                    patient.revision += 1
                 if placement:
                     state.placements = [
                         x.model_copy(
@@ -262,6 +301,16 @@ class CareService:
 
                 if is_helpless(state, value.patient):
                     state = clear_helpless(state, value.patient, event)
+                if value.patient.kind == "npc":
+                    state.facts.append(
+                        dict(
+                            kind="doctor_npc_recovered",
+                            patient=value.patient.model_dump_json(),
+                            care=value.id,
+                            period=period.id,
+                            event=event,
+                        )
+                    )
             value = value.model_copy(
                 update=dict(
                     confirmations=confirmations,
@@ -314,11 +363,18 @@ def prove(game: "GameService", c: Connection, value: rules.Care) -> None:
         if source
         else None
     )
-    if original is None or (original.doctor, original.frame, original.patient, original.angel) != (
+    if original is None or (
+        original.doctor,
+        original.frame,
+        original.patient,
+        original.angel,
+        original.patient_controller,
+    ) != (
         value.doctor,
         value.frame,
         value.patient,
         value.angel,
+        value.patient_controller,
     ):
         raise WorkflowError("Recover the actual original care declaration and source bodies")
     if value.care_event:

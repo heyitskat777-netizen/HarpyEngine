@@ -14,6 +14,7 @@ from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput
 from girlframe.engine.m3_actor_bonds import change, current_ref
 from girlframe.engine.m3_actor_state import ActorRef, SceneCast
 from girlframe.engine.m3_actors import fingerprint, resolve
+from girlframe.engine.m3_clone_am import additional_identities
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_intracadre_marriage import available, debit
 from girlframe.engine.m3_mockingbird import actor_tags, give_tag
@@ -591,7 +592,13 @@ def results(game: GameService, c: Connection, state: GameState, action: dict[str
         roll_event=rolled,
         event=action["data"].get("response_event") or rolled,
         speech=meta["speech"],
-        identities=tuple(item.id for item in state.sheets[meta["actor"]["entity"]].identities)
+        identities=tuple(
+            item.id
+            for item in (
+                *state.sheets[meta["actor"]["entity"]].identities,
+                *additional_identities(state, int(meta["actor"]["entity"])),
+            )
+        )
         if action["data"]["play"] == "changeling_blank_slate"
         else (),
     )
@@ -1042,6 +1049,24 @@ def stage_brain(
         support.validate_start_brain(game, c, before, after, value, brain, event)
         ids = _grant(after, value.actor, value.frame, brain, "start", value.id, event)
         rules.put(after, value.model_copy(update=dict(node=ids[0], attached_event=event)))
+
+
+def preflight_deepening(
+    game: GameService, c: Connection, state: GameState, first: ActorRef, second: ActorRef
+) -> None:
+    """Prove potential Psychic Strings subjects before committing a new Play.
+
+    This only reads existing human-authored facts; it neither creates a Bond nor
+    chooses any participant's response. Actual effects still revalidate at write.
+    """
+    if not _available(game, rules.STRINGS):
+        return
+    for actor, subject in ((first, second), (second, first)):
+        try:
+            rules.frame(state, actor)
+        except ValueError:
+            continue
+        _brain(game, c, state, subject, "node")
 
 
 def stage_deepen(
@@ -1854,7 +1879,9 @@ class ChangelingService:
                 )
             if label is not None:
                 _live(self.game, c, state, value.subject)
-                if label in {item.label for item in actor_tags(state, value.subject.actor)}:
+                if label.casefold() in {
+                    item.label.casefold() for item in actor_tags(state, value.subject.actor)
+                }:
                     raise WorkflowError("The actual affected person already has this Tag")
                 _copy(
                     state,
@@ -2091,6 +2118,82 @@ class ChangelingService:
             operation,
         )
 
+    def _held_newgirl_body_fact(
+        self, c: Connection, state: GameState, channel: int, actor: ActorRef
+    ) -> bool:
+        """Allow an absent original fact for one already-rolled native or learned result.
+
+        This is not a response, body change, new Play, or recovery cancellation.
+        The existing fact writer still proves author, role and no-overwrite.
+        """
+        from girlframe.services import m3_newgirl_sex as newgirl
+        from girlframe.services.m3_recovery import pending
+
+        if pending(self.game, c, include_unrolled=True):
+            return False
+        table = t.m2["m2_actions"]
+        identities = list(
+            c.scalars(
+                sa.select(table.c.id).where(
+                    table.c.campaign_id == self.store.campaign_id,
+                    table.c.state.not_in(("complete", "aborted")),
+                )
+            )
+        )
+        if len(identities) != 1:
+            return False
+        action = self.game.action(c, identities[0])
+        meta = action["data"].get("newgirl_sex")
+        if not meta or action["state"] != "awaiting_choices":
+            return False
+        value = newgirl.prove(self.game, c, state, meta["session"])
+        if (
+            value.phase != "results"
+            or value.tier != "mid"
+            or value.cast.channel != channel
+            or actor not in (value.actor, *value.partners)
+            or value.changeling_source
+        ):
+            return False
+        if value.bonded_source is not None:
+            from girlframe.services import m3_bonded as bonded
+
+            # The proved native Pair delegation is a source, not permission to
+            # alter a psychic/learned parent or another participant's held work.
+            parent = bonded.prove(self.game, c, state, value.bonded_source)
+            if (
+                parent.phase != "bound"
+                or parent.changeling_source is not None
+                or parent.learned_source is not None
+                or len(value.partners) != 1
+            ):
+                return False
+        # Contact re-proves original controllers, consent-source cast, actual
+        # unchanged vessels and co-location. No newly invented replacement body.
+        newgirl._contact(self.game, c, state, value)
+        _roll_source(self.game, c, action)
+        if not _available(self.game, rules.STRINGS):
+            return False
+        for row in self.game.pending(c, action["id"]):
+            if row["kind"] != "newgirl_sex_respect":
+                continue
+            partner = ActorRef.model_validate(json.loads(row["body_json"])["partner"])
+            if (
+                partner not in value.partners
+                or int(row["actor_id"]) != value.controllers[partner.token]
+                or actor not in (value.actor, partner)
+            ):
+                continue
+            # Only this still-unanswered pair can need this fact. A completed
+            # partner's missing fact is not admitted by another partner's hold.
+            counterpart = partner if actor == value.actor else value.actor
+            try:
+                rules.frame(state, counterpart)
+            except ValueError:
+                continue
+            return True
+        return False
+
     def body_fact(
         self,
         viewer: GuildViewer,
@@ -2106,7 +2209,9 @@ class ChangelingService:
         def operation(c: Connection, state: GameState, event: str) -> dict[str, Any]:
             from girlframe.services.m3_recovery import pending
 
-            if self.game.pending_actions(c) or pending(self.game, c, include_unrolled=True):
+            if (
+                self.game.pending_actions(c) or pending(self.game, c, include_unrolled=True)
+            ) and not self._held_newgirl_body_fact(c, state, channel, actor):
                 raise WorkflowError("Finish the actual held Play before establishing body facts")
             scene = _cast(self.game, c, state, channel)
             actual = resolve(
@@ -2388,7 +2493,7 @@ class ChangelingService:
         actual_text = _text(text, 8000)
 
         def operation(c: Connection, state: GameState, event: str) -> dict[str, Any]:
-            from girlframe.services.m3_changeling_effects import _born
+            from girlframe.services.m3_changeling_effects import _born, current_eye_scene
 
             use = prove_fingers(self.game, c, state, identity)
             view = _born(self.game, c, state, rules.EyeView, identity, {"ended_event"})
@@ -2399,7 +2504,7 @@ class ChangelingService:
                 profiles(c, self.store.campaign_id),
                 require_current_profile=False,
             )
-            scene = _cast(self.game, c, state, view.cast.channel)
+            scene = current_eye_scene(self.game, c, state, view.cast.channel)
             if (
                 view.ended_event
                 or scene.id != view.cast.id
@@ -2739,7 +2844,7 @@ class ChangelingService:
                 result["observe"] = (
                     value.kind == "sight"
                     and viewer.user_id == subject_controller
-                    and not result["effect"]["body"]["ended_event"]
+                    and result["effect"]["active"]
                 )
                 result["consent"] = (
                     value.kind == "sex"

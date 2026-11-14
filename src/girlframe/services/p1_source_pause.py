@@ -71,7 +71,13 @@ def _sources(state: GameState) -> tuple[_Source, ...]:
     from girlframe.engine import m3_am_sex as learned_am
 
     learned_encounters = tuple(
-        _Source(x.id, "learned_am", x.cast.channel, x.cast.id, x.effect_event)
+        _Source(
+            x.id,
+            "native_am" if x.native else "learned_am",
+            x.cast.channel,
+            x.cast.id,
+            x.effect_event,
+        )
         for x in learned_am.sources(state)
         if x.phase == "effects" and x.effect_event and not x.completed_event
     )
@@ -315,7 +321,7 @@ def require_clear(
             raise WorkflowError(
                 "Resolve the actual original Ankou source and its required followups"
             )
-        if row["kind"] == "learned_am":
+        if row["kind"] in ("learned_am", "native_am"):
             raise WorkflowError(
                 "SOURCE_SCENE_PAUSED: finish the actual no-roll AM source and its owed gifts"
             )

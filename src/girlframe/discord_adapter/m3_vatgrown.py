@@ -54,7 +54,8 @@ async def open_choice(
         )
 
     instructions = (
-        "Choose the printed quota. A nonempty question is actually speaking and ends "
+        "Choose the printed quota, or on an 8–10 select only Decline to take neither benefit. "
+        "A nonempty question is actually speaking and ends "
         "quiet/object background presentation; blank means you have no questions and they offer "
         "a secret. OOC pause remains available."
     )
@@ -96,7 +97,12 @@ async def open_vatgrown(
             "Your Doll source: "
             + data["phase"]
             + ". Benefits: "
-            + (", ".join(data["benefits"]) or "not selected")
+            + (
+                ", ".join(data["benefits"])
+                or (
+                    "declined; no benefits taken" if data["phase"] == "complete" else "not selected"
+                )
+            )
             + "."
         )
         if information:

@@ -10,9 +10,14 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_alpha_sex as alpha
 from girlframe.engine import m3_ankou as ankou
+from girlframe.engine import m3_casualty as casualty
 from girlframe.engine import m3_dose_up as dose
+from girlframe.engine import m3_newgirl_sex as newgirl
 from girlframe.engine import m3_oldgen_sex as oldgen
+from girlframe.engine import m3_princess_sex as princess
 from girlframe.engine import m3_required_plays as rules
+from girlframe.engine import m3_stim_sex as stim
+from girlframe.engine import m3_vatgrown_plays as vatgrown
 from girlframe.engine.m2 import GameState, PlayInput
 from girlframe.engine.m3_actor_bonds import current_ref, depth
 from girlframe.engine.m3_actor_state import ActorRef
@@ -26,6 +31,12 @@ from girlframe.services.m3_handler_advancements import _history
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
+MOCK_RULE = "girl.mockingbird.bad-at-being-a-person"
+MOCK_PLAY = "mockingbird_person"
+MOCK_SEX_RULE = "girl.mockingbird.sex-play"
+MOCK_SEX_PLAY = "mockingbird_sex"
+MOCK_SOURCES = {MOCK_RULE: MOCK_PLAY, MOCK_SEX_RULE: MOCK_SEX_PLAY}
+
 DIRECT_NOMINATIONS = {
     "brutalize": ("girl.alpha.brutalize", "ALPHA"),
     "old_dog_new_pups": ("girl.oldgen.old-dog-new-pups", "OLDGEN"),
@@ -33,15 +44,63 @@ DIRECT_NOMINATIONS = {
 }
 
 
-# These two real invitation recipes share only their required-source lifecycle.
+# Basic Frame Plays retain their own real trigger, resources and result authority.
+CORE_NOMINATIONS = {"dive_deep": "play.basic.dive_deep"}
+
+
+# These real invitation recipes share only their required-source lifecycle.
 # Self-Dose keeps its distinct immutable own-recipe proof and effects.
-OWN_SEX = {alpha.RULE: (alpha.PLAY, "ALPHA"), oldgen.RULE: (oldgen.PLAY, "OLDGEN")}
-SexRecipe = alpha.Session | oldgen.Session
+OWN_SEX = {
+    alpha.RULE: (alpha.PLAY, "ALPHA"),
+    oldgen.RULE: (oldgen.PLAY, "OLDGEN"),
+    newgirl.RULE: (newgirl.PLAY, "NEWGIRL"),
+    vatgrown.SEX: (vatgrown.PLAY, "VATGROWN"),
+    stim.RULE: (stim.PLAY, "STIM-BLISSED"),
+    princess.RULE: (princess.PLAY, "PRINCESS"),
+    casualty.SEX: (casualty.PLAY, "CASUALTY"),
+}
+SexRecipe = (
+    alpha.Session
+    | oldgen.Session
+    | newgirl.Session
+    | vatgrown.Session
+    | stim.Session
+    | princess.Session
+    | casualty.SexSession
+)
+
+
+def _recipe_target(recipe: SexRecipe) -> ActorRef:
+    # The required link keeps an anchor, not a replacement for the actual group.
+    # Newgirl proof and prepare retain every original partner and their consent.
+    if isinstance(recipe, newgirl.Session):
+        if not recipe.partners:
+            raise WorkflowError("Recover the actual Newgirl source partners")
+        return recipe.partners[0]
+    return recipe.target
+
+
+def _consent_basis(state: GameState, recipe: SexRecipe) -> object:
+    if isinstance(recipe, newgirl.Session):
+        return tuple(x for x in newgirl.records(state, newgirl.Consent) if x.session == recipe.id)
+    return recipe.consent_event
 
 
 def _sex_session(state: GameState, rule: str, identity: str) -> SexRecipe:
+    if rule == casualty.SEX:
+        from girlframe.services.m3_casualty import _session
+
+        return _session(state, identity)
+    if rule == princess.RULE:
+        return princess.get(state, identity)
+    if rule == stim.RULE:
+        return stim.get(state, identity)
+    if rule == vatgrown.SEX:
+        return vatgrown.get(state, identity)
     if rule == alpha.RULE:
         return alpha.get(state, identity)
+    if rule == newgirl.RULE:
+        return newgirl.get(state, identity)
     if rule == oldgen.RULE:
         return oldgen.get(state, identity)
     raise WorkflowError("Recover this actual supported owned intimacy recipe")
@@ -50,6 +109,40 @@ def _sex_session(state: GameState, rule: str, identity: str) -> SexRecipe:
 def _prove_sex(
     game: GameService, c: Connection, state: GameState, rule: str, identity: str
 ) -> SexRecipe:
+    if rule == casualty.SEX:
+        from girlframe.services.m3_casualty import prove_sex
+
+        casualty_value = prove_sex(game, c, state, identity)
+        if casualty_value.learned_source is not None:
+            raise WorkflowError(
+                "This nomination uses the actor's own Casualty recipe, not a lesson"
+            )
+        return casualty_value
+    if rule == princess.RULE:
+        from girlframe.services.m3_princess_sex import prove as prove_princess
+
+        princess_value = prove_princess(game, c, state, identity)
+        if princess_value.learned_source is not None:
+            raise WorkflowError(
+                "This nomination uses the actor's own Princess recipe, not a lesson"
+            )
+        return princess_value
+    if rule == stim.RULE:
+        from girlframe.services.m3_stim_sex import prove as prove_stim
+
+        stim_value = prove_stim(game, c, state, identity)
+        if stim_value.learned_source is not None:
+            raise WorkflowError("This nomination uses the actor's own Stim recipe, not a lesson")
+        return stim_value
+    if rule == vatgrown.SEX:
+        from girlframe.services.m3_vatgrown_plays import prove as prove_vatgrown
+
+        vatgrown_value = prove_vatgrown(game, c, state, identity)
+        if vatgrown_value.learned_source is not None:
+            raise WorkflowError(
+                "This nomination uses the actor's own Vatgrown recipe, not a lesson"
+            )
+        return vatgrown_value
     if rule == alpha.RULE:
         from girlframe.services.m3_alpha_sex import prove as prove_alpha
 
@@ -61,16 +154,37 @@ def _prove_sex(
         if value.learned_source is not None:
             raise WorkflowError("This nomination uses the actor's own Oldgen recipe, not a lesson")
         return value
+    if rule == newgirl.RULE:
+        from girlframe.services.m3_newgirl_sex import prove as prove_newgirl
+
+        newgirl_value = prove_newgirl(game, c, state, identity)
+        if newgirl_value.learned_source is not None:
+            raise WorkflowError("This nomination uses the actor's own Newgirl recipe, not a lesson")
+        return newgirl_value
     raise WorkflowError("Recover the actual supported owned intimacy source")
 
 
 def _recipe_play(rule: str) -> str:
-    return dose.PLAY if rule == dose.RULE else OWN_SEX[rule][0]
+    return (
+        ankou.PLAY
+        if rule == ankou.PROCESSOR
+        else MOCK_SOURCES[rule]
+        if rule in MOCK_SOURCES
+        else dose.PLAY
+        if rule == dose.RULE
+        else OWN_SEX[rule][0]
+    )
 
 
 def _sex_choices(state: GameState) -> tuple[tuple[str, SexRecipe], ...]:
-    return tuple((alpha.RULE, x) for x in alpha.sessions(state)) + tuple(
-        (oldgen.RULE, x) for x in oldgen.records(state, oldgen.Session)
+    return (
+        tuple((alpha.RULE, x) for x in alpha.sessions(state))
+        + tuple((oldgen.RULE, x) for x in oldgen.records(state, oldgen.Session))
+        + tuple((newgirl.RULE, x) for x in newgirl.records(state, newgirl.Session))
+        + tuple((vatgrown.SEX, x) for x in vatgrown.records(state, vatgrown.Session))
+        + tuple((stim.RULE, x) for x in stim.records(state, stim.Session))
+        + tuple((princess.RULE, x) for x in princess.sessions(state))
+        + tuple((casualty.SEX, x) for x in casualty.records(state, casualty.SexSession))
     )
 
 
@@ -79,6 +193,31 @@ def _restore_sex(state: GameState, rule: str, recipe: SexRecipe) -> None:
         alpha.put(state, recipe.model_copy(update={"action": None, "phase": "accepted"}))
     elif rule == oldgen.RULE and isinstance(recipe, oldgen.Session):
         oldgen.put(
+            state,
+            recipe.model_copy(update={"action": None, "bound_event": None, "phase": "accepted"}),
+        )
+    elif rule == newgirl.RULE and isinstance(recipe, newgirl.Session):
+        newgirl.put(
+            state,
+            recipe.model_copy(update={"action": None, "bound_event": None, "phase": "accepted"}),
+        )
+    elif rule == princess.RULE and isinstance(recipe, princess.Session):
+        princess.put(
+            state,
+            recipe.model_copy(update={"action": None, "bound_event": None, "phase": "accepted"}),
+        )
+    elif rule == stim.RULE and isinstance(recipe, stim.Session):
+        stim.put(
+            state,
+            recipe.model_copy(update={"action": None, "bound_event": None, "phase": "accepted"}),
+        )
+    elif rule == casualty.SEX and isinstance(recipe, casualty.SexSession):
+        casualty.put(
+            state,
+            recipe.model_copy(update={"action": None, "bound_event": None, "phase": "accepted"}),
+        )
+    elif rule == vatgrown.SEX and isinstance(recipe, vatgrown.Session):
+        vatgrown.put(
             state,
             recipe.model_copy(update={"action": None, "bound_event": None, "phase": "accepted"}),
         )
@@ -102,9 +241,21 @@ def nomination_options(
     for rule, play, girl in (
         *((rule, play, girl) for rule, (play, girl) in OWN_SEX.items()),
         (dose.RULE, dose.PLAY, "STIM-BLISSED"),
+        *((rule, play, "MOCKINGBIRD") for rule, play in MOCK_SOURCES.items()),
     ):
         if not has_rule(sheet, rule, girl) or (
-            play in (dose.PLAY, oldgen.PLAY) and sheet.girl != girl
+            play
+            in (
+                dose.PLAY,
+                oldgen.PLAY,
+                newgirl.PLAY,
+                vatgrown.PLAY,
+                stim.PLAY,
+                princess.PLAY,
+                casualty.PLAY,
+                *MOCK_SOURCES.values(),
+            )
+            and sheet.girl != girl
         ):
             continue
         try:
@@ -120,6 +271,16 @@ def nomination_options(
         except ValueError:
             continue
         result.append(play)
+    for play, rule in CORE_NOMINATIONS.items():
+        try:
+            registry.require_available(rule)
+        except ValueError:
+            continue
+        result.append(play)
+    from girlframe.services.m3_required_processor import available
+
+    if available(game, c, state, nominee):
+        result.append(ankou.PLAY)
     return tuple(result)
 
 
@@ -153,9 +314,14 @@ def _task(game: GameService, c: Connection, state: GameState, source: str) -> an
     if (
         not peers
         or value.options != tuple(dict.fromkeys(choices))
-        or not {*(x[0] for x in OWN_SEX.values()), dose.PLAY, *DIRECT_NOMINATIONS}.intersection(
-            value.options
-        )
+        or not {
+            *(x[0] for x in OWN_SEX.values()),
+            dose.PLAY,
+            *MOCK_SOURCES.values(),
+            *DIRECT_NOMINATIONS,
+            *CORE_NOMINATIONS,
+            ankou.PLAY,
+        }.intersection(value.options)
     ):
         raise WorkflowError("Use only the actual printed nominees' supported offered Play")
     return value
@@ -169,14 +335,14 @@ def direct_nomination(
     prepared: PlayInput,
     channel: int,
 ) -> bool:
-    """Positive actual Task source for three Plays with no separate recipe ID."""
+    """Positive actual Task source for finite Plays with no separate recipe ID."""
     if not prepared.source_work or not any(
         x.id == prepared.source_work for x in ankou.records(state, ankou.Task)
     ):
         return False
     task = _task(game, c, state, prepared.source_work)
     if (
-        prepared.play not in DIRECT_NOMINATIONS
+        prepared.play not in (*DIRECT_NOMINATIONS, *CORE_NOMINATIONS)
         or prepared.play not in task.options
         or task.actor != actor
         or task.controller != int(actor.entity)
@@ -215,12 +381,27 @@ def _birth(game: GameService, c: Connection, state: GameState, identity: str) ->
         or born.completed_event is not None
         or bool(born.releases)
         or born.retired_event is not None
+        or born.withdrawn_event is not None
         or value.id != rules.identity(value.source, value.recipe, value.event)
         or value.model_dump(
-            exclude={"action", "bound_event", "completed_event", "releases", "retired_event"}
+            exclude={
+                "action",
+                "bound_event",
+                "completed_event",
+                "releases",
+                "retired_event",
+                "withdrawn_event",
+            }
         )
         != born.model_dump(
-            exclude={"action", "bound_event", "completed_event", "releases", "retired_event"}
+            exclude={
+                "action",
+                "bound_event",
+                "completed_event",
+                "releases",
+                "retired_event",
+                "withdrawn_event",
+            }
         )
         or audit is None
         or audit.kind != "m3.required_play_linked"
@@ -263,11 +444,34 @@ def _birth(game: GameService, c: Connection, state: GameState, identity: str) ->
             if (
                 released_recipe.phase != "accepted"
                 or released_recipe.action is not None
-                or released_recipe.consent_event != original_recipe.consent_event
+                or _consent_basis(_history(c, game, release.event), released_recipe)
+                != _consent_basis(_history(c, game, value.event), original_recipe)
             ):
                 raise WorkflowError(
                     "Cancellation preserves the original accepted source without performed effects"
                 )
+        elif value.rule == ankou.PROCESSOR:
+            from girlframe.services.m3_required_processor import prove_recipe
+
+            original_processor = prove_recipe(game, c, _history(c, game, value.event), value)
+            released_processor = prove_recipe(game, c, _history(c, game, release.event), value)
+            if (
+                released_processor != original_processor
+                or released_processor.action
+                or released_processor.bound_event
+            ):
+                raise WorkflowError("Preserve the actual unrolled processor proposal")
+        elif value.rule in MOCK_SOURCES:
+            from girlframe.services.m3_required_mockingbird import prove_trigger
+
+            original_trigger = prove_trigger(game, c, _history(c, game, value.event), value)
+            released_trigger = prove_trigger(game, c, _history(c, game, release.event), value)
+            if (
+                original_trigger != released_trigger
+                or released_trigger.state != "ready"
+                or released_trigger.action
+            ):
+                raise WorkflowError("Preserve the original unrolled attested conversation")
         else:
             original_dose = rules.self_dose_recipe(_history(c, game, value.event), value.recipe)
             if (
@@ -281,7 +485,22 @@ def _birth(game: GameService, c: Connection, state: GameState, identity: str) ->
                 for x in dose.records(_history(c, game, release.event), dose.Dose)
             ):
                 raise WorkflowError("An actually rolled or applied Dose cannot be cancelled")
-    if value.retired_event and (
+    if value.withdrawn_event is not None:
+        if value.rule == princess.RULE:
+            _prove_princess_withdrawal(game, c, value)
+        elif value.rule == stim.RULE:
+            _prove_stim_withdrawal(game, c, value)
+        elif value.rule == ankou.PROCESSOR:
+            from girlframe.services.m3_required_processor import (
+                prove_withdrawal as prove_processor_withdrawal,
+            )
+
+            prove_processor_withdrawal(game, c, state, value)
+        else:
+            from girlframe.services.m3_required_mockingbird import prove_withdrawal
+
+            prove_withdrawal(game, c, state, value)
+    elif value.retired_event and (
         not value.releases
         or value.releases[-1].event != value.retired_event
         or value.action is not None
@@ -347,16 +566,36 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
     task = _task(game, c, state, value.source)
     if value.actor != task.actor or value.cast != task.cast:
         raise WorkflowError("Preserve the original nominated actor and source cast")
-    if value.rule == dose.RULE:
+    if value.rule == ankou.PROCESSOR:
+        from girlframe.services.m3_required_processor import prove_recipe
+
+        prove_recipe(game, c, state, value)
+        if ankou.PLAY not in task.options:
+            raise WorkflowError("Use only the actually nominated Processor Core")
+    elif value.rule in MOCK_SOURCES:
+        from girlframe.services.m3_required_mockingbird import prove_trigger
+
+        prove_trigger(
+            game, c, _history(c, game, value.event) if value.withdrawn_event else state, value
+        )
+        if MOCK_SOURCES[value.rule] not in task.options:
+            raise WorkflowError("Use the actual nominated conversation Play")
+    elif value.rule == dose.RULE:
         own_dose = _prove_self_dose(game, c, state, value)
         if dose.PLAY not in task.options or own_dose.target != value.actor:
             raise WorkflowError("Use only the actual nominated owned self-Dose")
     else:
-        recipe = _prove_sex(game, c, state, value.rule, value.recipe)
+        recipe = _prove_sex(
+            game,
+            c,
+            _history(c, game, value.withdrawn_event) if value.withdrawn_event else state,
+            value.rule,
+            value.recipe,
+        )
         if (
             _recipe_play(value.rule) not in task.options
             or recipe.actor != value.actor
-            or recipe.target != value.target
+            or _recipe_target(recipe) != value.target
             or fingerprint(recipe.cast) != fingerprint(value.cast)
             or recipe.bonded_source is not None
             or recipe.changeling_source is not None
@@ -429,10 +668,38 @@ def for_play(
         or current_ref(state, viewer.user_id) != value.actor
     ):
         raise WorkflowError("Only the original actual actor performs this unbound required source")
-    if value.rule == dose.RULE:
+    if value.rule == ankou.PROCESSOR:
+        from girlframe.services.m3_ankou import prepare as prepare_processor
+
+        prepare_processor(game, c, viewer, state, prepared, channel)
+    elif value.rule in MOCK_SOURCES:
+        from girlframe.services.m3_mockingbird_plays import prepare as prepare_mock
+
+        prepare_mock(game, c, viewer, prepared, state, channel=channel)
+    elif value.rule == dose.RULE:
         from girlframe.services.m3_dose_up import prepare as prepare_dose
 
         prepare_dose(game, c, viewer, state, prepared, channel)
+    elif value.rule == casualty.SEX:
+        from girlframe.services.m3_casualty import prepare as prepare_casualty
+
+        prepare_casualty(game, c, viewer, state, prepared, channel)
+    elif value.rule == princess.RULE:
+        from girlframe.services.m3_princess_sex import prepare as prepare_princess
+
+        prepare_princess(game, c, viewer, state, prepared, channel)
+    elif value.rule == stim.RULE:
+        from girlframe.services.m3_stim_sex import prepare as prepare_stim
+
+        prepare_stim(game, c, viewer, state, prepared, channel)
+    elif value.rule == vatgrown.SEX:
+        from girlframe.services.m3_vatgrown_plays import prepare as prepare_vatgrown
+
+        prepare_vatgrown(game, c, viewer, state, prepared, channel)
+    elif value.rule == newgirl.RULE:
+        from girlframe.services.m3_newgirl_sex import prepare as prepare_newgirl
+
+        prepare_newgirl(game, c, viewer, state, prepared, channel)
     elif value.rule == oldgen.RULE:
         from girlframe.services.m3_oldgen_sex import prepare as prepare_oldgen
 
@@ -466,12 +733,13 @@ def _action(value: rules.RequiredLink, action: dict[str, Any]) -> None:
         or actual_action_actor(action) != value.actor
         or action["data"].get("prepared", {}).get("source_work") != value.recipe
         or (
-            action["data"].get("dose_up", {}).get("required_recipe") != value.recipe
+            action["data"].get("ankou", {}).get("proposal") != value.recipe
+            if value.rule == ankou.PROCESSOR
+            else action["data"].get("dose_up", {}).get("required_recipe") != value.recipe
             if value.rule == dose.RULE
-            else action["data"]
-            .get("oldgen_sex" if value.rule == oldgen.RULE else "alpha_sex", {})
-            .get("session")
-            != value.recipe
+            else action["data"].get("mockingbird", {}).get("trigger") != value.recipe
+            if value.rule in MOCK_SOURCES
+            else action["data"].get(_recipe_play(value.rule), {}).get("session") != value.recipe
         )
         or meta.get("id") != value.source
         or meta.get("required_link") != value.id
@@ -530,7 +798,19 @@ def completion_ready(
             raise WorkflowError("Recover the actual bound required source")
         return True
     value = prove(game, c, state, candidates[0].id)
-    if value.rule == dose.RULE:
+    if value.rule == ankou.PROCESSOR:
+        if action["data"].get("ankou", {}).get("phase") != "complete":
+            return False
+        from girlframe.services.m3_ankou import prove_source
+
+        processor = prove_source(game, c, state, action["id"])
+        ready = processor.actor == value.actor and bool(processor.completed_event)
+    elif value.rule in MOCK_SOURCES:
+        from girlframe.services.m3_required_mockingbird import prove_trigger
+
+        trigger = prove_trigger(game, c, state, value)
+        ready = trigger.state == "complete" and trigger.action == action["id"]
+    elif value.rule == dose.RULE:
         if action["data"].get("dose_up", {}).get("phase") != "complete":
             return False
         from girlframe.services.m3_dose_up import prove as prove_dose
@@ -627,6 +907,17 @@ class RequiredPlayService:
                 raise WorkflowError(
                     "Preserve the exact one pending required slot and actual selected recipe"
                 )
+            if any(x.id == recipe for x in ankou.records(state, ankou.Proposal)):
+                from girlframe.services.m3_required_processor import link_recipe
+
+                return link_recipe(self.game, c, state, viewer, key, task, recipe)
+            if any(
+                x.id == recipe and x.play in MOCK_SOURCES.values()
+                for x in state.mockingbird.triggers
+            ):
+                from girlframe.services.m3_required_mockingbird import link_trigger
+
+                return link_trigger(self.game, c, state, viewer, key, task, recipe)
             matches = [
                 (rule, candidate)
                 for rule, candidate in _sex_choices(state)
@@ -652,7 +943,33 @@ class RequiredPlayService:
             if rule == alpha.RULE:
                 from girlframe.services.m3_alpha_sex import _contact
 
+                assert isinstance(own, alpha.Session)
                 _contact(self.game, c, state, own.actor, own.target, own.cast.channel)
+            elif rule == casualty.SEX:
+                from girlframe.services.m3_casualty import _contact as casualty_contact
+
+                assert isinstance(own, casualty.SexSession)
+                casualty_contact(self.game, c, state, own)
+            elif rule == princess.RULE:
+                from girlframe.services.m3_princess_sex import _contact as princess_contact
+
+                assert isinstance(own, princess.Session)
+                princess_contact(self.game, c, state, own.actor, own.target, own.cast.channel)
+            elif rule == stim.RULE:
+                from girlframe.services.m3_stim_sex import _contact as stim_contact
+
+                assert isinstance(own, stim.Session)
+                stim_contact(self.game, c, state, own)
+            elif rule == vatgrown.SEX:
+                from girlframe.services.m3_vatgrown_plays import _contact as vatgrown_contact
+
+                assert isinstance(own, vatgrown.Session)
+                vatgrown_contact(self.game, c, state, own)
+            elif rule == newgirl.RULE:
+                from girlframe.services.m3_newgirl_sex import _contact as newgirl_contact
+
+                assert isinstance(own, newgirl.Session)
+                newgirl_contact(self.game, c, state, own)
             else:
                 from girlframe.services.m3_oldgen_sex import _contact as oldgen_contact
 
@@ -666,9 +983,23 @@ class RequiredPlayService:
                 id=rules.identity(source, recipe, event),
                 source=source,
                 recipe=recipe,
-                rule="girl.oldgen.sex-play" if rule == oldgen.RULE else "girl.alpha.sex-play",
+                rule=(
+                    "girl.casualty.sex-play"
+                    if rule == casualty.SEX
+                    else "girl.princess.sex-play"
+                    if rule == princess.RULE
+                    else "girl.stim-blissed.sex-play"
+                    if rule == stim.RULE
+                    else "girl.vatgrown.sex-play"
+                    if rule == vatgrown.SEX
+                    else "girl.newgirl.sex-play"
+                    if rule == newgirl.RULE
+                    else "girl.oldgen.sex-play"
+                    if rule == oldgen.RULE
+                    else "girl.alpha.sex-play"
+                ),
                 actor=own.actor,
-                target=own.target,
+                target=_recipe_target(own),
                 cast=own.cast,
                 event=event,
             )
@@ -764,6 +1095,120 @@ class RequiredPlayService:
             authorize=lambda c: _access(self.game, c, viewer),
         )
 
+    def withdraw_princess(
+        self, viewer: GuildViewer, key: str, identity: str, revision: int
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            state = load_state(c, self.store.campaign_id)
+            value = prove(self.game, c, state, identity)
+            task = self._owner(c, viewer, state, value.source)
+            if state.revision != revision:
+                raise WorkflowError("STALE_REQUIRED_PLAY: reopen the actual source")
+            if (
+                value.rule != princess.RULE
+                or value.action
+                or value.bound_event
+                or value.retired_event
+                or value.completed_event
+                or value.releases
+                or task.child
+                or task.completed_event
+            ):
+                raise WorkflowError("Withdraw only this unprepared selection; the Play stays owed")
+            recipe = _prove_sex(self.game, c, state, value.rule, value.recipe)
+            assert isinstance(recipe, princess.Session)
+            if (
+                recipe.phase != "accepted"
+                or recipe.action
+                or recipe.bound_event
+                or recipe.effect_event
+            ):
+                raise WorkflowError("Preserve the actual unperformed accepted Princess source")
+            event = str(uuid4())
+            rules.put(
+                state, value.model_copy(update={"retired_event": event, "withdrawn_event": event})
+            )
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.required_princess_withdrawn",
+                state,
+                event_id=event,
+                link=value.id,
+                source=value.source,
+                recipe=value.recipe,
+            )
+            return dict(id=value.id, source=value.source, revision=state.revision)
+
+        return self.store._write(
+            viewer,
+            key,
+            "m3.required_princess_withdrawn",
+            dict(link=identity, revision=revision),
+            operation,
+            auto_audit=False,
+            authorize=lambda c: _access(self.game, c, viewer),
+        )
+
+    def withdraw_stim(
+        self, viewer: GuildViewer, key: str, identity: str, revision: int
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            state = load_state(c, self.store.campaign_id)
+            value = prove(self.game, c, state, identity)
+            task = self._owner(c, viewer, state, value.source)
+            if state.revision != revision:
+                raise WorkflowError("STALE_REQUIRED_PLAY: reopen the actual source")
+            if (
+                value.rule != stim.RULE
+                or value.action
+                or value.bound_event
+                or value.retired_event
+                or value.completed_event
+                or value.releases
+                or task.child
+                or task.completed_event
+            ):
+                raise WorkflowError("Withdraw only this unprepared selection; the Play stays owed")
+            recipe = _prove_sex(self.game, c, state, value.rule, value.recipe)
+            assert isinstance(recipe, stim.Session)
+            if (
+                recipe.phase != "accepted"
+                or recipe.action
+                or recipe.bound_event
+                or recipe.effect_event
+            ):
+                raise WorkflowError("Preserve the actual unperformed accepted Stim source")
+            event = str(uuid4())
+            rules.put(
+                state, value.model_copy(update={"retired_event": event, "withdrawn_event": event})
+            )
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.required_stim_withdrawn",
+                state,
+                event_id=event,
+                link=value.id,
+                source=value.source,
+                recipe=value.recipe,
+            )
+            return dict(id=value.id, source=value.source, revision=state.revision)
+
+        return self.store._write(
+            viewer,
+            key,
+            "m3.required_stim_withdrawn",
+            dict(link=identity, revision=revision),
+            operation,
+            auto_audit=False,
+            authorize=lambda c: _access(self.game, c, viewer),
+        )
+
     def menu(self, viewer: GuildViewer, source: str) -> dict[str, Any]:
         with self.store.engine.connect() as c:
             state = load_state(c, self.store.campaign_id)
@@ -781,11 +1226,55 @@ class RequiredPlayService:
                     or recipe.cast.id != task.cast.id
                     or recipe.bonded_source
                     or recipe.changeling_source
-                    or (rule == oldgen.RULE and recipe.learned_source)
+                    or (
+                        isinstance(
+                            recipe,
+                            (
+                                oldgen.Session,
+                                newgirl.Session,
+                                vatgrown.Session,
+                                stim.Session,
+                                princess.Session,
+                                casualty.SexSession,
+                            ),
+                        )
+                        and recipe.learned_source
+                    )
                 ):
                     continue
                 if recipe.phase == "accepted" and recipe.action is None:
                     _prove_sex(self.game, c, state, rule, recipe.id)
+                    if rule == princess.RULE:
+                        from girlframe.services.m3_princess_sex import _contact as princess_contact
+
+                        assert isinstance(recipe, princess.Session)
+                        try:
+                            princess_contact(
+                                self.game,
+                                c,
+                                state,
+                                recipe.actor,
+                                recipe.target,
+                                recipe.cast.channel,
+                            )
+                        except (WorkflowError, ValueError):
+                            continue
+                    if rule == stim.RULE:
+                        from girlframe.services.m3_stim_sex import _contact as stim_contact
+
+                        assert isinstance(recipe, stim.Session)
+                        try:
+                            stim_contact(self.game, c, state, recipe)
+                        except (WorkflowError, ValueError):
+                            continue
+                    if rule == casualty.SEX:
+                        from girlframe.services.m3_casualty import _contact as casualty_contact
+
+                        assert isinstance(recipe, casualty.SexSession)
+                        try:
+                            casualty_contact(self.game, c, state, recipe)
+                        except (WorkflowError, ValueError):
+                            continue
                     accepted.append(
                         dict(
                             id=recipe.id,
@@ -794,15 +1283,28 @@ class RequiredPlayService:
                             label=OWN_SEX[rule][1].title()
                             + " with "
                             + resolve(
-                                state, recipe.target, profiles(c, self.store.campaign_id)
-                            ).label,
-                            target=recipe.target.model_dump(mode="json"),
+                                state, _recipe_target(recipe), profiles(c, self.store.campaign_id)
+                            ).label
+                            + (
+                                f" and {len(recipe.partners) - 1} other confirmed partner(s)"
+                                if isinstance(recipe, newgirl.Session) and len(recipe.partners) > 1
+                                else ""
+                            ),
+                            target=_recipe_target(recipe).model_dump(mode="json"),
                         )
                     )
                 elif recipe.phase == "invited":
                     invitations.append(
                         dict(id=recipe.id, label="Await actual counterpart confirmation")
                     )
+            from girlframe.services.m3_required_mockingbird import menu_triggers
+
+            mock_accepted, mock_invitations = menu_triggers(self.game, c, state, task)
+            from girlframe.services.m3_required_processor import menu_recipes
+
+            accepted.extend(menu_recipes(self.game, c, state, task))
+            accepted.extend(mock_accepted)
+            invitations.extend(mock_invitations)
             from girlframe.services.p1_source_pause import projection as pause
 
             return dict(
@@ -811,8 +1313,18 @@ class RequiredPlayService:
                     dose.PLAY in task.options
                     and dose.PLAY in nomination_options(self.game, c, state, task.actor)
                 ),
+                processor_offered=(
+                    ankou.PLAY in task.options
+                    and ankou.PLAY in nomination_options(self.game, c, state, task.actor)
+                ),
+                mockingbird_offered=bool(set(MOCK_SOURCES.values()).intersection(task.options)),
                 alpha_offered=alpha.PLAY in task.options,
                 oldgen_offered=oldgen.PLAY in task.options,
+                newgirl_offered=newgirl.PLAY in task.options,
+                vatgrown_offered=vatgrown.PLAY in task.options,
+                stim_offered=stim.PLAY in task.options,
+                princess_offered=princess.PLAY in task.options,
+                casualty_offered=casualty.PLAY in task.options,
                 revision=state.revision,
                 actor=task.actor.model_dump(mode="json"),
                 channel=task.cast.channel,
@@ -858,11 +1370,30 @@ def release_unrolled(
         or not value.bound_event
     ):
         raise WorkflowError("Cancel only a genuine unrolled source, preserving known receipts")
-    if value.rule in OWN_SEX:
+    if value.rule == ankou.PROCESSOR:
+        from girlframe.services.m3_required_processor import prove_recipe
+
+        proposal = prove_recipe(game, c, state, value)
+        if proposal.action != action["id"] or any(
+            x.id == action["id"] for x in ankou.records(state, ankou.Processor)
+        ):
+            raise WorkflowError("Preserve every actual processor effect")
+        ankou.put(state, proposal.model_copy(update={"action": None, "bound_event": None}))
+    elif value.rule in OWN_SEX:
         recipe = _sex_session(state, value.rule, value.recipe)
-        if recipe.phase != "active" or recipe.action != action["id"] or recipe.effect_event:
-            raise WorkflowError("Preserve every actual Alpha effect")
+        if (
+            recipe.phase != ("bound" if value.rule in (newgirl.RULE, casualty.SEX) else "active")
+            or recipe.action != action["id"]
+            or recipe.effect_event
+        ):
+            raise WorkflowError("Preserve every actual owned source effect")
         _restore_sex(state, value.rule, recipe)
+    elif value.rule in MOCK_SOURCES:
+        from girlframe.services.m3_required_mockingbird import prove_trigger
+
+        trigger = prove_trigger(game, c, state, value)
+        if trigger.state != "ready" or trigger.action is not None:
+            raise WorkflowError("Preserve the actual performed conversation and its receipt")
     elif action["data"].get("dose_up", {}).get("phase") != "unrolled" or any(
         x.id == action["id"] for x in dose.records(state, dose.Dose)
     ):
@@ -880,3 +1411,83 @@ def release_unrolled(
         ),
     )
     return True
+
+
+def _prove_stim_withdrawal(game: GameService, c: Connection, value: rules.RequiredLink) -> None:
+    if (
+        value.rule != stim.RULE
+        or not value.withdrawn_event
+        or value.retired_event != value.withdrawn_event
+        or value.action
+        or value.bound_event
+        or value.completed_event
+        or value.releases
+    ):
+        raise WorkflowError("Preserve the actual unprepared Stim selection withdrawal")
+    audit = c.execute(
+        sa.select(t.events.c.kind, t.events.c.actor_id, t.events.c.payload_json).where(
+            t.events.c.campaign_id == game.store.campaign_id,
+            t.events.c.id == value.withdrawn_event,
+        )
+    ).first()
+    payload = json.loads(audit.payload_json) if audit else {}
+    withdrawn = _history(c, game, value.withdrawn_event)
+    recipe = _prove_sex(game, c, withdrawn, value.rule, value.recipe)
+    assert isinstance(recipe, stim.Session)
+    task = _task(game, c, withdrawn, value.source)
+    if (
+        audit is None
+        or audit.kind != "m3.required_stim_withdrawn"
+        or audit.actor_id != value.actor.entity
+        or payload.get("link") != value.id
+        or payload.get("source") != value.source
+        or payload.get("recipe") != value.recipe
+        or rules.get(withdrawn, value.id) != value
+        or recipe.phase != "accepted"
+        or recipe.action
+        or recipe.bound_event
+        or recipe.effect_event
+        or task.child
+        or task.completed_event
+    ):
+        raise WorkflowError("Recover the owner-authored withdrawal without resolving the owed Task")
+
+
+def _prove_princess_withdrawal(game: GameService, c: Connection, value: rules.RequiredLink) -> None:
+    if (
+        value.rule != princess.RULE
+        or not value.withdrawn_event
+        or value.retired_event != value.withdrawn_event
+        or value.action
+        or value.bound_event
+        or value.completed_event
+        or value.releases
+    ):
+        raise WorkflowError("Preserve the actual unprepared Princess selection withdrawal")
+    audit = c.execute(
+        sa.select(t.events.c.kind, t.events.c.actor_id, t.events.c.payload_json).where(
+            t.events.c.campaign_id == game.store.campaign_id,
+            t.events.c.id == value.withdrawn_event,
+        )
+    ).first()
+    payload = json.loads(audit.payload_json) if audit else {}
+    withdrawn = _history(c, game, value.withdrawn_event)
+    recipe = _prove_sex(game, c, withdrawn, value.rule, value.recipe)
+    assert isinstance(recipe, princess.Session)
+    task = _task(game, c, withdrawn, value.source)
+    if (
+        audit is None
+        or audit.kind != "m3.required_princess_withdrawn"
+        or audit.actor_id != value.actor.entity
+        or payload.get("link") != value.id
+        or payload.get("source") != value.source
+        or payload.get("recipe") != value.recipe
+        or rules.get(withdrawn, value.id) != value
+        or recipe.phase != "accepted"
+        or recipe.action
+        or recipe.bound_event
+        or recipe.effect_event
+        or task.child
+        or task.completed_event
+    ):
+        raise WorkflowError("Recover the owner-authored withdrawal without resolving the owed Task")

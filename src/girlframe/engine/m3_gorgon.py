@@ -80,14 +80,18 @@ def attack_npc(original: GameState, attack: NpcAttack, source_event: str) -> Gam
         raise ValueError("Attack using only the Gorgon's actual undamaged Assets")
     if not source_event.strip() or any(x.get("source_event") == source_event for x in state.facts):
         raise ValueError("An actual Attack needs one new source event")
-    assert state.world is not None
-    state.world = update(
-        state.world,
-        npcs=tuple(
-            x.model_copy(update={"alive": False}) if x.id == attack.target.entity else x
-            for x in state.world.npcs
-        ),
-    )
+    from girlframe.engine.m3_doctor import prevent_death
+
+    state, prevented = prevent_death(state, attack.target, source_event)
+    if not prevented:
+        assert state.world is not None
+        state.world = update(
+            state.world,
+            npcs=tuple(
+                x.model_copy(update={"alive": False}) if x.id == attack.target.entity else x
+                for x in state.world.npcs
+            ),
+        )
     state.facts.append(
         {
             "kind": "gorgon_attack_npc",

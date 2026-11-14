@@ -85,6 +85,9 @@ async def open_stim(
                     value["revision"],
                     values["accept"][0] == "yes",
                     values["account"],
+                    npc_contact_account=values.get("npc_contact")
+                    if values["accept"][0] == "yes"
+                    else None,
                 )
                 return (
                     "Your own source reply is saved. This grants no consent to other interactions."
@@ -104,6 +107,18 @@ async def open_stim(
                         ),
                     ),
                     Field("account", "Your own source confirmation or refusal", paragraph=True),
+                    *(
+                        [
+                            Field(
+                                "npc_contact",
+                                "If accepting: actual body contact outside enclosures and rides",
+                                paragraph=True,
+                                required=False,
+                            )
+                        ]
+                        if value["target"]["kind"] == "npc"
+                        else []
+                    ),
                 ],
                 respond,
             )
@@ -182,6 +197,37 @@ async def open_stim(
             ", ".join(x["kind"] + (": " + x["tag"] if x["tag"] else "") for x in value["effects"])
             or "none"
         )
+        if value.get("npc_order_effect"):
+
+            async def issue(current: discord.Interaction, values: dict[str, Any]) -> str:
+                from girlframe.services.m3_npc_orders import NpcOrderService
+
+                result = await asyncio.to_thread(
+                    NpcOrderService(service.game).issue,
+                    viewer_from_interaction(current),
+                    str(current.id),
+                    channel,
+                    ActorRef.model_validate(value["target"]),
+                    int(value["actor"]["entity"]),
+                    value["revision"],
+                    values["instruction"],
+                    origin_kind="stim_sex",
+                    source_effect=value["npc_order_effect"],
+                )
+                return "Actual NPC Order saved; the Pilot owns their reply. " + str(
+                    result["action_id"]
+                )
+
+            form = NativeForm(
+                viewer.user_id,
+                "Stim: actual NPC Order",
+                "This original NPC can give the drugged Pilot Orders until the real drug expires. "
+                "The Pilot still chooses their response and may Disobey. Drugs: " + drugs,
+                [Field("instruction", "Your actual NPC's direct Order", paragraph=True)],
+                issue,
+            )
+            await reply(interaction, form.text(), form)
+            return
         await reply(
             interaction,
             "Your Stim source: "
@@ -198,11 +244,26 @@ async def open_stim(
         raise WorkflowError("Reopen your actual available learned source")
     options = [("invite", "Record an actual voluntary source")] if data["targets"] else []
     options.extend((x["id"], "Your original Stim source: " + x["phase"]) for x in data["sessions"])
+    options.extend(
+        ("withdraw:" + x["id"], "Withdraw your unused delegated invitation")
+        for x in data["sessions"]
+        if x["can_withdraw"]
+    )
     if not options:
         await reply(interaction, "No current supported Stim source or private saved history here.")
         return
 
     async def choose(current: discord.Interaction, values: dict[str, Any]) -> str | None:
+        selected = values["source"][0]
+        if selected.startswith("withdraw:"):
+            await asyncio.to_thread(
+                service.withdraw,
+                viewer_from_interaction(current),
+                str(current.id),
+                selected.removeprefix("withdraw:"),
+                data["revision"],
+            )
+            return "Unused source withdrawn; new participation requires a fresh answer."
         if values["source"][0] != "invite":
             await open_stim(current, service, values["source"][0])
             return None

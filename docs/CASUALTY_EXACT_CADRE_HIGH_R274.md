@@ -1,0 +1,13 @@
+# r274: Casualty high immediate consequences in the requested cadre
+
+## Bounded source reconciliation
+
+Read locally authorized *Girl Frame 2026_09_01 (1)*, printed pp41–42 (Casualty), against `services/m3_casualty.py` and `discord_adapter/m3_casualty.py`. The ordinary Sex branches are implemented: mid source-owned presentation of up to three existing parts, independent focus/hesitation answers, optional actual Identity unmarks per focused part and required reciprocal Tags if any hesitation; high separately owned 3–4 Heat, actual counterpart Asset damage, counterpart-owned original body-part damage and Bond deepening; low actual unsatisfied statement, independently owned agreement and optional corresponding Tag(s). No additional production mismatch was established in this bounded reading. NPC high remains explicitly unsupported/pending, not mechanically completed by a ruling. Full body lifecycle, learned routes and all pairings were not reconciled here.
+
+## New focused test
+
+`tests/rules/test_casualty_exact_cadre_high.py::test_casualty_doctor_high_with_am_ankou_applies_all_immediate_effects` fills a named gap from the prior exact-cadre audit, which had only a mid Casualty→AM consequence. It uses the existing `test_newgirl_changeling_preflight.exact_setup`: actual AM/ANKOU, Casualty/DoctorDoctor, Newgirl/Changeling and Mockingbird/JANUS onboarding, with temporary synthetic rule approvals, deterministic dice, starting physical setup and mock delivery. This is one owned workflow, not a GM session mix or Director test.
+
+Actual Casualty invitation and AM consent precede one high roll. Both owners independently choose their Heat gains; Casualty selects an actual undamaged Girl Asset on AM; AM selects original Casualty Hands. Assertions require both Heat gains, real persisted Asset damage, original Hands broken, Bond increased once, action complete, original receipt retained, AM navigation pointing to that same receipt, exactly one dice call and no sheet changes for the other two cadre members. Native forms are exercised through injected values and mocked interactions, not live Discord dispatch. No synthetic mid-workflow repair or state mutation is used in this new test.
+
+The worker authored the test and ran only scoped Ruff formatting/lint. Root first run failed only the final receipt assertion (ID versus whole object), 1 failed in 5.70s. The corrected fixture passed: 1 passed in 5.18s. The initial failed log is retained. No production code changed. A passing result is not all-tier, all-cadre cross-product, production admission, full privacy, restart/restore, or full-regression certification. Rules approvals, integration and release gates remain unchanged.

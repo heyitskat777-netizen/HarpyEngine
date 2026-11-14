@@ -271,7 +271,8 @@ def choose(
                 )
             from girlframe.engine.m3_intracadre_marriage import marriage_for
 
-            if marriage_for(state, value.actor):
+            marriage = marriage_for(state, value.actor)
+            if marriage is not None and target in (marriage.first, marriage.second):
                 raise WorkflowError(
                     "SOURCE_MARRIAGE_BOND_REQUIRED: preserve actual marriage consequences"
                 )
@@ -292,17 +293,57 @@ def choose(
         elif choice == "purpose":
             rules.put(state, value.model_copy(update={"phase": "purpose"}))
         else:
-            if target is None or target.kind != "pilot":
+            from girlframe.services.m3_ankou_feedback import _reprisal_supported, handler_reprisal
+
+            if target is None or not _reprisal_supported(state, target):
                 raise WorkflowError(
                     "SOURCE_REPRISAL_REQUIRED: use a genuine native recipient adapter"
+                )
+            if target.kind == "npc":
+                from girlframe.services.m3_npc_flirt import prepare as prepare_npc_flirt
+
+                # Validate the existing real NPC Play before committing loss or Heat.
+                # This does not create a child or substitute the player's later choice.
+                prepare_npc_flirt(
+                    game,
+                    c,
+                    viewer,
+                    state,
+                    PlayInput(
+                        play="flirt",
+                        source_work=value.id,
+                        target_actor=target,
+                        heat=0,
+                        context=account,
+                        trigger_confirmed=True,
+                    ),
+                    value.cast.channel,
                 )
             from girlframe.engine.m3_budget_removal import blocked
 
             sheet = state.sheets[value.actor.entity]
             actual = next((x for x in sheet.assets if x.id == asset), None)
             view = resolve(state, value.actor, profiles(c, game.store.campaign_id))
-            if actual is None or actual.id in blocked(state, value.actor) or actual.void:
-                raise WorkflowError("Choose an actual removable owned uncorrupted Asset")
+            if actual is None or actual.id in blocked(state, value.actor):
+                raise WorkflowError("Choose an actual removable owned Asset")
+            handler_reprisal(game, c, state, value.actor, target, value.cast, torn_asset=actual.id)
+            if actual.void:
+                from girlframe.engine.m3_janus_storage import ids
+
+                stored = ids(state, value.actor)
+                remaining = [
+                    x
+                    for x in sheet.assets
+                    if x.family == actual.family and x.id != actual.id and x.id not in stored
+                ]
+                if (
+                    actual.id in stored
+                    or not any(not x.damaged for x in remaining)
+                    or not any(not x.void for x in remaining)
+                ):
+                    raise WorkflowError(
+                        "SOURCE_ANKOU_LOSS_REQUIRED: preserve last-Asset/Void continuations"
+                    )
             if actual.family == "frame" and (
                 view.frame_instance != rules.frame(state, value.actor)
                 or view.frame_cell is None
@@ -484,7 +525,10 @@ def prepare_child(
         if value.phase != "child" or value.child or not value.target:
             raise WorkflowError("Resume this actual outstanding Feedback child")
         actor, cast, target = value.actor, value.cast, value.target
-        allowed = ("flirt",)
+        from girlframe.services.m3_ankou_feedback import handler_reprisal, reprisal_play
+
+        handler_reprisal(game, c, state, actor, target, cast)
+        allowed = (reprisal_play(target),)
     else:
         assert task is not None
         task = prove_task(game, c, state, task.id)
@@ -507,16 +551,25 @@ def prepare_child(
     if value:
         assert target is not None
     if value and (
-        prepared.target_actor not in (None, target)
-        or target is None
-        or prepared.target not in (None, int(target.entity))
+        not (
+            target is not None
+            and (
+                target.kind in ("npc", "handler")
+                and prepared.target is None
+                and prepared.target_actor == target
+                or target.kind == "pilot"
+                and prepared.target_actor in (None, target)
+                and prepared.target in (None, int(target.entity))
+                and (prepared.target_actor == target or prepared.target == int(target.entity))
+            )
+        )
         or prepared.identity
         or prepared.disposable_heat
         or prepared.gain
         or prepared.heat != state.sheets[actor.entity].heat
     ):
         raise WorkflowError(
-            "Make the real reprisal Flirt against the selected person, spending all actual Heat"
+            "Make the real reprisal against the selected person, spending all actual Heat"
         )
     from girlframe.services.p1_source_pause import require_ready
 
@@ -558,6 +611,29 @@ def prepare_child(
         source_work=source,
         phase="prepared",
     )
+
+    if value:
+        from girlframe.services.m3_collateral import latest
+
+        sequence = prove(game, c, state, value.sequence)
+        row = latest(game, c, sequence.id)
+        body = json.loads(row["body_json"])
+        if (
+            sequence.actor != actor
+            or sequence.venue != cast
+            or sequence.completed_event
+            or sequence.terminal_event
+            or row["kind"] != "ankou_feedback_sequence"
+            or row["owner_id"] != actor.entity
+            or row["subject_id"] != actor.entity
+            or row["state"] != "pending"
+            or row["event_id"] != sequence.event
+            or body.get("source") != sequence.id
+            or body.get("actor") != actor.model_dump(mode="json")
+            or body.get("immediate") is not True
+        ):
+            raise WorkflowError("Prove this exact pending original Feedback work before its child")
+        result["feedback_work"] = sequence.id
 
     if required:
         result.update(
@@ -621,6 +697,11 @@ def complete_child(
     meta = action["data"].get("ankou_effect_child")
     if not meta:
         return
+    if meta.get("feedback_work"):
+        # These sequence continuations write after the child event is canonical.
+        # Engage and the later response hook can both reach this consumer; an
+        # earlier in-memory state must never repeat or overwrite a saved completion.
+        state = load_state(c, game.store.campaign_id)
     if (
         action["state"] != "complete"
         or not action["data"].get("receipt")
@@ -896,6 +977,7 @@ def projection(
             step=value.steps[-1] if value.steps else None,
         )
     value = prove_step(game, c, state, value.id)
+    from girlframe.services.m3_ankou_feedback import _reprisal_supported, reprisal_play
     from girlframe.services.p1_source_pause import projection as pause
 
     bound = profiles(c, game.store.campaign_id)
@@ -909,6 +991,7 @@ def projection(
                 id=x.actor.token,
                 ref=x.actor.model_dump(mode="json"),
                 label=resolve(state, x.actor, bound).label,
+                reprisal_supported=_reprisal_supported(state, x.actor),
             )
             for x in value.cast.roles
             if x.actor != value.actor
@@ -920,7 +1003,7 @@ def projection(
             body=dict(
                 source_work=value.id,
                 target=value.target.model_dump(mode="json") if value.target else None,
-                allowed=("flirt",),
+                allowed=(reprisal_play(value.target),) if value.target else (),
             ),
         )
         if value.phase == "child" and value.child is None

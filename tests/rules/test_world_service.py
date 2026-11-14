@@ -1,5 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
@@ -12,10 +13,22 @@ from test_world import initial
 from girlframe.database import tables as t
 from girlframe.engine.m3_world_state import Npc
 from girlframe.services.inbox import InboxService
+from girlframe.services.m3_npc_roles import NpcRoleService
 from girlframe.services.m3_world import WorldService
 from girlframe.services.onboarding import WorkflowError
 
 ledger = ledger_fixture
+
+
+def transfer_npc(world, controller, recipient, npc_id):
+    """A genuine current-owner offer followed by the invited human's own acceptance."""
+    roles = NpcRoleService(world)
+    offered = roles.offer_transfer(
+        controller, str(uuid4()), state(world.game).revision, npc_id, recipient.user_id
+    )
+    return roles.respond(
+        recipient, str(uuid4()), offered["id"], state(world.game).revision, "accept"
+    )
 
 
 def ready(store, frame="JANUS-B"):
@@ -86,6 +99,11 @@ def test_npc_control_is_claimed_by_actual_member_and_keeps_private_records_priva
     )
     svc.npc(ADMIN, "introduce-visible", state(game).revision, visible)
     revision = state(game).revision
+    with pytest.raises(WorkflowError, match="current controller must offer"):
+        svc.claim_npc(PLAYER, "claim", revision, "visible")
+    assert state(game).world.npcs[-1].controller == 1
+    transfer_npc(svc, ADMIN, PLAYER, "visible")
+    revision = state(game).revision
     claimed = svc.claim_npc(PLAYER, "claim", revision, "visible")
     assert svc.claim_npc(PLAYER, "claim", revision, "visible") == claimed
     assert state(game).world.npcs[-1].controller == 2
@@ -111,7 +129,7 @@ def test_handler_cannot_introduce_a_self_controlled_director(ledger):
     assert state(game) == before
 
 
-def test_concurrent_npc_claims_use_expected_state_and_do_not_both_succeed(ledger):
+def test_concurrent_offered_npc_transfers_use_expected_state_and_do_not_both_succeed(ledger):
     svc, game = ready(ledger)
     svc.npc(
         ADMIN,
@@ -127,11 +145,20 @@ def test_concurrent_npc_claims_use_expected_state_and_do_not_both_succeed(ledger
             revealed=True,
         ),
     )
+    roles = NpcRoleService(svc)
+    offers = {
+        viewer.user_id: roles.offer_transfer(
+            ADMIN, "offer-" + str(viewer.user_id), state(game).revision, "npc", viewer.user_id
+        )["id"]
+        for viewer in (PLAYER, OTHER)
+    }
     revision = state(game).revision
 
     def claim(viewer):
         try:
-            return svc.claim_npc(viewer, "claim-" + str(viewer.user_id), revision, "npc")
+            return roles.respond(
+                viewer, "claim-" + str(viewer.user_id), offers[viewer.user_id], revision, "accept"
+            )
         except WorkflowError:
             return None
 

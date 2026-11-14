@@ -1,0 +1,15 @@
+# Actual low NPC Dose: original recipient Punishment alternative
+
+Printed p36 allows the actual other recipient to Punish instead of receiving the cocktail. Existing NPC-executor social Punishment port supports actual Quality Time to the original Pilot: real Tag and actual executor Bond, without a fabricated NPC Status/resource sheet. The prior NPC Dose minimum covered high drugs/expiry only. This packet adds a genuine low source through its actual actor-aware port and parent completion, not a synthetic role case.
+
+Baseline: dose-integrated-20261111 (including Home acceptance). Candidate: dose-npc-low-20261111. Initial scope was test and design only. Root exposed the generic Enforcer-origin model guard incorrectly rejecting an NPC Dose executor; one narrow model correction is now included. Any runtime-discovered defect must be fixed with exact source evidence, not relaxed actor/consent/effect gates.
+
+Episode: real NPC WorldService introduction, cast join, human BodyFact and operator vein reach; actual low native Dose roll; original NPC controller selects Punish. A wrong owner cannot choose. Existing RolePunishmentService sets Quality Time, original executor records actual scene, actual Pilot independently attests, original NPC controller executes. Assert actual Tag/Bond, exact original executor/chooser/source, parent completion, no DrugTag/WorldTag cocktail, exactly one roll and unchanged spent Heat, no repeat execution and one private source canary. Initial Pilot placement/resources and scoped world approval are explicitly test-only. The role-Punishment portion uses actual service operations, not native form submission; no native UI acceptance claim for that portion.
+
+Only this supported NPC social port is covered. Medium dosing, other Punishments, custody/controller transfers and downstream Malleable remain separate. Unsupported effect ports must stay pending; no completed no-op or timeout dose fallback. No full P1 certification, bot/deployment or Space write.
+
+Worker test Ruff passed; root final minimum passed 1 in 3.41s; independent review found no blocker. No worker pytest or regression suite run.
+
+Root first run failed (1 failed in 2.77s) when native Punish selection encountered RolePunishment.actual_owners generic Enforcer-only guard. The finite exception is only source_kind=dose_up with NPC executor: chooser must be that original NPC with identical controller, subject must be Pilot, actual Action is required, and unrelated source_work/pc_work are forbidden. Existing exact low receipt/recipient/executor/chooser/event validation and supported social effect port remain mandatory. Negative model assertions reject alias chooser, absent Action and unrelated Alpha source. Final rerun passed 1 in 3.41s; independent narrow review found no blocker.
+
+Frozen: no production/test edits after final root pass; documentation validation and evidence only. Other NPC Punishment variants, current-controller transfer and custody changes remain untested; this is one actual Quality Time source path, not all low-result certification.

@@ -13,7 +13,7 @@ from girlframe.engine import m3_wyvern as rules
 from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput
 from girlframe.engine.m3_actor_bonds import change, current_ref, depth
 from girlframe.engine.m3_actor_state import ActorRef, SceneCast
-from girlframe.engine.m3_actors import fingerprint, resolve
+from girlframe.engine.m3_actors import fingerprint, owned_refs, resolve
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_intracadre_marriage import available, debit
 from girlframe.engine.m3_mockingbird import give_tag
@@ -367,6 +367,9 @@ def results(game: GameService, c: Connection, state: GameState, action: dict[str
             event=source.event,
         )
         rules.put(state, protected)
+        # Shield proof reloads the action: persist this validated in-flight total
+        # in the same transaction before checking the newly staged effect.
+        game.save_action(c, action)
         changed, work = shield(game, c, state, protected, source.event)
         _copy(state, changed)
         rules.put(
@@ -1312,6 +1315,10 @@ class WyvernService:
             event = str(uuid4())
             result = operation(c, state, event)
             self.game.event(c, viewer.user_id, key, kind, state, event_id=event, **result)
+            if kind == "m3.wyvern_roused_used":
+                from girlframe.services.m3_battle import synchronize_damage
+
+                synchronize_damage(self.game, c, event)
             from girlframe.services.m3_wyvern_support import synchronize as sync_effects
 
             sync_effects(self.game, c, event)
@@ -2135,14 +2142,12 @@ class WyvernService:
                 not value.high
                 or value.ended_event
                 or actor in (value.actor, value.target)
+                or target.cell is None
                 or approaching.cell != target.cell
             ):
                 raise WorkflowError(
                     "Declare an actual co-present approach to this still-protected person"
                 )
-            source = prove_source(self.game, c, state, value.session)
-            if not any(x.actor == actor for x in source.cast.roles):
-                raise WorkflowError("Use the actual approaching role in the original source scene")
             approach_id = str(uuid4())
             rules.put(
                 state,
@@ -2216,7 +2221,17 @@ class WyvernService:
                 raise WorkflowError("Recover the actual saved Wyvern source")
             audience = _audience(self.game, c, state, source)
             if viewer.user_id not in audience:
-                raise WorkflowError("This saved source belongs to its actual private audience")
+                approachers = _approachers(self.game, c, state, viewer, source)
+                if not approachers:
+                    raise WorkflowError("This saved source belongs to its actual private audience")
+                # A present newcomer can approach, not read the original private scene.
+                return dict(
+                    id=identity,
+                    kind=rules.KINDS[type(source)],
+                    revision=state.revision,
+                    source=dict(high=True, ended_event=None),
+                    approachers=approachers,
+                )
             result: dict[str, Any] = dict(
                 id=identity,
                 kind=rules.KINDS[type(source)],
@@ -2266,28 +2281,35 @@ class WyvernService:
                     if x.wraith == identity
                 ]
             if isinstance(source, rules.Shield) and source.high and not source.ended_event:
-                original = prove_source(self.game, c, state, source.session)
-                result["approachers"] = [
-                    dict(
-                        ref=x.actor.model_dump(mode="json"),
-                        token=x.actor.token,
-                        label=resolve(
-                            state,
-                            x.actor,
-                            profiles(c, self.store.campaign_id),
-                            require_alive=False,
-                            require_current_profile=False,
-                        ).label,
-                    )
-                    for x in original.cast.roles
-                    if x.controller == viewer.user_id
-                    and x.actor not in (source.actor, source.target)
-                ]
+                result["approachers"] = _approachers(self.game, c, state, viewer, source)
             if isinstance(source, rules.Party):
                 result["owed_roles"] = [
                     x.model_dump(mode="json") for x in source.companions if x not in source.present
                 ]
             return result
+
+
+def _approachers(
+    game: GameService, c: Connection, state: GameState, viewer: GuildViewer, source: rules.Source
+) -> list[dict[str, Any]]:
+    if not isinstance(source, rules.Shield) or not source.high or source.ended_event:
+        return []
+    prove_shield(game, c, state, source.id)
+    bound = profiles(c, game.store.campaign_id)
+    target = resolve(state, source.target, bound)
+    if target.cell is None:
+        return []
+    result = []
+    for ref in owned_refs(state, viewer.user_id, bound):
+        if ref in (source.actor, source.target):
+            continue
+        try:
+            actor = resolve(state, ref, bound)
+        except ValueError:
+            continue
+        if actor.controller == viewer.user_id and actor.cell == target.cell:
+            result.append(dict(ref=ref.model_dump(mode="json"), token=ref.token, label=actor.label))
+    return result
 
 
 def _audience(game: GameService, c: Connection, state: GameState, source: rules.Source) -> set[int]:
@@ -2352,7 +2374,9 @@ def _tasks(
         rules.Approach,
     )
     for source in rules.all_records(state, models):
-        if viewer.user_id not in _audience(game, c, state, source):
+        if viewer.user_id not in _audience(game, c, state, source) and not _approachers(
+            game, c, state, viewer, source
+        ):
             continue
         pending = False
         actionable = False

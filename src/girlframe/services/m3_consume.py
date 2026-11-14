@@ -384,7 +384,7 @@ def projection(
         if kind == "consume_eat"
         else [(k, v) for k, v in rules.TAGS.items()]
         if source.total >= 8
-        else [],
+        else [("give", "Give the actual Tag"), ("decline", "Do not give a Tag")],
         own_assets=[(x["id"], x["name"]) for x in context.get("own_assets", [])],
         target_assets=[(x["id"], x["name"]) for x in context.get("target_assets", [])],
         tier="low" if source.total < 8 else "high" if source.total >= 11 else "mid",
@@ -445,7 +445,11 @@ def apply(
         or answer.number is not None
         or answer.member is not None
         or not answer.text.strip()
-        or len(answer.options) != (0 if kind == "consume_feral" and source.total < 8 else 1)
+        or (
+            answer.options not in ((), ("give",), ("decline",))
+            if kind == "consume_feral" and source.total < 8
+            else len(answer.options) != 1
+        )
     ):
         raise WorkflowError("Choose only your actual printed CONSUME result and source account")
     expected = (
@@ -489,6 +493,12 @@ def apply(
         tier: Literal["low", "mid", "high"] = (
             "low" if source.total < 8 else "high" if source.total >= 11 else "mid"
         )
+        if tier == "low" and answer.options == ("decline",):
+            # The printed Handler Tag is optional. No Tag means no dependent
+            # forced-Disobey effect; retain the real roll and owned response.
+            action["data"]["consume"]["feral_tag_declined"] = event
+            action["data"]["consume"]["phase"] = "effects"
+            return
         label = answer.text.strip() if tier == "low" else rules.TAGS.get(answer.options[0])
         if label is None or len(label) > 120:
             raise WorkflowError("Select the actual printed Feral Tag")

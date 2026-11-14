@@ -3,17 +3,20 @@
 from typing import Any, cast
 from uuid import uuid4
 
+import sqlalchemy as sa
 from sqlalchemy import Connection
 
+from girlframe.database import tables as t
 from girlframe.engine import m3_oldgen as maxims
 from girlframe.engine import m3_oldgen_sex as rules
-from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput, shift_status
+from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput, TagState, shift_status
 from girlframe.engine.m3_actor_bonds import change, current_ref, depth, is_helpless
 from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_girl_runtime_state import has_rule
 from girlframe.engine.m3_handler_consequences import active_handler
-from girlframe.engine.m3_mockingbird import give_tag
+from girlframe.engine.m3_mockingbird import actor_tags, give_tag
+from girlframe.engine.m3_world_state import WorldTag
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
@@ -49,6 +52,94 @@ def _access(game: GameService, c: Connection, viewer: GuildViewer) -> None:
     gate.registry.require_available(rules.RULE)
 
 
+def _npc_space(game: GameService, c: Connection, state: GameState, actual: Any) -> None:
+    """Reject known incompatibilities; this does not turn unknown occupancy into outside."""
+    from girlframe.engine.m3_passengers import passenger_view
+    from girlframe.services.m3_changeling_body import _fact
+
+    fact = _fact(game, c, state, actual.ref)
+    if (
+        fact.kind != "human_npc"
+        or fact.vessel != actual.vessel_id
+        or actual.inside_frame is True
+        or actual.occupied_frame_instance is not None
+        or actual.offstage_source
+        or actual.custody not in (None, "free")
+        or actual.cell is None
+        or passenger_view(state, actual.ref) is not None
+    ):
+        raise WorkflowError(
+            "Recover genuine available NPC body/contact; no enclosure or ride proxy"
+        )
+
+
+def _prove_npc_contact(game: GameService, c: Connection, value: rules.Session) -> None:
+    contact = value.npc_contact
+    if contact is None or (
+        contact.session,
+        contact.target,
+        contact.actor,
+        contact.controller,
+        contact.vessel,
+        contact.actor_vessel,
+        contact.cast,
+        contact.event,
+    ) != (
+        value.id,
+        value.target,
+        value.actor,
+        value.counterpart,
+        value.target_vessel,
+        value.actor_vessel,
+        value.cast,
+        value.consent_event,
+    ):
+        raise WorkflowError(
+            "Recover the NPC controller's positive invitation-specific contact fact"
+        )
+    _audit(game, c, contact.event, "m3.oldgen_sex_consent", contact.controller)
+    born = _history(c, game, contact.event)
+    saved = rules.get(born, value.id)
+    if (
+        saved.npc_contact != contact
+        or saved.phase != "accepted"
+        or born.revision != contact.revision + 1
+    ):
+        raise WorkflowError("Preserve the actual canonical contact statement and revision")
+    bindings = snapshot_profiles(c, game.store.campaign_id, born)
+    own, other = resolve(born, value.actor, bindings), resolve(born, value.target, bindings)
+    _npc_space(game, c, born, other)
+    if (
+        own.cell != contact.cell
+        or other.cell != contact.cell
+        or other.controller != contact.controller
+        or own.inside_frame is not False
+        or own.vessel_id != contact.actor_vessel
+        or other.vessel_id != contact.vessel
+    ):
+        raise WorkflowError("Recover the actual original contact bodies and authored location")
+
+
+def _counterpart(game: GameService, c: Connection, state: GameState, actor: ActorRef) -> Any:
+    if actor.kind == "pilot":
+        return _native(game, c, state, actor)
+    if actor.kind != "npc":
+        raise WorkflowError("Use a supported original Pilot or ordinary NPC counterpart")
+    actual = resolve(
+        state, actor, profiles(c, game.store.campaign_id), require_current_profile=False
+    )
+    if (
+        actual.rules != "npc"
+        or not actual.alive
+        or actual.offstage_source
+        or actual.custody not in (None, "free")
+        or actual.vessel_id is None
+    ):
+        raise WorkflowError("Use the actual available ordinary NPC and original body")
+    _npc_space(game, c, state, actual)
+    return actual
+
+
 def _contact(
     game: GameService,
     c: Connection,
@@ -57,6 +148,7 @@ def _contact(
     *,
     lesson_id: str | None = None,
     pending_event: str | None = None,
+    proposing_npc: bool = False,
 ) -> None:
     from girlframe.services.m3_bonded import admit_delegation
     from girlframe.services.m3_changeling_sex import admit_contact
@@ -88,10 +180,16 @@ def _contact(
         game, c, state, value.actor, value.target, rules.RULE, value.changeling_source
     )
 
-    own, other = _native(game, c, state, value.actor), _native(game, c, state, value.target)
+    own, other = _native(game, c, state, value.actor), _counterpart(game, c, state, value.target)
     cast = _cast(game, c, state, value.cast.channel)
+    if value.target.kind == "npc" and not proposing_npc:
+        _prove_npc_contact(game, c, value)
+        assert value.npc_contact is not None
+        if other.cell != value.npc_contact.cell or own.cell != value.npc_contact.cell:
+            raise WorkflowError("The original invitation-specific contact no longer holds")
     if (
         value.actor == value.target
+        or (value.target.kind == "npc" and any((value.bonded_source, value.changeling_source)))
         or (
             not learned
             and value.bonded_source is None
@@ -105,7 +203,14 @@ def _contact(
             )
         )
         or cast != value.cast
-        or (not remote and any(x.inside_frame is not False or x.cell is None for x in (own, other)))
+        or (own.controller, other.controller) != (value.caster, value.counterpart)
+        or (
+            not remote
+            and any(
+                (x.ref.kind == "pilot" and x.inside_frame is not False) or x.cell is None
+                for x in (own, other)
+            )
+        )
         or (not remote and own.cell != other.cell)
         or (own.vessel_id, other.vessel_id) != (value.actor_vessel, value.target_vessel)
         or any(is_helpless(state, x) for x in (value.actor, value.target))
@@ -126,9 +231,15 @@ def _birth_contact(
     bound = snapshot_profiles(c, game.store.campaign_id, state)
     own, other = resolve(state, value.actor, bound), resolve(state, value.target, bound)
     remote = value.changeling_source is not None
+    if value.target.kind == "npc":
+        _npc_space(game, c, state, other)
     if (
         value.actor.kind != "pilot"
-        or value.target.kind != "pilot"
+        or value.target.kind not in ("pilot", "npc")
+        or (
+            value.target.kind == "npc"
+            and (other.rules != "npc" or any((value.bonded_source, value.changeling_source)))
+        )
         or value.actor == value.target
         or value.cast not in state.scene_casts
         or not value.cast.open
@@ -136,12 +247,17 @@ def _birth_contact(
         or value.cast.facilitator != state.handler
         or (own.controller, other.controller) != (value.caster, value.counterpart)
         or any(
-            x.rules != "girl_frame"
+            (
+                x.ref.kind == "pilot"
+                and (x.rules != "girl_frame" or state.sheets[x.ref.entity].medical_state != "fit")
+            )
             or not x.alive
             or x.offstage_source
             or x.custody not in (None, "free")
-            or state.sheets[x.ref.entity].medical_state != "fit"
-            or (not remote and (x.inside_frame is not False or x.cell is None))
+            or (
+                not remote
+                and ((x.ref.kind == "pilot" and x.inside_frame is not False) or x.cell is None)
+            )
             for x in (own, other)
         )
         or (not remote and own.cell != other.cell)
@@ -189,10 +305,13 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
     origin = _history(c, game, value.proposed_event)
     born = rules.get(origin, identity)
     from girlframe.services.m3_bonded import prove_delegation
+    from girlframe.services.m3_learned_bonded_oldgen import released_parent
 
-    prove_delegation(
-        game, c, state, value.bonded_source, value.id, value.actor, value.target, rules.RULE
-    )
+    released_delegation = released_parent(game, c, state, value)
+    if not released_delegation:
+        prove_delegation(
+            game, c, state, value.bonded_source, value.id, value.actor, value.target, rules.RULE
+        )
     stable = (
         "id",
         "actor",
@@ -213,7 +332,25 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
     if any(getattr(value, k) != getattr(born, k) for k in stable):
         raise WorkflowError("Preserve the original people, bodies and voluntary source")
     _birth_contact(game, c, origin, born)
-    if value.phase != "invited" and value.consent_event is None:
+    withdrawn_unused = (
+        value.phase == "withdrawn"
+        and (
+            released_delegation
+            or value.learned_source is not None
+            and link.released_kind == "withdrawn"
+            and link.released_event is not None
+        )
+        and value.action is None
+        and value.bound_event is None
+        and value.effect_event is None
+    )
+    if (
+        value.target.kind == "npc"
+        and value.phase not in ("invited", "declined")
+        and not (withdrawn_unused and value.consent_event is None)
+    ):
+        _prove_npc_contact(game, c, value)
+    if value.phase != "invited" and value.consent_event is None and not withdrawn_unused:
         raise WorkflowError("Recover the actual counterpart's source answer before continuing")
     if value.consent_event:
         saved = rules.get(_history(c, game, value.consent_event), identity)
@@ -287,6 +424,9 @@ def prepare(
         raise WorkflowError("Use the actual original Handler scene context")
     if value.cast.facilitator is None or state.handler is None:
         raise WorkflowError("Recover the genuine source facilitator and Handler before this Play")
+    from girlframe.services.m3_learned_bonded_oldgen import parent_lesson
+
+    delegated_lesson = parent_lesson(state, value)
     return (
         dict(
             session=value.id,
@@ -302,6 +442,7 @@ def prepare(
         )
         | ({"learned_source": value.learned_source} if value.learned_source is not None else {})
         | ({"bonded_source": value.bonded_source} if value.bonded_source is not None else {})
+        | ({"bonded_lesson": delegated_lesson} if delegated_lesson is not None else {})
         | (
             {"changeling_source": value.changeling_source}
             if value.changeling_source is not None
@@ -326,6 +467,10 @@ def authorize(
     value = prove(
         game, c, load_state(c, game.store.campaign_id), action["data"]["oldgen_sex"]["session"]
     )
+    if value.target.kind == "npc":
+        actual = _counterpart(game, c, load_state(c, game.store.campaign_id), value.target)
+        if actual.controller != value.counterpart:
+            raise WorkflowError("Recover the original NPC controller before choosing an outcome")
     if value.action != action["id"] or viewer.user_id not in action["data"]["oldgen_sex"]["table"]:
         raise WorkflowError("Only this actual original source table owns these choices")
 
@@ -540,10 +685,22 @@ def apply_choice(
                     ),
                 ),
             )
-            tag = next(x for x in state.sheets[target.entity].tags if x.id == tag_id)
-            tag.giver_character = chooser.incarnation
-            fields["tag"] = tag
+            tag = next(x for x in actor_tags(state, target) if x.id == tag_id)
+            if target.kind == "npc":
+                if not isinstance(tag, WorldTag):
+                    raise WorkflowError("Recover the actual NPC WorldTag")
+                fields["npc_tag"] = tag
+            else:
+                if not isinstance(tag, TagState):
+                    raise WorkflowError("Recover the actual Pilot Tag")
+                tag.giver_character = chooser.incarnation
+                fields["tag"] = tag
         elif kind == "status":
+            if target.kind != "pilot" or int(target.entity) not in state.order:
+                raise WorkflowError(
+                    "UNSUPPORTED_NPC_STATUS: pause for human-facilitator adjudication; "
+                    "this effect is not resolved and no rank is fabricated."
+                )
             fields["before"] = state.order.index(int(target.entity))
             shift_status(state, int(target.entity), -1)
             fields["after"] = state.order.index(int(target.entity))
@@ -595,6 +752,9 @@ def projection(
         if x.session == value.id and x.owner == value.actor
     }
     marked = maxims.marked_maxims(state, value.caster)
+    unsupported_status = value.target.kind == "npc" and value.phase != "reciprocal"
+    if unsupported_status:
+        labels["status"] = "NPC Status: unsupported; pause for facilitator"
     allowed = [
         x
         for x in rules.EFFECTS
@@ -602,6 +762,7 @@ def projection(
     ]
     return dict(
         phase=value.phase,
+        unsupported_status=unsupported_status,
         options=tuple((x, labels[x]) for x in allowed),
         minimum=2 if value.phase == "caster" else 0,
         maximum=2 if value.phase == "caster" else 1,
@@ -634,15 +795,31 @@ def prove_effect(game: GameService, c: Connection, state: GameState, identity: s
             "Recover the genuine original selected effect and exact original people"
         )
     if value.kind == "tag":
-        tag = next(
-            (x for x in born.sheets[target.entity].tags if value.tag and x.id == value.tag.id), None
-        )
+        stored = value.npc_tag if target.kind == "npc" else value.tag
+        tag = next((x for x in actor_tags(born, target) if stored and x.id == stored.id), None)
         if (
             tag is None
-            or value.tag is None
+            or stored is None
+            or tag != stored
+            or tag.id != "oldgen-sex-tag:" + selected.id
             or tag.label != answer.fields["tag"].strip()
-            or tag.giver_actor != chooser
-            or tag.giver_character != chooser.incarnation
+            or (
+                target.kind == "npc"
+                and (
+                    value.tag is not None
+                    or not isinstance(tag, WorldTag)
+                    or ActorRef.model_validate_json(tag.giver_entity) != chooser
+                )
+            )
+            or (
+                target.kind != "npc"
+                and (
+                    value.npc_tag is not None
+                    or not isinstance(tag, TagState)
+                    or tag.giver_actor != chooser
+                    or tag.giver_character != chooser.incarnation
+                )
+            )
         ):
             raise WorkflowError("Recover the actual original authored Tag")
     if value.kind in ("unmark", "rewrite") and value.maxim != answer.fields.get("maxim"):
@@ -723,7 +900,10 @@ class OldgenSexService:
             if state.revision != expected or self.game.pending_actions(c):
                 raise WorkflowError("Finish pending Plays and reopen the actual source")
             actor = current_ref(state, viewer.user_id)
-            own, other = _native(self.game, c, state, actor), _native(self.game, c, state, target)
+            own, other = (
+                _native(self.game, c, state, actor),
+                _counterpart(self.game, c, state, target),
+            )
             cast = _cast(self.game, c, state, channel)
             if own.vessel_id is None or other.vessel_id is None:
                 raise WorkflowError("Establish the actual original bodies")
@@ -743,7 +923,7 @@ class OldgenSexService:
                 proposed_event=str(uuid4()),
                 proposal=account,
             )
-            _contact(self.game, c, state, value, lesson_id=learned_source)
+            _contact(self.game, c, state, value, lesson_id=learned_source, proposing_npc=True)
             if learned_source is not None:
                 from girlframe.services.m3_learned_sex import reserve_invitation
 
@@ -799,6 +979,81 @@ class OldgenSexService:
             authorize=lambda c: _access(self.game, c, viewer),
         )
 
+    def withdraw(
+        self, viewer: GuildViewer, key: str, identity: str, expected: int
+    ) -> dict[str, Any]:
+        """Owner-only unused reservation release; never a fictional refusal."""
+
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            state = load_state(c, self.store.campaign_id)
+            value = prove(self.game, c, state, identity)
+            from girlframe.engine import m3_bonded as bonded
+
+            delegated = (
+                value.bonded_source is not None
+                and bonded.get(state, value.bonded_source).changeling_source is None
+            )
+            if (
+                state.revision != expected
+                or viewer.user_id != value.caster
+                or current_ref(state, viewer.user_id) != value.actor
+                or (value.learned_source is None and not delegated)
+                or (value.bonded_source is not None and not delegated)
+                or value.changeling_source is not None
+                or value.phase not in ("invited", "accepted")
+                or value.action is not None
+                or value.effect_event is not None
+                or value.bound_event is not None
+                or value.completed_event is not None
+            ):
+                raise WorkflowError("Only the original owner may withdraw this unbound invitation")
+            actions = t.m2["m2_actions"]
+            if c.scalar(
+                sa.select(actions.c.id).where(
+                    actions.c.campaign_id == self.store.campaign_id,
+                    sa.or_(
+                        sa.func.json_extract(actions.c.body_json, "$.oldgen_sex.session")
+                        == identity,
+                        sa.func.json_extract(actions.c.body_json, "$.prepared.source_work")
+                        == identity,
+                    ),
+                )
+            ):
+                raise WorkflowError(
+                    "Recover the actual original Action; never refund dice or costs"
+                )
+            from girlframe.services.m3_learned_sex import withdraw_invitation
+
+            event = str(uuid4())
+            if not delegated:
+                withdraw_invitation(self.game, c, state, value, event)
+            rules.put(state, value.model_copy(update={"phase": "withdrawn"}))
+            if delegated:
+                from girlframe.services.m3_learned_bonded_oldgen import release
+
+                release(self.game, c, state, identity, viewer.user_id, event)
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.oldgen_sex_withdrawn",
+                state,
+                event_id=event,
+                session=identity,
+            )
+            return dict(id=identity, phase="withdrawn")
+
+        return self.store._write(
+            viewer,
+            key,
+            "m3.oldgen_sex_withdrawn",
+            dict(id=identity, expected=expected),
+            operation,
+            auto_audit=False,
+            authorize=lambda c: _access(self.game, c, viewer),
+        )
+
     def respond(
         self,
         viewer: GuildViewer,
@@ -807,6 +1062,8 @@ class OldgenSexService:
         expected: int,
         accept: bool,
         account: str,
+        *,
+        npc_contact_account: str | None = None,
     ) -> dict[str, Any]:
         if not account.strip() or len(account) > 1200:
             raise WorkflowError("Record only your own actual source answer")
@@ -822,12 +1079,42 @@ class OldgenSexService:
                 or viewer.user_id != value.counterpart
             ):
                 raise WorkflowError("Answer only your own original current invitation")
-            _contact(self.game, c, state, value)
+            _contact(self.game, c, state, value, proposing_npc=True)
             event = str(uuid4())
+            contact = None
+            if value.target.kind == "npc" and accept:
+                if (
+                    not npc_contact_account
+                    or not npc_contact_account.strip()
+                    or len(npc_contact_account) > 1200
+                ):
+                    raise WorkflowError(
+                        "Attest actual physical contact outside enclosures for this invitation"
+                    )
+                other = _counterpart(self.game, c, state, value.target)
+                assert other.cell is not None
+                contact = rules.NpcContact(
+                    session=value.id,
+                    actor=value.actor,
+                    target=value.target,
+                    controller=viewer.user_id,
+                    vessel=value.target_vessel,
+                    actor_vessel=value.actor_vessel,
+                    cell=other.cell,
+                    cast=value.cast,
+                    revision=state.revision,
+                    event=event,
+                    account=npc_contact_account.strip(),
+                )
+            elif npc_contact_account is not None:
+                raise WorkflowError(
+                    "Only an accepting original NPC controller records this contact"
+                )
             rules.put(
                 state,
                 value.model_copy(
                     update=dict(
+                        npc_contact=contact,
                         consent_event=event,
                         consent_account=account,
                         phase="accepted" if accept else "declined",
@@ -837,6 +1124,12 @@ class OldgenSexService:
             from girlframe.services.m3_learned_sex import record_consent
 
             record_consent(self.game, c, state, rules.get(state, identity), accept, event)
+            if not accept and value.bonded_source is not None:
+                from girlframe.engine import m3_bonded as bonded
+                from girlframe.services.m3_learned_bonded_oldgen import release
+
+                if bonded.get(state, value.bonded_source).changeling_source is None:
+                    release(self.game, c, state, identity, viewer.user_id, event)
             self.game.event(
                 c,
                 viewer.user_id,
@@ -856,7 +1149,13 @@ class OldgenSexService:
             viewer,
             key,
             "m3.oldgen_sex_consent",
-            dict(id=identity, expected=expected, accept=accept, account=account),
+            dict(
+                id=identity,
+                expected=expected,
+                accept=accept,
+                account=account,
+                npc_contact_account=npc_contact_account,
+            ),
             operation,
             auto_audit=False,
             authorize=lambda c: _access(self.game, c, viewer),
@@ -864,6 +1163,7 @@ class OldgenSexService:
 
     def _tasks(self, c: Connection, viewer: GuildViewer) -> list[dict[str, Any]]:
         state = load_state(c, self.store.campaign_id)
+        from girlframe.services.m3_learned_bonded_oldgen import parent_lesson
         from girlframe.services.m3_learned_sex import cancelled
 
         return [
@@ -871,7 +1171,9 @@ class OldgenSexService:
                 id=x.id,
                 label="Your actual Oldgen intimacy source",
                 revision=state.revision,
-                pending=not cancelled(self.game, c, state, x.learned_source)
+                pending=not cancelled(
+                    self.game, c, state, x.learned_source or parent_lesson(state, x)
+                )
                 and (
                     x.phase == "invited"
                     and viewer.user_id == x.counterpart
@@ -897,18 +1199,21 @@ class OldgenSexService:
                 for x in rules.records(state, rules.Effect)
                 if x.session == identity
             ]
+            from girlframe.services.m3_learned_bonded_oldgen import parent_lesson
             from girlframe.services.m3_learned_sex import cancelled
 
             return value.model_dump(mode="json", exclude={"cast", "registry"}) | dict(
                 phase="cancelled"
-                if cancelled(self.game, c, state, value.learned_source)
+                if cancelled(
+                    self.game, c, state, value.learned_source or parent_lesson(state, value)
+                )
                 else value.phase,
                 revision=state.revision,
                 effects=[
                     dict(
                         kind=x.kind,
                         target=x.target.model_dump(mode="json"),
-                        tag=x.tag.label if x.tag else None,
+                        tag=x.tag.label if x.tag else x.npc_tag.label if x.npc_tag else None,
                     )
                     for x in effects
                 ],
@@ -920,6 +1225,8 @@ class OldgenSexService:
             state = load_state(c, self.store.campaign_id)
             targets = []
             offered: tuple[dict[str, str], ...] = ()
+            from girlframe.engine import m3_bonded as bonded
+            from girlframe.services.m3_learned_bonded_oldgen import parent_lesson
             from girlframe.services.m3_learned_sex import cancelled, lessons
 
             try:
@@ -935,11 +1242,14 @@ class OldgenSexService:
                     or offered
                 ) and own.inside_frame is False:
                     for role in cast.roles:
-                        if role.actor.kind != "pilot" or role.actor == actor:
+                        if role.actor.kind not in ("pilot", "npc") or role.actor == actor:
                             continue
-                        other = _native(self.game, c, state, role.actor)
+                        try:
+                            other = _counterpart(self.game, c, state, role.actor)
+                        except (ValueError, WorkflowError):
+                            continue
                         if (
-                            other.inside_frame is False
+                            (role.actor.kind == "npc" or other.inside_frame is False)
                             and own.cell is not None
                             and own.cell == other.cell
                         ):
@@ -960,8 +1270,18 @@ class OldgenSexService:
                     dict(
                         id=x.id,
                         phase="cancelled"
-                        if cancelled(self.game, c, state, x.learned_source)
+                        if cancelled(
+                            self.game, c, state, x.learned_source or parent_lesson(state, x)
+                        )
                         else x.phase,
+                        can_withdraw=(
+                            x.learned_source is not None
+                            or x.bonded_source is not None
+                            and bonded.get(state, x.bonded_source).changeling_source is None
+                        )
+                        and x.caster == viewer.user_id
+                        and x.action is None
+                        and x.phase in ("invited", "accepted"),
                     )
                     for x in rules.records(state, rules.Session)
                     if viewer.user_id in (x.caster, x.counterpart)

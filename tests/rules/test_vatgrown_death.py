@@ -1,10 +1,12 @@
 """Deferred P1 normal: actual death, distinct reviewed replacement, real supply and own noticing."""
 
 import asyncio
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
 from test_creation import selected
+from test_facilitator_native import interaction
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger
 from test_m2_game import answer, pass_tags, state, tick
@@ -13,6 +15,7 @@ from test_vatgrown_plays import ready
 
 from girlframe.discord_adapter.m3_careers import open_replacement
 from girlframe.discord_adapter.m3_vatgrown_death import open_vatgrown_death
+from girlframe.discord_adapter.p1_shelving import register_shelving
 from girlframe.engine import m3_vatgrown_death as rules
 from girlframe.engine.bonds import BondProposal
 from girlframe.engine.creation_details import DesireChoice, GirlDetails, NpcInvestor
@@ -30,6 +33,9 @@ from girlframe.services.m3_careers import CareerService
 from girlframe.services.m3_physical import PhysicalService
 from girlframe.services.m3_vatgrown_death import VatgrownDeathService, prove
 from girlframe.services.onboarding import WorkflowError
+from girlframe.services.p1_facilitator import FacilitatorService
+from girlframe.services.p1_shelving import ShelvingService
+from girlframe.services.p1_shelving_review import ShelvingReviewService
 
 
 def _native_source(service, viewer, identity, **values):
@@ -64,6 +70,11 @@ def test_actual_vatgrown_death_fresh_native_activation_and_original_other_owned_
     )
     old = state(game)
     original = current_ref(old, 2)
+    FacilitatorService(game).configure(
+        ADMIN, "replacement-shelving-reviewer", "user", ADMIN.user_id
+    )
+    shelving = ShelvingService(game)
+    old_request = shelving.request(PLAYER, "original-before-real-death")
     old_frame = next(x.frame_instance for x in old.placements if x.actor == original)
     with ledger.transaction() as c:
         prior = state(game)
@@ -245,6 +256,77 @@ def test_actual_vatgrown_death_fresh_native_activation_and_original_other_owned_
     active = state(game)
     source = rules.records(active, rules.Replacement)[-1]
     assert source.activated_event and current_ref(active, 2) == fresh.new_actor
+    new_request = shelving.request(PLAYER, "new-original-after-real-activation")
+    reviews = ShelvingReviewService(game)
+    with pytest.raises(WorkflowError, match="STALE_SHELVING_ACTOR"):
+        reviews.inspect(ADMIN, old_request["id"], old_request["revision"])
+    reviewed = reviews.inspect(ADMIN, new_request["id"], new_request["revision"])
+    assert reviewed.actor == fresh.new_actor and reviewed.availability_authority is False
+    assert state(game) == active
+    assert new_request["id"] != old_request["id"]
+    assert new_request["original_actor"] == fresh.new_actor.model_dump(mode="json")
+    assert new_request["pilot_identity_proof"]["character"] == fresh.new_actor.incarnation
+    assert new_request["pilot_identity_proof"]["binding_event"]
+    assert shelving.view(PLAYER, old_request["id"]) == dict(
+        old_request, can_review=False, own=True, actor_context="previous actor"
+    )
+    assert old_request["status"] == "requested"
+    with pytest.raises(WorkflowError, match="STALE_SHELVING_REQUEST"):
+        shelving.request(PLAYER, "original-before-real-death")
+    with pytest.raises(WorkflowError):
+        shelving.view(OTHER, old_request["id"])
+    with pytest.raises(WorkflowError):
+        shelving.view(OTHER, new_request["id"])
+
+    async def withdraw_previous_intake():
+        tree = MagicMock()
+        register_shelving(tree, PLAYER.guild_id, game)
+        group = tree.add_command.call_args.args[0]
+        inbox = interaction(PLAYER, "replacement-shelving-inbox")
+        await group.get_command("inbox").callback(inbox)
+        form = inbox.edit_original_response.call_args.kwargs["view"]
+        labels = dict(form.fields[0].options)
+        assert set(labels) == {old_request["id"], new_request["id"]}
+        assert "previous actor" in labels[old_request["id"]]
+        assert "current actor" in labels[new_request["id"]]
+        visible = form.text() + "\n" + "\n".join(labels.values())
+        actual_options = next(child.options for child in form.children if hasattr(child, "options"))
+        assert {option.value: option.label for option in actual_options} == labels
+        inbox.response.defer.assert_awaited_once_with(ephemeral=True)
+        for request in (old_request, new_request):
+            assert request["id"] in labels[request["id"]]
+            assert len(labels[request["id"]]) <= 100
+            assert request["original_actor"]["incarnation"] not in visible
+            for value in request["pilot_identity_proof"].values():
+                if isinstance(value, str) and len(value) > 20:
+                    assert value not in visible
+        # Reopening reconstructs identical labels; no ephemeral UI is the authority.
+        reopened = interaction(PLAYER, "replacement-shelving-inbox-reopen")
+        await group.get_command("inbox").callback(reopened)
+        saved_form = reopened.edit_original_response.call_args.kwargs["view"]
+        assert dict(saved_form.fields[0].options) == labels
+        saved_form.values["request"] = (old_request["id"],)
+        selected_request = interaction(PLAYER, "select-old-shelving-request")
+        await saved_form.confirm.callback(selected_request)
+        review_packet = selected_request.edit_original_response.call_args.kwargs
+        review = review_packet["view"]
+        assert labels[old_request["id"]] in review_packet["content"]
+        assert new_request["id"] not in review_packet["content"]
+        assert original.incarnation not in review_packet["content"]
+        assert fresh.new_actor.incarnation not in review_packet["content"]
+        assert "no player is frozen" in review_packet["content"]
+        assert dict(review.fields[0].options) == {"withdraw": "Withdraw my shelving request"}
+        review.values["operation"] = ("withdraw",)
+        submitted = interaction(PLAYER, "withdraw-real-previous-actor-request")
+        await review.confirm.callback(submitted)
+        assert review.completed
+        assert old_request["id"] in submitted.edit_original_response.call_args.kwargs["content"]
+        assert shelving.view(PLAYER, old_request["id"])["status"] == "withdrawn"
+        assert shelving.view(PLAYER, new_request["id"])["status"] == "requested"
+        assert [row["id"] for row in shelving.tasks(PLAYER)] == [new_request["id"]]
+        assert state(game) == active
+
+    asyncio.run(withdraw_previous_intake())
     assert active.sheets["2"].girl == "VATGROWN" and active.sheets["2"].permissions == 0
     assert active.sheets["2"].heat == 0 and not any(x.marked for x in active.sheets["2"].identities)
     assert tuple(x.name for x in active.sheets["2"].identities) == tuple(new.identities)

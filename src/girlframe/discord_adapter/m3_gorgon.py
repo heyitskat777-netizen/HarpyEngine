@@ -49,16 +49,23 @@ async def open_gorgon_attack(interaction: discord.Interaction, service: GorgonSe
                     trigger_confirmed=True,
                 ),
             )
+            outcome = (
+                "The actual NPC is kept alive by existing Metal Angel care. "
+                if result["outcome"] == "npc_kept_alive"
+                else "The actual NPC's death is recorded. "
+            )
             return (
-                "The actual NPC's death is recorded. No player character's resources changed. "
-                "Saved Attack: " + str(result["id"])
+                outcome
+                + "No player character's resources changed. Saved Attack: "
+                + str(result["id"])
             )
 
         form = NativeForm(
             viewer.user_id,
             "Confirm Gorgon Attack on an NPC",
             "Attacker: " + clean(attacker["label"]) + ". Choose its actual attacking Assets "
-            "and the reachable NPC. This Attack kills that NPC. Record the actual action in "
+            "and the reachable NPC. This Attack is lethal unless actual Metal Angel care "
+            "keeps that NPC alive. Record the actual action in "
             "the Conversation before confirming. Private world details stay in this review.",
             [
                 Field(
@@ -77,7 +84,7 @@ async def open_gorgon_attack(interaction: discord.Interaction, service: GorgonSe
                 Field(
                     "confirm",
                     "Confirm the printed consequence",
-                    (("yes", "Attack and kill the selected NPC"),),
+                    (("yes", "Resolve the lethal Attack on the selected NPC"),),
                 ),
             ],
             submit,

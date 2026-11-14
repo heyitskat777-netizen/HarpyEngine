@@ -448,6 +448,8 @@ def projection(
 ) -> dict[str, Any]:
     value = prove_source(game, c, state, action["id"])
     court = rules.get(state, rules.Court, value.court)
+    if row["kind"] in ("red_queen_answers", "red_queen_reciprocal", "red_queen_tag"):
+        _question_target(game, c, state, value)
     common = dict(
         source=value.id, total=value.total, targets=_native_targets(game, c, state, value)
     )
@@ -516,6 +518,12 @@ def _question_target(
 ) -> int:
     assert value.target is not None
     assert value.target_controller is not None
+    if value.play == "red_queen_panopticon" and value.target.kind == "npc":
+        current = resolve(state, value.target, profiles(c, game.store.campaign_id))
+        if current.controller != value.target_controller:
+            raise WorkflowError(
+                "STALE_PANOPTICON_OWNER: preserve the original observed person's current controller"
+            )
     return value.target_controller
 
 
@@ -2546,6 +2554,11 @@ def transfer_options(
             x.id
             for x in bonded.records(state, bonded.Source)
             if x.kind == "sex" and x.phase == "complete"
+        )
+        from girlframe.engine import m3_am_sex as am_sex
+
+        candidates.extend(
+            x.id for x in am_sex.sources(state) if x.mode == "both_am" and x.phase == "complete"
         )
     elif kind == "punishment":
         candidates = [x.id for x in state.role_punishments if x.completion_event]

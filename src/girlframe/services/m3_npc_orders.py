@@ -62,6 +62,7 @@ def _access(
         "am_secret": "girl.am.scrutinized",
         "secretary": "handler-advancement.handler-advancement.secretary",
         "npc_flirt": "play.basic.flirt",
+        "stim_sex": "girl.stim-blissed.sex-play",
     }[origin_kind]
     access.registry.require_available(rule)
 
@@ -92,6 +93,7 @@ def source(
                 "am_secret": "npc_am_secret_order",
                 "secretary": "npc_secretary_order",
                 "npc_flirt": "npc_flirt_order",
+                "stim_sex": "npc_stim_order",
             }[value.origin_kind]
             and x.get("id") == value.id
         ),
@@ -99,7 +101,14 @@ def source(
     )
     actual = resolve(state, value.issuer, profiles(c, game.store.campaign_id))
     recipient = resolve(state, value.target, profiles(c, game.store.campaign_id))
-    if value.origin_kind == "npc_flirt":
+    if value.origin_kind == "stim_sex":
+        from girlframe.services.m3_stim_npc import order_authority as stim_authority
+
+        condition_invalid = (
+            stim_authority(game, c, original, value.issuer, value.target, effect_id=value.condition)
+            is None
+        )
+    elif value.origin_kind == "npc_flirt":
         from girlframe.services.m3_npc_flirt import cannot_refuse
 
         condition_invalid = (
@@ -277,12 +286,20 @@ class NpcOrderService:
                 if role.actor.kind != "npc" or role.controller != viewer.user_id:
                     continue
                 try:
-                    if origin_kind == "npc_flirt":
+                    if origin_kind == "stim_sex":
+                        from girlframe.services.m3_stim_npc import order_authority as stim_authority
+
+                        effect = stim_authority(self.game, c, state, role.actor, recipient)
+                        if effect is None:
+                            continue
+                        condition_id = effect.id
+                    elif origin_kind == "npc_flirt":
                         from girlframe.services.m3_npc_flirt import cannot_refuse
 
-                        condition_id = cannot_refuse(self.game, c, state, recipient, role.actor)
-                        if condition_id is None:
+                        flirt_condition = cannot_refuse(self.game, c, state, recipient, role.actor)
+                        if flirt_condition is None:
                             continue
+                        condition_id = flirt_condition
                     else:
                         condition_id = _condition(self.game, c, state, role.actor, recipient).id
                 except (ValueError, WorkflowError):
@@ -309,8 +326,11 @@ class NpcOrderService:
         text: str,
         *,
         origin_kind: rules.Origin = "broken",
+        source_effect: str | None = None,
     ) -> dict[str, Any]:
-        if origin_kind not in ("broken", "am_secret", "secretary", "npc_flirt"):
+        if source_effect is not None and origin_kind != "stim_sex":
+            raise WorkflowError("An exact drug effect belongs only to its Stim source")
+        if origin_kind not in ("broken", "am_secret", "secretary", "npc_flirt", "stim_sex"):
             raise WorkflowError("Use only an implemented actual NPC order source")
         if not text.strip() or len(text) > 1200:
             raise WorkflowError("State the actual direct order in 1–1200 characters")
@@ -326,12 +346,22 @@ class NpcOrderService:
                 kind="pilot", entity=str(target), incarnation=state.sheets[str(target)].character_id
             )
             principal = None
-            if origin_kind == "npc_flirt":
+            if origin_kind == "stim_sex":
+                from girlframe.services.m3_stim_npc import order_authority as stim_authority
+
+                effect = stim_authority(
+                    self.game, c, state, issuer, recipient, effect_id=source_effect
+                )
+                if effect is None:
+                    raise WorkflowError("Use the original NPC's actual unexpired drug authority")
+                condition_id = effect.id
+            elif origin_kind == "npc_flirt":
                 from girlframe.services.m3_npc_flirt import cannot_refuse
 
-                condition_id = cannot_refuse(self.game, c, state, recipient, issuer)
-                if condition_id is None:
+                flirt_condition = cannot_refuse(self.game, c, state, recipient, issuer)
+                if flirt_condition is None:
                     raise WorkflowError("Use the actual NPC-given unresolved Tag source")
+                condition_id = flirt_condition
             elif origin_kind == "secretary":
                 from girlframe.services.m3_secretary import order_authority
 
@@ -462,6 +492,7 @@ class NpcOrderService:
                         "am_secret": "npc_am_secret_order",
                         "secretary": "npc_secretary_order",
                         "npc_flirt": "npc_flirt_order",
+                        "stim_sex": "npc_stim_order",
                     }[origin_kind],
                     id=identity,
                     body=value.model_dump_json(),
@@ -494,7 +525,8 @@ class NpcOrderService:
                 expected=expected,
                 text=text,
             )
-            | (dict(origin_kind=origin_kind) if origin_kind != "broken" else {}),
+            | (dict(origin_kind=origin_kind) if origin_kind != "broken" else {})
+            | (dict(source_effect=source_effect) if source_effect is not None else {}),
             operation,
             auto_audit=False,
             authorize=lambda c: _access(self.game, c, viewer, origin_kind),

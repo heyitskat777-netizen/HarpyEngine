@@ -10,6 +10,7 @@ from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger
 from test_m2_game import state
 from test_mission_ui import current
+from test_world_service import transfer_npc
 
 from girlframe.database import tables as t
 from girlframe.discord_adapter import m3_changeling as native
@@ -37,7 +38,7 @@ def test_real_npc_claim_hands_pending_question_to_current_role_without_rewriting
         detail="Actual original starting counterpart",
     )
     world.npc(ADMIN, str(uuid4()), state(game).revision, npc)
-    world.claim_npc(OTHER, str(uuid4()), state(game).revision, npc.id)
+    transfer_npc(world, ADMIN, OTHER, npc.id)
     world.import_starting_npc(PLAYER, str(uuid4()), state(game).revision, starting.slot, npc.id)
     target = ActorRef(kind="npc", entity=npc.id)
     shown = casts.view(OTHER, 900)
@@ -84,7 +85,7 @@ def test_real_npc_claim_hands_pending_question_to_current_role_without_rewriting
     original = rules.record(state(game), rules.Question, use.question)
     with pytest.raises(WorkflowError):
         controls.view(ADMIN, original.id)  # Handler privilege does not disclose it.
-    world.claim_npc(ADMIN, str(uuid4()), state(game).revision, npc.id)
+    transfer_npc(world, OTHER, ADMIN, npc.id)
     with pytest.raises(WorkflowError):
         controls.answer(OTHER, str(uuid4()), state(game).revision, original.id, "Old controller")
     with pytest.raises(WorkflowError, match="Join"):

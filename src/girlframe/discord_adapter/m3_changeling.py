@@ -44,9 +44,9 @@ async def open_choice(
                 "facets",
                 "Actual facets you change",
                 options,
-                minimum=detail["minimum"],
+                minimum=0 if copies else detail["minimum"],
                 maximum=detail["maximum"],
-                required=detail["minimum"] > 0,
+                required=not copies and detail["minimum"] > 0,
             )
         )
         if copies:
@@ -94,6 +94,13 @@ async def open_choice(
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str | None:
         chosen = tuple(values.get("facets", ()))
+        if kind in ("changeling_clay_owner", "changeling_clay_handler"):
+            if values.get("copy") and chosen:
+                raise WorkflowError("Choose either your physical facets or an appearance copy.")
+            if not values.get("copy") and not detail["minimum"] <= len(chosen) <= detail["maximum"]:
+                raise WorkflowError(
+                    f"Choose {detail['minimum']} actual facets or an available appearance copy."
+                )
         if chosen and not values.get("copy"):
 
             async def change(response: discord.Interaction, answers: dict[str, Any]) -> str:

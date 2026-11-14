@@ -91,7 +91,9 @@ def offer(
             state,
             rules.AnimalGift(
                 id=identity,
-                source_kind="learned_am"
+                source_kind="native_am"
+                if isinstance(source, LearnedAMSource) and source.native
+                else "learned_am"
                 if isinstance(source, LearnedAMSource)
                 else "bonded_am"
                 if isinstance(source, BondedAMSource)
@@ -254,7 +256,7 @@ def give(
         gift = prove(game, c, state, identity)
         source = _source(game, c, state, gift)
         animal, target = _gift_people(game, c, state, source, gift)
-        if gift.source_kind == "learned_am":
+        if gift.source_kind in ("learned_am", "native_am"):
             from girlframe.services.m3_am_sex import _access_learned
 
             _access_learned(game, c, viewer)
@@ -318,10 +320,13 @@ def give(
             source_id=source.id,
             gift_id=gift.id,
         )
-        if gift.source_kind == "learned_am":
-            from girlframe.services.m3_am_sex import synchronize_learned
+        if gift.source_kind in ("learned_am", "native_am"):
+            from girlframe.services.m3_am_sex import synchronize_learned, synchronize_native
 
-            synchronize_learned(game, c, changed, source.id, event)
+            complete = (
+                synchronize_native if gift.source_kind == "native_am" else synchronize_learned
+            )
+            complete(game, c, changed, source.id, event)
         elif gift.source_kind == "bonded_am":
             from girlframe.services.m3_bonded_am import synchronize
 
@@ -345,10 +350,17 @@ def give(
 def _source(
     game: "GameService", c: Connection, state: GameState, gift: rules.AnimalGift
 ) -> Source | UnrolledAMSex | BondedAMSource | LearnedAMSource:
+    if gift.source_kind == "native_am":
+        from girlframe.services.m3_am_sex import prove_native
+
+        return prove_native(game, c, state, gift.source)
     if gift.source_kind == "learned_am":
         from girlframe.services.m3_am_sex import prove_learned
 
-        return prove_learned(game, c, state, gift.source)
+        value = prove_learned(game, c, state, gift.source)
+        if value.native:
+            raise WorkflowError("Preserve the actual native Animal gift namespace")
+        return value
     if gift.source_kind == "bonded_am":
         from girlframe.services.m3_bonded_am import prove
 

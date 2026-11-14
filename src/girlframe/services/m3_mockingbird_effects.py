@@ -374,6 +374,13 @@ def source_trigger(
         else None
     )
     caster = ActorRef.model_validate(meta["actor"])
+    from girlframe.services.m3_bonded_mockingbird import prove_native_child
+    from girlframe.services.m3_learned_bonded_delegation import prove_effect_child
+
+    delegated = handler_required and (
+        prove_effect_child(game, c, proof, trigger, action)
+        or prove_native_child(game, c, proof, trigger, action)
+    )
     if (
         original is None
         or actual_cast is not None
@@ -393,6 +400,8 @@ def source_trigger(
                 "account",
                 "learned_source",
                 "learned_sex_source",
+                "bonded_source",
+                "changeling_source",
             )
         )
         or [(x.actor, x.controller) for x in declared.parties]
@@ -403,6 +412,7 @@ def source_trigger(
             owns(original, caster, SEX if handler_required else PERSON)
             or handler_required
             and declared.learned_sex_source is not None
+            or delegated
         )
         or handler_required
         and any(x.decision != "accepted" for x in trigger.parties)
@@ -419,6 +429,10 @@ def source_trigger(
 
         if not handler_required or not prove_learned_sex_trigger(game, c, proof, trigger, action):
             raise WorkflowError("Prove this genuine learned intimacy source and actual receipt")
+        if len(trigger.parties) > 1 and [
+            (x["actor"], x["controller"]) for x in meta["parties"]
+        ] != [(x.actor.model_dump(mode="json"), x.controller) for x in trigger.parties]:
+            raise WorkflowError("Preserve each actual group's original decision controller")
     if trigger.learned_source is not None:
         from girlframe.services.m3_mockingbird_plays import prove_learned_trigger
 

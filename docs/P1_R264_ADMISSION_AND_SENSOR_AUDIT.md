@@ -1,0 +1,9 @@
+# P1 r264 bounded admission and Check Sensors audit
+
+Read-only review against r263 source and authorized printed AM rules pp52–54. Jailbroken local prepared-hardware occupancy and native AM Sex counterpart routing exist; their ordinary tests use synthetic reviewed registry fixtures, not live approval. Arbitrary remote interfaces and actual circuits navigation remain unverified. No printed mismatch was established in this bounded review.
+
+All four native AM rule entries still have subset implementation, inventoried source, null contract and pending independent review. `rules_registry.require_available` blocks them in production. Genuine per-rule contracts, executed evidence and independent approval are needed; campaign release requires a trusted rules-subset approval tied to the final registry digest. Do not weaken guards or treat test fixture approvals as certification. Finish branch coverage and preserve exclusions; final checks follow authorized unpublished checkout reconciliation.
+
+Check Sensors: r263 implements exact printed-text and stable-ID classification with whitespace-only normalization, full Foundation/satellite qualifiers, readable UI, owned legacy-pending correction, and genuine off-list consequence handling. Historical root evidence in prior-r236-evidence/sensor-root-targeted.log: 13 passed in 17.52s. Not rerun here; not published or live Discord verified.
+
+Known unsupported or unfinished: NPC-target Doctor Nanobot outcomes, CONSUME on an actual Clone, transformed/scrapped original Frame Wings return, learned AM Scrutinized/Just Code, and Oldgen NPC Status mechanical resolution. r263 graft-side Wings Void and Clone low erasure/reacquisition have scoped focused tests, not broad certification. Full per-type reconciliation and final candidate regression/privacy/migration/backup-restore remain pending.

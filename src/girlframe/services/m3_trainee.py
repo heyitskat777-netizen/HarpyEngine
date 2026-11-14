@@ -193,6 +193,7 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
                 selection.tag.id if selection.tag else None,
                 _tags(game, c, before, lesson),
                 identity,
+                duplicates=ChoiceEngine(game).duplicate_labels(),
             )
             if (
                 new != expected
@@ -487,6 +488,7 @@ class TraineeService:
                     tag,
                     _tags(self.game, c, state, lesson),
                     identity,
+                    duplicates=ChoiceEngine(self.game).duplicate_labels(),
                 )
                 state.sheets[lesson.learner.entity] = changed
                 if selected_tag is not None:

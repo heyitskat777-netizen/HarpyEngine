@@ -1,0 +1,17 @@
+# Genuine NPC Dose as Malleable birth-time evidence
+
+Printed p36 gives a genuine temporary cocktail source; p37 qualifies Tags actually given while altered and protects an NPC so tagged from deprogramming. This adapter connects the implemented NPC Dose to the existing Malleable birth mechanism, without treating labels, a guessed state or an old unrelated exposure as intoxication.
+
+The finite active-drug helper proves the original canonical NPCDrugTag record, whole real Dose roll/choices/WorldTags and actual original vein-contact source, exact current body and controller, and unexpired actual scene clock. Malleable records its existing `dose` source-kind with this original drug ID only at a new genuine Tag birth. Historical birth proof recomputes qualification in the actual state before the Tag event. Later expiration stops new births but does not erase the original NPC protection; existing whole-person deprogramming protection is unchanged. Temporary drug Tags are still excluded from permanent Malleable births. No automatic NPC Identities, extra drug effects or consent assumptions.
+
+Baseline low-untouchable-integrated-20261111; candidate dose-npc-malleable-20261111. Production scope: services/m3_npc_dose.py and m3_malleable.py only. No central or Frame changes. Existing unsupported operations remain unsupported; no effect port or campaign ruling changed.
+
+Authored minimum: real introduced Foundation-employed NPC, authentic human BodyFact/cast/vein-reach, real native high cocktail, ordinary Tag before/during/after expiry. Only during-dose Tag gains the actual source-bound birth. Two actual recipient scenes expire drugs, then genuine Foundation Off-Duty deprogramming of a later ordinary Tag is blocked by the original protected birth. No synthetic dose or alteration fact. Existing initial Pilot body/resources, explicitly declared initial no-Void Assets before any NPC/Dose gameplay, and scoped world/strain/playbooks approvals are explicitly fixture-only; real-period helper uses its own deterministic Strain dice, not a forged period. New test includes one private contact canary, not general privacy certification.
+
+Scoped Ruff and two-module mypy pass. Root final minimum passed 1 in 5.03s; independent review found no blocker. Low/medium dose variants, body/controller changes and consumed NPC presentation-Tag scenarios are not runtime-covered by this node. No worker pytest/full regression/bot/deploy/merge or Space write.
+
+Initial root run failed at real-period effect selection (1 failed in 4.90s): the imported helper chooses low Void, but the original Dose fixture retained Void Assets and correctly produced high Void. The test now declares its initial no-Void fixture before source gameplay and asserts the saved actual low-Void event. It does not alter Assets after Dose or rewrite a saved Strain result. Final root rerun passed 1 in 5.03s.
+
+Second root run reached the real procedure but failed on an extra non-participant acknowledgement (1 failed in 5.28s). This NPC is controlled by ADMIN (1), so the actual scene participants are ADMIN and PLAYER (1, 2), not OTHER (3). The test now asks only those two actual accounts to attest; production participant enforcement is unchanged. Final root rerun passed 1 in 5.03s.
+
+Frozen after final root pass: no production/test edits, only documentation validation and evidence. Consumed presentation Tags, body/controller changes and low/medium variants remain untested.

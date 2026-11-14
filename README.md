@@ -1,5 +1,11 @@
 # HarpyEngine — GIRL FRAME private Discord pilot
 
+The November14 r285 source integration preserves unpublished post-b265003 work.
+See [integration evidence](reports/R285_INTEGRATION.md), the
+[current milestone plan](docs/R285_MILESTONE_PLAN.md) and
+[all-type coverage](docs/R285_TYPE_COVERAGE.csv). Source integration and focused
+checks do not close ordinary mechanics or independent/campaign/human release gates.
+
 Current authorized target: **P1 playable Discord gameplay for every Girl/Frame**, with durable human-facilitator handling and an honest manual boundary. See [active queue](docs/P1_CURRENT_QUEUE.md) and [work order/type matrix](docs/work_orders/P1_PLAYABLE_RELEASE.md). Bot remains OFF. Most automated testing is deferred to the final P1 candidate; current scoped checks do not establish full rules or human acceptance. Earlier M3 descriptions below are historical scope/evidence.
 
 M0 is accepted. M1 now implements server setup, persistent owner-bound drafts,
@@ -109,7 +115,7 @@ or outside Git. Never delete a populated database to refresh the environment.
 Before upgrading an existing database, make a new private backup, then migrate:
 
 ```bash
-python -m girlframe db backup --dest var/backups/before-0016.db
+python -m girlframe db backup --dest var/backups/before-0020.db
 python -m alembic upgrade head
 python -m alembic check
 ```
@@ -147,8 +153,13 @@ snapshots and acknowledgments for actual diceless sources; it creates no gamepla
 Actions or dice receipts. Both preserve existing campaign rows and refuse to
 silently discard populated histories on downgrade. They are development changes;
 the bot remains OFF and no live migration is authorized by source publication.
-`alembic downgrade base` destroys application tables: use only on
-throwaway test databases. Never downgrade real campaign data to roll back code.
+`0017`–`0018` add external-effect preparation/evidence and resource bindings;
+`0019` adds actor availability; `0020` protects canonical state while availability
+is draining. These migrations do not activate shelving, approve rules or run the
+bot. Current revision `0020` deliberately refuses downgrade so its write barrier
+cannot be silently removed. Rollback requires a verified backup and matching
+code/schema. Legacy downgrades can destroy tables; use them only in disposable
+tests, never as a live rollback procedure.
 
 ## Discord application and startup
 

@@ -279,8 +279,7 @@ def validate_npc_introduction(
         or not npc.alive
         or state.world is None
         or not any(
-            x.kind == "base"
-            and x.allegiance == "foundation"
+            (x.kind == "city" or (x.kind == "base" and x.allegiance == "foundation"))
             and x.condition != "destroyed"
             and x.control_loss is None
             and x.cell == npc.cell == actual.cell
@@ -288,7 +287,7 @@ def validate_npc_introduction(
         )
     ):
         raise WorkflowError(
-            "Introduce at most one ordinary actual civilian at your present permitted base "
+            "Introduce at most one ordinary actual civilian at your present permitted base or city "
             "for this pending original Show Dog choice"
         )
 
@@ -688,13 +687,12 @@ class ShowDogService:
             return data | dict(
                 people=people,
                 npcs=npcs,
-                bases=[
+                locations=[
                     dict(id=x.id, name=x.name, cell=list(x.cell))
                     for x in state.world.locations
-                    if x.kind == "base"
+                    if (x.kind == "city" or (x.kind == "base" and x.allegiance == "foundation"))
                     and x.condition != "destroyed"
                     and x.control_loss is None
-                    and x.allegiance == "foundation"
                     and x.cell == cell
                 ]
                 if state.world

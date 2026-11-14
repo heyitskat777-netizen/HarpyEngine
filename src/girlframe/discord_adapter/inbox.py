@@ -961,6 +961,14 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_malleable import MalleableService
 
             await open_malleable(interaction, MalleableService(self.service.store), item.identity)
+        elif item.task == "m3_native_am":
+            from girlframe.discord_adapter.m3_am_sex import open_native
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_am_sex import SexService as AMSexService
+
+            await open_native(
+                interaction, AMSexService(GameService(self.service.store)), identity=item.identity
+            )
         elif item.task == "m3_learned_am":
             from girlframe.discord_adapter.m3_am_sex import open_am_sex
             from girlframe.services.m2_game import GameService

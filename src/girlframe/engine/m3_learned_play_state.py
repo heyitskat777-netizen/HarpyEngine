@@ -24,7 +24,18 @@ class LearnedPlayUse(Model):
     used_event: str | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
+class LearnedSexParty(Model):
+    actor: ActorRef
+    controller: int
+    consent_event: str | None = None
+    accepted: bool | None = None
+
+
 class LearnedSexLink(Model):
+    parties: tuple[LearnedSexParty, ...] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    used_event: str | None = Field(default=None, exclude_if=lambda value: value is None)
     id: str
     lesson: str
     rule_id: Literal[
@@ -35,6 +46,8 @@ class LearnedSexLink(Model):
         "girl.oldgen.sex-play",
         "girl.newgirl.sex-play",
         "girl.vatgrown.sex-play",
+        "girl.bonded.sex-play",
+        "girl.casualty.sex-play",
     ]
     session: str
     actor: ActorRef
@@ -48,7 +61,21 @@ class LearnedSexLink(Model):
     roll_event: str | None = None
     receipt_sha256: str | None = None
     released_event: str | None = None
-    released_kind: Literal["declined", "owner_cancelled", "withdrawn"] | None = None
+    released_kind: (
+        Literal[
+            "declined",
+            "owner_cancelled",
+            "withdrawn",
+            "delegation_declined",
+            "delegation_withdrawn",
+        ]
+        | None
+    ) = None
+
+
+def sex_party_refs(value: LearnedSexLink) -> tuple[ActorRef, ...]:
+    """Actual saved role scope only; the service proves sources and answers."""
+    return tuple(x.actor for x in value.parties) if value.parties is not None else (value.target,)
 
 
 def learned_sex_links(state: "GameState") -> tuple[LearnedSexLink, ...]:

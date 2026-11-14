@@ -11,11 +11,16 @@ from girlframe.database import tables as t
 from girlframe.engine import m3_easy_target as rules
 from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput, shift_status
 from girlframe.engine.m3_actor_bonds import change, current_ref, depth
-from girlframe.engine.m3_actor_state import ActorRef, Model, SceneCast
+from girlframe.engine.m3_actor_state import ActorRef, ActorView, Model, SceneCast
 from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_girl_runtime_state import has_rule
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_mockingbird import give_tag
+from girlframe.services import m3_easy_target_handler_protection as handler_protection
+from girlframe.services import m3_easy_target_handler_use as handler_use
+from girlframe.services import m3_easy_target_hurt_cohort as hurt_cohort
+from girlframe.services import m3_easy_target_pilot_protection as pilot_protection
+from girlframe.services import m3_easy_target_pilot_use as pilot_use
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
@@ -72,7 +77,23 @@ def prepare(
     action_id: str | None = None,
 ) -> dict[str, Any]:
     _access(game, c, viewer)
-    actor = current_ref(state, viewer.user_id)
+    from girlframe.services.m3_princess_easy_target import controlled
+
+    directed = controlled(
+        game,
+        c,
+        state,
+        viewer,
+        prepared,
+        channel,
+        action=game.action(c, action_id) if action_id else None,
+    )
+    actor = (
+        ActorRef.model_validate(directed["actor"])
+        if directed
+        else current_ref(state, viewer.user_id)
+    )
+    owner = int(directed["actor_controller"]) if directed else viewer.user_id
     actual = _native(game, c, state, actor)
     sheet = state.sheets[actor.entity]
     scene = _cast(game, c, state, channel)
@@ -84,16 +105,21 @@ def prepare(
     from girlframe.services.m3_required_plays import direct_nomination
 
     nominated = direct_nomination(game, c, state, actor, prepared, channel)
+    from girlframe.services.m3_alpha_easy_target import counter as easy_counter
+
+    counter = easy_counter(
+        game, c, state, actor, prepared, channel, game.action(c, action_id) if action_id else None
+    )
     if (
         not (owns or available(game, c, state, actor, rules.RULE, action_id) is not None)
         or not others
         or handler is None
-        or prepared.parent
-        or (prepared.source_work and not nominated)
+        or (prepared.parent and directed is None and counter is None)
+        or (prepared.source_work and not nominated and directed is None)
         or prepared.off_duty_id
         or prepared.target is not None
         or prepared.target_actor is not None
-        or not any(x.actor == actor and x.controller == viewer.user_id for x in scene.roles)
+        or not any(x.actor == actor and x.controller == owner for x in scene.roles)
     ):
         raise WorkflowError(
             "Use the actual native Newgirl's mistake with other actual people in this scene"
@@ -114,9 +140,10 @@ def prepare(
     if scene not in state.scene_casts:
         state.scene_casts.append(scene)
     assert game.store.policy.m3_approval is not None
-    return dict(
+    assert state.handler is not None
+    result = dict(
         actor=actor.model_dump(mode="json"),
-        caster=viewer.user_id,
+        caster=owner,
         handler=handler.model_dump(mode="json"),
         handler_controller=state.handler,
         cast=scene.model_dump(mode="json"),
@@ -125,6 +152,9 @@ def prepare(
         registry=game.store.policy.m3_approval.registry_sha256,
         phase="unrolled",
     )
+    if directed is not None:
+        result["princess_direction"] = directed["direction"]
+    return result
 
 
 def pre_roll(
@@ -386,8 +416,10 @@ def _consequence(
             state, value.model_copy(update=dict(completed_event=event, consequence="cohort-exempt"))
         )
     elif value.urge == "hurt":
+        from girlframe.services.m3_princess_easy_target import controlled_source
         from girlframe.services.m3_role_punishments import open_case
 
+        direction = controlled_source(game, c, state, action)
         identity = "easy-target-punishment:" + value.id
         changed, _ = open_case(
             state,
@@ -400,6 +432,7 @@ def _consequence(
             source_event=event,
             identity=identity,
             source_work=value.id,
+            chooser_controller=direction.author_controller if direction else None,
         )
         _copy(state, changed)
         rules.put(state, value.model_copy(update=dict(consequence=identity)))
@@ -500,13 +533,33 @@ def apply(
             )
             if performer is None:
                 raise WorkflowError("Use the actual reactor or Newgirl as the owned performer")
-        primary = answer.fields.get("primary")
-        if urge == "cohort" and (not primary or primary == rules.identity(source.id, actor)):
+        # An explicit Play keeps its own source route. The finite ordinary-role
+        # no-Play branches retain their actual separate source and body proof.
+        if (
+            urge == "use"
+            and actor.kind in ("npc", "handler", "pilot")
+            and not answer.fields.get("play")
+        ):
+            if answer.fields.get("performer") not in (None, actor.token):
+                raise WorkflowError("Unrolled use must be performed by its actual original person")
+            performer = actor
+        primary_id = answer.fields.get("primary")
+        if urge == "cohort" and (not primary_id or primary_id == rules.identity(source.id, actor)):
             raise WorkflowError("Choose the actual other person's primary reaction")
         if urge not in ("pass", "contempt", "cohort") and (
             (
                 not answer.fields.get("play")
-                and not (urge in ("hurt", "protect") and actor.kind == "npc" and performer == actor)
+                and not (
+                    urge in ("hurt", "protect", "use")
+                    and (
+                        actor.kind == "npc"
+                        or urge in ("use", "protect")
+                        and actor.kind == "handler"
+                        or urge in ("protect", "use")
+                        and actor.kind == "pilot"
+                    )
+                    and performer == actor
+                )
             )
             or not answer.fields.get("context", "").strip()
         ):
@@ -520,7 +573,7 @@ def apply(
             event=event,
             urge=urge,
             account=answer.text.strip(),
-            primary=primary,
+            primary=primary_id,
             performer=performer,
             play=answer.fields.get("play"),
             context=answer.fields.get("context", ""),
@@ -549,17 +602,316 @@ def apply(
             ).controller
             _request(game, c, action, owner, "easy_target_child", value)
         elif kind == "easy_target_child":
-            if _npc_protect_reaction(value):
+            if hurt_cohort.matches(state, value):
+                hurt_cohort.apply(game, c, state, value, row, answer, event)
+            elif _use_cohort(state, value):
+                if (
+                    answer.options not in ((), ("participate",), ("decline",), ("missed",))
+                    or answer.fields
+                    or answer.flag is not None
+                ):
+                    raise WorkflowError(
+                        "Choose your own actual participation, decline or missed opportunity"
+                    )
+                primary = _get(state, rules.Reaction, value.primary or "")
+                if value.performance_event or value.completed_event:
+                    raise WorkflowError("This original cohort already answered")
+                if answer.options in (("decline",), ("missed",)):
+                    missed = bool(primary.performance_event)
+                    if answer.options != (("missed",) if missed else ("decline",)):
+                        raise WorkflowError("Reopen your control for the current use outcome")
+                    prove(game, c, state, value.id)
+                    use = None
+                    if missed:
+                        use = next(
+                            (
+                                x
+                                for x in (
+                                    rules.records(state, rules.HandlerUse)
+                                    if handler_use.matches(primary)
+                                    else rules.records(state, rules.NpcUse)
+                                )
+                                if x.reaction == primary.id
+                            ),
+                            None,
+                        )
+                        if use is None:
+                            raise WorkflowError("Recover the actual completed original use")
+                        _prove_use(game, c, state, primary, use.id)
+                    else:
+                        if not rules.settled(state, source) or not primary.validation_event:
+                            raise WorkflowError(
+                                "Wait for original reactions and Handler validation"
+                            )
+                        prove(game, c, state, primary.id)
+                    rules.put(
+                        state,
+                        rules.UseCohort(
+                            id=str(uuid4()),
+                            reaction=value.id,
+                            primary=primary.id,
+                            outcome="missed" if missed else "declined",
+                            use=use.id if use else None,
+                            actor=value.actor,
+                            controller=value.controller,
+                            choice=row["id"],
+                            account=answer.text.strip(),
+                            event=event,
+                            cast=source.cast,
+                            position=None,
+                            vessel=None,
+                        ),
+                    )
+                    rules.put(
+                        state,
+                        value.model_copy(
+                            update=dict(
+                                consequence="use-cohort-missed"
+                                if missed
+                                else "use-cohort-declined",
+                                completed_event=event,
+                            )
+                        ),
+                    )
+                    _finish(game, c, state, action)
+                    return
+                _use_context(game, c, state, primary)
+                prove(game, c, state, value.id)
+                scene = _cast(game, c, state, source.cast.channel)
+                participant = _use_cohort_actor(game, c, state, value, source, scene)
+                rules.put(
+                    state,
+                    rules.UseCohort(
+                        id=str(uuid4()),
+                        reaction=value.id,
+                        primary=primary.id,
+                        actor=value.actor,
+                        controller=value.controller,
+                        choice=row["id"],
+                        account=answer.text.strip(),
+                        event=event,
+                        cast=scene,
+                        position=participant.position_sha256,
+                        vessel=participant.vessel_id,
+                    ),
+                )
+                rules.put(
+                    state,
+                    value.model_copy(
+                        update=dict(
+                            performance_event=event,
+                            exemption=primary.id,
+                            consequence="cohort-exempt",
+                        )
+                    ),
+                )
+                # Completion still belongs to the actual original NPC or Handler performer.
+                rules.put(state, primary.model_copy(update=dict(exemption=value.id)))
+            elif _protection_cohort(state, value):
+                if (
+                    answer.options not in ((), ("participate",), ("decline",), ("missed",))
+                    or answer.fields
+                    or answer.flag is not None
+                ):
+                    raise WorkflowError("Choose your own protection participation outcome")
+                primary = _get(state, rules.Reaction, value.primary or "")
+                if value.performance_event or value.completed_event:
+                    raise WorkflowError("This original cohort already answered")
+                if answer.options == ("decline",):
+                    prove(game, c, state, value.id)
+                    prove(game, c, state, primary.id)
+                    if not rules.settled(state, source) or not primary.validation_event:
+                        raise WorkflowError("Wait for the original Handler's protection validation")
+                    if primary.failure:
+                        raise WorkflowError(
+                            "Protection already failed; acknowledge missed participation"
+                        )
+                    prior_protection = next(
+                        (
+                            x
+                            for x in rules.records(state, rules.NpcProtection)
+                            if x.reaction == primary.id
+                        ),
+                        None,
+                    )
+                    if prior_protection:
+                        prove_npc_protection(game, c, state, prior_protection.id)
+                    rules.put(
+                        state,
+                        rules.ProtectionCohort(
+                            id=str(uuid4()),
+                            reaction=value.id,
+                            primary=primary.id,
+                            protection=prior_protection.id if prior_protection else None,
+                            outcome="declined",
+                            actor=value.actor,
+                            controller=value.controller,
+                            choice=row["id"],
+                            account=answer.text.strip(),
+                            event=event,
+                            cast=source.cast,
+                            position=None,
+                            vessel=None,
+                        ),
+                    )
+                    rules.put(
+                        state,
+                        value.model_copy(
+                            update=dict(
+                                consequence="protection-cohort-declined", completed_event=event
+                            )
+                        ),
+                    )
+                    _finish(game, c, state, action)
+                    return
+                if primary.failure:
+                    if answer.options not in ((), ("missed",)):
+                        raise WorkflowError(
+                            "Protection already failed; acknowledge missed participation"
+                        )
+                    prove(game, c, state, value.id)
+                    _prove_protection_failure(game, c, state, primary, source)
+                    protection = next(
+                        x
+                        for x in rules.records(state, rules.NpcProtection)
+                        if x.reaction == primary.id
+                    )
+                    prove_npc_protection(game, c, state, protection.id)
+                    rules.put(
+                        state,
+                        rules.ProtectionCohort(
+                            id=str(uuid4()),
+                            reaction=value.id,
+                            primary=primary.id,
+                            protection=protection.id,
+                            outcome="missed",
+                            failure=primary.failure,
+                            actor=value.actor,
+                            controller=value.controller,
+                            choice=row["id"],
+                            account=answer.text.strip(),
+                            event=event,
+                            cast=protection.cast,
+                            position=None,
+                            vessel=None,
+                        ),
+                    )
+                    rules.put(
+                        state,
+                        value.model_copy(
+                            update=dict(
+                                consequence="protection-already-failed",
+                                completed_event=event,
+                            )
+                        ),
+                    )
+                    _finish(game, c, state, action)
+                    return
+                if answer.options == ("missed",):
+                    raise WorkflowError(
+                        "Protection has not failed; participate or explicitly decline"
+                    )
+                protection = _active_npc_protection(game, c, state, primary, allow_exempt=True)
+                prove(game, c, state, value.id)
+                scene = _cast(game, c, state, source.cast.channel)
+                participant = _protection_cohort_actor(game, c, state, value, protection, scene)
+                participation = rules.ProtectionCohort(
+                    id=str(uuid4()),
+                    reaction=value.id,
+                    primary=primary.id,
+                    protection=protection.id,
+                    actor=value.actor,
+                    controller=value.controller,
+                    choice=row["id"],
+                    account=answer.text.strip(),
+                    event=event,
+                    cast=scene,
+                    position=participant.position_sha256,
+                    vessel=participant.vessel_id,
+                )
+                rules.put(state, participation)
+                rules.put(
+                    state,
+                    value.model_copy(
+                        update=dict(
+                            performance_event=event,
+                            exemption=primary.id,
+                            consequence="cohort-exempt",
+                            completed_event=event,
+                        )
+                    ),
+                )
+                rules.put(
+                    state,
+                    primary.model_copy(
+                        update=dict(
+                            exemption=value.id,
+                            consequence="cohort-exempt",
+                        )
+                    ),
+                )
+            elif handler_use.matches(value):
+                handler_use.perform(game, c, state, action, row, value, answer)
+            elif _unrolled_use_reaction(value):
+                if answer.options or answer.fields or answer.flag is not None:
+                    raise WorkflowError("Record only the actual person's completed non-Play use")
+                _npc_use_context(game, c, state, value)
+                cohorts = [
+                    x
+                    for x in rules.records(state, rules.Reaction)
+                    if x.session == source.id and x.urge == "cohort" and x.primary == value.id
+                ]
+                for cohort in cohorts:
+                    use_participation = next(
+                        (
+                            x
+                            for x in rules.records(state, rules.UseCohort)
+                            if x.reaction == cohort.id
+                        ),
+                        None,
+                    )
+                    if use_participation is not None:
+                        prove_use_cohort(game, c, state, use_participation.id)
+                if value.performance_event or value.completed_event:
+                    raise WorkflowError("This original non-Play use was already performed")
+                bound = profiles(c, game.store.campaign_id)
+                npc = resolve(state, value.actor, bound)
+                target = _native(game, c, state, source.actor)
+                use = rules.NpcUse(
+                    id=str(uuid4()),
+                    reaction=value.id,
+                    session=source.id,
+                    actor=value.actor,
+                    controller=value.controller,
+                    target=source.actor,
+                    handler=source.handler,
+                    cast=_cast(game, c, state, source.cast.channel),
+                    choice=row["id"],
+                    account=answer.text.strip(),
+                    event=event,
+                    actor_position=npc.position_sha256,
+                    target_position=target.position_sha256,
+                    actor_vessel=npc.vessel_id,
+                    target_vessel=target.vessel_id,
+                )
+                rules.put(state, use)
+                for cohort in cohorts:
+                    if cohort.performance_event and not cohort.completed_event:
+                        rules.put(state, cohort.model_copy(update=dict(completed_event=event)))
+                value = value.model_copy(update=dict(performance_event=event))
+                rules.put(state, value)
+                _consequence(game, c, state, action, value, event)
+            elif _protect_reaction(value):
                 if (
                     answer.options
                     or answer.fields
                     or answer.flag is not None
                     or not answer.text.strip()
                 ):
-                    raise WorkflowError("Record only this actual NPC's performed protection")
+                    raise WorkflowError("Record only this actual person's performed protection")
                 _npc_protect_context(game, c, state, value)
                 if value.performance_event or value.child:
-                    raise WorkflowError("The original NPC protection was already performed")
+                    raise WorkflowError("The original protection was already performed")
                 bound = profiles(c, game.store.campaign_id)
                 npc = resolve(state, value.actor, bound)
                 ward = _native(game, c, state, source.actor)
@@ -588,6 +940,7 @@ def apply(
                 if answer.options or answer.fields or answer.flag is not None:
                     raise WorkflowError("Record only this actual NPC's performed bodily action")
                 _npc_hurt_context(game, c, state, value)
+                hurt_cohort.verify_participants(game, c, state, value)
                 if any(
                     x.reaction == value.id and not x.completed_event
                     for x in rules.records(state, rules.NpcHurt)
@@ -629,6 +982,27 @@ def apply(
                 raise WorkflowError(
                     "The original Newgirl chooses whether to deepen their actual Bond after use"
                 )
+            if handler_use.matches(value):
+                performed = next(
+                    (x for x in rules.records(state, rules.HandlerUse) if x.reaction == value.id),
+                    None,
+                )
+                if (
+                    performed is None
+                    or handler_use.prove(game, c, state, performed.id).event
+                    != value.performance_event
+                ):
+                    raise WorkflowError("Recover the original Handler's actual completed use")
+            if _unrolled_use_reaction(value):
+                use = next(
+                    (x for x in rules.records(state, rules.NpcUse) if x.reaction == value.id),
+                    None,
+                )
+                if (
+                    use is None
+                    or prove_npc_use(game, c, state, use.id).event != value.performance_event
+                ):
+                    raise WorkflowError("Recover the original actual completed non-Play use")
             if answer.flag:
                 _copy(state, change(state, source.actor, value.actor, 1, event))
             rules.put(
@@ -723,6 +1097,519 @@ def apply(
 apply_choice = apply
 
 
+def _protection_cohort(state: GameState, value: rules.Reaction) -> bool:
+    primary = next((x for x in rules.records(state, rules.Reaction) if x.id == value.primary), None)
+    return bool(value.urge == "cohort" and primary and _protect_reaction(primary))
+
+
+def _protection_cohort_actor(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    value: rules.Reaction,
+    protection: rules.NpcProtection,
+    scene: SceneCast,
+) -> ActorView:
+    """Require the real original person, body, controller and same live scene."""
+    from girlframe.services.m3_actor_history import snapshot_profiles
+
+    bound = snapshot_profiles(c, game.store.campaign_id, state)
+    actor = resolve(state, value.actor, bound, require_current_profile=False)
+    ward = resolve(state, protection.target, bound, require_current_profile=False)
+    original_handler = value.actor.kind == "handler"
+    if original_handler:
+        source = _session(game, c, state, game.action(c, value.session))
+        handler_protection.participant(state, value, protection, source, scene, actor)
+    if (
+        value.session != protection.session
+        or value.primary != protection.reaction
+        or value.actor in (protection.actor, protection.target)
+        or value.performance_event
+        or value.completed_event
+        or (not original_handler and actor.rules not in ("npc", "girl_frame"))
+        or not actor.alive
+        or actor.controller != value.controller
+        or actor.offstage_source
+        or actor.custody not in (None, "free")
+        or (actor.rules == "girl_frame" and actor.inside_frame is not False)
+        or actor.cell is None
+        or actor.cell != ward.cell
+        or scene.id != protection.cast.id
+        or not scene.open
+        or not any(r.actor == value.actor and r.controller == value.controller for r in scene.roles)
+    ):
+        raise WorkflowError(
+            "Go along as your actual available body in the original protection scene"
+        )
+    return actor
+
+
+def prove_protection_cohort(
+    game: GameService, c: Connection, state: GameState, identity: str
+) -> rules.ProtectionCohort:
+    value = _get(state, rules.ProtectionCohort, identity)
+    born = _history(c, game, value.event)
+    reaction = prove(game, c, born, value.reaction)
+    primary = prove(game, c, born, value.primary)
+    response = _response(
+        game,
+        c,
+        reaction.session,
+        value.choice,
+        value.event,
+        value.controller,
+        "easy_target_child:" + value.actor.token,
+    )
+    if (
+        value != _get(born, rules.ProtectionCohort, identity)
+        or not _protection_cohort(born, reaction)
+        or reaction.primary != value.primary
+        or (value.actor, value.controller) != (reaction.actor, reaction.controller)
+        or reaction.completed_event != value.event
+        or response.text.strip() != value.account
+        or response.options
+        not in (
+            (("decline",),)
+            if value.outcome == "declined"
+            else ((), ("missed",))
+            if value.outcome == "missed"
+            else ((), ("participate",))
+        )
+        or response.fields
+        or response.flag is not None
+    ):
+        raise WorkflowError("Recover the actual owned protection participation and exemptions")
+    if value.outcome == "declined":
+        source = _session(game, c, born, game.action(c, reaction.session))
+        prior = next(
+            (x for x in rules.records(born, rules.NpcProtection) if x.reaction == primary.id),
+            None,
+        )
+        if (
+            not rules.settled(born, source)
+            or not primary.validation_event
+            or primary.failure
+            or value.failure
+            or value.protection != (prior.id if prior else None)
+            or reaction.performance_event
+            or reaction.exemption
+            or reaction.consequence != "protection-cohort-declined"
+            or value.cast != source.cast
+            or value.position is not None
+            or value.vessel is not None
+        ):
+            raise WorkflowError("Preserve the original owned decline without an invented exemption")
+        if prior:
+            prove_npc_protection(game, c, born, prior.id)
+        return value
+    if not value.protection:
+        raise WorkflowError("Recover the actual original NPC protection")
+    protection = prove_npc_protection(game, c, born, value.protection)
+    if value.primary != protection.reaction:
+        raise WorkflowError("Preserve the actual original NPC protective source")
+    if value.outcome == "missed":
+        source = _session(game, c, born, game.action(c, reaction.session))
+        _prove_protection_failure(game, c, born, primary, source)
+        if (
+            value.failure != primary.failure
+            or not value.failure
+            or reaction.performance_event
+            or reaction.exemption
+            or reaction.consequence != "protection-already-failed"
+            or value.position is not None
+            or value.vessel is not None
+        ):
+            raise WorkflowError(
+                "Preserve the actual failed opportunity without retroactive immunity"
+            )
+        return value
+    if (
+        value.failure
+        or reaction.performance_event != value.event
+        or reaction.exemption != primary.id
+        or primary.exemption != reaction.id
+    ):
+        raise WorkflowError("Recover the actual performed participation and both exemptions")
+    actor = _protection_cohort_actor(
+        game,
+        c,
+        born,
+        reaction.model_copy(update=dict(performance_event=None, completed_event=None)),
+        protection,
+        value.cast,
+    )
+    if actor.position_sha256 != value.position or actor.vessel_id != value.vessel:
+        raise WorkflowError("Preserve the original participating body")
+    return value
+
+
+def _use_cohort(state: GameState, value: rules.Reaction) -> bool:
+    primary = next((x for x in rules.records(state, rules.Reaction) if x.id == value.primary), None)
+    return bool(
+        value.urge == "cohort"
+        and primary
+        and (_unrolled_use_reaction(primary) or handler_use.matches(primary))
+    )
+
+
+def _use_cohort_actor(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    value: rules.Reaction,
+    source: rules.Session,
+    scene: SceneCast,
+) -> ActorView:
+    from girlframe.services.m3_actor_history import snapshot_profiles
+
+    bound = snapshot_profiles(c, game.store.campaign_id, state)
+    actor = resolve(state, value.actor, bound, require_current_profile=False)
+    target = resolve(state, source.actor, bound, require_current_profile=False)
+    primary = _get(state, rules.Reaction, value.primary or "")
+    original_handler = value.actor.kind == "handler"
+    if original_handler:
+        handler_use.participant(state, value, primary, source, scene, actor)
+    if (
+        value.session != source.id
+        or not _use_cohort(state, value)
+        or value.actor in (source.actor, primary.actor)
+        or value.performance_event
+        or value.completed_event
+        or (not original_handler and actor.rules not in ("npc", "girl_frame"))
+        or not actor.alive
+        or actor.controller != value.controller
+        or actor.offstage_source
+        or actor.custody not in (None, "free")
+        or (actor.rules == "girl_frame" and actor.inside_frame is not False)
+        or actor.cell is None
+        or actor.cell != target.cell
+        or scene.id != source.cast.id
+        or not scene.open
+        or not any(r.actor == value.actor and r.controller == value.controller for r in scene.roles)
+    ):
+        raise WorkflowError("Participate as your actual available body in the original use scene")
+    return actor
+
+
+def prove_use_cohort(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    identity: str,
+) -> rules.UseCohort:
+    value = _get(state, rules.UseCohort, identity)
+    born = _history(c, game, value.event)
+    reaction = prove(game, c, born, value.reaction)
+    primary = prove(game, c, born, value.primary)
+    source = _session(game, c, born, game.action(c, reaction.session))
+    response = _response(
+        game,
+        c,
+        source.id,
+        value.choice,
+        value.event,
+        value.controller,
+        "easy_target_child:" + value.actor.token,
+    )
+    if value.outcome != "participated":
+        if (
+            value != _get(born, rules.UseCohort, identity)
+            or not _use_cohort(born, reaction)
+            or reaction.primary != primary.id
+            or (value.actor, value.controller) != (reaction.actor, reaction.controller)
+            or reaction.performance_event
+            or reaction.exemption
+            or reaction.completed_event != value.event
+            or reaction.consequence != "use-cohort-" + value.outcome
+            or value.position is not None
+            or value.vessel is not None
+            or value.cast != source.cast
+            or response.text.strip() != value.account
+            or response.options != (("decline",) if value.outcome == "declined" else ("missed",))
+            or response.fields
+            or response.flag is not None
+            or not rules.settled(born, source)
+            or not primary.validation_event
+        ):
+            raise WorkflowError("Recover the actual owned nonparticipation acknowledgment")
+        if value.outcome == "missed":
+            use = _prove_use(game, c, born, primary, value.use or "")
+            if use.reaction != primary.id or primary.performance_event != use.event:
+                raise WorkflowError("Preserve the actual use completed before this acknowledgment")
+        elif value.use is not None or primary.performance_event or primary.completed_event:
+            raise WorkflowError("Preserve the actual decline before use completed")
+        return value
+    source = _use_context(game, c, born, primary, historical=True)
+    if (
+        value != _get(born, rules.UseCohort, identity)
+        or not _use_cohort(born, reaction)
+        or reaction.primary != value.primary
+        or (value.actor, value.controller) != (reaction.actor, reaction.controller)
+        or reaction.performance_event != value.event
+        or reaction.exemption != primary.id
+        or primary.exemption != reaction.id
+        or reaction.completed_event
+        or reaction.consequence != "cohort-exempt"
+        or response.text.strip() != value.account
+        or value.use is not None
+        or response.options not in ((), ("participate",))
+        or response.fields
+        or response.flag is not None
+    ):
+        raise WorkflowError(
+            "Recover the actual owned participation before the original use finished"
+        )
+    actor = _use_cohort_actor(
+        game, c, born, reaction.model_copy(update=dict(performance_event=None)), source, value.cast
+    )
+    if actor.position_sha256 != value.position or actor.vessel_id != value.vessel:
+        raise WorkflowError("Preserve the original use participant's actual body")
+    return value
+
+
+def _use_context(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    value: rules.Reaction,
+    *,
+    historical: bool = False,
+) -> rules.Session:
+    if handler_use.matches(value):
+        return handler_use.context(game, c, state, value, historical=historical)
+    return _npc_use_context(game, c, state, value, historical=historical)
+
+
+def _prove_use(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    primary: rules.Reaction,
+    identity: str,
+) -> rules.NpcUse | rules.HandlerUse:
+    if handler_use.matches(primary):
+        return handler_use.prove(game, c, state, identity)
+    return prove_npc_use(game, c, state, identity)
+
+
+def _npc_use_reaction(value: rules.Reaction) -> bool:
+    return (
+        value.urge == "use"
+        and value.actor.kind == "npc"
+        and value.performer == value.actor
+        and value.play is None
+    )
+
+
+def _unrolled_use_reaction(value: rules.Reaction) -> bool:
+    return _npc_use_reaction(value) or pilot_use.matches(value)
+
+
+def _npc_use_context(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    value: rules.Reaction,
+    *,
+    historical: bool = False,
+) -> rules.Session:
+    """A genuine free present World NPC, not a proxy or substitute for a triggered Play."""
+    prove(game, c, state, value.id)
+    source = _session(game, c, state, game.action(c, value.session))
+    if (
+        not _unrolled_use_reaction(value)
+        or not rules.settled(state, source)
+        or not value.validation_event
+        or value.child
+        or value.performance_event
+        or value.completed_event
+        or (not historical and game.action(c, value.session)["state"] in ("complete", "aborted"))
+        or current_ref(state, source.caster) != source.actor
+        or active_handler(state) != source.handler
+        or state.handler != source.handler_controller
+    ):
+        raise WorkflowError("Use the actual validated original non-Play use source")
+    choices = t.m2["m2_choices"]
+    validation_row = next(
+        (
+            x
+            for x in c.execute(
+                sa.select(choices).where(
+                    choices.c.campaign_id == game.store.campaign_id,
+                    choices.c.action_id == source.id,
+                    choices.c.kind == "easy_target_validate:" + value.actor.token,
+                )
+            ).mappings()
+            if json.loads(x["body_json"]).get("work") == value.id
+        ),
+        None,
+    )
+    if validation_row is None:
+        raise WorkflowError("Recover the original Handler's factual non-Play use validation")
+    validation = _response(
+        game,
+        c,
+        source.id,
+        validation_row["id"],
+        value.validation_event,
+        source.handler_controller,
+        "easy_target_validate:" + value.actor.token,
+    )
+    if validation.flag is not True or not validation.text.strip():
+        raise WorkflowError("Preserve actual completed non-Play use and its validated source")
+    if historical:
+        from girlframe.services.m3_actor_history import snapshot_profiles
+
+        bound = snapshot_profiles(c, game.store.campaign_id, state)
+        ward = resolve(state, source.actor, bound, require_current_profile=False)
+        scene = next((x for x in state.scene_casts if x.id == source.cast.id), None)
+        if (
+            source.actor.kind != "pilot"
+            or ward.rules != "girl_frame"
+            or ward.offstage_source is not None
+            or state.sheets[source.actor.entity].medical_state != "fit"
+            or scene is None
+            or scene.adjudicator is not None
+            or scene.facilitator != state.handler
+        ):
+            raise WorkflowError("Recover the original use body's and scene's canonical snapshot")
+    else:
+        bound = profiles(c, game.store.campaign_id)
+        ward = _native(game, c, state, source.actor)
+        scene = _cast(game, c, state, source.cast.channel)
+    actor = resolve(state, value.actor, bound, require_current_profile=False)
+    npc = (
+        next((x for x in state.world.npcs if x.id == value.actor.entity), None)
+        if state.world
+        else None
+    )
+    original_pilot = pilot_use.matches(value)
+    if original_pilot:
+        pilot_use.primary(state, value, source, scene, actor)
+    if (
+        (
+            not original_pilot
+            and (npc is None or npc.source_kind == "wyvern_wraith" or actor.rules != "npc")
+        )
+        or not actor.alive
+        or actor.controller != value.controller
+        or actor.offstage_source
+        or actor.custody not in (None, "free")
+        or ward.inside_frame is not False
+        or ward.custody not in (None, "free")
+        or actor.cell is None
+        or actor.cell != ward.cell
+        or scene.id != source.cast.id
+        or not scene.open
+        or not all(
+            any(r.actor == ref and r.controller == owner for r in scene.roles)
+            for ref, owner in ((source.actor, source.caster), (value.actor, value.controller))
+        )
+    ):
+        raise WorkflowError("Use actual available original bodies in their live non-Play use scene")
+    return source
+
+
+def prove_npc_use(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    identity: str,
+) -> rules.NpcUse:
+    value = _get(state, rules.NpcUse, identity)
+    born = _history(c, game, value.event)
+    reaction = prove(game, c, born, value.reaction)
+    source = _session(game, c, born, game.action(c, value.session))
+    original = _get(born, rules.NpcUse, identity)
+    if (
+        original != value
+        or not _unrolled_use_reaction(reaction)
+        or (value.actor, value.controller, value.target, value.handler)
+        != (reaction.actor, reaction.controller, source.actor, source.handler)
+        or reaction.performance_event != value.event
+    ):
+        raise WorkflowError("Recover the canonical original non-Play use performance")
+    choices = t.m2["m2_choices"]
+    validation_row = next(
+        (
+            x
+            for x in c.execute(
+                sa.select(choices).where(
+                    choices.c.campaign_id == game.store.campaign_id,
+                    choices.c.action_id == source.id,
+                    choices.c.kind == "easy_target_validate:" + value.actor.token,
+                )
+            ).mappings()
+            if json.loads(x["body_json"]).get("work") == reaction.id
+        ),
+        None,
+    )
+    if validation_row is None or reaction.validation_event is None:
+        raise WorkflowError("Recover the original Handler's non-Play use validation")
+    validation = _response(
+        game,
+        c,
+        source.id,
+        validation_row["id"],
+        reaction.validation_event,
+        source.handler_controller,
+        "easy_target_validate:" + value.actor.token,
+    )
+    if validation.flag is not True or not validation.text.strip():
+        raise WorkflowError("Preserve the original Handler's actual non-Play use validation")
+    answer = _response(
+        game,
+        c,
+        value.session,
+        value.choice,
+        value.event,
+        value.controller,
+        "easy_target_child:" + value.actor.token,
+    )
+    if (
+        answer.text.strip() != value.account
+        or answer.options
+        or answer.fields
+        or answer.flag is not None
+    ):
+        raise WorkflowError(
+            "Only the actual original controller authors this performed non-Play use"
+        )
+    from girlframe.services.m3_actor_history import snapshot_profiles
+
+    bound = snapshot_profiles(c, game.store.campaign_id, born)
+    actor, ward = (
+        resolve(born, ref, bound, require_current_profile=False)
+        for ref in (value.actor, value.target)
+    )
+    original_pilot = pilot_use.matches(reaction)
+    if original_pilot:
+        pilot_use.primary(born, reaction, source, value.cast, actor)
+    if (
+        (not original_pilot and actor.rules != "npc")
+        or not actor.alive
+        or actor.controller != value.controller
+        or actor.offstage_source
+        or actor.custody not in (None, "free")
+        or ward.inside_frame is not False
+        or ward.custody not in (None, "free")
+        or actor.cell is None
+        or actor.cell != ward.cell
+        or actor.position_sha256 != value.actor_position
+        or ward.position_sha256 != value.target_position
+        or actor.vessel_id != value.actor_vessel
+        or ward.vessel_id != value.target_vessel
+        or value.cast.id != source.cast.id
+        or not value.cast.open
+        or not all(
+            any(r.actor == ref and r.controller == owner for r in value.cast.roles)
+            for ref, owner in ((source.actor, source.caster), (value.actor, value.controller))
+        )
+    ):
+        raise WorkflowError("Preserve actual original non-Play use bodies and scene, never a proxy")
+    return value
+
+
 def _npc_protect_reaction(value: rules.Reaction) -> bool:
     return (
         value.urge == "protect"
@@ -732,17 +1619,27 @@ def _npc_protect_reaction(value: rules.Reaction) -> bool:
     )
 
 
+def _protect_reaction(value: rules.Reaction) -> bool:
+    return (
+        _npc_protect_reaction(value)
+        or handler_protection.matches(value)
+        or pilot_protection.matches(value)
+    )
+
+
 def _npc_protect_context(
     game: GameService,
     c: Connection,
     state: GameState,
     value: rules.Reaction,
+    *,
+    historical: bool = False,
 ) -> rules.Session:
-    """A genuine free present World NPC, not an account's Pilot or a free Engage grant."""
+    """Actual source-owned ordinary protection; never a free Engage grant."""
     prove(game, c, state, value.id)
     source = _session(game, c, state, game.action(c, value.session))
     if (
-        not _npc_protect_reaction(value)
+        not _protect_reaction(value)
         or not rules.settled(state, source)
         or not value.validation_event
         or value.child
@@ -750,7 +1647,7 @@ def _npc_protect_context(
         or active_handler(state) != source.handler
         or state.handler != source.handler_controller
     ):
-        raise WorkflowError("Use the actual validated original NPC protective source")
+        raise WorkflowError("Use the actual validated original protective source")
     choices = t.m2["m2_choices"]
     validation_row = next(
         (
@@ -788,10 +1685,16 @@ def _npc_protect_context(
         else None
     )
     scene = _cast(game, c, state, source.cast.channel)
+    original_handler = handler_protection.matches(value)
+    original_pilot = pilot_protection.matches(value)
+    if original_handler:
+        handler_protection.primary(state, value, source, scene, actor)
+    elif original_pilot:
+        pilot_protection.primary(state, value, source, scene, actor)
+    ordinary_npc = not (original_handler or original_pilot)
     if (
-        npc is None
-        or npc.source_kind == "wyvern_wraith"
-        or actor.rules != "npc"
+        (ordinary_npc and (npc is None or npc.source_kind == "wyvern_wraith"))
+        or (ordinary_npc and actor.rules != "npc")
         or not actor.alive
         or actor.controller != value.controller
         or actor.offstage_source
@@ -808,11 +1711,6 @@ def _npc_protect_context(
         )
     ):
         raise WorkflowError("Use actual available original bodies in their live protection scene")
-    if any(
-        x.session == source.id and x.urge == "cohort" and x.primary == value.id
-        for x in rules.records(state, rules.Reaction)
-    ):
-        raise WorkflowError("REQUIRED_NPC_PROTECTION_COHORT_ADAPTER: no fictitious assistance roll")
     return source
 
 
@@ -829,13 +1727,13 @@ def prove_npc_protection(
     original = _get(born, rules.NpcProtection, identity)
     if (
         original != value
-        or not _npc_protect_reaction(reaction)
+        or not _protect_reaction(reaction)
         or (value.actor, value.controller, value.target, value.handler)
         != (reaction.actor, reaction.controller, source.actor, source.handler)
         or reaction.protection_event != value.event
         or reaction.performance_event != value.event
     ):
-        raise WorkflowError("Recover the canonical original NPC protective performance")
+        raise WorkflowError("Recover the canonical original protective performance")
     answer = _response(
         game,
         c,
@@ -851,7 +1749,9 @@ def prove_npc_protection(
         or answer.fields
         or answer.flag is not None
     ):
-        raise WorkflowError("Only the actual NPC controller authors this performed protection")
+        raise WorkflowError(
+            "Only the actual protector controller authors this performed protection"
+        )
     from girlframe.services.m3_actor_history import snapshot_profiles
 
     bound = snapshot_profiles(c, game.store.campaign_id, born)
@@ -859,9 +1759,24 @@ def prove_npc_protection(
         resolve(born, ref, bound, require_current_profile=False)
         for ref in (value.actor, value.target)
     )
+    original_handler = handler_protection.matches(reaction)
+    original_pilot = pilot_protection.matches(reaction)
+    if original_handler:
+        handler_protection.primary(born, reaction, source, value.cast, actor)
+    elif original_pilot:
+        pilot_protection.primary(born, reaction, source, value.cast, actor)
     if (
-        actor.rules != "npc"
+        (not (original_handler or original_pilot) and actor.rules != "npc")
         or not actor.alive
+        or (
+            (original_handler or original_pilot)
+            and (
+                not ward.alive
+                or ward.offstage_source
+                or ward.inside_frame is not False
+                or ward.custody not in (None, "free")
+            )
+        )
         or actor.controller != value.controller
         or actor.cell is None
         or actor.cell != ward.cell
@@ -885,10 +1800,12 @@ def _active_npc_protection(
     c: Connection,
     state: GameState,
     value: rules.Reaction,
+    *,
+    allow_exempt: bool = False,
 ) -> rules.NpcProtection:
     source = _npc_protect_context(game, c, state, value)
-    if not value.protection_event or value.failure or value.exemption:
-        raise WorkflowError("Use an actual unfailed, unexempted NPC protective performance")
+    if not value.protection_event or value.failure or (value.exemption and not allow_exempt):
+        raise WorkflowError("Use an actual unfailed, unexempted protective performance")
     protection = next(
         (
             x
@@ -968,7 +1885,7 @@ def _prove_protection_failure(
             or not value.protection_event
         ):
             raise WorkflowError("Recover actual bodily harm after the original protection")
-        if _npc_protect_reaction(value):
+        if _protect_reaction(value):
             protection = next(
                 (x for x in rules.records(state, rules.NpcProtection) if x.reaction == value.id),
                 None,
@@ -988,7 +1905,12 @@ def _npc_hurt_reaction(value: rules.Reaction) -> bool:
 
 
 def _npc_hurt_context(
-    game: GameService, c: Connection, state: GameState, value: rules.Reaction
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    value: rules.Reaction,
+    *,
+    historical: bool = False,
 ) -> rules.Session:
     """Current physical performance authority; never a grant of a PC Play."""
     prove(game, c, state, value.id)
@@ -1001,7 +1923,7 @@ def _npc_hurt_context(
         or value.child
         or value.performance_event
         or value.completed_event
-        or parent["state"] in ("complete", "aborted")
+        or (not historical and parent["state"] in ("complete", "aborted"))
         or current_ref(state, source.caster) != source.actor
         or active_handler(state) != source.handler
         or state.handler != source.handler_controller
@@ -1034,9 +1956,26 @@ def _npc_hurt_context(
     )
     if validation.flag is not True or not validation.text.strip():
         raise WorkflowError("Preserve the original Handler's actual supported-injury account")
-    bound = profiles(c, game.store.campaign_id)
+    if historical:
+        from girlframe.services.m3_actor_history import snapshot_profiles
+
+        bound = snapshot_profiles(c, game.store.campaign_id, state)
+        target = resolve(state, source.actor, bound, require_current_profile=False)
+        scene = next((x for x in state.scene_casts if x.id == source.cast.id), None)
+        if (
+            target.rules != "girl_frame"
+            or not target.alive
+            or target.offstage_source
+            or state.sheets[source.actor.entity].medical_state != "fit"
+            or scene is None
+            or scene.adjudicator is not None
+        ):
+            raise WorkflowError("Recover the original hurt source's actual body and scene")
+    else:
+        bound = profiles(c, game.store.campaign_id)
+        target = _native(game, c, state, source.actor)
+        scene = _cast(game, c, state, source.cast.channel)
     actor = resolve(state, value.actor, bound, require_current_profile=False)
-    target = _native(game, c, state, source.actor)
     npc = (
         next((x for x in state.world.npcs if x.id == value.actor.entity), None)
         if state.world
@@ -1055,7 +1994,6 @@ def _npc_hurt_context(
         or actor.cell != target.cell
     ):
         raise WorkflowError("Use the actual free present NPC and the original exposed Girl body")
-    scene = _cast(game, c, state, source.cast.channel)
     departed = {
         x.actor
         for x in rules.records(state, rules.Reaction)
@@ -1068,13 +2006,6 @@ def _npc_hurt_context(
         or scene.roles != tuple(x for x in source.cast.roles if x.actor not in departed)
     ):
         raise WorkflowError("Preserve the actual original bodily-performance scene and controllers")
-    if any(
-        x.session == source.id and x.urge == "cohort" and x.primary == value.id
-        for x in rules.records(state, rules.Reaction)
-    ):
-        raise WorkflowError(
-            "REQUIRED_NPC_HURT_COHORT_ADAPTER: actual non-roll assistance is not a Tag roll"
-        )
     return source
 
 
@@ -1333,10 +2264,13 @@ def prove_npc_hurt_damage(
         if not hurt.damage_event or not hurt.asset_choice:
             raise WorkflowError("Recover the real original NPC injury selection")
         source = _get(_history(c, game, hurt.damage_event), rules.Session, hurt.session)
-        selected_answer = _response(
+        from girlframe.services.m3_princess_easy_target import injury_response
+
+        selected_answer = injury_response(
             game,
             c,
-            hurt.session,
+            state,
+            game.action(c, hurt.session),
             hurt.asset_choice,
             hurt.damage_event,
             source.caster,
@@ -1425,6 +2359,7 @@ def _complete_npc_hurt(game: GameService, c: Connection, hurt: rules.NpcHurt, ev
             )
         )
         rules.put(state, value)
+        hurt_cohort.complete(game, c, state, value, effect_event)
         _consequence(game, c, state, parent, value, effect_event)
     _finish(game, c, state, parent)
     game.save_action(c, parent)
@@ -1444,6 +2379,9 @@ def _complete_npc_hurt(game: GameService, c: Connection, hurt: rules.NpcHurt, ev
         from girlframe.services.m3_role_punishments import synchronize as sync_punishment
 
         sync_punishment(game, c, parent, effect_event)
+    from girlframe.services.m3_princess_easy_target import complete_directed
+
+    complete_directed(game, c, game.action(c, parent["id"]), effect_event)
     return True
 
 
@@ -1803,6 +2741,9 @@ def complete_child(
             from girlframe.services.m3_role_punishments import synchronize as sync_punishment
 
             sync_punishment(game, c, parent, effect_event)
+        from girlframe.services.m3_princess_easy_target import complete_directed
+
+        complete_directed(game, c, game.action(c, parent["id"]), effect_event)
     return True
 
 
@@ -1864,7 +2805,7 @@ def observe_harm(
             )
         ):
             continue
-        if _npc_protect_reaction(value):
+        if _protect_reaction(value):
             try:
                 _active_npc_protection(game, c, before, value)
             except (WorkflowError, ValueError):
@@ -1902,9 +2843,14 @@ def leave_actor(
 
 def validate_role_case(c: Connection, game: GameService, state: GameState, case: Any) -> None:
     value = prove(game, c, state, case.source_work or "")
-    source = _session(game, c, state, game.action(c, value.session))
+    action = game.action(c, value.session)
+    source = _session(game, c, state, action)
+    from girlframe.services.m3_princess_easy_target import controlled_source
+
+    direction = controlled_source(game, c, state, action)
     if (
-        case.source_kind != "easy_target"
+        case.chooser_controller != (direction.author_controller if direction else source.caster)
+        or case.source_kind != "easy_target"
         or value.urge != "hurt"
         or not value.harm
         or value.exemption
@@ -1926,17 +2872,21 @@ def complete_role_case(c: Connection, game: GameService, case: Any, event: str) 
     value = _get(state, rules.Reaction, case.source_work)
     rules.put(state, value.model_copy(update=dict(completed_event=event)))
     parent = game.action(c, value.session)
+    actual = str(uuid4())
     game.event(
         c,
         case.executor_controller,
         "easy-target-punished:" + case.id,
         "m3.easy_target_punished",
         state,
-        event_id=str(uuid4()),
+        event_id=actual,
         work=value.id,
         punishment=case.id,
     )
     _finish(game, c, state, parent)
+    from girlframe.services.m3_princess_easy_target import complete_directed
+
+    complete_directed(game, c, game.action(c, parent["id"]), actual)
 
 
 def projection(
@@ -1962,6 +2912,25 @@ def projection(
         npc_reactor=bool(body.get("actor", {}).get("kind") == "npc"),
         npc_hurt=bool(value and _npc_hurt_reaction(value)),
         npc_protect=bool(value and _npc_protect_reaction(value)),
+        handler_protect=bool(value and handler_protection.matches(value)),
+        pilot_protect=bool(value and pilot_protection.matches(value)),
+        npc_use=bool(value and _npc_use_reaction(value)),
+        pilot_use=bool(value and pilot_use.matches(value)),
+        handler_use=bool(value and handler_use.matches(value)),
+        hurt_cohort=bool(value and hurt_cohort.matches(state, value)),
+        hurt_cohort_missed=bool(value and hurt_cohort.attempt(state, value)),
+        use_cohort=bool(value and _use_cohort(state, value)),
+        use_cohort_missed=bool(
+            value
+            and _use_cohort(state, value)
+            and _get(state, rules.Reaction, value.primary or "").performance_event
+        ),
+        protection_cohort=bool(value and _protection_cohort(state, value)),
+        protection_cohort_missed=bool(
+            value
+            and _protection_cohort(state, value)
+            and _get(state, rules.Reaction, value.primary or "").failure
+        ),
         roles=roles,
         urges=rules.choices(source) + (("pass",) if source.total >= 11 else ()),
         work=value.model_dump(mode="json") if value else None,
@@ -2051,6 +3020,31 @@ class EasyTargetService:
                 revision=state.revision,
                 work=value.model_dump(mode="json"),
                 source=source.model_dump(mode="json"),
+                hurt_cohort=[
+                    hurt_cohort.prove(self.game, c, state, x.id).model_dump(mode="json")
+                    for x in rules.records(state, rules.HurtCohort)
+                    if x.reaction == identity
+                ],
+                protection_cohort=[
+                    prove_protection_cohort(self.game, c, state, x.id).model_dump(mode="json")
+                    for x in rules.records(state, rules.ProtectionCohort)
+                    if x.reaction == identity
+                ],
+                use_cohort=[
+                    prove_use_cohort(self.game, c, state, x.id).model_dump(mode="json")
+                    for x in rules.records(state, rules.UseCohort)
+                    if x.reaction == identity
+                ],
+                handler_use=[
+                    handler_use.prove(self.game, c, state, x.id).model_dump(mode="json")
+                    for x in rules.records(state, rules.HandlerUse)
+                    if x.reaction == identity
+                ],
+                npc_use=[
+                    prove_npc_use(self.game, c, state, x.id).model_dump(mode="json")
+                    for x in rules.records(state, rules.NpcUse)
+                    if x.reaction == identity
+                ],
                 npc_hurt=[
                     prove_npc_hurt(self.game, c, state, x.id).model_dump(mode="json")
                     for x in rules.records(state, rules.NpcHurt)
@@ -2209,6 +3203,9 @@ class EasyTargetService:
                     )
                 ),
             )
+            parent = self.game.action(c, source.id)
+            if parent["state"] != "complete":
+                _finish(self.game, c, state, parent)
             self.game.event(
                 c,
                 viewer.user_id,
@@ -2315,3 +3312,6 @@ def observe_assistance(
 def synchronize(game: GameService, c: Connection, action: dict[str, Any], event: str) -> None:
     if action["data"].get("easy_target_child") and action["state"] == "complete":
         complete_child(game, c, load_state(c, game.store.campaign_id), action, event)
+        from girlframe.services.m3_princess_easy_target import complete_directed
+
+        complete_directed(game, c, game.action(c, action["parent_id"]), event)

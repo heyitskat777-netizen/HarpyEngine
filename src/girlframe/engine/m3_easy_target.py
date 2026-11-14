@@ -92,6 +92,8 @@ class NpcHurt(Model):
 
 
 class NpcProtection(Model):
+    """Original physical protector; the legacy key retains actual NPC or Handler identity."""
+
     id: str
     reaction: str
     session: str
@@ -109,7 +111,104 @@ class NpcProtection(Model):
     target_vessel: str | None
 
 
+class NpcUse(Model):
+    """Actual completed non-Play NPC use, not an invented rolled performance."""
+
+    id: str
+    reaction: str
+    session: str
+    actor: ActorRef
+    controller: int
+    target: ActorRef
+    handler: ActorRef
+    cast: SceneCast
+    choice: str
+    account: str = Field(min_length=1, max_length=1200)
+    event: str
+    actor_position: str | None
+    target_position: str | None
+    actor_vessel: str | None
+    target_vessel: str | None
+
+
+class HandlerUse(Model):
+    """Actual original Handler non-Play use, followed by the Newgirl's own Bond choice."""
+
+    id: str
+    reaction: str
+    session: str
+    actor: ActorRef
+    controller: int
+    target: ActorRef
+    handler: ActorRef
+    cast: SceneCast
+    choice: str
+    account: str = Field(min_length=1, max_length=1200)
+    event: str
+    cell: tuple[int, int]
+    target_position: str | None
+    actor_vessel: str | None
+    target_vessel: str | None
+
+
+class UseCohort(Model):
+    """Owned participation while original validated NPC or Handler use is still ongoing."""
+
+    id: str
+    reaction: str
+    primary: str
+    outcome: Literal["participated", "declined", "missed"] = "participated"
+    use: str | None = None
+    actor: ActorRef
+    controller: int
+    choice: str
+    account: str = Field(min_length=1, max_length=1200)
+    event: str
+    cast: SceneCast
+    position: str | None
+    vessel: str | None
+
+
+class HurtCohort(Model):
+    """Owned bodily participation before the original NPC hurt performance."""
+
+    id: str
+    reaction: str
+    primary: str
+    outcome: Literal["participated", "declined", "missed"]
+    hurt: str | None = None
+    actor: ActorRef
+    controller: int
+    choice: str
+    account: str = Field(min_length=1, max_length=1200)
+    event: str
+    cast: SceneCast
+    position: str | None
+    vessel: str | None
+
+
+class ProtectionCohort(Model):
+    """Owned participation, decline or missed opportunity in original NPC protection."""
+
+    id: str
+    reaction: str
+    primary: str
+    protection: str | None = None
+    outcome: Literal["participated", "declined", "missed"] = "participated"
+    failure: str | None = None
+    actor: ActorRef
+    controller: int
+    choice: str
+    account: str = Field(min_length=1, max_length=1200)
+    event: str
+    cast: SceneCast
+    position: str | None
+    vessel: str | None
+
+
 class NpcProtectionFailure(Model):
+    """Original protector failure; legacy ``npc`` stores the actual protector reference."""
+
     id: str
     protection: str
     reaction: str
@@ -128,6 +227,11 @@ KINDS: dict[type[Model], str] = {
     Harm: "easy_target_harm",
     NpcHurt: "easy_target_npc_hurt",
     NpcProtection: "easy_target_npc_protection",
+    NpcUse: "easy_target_npc_use",
+    HandlerUse: "easy_target_handler_use",
+    UseCohort: "easy_target_use_cohort",
+    HurtCohort: "easy_target_hurt_cohort",
+    ProtectionCohort: "easy_target_protection_cohort",
     NpcProtectionFailure: "easy_target_npc_protection_failure",
 }
 

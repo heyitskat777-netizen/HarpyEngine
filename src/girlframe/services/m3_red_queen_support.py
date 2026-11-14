@@ -532,9 +532,54 @@ def issue_pending_orders(game: "GameService", c: Connection, event: str) -> None
                 or not lock
                 or lock["state"] != "held"
                 or lock["action_id"] != parent_id
-                or action["data"].get("order_id")
             ):
                 raise WorkflowError("Preserve the actual held original Consult action")
+            previous = action["data"].get("order_id")
+            if previous:
+                # Low Consult creates several independent Orders on one held Play.
+                # Advance only after the original owner has followed the prior one;
+                # never overwrite a pending response or an unresolved refusal child.
+                prior = next(
+                    (
+                        x
+                        for x in rules.records(state, rules.Advice)
+                        if x.session == parent_id
+                        and x.order == previous
+                        and x.actor == rules.get(state, rules.Session, parent_id).actor
+                        and x.author == issuer
+                    ),
+                    None,
+                )
+                table = t.m2["m2_orders"]
+                row = (
+                    c.execute(
+                        table.select().where(
+                            table.c.campaign_id == game.store.campaign_id,
+                            table.c.id == previous,
+                            table.c.issuer_id == str(issuer),
+                            table.c.target_id == str(target),
+                            table.c.channel_id == str(channel),
+                            table.c.state == "followed",
+                        )
+                    )
+                    .mappings()
+                    .first()
+                )
+                body = json.loads(row["body_json"]) if row is not None else {}
+                if (
+                    prior is None
+                    or not prior.answered_event
+                    or body.get("text") != prior.instruction
+                    or body.get("red_queen")
+                    != dict(
+                        kind="advice",
+                        id=prior.id,
+                        target=prior.actor.model_dump(mode="json"),
+                        court=prior.court,
+                    )
+                    or game.pending(c, parent_id)
+                ):
+                    raise WorkflowError("Resolve the actual preceding Court Order first")
         else:
             if lock and lock["state"] != "released":
                 raise WorkflowError("Resolve the current scene action before this actual Order")

@@ -1,0 +1,11 @@
+# Earned once-use Princess source with actual NPC counterpart
+
+Printed p31 supports the actual ordinary NPC counterpart. The established Vatgrown learning source supplies one use of the selected Play, not permanent Princess ownership, NPC anatomy, consent or extra resources. This increment connects those existing sources without changing printed outcomes.
+
+NPC admission requires either actual permanent ownership (tested after removing all temporary learned entries from the rights check) or the explicitly selected valid free lesson/original learned Link. An invalid explicit lesson never falls back to native ownership. The NPC contact helper re-proves the exact Link actor, target and rule through admit_source. Existing canonical consent, original controller/body/cell/cast and positive-contact proof remain mandatory; Bonded/psychic NPC sources stay excluded.
+
+Only two production modules changed. No shared learned Link, central game or result semantics changes. Existing high NPC performer fallback remains explicitly pending for human adjudication. This supersedes only the native-only restriction in the previous Princess NPC handoff.
+
+Minimum: tests/rules/test_learned_princess_npc.py::test_actual_earned_princess_npc_favour_and_once_use. Actual Vatgrown high learning Action, original teacher's selected Princess grant and actual send-away; actual introduced NPC/cast/body and separate controller consent/contact; zero-Heat Princess mid favour/refusal/WorldTag. Exact Link lesson/actor/target/consent/action/roll/receipt is checked, no remaining free lesson or permanent Princess ownership, and actual spent-lesson and implicit ownership reoffers reject without mutation. Initial physical/world/teacher/resources and scoped approvals are inherited explicit fixture setup. One private-detail canary.
+
+Scoped Ruff and two-module mypy pass. Root final minimum passed 1 in 6.23s; independent source/code review found no blocker. No production/test edits after final pass. Low/high outcomes, controller/body transitions and native NPC contact-form submission untested. Service source operations with genuine native teaching, not full UI coverage. Local only; no Space/full regression/bot/deploy/merge.

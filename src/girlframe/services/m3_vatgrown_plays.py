@@ -222,8 +222,9 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         )
 
     from girlframe.services.m3_bonded import prove_delegation
+    from girlframe.services.m3_learned_bonded_vatgrown import released_parent
 
-    if value.bonded_source is not None:
+    if value.bonded_source is not None and not released_parent(game, c, state, value):
         prove_delegation(
             game, c, state, value.bonded_source, value.id, value.actor, value.target, rules.SEX
         )
@@ -269,7 +270,7 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
             or any(getattr(agreed, x) != getattr(value, x) for x in stable)
         ):
             raise WorkflowError("Recover the original counterpart's actual voluntary response")
-    elif value.phase != "invited":
+    elif value.phase not in ("invited", "withdrawn"):
         raise WorkflowError("The actual original counterpart must answer the source")
     if value.bound_event:
         saved = _get(_history(c, game, value.bound_event), rules.Session, identity)
@@ -321,6 +322,9 @@ def prepare(
         raise WorkflowError("Recover the actual current Handler body")
     if value.cast.facilitator is None or state.handler is None:
         raise WorkflowError("Recover the genuine source facilitator and Handler before this Play")
+    from girlframe.services.m3_learned_bonded_vatgrown import parent_lesson
+
+    delegated_lesson = parent_lesson(state, value)
     return (
         dict(
             session=value.id,
@@ -336,6 +340,7 @@ def prepare(
         )
         | ({"learned_source": value.learned_source} if value.learned_source is not None else {})
         | ({"bonded_source": value.bonded_source} if value.bonded_source is not None else {})
+        | ({"bonded_lesson": delegated_lesson} if delegated_lesson is not None else {})
         | (
             {"changeling_source": value.changeling_source}
             if value.changeling_source is not None
@@ -1822,6 +1827,39 @@ class VatgrownPlaysService:
             operation,
         )
 
+    def withdraw(
+        self, viewer: GuildViewer, key: str, identity: str, expected: int
+    ) -> dict[str, Any]:
+        """Owner-only release of an unused Pair source, never its real effects."""
+
+        def operation(c: Connection, state: GameState, event: str) -> dict[str, Any]:
+            from girlframe.engine import m3_bonded as bonded
+            from girlframe.services.m3_learned_bonded_vatgrown import release
+
+            value = prove(self.game, c, state, identity)
+            if (
+                viewer.user_id != value.caster
+                or current_ref(state, viewer.user_id) != value.actor
+                or value.bonded_source is None
+                or bonded.get(state, value.bonded_source).changeling_source is not None
+                or value.changeling_source is not None
+                or value.phase not in ("invited", "accepted")
+                or value.action is not None
+            ):
+                raise WorkflowError("Only the original owner withdraws this unused Pair child")
+            rules.put(state, value.model_copy(update={"phase": "withdrawn"}))
+            release(self.game, c, state, identity, viewer.user_id, event)
+            return dict(id=identity, phase="withdrawn")
+
+        return self._mutate(
+            viewer,
+            key,
+            "m3.vatgrown_sex_withdrawn",
+            expected,
+            dict(id=identity),
+            operation,
+        )
+
     def respond(
         self,
         viewer: GuildViewer,
@@ -1856,6 +1894,12 @@ class VatgrownPlaysService:
             from girlframe.services.m3_learned_sex import record_consent
 
             record_consent(self.game, c, state, rules.get(state, identity), accept, event)
+            if not accept and value.bonded_source is not None:
+                from girlframe.engine import m3_bonded as bonded
+                from girlframe.services.m3_learned_bonded_vatgrown import release
+
+                if bonded.get(state, value.bonded_source).changeling_source is None:
+                    release(self.game, c, state, identity, viewer.user_id, event)
             return dict(id=identity, phase="accepted" if accept else "declined")
 
         return self._mutate(
@@ -2699,6 +2743,7 @@ class VatgrownPlaysService:
     def _tasks(self, c: Connection, viewer: GuildViewer) -> list[dict[str, Any]]:
         state = load_state(c, self.store.campaign_id)
         result = []
+        from girlframe.services.m3_learned_bonded_vatgrown import parent_lesson
         from girlframe.services.m3_learned_sex import cancelled
 
         for session in rules.records(state, rules.Session):
@@ -2712,7 +2757,9 @@ class VatgrownPlaysService:
                 ),
                 None,
             )
-            ended = cancelled(self.game, c, state, session.learned_source)
+            ended = cancelled(
+                self.game, c, state, session.learned_source or parent_lesson(state, session)
+            )
             pending = not ended and (
                 session.phase == "invited"
                 and viewer.user_id == session.counterpart
@@ -2733,7 +2780,7 @@ class VatgrownPlaysService:
                     phase="resolved"
                     if ended
                     or (session.completed_event and side is None)
-                    or session.phase == "declined"
+                    or session.phase in ("declined", "withdrawn")
                     else "pending",
                 )
             )
@@ -2852,13 +2899,23 @@ class VatgrownPlaysService:
                     None,
                 )
                 runtime = state.sheets[value.actor.entity].girl_runtime
+                from girlframe.engine import m3_bonded as bonded
+                from girlframe.services.m3_learned_bonded_vatgrown import parent_lesson
                 from girlframe.services.m3_learned_sex import cancelled
 
-                ended = cancelled(self.game, c, state, value.learned_source)
+                delegated_lesson = parent_lesson(state, value)
+                ended = cancelled(self.game, c, state, value.learned_source or delegated_lesson)
                 return dict(
                     id=identity,
                     type="sex",
                     revision=state.revision,
+                    can_withdraw=value.bonded_source is not None
+                    and bonded.get(state, value.bonded_source).changeling_source is None
+                    and value.changeling_source is None
+                    and not ended
+                    and viewer.user_id == value.caster
+                    and value.phase in ("invited", "accepted")
+                    and value.action is None,
                     session=value.model_dump(mode="json")
                     | ({"phase": "cancelled"} if ended else {}),
                     side=side.model_dump(mode="json") if side else None,

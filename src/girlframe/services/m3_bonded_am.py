@@ -439,6 +439,9 @@ class BondedAMService:
                 )
             ):
                 raise WorkflowError("Record this original person's actual performed scene once")
+            from girlframe.services.m3_learned_bonded_am import consume
+
+            consume(self.game, c, state, source, event)
             rules.put(
                 state,
                 rules.Performance(
@@ -518,6 +521,9 @@ class BondedAMService:
                     )
                 ),
             )
+            from girlframe.services.m3_learned_bonded_am import release
+
+            release(self.game, c, state, source, actor, event)
             self.game.event(
                 c,
                 viewer.user_id,

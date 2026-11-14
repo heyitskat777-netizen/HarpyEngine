@@ -19,6 +19,27 @@ def offer(world: World, handler: int, npc: Npc, identity: str, source: str) -> W
     )
 
 
+def offer_transfer(
+    world: World, controller: int, npc_id: str, recipient: int, identity: str, source: str
+) -> World:
+    npc = next((x for x in world.npcs if x.id == npc_id), None)
+    if npc is None or not npc.alive or npc.controller != controller or recipient == controller:
+        raise ValueError("Only the current controller offers their living NPC to another human")
+    return update(
+        world,
+        npc_role_offers=world.npc_role_offers
+        + (
+            NpcRoleOffer(
+                id=identity,
+                proposer=controller,
+                npc=npc.model_copy(update={"controller": recipient}),
+                source_event=source,
+                transfer=True,
+            ),
+        ),
+    )
+
+
 def respond(
     world: World, handler: int, actor: int, identity: str, decision: str, source: str
 ) -> World:
@@ -29,6 +50,8 @@ def respond(
         or decision not in ("accept", "decline", "withdraw")
     ):
         raise ValueError("Resume an actual pending NPC role invitation")
+    if proposal.transfer:
+        return _respond_transfer(world, handler, actor, proposal, decision, source)
     if decision == "withdraw":
         if actor != handler:
             raise ValueError("Only the current Handler withdraws this introduction")
@@ -61,3 +84,48 @@ def respond(
             npc = npc.model_copy(update={"custody_event": source})
         result = introduce_npc(result, npc)
     return result
+
+
+def _respond_transfer(
+    world: World, handler: int, actor: int, proposal: NpcRoleOffer, decision: str, source: str
+) -> World:
+    if decision == "withdraw":
+        if actor != proposal.proposer:
+            raise ValueError("Only the original controller withdraws this transfer")
+        status = "withdrawn"
+    else:
+        if actor != proposal.npc.controller:
+            raise ValueError("Only the invited human answers this transfer")
+        status = "accepted" if decision == "accept" else "declined"
+    npc = next((x for x in world.npcs if x.id == proposal.npc.id), None)
+    if decision == "accept":
+        if (
+            npc is None
+            or not npc.alive
+            or npc != proposal.npc.model_copy(update={"controller": proposal.proposer})
+        ):
+            raise ValueError(
+                "STALE_NPC_TRANSFER: the original controller must offer the current NPC"
+            )
+        if "director" in npc.jobs and actor == handler:
+            raise ValueError("The Director must be played by a different human from the Handler")
+    return update(
+        world,
+        npcs=tuple(
+            x.model_copy(update={"controller": actor})
+            if decision == "accept" and x.id == proposal.npc.id
+            else x
+            for x in world.npcs
+        ),
+        npc_role_offers=tuple(
+            x.model_copy(update={"state": status, "response_event": source})
+            if x.id == proposal.id
+            else x.model_copy(update={"state": "withdrawn", "response_event": source})
+            if decision == "accept"
+            and x.transfer
+            and x.npc.id == proposal.npc.id
+            and x.state == "pending"
+            else x
+            for x in world.npc_role_offers
+        ),
+    )

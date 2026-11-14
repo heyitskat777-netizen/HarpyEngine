@@ -69,7 +69,7 @@ async def open_book(
             "Actual conversation or interaction counterparts",
             tuple((x["token"], x["label"]) for x in data["targets"]),
             minimum=1,
-            maximum=1 if learned_source is not None else max(1, len(data["targets"])),
+            maximum=max(1, len(data["targets"])),
         ),
         Field(
             "primary",

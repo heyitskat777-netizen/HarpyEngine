@@ -1,0 +1,5 @@
+# ANKOU Relay nomination — r271
+
+Printed p83/PDF85 requires an actual selected Play after Intense partners nominate. The existing source already has independently owned nomination and a source-bound child Play, not a GM acknowledgment. This run adds a bounded normal-path test: synthetic starting actual Intense Bond; actual Relay activation and Handler consequence; counterpart nomination; original ANKOU Keep Your Head roll, Tag choices and Handler answer; persisted task/receipt completion and service reopen. It rejects wrong-owner nomination and fake task acknowledgment. Root execution is required; worker did not run pytest.
+
+No production change is justified by this authored test alone. Relay.completed_event is not set by the performed-child route, unlike no-nomination branches; the pending UI uses the completed task rather than that field. This is a status consistency question, not evidence of a stuck Play. Obsessive eligibility, NPC-death consequence, independent Clone actors, other nominations, live Discord, privacy and whole-database restore remain outside this test. Test approvals and initial Bond setup are synthetic; no campaign gate is cleared.

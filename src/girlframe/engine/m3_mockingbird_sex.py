@@ -166,9 +166,77 @@ def _owns_source(state: GameState, actor: ActorRef, action: str) -> bool:
     """Pure effect admission; the service proves canonical source/receipt first."""
     if owns(state, actor, SEX):
         return True
-    from girlframe.engine.m3_learned_play_state import learned_sex_links
+    from girlframe.engine.m3_learned_play_state import learned_sex_links, sex_party_refs
 
     trigger = next((x for x in state.mockingbird.triggers if x.action == action), None)
+    if trigger is not None and trigger.bonded_source is not None:
+        from girlframe.engine import m3_bonded as bonded
+
+        parent = next(
+            (x for x in bonded.records(state, bonded.Source) if x.id == trigger.bonded_source), None
+        )
+        from girlframe.engine.m3_girl_runtime_state import has_rule
+
+        native = bool(
+            parent is not None
+            and parent.learned_source is None
+            and actor.kind == "pilot"
+            and actor.entity in state.sheets
+            and has_rule(state.sheets[actor.entity], bonded.SEX, "BONDED")
+            and parent.pair.kind == "pilot"
+            and parent.pair.entity in state.sheets
+            and has_rule(state.sheets[parent.pair.entity], SEX, "MOCKINGBIRD")
+        )
+        return bool(
+            parent is not None
+            and parent.route == "delegated"
+            and parent.delegated_rule == SEX
+            and parent.phase in ("bound", "complete")
+            and parent.actor == actor
+            and trigger.play == "mockingbird_sex"
+            and trigger.actor == actor
+            and trigger.learned_source is None
+            and trigger.learned_sex_source is None
+            and trigger.changeling_source is None
+            and bool(trigger.parties)
+            and len({x.actor for x in trigger.parties}) == len(trigger.parties)
+            and trigger.parties[0].actor == parent.target
+            and all(
+                x.actor != actor
+                and x.decision == "accepted"
+                and x.event is not None
+                and any(
+                    r.actor == x.actor and r.controller == x.controller for r in parent.cast.roles
+                )
+                for x in trigger.parties
+            )
+            and any(
+                x.source == parent.id
+                and x.session == trigger.id
+                and x.rule == SEX
+                and x.actor == actor
+                and x.target == parent.target
+                for x in bonded.records(state, bonded.Delegation)
+            )
+            and (
+                native
+                or any(
+                    x.id == parent.learned_source
+                    and x.rule_id == bonded.SEX
+                    and x.session == parent.id
+                    and x.actor == actor
+                    and x.target == parent.target
+                    and x.action == action
+                    and x.accepted is True
+                    and x.bound_event is not None
+                    and x.roll_event is not None
+                    and x.receipt_sha256 is not None
+                    and len(x.receipt_sha256) == 64
+                    and x.released_event is None
+                    for x in learned_sex_links(state)
+                )
+            )
+        )
     if (
         trigger is None
         or trigger.play != "mockingbird_sex"
@@ -177,8 +245,9 @@ def _owns_source(state: GameState, actor: ActorRef, action: str) -> bool:
         or trigger.learned_source is not None
         or trigger.bonded_source is not None
         or trigger.changeling_source is not None
-        or len(trigger.parties) != 1
-        or trigger.parties[0].decision != "accepted"
+        or not trigger.parties
+        or len({x.actor for x in trigger.parties}) != len(trigger.parties)
+        or any(x.decision != "accepted" or x.event is None for x in trigger.parties)
     ):
         return False
     return any(
@@ -187,6 +256,18 @@ def _owns_source(state: GameState, actor: ActorRef, action: str) -> bool:
         and x.session == trigger.id
         and x.actor == actor
         and x.target == trigger.parties[0].actor
+        and sex_party_refs(x) == tuple(p.actor for p in trigger.parties)
+        and (
+            x.parties is None
+            or (
+                tuple((p.actor, p.controller) for p in x.parties)
+                == tuple((p.actor, p.controller) for p in trigger.parties)
+                and all(
+                    p.accepted is True and p.consent_event == actual.event
+                    for p, actual in zip(x.parties, trigger.parties, strict=True)
+                )
+            )
+        )
         and x.action == action
         and x.accepted is True
         and x.bound_event is not None

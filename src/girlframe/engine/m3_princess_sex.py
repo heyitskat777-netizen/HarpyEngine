@@ -11,7 +11,46 @@ RULE = "girl.princess.sex-play"
 PLAY = "princess_sex"
 
 
+class NpcContact(Model):
+    session: str
+    target: ActorRef
+    actor: ActorRef
+    controller: int
+    vessel: str
+    actor_vessel: str
+    cell: tuple[int, int]
+    cast: SceneCast
+    revision: int
+    event: str
+    account: str = Field(min_length=1, max_length=1200)
+
+
+class NpcDirection(Model):
+    """One printed job move selected by the Princess and actually performed by the NPC."""
+
+    id: str
+    session: str
+    action: str
+    actor: ActorRef
+    controller: int
+    author: ActorRef
+    author_controller: int
+    cast: SceneCast
+    job: str
+    move: str
+    context: str = Field(min_length=1, max_length=1200)
+    selected_choice: str
+    selected_event: str
+    performance_choice: str | None = None
+    performance_event: str | None = None
+    rendition: str | None = Field(default=None, min_length=1, max_length=1200)
+
+
 class Session(Model):
+    actor_vessel: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    target_vessel: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    npc_contact: NpcContact | None = Field(default=None, exclude_if=lambda value: value is None)
+    npc_direction: NpcDirection | None = Field(default=None, exclude_if=lambda value: value is None)
     id: str
     actor: ActorRef
     target: ActorRef
@@ -30,12 +69,14 @@ class Session(Model):
         "invited",
         "accepted",
         "declined",
+        "withdrawn",
         "active",
         "low_tag",
         "favour",
         "favour_reply",
         "optional_tag",
         "direction",
+        "npc_performance",
         "child",
         "complete",
     ] = "invited"
@@ -76,6 +117,10 @@ class HighDirection(Model):
         "put_someone_beneath_you",
         "disobey_orders",
         "dose_up",
+        "old_dog_new_pups",
+        "brutalize",
+        "unassuming_doll",
+        "easy_target",
     ]
     target: ActorRef | None = Field(default=None, exclude_if=lambda value: value is None)
     order_id: str | None = Field(default=None, exclude_if=lambda value: value is None)

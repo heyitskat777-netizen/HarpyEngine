@@ -3,7 +3,7 @@
   "published_source": "40b3b226aa8ad45879b3c664690ef7998e315817",
   "main_merge": "c4550ecbd89bbf84363537e7bdf763c2177a998f",
   "scope": "10Girl labels;10Frame labels representing9official Frame rulesets; JANUS-B uses JANUS",
-  "evidence_note": "Published40b3b22 focused CI42564398560 PASS/full skipped. Current AM/Sup/Oldgen packet has6 passing new focused cases across first run and failed-only retry. Final full/global/independent/player gates pending.",
+  "evidence_note": "Historical per-rule/type evidence retained. Current r285 integrated assessment is r285_integrated_type_coverage.json; source integration and32 focused checks are not whole-type, full-regression, independent or human approval.",
   "rows": [
     {
       "category": "Girl",
@@ -3477,5 +3477,6 @@
         }
       ]
     }
-  ]
+  ],
+  "current_reconciled_assessment": "r285_integrated_type_coverage.json"
 }

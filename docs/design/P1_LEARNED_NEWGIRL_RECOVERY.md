@@ -1,0 +1,11 @@
+# Learned Newgirl group unused-source recovery
+
+The existing learned Newgirl group source requires each actual original participant's independent consent and live contact. A real cockpit/contact change before all answers can strand an unused earned lesson because even refusal correctly requires original contact. This increment provides separate owner-only technical withdrawal, not a fictional refusal or performance.
+
+The exact original learner, revision, source, lesson, group membership and every authored Consent remain proved. Withdraw only invited/accepted learned sources with no Action reference (including aborted), binding or effect. Borrowed native Pair and remote sources remain excluded. A canonical owner withdrawal event records the original session and released learned link. The service allows a withdrawn phase only with that positive proof; every existing consent is still audited. Current contact checks for invite, confirm and Play remain unchanged. No cost, dice, outcome, Mentor or lesson use is refunded. Fresh proposal and fresh independent answers are required to proceed.
+
+The native private source menu exposes this operation only to the original learner. Existing accepted Play controls remain unchanged. Engine phase vocabulary gains withdrawn; no action semantics change.
+
+Minimum episode extends the genuine group acquisition fixture with real cockpit enter/exit for no-answer, partial-answer and all-answer sources. It verifies stale-contact refusal rejection, wrong-owner denial, preserved participant histories and resources, then fresh actual group consent and one real receipt/Mentor result. Released histories stay viewable after the same lesson is consumed. Existing fixture initial physical placement is test-only and explicit; no anatomy, partners, consent or outcomes are invented.
+
+Base: local oldgen-court-integrated. Scoped Ruff and four-module mypy passed. Root targeted runtime: 1 passed in 9.73s. Independent review found no blocker. No production or test edits after the final passing run; only this validation record and evidence were finalized. No worker pytest, full regression, bot, deploy, merge or Space write. Preserve local-only staging and unknown unpublished overlap warning.

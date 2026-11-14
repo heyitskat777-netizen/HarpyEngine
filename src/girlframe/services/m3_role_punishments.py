@@ -131,6 +131,21 @@ def open_case(
     if source_kind in ("handler_play", "compliance_virus", "janus_training"):
         if chooser_controller is None or source_work is None:
             raise WorkflowError("Use the actual scoped Handler Play grant and chooser controller.")
+    elif source_kind == "easy_target" and chooser_controller is not None:
+        from girlframe.engine.m3_princess_sex import directions
+
+        direction = next((x for x in directions(changed) if x.child == action), None)
+        if (
+            direction is None
+            or direction.play != "easy_target"
+            or direction.actor != chooser
+            or direction.author_controller != chooser_controller
+            or direction.completed_event
+            or source_work is None
+        ):
+            raise WorkflowError(
+                "Keep the actual directed Newgirl's source-bound instruction author"
+            )
     elif chooser is None:
         raise WorkflowError("This source requires the actual original chooser.")
     elif chooser.kind == "handler":

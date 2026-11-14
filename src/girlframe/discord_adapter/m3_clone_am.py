@@ -190,7 +190,8 @@ async def open_clone(interaction: discord.Interaction, service: CloneService) ->
     await NativeForm(
         interaction.user.id,
         "Clone AM",
-        f"Shared Heat: {own['heat']}. Own Identity: {own['identity']['name']}. "
+        f"Shared Heat: {own['heat']}. Own Identity: "
+        f"{own['identity']['name'] if own['identity'] else 'None (erased)'}. "
         "Join the copy through Cast before acting.",
         [Field("mode", "Actual copy action", tuple(options))],
         choose,

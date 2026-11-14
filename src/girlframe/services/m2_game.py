@@ -102,6 +102,9 @@ class GameService:
         **metadata: Any,
     ) -> str:
         if state is not None:
+            from girlframe.services.p1_canonical_barrier import require_canonical_writable
+
+            require_canonical_writable(c, self.store.campaign_id)
             from girlframe.services.m3_incarnations import prepare_write
 
             bound, binding_proof = prepare_write(c, self.store.campaign_id, state)
@@ -1685,6 +1688,11 @@ class GameService:
                 from girlframe.services.m3_beneath import prepare as prepare_beneath
 
                 beneath = prepare_beneath(self, c, viewer, prepared, state)
+            from girlframe.services.m3_beneath_mixed import prepare as prepare_beneath_mixed
+
+            beneath_mixed = prepare_beneath_mixed(
+                self, c, viewer, state, prepared, channel, beneath
+            )
             if prepared.play in M3_ROLL_IDS:
                 from girlframe.services.m3_play_support import prepare
 
@@ -1766,6 +1774,7 @@ class GameService:
                         for x in (
                             virus_order_work,
                             red_queen_child["work"] if red_queen_child else None,
+                            ankou_effect_child.get("feedback_work") if ankou_effect_child else None,
                             bomb_collar_source["work"] if bomb_collar_source else None,
                             void_frame_entry["entry"] if void_frame_entry else None,
                         )
@@ -1861,6 +1870,15 @@ class GameService:
                         vatgrown,
                         newgirl_sex,
                         casualty_sex,
+                        dose_up
+                        if dose_up is not None and dose_up["target"]["kind"] == "npc"
+                        else None,
+                        oldgen_sex
+                        if oldgen_sex is not None and oldgen_sex["target"]["kind"] == "npc"
+                        else None,
+                        stim_sex
+                        if stim_sex is not None and stim_sex["target"]["kind"] == "npc"
+                        else None,
                         vatgrown_sex,
                         prince,
                         consume,
@@ -1884,6 +1902,7 @@ class GameService:
                         secretary_scope,
                         npc_flirt,
                         rejection_child,
+                        beneath_mixed,
                     )
                 )
                 and not scoped_defeat
@@ -1905,6 +1924,8 @@ class GameService:
                     source_cast, _ = CastService(ActorService(MissionService(self.store)))._current(
                         c, state, channel
                     )
+                elif beneath_mixed is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(beneath_mixed["cast"]))
                 elif rejection_child is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(rejection_child["cast"]))
                 elif npc_flirt is not None:
@@ -1969,6 +1990,15 @@ class GameService:
                     source_cast = SceneCast.model_validate_json(json.dumps(prince["cast"]))
                 elif consume is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(consume["cast"]))
+                elif dose_up is not None and dose_up["target"]["kind"] == "npc":
+                    source_cast = SceneCast.model_validate_json(json.dumps(dose_up["cast"]))
+                elif stim_sex is not None and stim_sex["target"]["kind"] == "npc":
+                    # Original accepted NPC contact was proved by prepare_stim.
+                    source_cast = SceneCast.model_validate_json(json.dumps(stim_sex["cast"]))
+                elif oldgen_sex is not None and oldgen_sex["target"]["kind"] == "npc":
+                    # prepare_oldgen_sex already proves the original NPC's accepted
+                    # invitation and separate canonical physical-contact statement.
+                    source_cast = SceneCast.model_validate_json(json.dumps(oldgen_sex["cast"]))
                 elif vatgrown_sex is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(vatgrown_sex["cast"]))
                 elif easy_target is not None:
@@ -2514,6 +2544,8 @@ class GameService:
                     cast=npc_flirt["cast"],
                     cast_sha256=npc_flirt["cast_sha256"],
                 )
+            if beneath_mixed is not None:
+                data["beneath_mixed"] = beneath_mixed
             if consume_child is not None:
                 data["consume_child"] = consume_child
             if bonded_child is not None:
@@ -3100,7 +3132,9 @@ class GameService:
                 from girlframe.services.m3_alpha_sex import bind as bind_alpha_sex
 
                 bind_alpha_sex(state, self.action(c, identity))
-            if (mockingbird or {}).get("learned_sex_source"):
+            if (mockingbird or {}).get("learned_sex_source") or (mockingbird or {}).get(
+                "bonded_source"
+            ):
                 from girlframe.services.m3_mockingbird_plays import bind as bind_mockingbird_sex
 
                 bind_mockingbird_sex(state, self.action(c, identity))
@@ -3512,6 +3546,7 @@ class GameService:
                     or marriage_cast_saved
                     or secretary_response is not None
                     or claimed_learned
+                    or (mockingbird or {}).get("bonded_source") is not None
                     or npc_flirt is not None
                     or rejection_child is not None
                     or prince is not None
@@ -3825,6 +3860,17 @@ class GameService:
                 )
 
                 pre_roll_rejection(self, c, viewer, state, action)
+            if action["data"].get("alpha_counter_source") and action["data"]["play"] == "flirt":
+                from girlframe.services.m3_alpha_flirt import pre_roll as pre_roll_alpha_flirt
+
+                pre_roll_alpha_flirt(self, c, state, action)
+            if (
+                action["data"].get("alpha_counter_source")
+                and action["data"]["play"] == "put_someone_beneath_you"
+            ):
+                from girlframe.services.m3_alpha_beneath import pre_roll as pre_roll_alpha_beneath
+
+                pre_roll_alpha_beneath(self, c, state, action)
             if action["data"].get("npc_flirt"):
                 from girlframe.services.m3_npc_flirt import pre_roll as pre_roll_npc_flirt
 
@@ -3863,6 +3909,9 @@ class GameService:
                 from girlframe.services.m3_prince import pre_roll as pre_roll_prince
 
                 pre_roll_prince(self, c, viewer, state, action)
+            from girlframe.services.m3_beneath_mixed import pre_roll as pre_roll_beneath_mixed
+
+            pre_roll_beneath_mixed(self, c, state, action)
             if action["data"].get("wyvern_pin_response"):
                 from girlframe.services.m3_wyvern_combat import pre_roll_pin_response
 
@@ -4034,11 +4083,11 @@ class GameService:
             if action["data"].get("dose_up"):
                 from girlframe.services.m3_dose_up import pre_roll as dose_pre_roll
 
-                dose_pre_roll(self, c, viewer, state, action)
+                dose_pre_roll(self, c, viewer, state, action, commit=False)
             if action["data"].get("battle"):
                 from girlframe.services.m3_battle import pre_roll as battle_pre_roll
 
-                battle_pre_roll(self, c, state, action)
+                battle_pre_roll(self, c, state, action, commit=False)
             if action["data"].get("engage"):
                 from girlframe.services.m3_engage import pre_roll as engage_pre_roll
 
@@ -4131,13 +4180,27 @@ class GameService:
             if prepared.play == "disobey_orders":
                 from girlframe.services.m3_refusal import pre_roll as consume_refusal
 
-                refusal_modifiers = consume_refusal(self, c, viewer, state, action)
+                if action["data"].get("ankou_feedback"):
+                    from girlframe.services.m3_ankou_disobey import pre_roll as refusal_feedback
+
+                    refusal_feedback(self, c, state, action)
+                refusal_modifiers = consume_refusal(self, c, viewer, state, action, commit=False)
             if committed is None:
                 from girlframe.services.m3_ankou_feedback import hold_before_roll
 
                 held_feedback = hold_before_roll(self, c, viewer, state, action, key)
                 if held_feedback is not None:
                     return held_feedback
+            if prepared.play == "disobey_orders":
+                refusal_modifiers = consume_refusal(self, c, viewer, state, action)
+            if action["data"].get("battle"):
+                from girlframe.services.m3_battle import commit_declaration
+
+                commit_declaration(state, action)
+            if action["data"].get("dose_up"):
+                from girlframe.services.m3_dose_up import commit_declaration as commit_dose
+
+                commit_dose(state, action)
             disposal_before = (
                 GameState.model_validate_json(state.model_dump_json())
                 if prepared.disposable_heat
@@ -4299,10 +4362,14 @@ class GameService:
                     dict(source="battery_tags", amount=len(action["data"]["janus"]["tags"]))
                 )
             if action["data"].get("battle"):
+                from girlframe.services.m3_actors import profiles
                 from girlframe.services.m3_battle import modifier as battle_modifier
 
                 pre_modifiers.append(
-                    dict(source="core_intact_assets", amount=battle_modifier(state, action))
+                    dict(
+                        source="core_intact_assets",
+                        amount=battle_modifier(state, action, profiles(c, self.store.campaign_id)),
+                    )
                 )
             receipt = {
                 "id": str(uuid4()),
@@ -4474,6 +4541,7 @@ class GameService:
 
             if (
                 psychic_flirt
+                or prepared.ankou_pulse
                 or court_doll is not None
                 or any(
                     x.used_action == action["id"] and x.applied_event == court_event
@@ -5316,6 +5384,20 @@ class GameService:
                 from girlframe.services.m3_easy_target import synchronize_npc_hurt
 
                 synchronize_npc_hurt(self, c, self.action(c, action["id"]), event)
+                action = self.action(c, action["id"])
+                from girlframe.services.m3_princess_easy_target import complete_directed
+
+                complete_directed(self, c, action, event)
+            if action["data"].get("alpha_counter_source") and (
+                action["data"].get("oldgen")
+                or action["data"].get("dose_up")
+                or action["data"].get("vatgrown")
+                or action["data"]["play"] in ("flirt", "put_someone_beneath_you")
+            ):
+                from girlframe.services.m3_alpha import synchronize_counters as alpha_counters
+
+                # Prove source-specific consequences after the owned response is durable.
+                alpha_counters(self, c, event)
                 action = self.action(c, action["id"])
             if action["data"].get("alpha_sex_counter_source"):
                 from girlframe.services.m3_alpha_sex import synchronize_counters as sex_counters
@@ -6209,8 +6291,10 @@ class GameService:
                 ]
             close_event = str(uuid4())
             from girlframe.services.m3_ankou import expire_scene as expire_ankou_scene
+            from girlframe.services.m3_changeling_effects import expire_scene as expire_eyes
 
             drugs_changed = expire_ankou_scene(self, c, state, scene["id"], close_event)
+            drugs_changed = expire_eyes(self, c, state, scene["id"], close_event) or drugs_changed
             if any(x.get("kind") == "stim_sex_drug" for x in state.facts):
                 from girlframe.services.m3_stim_sex import expire_scene as expire_stim
 
@@ -6978,6 +7062,7 @@ class GameService:
                 from girlframe.services.m3_ankou import self_tag as champion_self_tag
                 from girlframe.services.m3_dose_up import self_tag as drug_self_tag
                 from girlframe.services.m3_kicked_puppy import self_tag as kicked_self_tag
+                from girlframe.services.m3_malleable_self_tag import self_tag as malleable_self_tag
                 from girlframe.services.m3_stim_sex import self_tag as stim_self_tag
 
                 tags = [
@@ -6988,6 +7073,7 @@ class GameService:
                     if kicked_self_tag(self, c, state, action, viewer.user_id, x)
                     or drug_self_tag(self, c, state, action, viewer.user_id, x)
                     or stim_self_tag(self, c, state, action, viewer.user_id, x)
+                    or malleable_self_tag(self, c, state, action, viewer.user_id, x)
                     or actor.character_id is not None
                     and champion_self_tag(
                         self,
@@ -7201,6 +7287,14 @@ class GameService:
                 )
             if action["data"].get("enforcer_keep"):
                 result["enforcer_keep"] = action["data"]["enforcer_keep"]
+            if row["kind"] == "handler_sensors":
+                from girlframe.engine.m2 import sensors_off_list
+
+                # Read-only projection of legacy pending questions; no history rewrite.
+                result["result"] = dict(result["result"])
+                result["result"]["off_list"] = sensors_off_list(
+                    result["result"]["questions"], result["result"]["tier"]
+                )
             if row["kind"] == "actor_sensors":
                 from girlframe.services.p1_consume_hooks import smell_question
 

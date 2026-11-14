@@ -59,12 +59,17 @@ def test_mid_damage_broken_relative_status_and_real_mid_disobey_removal(
 ):
     game, worker, gateway, action = rolled(ledger, tmp_path, monkeypatch, (4, 5))
     original = state(game)
+    original_receipt = game.inspect(PLAYER, action)["receipt"]
+    original_order = original.order
     asset = next(x for x in original.sheets["3"].assets if x.family == "girl" and not x.damaged)
     assert not higher(original, 2, 3)
     answer(game, PLAYER, "alpha_damage", options=(asset.id,))
     actual = state(game)
     assert next(x for x in actual.sheets["3"].assets if x.id == asset.id).damaged
-    assert conditions(actual, current_ref(actual, 3), current_ref(actual, 2))
+    broken = conditions(actual, current_ref(actual, 3), current_ref(actual, 2))
+    assert len(broken) == 1 and broken[0].source_action == action
+    assert broken[0].source_event and broken[0].removed_event is None
+    assert actual.order == original_order  # Relative Broken Status does not rewrite cadre rank.
     assert higher(actual, 2, 3) and not higher(actual, 3, 2)
     assert game.sheet(OTHER)["broken_against"] == [current_ref(actual, 2).model_dump(mode="json")]
     assert game.inspect(PLAYER, action)["state"] == "complete"
@@ -93,6 +98,20 @@ def test_mid_damage_broken_relative_status_and_real_mid_disobey_removal(
     assert game.inspect(OTHER, child)["state"] == "complete"
     assert not conditions(state(game), current_ref(state(game), 3), current_ref(state(game), 2))
     assert not higher(state(game), 2, 3) and game.dice.calls == 2
+    completed = state(game)
+    history = next(x for x in completed.alpha_broken if x.id == broken[0].id)
+    assert history.source_action == action and history.source_event == broken[0].source_event
+    assert history.removed_action == child and history.removed_event
+    assert history.subject == broken[0].subject and history.inflictor == broken[0].inflictor
+    assert completed.order == original_order
+    # Removing Broken is not a repair, erasure of injury history or a replay of the source.
+    assert next(x for x in completed.sheets["3"].assets if x.id == asset.id).damaged
+    assert game.inspect(PLAYER, action)["receipt"] == original_receipt
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+    child_receipt = game.inspect(OTHER, child)["receipt"]
+    assert child_receipt and child_receipt != original_receipt
+    assert game.inspect(OTHER, child)["receipt"] == child_receipt
+    assert game.dice.calls == 2
 
 
 def test_high_native_damage_applies_actual_helplessness_without_broken(

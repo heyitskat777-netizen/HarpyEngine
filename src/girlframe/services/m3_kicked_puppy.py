@@ -66,15 +66,26 @@ def prepare(
             raise WorkflowError("Acquire the actual Kicked Puppy rule before choosing its basis")
         return None
     Access(game.store).authorize(c, viewer, "plays")
-    if prepared.target is None or prepared.target == owner:
-        raise WorkflowError("Choose another actual original Pilot for this Flirt")
-    target = ActorRef(
-        kind="pilot",
-        entity=str(prepared.target),
-        incarnation=game.character_binding(
-            c, state, prepared.target, require_current_profile=False
-        ),
-    )
+    if prepared.target_actor is not None and prepared.target_actor.kind == "npc":
+        from girlframe.services.m3_npc_flirt import _npc
+
+        if prepared.target is not None:
+            raise WorkflowError("Choose only one actual Flirt counterpart")
+        target = prepared.target_actor
+        _npc(state, target)
+        resolve(state, target, profiles(c, game.store.campaign_id))
+    else:
+        if prepared.target is None or prepared.target == owner:
+            raise WorkflowError(
+                "Choose another actual original Pilot or ordinary NPC for this Flirt"
+            )
+        target = ActorRef(
+            kind="pilot",
+            entity=str(prepared.target),
+            incarnation=game.character_binding(
+                c, state, prepared.target, require_current_profile=False
+            ),
+        )
     actual = resolve(state, actor, profiles(c, game.store.campaign_id))
     assert game.store.policy.m3_approval is not None
     from girlframe.engine.m3_class_retention import binding

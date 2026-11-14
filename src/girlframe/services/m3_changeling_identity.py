@@ -11,7 +11,7 @@ from girlframe.engine import m3_changeling as rules
 from girlframe.engine.m2 import GameState, IdentityState, PilotSheet, shift_status
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import resolve
-from girlframe.engine.m3_clone_am import additional_identities
+from girlframe.engine.m3_clone_am import additional_identities, copies, erase_identity
 from girlframe.engine.m3_identity_slots import bind, replacement_slot
 from girlframe.engine.m3_leviathan_obsession import require_identity_change, require_unlocked
 from girlframe.services.m3_actors import profiles
@@ -34,7 +34,7 @@ def _legal(state: GameState, actor: ActorRef, item: IdentityState) -> bool:
     if item.protected or item.paired or item.am_limiter or item.id in sheet.sedation_locked:
         return False
     try:
-        require_unlocked(sheet.identities, (item.id,))
+        require_unlocked((*sheet.identities, item), (item.id,))
         require_identity_change(state, actor, (item.id,))
     except ValueError:
         return False
@@ -54,11 +54,14 @@ def identity_options(
         raise WorkflowError("Use the actual printed erasure clause")
     sheet = _sheet(state, owner)
     resolve(state, owner, profiles(c, game.store.campaign_id), require_current_profile=False)
-    if additional_identities(state, int(owner.entity)):
-        raise WorkflowError(
-            "SOURCE_CLONE_IDENTITY_ERASURE_REQUIRED: preserve actual copy aftermath"
-        )
-    return [(item.id, item.name) for item in sheet.identities if _legal(state, owner, item)]
+    native = [(item.id, item.name) for item in sheet.identities if _legal(state, owner, item)]
+    if clause == "fingers_counter":
+        return native
+    from girlframe.services.m3_clone_am import prove_additional
+
+    prove_additional(game, c, state, int(owner.entity))
+    extra = additional_identities(state, int(owner.entity))
+    return native + [(item.id, item.name) for item in extra if _legal(state, owner, item)]
 
 
 def identity_requirements(
@@ -84,7 +87,8 @@ def erase_identities(
 ) -> tuple[GameState, tuple[str, ...]]:
     sheet = _sheet(state, owner)
     options = dict(identity_options(game, c, state, owner, chooser=owner, clause=clause))
-    actual = {item.id for item in sheet.identities}
+    extra = additional_identities(state, int(owner.entity)) if clause != "fingers_counter" else ()
+    actual = {item.id for item in (*sheet.identities, *extra)}
     if not event or not source or len(set(ids)) != len(ids) or not set(ids) <= actual:
         raise WorkflowError("Preserve the exact distinct actual original Identity batch")
     if clause == "blank_all":
@@ -100,6 +104,9 @@ def erase_identities(
     target = changed.sheets[owner.entity]
     require_identity_change(changed, owner, selected)
     require_unlocked(target.identities, selected)
+    for copy in copies(changed):
+        if copy.original == owner and copy.identity.id in selected:
+            erase_identity(changed, copy.ref, copy.identity.id, event, source)
     target.identities = [item for item in target.identities if item.id not in selected]
     if selected:
         target.revision += 1
@@ -133,7 +140,11 @@ def erased_batch(state: GameState, source: rules.Session) -> bool:
     if fact is None:
         return False
     removed = set(json.loads(fact["ids"]))
-    return not removed & {item.id for item in _sheet(state, source.actor).identities}
+    actual = (
+        *_sheet(state, source.actor).identities,
+        *additional_identities(state, int(source.actor.entity)),
+    )
+    return not removed & {item.id for item in actual}
 
 
 def grant_blank(

@@ -193,6 +193,9 @@ class ReadOnlyDiscordBot(discord.Client):
             from girlframe.discord_adapter.p1_facilitator import register_facilitator
 
             register_facilitator(self.tree, policy.guild_id, self.game)
+            from girlframe.discord_adapter.p1_shelving import register_shelving
+
+            register_shelving(self.tree, policy.guild_id, self.game)
             from girlframe.discord_adapter.m3_missions import register_missions
             from girlframe.services.m3_missions import MissionService
 

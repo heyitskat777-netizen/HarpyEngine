@@ -276,6 +276,61 @@ def test_high_actual_other_contact_three_distinct_owned_tags_and_replay(
     assert game.inspect(PLAYER, action)["state"] == "complete" and game.dice.calls == 1
 
 
+def test_low_self_handler_one_component_actual_tags_and_two_scene_expiry(
+    ledger, tmp_path, monkeypatch
+):
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch)
+    before = state(game)
+    action = dose(game, worker, gateway, faces=(1, 1), heat=1)
+    receipt = game.inspect(PLAYER, action)["receipt"]
+    row = next(x for x in game.choices(ADMIN) if x["kind"] == "dose_up_components")
+    detail = game.decision(ADMIN, row["id"])["detail"]
+    assert detail["role"] == "handler" and (detail["minimum"], detail["maximum"]) == (1, 2)
+    assert not any(x["kind"].startswith("dose_up_") for x in game.choices(PLAYER))
+    snapshot = state(game).model_dump_json()
+    with pytest.raises(WorkflowError):
+        game.respond(
+            PLAYER, str(uuid4()), row["id"], row["revision"], ChoiceAnswer(options=("calm",))
+        )
+    assert state(game).model_dump_json() == snapshot
+    native_choice(game, ADMIN, ("calm",))
+    actual = state(game)
+    value = next(x for x in rules.records(actual, rules.Dose) if x.id == action)
+    assert value.actor == value.target == current_ref(actual, 2)
+    assert value.total == 3 and value.heat == 1
+    assert [(x.role, x.chooser, x.components) for x in value.selections] == [
+        ("handler", 1, ("calm",))
+    ]
+    assert value.recipient_choice is None and value.punishment is None
+    assert actual.sheets["2"].heat == before.sheets["2"].heat - 1
+    assert actual.sheets["3"] == before.sheets["3"]
+    drugs = [x for x in rules.drug_tags(actual, value.target) if x.dose == action]
+    assert len(drugs) == 1
+    drug = drugs[0]
+    assert drug.component == "calm" and drug.event == value.event
+    assert any(x.id == drug.id and x.label == rules.LABELS["calm"] for x in actual.sheets["2"].tags)
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+    with ledger.engine.connect() as c:
+        assert prove(game, c, actual, action) == value
+    tick(worker, gateway, 5)
+    for scene_number in (1, 2):
+        game.close_scene(ADMIN, str(uuid4()), 900)
+        ends = [x for x in rules.records(state(game), rules.SceneEnd) if x.dose == action]
+        assert len(ends) == scene_number
+        assert rules.expired(state(game), action) == (scene_number == 2)
+        if scene_number == 1:
+            assert any(x.id == drug.id for x in state(game).sheets["2"].tags)
+            game.bind_scene(ADMIN, str(uuid4()), 900)
+            for human in (PLAYER, OTHER, ADMIN):
+                game.join_scene(human, str(uuid4()), 900)
+    final = state(game)
+    assert not any(x.id == drug.id for x in final.sheets["2"].tags)
+    assert any(x.id == "unrelated" for x in final.sheets["2"].tags)
+    assert next(x for x in rules.records(final, rules.Dose) if x.id == action) == value
+    assert controls.view(PLAYER, action)["phase"] == "expired"
+    assert game.inspect(PLAYER, action)["receipt"] == receipt and game.dice.calls == 1
+
+
 def test_low_other_real_recipient_dose_then_handler_components(ledger, tmp_path, monkeypatch):
     game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch)
     action = dose(game, worker, gateway, faces=(1, 1), source=contact(controls, game))

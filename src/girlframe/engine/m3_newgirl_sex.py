@@ -26,9 +26,9 @@ class Session(Model):
     mentor_source: str
     proposed_event: str
     proposal: str
-    phase: Literal["invited", "accepted", "declined", "bound", "results", "damage", "complete"] = (
-        "invited"
-    )
+    phase: Literal[
+        "invited", "accepted", "declined", "withdrawn", "bound", "results", "damage", "complete"
+    ] = "invited"
     action: str | None = None
     bound_event: str | None = None
     effect_event: str | None = None

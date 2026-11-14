@@ -19,6 +19,9 @@ async def open_choice(
     interaction: discord.Interaction, game: GameService, decision: dict[str, Any]
 ) -> None:
     data, kind = decision["detail"], decision["kind"]
+    if data.get("unsupported_npc"):
+        await interaction.edit_original_response(content=data["guidance"], view=None)
+        return
     fields = []
     if data["options"] and kind != "casualty_focus":
         fields.append(
@@ -123,12 +126,55 @@ async def open_choice(
     await reply(interaction, form.text(), form)
 
 
+async def open_learned_casualty(
+    interaction: discord.Interaction, service: CasualtyService, lesson: str
+) -> None:
+    channel = int(interaction.channel_id or 0)
+    data = await asyncio.to_thread(
+        service.learned_menu, viewer_from_interaction(interaction), channel, lesson
+    )
+    targets = {ActorRef.model_validate(x["ref"]).token: x for x in data["targets"]}
+
+    async def propose(current: discord.Interaction, values: dict[str, Any]) -> str:
+        result = await asyncio.to_thread(
+            service.invite,
+            viewer_from_interaction(current),
+            str(current.id),
+            channel,
+            ActorRef.model_validate(targets[values["target"][0]]["ref"]),
+            data["revision"],
+            values["account"],
+            learned_source=lesson,
+        )
+        return (
+            "Original-body source proposed; the actual counterpart independently answers: "
+            + str(result["id"])
+        )
+
+    form = NativeForm(
+        interaction.user.id,
+        "Learned Casualty original-body source",
+        "This lesson creates no body parts or consent. Use your original proven body.",
+        [
+            Field(
+                "target",
+                "Actual counterpart",
+                tuple((key, x["label"]) for key, x in targets.items()),
+            ),
+            Field("account", "Your actual voluntary source", paragraph=True),
+        ],
+        propose,
+    )
+    await reply(interaction, form.text(), form)
+
+
 async def open_casualty(
     interaction: discord.Interaction,
     service: CasualtyService,
     identity: str | None = None,
     *,
     page: int = 0,
+    allow_withdraw: bool = True,
 ) -> None:
     viewer, channel = viewer_from_interaction(interaction), int(interaction.channel_id or 0)
     if identity:
@@ -150,7 +196,42 @@ async def open_casualty(
                 summary += " Original part: " + rules.LABELS[record["part"]]
             await reply(interaction, summary)
             return
+        if allow_withdraw and data.get("can_withdraw"):
+            options = [("withdraw", "Withdraw the unused invitation; preserve its source")]
+            if data["can_roll"]:
+                options.append(("continue", "Use this actually accepted source"))
+
+            async def manage(current: discord.Interaction, values: dict[str, Any]) -> str | None:
+                if values["operation"] == ("withdraw",):
+                    await asyncio.to_thread(
+                        service.withdraw_learned,
+                        viewer_from_interaction(current),
+                        str(current.id),
+                        identity,
+                        data["revision"],
+                    )
+                    return "Invitation withdrawn; a fresh source needs fresh consent."
+                await open_casualty(current, service, identity, allow_withdraw=False)
+                return None
+
+            form = NativeForm(
+                interaction.user.id,
+                "Your learned original-body source",
+                "Your original source remains private and belongs to its actual participants.",
+                [Field("operation", "Action", tuple(options))],
+                manage,
+            )
+            await reply(interaction, form.text(), form)
+            return
         summary = "Your actual Casualty intimacy source: " + data["phase"] + ". " + data["proposal"]
+        if data["target"]["kind"] == "npc":
+            summary += (
+                " NPC high results need human adjudication for missing Heat and Asset effects; "
+                "the entire result remains pending, with no partial effect "
+                "or automatic completion. "
+                "NPC Identity unmark is unsupported: requesting it stays pending for adjudication. "
+                "Only the NPC controller's explicit decline resolves that optional choice."
+            )
         if not data["can_confirm"] and not data["can_roll"]:
             await reply(
                 interaction,
@@ -166,6 +247,12 @@ async def open_casualty(
                     (("yes", "Voluntarily participate"), ("no", "Decline")),
                 ),
                 Field("account", "Your actual voluntary source account", paragraph=True),
+                Field(
+                    "npc_contact",
+                    "NPC only: actual contact outside enclosures",
+                    paragraph=True,
+                    required=False,
+                ),
             ]
         else:
             sheet = await asyncio.to_thread(service.game.sheet, viewer)
@@ -188,6 +275,9 @@ async def open_casualty(
                     data["revision"],
                     values["accept"][0] == "yes",
                     values["account"],
+                    npc_contact_account=(values.get("npc_contact") or None)
+                    if values["accept"][0] == "yes"
+                    else None,
                 )
             else:
                 await asyncio.to_thread(
@@ -214,10 +304,10 @@ async def open_casualty(
         return
     menu = await asyncio.to_thread(service.menu, viewer, channel)
     options = [("replacement", "Missing hardware: supplied replacement and installation")]
+    if menu.get("barely_available") and menu["identities"] and menu["assets"]:
+        options.append(("barely", "Erase Identity to undamage a real Asset"))
     if menu["available"]:
         options.append(("body", "Record/review actual original ideal parts"))
-        if menu["identities"] and menu["assets"]:
-            options.append(("barely", "Erase Identity to undamage a real Asset"))
         if any(x["condition"] == "broken" for x in menu["parts"]):
             options.append(("repair", "Repair one broken original part for1 Permission"))
             if menu.get("payment_needed"):
@@ -264,6 +354,14 @@ async def open_casualty(
             return None
         fields: list[Field] = []
         if kind == "barely":
+            if menu.get("barely_lessons"):
+                fields.append(
+                    Field(
+                        "lesson",
+                        "Actual one-use lesson",
+                        tuple((x["id"], x["label"]) for x in menu["barely_lessons"]),
+                    )
+                )
             fields.extend(
                 (
                     Field(
@@ -351,6 +449,7 @@ async def open_casualty(
                     answer["identity"][0],
                     answer["asset"][0],
                     answer["account"],
+                    lesson=next(iter(answer.get("lesson", ())), None),
                 )
             elif kind == "repair":
                 await asyncio.to_thread(

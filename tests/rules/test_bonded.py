@@ -29,7 +29,14 @@ PEOPLE = {2: PLAYER, 3: OTHER, 4: FOUR}
 
 
 def bonded_game(
-    store, girl="BONDED", frame="THE ENFORCER", faces=(4, 5), *, three=False, paired_target=False
+    store,
+    girl="BONDED",
+    frame="THE ENFORCER",
+    faces=(4, 5),
+    *,
+    three=False,
+    paired_target=False,
+    native_pair_book="MOCKINGBIRD",
 ):
     from test_creation import selected
     from test_creation_review import ready as creation_ready
@@ -41,7 +48,7 @@ def bonded_game(
     from girlframe.services.bonds import BondService
     from girlframe.services.m2_game import GameService
 
-    review, creation, _ = creation_ready(store, girl, frame)
+    review, creation, _ = creation_ready(store, girl, frame, other_girl=native_pair_book)
     store.policy = store.policy.model_copy(
         update={
             "owner_intense_tag_bonus": 2,
@@ -52,17 +59,63 @@ def bonded_game(
             ),
         }
     )
+    pair_update = {}
+    if native_pair_book == "VATGROWN":
+        from girlframe.engine.creation_details import DesireChoice, GirlDetails, NpcInvestor
+        from girlframe.services.creation_coordination import CoordinationService
+
+        pair_update["girl_details"] = GirlDetails(
+            investors=tuple(
+                NpcInvestor(npc_slot=x.slot, desires=DesireChoice(slots=(0,)))
+                for x in selected(native_pair_book, "JANUS-B").npc_bonds
+            )
+        )
+        coordination = CoordinationService(store)
+        request = coordination.propose(
+            ADMIN,
+            str(uuid4()),
+            OTHER.user_id,
+            "vatgrown_handler",
+            coordination.prepare(ADMIN, OTHER.user_id, "vatgrown_handler"),
+            DesireChoice(slots=(1,)),
+        )
+        coordination.decide(OTHER, str(uuid4()), request["id"], 1, "accept")
+    if native_pair_book == "OLDGEN":
+        from girlframe.engine.creation_details import GirlDetails
+
+        pair_update["girl_details"] = GirlDetails(maxims=(0, 1))
+    if native_pair_book == "PRINCESS":
+        from girlframe.engine.creation_details import GirlDetails, StandardChoice
+        from girlframe.services.creation_coordination import CoordinationService
+
+        pair_update["girl_details"] = GirlDetails(own_standard=StandardChoice(slot=0))
+        coordination = CoordinationService(store)
+        for owner, role in ((PLAYER, "princess_peer"), (ADMIN, "princess_handler")):
+            request = coordination.propose(
+                owner,
+                str(uuid4()),
+                OTHER.user_id,
+                role,
+                coordination.prepare(owner, OTHER.user_id, role),
+                StandardChoice(slot=1),
+            )
+            coordination.decide(OTHER, str(uuid4()), request["id"], 1, "accept")
     own = creation.get(OTHER)
     creation.save(
         OTHER,
         str(uuid4()),
         own.revision,
         store.draft(OTHER)["revision"],
-        selected("MOCKINGBIRD", "JANUS-B").model_copy(
-            update={"shared_tokens": own.draft.shared_tokens}
+        selected(native_pair_book, "JANUS-B").model_copy(
+            update={"shared_tokens": own.draft.shared_tokens, **pair_update}
         ),
     )
-    third_draft(store)
+    third_draft(
+        store,
+        starting_order=(OTHER, PLAYER, FOUR)
+        if native_pair_book == "PRINCESS"
+        else (PLAYER, OTHER, FOUR),
+    )
     bonds = BondService(store)
     if paired_target:
         from girlframe.engine.creation import AssetChoice
@@ -129,8 +182,27 @@ def bonded_game(
             handler.roster(ADMIN)["revision"],
             tuple(
                 PilotRef(user_id=x.user_id, character_revision=store.draft(x)["revision"])
-                for x in (PLAYER, OTHER, FOUR)
+                for x in (
+                    (OTHER, PLAYER, FOUR)
+                    if native_pair_book == "PRINCESS"
+                    else (PLAYER, OTHER, FOUR)
+                )
             ),
+        )
+    if native_pair_book == "NEWGIRL":
+        from girlframe.engine.cadre_history import PriorMission
+        from girlframe.engine.handler_setup import PilotRef
+        from girlframe.engine.shared_setup import CallsignChoice
+        from girlframe.services.handler_setup import HandlerService
+        from girlframe.services.shared_setup import SharedSetupService
+
+        handler = HandlerService(store)
+        handler.mentor(
+            ADMIN,
+            str(uuid4()),
+            handler.roster(ADMIN)["revision"],
+            PilotRef(user_id=3, character_revision=store.draft(OTHER)["revision"]),
+            PilotRef(user_id=4, character_revision=store.draft(FOUR)["revision"]),
         )
     personal = bonds.propose(
         OTHER,
@@ -140,6 +212,33 @@ def bonded_game(
         BondProposal(target_id=4, prompt=0, context="My actual Personal starting Bond"),
     )
     bonds.decide(FOUR, str(uuid4()), personal["id"], 1, "accept")
+    if native_pair_book == "NEWGIRL":
+        shared = SharedSetupService(store)
+        name = shared.propose(
+            FOUR,
+            str(uuid4()),
+            3,
+            "callsign",
+            shared.prepare(FOUR, 3, "callsign"),
+            CallsignChoice(callsign="Actual original trainee"),
+        )
+        shared.decide(OTHER, str(uuid4()), name["id"], 1, "accept")
+        own = creation.get(OTHER)
+        creation.save(
+            OTHER,
+            str(uuid4()),
+            own.revision,
+            store.draft(OTHER)["revision"],
+            own.draft.model_copy(
+                update={
+                    "prior_missions": tuple(
+                        PriorMission(user_id=uid, character_revision=row["revision"], missions=0)
+                        for uid, row in creation.cadre(OTHER).items()
+                    ),
+                    "cadre_discussed": True,
+                }
+            ),
+        )
     own = creation.get(OTHER)
     review.select_bond(
         OTHER, str(uuid4()), own.revision, store.draft(OTHER)["revision"], own.draft, personal["id"]
@@ -157,7 +256,15 @@ def bonded_game(
 
 
 def ready(
-    store, tmp_path, monkeypatch, *, three=False, marks=False, pair_book=None, paired_target=False
+    store,
+    tmp_path,
+    monkeypatch,
+    *,
+    three=False,
+    marks=False,
+    pair_book=None,
+    paired_target=False,
+    native_pair_book="MOCKINGBIRD",
 ):
     import test_mission_service as fixture
 
@@ -165,7 +272,11 @@ def ready(
         fixture,
         "setup_game",
         lambda actual, **kwargs: bonded_game(
-            actual, three=three, paired_target=paired_target, **kwargs
+            actual,
+            three=three,
+            paired_target=paired_target,
+            native_pair_book=native_pair_book,
+            **kwargs,
         ),
     )
     _, game = service(store, girl="BONDED", frame="THE ENFORCER")

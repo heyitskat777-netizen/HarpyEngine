@@ -110,6 +110,9 @@ class GorgonService:
                 raise WorkflowError("STALE_ATTACK: reopen the actual world and target review.")
             source = str(uuid4())
             state = rules.attack_npc(state, attack, source)
+            assert state.world is not None
+            alive = next(x.alive for x in state.world.npcs if x.id == attack.target.entity)
+            outcome = "npc_kept_alive" if alive else "npc_dead"
             self.game.event(
                 c,
                 viewer.user_id,
@@ -118,9 +121,9 @@ class GorgonService:
                 state,
                 event_id=source,
                 attack_id=source,
-                outcome="npc_dead",
+                outcome=outcome,
             )
-            return {"id": source, "outcome": "npc_dead", "game_revision": state.revision}
+            return {"id": source, "outcome": outcome, "game_revision": state.revision}
 
         try:
             attack = rules.NpcAttack.model_validate_json(attack.model_dump_json())

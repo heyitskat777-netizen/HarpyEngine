@@ -1,0 +1,15 @@
+# Princess ordinary Standards and mission-end reconciliation, r265
+
+Read-only bounded review of recovered r264 v33, 2026-11-13. Printed *Girl Frame 2026_09_01 (1).pdf* p30 freshly reopened. No production edit or test execution. This closes the previous map's Standards/mission R inspection gap, not a certification of all Princess play branches or live navigation.
+
+## Clause to actual route
+
+- Three original choosers: StandardsService retains the owner's own choice, a bonded Girl's separate choice and the assigned Handler's separate choice. Original human grants are source-event and actor-bound; the Handler choice is projected as an order. `services/m3_standards.py` `_body`, `_actual`, `choices`; `engine/m3_standards.py` compiled projections. Existing `tests/rules/test_standards.py` covers actual three-chooser setup, distinct native forms, unavailable chooser pause, source tampering, and activation. These are authored tests, not newly run evidence.
+- End of mission: `MissionService.end` queues owned Princess mission-end work before the final Status/reward snapshot (`services/m3_missions.py:626–640`). `ReactionService.princess` requires all three Standards and the Handler's factual upheld/not-upheld review. It records review rationale durably; the UI shows the original choices and marks the Handler standard as an order (`discord_adapter/m3_reactions.py:64–100`).
+- Upheld branch: `engine/m3_reactions.py:41–84` applies real Status promotion and, if the Princess qualifies as Ace under the selected timing, Permission. Not-upheld branch does not invent promotion or a bonus. Missing timing ruling blocks the upheld branch rather than silently choosing. Native UI identifies that pending ruling. Intra-cadre marriage-aware credit remains routed through existing machinery.
+- Permission timing is a documented interpretation, not a silent printed fact: before- versus after-promotion policy is explicit, and existing tests/rules/test_reactions.py:54–73 cover the options and missing-ruling behavior. The real service test `test_reaction_service.py:192` authors actual promotion, own Permission, repeat-idempotence, and later distinct mission rewards. `test_reaction_ui.py:33` authors native review preservation. None was newly run for this audit.
+- She/her permission while Ace and NPC obedience unless they have reason not to are fictional permissions/constraints. No automatic forced NPC action or unrequested Discord identity change is justified. The human GM determines relevant fiction; this cannot substitute for the mechanical promotion/Permission path above.
+
+## Outcome
+
+No verified ordinary production mismatch found in this bounded Princess Standards/mission review. Do not manufacture a code change or count new tested workflows from static inspection. Remaining Princess Sex/Show Dog branches, actual live form dispatch, production registry approval, and final-candidate regression/privacy/migration/backup-restore remain separate gates. Pre-pause unpublished overlap remains unreconciled and must not be bypassed.

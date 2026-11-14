@@ -1,0 +1,9 @@
+# CONSUME low Feral: optional Handler Tag, r269
+
+Source: retained authorized Girl Frame 2026_09_01 PDF67 / printed65, reopened via pdftotext. The low result says the Handler can give any Tag; the automatic low Disobey consequence exists while that Tag remains. This is interpreted literally as a discretionary grant, not a compulsory grant with discretionary wording. No required effect may be skipped once a Tag is given.
+
+Verified r268/v37 source had no decline result: low required a nonempty Tag and always created a FeralEffect. That forced the Handler to impose a new mechanical restriction to complete an otherwise ordinary failed Feral roll. The correction exposes Give/Decline in the native owned choice; explicit decline stores the original Handler response event in the original source and completes without a new Tag, FeralEffect, or reaffirmation. Original source, controller checks, roll receipt and normal completion remain. Mid/high are unchanged. Existing saved low empty-option Tag answers still work; explicit Give follows the same real Tag path. This does not clear production registry approval.
+
+New authored test `test_consume_optional_feral.py` performs a real purchased Feral low roll, invokes the Handler's mock native callback, rejects another user's interaction, checks completion, unchanged receipt/total/Heat/Tags, absence of forced-Disobey or child work, persisted decline marker and repeat callback idempotency. Synthetic starting scene/resources/approvals and direct mock-form values are inherited from existing test setup. No pytest was run by the worker. Root must record actual execution. The existing low Tag test remains for compatibility; high/mid, live Discord, actual AI, privacy, full regression and final release gates are not certified here.
+
+Files: services/m3_consume.py, discord_adapter/m3_consume.py, tests/rules/test_consume_optional_feral.py, this note. No registry, shared engine, publication or deployment change.

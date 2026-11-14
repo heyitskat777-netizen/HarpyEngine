@@ -113,18 +113,48 @@ class RolePunishment(Model):
             raise ValueError("Use the actual retained Harpy Initiative or Virus source")
         if self.executor == self.subject and self.source_kind != "compliance_virus":
             raise ValueError("Only an actual Compliance Virus self-purge requires self-Punishment")
-        if self.source_kind not in (
-            "handler_play",
-            "compliance_virus",
-            "janus_training",
-            "succubus_npc_disobey",
-            "vatgrown_doll",
-            "show_dog",
-            "easy_target",
-            "vatgrown_plays",
-            "prince",
-            "trainee",
-        ) and (self.executor.kind not in ("pilot", "external_pilot") or self.chooser is None):
+        npc_dose = self.source_kind == "dose_up" and self.executor.kind == "npc"
+        if npc_dose and (
+            self.chooser != self.executor
+            or self.chooser_controller != self.executor_controller
+            or self.subject.kind != "pilot"
+            or self.action is None
+            or self.source_work is not None
+            or self.pc_work is not None
+        ):
+            raise ValueError(
+                "Preserve the actual NPC Dose recipient and original rolled alternative"
+            )
+        npc_alpha = self.source_kind == "alpha_sex" and self.executor.kind == "npc"
+        if npc_alpha and (
+            self.chooser != self.executor
+            or self.chooser_controller != self.executor_controller
+            or self.subject.kind != "pilot"
+            or self.action is None
+            or not self.source_work
+            or self.pc_work is not None
+        ):
+            raise ValueError(
+                "Preserve the actual NPC Alpha counterpart and original source session"
+            )
+        if (
+            not npc_dose
+            and not npc_alpha
+            and self.source_kind
+            not in (
+                "handler_play",
+                "compliance_virus",
+                "janus_training",
+                "succubus_npc_disobey",
+                "vatgrown_doll",
+                "show_dog",
+                "easy_target",
+                "vatgrown_plays",
+                "prince",
+                "trainee",
+            )
+            and (self.executor.kind not in ("pilot", "external_pilot") or self.chooser is None)
+        ):
             raise ValueError("Preserve the Enforcer source's original chooser and executor")
         if self.executor.kind in ("pilot", "external_pilot") and self.executor_frame is None:
             raise ValueError("A Girl/Harpy executor preserves its actual source Frame")

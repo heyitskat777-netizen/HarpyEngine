@@ -24,6 +24,8 @@ RULES = (
     "girl.oldgen.sex-play",
     "girl.newgirl.sex-play",
     "girl.vatgrown.sex-play",
+    "girl.bonded.sex-play",
+    "girl.casualty.sex-play",
 )
 
 
@@ -85,6 +87,16 @@ async def open_learned_sex(
             from girlframe.services.m3_vatgrown_plays import VatgrownPlaysService
 
             await open_vatgrown_plays(current, VatgrownPlaysService(game), learned_source=lesson)
+        elif row["rule_id"] == "girl.bonded.sex-play":
+            from girlframe.discord_adapter.m3_bonded import open_learned_bonded
+            from girlframe.services.m3_bonded import BondedService
+
+            await open_learned_bonded(current, BondedService(game), lesson)
+        elif row["rule_id"] == "girl.casualty.sex-play":
+            from girlframe.discord_adapter.m3_casualty import open_learned_casualty
+            from girlframe.services.m3_casualty import CasualtyService
+
+            await open_learned_casualty(current, CasualtyService(game), lesson)
         elif row["rule_id"] == "girl.am.sex-play":
             from girlframe.discord_adapter.m3_am_sex import open_am_sex
             from girlframe.services.m3_am_sex import SexService as AMSexService

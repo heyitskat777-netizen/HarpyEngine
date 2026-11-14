@@ -64,6 +64,7 @@ async def open_choice(
                 tuple(data["options"]),
                 minimum=data["minimum"],
                 maximum=data["maximum"],
+                required=data["minimum"] > 0,
             ),
             Field("tag", "Actual Tag label if chosen", required=False),
         ]
@@ -78,7 +79,23 @@ async def open_choice(
                 )
             )
 
-    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str | None:
+        if data.get("unsupported_status") and "status" in values.get("effects", ()):
+            # A choice of an unsupported consequence is a request for adjudication,
+            # never permission to invent NPC rank or partially apply the other effects.
+            fresh = await asyncio.to_thread(
+                game.decision, viewer_from_interaction(current), decision["id"]
+            )
+            if fresh["revision"] != decision["revision"]:
+                raise WorkflowError("This choice changed. Reopen your actual pending result.")
+            if not fresh["detail"].get("unsupported_status"):
+                raise WorkflowError("Reopen the current result and its supported choices.")
+            from girlframe.discord_adapter.p1_facilitator import open_missing_source
+
+            await open_missing_source(
+                current, game, "action", fresh["parent"], "choice:" + fresh["kind"]
+            )
+            return None
         supplied = {}
         if values.get("tag", "").strip():
             supplied["tag"] = values["tag"]
@@ -90,11 +107,19 @@ async def open_choice(
             str(current.id),
             decision["id"],
             decision["revision"],
-            ChoiceAnswer(options=values["effects"], fields=supplied, text=values.get("text", "")),
+            ChoiceAnswer(
+                options=values.get("effects", ()), fields=supplied, text=values.get("text", "")
+            ),
         )
         return "Your actual owned Oldgen Sex result is saved."
 
-    form = NativeForm(interaction.user.id, "Oldgen: your actual result", DISCLOSURE, fields, submit)
+    disclosure = DISCLOSURE
+    if data.get("unsupported_status"):
+        disclosure += (
+            " NPC Status has no automated ranked resource here. Confirming it opens a private "
+            "GM decision request and leaves ALL effects pending; no rank or completion is invented."
+        )
+    form = NativeForm(interaction.user.id, "Oldgen: your actual result", disclosure, fields, submit)
     await reply(interaction, form.text(), form)
 
 
@@ -120,6 +145,7 @@ async def open_oldgen_sex(
                     data["revision"],
                     values["accept"][0] == "yes",
                     values["account"],
+                    npc_contact_account=values.get("npc_contact") or None,
                 )
                 return "Your own actual voluntary source response is saved."
 
@@ -134,7 +160,19 @@ async def open_oldgen_sex(
                         (("yes", "Confirm"), ("no", "Decline")),
                     ),
                     Field("account", "Your own actual answer", paragraph=True),
-                ],
+                ]
+                + (
+                    [
+                        Field(
+                            "npc_contact",
+                            "If accepting: actual physical contact, outside enclosures",
+                            paragraph=True,
+                            required=False,
+                        )
+                    ]
+                    if data["target"]["kind"] == "npc"
+                    else []
+                ),
                 respond,
             )
         elif data["phase"] == "accepted" and viewer.user_id == data["caster"]:
@@ -189,6 +227,11 @@ async def open_oldgen_sex(
         raise WorkflowError("Reopen your actual available learned Oldgen source")
     options = [("invite", "Propose your actual voluntary source")] if data["targets"] else []
     options.extend((x["id"], "Your saved interaction: " + x["phase"]) for x in data["sessions"])
+    options.extend(
+        ("withdraw:" + x["id"], "Withdraw your unused invitation")
+        for x in data["sessions"]
+        if x["can_withdraw"]
+    )
     if not options:
         await reply(
             interaction, "No actual Oldgen intimacy source controls or private history here."
@@ -197,6 +240,17 @@ async def open_oldgen_sex(
 
     async def choose(current: discord.Interaction, values: dict[str, Any]) -> str | None:
         selected = values["action"][0]
+        if selected.startswith("withdraw:"):
+            await asyncio.to_thread(
+                service.withdraw,
+                viewer_from_interaction(current),
+                str(current.id),
+                selected.removeprefix("withdraw:"),
+                data["revision"],
+            )
+            return (
+                "Unused invitation withdrawn; original consent remains history, not a new answer."
+            )
         if selected != "invite":
             await open_oldgen_sex(current, service, selected)
             return None

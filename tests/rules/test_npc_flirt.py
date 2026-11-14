@@ -12,6 +12,7 @@ from test_ledger import ledger as ledger_fixture
 from test_m2_game import answer, pass_tags, state, tick
 from test_mission_ui import current as original_current
 from test_red_queen import am, initialize, ready
+from test_world_service import transfer_npc
 
 from girlframe.delivery.p1_source_pause_worker import SourcePauseWorker
 from girlframe.discord_adapter.m3_npc_flirt import open_choice
@@ -351,9 +352,7 @@ def test_actual_princess_directed_mid_native_npc_flirt_keeps_people_resources_an
             cell=(0, 0),
         ),
     )
-    WorldService(MissionService(ledger)).claim_npc(
-        OTHER, str(uuid4()), state(game).revision, npc.entity
-    )
+    transfer_npc(WorldService(MissionService(ledger)), ADMIN, OTHER, npc.entity)
     cast_change(CastService(ActorService(MissionService(ledger))), OTHER, "join", npc)
     identity, parent = roll(game, worker, gateway, source, (6, 6), native=True)
     pass_tags(game)

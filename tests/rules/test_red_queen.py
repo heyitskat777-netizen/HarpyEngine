@@ -1,6 +1,7 @@
 """Red Queen printed normals. Only the named mid-Court native smoke may run during P1."""
 
 import asyncio
+import json
 from uuid import uuid4
 
 import pytest
@@ -14,6 +15,7 @@ from test_physical_operations import place
 from test_trainee import discipline
 from test_world import initial
 
+from girlframe.database import tables as t
 from girlframe.delivery.m2_worker import GameWorker
 from girlframe.discord_adapter.m3_red_queen import open_choice, open_red_queen
 from girlframe.engine import m3_red_queen as rules
@@ -244,6 +246,7 @@ def test_consult_other_tiers_real_recall_queen_transfer_and_handler_advice_order
             value.id,
             "Follow the actual advice of " + rules.get(state(game), rules.CourtAM, value.am).role,
         )
+        answer(game, PLAYER, "order_response", options=("obedient",))
     final = state(game)
     assert all(x.order for x in rules.records(final, rules.Advice) if x.session == identity)
     assert am(game, "The Queen").bearer == current_ref(final, 2 if high else 3)
@@ -987,3 +990,82 @@ def test_personality_actual_copy_advice_optional_and_signed_real_roll_modifier(
         assert actual["data"]["receipt"]["pre_total"] == 7
         assert actual["data"]["result"]["total"] == 8
     assert game.inspect(PLAYER, action)["state"] == "complete" and game.dice.calls == 1
+
+
+def test_low_consult_all_advice_owned_orders_complete_original_play(ledger, tmp_path, monkeypatch):
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch)
+    initialize(controls)
+    identity = roll(game, worker, gateway, faces=(2, 3))
+    receipt = game.inspect(PLAYER, identity)["receipt"]
+    knight = am(game, "The Knight")
+    native_choice(
+        game,
+        PLAYER,
+        "red_queen_consult",
+        options=(knight.id,),
+        text="",
+        queen=(current_ref(state(game), 3).token,),
+    )
+    records = [x for x in rules.records(state(game), rules.Advice) if x.session == identity]
+    assert len(records) == 4
+    assert {x.am for x in records} == {
+        x.id for x in rules.assigned(state(game), current_ref(state(game), 2))
+    }
+    assert am(game, "The Queen").bearer == current_ref(state(game), 3)
+    for index, value in enumerate(records):
+        assert not rules.get(state(game), rules.Session, identity).completed_event
+        before = state(game)
+        with pytest.raises(WorkflowError, match="actual requested human"):
+            controls.answer_advice(PLAYER, str(uuid4()), before.revision, value.id, "Forged")
+        assert state(game) == before
+        instruction = "Follow actual advice from " + rules.get(before, rules.CourtAM, value.am).role
+
+        async def give_advice(advice_id=value.id, text=instruction):
+            interaction = current(1, int(uuid4().int % 1000000000))
+            await interaction.response.defer(ephemeral=True)
+            await open_red_queen(interaction, controls, advice_id)
+            form = interaction.edit_original_response.call_args.kwargs["view"]
+            assert not await form.interaction_check(current(2))
+            form.values["instruction"] = text
+            submitted = current(1, int(uuid4().int % 1000000000))
+            await form.confirm.callback(submitted)
+            assert form.completed, submitted.edit_original_response.call_args_list
+
+        asyncio.run(give_advice())
+        advice = rules.get(state(game), rules.Advice, value.id)
+        assert advice.order and advice.instruction == instruction
+        with ledger.engine.connect() as c:
+            table = t.m2["m2_orders"]
+            row = c.execute(table.select().where(table.c.id == advice.order)).mappings().one()
+            body = json.loads(row["body_json"])
+            assert row["issuer_id"] == "1" and row["target_id"] == "2"
+            assert row["state"] == "awaiting_response"
+            assert body["red_queen"]["id"] == value.id and body["text"] == instruction
+        if index < len(records) - 1:
+            before_pending = state(game)
+            with pytest.raises(WorkflowError, match="preceding Court Order"):
+                controls.answer_advice(
+                    ADMIN,
+                    str(uuid4()),
+                    before_pending.revision,
+                    records[index + 1].id,
+                    "Do not bypass her unanswered Order",
+                )
+            assert state(game) == before_pending
+        answer(game, PLAYER, "order_response", options=("obedient",))
+        assert game.inspect(PLAYER, identity)["receipt"] == receipt
+        assert game.dice.calls == 1
+        if index < len(records) - 1:
+            assert game.inspect(PLAYER, identity)["state"] != "complete"
+    final = state(game)
+    assert rules.get(final, rules.Session, identity).completed_event
+    assert game.inspect(PLAYER, identity)["state"] == "complete"
+    orders = [rules.get(final, rules.Advice, x.id).order for x in records]
+    assert len(set(orders)) == 4
+    with ledger.engine.connect() as c:
+        table = t.m2["m2_orders"]
+        rows = c.execute(table.select().where(table.c.id.in_(orders))).mappings().all()
+        assert len(rows) == 4 and all(x["state"] == "followed" for x in rows)
+    assert controls.view(PLAYER, identity)["source"]["completed_event"]
+    game.rebuild()
+    assert state(game) == final

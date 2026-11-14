@@ -136,6 +136,7 @@ class Procedure(Model):
     channel: int
     heat: int = 0
     asset: str | None = None
+    replace: str | None = Field(default=None, exclude_if=lambda value: value is None)
     phase: Literal["proposal", "complete"] = "proposal"
     completion_event: str | None = None
 

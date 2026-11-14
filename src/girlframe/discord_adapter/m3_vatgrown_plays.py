@@ -21,6 +21,15 @@ async def open_choice(
     interaction: discord.Interaction, game: GameService, decision: dict[str, Any]
 ) -> None:
     detail, kind = decision["detail"], decision["kind"]
+    if kind == "vat_sex_learn" and detail["tier"] == "high" and not detail["plays"]:
+        # Both first effects are mandatory here. An absent consumer is not an
+        # optional empty field, and a ruling cannot fabricate the learned Play.
+        from girlframe.discord_adapter.p1_facilitator import open_missing_source
+
+        await open_missing_source(
+            interaction, game, "action", decision["action_id"], "choice:" + kind
+        )
+        return
     service = VatgrownPlaysService(game)
     if kind == "vat_sex_depart":
         data = await asyncio.to_thread(
@@ -214,6 +223,17 @@ async def _sex(
         sheet = await asyncio.to_thread(service.game.sheet, viewer)
 
         async def begin(current: discord.Interaction, values: dict[str, Any]) -> str:
+            if values.get("operation") == ("withdraw",):
+                await asyncio.to_thread(
+                    service.withdraw,
+                    viewer_from_interaction(current),
+                    str(current.id),
+                    value["id"],
+                    data["revision"],
+                )
+                return "Your unused invitation was withdrawn without a roll or fictional departure."
+            if not values.get("heat"):
+                raise WorkflowError("Select the actual Heat before preparing the Play")
             result = await asyncio.to_thread(
                 service.game.begin,
                 viewer_from_interaction(current),
@@ -234,8 +254,45 @@ async def _sex(
             interaction.user.id,
             "Vatgrown source roll",
             "Spend the actual available Heat under the ordinary rules.",
-            [Field("heat", "Actual Heat", tuple((str(x), str(x)) for x in range(1, 11)))],
+            (
+                [
+                    Field(
+                        "operation",
+                        "Your source",
+                        (("roll", "Prepare Play"), ("withdraw", "Withdraw unused invitation")),
+                    )
+                ]
+                if data.get("can_withdraw")
+                else []
+            )
+            + [
+                Field(
+                    "heat",
+                    "Actual Heat if preparing",
+                    tuple((str(x), str(x)) for x in range(1, 11)),
+                    required=not data.get("can_withdraw", False),
+                )
+            ],
             begin,
+        )
+    elif data.get("can_withdraw"):
+
+        async def withdraw(current: discord.Interaction, values: dict[str, Any]) -> str:
+            await asyncio.to_thread(
+                service.withdraw,
+                viewer_from_interaction(current),
+                str(current.id),
+                value["id"],
+                data["revision"],
+            )
+            return "Your unused invitation was withdrawn without a roll or fictional departure."
+
+        form = NativeForm(
+            interaction.user.id,
+            "Your unused invitation",
+            "Withdraw only this unused source. This is not a fictional departure or response.",
+            [Field("operation", "Your source", (("withdraw", "Withdraw invitation"),))],
+            withdraw,
         )
     elif data.get("side") and not data["side"]["released_event"] and not data["side"]["left_event"]:
         if viewer.user_id == value["caster"]:

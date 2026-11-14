@@ -47,6 +47,8 @@ PSYCHE = "girl.stim-blissed.disposable-psyche"
 DOLL = "girl.vatgrown.unassuming-doll"
 AM_SEX = "girl.am.sex-play"
 SEX_LESSONS = {
+    "girl.casualty.sex-play": "CASUALTY",
+    "girl.bonded.sex-play": "BONDED",
     "girl.princess.sex-play": "PRINCESS",
     "girl.stim-blissed.sex-play": "STIM-BLISSED",
     "girl.alpha.sex-play": "ALPHA",
@@ -65,6 +67,7 @@ OFF_DUTY = ("go_off_duty", "void_observation")
 CALL_OPTIONS = ("call_reclassify_assets", "call_cockpit_guest", "call_gorgon_relay")
 KEEP_RIDERS = (BEAUTIFUL, ITCHING, ELDER)
 SUPPORTED = {
+    "girl.bonded.always-by-her-side": ("bonded_side", "BONDED"),
     "girl.alpha.brutalize": ("brutalize", "ALPHA"),
     "girl.stim-blissed.dose-up": ("dose_up", "STIM-BLISSED"),
     "girl.oldgen.old-dog-new-pups": ("old_dog_new_pups", "OLDGEN"),
@@ -78,6 +81,10 @@ SUPPORTED = {
 
 
 def lesson_label(rule_id: str, play: str) -> str:
+    if rule_id == "girl.bonded.always-by-her-side":
+        return "Always By Her Side (one use; requires your actual original Pair)"
+    if rule_id == "girl.casualty.barely-a-girl":
+        return "Barely a Girl (erase an actual Identity to repair one Asset)"
     if rule_id == AM_SEX:
         return "AM Sex (one actual no-roll source; no circuit capability)"
     if rule_id in SEX_LESSONS:
@@ -109,6 +116,8 @@ def lesson_label(rule_id: str, play: str) -> str:
 
 def lesson_book(rule_id: str) -> str | None:
     """The finite Status lesson has no invented underlying Play ID."""
+    if rule_id == "girl.casualty.barely-a-girl":
+        return "CASUALTY"
     if rule_id == AM_SEX:
         return "AM"
     if rule_id in (RISK, CALL):
@@ -128,6 +137,13 @@ def teacher_lessons(sheet: Any) -> tuple[dict[str, str], ...]:
         for rule, (play, book) in SUPPORTED.items()
         if sheet.girl == book and has_rule(sheet, rule, book)
     ]
+    if sheet.girl == "CASUALTY" and has_rule(sheet, "girl.casualty.barely-a-girl", "CASUALTY"):
+        result.append(
+            dict(
+                id="girl.casualty.barely-a-girl",
+                label=lesson_label("girl.casualty.barely-a-girl", ""),
+            )
+        )
     if sheet.girl == "AM" and has_rule(sheet, AM_SEX, "AM"):
         result.append(dict(id=AM_SEX, label=lesson_label(AM_SEX, "")))
     if sheet.girl == "ALPHA" and has_rule(sheet, HOUND, "ALPHA"):

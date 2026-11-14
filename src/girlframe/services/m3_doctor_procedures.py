@@ -10,11 +10,11 @@ from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import resolve
-from girlframe.engine.m3_assets import counts_toward_limit, frame_capacity
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_doctor import owned
+from girlframe.services.m3_doctor_wings import graft
 from girlframe.services.m3_enforcement_initiative import _cast
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
@@ -24,22 +24,68 @@ if TYPE_CHECKING:
 
 
 def wings_thresholds(state: GameState, donor: ActorRef, asset: str) -> None:
-    from girlframe.engine.m3_janus_storage import active, effective_for_owner
+    from girlframe.engine.m3_janus_storage import active
+    from girlframe.engine.m3_supply_drop import current_asset, live
 
+    # A graft gets a new ID on the Doctor. These sources still expire/return
+    # against their original holder and ID, so do not strand their live hardware.
+    if any(current_asset(state, use) == asset for use in live(state, donor)):
+        raise WorkflowError(
+            "SOURCE_PORT_REQUIRED: preserve the actual temporary Supply Drop before Wings transfer"
+        )
+    if any(
+        loan.doctor == donor and loan.asset == asset and loan.phase == "borrowed"
+        for loan in rules.values(state, "doctor_loan", rules.Loan)
+    ):
+        raise WorkflowError(
+            "SOURCE_PORT_REQUIRED: return this actual borrowed Wings Asset before lending it again"
+        )
+    if any(item.asset_owner == donor and item.asset_id == asset for item in state.held_items):
+        raise WorkflowError(
+            "SOURCE_PORT_REQUIRED: preserve this actual held object's custody before Wings transfer"
+        )
     if any(x.asset == asset for x in active(state, donor)):
         raise WorkflowError(
             "Unplug or remove stored Void before transferring its actual host Asset"
         )
-    before = effective_for_owner(state, donor.entity)
-    remaining = [x for x in before if x.family == "frame" and x.id != asset]
-    original = [x for x in before if x.family == "frame"]
-    if remaining and all(x.void for x in remaining) and not all(x.void for x in original):
-        raise WorkflowError("This Wings transfer needs its full-Void consequence source port")
 
 
 class ProcedureService:
     def __init__(self, game: "GameService"):
         self.game, self.store = game, game.store
+
+    def call_menu(self, viewer: GuildViewer, channel: int) -> dict[str, Any]:
+        """Discover actual joined Doctors without exposing their private resources."""
+        with self.store.engine.connect() as c:
+            Access(self.store).authorize(c, viewer, "playbooks")
+            self.game.authorize(c, viewer, game=False)
+            state = load_state(c, self.store.campaign_id)
+            caller = current_ref(state, viewer.user_id)
+            cast = _cast(self.game, c, state, channel)
+            if caller not in {x.actor for x in cast.roles}:
+                raise WorkflowError("Join the actual call scene first")
+            try:
+                rules.sheet(state, caller)
+                native = True
+            except ValueError:
+                native = False
+            doctors = []
+            for role in cast.roles:
+                actor = role.actor
+                if actor == caller or actor.kind != "pilot":
+                    continue
+                if not owned(self.game, c, state, actor, rules.RAGGED):
+                    continue
+                actual = resolve(state, actor, profiles(c, self.store.campaign_id))
+                doctors.append(
+                    dict(ref=actor.model_dump(mode="json"), token=actor.token, label=actual.label)
+                )
+            return dict(
+                revision=state.revision,
+                caller=caller.model_dump(mode="json"),
+                native=native,
+                doctors=doctors,
+            )
 
     def propose(
         self,
@@ -53,6 +99,8 @@ class ProcedureService:
         *,
         asset: str | None = None,
         heat: int = 0,
+        called_doctor: ActorRef | None = None,
+        replace: str | None = None,
     ) -> dict[str, Any]:
         def access(c: Connection) -> None:
             Access(self.store).authorize(c, viewer, "playbooks")
@@ -60,7 +108,12 @@ class ProcedureService:
         def change(c: Connection) -> dict[str, Any]:
             self.game.unpaused(c)
             state = load_state(c, self.store.campaign_id)
-            actor = current_ref(state, viewer.user_id)
+            initiator = current_ref(state, viewer.user_id)
+            actor = called_doctor or initiator
+            if called_doctor is not None and (
+                kind != "ragged" or counterpart != initiator or actor.kind != "pilot"
+            ):
+                raise WorkflowError("Call only as the actual caller of Running Ragged")
             if (
                 state.revision != revision
                 or self.game.pending_actions(c)
@@ -95,15 +148,12 @@ class ProcedureService:
                     raise WorkflowError(
                         "Tear off an actual damaged Frame Asset and spend at least two Heat"
                     )
-                if sum(
-                    x.family == "frame" and counts_toward_limit(own, x) for x in own.assets
-                ) >= frame_capacity(own, state):
-                    raise WorkflowError("Make room within the actual Frame-Asset limit first")
+                graft(state, actor, selected, "doctor-loan:preview", replace)
                 wings_thresholds(state, counterpart, selected.id)
                 giver = resolve(state, actor, profiles(c, self.store.campaign_id))
                 if giver.cell is not None and target.cell is not None and giver.cell != target.cell:
                     raise WorkflowError("The actual damaged Frame must be physically reachable")
-            elif asset is not None or heat:
+            elif asset is not None or heat or replace is not None:
                 raise WorkflowError(
                     "Running Ragged marks a real owned Tag instead of spending Heat"
                 )
@@ -120,6 +170,7 @@ class ProcedureService:
                 channel=channel,
                 asset=asset,
                 heat=heat,
+                replace=replace,
             )
             rules.put(state, "doctor_procedure", request)
             self.game.event(
@@ -139,7 +190,9 @@ class ProcedureService:
                 account=account,
                 asset=asset,
                 heat=heat,
-            ),
+            )
+            | ({"replace": replace} if replace is not None else {})
+            | ({"called_doctor": called_doctor.model_dump(mode="json")} if called_doctor else {}),
             change,
             auto_audit=False,
             authorize=access,
@@ -228,6 +281,7 @@ class ProcedureService:
             if not owned(self.game, c, state, value.doctor, rule):
                 raise WorkflowError("Recover the current original Doctor entitlement")
             event = str(uuid4())
+            before_transfer = state.model_copy(deep=True)
             if value.kind == "wings":
                 if viewer.user_id != value.controller or tag is not None:
                     raise WorkflowError(
@@ -243,23 +297,18 @@ class ProcedureService:
                     ),
                     None,
                 )
-                if (
-                    asset is None
-                    or donor.frame_scrapped
-                    or own.heat < value.heat
-                    or sum(x.family == "frame" and counts_toward_limit(own, x) for x in own.assets)
-                    >= frame_capacity(own, state)
-                ):
+                if asset is None or donor.frame_scrapped or own.heat < value.heat:
                     raise WorkflowError(
                         "Refresh the actual damaged donor Asset, Heat and available slot"
                     )
                 wings_thresholds(state, value.counterpart, asset.id)
-                graft = asset.model_copy(update={"id": "doctor-loan:" + identity, "damaged": False})
+                updated, received = graft(
+                    state, value.doctor, asset, "doctor-loan:" + identity, value.replace
+                )
                 donor.assets = [x for x in donor.assets if x.id != asset.id]
-                own.assets.append(graft)
-                own.heat -= value.heat
+                updated.heat -= value.heat
+                state.sheets[value.doctor.entity] = updated
                 donor.revision += 1
-                own.revision += 1
                 rules.put(
                     state,
                     "doctor_loan",
@@ -271,7 +320,7 @@ class ProcedureService:
                         donor_frame=donor.frame_runtime.id
                         if donor.frame_runtime
                         else "initial:" + str(value.counterpart.incarnation),
-                        asset=graft.id,
+                        asset=received.id,
                         source_asset_json=asset.model_dump_json(),
                         source_event=event,
                         account=account,
@@ -317,6 +366,23 @@ class ProcedureService:
             self.game.event(
                 c, viewer.user_id, key, "m3.doctor_procedure_completed", state, event_id=event
             )
+            if value.kind == "wings":
+                from girlframe.services.m3_asset_loss import create_loss_work
+
+                # Both original participants can cross the full-Void threshold:
+                # removing the donor component or replacing the Doctor cap slot.
+                for subject in (value.counterpart, value.doctor):
+                    create_loss_work(
+                        self.game,
+                        c,
+                        before_transfer,
+                        state,
+                        scope=dict(campaign_id=self.store.campaign_id, campaign_context=True),
+                        actor=subject,
+                        event=event,
+                        reason="doctor_wings",
+                        source_id=identity,
+                    )
             return dict(id=identity)
 
         return self.store._write(
@@ -402,7 +468,11 @@ class ProcedureService:
                 or not account.strip()
             ):
                 raise WorkflowError("Only the actual original protector ends their protection")
-            resolve(state, value.protector, profiles(c, self.store.campaign_id))
+            actual = resolve(state, value.protector, profiles(c, self.store.campaign_id))
+            if actual.controller != value.controller:
+                raise WorkflowError(
+                    "Recover the original protector controller before ending protection"
+                )
             event = str(uuid4())
             rules.put(
                 state,

@@ -266,9 +266,29 @@ def test_actual_nearby_gorgon_owns_reply_without_new_roll_cast_or_compelled_trut
     assert service.get(OTHER, session)["message"] == ""
     with pytest.raises(WorkflowError):
         respond(service, PLAYER, session, "accept")
-    respond(service, ADMIN, session, "accept")
-    assert service.get(PLAYER, session)["answer"] == "My actual owned source response"
+    receipt = game.inspect(PLAYER, identity)["receipt"]
+    assert game.inspect(PLAYER, identity)["state"] != "complete"
+    assert service.get(ADMIN, session)["can_act"]
+
+    async def native_reply():
+        owner = current(1, 8828201)
+        await owner.response.defer(ephemeral=True)
+        await open_call(owner, service, session)
+        form = owner.edit_original_response.call_args.kwargs["view"]
+        assert not await form.interaction_check(current(2, 8828202))
+        form.values.update(decision=("accept",), account="My actual owned source response")
+        await form.confirm.callback(current(1, 8828203))
+        assert form.completed
+
+    asyncio.run(native_reply())
+    # Reopening the service preserves the original private reply and consumed source.
+    reopened = CallService(game)
+    assert reopened.get(PLAYER, session)["answer"] == "My actual owned source response"
+    assert reopened.get(OTHER, session)["answer"] == ""
+    assert not reopened.get(ADMIN, session)["can_act"]
+    assert reopened.get(PLAYER, session)["phase"] == "complete"
     assert state(game).world == before.world and state(game).scene_casts == before.scene_casts
+    assert game.inspect(PLAYER, identity)["receipt"] == receipt
     assert game.inspect(PLAYER, identity)["state"] == "complete" and game.dice.calls == 1
 
 

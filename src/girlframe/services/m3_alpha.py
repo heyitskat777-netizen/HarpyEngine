@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import sqlalchemy as sa
 from sqlalchemy import Connection
+from sqlalchemy.engine import RowMapping
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_alpha as rules
@@ -14,6 +15,7 @@ from girlframe.engine.m3_actor_bonds import current_ref, is_helpless, make_helpl
 from girlframe.engine.m3_actor_state import ActorRef, SceneCast
 from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_girl_runtime_state import has_rule
+from girlframe.engine.m3_princess_sex import HighDirection
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
@@ -48,6 +50,22 @@ def authorize(
         if approval is None or approval.registry_sha256 != meta["registry"]:
             raise WorkflowError("Recover the original Brutalize rules approval")
         state = load_state(c, game.store.campaign_id)
+        if (
+            action["state"] == "complete"
+            and action["data"].get("receipt")
+            and action["data"].get("princess_child")
+            and meta.get("target", {}).get("kind") == "npc"
+        ):
+            # Actual NPC death removes that actor from the current cast. Reopen
+            # only the proved completed directive and immutable original receipt.
+            direction = controlled_source(game, c, state, action)
+            if direction is not None and direction.completed_event:
+                return
+        if action["data"].get("ankou_feedback"):
+            from girlframe.services.m3_ankou_alpha import completed_npc_death
+
+            if completed_npc_death(game, c, state, action):
+                return
         if fingerprint(_cast(game, c, state, int(action["channel_id"]))) != meta["cast_sha256"]:
             raise WorkflowError("Recover the actual original Brutalize source cast")
 
@@ -120,6 +138,52 @@ def preview(game: GameService, viewer: GuildViewer, channel: int) -> dict[str, A
         return dict(available=False, targets=[])
 
 
+def controlled_source(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any]
+) -> HighDirection | None:
+    """Retain the actual Alpha performer; the Princess owns only her one Play decisions."""
+    if not action["data"].get("princess_child"):
+        return None
+    from girlframe.engine.m3_princess_sex import get as princess_session
+    from girlframe.services.m3_princess_sex import _bound
+
+    value = _bound(game, c, state, action)
+    meta = action["data"]["alpha"]
+    if (
+        value is None
+        or value.play != "brutalize"
+        or meta.get("princess_direction") != value.id
+        or meta["actor"] != value.actor.model_dump(mode="json")
+        or meta["actor_controller"] != value.actor_controller
+        or value.target is None
+        or value.target.kind not in ("pilot", "npc")
+        or meta["target"] != value.target.model_dump(mode="json")
+    ):
+        raise WorkflowError("Preserve this original Alpha, real target and fixed Princess author")
+    cast = princess_session(state, value.session).cast
+    if (
+        meta["cast"] != cast.model_dump(mode="json")
+        or not any(
+            role.actor == value.target and role.controller == meta["target_controller"]
+            for role in cast.roles
+        )
+        or (value.target.kind == "npc" and not meta.get("npc_assessment"))
+    ):
+        raise WorkflowError("Preserve the original recipient, source cast and NPC assessment")
+    if value.target.kind == "npc":
+        from girlframe.services.m3_handler_advancements import _history
+        from girlframe.services.m3_npc_guard import prove_assessment
+
+        prove_assessment(
+            c,
+            game,
+            _history(c, game, value.bound_event or ""),
+            value.target,
+            meta["npc_assessment"],
+        )
+    return value
+
+
 def prepare(
     game: GameService,
     c: Connection,
@@ -130,7 +194,15 @@ def prepare(
     channel: int,
 ) -> dict[str, Any]:
     authorize(game, c, viewer)
-    actor = current_ref(state, viewer.user_id)
+    from girlframe.services.m3_princess_sex import child_source
+
+    directed = child_source(game, c, viewer, state, prepared, channel)
+    actor = (
+        ActorRef.model_validate(directed["actor"])
+        if directed
+        else current_ref(state, viewer.user_id)
+    )
+    owner = int(directed["actor_controller"]) if directed else viewer.user_id
     target = prepared.target_actor
     from girlframe.services.m3_required_plays import direct_nomination
 
@@ -146,7 +218,7 @@ def prepare(
         )
     if (
         prepared.target is not None
-        or (prepared.source_work and not nominated)
+        or (prepared.source_work and not nominated and directed is None)
         or prepared.off_duty_id
         or prepared.order_id
     ):
@@ -156,7 +228,7 @@ def prepare(
             "Describe the actual tearing into this person with words, fists and teeth"
         )
     cast = _cast(game, c, state, channel)
-    if not any(x.actor == actor and x.controller == viewer.user_id for x in cast.roles):
+    if not any(x.actor == actor and x.controller == owner for x in cast.roles):
         raise WorkflowError("Join as the actual original Alpha")
     assert game.store.policy.m3_approval is not None
     other = resolve(state, target, profiles(c, game.store.campaign_id))
@@ -167,19 +239,25 @@ def prepare(
         fact = guard_assessment(state, target)
         assert fact is not None
         assessment = fact.id
-    return dict(
+    result = dict(
         actor=actor.model_dump(mode="json"),
         target=target.model_dump(mode="json"),
-        actor_controller=viewer.user_id,
+        actor_controller=owner,
         target_controller=other.controller,
         cast=cast.model_dump(mode="json"),
         cast_sha256=fingerprint(cast),
-        table=sorted({x.controller for x in cast.roles} | {cast.facilitator}),
+        table=sorted(
+            {x.controller for x in cast.roles}
+            | ({cast.facilitator} if cast.facilitator is not None else set())
+        ),
         registry=game.store.policy.m3_approval.registry_sha256,
         phase="unrolled",
         followups=[],
         npc_assessment=assessment,
     )
+    if directed is not None:
+        result["princess_direction"] = directed["direction"]
+    return result
 
 
 def pre_roll(
@@ -187,6 +265,23 @@ def pre_roll(
 ) -> None:
     authorize(game, c, viewer, action)
     actor, target = _refs(action)
+    direction = controlled_source(game, c, state, action)
+    if direction is not None:
+        from girlframe.services.m3_princess_sex import pre_roll_child
+
+        if viewer.user_id != direction.author_controller:
+            raise WorkflowError("Only the original Princess owns this directed Brutalize roll")
+        pre_roll_child(game, c, state, action)
+    if action["data"].get("alpha_counter_source"):
+        brutalize_counter(
+            game,
+            c,
+            state,
+            actor,
+            PlayInput.model_validate(action["data"]["prepared"]),
+            int(action["channel_id"]),
+            action,
+        )
     if not has_rule(state.sheets[actor.entity], rules.RULE, "ALPHA") or target.model_dump(
         mode="json"
     ) not in [x["ref"] for x in _targets(game, c, state, actor, int(action["channel_id"]))]:
@@ -245,6 +340,7 @@ def projection(
         can_counter=not is_helpless(state, target) and own.medical_state == "fit",
         target=action["data"]["alpha"]["target"],
         actor=action["data"]["alpha"]["actor"],
+        counter_plays=counter_plays(game, c, state, action, target),
     )
 
 
@@ -508,6 +604,8 @@ def complete_npc_counter(
         source_event=event,
     )
     game.save_action(c, action)
+    if action["state"] == "complete" and action["data"].get("princess_child"):
+        complete_directed(game, c, action, actual)
 
 
 def synchronize(game: GameService, c: Connection, action: dict[str, Any], event: str) -> None:
@@ -522,15 +620,584 @@ def synchronize(game: GameService, c: Connection, action: dict[str, Any], event:
         action["data"]["alpha"]["materialized"] = event
     if action["data"]["alpha"]["phase"] in ("effects", "resolved"):
         _finish(game, c, load_state(c, game.store.campaign_id), action)
+        if action["state"] == "complete" and action["data"].get("alpha_counter_source"):
+            synchronize_counters(game, c, event)
+            current = game.action(c, action["id"])
+            action.clear()
+            action.update(current)
+        if action["state"] == "complete" and action["data"].get("princess_child"):
+            complete_directed(game, c, action, event)
         if action["state"] == "complete" and action["data"].get("battle_counter_source"):
             from girlframe.services.m3_battle import complete_counter_play
 
             complete_counter_play(game, c, action, event, None, str(uuid4()))
 
 
+def _directed_completion_author(
+    game: GameService, c: Connection, action: dict[str, Any], event: str
+) -> int:
+    """Accept only this Brutalize's real result, damage work or completed counter."""
+    audit = (
+        c.execute(
+            sa.select(t.events).where(
+                t.events.c.campaign_id == game.store.campaign_id, t.events.c.id == event
+            )
+        )
+        .mappings()
+        .first()
+    )
+    if audit is None or audit["actor_id"] is None:
+        raise WorkflowError("Recover the actual directed Brutalize completion cause")
+    payload = json.loads(audit["payload_json"])
+    meta = action["data"]["alpha"]
+    choices = t.m2["m2_choices"]
+    row = (
+        c.execute(
+            sa.select(choices).where(
+                choices.c.campaign_id == game.store.campaign_id,
+                choices.c.id == payload.get("choice_id"),
+                choices.c.action_id == action["id"],
+                choices.c.state == "answered",
+                choices.c.kind.in_(
+                    ("alpha_damage", "alpha_low", "alpha_npc_damage", "alpha_npc_mercy")
+                ),
+            )
+        )
+        .mappings()
+        .first()
+    )
+    if (
+        audit["kind"] in ("m2.choice_resolved", "m3.choice_resolved")
+        and payload.get("action_id") == action["id"]
+        and row is not None
+    ):
+        expected = (
+            str(meta["target_controller"])
+            if row["kind"] == "alpha_low"
+            else str(action["data"]["princess_child"]["author"])
+        )
+        if audit["actor_id"] == expected:
+            return int(audit["actor_id"])
+    if (
+        audit["kind"] == "m3.alpha_counter_completed"
+        and payload.get("action_id") == action["id"]
+        and meta.get("counter_completed_event") == event
+        and payload.get("child") == meta.get("counter_child")
+        and meta.get("counter_child")
+    ):
+        counter = game.action(c, meta["counter_child"])
+        if (
+            counter["state"] == "complete"
+            and counter["parent_id"] == action["id"]
+            and counter["actor_id"] == str(meta["target_controller"])
+            and counter["data"].get("alpha_counter_completed") == event
+            and counter["data"].get("receipt")
+            and not game.pending(c, counter["id"])
+        ):
+            return int(audit["actor_id"])
+    if (
+        audit["kind"] == "m3.alpha_npc_counter_completed"
+        and payload.get("action_id") == action["id"]
+        and meta.get("counter_completed_event") == event
+        and payload.get("source_event") == meta.get("counter_performed_event")
+        and meta.get("counter_performed_event")
+        and audit["actor_id"] == str(meta["target_controller"])
+    ):
+        from girlframe.services.m3_npc_guard import prove_performed
+
+        npc_counter = (
+            c.execute(
+                sa.select(choices).where(
+                    choices.c.campaign_id == game.store.campaign_id,
+                    choices.c.action_id == action["id"],
+                    choices.c.kind == "alpha_counter_play",
+                    choices.c.actor_id == str(meta["target_controller"]),
+                    choices.c.state == "completed_by_work",
+                )
+            )
+            .mappings()
+            .one_or_none()
+        )
+        if npc_counter is not None:
+            actor, npc = _refs(action)
+            prove_performed(
+                c,
+                game,
+                meta["counter_performed_event"],
+                action["id"],
+                npc_counter["id"],
+                npc,
+                actor,
+            )
+            return int(audit["actor_id"])
+    work = t.m3["m3_required_work"]
+    if meta.get("followups") and c.scalar(
+        sa.select(work.c.id)
+        .where(
+            work.c.campaign_id == game.store.campaign_id,
+            work.c.id.in_(meta["followups"]),
+            work.c.state == "resolved",
+            work.c.event_id == event,
+        )
+        .limit(1)
+    ):
+        return int(audit["actor_id"])
+    raise WorkflowError("Preserve this Brutalize's actual completed result and owned consequences")
+
+
+def complete_directed(
+    game: GameService, c: Connection, action: dict[str, Any], trigger: str
+) -> None:
+    from girlframe.engine import m3_princess_sex as princess
+    from girlframe.services.m3_princess_sex import complete_child
+
+    child = game.action(c, action["id"])
+    if not child["data"].get("princess_child") or child["state"] != "complete":
+        return
+    state = load_state(c, game.store.campaign_id)
+    direction = princess.direction(state, child["data"]["princess_child"]["direction"])
+    if direction.completed_event:
+        return
+    controlled_source(game, c, state, child)
+    human = _directed_completion_author(game, c, child, trigger)
+    event = str(uuid4())
+    complete_child(game, c, state, child, event)
+    game.event(
+        c,
+        human,
+        str(uuid4()),
+        "m3.princess_directed_brutalize_completed",
+        state,
+        event_id=event,
+        action_id=child["id"],
+        parent=direction.parent,
+        direction=direction.id,
+        trigger_event=trigger,
+    )
+    from girlframe.services.m3_princess_sex import synchronize as synchronize_princess
+
+    synchronize_princess(game, c, child, event)
+
+
+def prove_directed_completion(
+    game: GameService, c: Connection, value: HighDirection, audit: RowMapping
+) -> None:
+    payload = json.loads(audit["payload_json"])
+    child = game.action(c, value.child or "")
+    meta = child["data"].get("alpha", {})
+    receipt = c.scalar(
+        sa.select(t.m2["m2_receipts"].c.body_json).where(
+            t.m2["m2_receipts"].c.campaign_id == game.store.campaign_id,
+            t.m2["m2_receipts"].c.action_id == child["id"],
+        )
+    )
+    if (
+        value.play != "brutalize"
+        or audit["kind"] != "m3.princess_directed_brutalize_completed"
+        or payload.get("action_id") != child["id"]
+        or payload.get("parent") != value.parent
+        or payload.get("direction") != value.id
+        or child["parent_id"] != value.parent
+        or child["actor_id"] != value.actor.entity
+        or child["data"].get("play") != value.play
+        or meta.get("princess_direction") != value.id
+        or meta.get("actor") != value.actor.model_dump(mode="json")
+        or meta.get("actor_controller") != value.actor_controller
+        or value.target is None
+        or meta.get("target") != value.target.model_dump(mode="json")
+        or (child["data"].get("princess_child") or {}).get("author") != value.author_controller
+        or child["state"] != "complete"
+        or receipt is None
+        or json.loads(receipt) != child["data"].get("receipt")
+        or game.pending(c, child["id"])
+    ):
+        raise WorkflowError("Prove this actual directed Brutalize and its immutable receipt")
+    from girlframe.engine.m3_princess_sex import get as princess_session
+    from girlframe.services.m3_handler_advancements import _history
+
+    bound = _history(c, game, value.bound_event or "")
+    cast = princess_session(bound, value.session).cast
+    if meta.get("cast") != cast.model_dump(mode="json") or not any(
+        role.actor == value.target and role.controller == meta.get("target_controller")
+        for role in cast.roles
+    ):
+        raise WorkflowError("Prove the original directed Brutalize recipient and controller")
+    if value.target.kind == "npc":
+        from girlframe.services.m3_npc_guard import prove_assessment
+
+        prove_assessment(c, game, bound, value.target, meta.get("npc_assessment", ""))
+    if int(audit["actor_id"]) != _directed_completion_author(
+        game, c, child, payload.get("trigger_event", "")
+    ):
+        raise WorkflowError("Retain the actual human author of the completed Brutalize consequence")
+
+
+def advice_counter(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    actor: ActorRef,
+    prepared: PlayInput,
+    channel: int,
+    action: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """The native original target may answer Brutalize with advice to its attacker."""
+    from girlframe.engine import m3_oldgen as oldgen
+    from girlframe.engine.m3_alpha_sex import asleep
+    from girlframe.services.m3_access import load_registry
+    from girlframe.services.m3_dose_up import _native
+
+    if prepared.play != oldgen.PLAY or prepared.parent is None:
+        return None
+    parent = game.action(c, prepared.parent)
+    meta = parent["data"].get("alpha")
+    if meta is None:
+        return None
+    if fingerprint(_cast(game, c, state, channel)) != meta["cast_sha256"]:
+        raise WorkflowError("Recover the original Brutalize counter scene and people")
+    attacker, target = _refs(parent)
+    row = next(
+        (x for x in game.pending(c, parent["id"]) if x["kind"] == "alpha_counter_play"), None
+    )
+    if (
+        actor != target
+        or target.kind != "pilot"
+        or attacker.kind != "pilot"
+        or state.sheets[actor.entity].girl != "OLDGEN"
+        or not has_rule(state.sheets[actor.entity], oldgen.ADVICE, "OLDGEN")
+        or meta.get("phase") != "counter"
+        or row is None
+        or row["actor_id"] != actor.entity
+        or prepared.target != int(attacker.entity)
+        or prepared.target_actor is not None
+        or prepared.source_work is not None
+        or prepared.order_id is not None
+        or prepared.off_duty_id is not None
+        or int(parent["channel_id"]) != channel
+        or is_helpless(state, actor)
+        or asleep(state, actor)
+        or asleep(state, attacker)
+    ):
+        raise WorkflowError("Use the native original Oldgen's advice to this awake Alpha attacker")
+    for person in (actor, attacker):
+        _native(game, c, state, person)
+    load_registry().require_available(oldgen.ADVICE)
+    selection = c.scalar(
+        sa.select(t.m2["m2_responses"].c.answer_json).where(
+            t.m2["m2_responses"].c.campaign_id == game.store.campaign_id,
+            t.m2["m2_responses"].c.choice_id == meta.get("selection_choice"),
+            t.m2["m2_responses"].c.event_id == meta.get("counter_selected_event"),
+            t.m2["m2_responses"].c.actor_id == actor.entity,
+        )
+    )
+    expected = "counter_broken" if meta["retaliate"] else "counter_only"
+    if selection is None or ChoiceAnswer.model_validate_json(selection).options != (expected,):
+        raise WorkflowError("Recover the original target's actual selected Brutalize opportunity")
+    scope = dict(
+        choice=row["id"], actor=meta["target"], attacker=meta["actor"], parent=parent["id"]
+    )
+    if action is not None and (
+        action["data"].get("alpha_counter_source") != scope
+        or action["parent_id"] != parent["id"]
+        or action["actor_id"] != actor.entity
+        or action["data"]["prepared"] != prepared.model_dump(mode="json")
+    ):
+        raise WorkflowError("Recover this exact original advice counter before spending or rolling")
+    return scope
+
+
+def brutalize_counter(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    actor: ActorRef,
+    prepared: PlayInput,
+    channel: int,
+    action: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """The actual native Alpha target answers her attacker with her own Brutalize."""
+    from girlframe.engine.m3_alpha_sex import asleep
+    from girlframe.services.m3_access import load_registry
+    from girlframe.services.m3_dose_up import _native
+
+    if prepared.play != "brutalize" or prepared.parent is None:
+        return None
+    parent = game.action(c, prepared.parent)
+    meta = parent["data"].get("alpha")
+    if meta is None:
+        return None
+    attacker, target = _refs(parent)
+    row = next(
+        (x for x in game.pending(c, parent["id"]) if x["kind"] == "alpha_counter_play"), None
+    )
+    if (
+        actor != target
+        or target.kind != "pilot"
+        or attacker.kind != "pilot"
+        or current_ref(state, int(target.entity)) != target
+        or current_ref(state, int(attacker.entity)) != attacker
+        or state.sheets[actor.entity].girl != "ALPHA"
+        or not has_rule(state.sheets[actor.entity], rules.RULE, "ALPHA")
+        or meta.get("phase") != "counter"
+        or parent["data"].get("result", {}).get("tier") != "low"
+        or row is None
+        or row["actor_id"] != actor.entity
+        or prepared.target_actor != attacker
+        or prepared.target is not None
+        or prepared.source_work is not None
+        or prepared.order_id is not None
+        or prepared.off_duty_id is not None
+        or int(parent["channel_id"]) != channel
+        or fingerprint(_cast(game, c, state, channel)) != meta["cast_sha256"]
+        or is_helpless(state, actor)
+        or asleep(state, actor)
+        or asleep(state, attacker)
+    ):
+        raise WorkflowError("Use the native original Alpha's own Brutalize against her attacker")
+    for person in (actor, attacker):
+        _native(game, c, state, person)
+    if attacker.model_dump(mode="json") not in [
+        x["ref"] for x in _targets(game, c, state, actor, channel)
+    ]:
+        raise WorkflowError("Recover the original attacker's actual legal Brutalize target")
+    load_registry().require_available(rules.RULE)
+    responses, choices, receipts = (t.m2[x] for x in ("m2_responses", "m2_choices", "m2_receipts"))
+    selection = c.scalar(
+        sa.select(responses.c.answer_json)
+        .join(
+            choices,
+            sa.and_(
+                responses.c.campaign_id == choices.c.campaign_id,
+                responses.c.choice_id == choices.c.id,
+            ),
+        )
+        .where(
+            responses.c.campaign_id == game.store.campaign_id,
+            responses.c.choice_id == meta.get("selection_choice"),
+            responses.c.event_id == meta.get("counter_selected_event"),
+            responses.c.actor_id == actor.entity,
+            choices.c.action_id == parent["id"],
+            choices.c.kind == "alpha_low",
+        )
+    )
+    receipt = c.scalar(
+        sa.select(receipts.c.body_json).where(
+            receipts.c.campaign_id == game.store.campaign_id,
+            receipts.c.action_id == parent["id"],
+        )
+    )
+    expected = "counter_broken" if meta["retaliate"] else "counter_only"
+    if (
+        selection is None
+        or ChoiceAnswer.model_validate_json(selection).options != (expected,)
+        or receipt is None
+        or json.loads(receipt) != parent["data"].get("receipt")
+    ):
+        raise WorkflowError("Recover the original low receipt and owned counter selection")
+    scope = dict(
+        choice=row["id"], actor=meta["target"], attacker=meta["actor"], parent=parent["id"]
+    )
+    if action is not None and (
+        action["data"].get("alpha_counter_source") != scope
+        or action["parent_id"] != parent["id"]
+        or action["actor_id"] != actor.entity
+        or action["data"]["prepared"] != prepared.model_dump(mode="json")
+        or action["data"].get("alpha", {}).get("actor") != meta["target"]
+        or action["data"].get("alpha", {}).get("target") != meta["actor"]
+    ):
+        raise WorkflowError(
+            "Recover this exact original Brutalize counter before spending or rolling"
+        )
+    return scope
+
+
+def self_dose_counter(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    actor: ActorRef,
+    prepared: PlayInput,
+    channel: int,
+    action: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """The actual native Stim answers failed Brutalize with her own self-Dose."""
+    from girlframe.engine import m3_dose_up as dose
+    from girlframe.engine.m3_alpha_sex import asleep
+    from girlframe.services.m3_access import load_registry
+    from girlframe.services.m3_dose_up import _native, _operator
+
+    if prepared.play != dose.PLAY or prepared.parent is None:
+        return None
+    parent = game.action(c, prepared.parent)
+    meta = parent["data"].get("alpha")
+    if meta is None:
+        return None
+    attacker, target = _refs(parent)
+    row = next(
+        (x for x in game.pending(c, parent["id"]) if x["kind"] == "alpha_counter_play"), None
+    )
+    if (
+        actor != target
+        or target.kind != "pilot"
+        or attacker.kind != "pilot"
+        or current_ref(state, int(target.entity)) != target
+        or current_ref(state, int(attacker.entity)) != attacker
+        or state.sheets[actor.entity].girl != "STIM-BLISSED"
+        or not has_rule(state.sheets[actor.entity], dose.RULE, "STIM-BLISSED")
+        or meta.get("phase") != "counter"
+        or parent["data"].get("result", {}).get("tier") != "low"
+        or row is None
+        or row["actor_id"] != actor.entity
+        or prepared.target_actor not in (None, actor)
+        or prepared.target is not None
+        or prepared.source_work is not None
+        or prepared.order_id is not None
+        or prepared.off_duty_id is not None
+        or int(parent["channel_id"]) != channel
+        or fingerprint(_cast(game, c, state, channel)) != meta["cast_sha256"]
+        or is_helpless(state, actor)
+        or asleep(state, actor)
+        or asleep(state, attacker)
+    ):
+        raise WorkflowError(
+            "Use the native original Stim's own self-Dose in this Brutalize opportunity"
+        )
+    for person in (actor, attacker):
+        _native(game, c, state, person)
+    _operator(game, c, state, actor)
+    load_registry().require_available(dose.RULE)
+    responses, choices, receipts = (t.m2[x] for x in ("m2_responses", "m2_choices", "m2_receipts"))
+    selection = c.scalar(
+        sa.select(responses.c.answer_json)
+        .join(
+            choices,
+            sa.and_(
+                responses.c.campaign_id == choices.c.campaign_id,
+                responses.c.choice_id == choices.c.id,
+            ),
+        )
+        .where(
+            responses.c.campaign_id == game.store.campaign_id,
+            responses.c.choice_id == meta.get("selection_choice"),
+            responses.c.event_id == meta.get("counter_selected_event"),
+            responses.c.actor_id == actor.entity,
+            choices.c.action_id == parent["id"],
+            choices.c.kind == "alpha_low",
+        )
+    )
+    receipt = c.scalar(
+        sa.select(receipts.c.body_json).where(
+            receipts.c.campaign_id == game.store.campaign_id,
+            receipts.c.action_id == parent["id"],
+        )
+    )
+    expected = "counter_broken" if meta["retaliate"] else "counter_only"
+    if (
+        selection is None
+        or ChoiceAnswer.model_validate_json(selection).options != (expected,)
+        or receipt is None
+        or json.loads(receipt) != parent["data"].get("receipt")
+    ):
+        raise WorkflowError("Recover the original low receipt and owned counter selection")
+    scope = dict(
+        choice=row["id"], actor=meta["target"], attacker=meta["actor"], parent=parent["id"]
+    )
+    if action is not None and (
+        action["data"].get("alpha_counter_source") != scope
+        or action["parent_id"] != parent["id"]
+        or action["actor_id"] != actor.entity
+        or action["data"]["prepared"] != prepared.model_dump(mode="json")
+        or action["data"].get("dose_up", {}).get("actor") != meta["target"]
+        or action["data"].get("dose_up", {}).get("target") != meta["target"]
+    ):
+        raise WorkflowError(
+            "Recover this exact original self-Dose counter before spending or rolling"
+        )
+    return scope
+
+
+def counter_plays(
+    game: GameService, c: Connection, state: GameState, parent: dict[str, Any], actor: ActorRef
+) -> tuple[str, ...]:
+    from girlframe.engine import m3_oldgen as oldgen
+    from girlframe.services.m3_alpha_beneath import counter as beneath_counter
+    from girlframe.services.m3_alpha_doll import counter as doll_counter
+    from girlframe.services.m3_alpha_easy_target import counter as easy_counter
+    from girlframe.services.m3_alpha_flirt import counter as flirt_counter
+
+    attacker, _ = _refs(parent)
+    plays = ["keep_your_head"]
+    if attacker.kind != "pilot":
+        return tuple(plays)
+    for play, validate, target in (
+        ("flirt", flirt_counter, dict(target=int(attacker.entity))),
+        ("put_someone_beneath_you", beneath_counter, dict(target=int(attacker.entity))),
+        (oldgen.PLAY, advice_counter, dict(target=int(attacker.entity))),
+        ("brutalize", brutalize_counter, dict(target_actor=attacker)),
+        ("dose_up", self_dose_counter, {}),
+        ("easy_target", easy_counter, {}),
+        ("unassuming_doll", doll_counter, dict(target_actor=attacker)),
+    ):
+        try:
+            source = validate(
+                game,
+                c,
+                state,
+                actor,
+                PlayInput(
+                    play=play,
+                    parent=parent["id"],
+                    **target,
+                    context="Availability preview only; no actual performance or action",
+                    trigger_confirmed=True,
+                    heat=0,
+                ),
+                int(parent["channel_id"]),
+            )
+        except (ValueError, WorkflowError):
+            continue
+        if source is not None:
+            plays.append(play)
+    return tuple(plays)
+
+
 def validate_counter_child(
     game: GameService, c: Connection, parent: dict[str, Any], actor: ActorRef, prepared: PlayInput
 ) -> dict[str, Any]:
+    from girlframe.services.m3_alpha_beneath import counter as beneath_counter
+    from girlframe.services.m3_alpha_doll import counter as doll_counter
+    from girlframe.services.m3_alpha_easy_target import counter as easy_counter
+    from girlframe.services.m3_alpha_flirt import counter as flirt_counter
+
+    if prepared.play in (
+        "flirt",
+        "put_someone_beneath_you",
+        "old_dog_new_pups",
+        "brutalize",
+        "dose_up",
+        "easy_target",
+        "unassuming_doll",
+    ):
+        validate = {
+            "flirt": flirt_counter,
+            "put_someone_beneath_you": beneath_counter,
+            "old_dog_new_pups": advice_counter,
+            "brutalize": brutalize_counter,
+            "dose_up": self_dose_counter,
+            "easy_target": easy_counter,
+            "unassuming_doll": doll_counter,
+        }[prepared.play]
+        source = validate(
+            game,
+            c,
+            load_state(c, game.store.campaign_id),
+            actor,
+            prepared,
+            int(parent["channel_id"]),
+        )
+        if source is None or source["parent"] != parent["id"]:
+            raise WorkflowError("Recover the actual original source-specific Brutalize counter")
+        return source
     meta = parent["data"].get("alpha")
     if (
         meta is None
@@ -574,6 +1241,25 @@ def synchronize_counters(game: GameService, c: Connection, event: str) -> GameSt
     )
     for identity in rows:
         child = game.action(c, identity)
+        if (
+            child["data"].get("ankou_feedback")
+            and child["data"].get("play")
+            in (
+                "brutalize",
+                "unassuming_doll",
+                "easy_target",
+                "old_dog_new_pups",
+                "dose_up",
+                "keep_your_head",
+                "flirt",
+                "put_someone_beneath_you",
+            )
+            and child["data"].get("result", {}).get("blocked_before_roll")
+        ):
+            from girlframe.services.m3_ankou_alpha_counter import finish_ended
+
+            finish_ended(game, c, load_state(c, game.store.campaign_id), child, event)
+            continue
         source = child["data"]["alpha_counter_source"]
         parent = game.action(c, source["parent"])
         meta = parent["data"]["alpha"]
@@ -581,7 +1267,17 @@ def synchronize_counters(game: GameService, c: Connection, event: str) -> GameSt
         if (
             child["parent_id"] != parent["id"]
             or child["actor_id"] != target.entity
-            or child["data"]["play"] != "keep_your_head"
+            or child["data"]["play"]
+            not in (
+                "keep_your_head",
+                "flirt",
+                "put_someone_beneath_you",
+                "old_dog_new_pups",
+                "brutalize",
+                "dose_up",
+                "easy_target",
+                "unassuming_doll",
+            )
             or child["data"]["character_ids"].get(target.entity) != target.incarnation
             or source["actor"] != meta["target"]
             or source["attacker"] != meta["actor"]
@@ -637,6 +1333,212 @@ def synchronize_counters(game: GameService, c: Connection, event: str) -> GameSt
                 "Preserve the actual original target's selected counter and saved receipt"
             )
         state = load_state(c, game.store.campaign_id)
+        if child["data"]["play"] == "flirt":
+            from girlframe.services.m3_alpha_flirt import completed as complete_flirt
+
+            if not complete_flirt(game, c, state, child, event):
+                continue
+        if child["data"]["play"] == "put_someone_beneath_you":
+            from girlframe.services.m3_alpha_beneath import completed as complete_beneath
+
+            if not complete_beneath(game, c, state, child, event):
+                continue
+        if child["data"]["play"] == "brutalize":
+            own = child["data"].get("alpha", {})
+            prepared = PlayInput.model_validate(child["data"]["prepared"])
+            if (
+                own.get("phase") != "complete"
+                or own.get("actor") != meta["target"]
+                or own.get("target") != meta["actor"]
+                or own.get("actor_controller") != meta["target_controller"]
+                or own.get("target_controller") != meta["actor_controller"]
+                or own.get("cast") != meta["cast"]
+                or child["data"].get("learned_play")
+                or prepared.source_work is not None
+                or prepared.parent != parent["id"]
+                or prepared.target is not None
+                or prepared.target_actor != actor
+            ):
+                raise WorkflowError("Complete the original native Alpha's actual counter results")
+            # This child keeps its own result and chooser. A low result can itself
+            # owe a genuine counter; high/mid damage must finish its ordinary work.
+            kind = "alpha_low" if child["data"]["result"]["tier"] == "low" else "alpha_damage"
+            owner = own["target_controller"] if kind == "alpha_low" else own["actor_controller"]
+            result_choice = (
+                c.execute(
+                    sa.select(choices).where(
+                        choices.c.campaign_id == game.store.campaign_id,
+                        choices.c.action_id == identity,
+                        choices.c.kind == kind,
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            response = (
+                c.execute(
+                    sa.select(responses).where(
+                        responses.c.campaign_id == game.store.campaign_id,
+                        responses.c.choice_id == result_choice["id"],
+                    )
+                )
+                .mappings()
+                .first()
+            )
+            if response is None:
+                # event() precedes the response insert. Only that actual current
+                # choice may wait for the post-response synchronization callback.
+                incoming = (
+                    c.execute(
+                        sa.select(t.events).where(
+                            t.events.c.campaign_id == game.store.campaign_id,
+                            t.events.c.id == event,
+                        )
+                    )
+                    .mappings()
+                    .one()
+                )
+                payload = json.loads(incoming["payload_json"])
+                if (
+                    incoming["kind"] != "m3.choice_resolved"
+                    or incoming["actor_id"] != str(owner)
+                    or payload.get("action_id") != identity
+                    or payload.get("choice_id") != result_choice["id"]
+                ):
+                    raise WorkflowError("Recover the exact original Brutalize result response")
+                continue
+            if response["actor_id"] != str(owner) or result_choice["actor_id"] != str(owner):
+                raise WorkflowError("Preserve the actual counter result's original chooser")
+        if child["data"]["play"] == "old_dog_new_pups":
+            from girlframe.engine import m3_oldgen as oldgen
+            from girlframe.services.m3_oldgen import prove_advice
+
+            original = next(
+                (x for x in oldgen.records(state, oldgen.Advice) if x.id == identity), None
+            )
+            advice = child["data"].get("oldgen", {})
+            if original is None or advice.get("phase") != "complete":
+                raise WorkflowError("Complete the actual original advice and owned listening")
+            choice = advice.get("listen_choice") if original.total >= 8 else original.choice
+            response_event = advice.get("listen_event") if original.total >= 8 else original.event
+            response = c.scalar(
+                sa.select(responses.c.event_id).where(
+                    responses.c.campaign_id == game.store.campaign_id,
+                    responses.c.choice_id == choice,
+                )
+            )
+            if response is None:
+                # The event is saved before its immutable response. Retry after insertion.
+                incoming = (
+                    c.execute(
+                        sa.select(t.events).where(
+                            t.events.c.campaign_id == game.store.campaign_id, t.events.c.id == event
+                        )
+                    )
+                    .mappings()
+                    .one()
+                )
+                payload = json.loads(incoming["payload_json"])
+                if (
+                    response_event != event
+                    or incoming["kind"] != "m3.choice_resolved"
+                    or incoming["actor_id"] != str(original.counterpart)
+                    or payload.get("action_id") != identity
+                    or payload.get("choice_id") != choice
+                ):
+                    raise WorkflowError("Recover the exact current advice response event")
+                continue
+            proof = prove_advice(game, c, state, identity)
+            if (
+                proof.actor != target
+                or proof.target != actor
+                or proof.cast.model_dump(mode="json") != meta["cast"]
+                or child["data"].get("learned_play")
+                or source
+                != advice_counter(
+                    game,
+                    c,
+                    state,
+                    target,
+                    PlayInput.model_validate(child["data"]["prepared"]),
+                    int(parent["channel_id"]),
+                    child,
+                )
+            ):
+                raise WorkflowError(
+                    "Preserve the actual native advice and original Alpha recipient"
+                )
+        if child["data"]["play"] == "dose_up":
+            from girlframe.services.m3_dose_up import prove as prove_dose
+
+            # Game.event publishes the canonical choice event before respond inserts
+            # its response row. Defer only that exact current selection; the
+            # post-response callback must prove the complete actual Dose below.
+            staged = next(
+                (x for x in child["data"]["dose_up"]["selections"] if x["event"] == event),
+                None,
+            )
+            if staged is not None:
+                response = c.scalar(
+                    sa.select(t.m2["m2_responses"].c.event_id).where(
+                        t.m2["m2_responses"].c.campaign_id == game.store.campaign_id,
+                        t.m2["m2_responses"].c.choice_id == staged["choice"],
+                    )
+                )
+                if response is None:
+                    incoming = (
+                        c.execute(
+                            sa.select(t.events).where(
+                                t.events.c.campaign_id == game.store.campaign_id,
+                                t.events.c.id == event,
+                            )
+                        )
+                        .mappings()
+                        .one()
+                    )
+                    payload = json.loads(incoming["payload_json"])
+                    if (
+                        incoming["kind"] != "m3.choice_resolved"
+                        or incoming["actor_id"] != str(staged["chooser"])
+                        or payload.get("action_id") != child["id"]
+                        or payload.get("choice_id") != staged["choice"]
+                    ):
+                        raise WorkflowError("Recover the exact current Dose response event")
+                    continue
+            dose = prove_dose(game, c, state, child["id"])
+            if (
+                dose.actor != target
+                or dose.target != target
+                or dose.contact is not None
+                or dose.order is not None
+                or child["data"]["dose_up"]["phase"] != "complete"
+                or child["data"]["prepared"].get("source_work") is not None
+                or child["data"]["dose_up"].get("princess_direction") is not None
+                or child["data"]["dose_up"].get("required_recipe") is not None
+                or dose.cast.model_dump(mode="json") != meta["cast"]
+                or child["data"].get("learned_play")
+                or source
+                != self_dose_counter(
+                    game,
+                    c,
+                    state,
+                    target,
+                    PlayInput.model_validate(child["data"]["prepared"]),
+                    int(parent["channel_id"]),
+                    child,
+                )
+            ):
+                raise WorkflowError("Complete the actual original Stim's genuine self-Dose counter")
+        if child["data"]["play"] == "easy_target":
+            from girlframe.services.m3_alpha_easy_target import completed as complete_easy
+
+            if not complete_easy(game, c, state, child, event):
+                continue
+        if child["data"]["play"] == "unassuming_doll":
+            from girlframe.services.m3_alpha_doll import completed as complete_doll
+
+            if not complete_doll(game, c, state, child, event):
+                continue
         actual = str(uuid4())
         if meta["retaliate"]:
             state = rules.inflict(state, actor, target, parent["id"], actual, counter=child["id"])
@@ -670,6 +1572,8 @@ def synchronize_counters(game: GameService, c: Connection, event: str) -> GameSt
             child=child["id"],
             source_event=event,
         )
+        if parent["state"] == "complete" and parent["data"].get("princess_child"):
+            complete_directed(game, c, parent, actual)
         if parent["state"] == "complete" and parent["data"].get("battle_counter_source"):
             from girlframe.services.m3_battle import complete_counter_play
 

@@ -93,7 +93,7 @@ async def open_show_dog(
             )
         if not data["second"]:
             options.append(("second", "Choose actual witnessed NPC interest and gain a Bond"))
-            if data["bases"]:
+            if data["locations"]:
                 options.append(("create", "Introduce an actual new NPC first"))
     if data["can_risk"]:
         options.append(("risk", "Adjudicate actual performed appearance risk"))
@@ -115,14 +115,14 @@ async def open_show_dog(
         if selected == "create":
 
             async def create(response: discord.Interaction, answer: dict[str, Any]) -> str:
-                base = next(x for x in data["bases"] if x["id"] == answer["base"][0])
+                location = next(x for x in data["locations"] if x["id"] == answer["location"][0])
                 npc = Npc(
                     id=str(uuid4()),
                     name=answer["name"],
                     jobs=("civilian",),
                     detail=answer["detail"],
                     controller=response.user.id,
-                    cell=(int(base["cell"][0]), int(base["cell"][1])),
+                    cell=(int(location["cell"][0]), int(location["cell"][1])),
                 )
                 await asyncio.to_thread(
                     WorldService(MissionService(service.store)).npc,
@@ -145,9 +145,9 @@ async def open_show_dog(
                     Field("name", "Actual NPC name"),
                     Field("detail", "Actual identifying detail", paragraph=True),
                     Field(
-                        "base",
-                        "Actual existing base",
-                        tuple((x["id"], x["name"]) for x in data["bases"]),
+                        "location",
+                        "Actual present base or city",
+                        tuple((x["id"], x["name"]) for x in data["locations"]),
                     ),
                 ],
                 create,

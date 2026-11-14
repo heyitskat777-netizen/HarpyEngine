@@ -139,7 +139,16 @@ async def open_choice(
                     value = _one(values, key + str(n))
                     if value and value != "none":
                         actual[key + str(n)] = value
-            answer = ChoiceAnswer(options=options, fields=actual)
+            # ChoiceAnswer deliberately requires distinct wire options. The printed
+            # Processor Identity benefit alone may repeat, so bind later repeats
+            # to their original result slot; the Ankou consumer revalidates them.
+            encoded = tuple(
+                f"identity_repeat_{n}"
+                if option == "identity" and "identity" in options[:n]
+                else option
+                for n, option in enumerate(options)
+            )
+            answer = ChoiceAnswer(options=encoded, fields=actual)
         elif kind == "ankou_processor_symptoms":
             answer = ChoiceAnswer(options=tuple(values["options"]))
         else:
@@ -219,7 +228,13 @@ async def open_ankou(
 
 
 async def _operation(
-    interaction: discord.Interaction, service: AnkouService, menu: dict[str, Any], operation: str
+    interaction: discord.Interaction,
+    service: AnkouService,
+    menu: dict[str, Any],
+    operation: str,
+    *,
+    required_source: str | None = None,
+    processor_recipe: str | None = None,
 ) -> None:
     channel = interaction.channel_id
     if channel is None:
@@ -251,6 +266,8 @@ async def _operation(
             ),
             *fields,
         ]
+    if operation == "processor" and processor_recipe is not None:
+        fields = [field for field in fields if field.key not in ("cadre", "exempt")]
     elif operation == "relay":
         fields = [
             Field(
@@ -323,7 +340,8 @@ async def _operation(
             Field(
                 "resource",
                 "Actual disclosed source",
-                (("none", "No writing"),) + tuple((x["id"], x["label"]) for x in menu["disclosed"]),
+                (("none", "No writing"),)
+                + tuple((x["token"], x["label"]) for x in menu["disclosed"]),
             ),
             *fields,
         ]
@@ -334,16 +352,32 @@ async def _operation(
         account = values.get("account", "")
         if operation == "processor":
             exempt = _one(values, "exempt")
-            proposed = await asyncio.to_thread(
-                service.propose_processor,
-                viewer,
-                key + ":proposal",
-                channel,
-                menu["revision"],
-                account,
-                exempt_cadre=_one(values, "cadre") == "yes",
-                exempt=refs.get(exempt),
-            )
+            if processor_recipe is None:
+                proposed = await asyncio.to_thread(
+                    service.propose_processor,
+                    viewer,
+                    key + ":proposal",
+                    channel,
+                    menu["revision"],
+                    account,
+                    exempt_cadre=_one(values, "cadre") == "yes",
+                    exempt=refs.get(exempt),
+                )
+                if required_source is not None:
+                    from girlframe.services.m3_required_plays import RequiredPlayService
+
+                    required = RequiredPlayService(service.game)
+                    refreshed = await asyncio.to_thread(required.menu, viewer, required_source)
+                    await asyncio.to_thread(
+                        required.link,
+                        viewer,
+                        key + ":link",
+                        required_source,
+                        proposed["id"],
+                        refreshed["revision"],
+                    )
+            else:
+                proposed = {"id": processor_recipe}
             latest = await asyncio.to_thread(service.menu, viewer, channel)
             identity = _one(values, "identity")
             result = await asyncio.to_thread(
@@ -429,7 +463,7 @@ async def _operation(
             )
         elif operation == "quickchange":
             selected = next(
-                (x for x in menu["disclosed"] if x["id"] == _one(values, "resource")), None
+                (x for x in menu["disclosed"] if x["token"] == _one(values, "resource")), None
             )
             result = await asyncio.to_thread(
                 service.quickchange,
@@ -662,7 +696,7 @@ async def _record(
                         (
                             x["id"],
                             x["label"]
-                            + (" (Bond/Purpose only)" if x["ref"]["kind"] != "pilot" else ""),
+                            + (" (Bond/Purpose only)" if not x["reprisal_supported"] else ""),
                         )
                         for x in data["targets"]
                     ),
@@ -902,7 +936,19 @@ async def _child(
             ],
             choose,
         )
-    elif selected in ("alpha_sex", "dose_up"):
+    elif selected in (
+        "alpha_sex",
+        "oldgen_sex",
+        "newgirl_sex",
+        "vatgrown_sex",
+        "casualty_sex",
+        "stim_sex",
+        "princess_sex",
+        "dose_up",
+        "mockingbird_person",
+        "mockingbird_sex",
+        rules.PLAY,
+    ):
         from girlframe.discord_adapter.m3_required_plays import open_required
 
         await open_required(interaction, game, parent["body"]["source_work"])

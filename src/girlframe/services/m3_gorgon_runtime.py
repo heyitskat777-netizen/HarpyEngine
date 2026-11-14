@@ -1040,7 +1040,7 @@ def apply_fatal(
     from girlframe.services.m3_sprite import defer
 
     meta = _meta(action)
-    if meta.get("fatal_event") or meta.get("fatal_intercepted"):
+    if meta.get("fatal_event") or meta.get("fatal_intercepted") or meta.get("fatal_prevented"):
         return
     state = load_state(c, game.store.campaign_id)
     target = _ref(meta["target"])
@@ -1074,26 +1074,32 @@ def apply_fatal(
         else:
             allow_sprite = False
     if not allow_sprite:
-        state = interrupt_journeys(state, target, event, "Actual Gorgon Attack kills this NPC.")
-        state = battle.end_actor_casts(state, target, event)
-        assert state.world is not None
-        state.world = state.world.model_copy(
-            update={
-                "npcs": tuple(
-                    x.model_copy(update={"alive": False}) if x.id == target.entity else x
-                    for x in state.world.npcs
-                )
-            }
-        )
+        from girlframe.engine.m3_doctor import prevent_death
+
+        state, prevented = prevent_death(state, target, event)
+        if prevented:
+            meta.update(fatal_pending=False, fatal_prevented=event)
+        else:
+            state = interrupt_journeys(state, target, event, "Actual Gorgon Attack kills this NPC.")
+            state = battle.end_actor_casts(state, target, event)
+            assert state.world is not None
+            state.world = state.world.model_copy(
+                update={
+                    "npcs": tuple(
+                        x.model_copy(update={"alive": False}) if x.id == target.entity else x
+                        for x in state.world.npcs
+                    )
+                }
+            )
+            meta.update(fatal_pending=False, fatal_event=event)
         state.facts.append(
             dict(
-                kind="gorgon_attack_npc_killed",
+                kind="gorgon_attack_npc_kept_alive" if prevented else "gorgon_attack_npc_killed",
                 action=action["id"],
                 event=event,
                 target=target.model_dump_json(),
             )
         )
-        meta.update(fatal_pending=False, fatal_event=event)
     index = c.scalar(
         sa.select(sa.func.max(t.events.c.event_index)).where(
             t.events.c.campaign_id == game.store.campaign_id, t.events.c.command_key == key

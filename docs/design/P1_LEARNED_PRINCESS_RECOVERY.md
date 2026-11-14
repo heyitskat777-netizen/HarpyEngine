@@ -1,0 +1,11 @@
+# Learned Princess unused invitation recovery
+
+A genuine learned Princess invitation reserves its earned lesson before a Play. Original counterpart confirmation, including refusal, correctly requires live physical contact. Actual cockpit entry can therefore strand an unused invitation. This increment supplies technical owner withdrawal, separate from any fictional answer or effect.
+
+Only the original source learner with the exact revision can withdraw an invited/accepted learned source. Any Action reference (including aborted), binding, effect or completion blocks it. Borrowed Pair and remote sources are excluded. Required Princess Tasks use their separate workflow and are not changed. The original consent event/account remain untouched. The canonical owner event and released learned link establish withdrawn history, while fresh source and consent are needed for subsequent play. No resource, roll, favour, Tag or lesson use is refunded. Invite/confirmation/Play contact checks remain unchanged.
+
+The private native menu exposes the exact unused withdrawal. The engine's phase vocabulary gains withdrawn, with no printed result semantics altered. Shared learned proof recognizes only the actual canonical Princess owner event/session snapshot for this release.
+
+Minimum episode uses the genuine earned Princess lesson fixture, actual cockpit enter/exit before and after original consent, stale-contact refusal and wrong-owner rejection, unchanged sheets/dice, then fresh source refusal, real unrolled Action cancellation, fresh actual mid Play and original target's favour refusal/optional Tag. Released histories remain readable after the lesson is used. Existing initial physical/resource setup is test-only; no invented anatomy, partner, consent or outcome.
+
+Exact base: newgirl-recovery-integrated local cumulative candidate, preserving the frozen Newgirl and Oldgen shared learned-source changes. Scoped Ruff and four-module mypy passed. Root minimum: 1 passed in 11.15s. Independent review found no blocker. No production or test edits after the final passing run; only this validation record and evidence were finalized. No worker pytest/full regression, bot/deploy/merge or Space write. Space conflict and unknown unpublished pre-pause overlap remain disclosed.

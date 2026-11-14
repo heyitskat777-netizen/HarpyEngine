@@ -123,6 +123,12 @@ def test_actual_removed_link_supplied_native_install_payment_history_and_real_re
     )
     quote = rules.records(state(game), rules.Quote)[-1]
     assert quote.price == 2 and quote.part == "link" and quote.component
+    # The supplied component survives leaving the UI; the owner resumes the same
+    # quote, rather than requesting or paying for a second component.
+    quoted_view = replacement.view(PLAYER, request.id)
+    replacement = ReplacementService(game)
+    assert replacement.view(PLAYER, request.id) == quoted_view
+    assert len(rules.records(state(game), rules.Quote)) == 1
     before = state(game)
     with pytest.raises(WorkflowError, match="STALE"):
         replacement.install(
@@ -205,3 +211,15 @@ def test_actual_removed_link_supplied_native_install_payment_history_and_real_re
     answer(game, PLAYER, "actor_keep", options=("tough",))
     answer(game, ADMIN, "handler_keep", flag=True, text="The real original-body recovery holds")
     assert game.inspect(PLAYER, action)["state"] == "complete" and game.dice.calls == 1
+    recovered = state(game)
+    assert current_ref(recovered, 2) == actor
+    recovered_body = casualty.body(recovered, actor)
+    assert recovered_body is not None and recovered_body.vessel == body.vessel
+    assert rules.records(recovered, rules.Installation) == (installed,)
+    assert recovered.sheets["2"].permissions == after.sheets["2"].permissions
+    assert ReplacementService(game).view(PLAYER, request.id)["phase"] == "complete"
+    with pytest.raises(WorkflowError):
+        ReplacementService(game).view(OTHER, request.id)
+    tick(worker, gateway, 5)
+    with ledger.engine.connect() as c:
+        assert game.lock(c, 900)["state"] == "released"

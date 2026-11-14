@@ -108,6 +108,28 @@ def _sex(
         ):
             raise WorkflowError("Preserve the genuine diceless or rolled source completion")
         return bonded_value.completed_event
+    from girlframe.engine import m3_am_sex as am_sex
+
+    native_am = next((x for x in am_sex.sources(state) if x.id == source), None)
+    if native_am is not None:
+        from girlframe.services.m3_am_sex import prove_learned
+
+        actual = prove_learned(game, c, state, source)
+        if (
+            actual.mode != "both_am"
+            or actual.phase != "complete"
+            or actual.completed_event is None
+            or actual.action is not None
+            or actual.counterpart_action is not None
+            or {actual.actor, actual.target} != {actor, target}
+        ):
+            raise WorkflowError(
+                "Use the actual completed native AM or learned AM pair and both real performances"
+            )
+        am_completed = am_sex.source(_history(c, game, actual.completed_event), source)
+        if am_completed != actual:
+            raise WorkflowError("Preserve the genuine original diceless AM source completion")
+        return actual.completed_event
     action = game.action(c, source)
     if action["state"] != "complete" or game.pending(c, source):
         raise WorkflowError("Complete the genuine performed Sex and all its required outcomes")
@@ -162,32 +184,37 @@ def _sex(
             trigger is None
             or trigger.action != source
             or trigger.state != "complete"
-            or len(trigger.parties) != 1
+            or not trigger.parties
         ):
             raise WorkflowError("Recover the real completed Mockingbird Sex source")
-        party = trigger.parties[0]
-        birth = _history(c, game, trigger.source_event)
-        original = next((x for x in birth.mockingbird.triggers if x.id == trigger.id), None)
-        if (
-            original is None
-            or original.actor != trigger.actor
-            or original.parties[0].actor != party.actor
-            or party.decision != "accepted"
-            or not party.event
-            or {trigger.actor, party.actor} != {actor, target}
-        ):
-            raise WorkflowError("Preserve the actual original participants and voluntary contact")
-        accepted = _history(c, game, party.event)
-        original_party = next(
-            (x.parties[0] for x in accepted.mockingbird.triggers if x.id == trigger.id), None
-        )
-        audit = c.scalar(
-            sa.select(t.events.c.actor_id).where(
-                t.events.c.campaign_id == game.store.campaign_id, t.events.c.id == party.event
+        from girlframe.services.m3_mockingbird_effects import source_trigger
+
+        source_trigger(game, c, action, state)
+        if not any({trigger.actor, party.actor} == {actor, target} for party in trigger.parties):
+            raise WorkflowError("Co-partners do not automatically have sex with one another")
+        # Every actual party must retain their own accepted immutable attestation.
+        # The AM recipient can be any actual partner, not only the primary outcome target.
+        for party in trigger.parties:
+            if party.decision != "accepted" or not party.event:
+                raise WorkflowError("Preserve every original participant's voluntary contact")
+            accepted = _history(c, game, party.event)
+            original_trigger = next(
+                (x for x in accepted.mockingbird.triggers if x.id == trigger.id), None
             )
-        )
-        if original_party != party or audit != str(party.controller):
-            raise WorkflowError("Only the original actual counterpart confirmed this Sex source")
+            original_party = (
+                next((x for x in original_trigger.parties if x.actor == party.actor), None)
+                if original_trigger
+                else None
+            )
+            audit = c.scalar(
+                sa.select(t.events.c.actor_id).where(
+                    t.events.c.campaign_id == game.store.campaign_id, t.events.c.id == party.event
+                )
+            )
+            if original_party != party or audit != str(party.controller):
+                raise WorkflowError(
+                    "Only the original actual counterpart confirmed this Sex source"
+                )
         history = t.m2["m2_state_history"]
         for row in c.execute(
             sa.select(history)

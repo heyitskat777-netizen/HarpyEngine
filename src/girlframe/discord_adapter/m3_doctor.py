@@ -21,10 +21,22 @@ from girlframe.services.onboarding import WorkflowError
 async def open_doctor(interaction: discord.Interaction, service: DoctorService) -> None:
     if interaction.channel_id is None:
         raise WorkflowError("Use the original joined scene channel")
+    from girlframe.services.m3_doctor_procedures import ProcedureService
+
+    calls = await asyncio.to_thread(
+        ProcedureService(service.game).call_menu,
+        viewer_from_interaction(interaction),
+        interaction.channel_id,
+    )
+    if not calls["native"]:
+        await open_call(interaction, service, calls)
+        return
     data = await asyncio.to_thread(
         service.menu, viewer_from_interaction(interaction), interaction.channel_id
     )
     options = [("roll", "Nanobot Injection / Here for Support")]
+    if calls["doctors"]:
+        options.append(("call", "Call another Doctor — Running Ragged"))
     if data["acquisitions"]:
         options.append(("buy", "Acquire a native Requisition (2 Permissions; unmark one box)"))
     for rule, kind in (
@@ -38,7 +50,9 @@ async def open_doctor(interaction: discord.Interaction, service: DoctorService) 
             options.append((kind, rules.TITLES[rule]))
 
     async def choose(current: discord.Interaction, kind: str) -> None:
-        if kind == "roll":
+        if kind == "call":
+            await open_call(current, service, calls)
+        elif kind == "roll":
             await open_roll(current, service)
         else:
             await open_procedure(current, service, data, kind)
@@ -49,6 +63,48 @@ async def open_doctor(interaction: discord.Interaction, service: DoctorService) 
         tuple(options),
         choose,
     ).show(interaction)
+
+
+async def open_call(
+    interaction: discord.Interaction, service: DoctorService, data: dict[str, Any]
+) -> None:
+    """The caller declares their own call, then either participant pays their Tag."""
+    from girlframe.services.m3_doctor_procedures import ProcedureService
+
+    if not data["doctors"]:
+        raise WorkflowError("No other joined Doctor has actual Running Ragged")
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        doctor = next(x for x in data["doctors"] if x["token"] == values["doctor"][0])
+        assert interaction.channel_id is not None
+        result = await asyncio.to_thread(
+            ProcedureService(service.game).propose,
+            viewer_from_interaction(current),
+            str(current.id),
+            data["revision"],
+            interaction.channel_id,
+            ActorRef.model_validate(data["caller"]),
+            "ragged",
+            values["account"],
+            called_doctor=ActorRef.model_validate(doctor["ref"]),
+        )
+        return (
+            "Your actual call is saved. Either participant may mark their own Tag in the Inbox: "
+            + str(result["id"])
+        )
+
+    await NativeForm(
+        interaction.user.id,
+        "Call a Doctor — Running Ragged",
+        "Declare your actual call. Arrival requires either participant's own unmarked Tag.",
+        [
+            Field(
+                "doctor", "Doctor to call", tuple((x["token"], x["label"]) for x in data["doctors"])
+            ),
+            Field("account", "Describe your actual call", paragraph=True),
+        ],
+        submit,
+    ).present(interaction)
 
 
 async def open_roll(interaction: discord.Interaction, service: DoctorService) -> None:
@@ -71,8 +127,25 @@ async def open_roll(interaction: discord.Interaction, service: DoctorService) ->
         interaction, DampenerService(service.game), ActorRef.model_validate(data["actor"])
     )
 
+    targets = list(
+        {
+            row["token"]: row
+            for row in data["targets"]
+            + data.get("npc_nanobot_targets", [])
+            + data.get("npc_support_targets", [])
+        }.values()
+    )
+
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
-        target = next(x for x in data["targets"] if x["token"] == values["target"][0])
+        target = next(x for x in targets if x["token"] == values["target"][0])
+        if target["ref"]["kind"] == "npc":
+            eligible = data[
+                "npc_support_targets"
+                if values["play"][0] == "doctor_support"
+                else "npc_nanobot_targets"
+            ]
+            if target["token"] not in {row["token"] for row in eligible}:
+                raise WorkflowError("Choose an actual NPC counterpart supported by this ability")
         assert interaction.channel_id is not None
         result = await asyncio.to_thread(
             service.game.begin,
@@ -100,11 +173,16 @@ async def open_roll(interaction: discord.Interaction, service: DoctorService) ->
         "DoctorDoctor Mk. II",
         "Planned Obsolescence: "
         + str(data["track"])
-        + "/8. Actual Nanobot use marks one box; it does not move either body.",
+        + "/8. Actual Nanobot use marks one box; it does not move either body. "
+        "NPCs: Here for Support uses their own controller and Tags. "
+        "New NPC Nanobot Injection is unavailable: required NPC medical mechanics are "
+        "incomplete. Previously rolled NPC actions retain their pending recovery choices.",
         [
             Field("play", "Actual ability", tuple((x["id"], x["label"]) for x in data["choices"])),
             Field(
-                "target", "Actual patient", tuple((x["token"], x["label"]) for x in data["targets"])
+                "target",
+                "Actual patient or protector",
+                tuple((x["token"], x["label"]) for x in targets),
             ),
             Field("heat", "Heat", tuple((str(x), str(x)) for x in range(data["heat"] + 1))),
             Field("account", "Describe the actual medical trigger", paragraph=True),
@@ -121,6 +199,13 @@ async def open_choice(
         service.game.decision, viewer_from_interaction(interaction), identity
     )
     detail = data["doctor"]
+    if detail.get("unsupported"):
+        from girlframe.discord_adapter.p1_facilitator import open_missing_source
+
+        await open_missing_source(
+            interaction, service.game, "action", data["parent"], "choice:" + data["kind"]
+        )
+        return
     if data["kind"] == "doctor_handler":
         from girlframe.discord_adapter.m3_handler_plays import open_play
         from girlframe.services.m3_handler_plays import HandlerPlayService
@@ -139,8 +224,11 @@ async def open_choice(
             Field("bond", "If protecting: deepen Bond?", (("no", "No"), ("yes", "Yes"))),
         ]
     elif data["kind"] == "doctor_support_refused":
+        consequences: tuple[tuple[str, str], ...] = (("tag", "Give a Tag"),)
+        if not detail.get("npc"):
+            consequences += (("status", "Lower Status"),)
         fields = [
-            Field("decision", "Consequence", (("tag", "Give a Tag"), ("status", "Lower Status"))),
+            Field("decision", "Consequence", consequences),
             Field("tag", "Only for Tag: actual new Tag", required=False),
         ]
     elif data["kind"] == "doctor_nanobot_benefits":
@@ -148,6 +236,8 @@ async def open_choice(
             ("repair", "Repair two actual damaged Assets"),
             ("identity", "Patient may unmark an actual Identity"),
         )
+        if detail.get("npc"):
+            choices = ()
         if detail["effects"]:
             choices += (("remove", "Remove a supported actual ongoing effect"),)
         fields = [
@@ -169,6 +259,14 @@ async def open_choice(
                     required=False,
                 )
             )
+    elif detail.get("npc"):
+        fields = [
+            Field(
+                "confirm",
+                "Confirm actual received treatment",
+                (("confirm", detail["effect"]["label"]),),
+            )
+        ]
     else:
         fields = []
         if detail["repair"] and detail["assets"]:
@@ -214,6 +312,8 @@ async def open_choice(
                 options=tuple(values["choices"]),
                 fields={"effect": values["effect"][0]} if values.get("effect") else {},
             )
+        elif detail.get("npc"):
+            answer = ChoiceAnswer(options=tuple(values["confirm"]))
         else:
             chosen = replacements(values)
             answer = ChoiceAnswer(
@@ -262,7 +362,11 @@ async def open_procedure(
             ),
         )
     elif kind in ("nurse", "angel", "ragged"):
-        targets = [x for x in data["targets"] if x["ref"] != data["actor"]]
+        targets = [
+            x
+            for x in data["nurse_targets" if kind in ("nurse", "angel") else "targets"]
+            if x["ref"] != data["actor"]
+        ]
         if not targets:
             raise WorkflowError("Join the actual other person to the source scene first")
         fields.insert(
@@ -288,6 +392,15 @@ async def open_procedure(
                 tuple((str(x), str(x)) for x in range(2, data["heat"] + 1)),
             ),
         ]
+        if data["wings_replacements"]:
+            fields.insert(
+                1,
+                Field(
+                    "replace",
+                    "Your non-Void Frame Asset to replace at the cap",
+                    tuple((x["id"], x["label"]) for x in data["wings_replacements"]),
+                ),
+            )
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
         viewer = viewer_from_interaction(current)
@@ -312,7 +425,7 @@ async def open_procedure(
             return "Actual Helplessness ended; Obsolescence marked. Asset damage remains."
         assert interaction.channel_id is not None
         if kind in ("nurse", "angel"):
-            target = next(x for x in data["targets"] if x["token"] == values["target"][0])
+            target = next(x for x in data["nurse_targets"] if x["token"] == values["target"][0])
             result = await asyncio.to_thread(
                 CareService(service.game).propose,
                 viewer,
@@ -340,6 +453,7 @@ async def open_procedure(
                 values["account"],
                 asset=item["id"] if kind == "wings" else None,
                 heat=int(values["heat"][0]) if kind == "wings" else 0,
+                replace=values["replace"][0] if values.get("replace") else None,
             )
         return (
             "Actual owned request saved. The original participants can reopen it in the Inbox: "

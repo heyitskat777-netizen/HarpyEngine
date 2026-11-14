@@ -3,7 +3,9 @@
 from typing import Literal
 from uuid import NAMESPACE_URL, uuid5
 
-from girlframe.engine.m2 import GameState
+from pydantic import Field
+
+from girlframe.engine.m2 import GameState, TagState
 from girlframe.engine.m3_actor_bonds import depth
 from girlframe.engine.m3_actor_state import ActorRef, Model, SceneCast
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
@@ -183,6 +185,7 @@ class TagUse(Model):
     scene: str
     event: str
     kind: Literal["emotion", "obsession", "spy", "symptom", "champion", "pulse"]
+    original_tag: TagState | None = Field(default=None, exclude_if=lambda value: value is None)
     ended_event: str | None = None
 
 

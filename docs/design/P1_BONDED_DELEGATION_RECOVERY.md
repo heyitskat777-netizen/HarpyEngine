@@ -1,0 +1,13 @@
+# Actual Pair-rule invitation recovery
+
+Baseline: court-bonded-integrated (exact cumulative Court and learned non-Pair7). Girl Frame printed57/PDF59 permits using the actual Pair's Sex Play with someone else. Existing native delegation creates a Bonded parent, obtains that actual person's consent, then binds the parent to an independently confirmed child invitation. This change preserves the existing printed effect and consent machinery. It invents no performance, outcome, lesson, Pair or persona.
+
+Concrete integration blocker: binding the parent to the child invitation occurs before the child's own response or Play. A child refusal or owner withdrawal previously left the parent `bound` indefinitely. The parent's private history then reported an unfinished source even though its sole actual child had declined or been withdrawn. The existing child withdrawal UI already supported this technical no-effect withdrawal.
+
+This bounded repair handles the actual Mockingbird child only. Existing child refusal/withdrawal transactions atomically record a new immutable DelegationRelease and mark that exact native parent declined/withdrawn. Proof retains original source/Pair lineage, immutable child/delegation birth, canonical author and original single counterpart, actual child refusal or original owner withdrawal, and exact same-event historical record. A released parent cannot admit a new child. Fresh invitations still require fresh independent responses. Parent history treats withdrawn sources as complete rather than pending.
+
+No action of any state may reference the child, including an aborted Action; no dice, costs, completed effect, resource or consent is cleared. Actual unrolled Action recovery and learned delegation require their own full lifecycle integration. This increment does not enable learned delegation, remote/CHANGELING mixing or new AM carriers. Other delegated child families remain unchanged.
+
+The minimum authored episode uses genuinely reviewed native Bonded and Mockingbird Pair creation, with an independently controlled third Girl. No synthetic prior book rewrite. It tests counterpart-only refusal, original-owner-only withdrawal, both actual people's private history, source refusal to reopen, truthful parent/task state, no new dice/resources and no private text in public delivery. Existing initial map/resource test setup is disclosed; no gameplay transition or source event is injected.
+
+Worker Ruff and scoped four-module mypy passed. Final root minimum: 1 passed in 2.95s. Independent review found no blocker. No production/test edits after this passing run; documentation/evidence only. No worker pytest, full regression, bot, deploy or merge. Unknown pre-pause unpublished overlap remains unverified.

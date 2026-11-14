@@ -70,11 +70,12 @@ async def open_newgirl_sex(
     identity: str | None = None,
     *,
     learned_source: str | None = None,
+    bonded_source: str | None = None,
 ) -> None:
     viewer = viewer_from_interaction(interaction)
     channel = int(interaction.channel_id or 0)
     if identity is None:
-        data = await asyncio.to_thread(service.menu, viewer, channel)
+        data = await asyncio.to_thread(service.menu, viewer, channel, bonded_source=bonded_source)
         if learned_source is not None and learned_source not in {x["id"] for x in data["lessons"]}:
             raise WorkflowError("Reopen your actual available Newgirl lesson")
         options = (
@@ -83,6 +84,11 @@ async def open_newgirl_sex(
             else []
         )
         options.extend((x["id"], x["label"]) for x in data["history"])
+        options.extend(
+            ("withdraw:" + x["id"], "Withdraw unused invitation")
+            for x in data["history"]
+            if x.get("can_withdraw")
+        )
         if not options:
             await reply(
                 interaction, "No supported original-person source or private saved history here."
@@ -90,6 +96,15 @@ async def open_newgirl_sex(
             return
 
         async def choose(current: discord.Interaction, values: dict[str, Any]) -> str | None:
+            if values["source"][0].startswith("withdraw:"):
+                await asyncio.to_thread(
+                    service.withdraw,
+                    viewer_from_interaction(current),
+                    str(current.id),
+                    values["source"][0].removeprefix("withdraw:"),
+                    data["revision"],
+                )
+                return "Unused invitation withdrawn. Each original response remains history."
             if values["source"][0] != "invite":
                 await open_newgirl_sex(current, service, values["source"][0])
                 return None
@@ -100,6 +115,11 @@ async def open_newgirl_sex(
                     for x in data["partners"]
                     if ActorRef.model_validate(x["ref"]).token in answer["partners"]
                 )
+                if data["required_partner"] is not None:
+                    required = ActorRef.model_validate(data["required_partner"])
+                    if required not in partners:
+                        raise WorkflowError("Include the original delegated counterpart")
+                    partners = (required, *(x for x in partners if x != required))
                 result = await asyncio.to_thread(
                     service.invite,
                     viewer_from_interaction(response),
@@ -109,6 +129,7 @@ async def open_newgirl_sex(
                     data["revision"],
                     answer["account"],
                     learned_source=next(iter(answer.get("lesson", ())), learned_source),
+                    bonded_source=bonded_source,
                 )
                 return "Actual source proposed; each original person must confirm: " + str(
                     result["id"]
@@ -121,7 +142,13 @@ async def open_newgirl_sex(
                 "voluntary participation; no fictional dialogue or consent is inferred. "
                 + "Your actual current Mentors: "
                 + (", ".join(data["mentor_names"]) or "none")
-                + ". No pre-existing Mentor is required.",
+                + ". No pre-existing Mentor is required."
+                + (
+                    " Include the original delegated counterpart; "
+                    "every additional person must independently confirm."
+                    if bonded_source
+                    else ""
+                ),
                 [
                     Field(
                         "partners",
@@ -131,7 +158,7 @@ async def open_newgirl_sex(
                             for x in data["partners"]
                         ),
                         minimum=1,
-                        maximum=1 if learned_source is not None else len(data["partners"]),
+                        maximum=len(data["partners"]),
                     ),
                     Field("account", "Your actual voluntary source proposal", paragraph=True),
                 ]

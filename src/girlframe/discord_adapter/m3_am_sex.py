@@ -35,6 +35,8 @@ async def open_am_sex(
     options = (
         [("circuits", "Actual circuit contact: use Just Code")] if bonded_source is None else []
     )
+    if data.get("native_no_roll"):
+        options.insert(0, ("native", "Actual native AM + AM no-roll source"))
     options += [
         (x["id"], x["play"].replace("_", " ") + " · " + x["state"]) for x in data["sources"]
     ]
@@ -50,6 +52,9 @@ async def open_am_sex(
 
     async def select(current: discord.Interaction, values: dict[str, Any]) -> None:
         source = values["source"][0]
+        if source in ("native", "native_am"):
+            await open_native(current, service)
+            return
         if source == "circuits":
             from girlframe.discord_adapter.m3_am_code import open_code
             from girlframe.services.m3_am_code import CodeService
@@ -119,11 +124,16 @@ async def _open_learned(
     service: SexService,
     identity: str | None,
     lesson: str | None,
+    *,
+    native: bool = False,
 ) -> None:
     viewer = viewer_from_interaction(interaction)
     if identity is None:
         data = await asyncio.to_thread(
-            service.lesson_menu, viewer, int(interaction.channel_id or 0), lesson
+            service.native_menu if native else service.lesson_menu,
+            viewer,
+            int(interaction.channel_id or 0),
+            **({} if native else {"lesson": lesson}),
         )
         options = [(x["id"], x["label"]) for x in data["tasks"]]
         if data["targets"]:
@@ -143,14 +153,14 @@ async def _open_learned(
             async def invite(response: discord.Interaction, answers: dict[str, Any]) -> str:
                 actual = next(x for x in data["targets"] if x["id"] == answers["target"][0])
                 result = await asyncio.to_thread(
-                    service.invite,
+                    service.invite_native if native else service.invite,
                     viewer_from_interaction(response),
                     str(response.id),
                     data["channel"],
                     ActorRef.model_validate(actual["ref"]),
                     data["revision"],
                     answers["account"],
-                    learned_source=answers["lesson"][0],
+                    **({} if native else {"learned_source": answers["lesson"][0]}),
                 )
                 return (
                     "Actual no-roll source proposed: "
@@ -160,9 +170,13 @@ async def _open_learned(
 
             form = NativeForm(
                 current.user.id,
-                "Actual learned AM invitation",
-                "This reserves your one-use lesson, not another person's consent. "
-                "Both people author "
+                "Actual native AM invitation" if native else "Actual learned AM invitation",
+                (
+                    "Both original people have their actual permanent AM rule. "
+                    if native
+                    else "This reserves your one-use lesson, not another person's consent. "
+                )
+                + "Both people author "
                 "their own performed scene later. No circuit hardware or Just Code is granted.",
                 [
                     Field(
@@ -170,10 +184,16 @@ async def _open_learned(
                         "Actual original counterpart",
                         tuple((x["id"], x["label"]) for x in data["targets"]),
                     ),
-                    Field(
-                        "lesson",
-                        "One actual no-roll lesson",
-                        tuple((x["id"], x["label"]) for x in data["lessons"]),
+                    *(
+                        []
+                        if native
+                        else [
+                            Field(
+                                "lesson",
+                                "One actual no-roll lesson",
+                                tuple((x["id"], x["label"]) for x in data["lessons"]),
+                            )
+                        ]
                     ),
                     Field("account", "Your actual voluntary proposal", paragraph=True),
                 ],
@@ -183,7 +203,7 @@ async def _open_learned(
 
         form = NativeForm(
             viewer.user_id,
-            "Learned AM no-roll source",
+            "Native AM no-roll source" if native else "Learned AM no-roll source",
             "No extra Action, dice, Heat or circuit capability is created.",
             [Field("source", "Your actual source", tuple(options))],
             choose,
@@ -192,12 +212,17 @@ async def _open_learned(
         return
     data = await asyncio.to_thread(service.view_learned, viewer, identity)
     body = data["body"]
+    native = body.get("native") is True
     summary = (
-        "Actual learned AM source: "
+        ("Actual native AM source: " if native else "Actual learned AM source: ")
         + body["phase"]
         + ". "
         + (
-            "One use spent by its real performed/known source."
+            "Actual factual performance is recorded; no lesson is claimed or spent."
+            if native and body["used_event"]
+            else "No factual performance recorded yet."
+            if native
+            else "One use spent by its real performed/known source."
             if body["used_event"]
             else "Unused source reservation."
         )
@@ -339,7 +364,7 @@ async def _open_learned(
 
         form = MemoryForm(
             current.user.id,
-            "Your actual learned AM " + operation,
+            ("Your actual native AM " if native else "Your actual learned AM ") + operation,
             summary,
             fields,
             submit,
@@ -349,10 +374,18 @@ async def _open_learned(
 
     form = MemoryForm(
         viewer.user_id,
-        "Learned AM source controls",
+        "Native AM source controls" if native else "Learned AM source controls",
         summary,
         [Field("operation", "Your actual source control", tuple(options))],
         select,
         authorize=authorize,
     )
     await reply(interaction, form.text(), form)
+
+
+async def open_native(
+    interaction: discord.Interaction, service: SexService, identity: str | None = None
+) -> None:
+    if identity is not None:
+        await asyncio.to_thread(service.view_native, viewer_from_interaction(interaction), identity)
+    await _open_learned(interaction, service, identity, None, native=True)

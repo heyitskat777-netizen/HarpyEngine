@@ -1,5 +1,6 @@
 """Canonical pilot state and typed human inputs for the audited M2 subset."""
 
+from collections.abc import Sequence
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -69,15 +70,35 @@ RULESET: Literal["girlframe-m2-pilot-1"] = "girlframe-m2-pilot-1"
 PLAY_IDS = ("keep_your_head", "check_sensors", "engage", "disobey_orders", "flirt")
 TRAITS = ("desperate", "sexy", "tough", "vicious", "in_control")
 MANEUVERS = ("pin", "advance", "drive_back", "reposition", "cover", "shatter", "protect", "lure")
-QUESTIONS = (
-    "foundation_destination",
-    "foundation_avoid",
-    "enemy_activity",
-    "repair_rest",
-    "civilian_danger",
-    "orders",
-)
+SENSOR_QUESTION_TEXT = {
+    "foundation_destination": "Where does the Foundation want us to go?",
+    "foundation_avoid": "What does the Foundation want us to avoid?",
+    "enemy_activity": "What do the satellites say the enemy is doing?",
+    "repair_rest": "Where is a place we can rest and repair?",
+    "civilian_danger": "Where are civilians in danger?",
+    "orders": "What orders do you have for us?",
+}
+QUESTIONS = tuple(SENSOR_QUESTION_TEXT)
 FLIRT_QUESTIONS = ("hurt", "be", "hide", "fears", "name", "intimacy")
+
+
+def sensor_question_id(question: str) -> str | None:
+    """Recognize listed IDs or printed wording, allowing only whitespace variation."""
+    normalized = " ".join(question.split())
+    if normalized in SENSOR_QUESTION_TEXT:
+        return normalized
+    return next((key for key, text in SENSOR_QUESTION_TEXT.items() if text == normalized), None)
+
+
+def sensor_question_text(question: str) -> str:
+    identity = sensor_question_id(question)
+    return SENSOR_QUESTION_TEXT[identity] if identity is not None else question
+
+
+def sensors_off_list(questions: Sequence[str], level: str) -> bool:
+    """Classify ordinary questions, excluding the separately appended Human Hound answer."""
+    count = {"low": 1, "mid": 2, "high": 3}[level]
+    return any(sensor_question_id(question) is None for question in questions[:count])
 
 
 class Model(BaseModel):

@@ -3617,7 +3617,7 @@ These version1 recommendations require printed-rule clarity review.
 
 - `easy_target_performed_sources`: Actual urges require real supported performances and consequences; the original Handler validates unspecified task/trigger details, and the requester judges actual completed requested work. The text supplies urges and consequences, without a universal damage amount or a substitute Play. Alternative: Add separate explicitly priced factual harm/task adapters after rule clarification. Current hurt proof uses genuine physical damage to a Girl Asset; Frame-only damage does not prove bodily hurt. Other harm/actor/performance adapters remain required gaps; no text-as-mechanics or inferred intimacy consent. Version future interpretation changes; preserve original people, actual performed sources, old records and consumed entitlements.
 
-- `easy_target_cohort_scope`: Proven cohort assistance exempts both people from matching Easy Target consequences, preserving ordinary child Play costs and unrelated outcomes. This source supplies the exemption; unrelated rules retain their actual effects. Alternative: Interpret neither facing consequences as broad immunity from all child Play results. Require actual positive Tag assistance to the selected primary child; no blanket narrative immunity or erased dice. Version future interpretation changes; preserve original people, actual performed sources, old records and consumed entitlements.
+- `easy_target_cohort_scope` (revision 2): Revision 2 preserves positive Tag assistance for rolled primary children. For actual unrolled NPC protection, require original Handler-validated primary performance followed by the cohort controller's source-proved participation in the same scene with an available body. Grant only matching Easy Target consequence exemptions, not a bonus, interception or immunity from unrelated outcomes. If protection failed first, record an owned missed-opportunity acknowledgment with no exemption, preserving the actual failure and original Newgirl's Tag choice. Rationale: Easy Target PDF41/printed39 allows going along with another person without requiring a roll or Tag modifier. Positive Tag assistance remains evidence for rolled children; actual owned bodily participation is evidence for unrolled NPC protection. Neither route erases earlier consequences. Revision 2 is a narrow unrolled-protection extension under delegated recommendation, requiring printed-rule clarity review. Preserve all prior rolled sources and consumed entitlements. Unsupported body kinds and NPC hurt remain explicit.
 
 - `easy_target_protection_failure`: Proven physical bodily harm while actual original ward and protector remain in the same open source scene creates a separate optional failure Tag entitlement. The actual protection and failure need source proof; a completed old Play cannot be reopened over a different current action. Alternative: Broader witnessed off-scene failure or explicit abandonment adapters, with their own actual evidence. Keep the original parent complete and preserve the current action/lock; the original Newgirl privately gives or declines the real Tag with replay protection. Other failure adapters remain explicit gaps. Version future interpretation changes; preserve original people, actual performed sources, old records and consumed entitlements.
 
@@ -4127,3 +4127,364 @@ Ship destruction ruling uses the same source-limited principle. Keep Sprite,
 real Frame and Ship/Base sources distinct. Delegated recommendation; printed
 clarity review pending. Preserve previous assessments, receipts and people; any
 future real boarding producer must specify its own lifecycle.
+
+
+## P1 ordinary NPC Easy Target use
+
+`easy_target_npc_use_facts` (Easy Target PDF41/printed39): The printed use urge
+allows the Newgirl to deepen the Bond when the other person is finished; it does
+not prescribe a roll for an ordinary performance that triggers no Play. Require
+original Handler validation, an actual controller-owned completed NPC performance,
+original free co-located bodies and live scene, then the Newgirl's optional Bond
+choice. This is factual performance proof, not narration substituted for triggered
+mechanics. No injury, payment, dialogue, intimacy consent or other effect is
+inferred. Explicit real Plays retain their existing workflow. Other body kinds and performances needing another source remain unsupported.
+Requiring a separate Play for every use is the alternative interpretation. Preserve
+old rolled/NPC protection/hurt/cohort records and consumed choices. Delegated
+recommendation; printed-rule clarity review remains pending.
+
+
+## P1 actual NPC use cohorts
+
+`easy_target_use_cohort_facts` (Easy Target PDF41/printed39): Both actual
+participants avoid the listed consequences. After original Handler validation,
+the cohort records participation in the ongoing non-Play use through their own
+private control, with the original live co-present bodies. This records a factual
+performance, not just nomination. The original NPC then records actual completion;
+only then do both obligations complete, with no Bond choice. No new roll, consent,
+injury, payment or unrelated consequence is inferred. The initial v11 implementation required every nominated cohort to perform before
+completion; the additive per-actor resolution below supersedes that requirement. Later participation cannot erase completed
+use. Existing rolled cohorts and non-cohort optional Bonds remain unchanged.
+This extends v10's explicitly unsupported cohort boundary. Delegated interpretation;
+printed-rule clarity review remains pending.
+
+
+## P1 NPC use cohort nonparticipation
+
+`easy_target_use_cohort_facts`, revision 2 (Easy Target PDF41/printed39):
+Actual participation, not nomination, establishes the printed exemption. The
+original NPC can finish actual non-Play use while nominees remain unanswered.
+An original cohort controller may explicitly decline after Handler validation,
+or acknowledge missed participation after actual use finishes. These immutable
+owned outcomes close only that actor's obligation, grant no performance or
+exemption, and cannot change another participant's proof or the Newgirl's existing
+Bond choice. One or more actual participants still exempt the NPC and those
+participants; if none participated the ordinary optional Bond choice remains.
+Unanswered cohorts remain pending for their own acknowledgment. Neither the NPC
+controller nor a timeout may assert another person's participation or decline.
+The interpretation avoids an unprinted requirement that every nominee perform,
+and invents no penalty for nonparticipation. Existing completed participation
+records remain valid; previous decline/acknowledgment records cannot be erased or
+reopened as later participation. No automatic role substitution, roll, consent,
+injury or reward. Delegated recommendation; printed-rule clarity review pending.
+
+
+## P1 actual NPC hurt cohorts
+
+`easy_target_hurt_cohort_facts` (Easy Target PDF41/printed39): After the
+original Handler validates the real bodily source, an original cohort controller
+records actual participation with their available co-present body before the
+NPC's first performed bodily attempt, or explicitly declines. The NPC need not
+wait for every nominee; unanswered nominees can acknowledge missing that attempt,
+without retroactive participation or exemption. Actual participants and the
+primary avoid only matching Easy Target Punishment, never the real injury,
+interception work, other costs or unrelated consequences. The original Newgirl
+still selects her actual injury; a factual account is not a damage setter or a
+new NPC roll. Participated obligations finish only after actual resolved bodily
+harm. Historical body, scene, source and response proofs remain immutable.
+Nomination-only immunity or erasing a prior outcome are rejected alternatives.
+This additive consumer replaces the explicit NPC-hurt cohort adapter gap while
+preserving rolled assistance, NPC use/protection and prior non-cohort hurt.
+Delegated recommendation; printed-rule clarity review remains pending.
+
+
+## P1 NPC protection cohort nonparticipation
+
+`easy_target_cohort_scope`, revision 3 (Easy Target PDF41/printed39):
+The original cohort controller may explicitly decline after the original Handler
+validates the NPC protection, before or after its actual performance but before
+failure. This closes only the actor's owned obligation, not the original NPC
+protection. No performance, available body, exemption, consent or penalty is
+inferred. The NPC can actually protect without the nominee; the original Newgirl
+still owns her optional Tag if that protection later fails. After actual failure,
+an unanswered nominee acknowledges missed participation without changing it.
+Existing performed participation and historical no-option answers remain valid.
+
+The alternative would force every selected cohort to perform or leave their
+mandatory response pending until the protection fails. That has no printed basis
+and differs from the already-recorded high-result use/hurt nonparticipation
+interpretation. Actual participation, not nomination, remains the exemption source.
+An unanswered controller still needs their own actual response; neither the human
+facilitator nor another controller may manufacture it. The existing durable
+facilitator coordination route remains unchanged. Delegated recommendation;
+printed-rule clarity review remains pending.
+
+
+## P1 Emotional Relay interruption through Dive Deep
+
+`ankou_relay_interruption_dive` (Emotional Relay PDF85/printed83; Dive Deep
+PDF24/printed22): The actual Relay owner can erase the acting person's real Tag
+and use her own ordinary Dive as the interruption chance. The printed text does
+not restrict the chance to the six basic Plays previously exposed in the UI, or
+require every interruption to target that person. The interrupted person remains
+the cost/parent source, not a Dive target. Preserve the genuine original Relay,
+Task, actual Tag removal, held incoming Action and owned pending child request.
+All ordinary Dive triggers, link/resources, results and independent table answers
+still apply. Only actual child completion resumes the existing parent with its
+known receipt and remaining choices; neither narration nor selecting Dive cancels
+or changes the incoming result. A six-option-only restriction or false target is
+the rejected alternative. This finite adapter does not admit other special
+recipes. Delegated recommendation; printed-rule clarity review remains pending.
+
+## P1 actual NPC Nanobot removal
+
+`doctor-npc-nanobot-real-removal` (PDF72/printed70; ordinary NPC distinction PDF5):
+Nanobot's “someone” includes an actual visible, joined ordinary NPC. A mid result
+can remove one actual WorldTag or explicit source-owned HelplessCondition. The
+Doctor chooses the benefit and source; the original NPC controller confirms
+actual received care before that exact effect is removed. This is OOC factual
+ownership, not fabricated voluntary dialogue. Preserve the original body and
+controller, actual roll, spent Heat and one Obsolescence mark. Admission and
+resumed responses prove the original canonical physical BodyFact and current
+same-cell reach. A genuine Frame-created Wraith is not a physical patient merely
+because its rule mode is NPC. Actual recorded human and reset hardware bodies
+retain their original classification. Real shared enclosures or an operating
+Doctor Frame may provide reach; unrelated enclosing Frames do not.
+
+As with existing NPC Bond/Succubus consumers, retain the printed Heat gain as
+source metadata without inventing an NPC pool or crediting the controller's
+Pilot. Low repair and high two-distinct-benefit branches remain explicit pending
+implementation; empty repair/Identity choices and two removals cannot complete
+them. These are outstanding P1 resource consumers, not approved exclusions.
+
+Removal of a drug's WorldTag does not expire independent physiology or its other
+effects. The original source's actual recipient-scene clock continues. Other
+Helpless families or unrepresented ongoing effects need their exact source
+adapter. No generic "clear everything" flag or new medical resource model.
+
+Alternative: exclude every NPC or manufacture sheet resources/no-op benefits.
+The bounded genuine removal preserves the printed target without either error.
+Delegated recommendation; printed-rule clarity review remains required. Future
+changes must preserve immutable source/cost history and every unrelated effect.
+
+## P1 NPC Nanobot recovery from Stim Helplessness
+
+`doctor-npc-stim-helpless-recovery` (Nanobot PDF72/printed70; Stim Sex
+PDF39/printed37): the existing mid-result removal benefit can end the selected
+actual NPC's physiological Stim Helpless effect. The effect, drug, original owned
+choice and body source must prove through the original Stim service when selected
+and again when the NPC controller confirms treatment. Preserve the existing
+Doctor contact contract, genuine receipt, spent Heat and one Obsolescence mark.
+
+Record one immutable source-specific recovery, rather than deleting the original
+effect or expiring its drug. The drug Tag and other effects remain, and the actual
+recipient-scene expiry clock continues unchanged. Other simultaneous Helpless
+sources still apply. Removing a drug's presentation Tag remains a separate choice
+and does not cure physiology. Recovery does not create NPC resources or enable
+Nanobot low/high resource branches, which remain open P1 dependencies.
+
+This follows the printed permission to remove an effect from another playbook.
+The rejected alternative is to clear all Helplessness or forcibly expire the
+whole drug with its unrelated benefits. Delegated recommendation; printed-rule
+clarity review and independent/player acceptance remain pending.
+
+## P1 native Alpha Brutalize counter
+
+`alpha-native-brutalize-counter` (Brutalize PDF52/printed50): an original native
+Alpha who receives the low-result opportunity can answer with her own Brutalize
+against the original attacker. The printed opportunity does not restrict her to
+Keep Your Head or turn the counter into an automatic success. Admit only the
+actual selected low opportunity, original people/cast, native rule, legal target,
+real owned Heat and ordinary held-parent Action. The new finite route does not
+admit other source recipes or a different target.
+
+Resolve the actual counter's normal result first. Mid damages the chosen real
+Girl Asset and applies its own Broken; high damages the chosen Asset and applies
+Helpless; low preserves the original attacker's own opportunity and response.
+Only actual completed work closes the outer opportunity and applies the outer
+chooser's optional Broken. Existing same-inflictor Broken deduplication stays in
+force; selecting the outer optional effect does not duplicate a mid counter's
+existing condition. Preserve both original receipts and result owners.
+
+The rejected alternative is to treat any successful roll, a selected menu option
+or an acknowledgment as counter completion, or suppress the counter's own low
+result. Learned, NPC, sleeping-source and Princess-directed Brutalize remain
+separate source adapters. Delegated recommendation; printed-rule clarity review
+and independent/player acceptance remain pending.
+
+
+## P1 native Stim self-Dose counter to Brutalize
+
+`alpha-native-self-dose-counter` (Brutalize PDF52/printed50; Dose Up
+PDF38/printed36): the original native Stim-Blissed receiving the failed
+Brutalize opportunity may make her real self-Dose. The printed opportunity
+permits a Play; it does not require a direct attack on the Alpha or a successful
+roll. The player describes the actual injection in this opportunity. There is no
+free cocktail, fabricated contact, transferred rule or new Order.
+
+Admission and pre-roll require the original selected low result and immutable
+receipt, original living people and cast, actual native Stim rule, available
+body and held parent. Her own Heat, original roll and ordinary Tag decisions
+remain hers. Mid gives her two components; high requires her two plus the real
+Handler's independent one; low requires the real Handler's one or two. No
+controller or attacker can replace the printed chooser. OOC pause still works.
+
+Only the actual completed Dose, its durable owned responses and genuine
+source-bound temporary Tags close the parent. The target's previously selected
+optional Broken then applies once to the original Alpha. Original receipts,
+component provenance and recipient-scene expiry remain intact. This is a finite
+native self-Dose adapter, not universal counter permission. Other-target dosing,
+learned/NPC performers and other special sources remain separate work.
+
+The rejected alternatives are attack-only counter admission, treating preparation
+or a roll as completed dosing, or granting another person's Handler response to
+the Stim. Delegated recommendation; printed-rule clarity review and independent
+and player acceptance remain pending. A later source change must preserve saved
+receipts, source ownership and the real drug lifecycle.
+
+
+## P1 original NPC Here for Support
+
+`doctor-original-npc-support` (PDF73/printed71): hiding behind someone includes
+an actual visible living ordinary NPC. Admit only the original physical person,
+current scene/cast, reachable body and controller. The Doctor uses her own
+Requisition and Heat, with the original receipt and no Obsolescence charge.
+
+The mid result establishes real protection immediately. The NPC's controller
+chooses its optional typed Bond; they do not use their own Pilot sheet. The
+protection survives while the actual people remain current and can be ended by
+the original controller through the existing source-owned control. The existing
+harm guard permits only the actual protector to hurt Doctor while protecting.
+High permits that controller to refuse, then Doctor gives the NPC a real Tag.
+Ordinary NPCs have no Status resource; this finite adapter neither fabricates
+one nor lowers a controller's Pilot Status. Low preserves the actual required
+Handler Play and cannot complete through acknowledgment.
+
+Protection choices do not reveal medical effects, and no controller resources,
+movement, anatomy, Nanobot benefits or source-created Wraith handling are
+inferred. The rejected alternatives are blanket Pilot-only admission or a
+controller-sheet proxy. This delegated recommendation requires printed-rule
+clarity review. Existing Pilot and Nanobot paths remain distinct. Independent
+review, human acceptance and final exact-candidate regression remain pending.
+
+
+## P1 native Newgirl Easy Target counter to Brutalize
+
+`alpha-native-easy-target-counter` (Brutalize PDF52/printed50; Easy Target
+PDF41/printed39): the original native Newgirl receiving the low Brutalize
+opportunity may make her actual Easy Target. She must describe a real mistake
+under that pressure; choosing the counter is not itself a fabricated trigger.
+The book permits a Play, not only an attack or a successful roll.
+
+Admission and pre-roll retain the original low receipt, actual owned selection,
+current native rule, available body, original people and scene. The Newgirl
+spends her own Heat and keeps her actual receipt. The original Easy Target
+selection, Tag, each person's reaction, Handler trigger validation, actual
+performance and consequences retain their existing owners. A demanded task's
+original requester still judges the actual performance. No preparation, roll,
+acknowledgment or completed-looking row substitutes for those responses.
+
+Canonical completed-source proof waits for the exact final response to become
+durable and for all actual reactions and immediate consequences. Only then does
+the previously selected optional outer Broken apply once to the original Alpha.
+Consequences that legitimately change the Newgirl's body do not retroactively
+revoke the already proved native roll. OOC safety and source-owned recovery remain.
+
+Rejected alternatives are attack-only admission, automatic reactions or Broken
+on preparation, and borrowing a controller's character. This is a finite native
+Newgirl adapter; learned and NPC performers and further source families remain
+separate. Delegated recommendation, requiring printed-rule clarity review;
+independent review, player testing and final exact-candidate gates remain pending.
+
+
+## P1 actual player Stim Helplessness relief
+
+`doctor-player-stim-relief` (Nanobot Injection PDF72/printed70): the printed
+removal benefit can treat the original player's actual active Stim physiological
+Helplessness. Select the precise current effect, prove its original patient,
+drug, chooser, source result and immutable history, and record the existing
+per-effect HelplessRecovery. The original drug, expiry clock, Tags, other effects
+and historical source records remain intact. Generic Helplessness removal is
+offered only for sources that its existing consumer actually clears.
+
+Existing player-treatment timing is preserved: the selected effect ends when
+the Doctor chooses the benefit, before the patient's separately owned final
+response. That later response is not advance treatment consent. This adapter
+does not add an advance-consent gate or grant broader treatment permission.
+Existing costs, Heat, Obsolescence, native choice ownership and OOC safety remain;
+the separate NPC treatment flow is unchanged.
+
+Rejected alternatives are a successful generic no-op, deletion of the whole drug
+or unrelated effects, a controller-resource proxy, or calling the final response
+advance consent. This delegated source-specific recommendation requires printed-
+rule clarity review. Other source consumers, final exact-candidate checks and
+actual independent/player acceptance remain distinct pending gates.
+
+
+## P1 Unassuming Doll with an ordinary NPC observer
+
+`vatgrown-doll-ordinary-npc-observer` (Unassuming Doll PDF50/printed48):
+“someone” and “they” include an actual ordinary World NPC in the original
+Vatgrown's scene. The native Vatgrown still spends her own Heat and retains her
+actual receipt. The NPC is a distinct fictional person with its real controller;
+its controller authors information, low Tags and any supported Punishment.
+
+The ordinary observer must be alive, known to the Vatgrown, available at the
+same actual location, and bound to the real source cast under its controller.
+No NPC resource sheet, rank, anatomy, consent, contact statement or human-body
+fact is invented. This is an observation trigger, not a physical-contact or
+intimacy trigger. Director, Wraith and other special-source aliases are not
+admitted as ordinary NPCs. Historical source proof rechecks the exact original
+ordinary visible NPC, cast, controllers, location and immutable receipt.
+
+Existing printed quotas and source lifetimes are unchanged. Mid gives two
+benefits; high gives one plus object treatment; low requires the actual Tag or
+completed supported Punishment before one benefit. NPC Punishment uses the
+existing actual-role social effect port, its source, severity-appropriate
+consultation and participant attendance; no generic acknowledgment replaces
+the consequence. Currently supported NPC social effects are minor and do not
+require Handler consultation; the existing mandatory gate is moderate-only.
+Actual information remains private to the original caster and NPC controller.
+
+Rejected alternatives are excluding every NPC from “someone,” inventing NPC
+Heat or anatomy, narrating an answer on its controller's behalf, or treating a
+source-specific social Punishment as support for every bodily Punishment.
+This delegated reading requires printed-rule clarity review. Other NPC bodies,
+special performers, final regression, independent review and player acceptance
+remain separate pending gates. RULES_SUBSET and bot OFF are unchanged.
+
+
+## Same-copy Blank Slate Identity erasure — 2026-11-13
+
+Rulebook PDF81/printed79 says Blank Slate erases one/all Identities; PDF92/printed90
+says Clone AM has its own replaceable Identity usable as an additional Identity.
+Apply the existing additional-Identity ruling to this actual source: erasure removes
+the usable resource, not the person. Retain its exact saved Identity as an erased
+tombstone for audit, and preserve the same actor, paid source, residency, Tags, Bonds
+and shared Heat. No automatic Perfect Copy regeneration. A real later marked-Tag
+embrace may fill the empty copy slot. This delegated interpretation requires
+printed-rule clarity review. It does not authorize CONSUME/death or unimplemented
+lifecycle effects, nor does it grant a new native Identity slot to the original owner.
+
+## Unassuming Doll optional mid benefit package — 2026-11-13
+
+`vatgrown-doll-mid-optional-benefits` (PDF50/printed48): interpret “may pick 2”
+as permission to decline the entire package, or accept and select exactly two.
+This preserves existing selection cardinality while correcting forced benefit
+acceptance. “Up to two” is an alternative reading, not silently granted here.
+This delegated recommendation requires printed-rule clarity review. Existing
+high/low behavior is unchanged; the low “can pick 1” wording is not decided here.
+
+Only the source owner's explicit decline on a mid result completes without
+benefits. Preserve actual roll, Heat, immutable choice event and source proof;
+create no effect or information request. This is not a fabricated completion
+of a required effect. The new registry ruling changes the campaign digest;
+legitimate matching approval and final independent/human gates remain pending.
+
+## Bonded low optional continuation — 2026-11-13
+
+`bonded-low-optional-continuation` (PDF59/printed57): on the low Sex Play result, the counterpart can continue without taking either optional benefit, or use the existing route that applies both. Independent selection of the two benefits is an alternative reading and remains a printed-clarity question. This is a delegated recommendation, not a rule approval. The counterpart retains the choice; the roll, cost, receipt and source proof remain, without an invented Status or Identity change. The separate mid-result unmark restriction is not resolved here. The registry change requires a fresh legitimate matching campaign approval digest.
+
+## Bonded mid exhausted unmarks — 2026-11-13
+
+`bonded-mid-exhausted-unmarks` (PDF59/printed57): choose shaping requests even if fewer marked Identities remain. Unmark every available unlocked Identity up to the number of requests; do not fabricate a resource or skip an available required unmark. Treating unmarks as limiting costs or as wholly optional are alternative readings. This delegated interpretation requires printed clarity review and a fresh legitimate approval of the changed campaign digest. Counterpart decisions and actual effects remain required.

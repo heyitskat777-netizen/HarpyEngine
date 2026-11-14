@@ -1,5 +1,6 @@
 """Held actual-actor Engage, including source-owned damage and the Harpy extra maneuver."""
 
+import hashlib
 import json
 from typing import TYPE_CHECKING, Any
 
@@ -91,6 +92,12 @@ def prepare(
     )
 
 
+def source_binding(meta: dict[str, Any]) -> str:
+    """Bind the actual declaration, excluding only its later consequence bookkeeping."""
+    original = {key: value for key, value in meta.items() if key not in ("followups", "applied")}
+    return hashlib.sha256(json.dumps(original, sort_keys=True).encode()).hexdigest()
+
+
 def pre_roll(game: "GameService", c: Connection, state: GameState, action: dict[str, Any]) -> None:
     from girlframe.services.m3_battle import _cast
 
@@ -106,11 +113,45 @@ def pre_roll(game: "GameService", c: Connection, state: GameState, action: dict[
             "maneuvers"
         ]:
             raise WorkflowError("Preserve the actual paid piloted Crushing Bulk source")
-    for key in ("actor", "target"):
-        actual = resolve(
-            state, ActorRef.model_validate(meta[key]), profiles(c, game.store.campaign_id)
+    bound = profiles(c, game.store.campaign_id)
+    expected = None
+    if action["data"].get("ankou_feedback"):
+        from girlframe.services.m3_ankou_feedback import engage_history, prove
+        from girlframe.services.m3_disposable_psyche import _before
+
+        feedback = prove(game, c, state, action["data"]["ankou_feedback"])
+        if feedback.engage_source != source_binding(meta):
+            raise WorkflowError("Preserve the original Feedback-held Engage declaration")
+        if (
+            feedback.engage_source is None
+            or feedback.phase != "resolved"
+            or feedback.resolved_event is None
+            or feedback.actor != ActorRef.model_validate(meta["actor"])
+            or meta["applied"]
+            or meta["followups"]
+        ):
+            raise WorkflowError("Resolve the actual original Engage Feedback before its dice")
+        original = _before(game, c, feedback.mark_event)
+        for key in ("actor", "target"):
+            ref = ActorRef.model_validate(meta[key])
+            if resolve(original, ref, bound).source_sha256 != meta[key + "_sha256"]:
+                raise WorkflowError("Preserve the genuine pre-Feedback Engage resources")
+        expected = engage_history(
+            game,
+            c,
+            feedback,
+            original,
+            tuple(ActorRef.model_validate(meta[key]) for key in ("actor", "target")),
         )
-        if actual.source_sha256 != meta[key + "_sha256"]:
+    for key in ("actor", "target"):
+        ref = ActorRef.model_validate(meta[key])
+        actual = resolve(state, ref, bound)
+        expected_hash = (
+            resolve(expected, ref, bound).source_sha256
+            if expected is not None
+            else meta[key + "_sha256"]
+        )
+        if actual.source_sha256 != expected_hash:
             raise WorkflowError("STALE_ENGAGE: actual battlefield resources changed before dice")
 
 
@@ -344,6 +385,17 @@ def synchronize(
     from girlframe.services.m3_battle import synchronize_damage
 
     synchronize_damage(game, c, event)
+    feedback_reprisal = action["data"].get("ankou_feedback_child") or action["data"].get(
+        "ankou_effect_child", {}
+    ).get("feedback_work")
+    if feedback_reprisal:
+        from girlframe.services.m3_collateral import latest
+
+        if any(
+            latest(game, c, work)["state"] != "resolved"
+            for work in action["data"]["engage"]["followups"]
+        ):
+            return
     if action["data"]["engage"]["applied"] and not game.pending(c, action["id"]):
         state = load_state(c, game.store.campaign_id)
         if action["data"].get("actor_basic"):
@@ -355,6 +407,14 @@ def synchronize(
 
             ChoiceEngine(game).finish(c, state, action)
         game.save_action(c, action)
+        if action["data"].get("ankou_feedback_child"):
+            from girlframe.services.m3_ankou_feedback import finish_engage_reprisal
+
+            finish_engage_reprisal(game, c, action, event)
+        elif action["data"].get("ankou_effect_child", {}).get("feedback_work"):
+            from girlframe.services.m3_ankou_feedback_sequences import complete_child
+
+            complete_child(game, c, load_state(c, game.store.campaign_id), action, event)
 
 
 def complete_damage_work(

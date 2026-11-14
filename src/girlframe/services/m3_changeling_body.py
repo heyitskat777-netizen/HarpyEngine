@@ -188,9 +188,11 @@ def validate_access(
             "SOURCE_UNCONSCIOUS_PRODUCER_REQUIRED: use actual medical unconsciousness"
         )
     if condition == "helpless":
-        from girlframe.engine.m3_casualty import helpless
+        from girlframe.engine.m3_actor_bonds import is_helpless
 
-        if not helpless(state, target) and not (placement and placement.incapacitated):
+        # The shared query distinguishes source-qualified conditions from
+        # unqualified bodily effects such as Psych Whip (printed p81).
+        if not is_helpless(state, target, caster) and not (placement and placement.incapacitated):
             raise WorkflowError("Use actual current Helplessness, not a narrative substitute")
     return dict(
         caster=own.ref.model_dump(mode="json"),
@@ -396,6 +398,27 @@ def reconditioning_candidates(
             ),
             None,
         )
+        if cast is None:
+            # Ordinary Plays can retain a genuine legacy cast through their
+            # original scene bind/join events without materializing scene_casts.
+            # Recover only this damage source's exact saved Action and scene.
+            actions = t.m2["m2_actions"]
+            action = c.execute(
+                sa.select(actions.c.channel_id, actions.c.scene_id).where(
+                    actions.c.campaign_id == game.store.campaign_id,
+                    actions.c.id == source,
+                )
+            ).first()
+            if action is not None:
+                from girlframe.services.m3_dose_up import _cast
+
+                actual_cast = _cast(game, c, after, int(action.channel_id))
+                if (
+                    actual_cast.id == action.scene_id
+                    and actual_cast.open
+                    and {actor, owner} <= {role.actor for role in actual_cast.roles}
+                ):
+                    cast = actual_cast
         if cast is None:
             raise WorkflowError("SOURCE_RECONDITIONING_SCENE_REQUIRED: retain actual cockpit roles")
         result.append(

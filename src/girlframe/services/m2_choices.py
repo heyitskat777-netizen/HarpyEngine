@@ -20,6 +20,8 @@ from girlframe.engine.m2 import (
     TagState,
     higher,
     pair_key,
+    sensor_question_id,
+    sensors_off_list,
     shift_status,
     tier,
 )
@@ -797,24 +799,31 @@ class ChoiceEngine:
                 "consume_smell" not in answer.options or smell is not None,
                 "Acquire the actual Human Hound source first",
             )
-            picks(ordinary, set(QUESTIONS), 1 if level == "low" else 0, count)
+            picks(ordinary, set(QUESTIONS), 0, count)
             require(
                 set(answer.fields) <= {"q1", "q2", "q3"}
                 and all(x.strip() for x in answer.fields.values()),
                 "Provide valid custom questions.",
             )
+            questions = list(ordinary) + [
+                sensor_question_id(answer.fields[x]) or answer.fields[x]
+                for x in sorted(answer.fields)
+            ]
+            off_list = sensors_off_list(questions, level)
             require(
-                len(ordinary) + len(answer.fields) == count
-                and (level != "low" or not answer.fields),
+                len(questions) == count and (level != "low" or not off_list),
                 "Choose the printed question count; low results use listed questions only.",
             )
-            result["questions"] = list(ordinary) + [answer.fields[x] for x in sorted(answer.fields)]
+            result["questions"] = questions
+            result["off_list"] = off_list
             if "consume_smell" in answer.options:
                 result["questions"].append(smell)
-            result["off_list"] = bool(answer.fields)
             self.game.request(c, action, state.handler, "handler_sensors")
             return
         if kind == "handler_sensors":
+            # Pending older actions may have classified the input control, not its question.
+            # Correct only this action on its owned response; never replay completed effects.
+            result["off_list"] = sensors_off_list(result["questions"], level)
             expected = {"a" + str(i + 1) for i in range(len(result["questions"]))}
             require(
                 set(answer.fields) == expected and all(x.strip() for x in answer.fields.values()),
@@ -1174,6 +1183,7 @@ class ChoiceEngine:
         from girlframe.services.m3_ankou import self_tag as champion_self_tag
         from girlframe.services.m3_dose_up import self_tag as drug_self_tag
         from girlframe.services.m3_kicked_puppy import self_tag as kicked_self_tag
+        from girlframe.services.m3_malleable_self_tag import self_tag as malleable_self_tag
         from girlframe.services.m3_stim_sex import self_tag as stim_self_tag
 
         actor = int(action["actor_id"])
@@ -1258,6 +1268,7 @@ class ChoiceEngine:
                 or ritual_self_tag(self.game, c, state, action, owner, tag)
                 or drug_self_tag(self.game, c, state, action, owner, tag)
                 or stim_self_tag(self.game, c, state, action, owner, tag)
+                or malleable_self_tag(self.game, c, state, action, owner, tag)
                 or champion_self_tag(self.game, c, state, markers.roller(state, action), tag.id),
                 "Only another player or a printed self-mark exception can mark this Girl Tag.",
             )
@@ -1890,10 +1901,20 @@ class ChoiceEngine:
         if action["data"].get("princess_child") and action["data"].get("battle"):
             # Battle finishes after the response event; persist its directed source separately.
             return
+        if action["data"].get("princess_child") and action["data"].get("easy_target"):
+            # Real reactions, separate performances and consequences finish first.
+            return
+        if action["data"].get("princess_child") and action["data"].get("alpha"):
+            # Brutalize may owe real damage work or a counter before this grant ends.
+            return
         if action["data"].get("vatgrown_leaving") and action["data"]["result"].get("can_disobey"):
             from girlframe.services.m3_vatgrown_support import finish_departure
 
             finish_departure(self.game, c, state, action, action["data"]["response_event"])
+        if action["data"].get("ankou_feedback_child") and action["data"].get("engage"):
+            # Engage finishes after its canonical maneuver/damage event. Its Feedback
+            # continuation must be saved in a new event, never just in this local state.
+            return
         if action["data"].get("ankou_feedback_child"):
             from girlframe.services.m3_ankou_feedback import complete_child as complete_ankou
 
@@ -1969,8 +1990,20 @@ class ChoiceEngine:
                 .values(state="completed_by_child", revision=requests[0]["revision"] + 1)
             )
             parent["data"]["result"]["response_play"] = action["id"]
+            if requests[0]["kind"] == "beneath_response_play":
+                from girlframe.services.m3_ankou_pin import finish_parent as finish_pin_feedback
+
+                finish_pin_feedback(self.game, c, state, action, parent)
             if requests[0]["kind"] == "escape_play":
-                parent["data"]["result"]["escaped"] = True
+                # Mandatory Feedback may end this escape before any Play is made.
+                # Completing the held parent cannot invent a successful escape.
+                parent["data"]["result"]["escaped"] = not action["data"]["result"].get(
+                    "blocked_before_roll", False
+                )
+                if not parent["data"]["result"]["escaped"]:
+                    from girlframe.services.m3_ankou_escape import finish_blocked
+
+                    finish_blocked(self.game, c, state, action, parent)
             if not self.game.pending(c, parent["id"]):
                 if parent["data"].get("actor_basic"):
                     from girlframe.services.m3_actor_plays import ActorPlayService

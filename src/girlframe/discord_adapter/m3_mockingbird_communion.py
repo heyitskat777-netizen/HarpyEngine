@@ -46,8 +46,9 @@ async def open_call(interaction: discord.Interaction, service: CallService, iden
         fields = [
             Field(
                 "option",
-                "Choose your one actual Dive consequence",
-                tuple((x, LABELS[x]) for x in value["options"]),
+                "Choose a Dive consequence, or decline",
+                tuple((x, LABELS[x]) for x in value["options"])
+                + (("decline_effect", "Stay aboard without an extra Dive choice"),),
             ),
             Field("account", "Describe your own connection", paragraph=True),
         ]
@@ -113,6 +114,8 @@ async def open_call(interaction: discord.Interaction, service: CallService, iden
                 "npc",
             )
         option = answers["option"][0]
+        if option == "decline_effect":
+            return await commit(current, dict(account=answers["account"]), "decline_effect")
         data = dict(option=option, account=answers["account"])
         detail: list[Field] = []
         if option == "void_and_unmark_all":

@@ -7,13 +7,29 @@ from pydantic import Field
 from girlframe.engine.m2 import GameState, TagState
 from girlframe.engine.m3_actor_state import ActorRef, Model, ProfileBinding, SceneCast
 from girlframe.engine.m3_dose_up import DURATION, Component
+from girlframe.engine.m3_world_state import WorldTag
 
 RULE = "girl.stim-blissed.sex-play"
 PLAY = "stim_sex"
 EFFECTS = ("helpless", "orders", "bond", "tag")
 
 
+class NpcContact(Model):
+    session: str
+    target: ActorRef
+    actor: ActorRef
+    controller: int
+    vessel: str
+    actor_vessel: str
+    cell: tuple[int, int]
+    cast: SceneCast
+    revision: int
+    event: str
+    account: str = Field(min_length=1, max_length=1200)
+
+
 class Session(Model):
+    npc_contact: NpcContact | None = Field(default=None, exclude_if=lambda value: value is None)
     id: str
     actor: ActorRef
     target: ActorRef
@@ -59,7 +75,7 @@ class Drug(Model):
     vessel: str
     giver: ActorRef
     component: Component
-    tag: TagState
+    tag: TagState | WorldTag
     choice: str
     event: str
     duration: Literal[1, 2] = DURATION
@@ -75,9 +91,21 @@ class Effect(Model):
     drug: str
     choice: str
     event: str
-    tag: TagState | None = None
+    tag: TagState | WorldTag | None = None
     bond_before: int | None = None
     bond_after: int | None = None
+
+
+class HelplessRecovery(Model):
+    """One genuine Nanobot treatment ends only its selected physiological effect."""
+
+    id: str
+    effect: str
+    effect_event: str
+    target: ActorRef
+    drug: str
+    doctor_action: str
+    event: str
 
 
 class SceneEnd(Model):
@@ -95,6 +123,7 @@ KINDS: dict[type[Model], str] = {
     Drug: "stim_sex_drug",
     Effect: "stim_sex_effect",
     SceneEnd: "stim_sex_scene_end",
+    HelplessRecovery: "stim_sex_helpless_recovery",
 }
 
 
@@ -148,13 +177,27 @@ def active(state: GameState, drug: Drug) -> bool:
     return actual.vessel_id == drug.vessel
 
 
-def helpless(state: GameState, subject: ActorRef, foe: ActorRef | None = None) -> bool:
-    # Printed unqualified physiological Helplessness, independent of unrelated sources.
+def helpless_effects(state: GameState, subject: ActorRef) -> tuple[Effect, ...]:
+    """Current source effects, minus individually treated ones; drugs retain their clock."""
     drugs = {x.id: x for x in records(state, Drug)}
-    return any(
-        x.kind == "helpless"
-        and x.target == subject
-        and x.drug in drugs
-        and active(state, drugs[x.drug])
-        for x in records(state, Effect)
+    recoveries = records(state, HelplessRecovery)
+    return tuple(
+        effect
+        for effect in records(state, Effect)
+        if effect.kind == "helpless"
+        and effect.target == subject
+        and effect.drug in drugs
+        and active(state, drugs[effect.drug])
+        and not any(
+            recovery.effect == effect.id
+            and recovery.effect_event == effect.event
+            and recovery.target == effect.target
+            and recovery.drug == effect.drug
+            for recovery in recoveries
+        )
     )
+
+
+def helpless(state: GameState, subject: ActorRef, foe: ActorRef | None = None) -> bool:
+    # Printed unqualified physiology remains independent of unrelated Helpless sources.
+    return bool(helpless_effects(state, subject))

@@ -1,5 +1,6 @@
 """Put Someone Beneath You uses the existing dice, durable choices and scene lock."""
 
+import hashlib
 import json
 from typing import TYPE_CHECKING, Any
 from uuid import NAMESPACE_URL, uuid5
@@ -146,6 +147,41 @@ def prepare(
     )
 
 
+def feedback_source_binding(action: dict[str, Any], *, counter_source: str | None = None) -> str:
+    """Bind one original ordinary social declaration, not a generic special-Play permit."""
+    prepared = PlayInput.model_validate(action["data"]["prepared"])
+    meta = action["data"].get("beneath")
+    if (
+        prepared.play != rules.PLAY
+        or counter_source is None
+        and (action.get("parent_id") is not None or prepared.parent is not None)
+        or counter_source is not None
+        and (
+            not action.get("parent_id")
+            or prepared.parent != action["parent_id"]
+            or not action["data"].get("alpha_counter_source")
+        )
+        or not isinstance(meta, dict)
+        or set(meta) != {"actor", "target", "target_sha256", "special_girl"}
+        or meta["special_girl"] is not None
+    ):
+        raise WorkflowError(
+            "SOURCE_ANKOU_BENEATH_PORT_REQUIRED: preserve this specialised social source"
+        )
+    actor, target = (ActorRef.model_validate(meta[key]) for key in ("actor", "target"))
+    if (
+        actor.kind != "pilot"
+        or actor.entity != action["actor_id"]
+        or target.kind != "pilot"
+        or prepared.target != int(target.entity)
+        or prepared.target_actor is not None
+        or actor == target
+    ):
+        raise WorkflowError("Preserve the actual original Pilot and selected Beneath target")
+    binding = dict(meta, counter_source=counter_source) if counter_source is not None else meta
+    return hashlib.sha256(json.dumps(binding, sort_keys=True).encode()).hexdigest()
+
+
 def pre_roll(
     game: "GameService",
     c: Connection,
@@ -157,11 +193,47 @@ def pre_roll(
     from girlframe.services.m3_special_girl import pre_roll as pre_roll_special
 
     pre_roll_special(game, c, viewer, state, action)
-    target = ActorRef.model_validate_json(json.dumps(action["data"]["beneath"]["target"]))
-    actual = resolve(
-        state, target, profiles(c, game.store.campaign_id), require_current_profile=False
+    meta = action["data"]["beneath"]
+    target = ActorRef.model_validate(meta["target"])
+    bound = profiles(c, game.store.campaign_id)
+    expected = None
+    if action["data"].get("ankou_feedback"):
+        from girlframe.services.m3_ankou_feedback import engage_history, prove
+        from girlframe.services.m3_battle import _cast
+        from girlframe.services.m3_disposable_psyche import _before
+
+        feedback = prove(game, c, state, action["data"]["ankou_feedback"])
+        if feedback.beneath_source != feedback_source_binding(
+            action, counter_source=feedback.beneath_counter_source
+        ):
+            raise WorkflowError("Preserve the original Feedback-held Beneath declaration")
+        if (
+            feedback.phase != "resolved"
+            or feedback.resolved_event is None
+            or feedback.actor != ActorRef.model_validate(meta["actor"])
+            or _cast(game, c, state, int(action["channel_id"])) != feedback.cast
+        ):
+            raise WorkflowError("Resolve the actual original Beneath Feedback before its dice")
+        original = _before(game, c, feedback.mark_event)
+        if resolve(original, target, bound).source_sha256 != meta["target_sha256"]:
+            raise WorkflowError("Preserve the genuine pre-Feedback Beneath target")
+        refs = (feedback.actor, target)
+        expected = engage_history(game, c, feedback, original, refs)
+        for ref in refs:
+            if (
+                resolve(state, ref, bound).source_sha256
+                != resolve(expected, ref, bound).source_sha256
+            ):
+                raise WorkflowError(
+                    "STALE_TARGET: actual Beneath resources changed outside its Feedback"
+                )
+    actual = resolve(state, target, bound, require_current_profile=False)
+    expected_hash = (
+        resolve(expected, target, bound).source_sha256
+        if expected is not None
+        else meta["target_sha256"]
     )
-    if actual.source_sha256 != action["data"]["beneath"]["target_sha256"]:
+    if actual.source_sha256 != expected_hash:
         raise WorkflowError(
             "STALE_TARGET: recover the unrolled Play and confirm its actual target."
         )

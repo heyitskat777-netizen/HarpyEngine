@@ -1,0 +1,15 @@
+# r273: missing original BodyFact while a native Newgirl result is held
+
+The r272 preflight protects new starts but cannot repair an already-rolled historical action. An affirmative native Newgirl mid result requires a Bond increase; a Changeling counterpart's Psychic Strings then requires the original subject's human-authored BodyFact. The original `body_fact` global held-Play guard prevented recording that prerequisite after the roll. The failed answer is transactional and must remain unanswered, not be replaced by a forced negative answer or cancelled roll.
+
+The narrowly scoped exception permits an append-only original fact while exactly one native Newgirl mid action is awaiting a respect response. It proves the actual saved source, original cast/controllers/vessels, current contact, real rolled result, participant membership, and the Changeling counterpart that needs this subject's brain. Interrupted recoveries, multiple held actions, delegated/learned/psychic sources, unrelated actors and other phases remain excluded. The existing factual writer still requires original owner or Handler authorship, an actual vessel and matching printed actor role, and forbids replacing an existing fact. It does not choose the response, apply the Bond or Status, create a second roll, change bodies, waive cost or release the held action. Normal owned response retry applies all mandatory mechanics.
+
+This is a workflow repair for existing implemented Newgirl mid / Psychic Strings rules, not a new biological interpretation or rule approval. The `/campaign frame area:body` entry reaches the existing BodyFactsService recording workflow independently of the pending Play menu. No live Discord dispatch was performed.
+
+`test_newgirl_held_body_fact.py` recreates the legacy condition by bypassing **only** r272 preflight during the real begin call; the monkeypatch ends before any response/recovery checks. It uses exact-cadre genuine onboarding/placement from the r272 fixture, synthetic test approvals, deterministic dice and mock delivery. It verifies failed affirmative rollback, wrong-owner/unrelated-actor rejection, unchanged held action and sheet resources during owner recording, no-overwrite, retry with the same result/dice, and actual Bond/Status/fresh unspent String. Test authored by worker, execution and independent review delegated to coordinator; no execution claim here.
+
+Unverified: Handler-authored recovery, broader native group variants, parent-held/delegated sources, other Bond producers, live Discord, privacy matrix, restart/restore and full regression. Bot off; isolated code not merged or deployed.
+
+Coordinator focused execution: singleton passed 1 in 6.95s. Scoped lint/format passed. Synthetic approvals/mock delivery; not production admission or final regression.
+
+Independent review requested matching the exact unanswered respect pair/controller rather than any pending group participant. Helper tightened; final focused rerun passed 1 in 5.43s. Earlier 6.95s pass preceded this stricter guard. Group variants remain unverified.

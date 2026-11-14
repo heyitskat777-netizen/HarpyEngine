@@ -5,6 +5,7 @@ from test_ledger import ADMIN, PLAYER
 from test_ledger import ledger as ledger_fixture
 from test_m2_game import state
 from test_off_duty_cycle import activate, call, prepared
+from test_world_service import transfer_npc
 
 from girlframe.engine.m3_off_duty import HandlerContext
 from girlframe.engine.m3_world import update
@@ -35,7 +36,7 @@ def npc_actor(store, cycle, game, job="base_personnel"):
             revealed=True,
         ),
     )
-    world.claim_npc(ACTOR, "claim-actual-role", state(game).revision, "person")
+    transfer_npc(world, ADMIN, ACTOR, "person")
 
 
 @pytest.mark.parametrize(

@@ -13,6 +13,7 @@ from test_m2_game import Gateway, start, state, tick
 from test_mission_ui import current
 from test_world import gorgon
 from test_world_service import ready as world_ready
+from test_world_service import transfer_npc
 
 from girlframe.database import tables as t
 from girlframe.delivery.m2_worker import GameWorker
@@ -49,7 +50,7 @@ def ready(store):
             revealed=True,
         ),
     )
-    world.claim_npc(PLAYER, "actual-role-claim", state(game).revision, "npc")
+    transfer_npc(world, ADMIN, PLAYER, "npc")
     with store.transaction() as c:
         canon = state(game)
         canon.world = update(
@@ -173,7 +174,7 @@ def test_scope_revocation_also_blocks_cached_replay_without_new_effects(ledger):
 def test_stale_target_world_and_conflicting_command_cannot_redirect_an_attack(ledger):
     svc, game = ready(ledger)
     data, attack = selection(svc)
-    svc.world.claim_npc(OTHER, "actual-role-changes", state(game).revision, "npc")
+    transfer_npc(svc.world, PLAYER, OTHER, "npc")
     before = state(game)
     with pytest.raises(WorkflowError, match="STALE_ATTACK"):
         apply(svc, data=data, attack=attack)

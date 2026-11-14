@@ -499,6 +499,17 @@ def get(state: GameState, identity: str) -> Fingers:
     return record(state, Fingers, identity)
 
 
+def whip_helpless(state: GameState, subject: ActorRef) -> bool:
+    """Printed p81 is unqualified; retain the actual causal foe and recovery."""
+    events = {value.event for value in records(state, FryOutcome) if value.outcome == "helpless"}
+    return any(
+        condition.active
+        and condition.subject == subject
+        and events.intersection(condition.source_events)
+        for condition in state.helpless_conditions
+    )
+
+
 def frame(state: GameState, actor: ActorRef) -> str:
     sheet = state.sheets.get(actor.entity) if actor.kind == "pilot" else None
     if (
