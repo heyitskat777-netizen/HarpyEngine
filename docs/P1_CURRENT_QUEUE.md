@@ -48,6 +48,13 @@ retries. Successful retries are not aggregated into a green full
 regression. Required final full mode will discover the complete suite, including
 memory pagination, both existing session-mix files and the new endpoint guard.
 
+Full CI43613811804 on43f9ff9 completed3,299 passed/1 failed across3,300 tests.
+The sole new failure was a fixture selecting a held parent Tag window instead
+of its replacement child's window. It now binds replies to the child's action ID,
+retains a negative parent/rollback check and passes its focused retry1/3.79s.
+Runtime code is unchanged. A new exact-commit full regression is required;
+current result is not green full acceptance.
+
 Final integration evidence and per-type assessment are recorded in
 `reports/R285_INTEGRATION.md` and `docs/R285_MILESTONE_PLAN.md`.
 

@@ -183,6 +183,25 @@ CI evidence and renewed actual restore/reopen remain to be recorded. No bot
 startup, live migration, model call, environment publication or rules promotion
 occurred.
 
+## Exact CI43f9ff9 and test-only follow-up
+
+[CI43613811804](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43613811804)
+records exact43f9ff9, `Scope: full`,3,300 tests: **3,299 passed,1 failed,
+0 errors,0 skipped in4,338.64s**. Global static and publishable-file checks pass.
+Post-test CLI/registry/planning steps were skipped following the test failure;
+their earlier local evidence remains separate. All four Deep-Brain-Spikes
+pagination tests, including native return causes, and all five existing
+session-mix tests pass in this full run.
+
+The sole failure was the Wyvern replacement normal's generic `pass_tags` helper:
+the same viewer has both held-parent and replacement-child windows, and the first
+row depends on UUID/index ordering. The real source guard correctly refused the
+parent. The test now responds by actual child `action_id`, additionally proving
+the parent remains blocked with unchanged state. The first focused attempt used
+the wrong row field (1 failed3.43s); the corrected failed-node retry passes
+1/3.79s. No production source or gameplay rule changed. This is not a green full
+result; the exact test-only follow-up still needs its complete regression.
+
 
 ## Ordinary packet freeze update
 

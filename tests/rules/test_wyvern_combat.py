@@ -18,7 +18,7 @@ from test_wyvern import buy, free_chat, ready, roll
 from girlframe.engine import m3_battle as battle
 from girlframe.engine import m3_vehicles as vehicles
 from girlframe.engine import m3_wyvern as rules
-from girlframe.engine.m2 import PlayInput
+from girlframe.engine.m2 import ChoiceAnswer, PlayInput
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import resolve
@@ -201,7 +201,24 @@ def test_known_incoming_receipt_and_heat_survive_too_big_then_real_different_nat
     tick(worker, gateway, 3)
     if game.inspect(OTHER, child)["state"] != "tag_window":
         game.roll(OTHER, str(uuid4()), child)
-    pass_tags(game)
+    # Both source and replacement have Tag windows. Their UUID ordering must
+    # never select the held incoming Play instead of this actual child.
+    held = next(
+        x for x in game.choices(OTHER) if x["kind"] == "tag_window" and x["action_id"] == incoming
+    )
+    before_held_reply = state(game)
+    with pytest.raises(WorkflowError, match="source-owned replacement Play"):
+        game.respond(
+            OTHER, str(uuid4()), held["id"], held["revision"], ChoiceAnswer(options=("pass",))
+        )
+    assert state(game) == before_held_reply
+    for viewer in (PLAYER, OTHER, ADMIN):
+        row = next(
+            x for x in game.choices(viewer) if x["kind"] == "tag_window" and x["action_id"] == child
+        )
+        game.respond(
+            viewer, str(uuid4()), row["id"], row["revision"], ChoiceAnswer(options=("pass",))
+        )
     if any(x["kind"] == "mockingbird_risk" for x in game.choices(OTHER)):
         answer(game, OTHER, "mockingbird_risk")
     answer(game, OTHER, "actor_keep", options=("tough",))
