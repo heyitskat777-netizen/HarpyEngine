@@ -97,6 +97,198 @@ def connection_endpoints(
     return expected
 
 
+def _core_defeat_separation(game: "GameService", c: Connection, value: NeuralConnection) -> bool:
+    """Prove live original Core separation, without calling the living actor dead.
+
+    The saved action/answered choice and canonical before/after event exist while
+    GameService.event runs. The m2_responses row is deliberately not needed here.
+    """
+    import json
+
+    from girlframe.engine.m2 import ChoiceAnswer
+
+    actor, event = value.ended_by, value.ended_event
+    if actor is None or event is None or actor.kind != "external_pilot":
+        return False
+    event_row = (
+        c.execute(
+            sa.select(t.events).where(
+                t.events.c.campaign_id == game.store.campaign_id,
+                t.events.c.id == event,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    history = t.m2["m2_state_history"]
+    ended = (
+        c.execute(
+            sa.select(history).where(
+                history.c.campaign_id == game.store.campaign_id,
+                history.c.event_id == event,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    if event_row is None or ended is None or event_row["kind"] != "m3.harpy_defeat_choice":
+        return False
+    prior_raw = c.scalar(
+        sa.select(history.c.body_json)
+        .where(
+            history.c.campaign_id == game.store.campaign_id,
+            history.c.revision < ended["revision"],
+        )
+        .order_by(history.c.revision.desc())
+        .limit(1)
+    )
+    if prior_raw is None:
+        return False
+    before = GameState.model_validate_json(prior_raw)
+    after = GameState.model_validate_json(ended["body_json"])
+    previous_core, core = find_core(before, actor), find_core(after, actor)
+    if (
+        previous_core is None
+        or core is None
+        or not previous_core.alive
+        or not core.alive
+        or not (previous_core.attached or previous_core.linked)
+        or core.attached
+        or core.linked
+        or core.condition_event != event
+        or core.state_event != event
+    ):
+        return False
+    immutable = (
+        "id",
+        "controller",
+        "body_vessel",
+        "frame_owner",
+        "frame_instance",
+        "source_setup",
+        "source_event",
+        "proposed_event",
+        "source_facts",
+        "baseline_tags",
+    )
+    if any(getattr(previous_core, key) != getattr(core, key) for key in immutable):
+        return False
+    before_wire = next((x for x in before.neural_connections if x.id == value.id), None)
+    after_wire = next((x for x in after.neural_connections if x.id == value.id), None)
+    endings = {"phase", "ended_event", "ended_by", "end_account"}
+    if (
+        before_wire is None
+        or after_wire != value
+        or before_wire.phase != "connected"
+        or actor not in (value.caster, value.battery)
+        or any(
+            getattr(before_wire, key) != getattr(value, key)
+            for key in NeuralConnection.model_fields
+            if key not in endings
+        )
+    ):
+        return False
+    payload = json.loads(event_row["payload_json"])
+    action_id, choice_id = payload.get("action_id"), payload.get("choice_id")
+    if not isinstance(action_id, str) or not isinstance(choice_id, str):
+        return False
+    action = game.action(c, action_id)
+    raw_declaration = action["data"].get("harpy_defeat")
+    if raw_declaration is None or action["data"].get("play") != "harpy_defeat":
+        return False
+    from girlframe.services.m3_harpy_defeat import HarpyDefeatService
+
+    service = HarpyDefeatService(game.store, game)
+    declared = service._declaration(c, action)
+    effect = next(
+        (x for x in after.harpy_defeats if x.action == action_id and x.actor == actor), None
+    )
+    if (
+        effect is None
+        or declared.actor != actor
+        or declared.controller != core.controller
+        or declared.frame_instance != core.frame_instance
+        or effect.work != declared.work
+        or effect.frame_instance != core.frame_instance
+        or effect.source_cast != declared.cast
+        or action["data"].get("result", {}).get("harpy_effect") != effect.id
+    ):
+        return False
+    source_work, _, source_actor = service._source(c, declared.work, pending=False)
+    if source_actor != actor or source_work["owner_id"] != str(core.controller):
+        return False
+    choices = t.m2["m2_choices"]
+    choice = (
+        c.execute(
+            sa.select(choices).where(
+                choices.c.campaign_id == game.store.campaign_id,
+                choices.c.id == choice_id,
+                choices.c.action_id == action_id,
+                choices.c.state == "answered",
+                choices.c.actor_id == event_row["actor_id"],
+            )
+        )
+        .mappings()
+        .first()
+    )
+    if choice is None:
+        return False
+    raw_answer = action["data"].get("choices", {}).get(choice["kind"] + ":" + choice["actor_id"])
+    if raw_answer is None:
+        return False
+    answer = ChoiceAnswer.model_validate_json(json.dumps(raw_answer))
+    body = json.loads(choice["body_json"])
+    if choice["kind"] == "harpy_defeat_select":
+        return bool(
+            choice["actor_id"] == str(core.controller)
+            and effect.escaped
+            and actor in effect.departed
+            and effect.phase == "complete"
+            and effect.source_event == event
+            and effect.choice in ("message", "rift", "kidnap", "rescue")
+            and answer.options == (effect.choice,)
+        )
+    if choice["kind"] == "harpy_girl_plea":
+        return bool(
+            effect.choice == "plead"
+            and effect.girl is not None
+            and choice["actor_id"] == effect.girl.entity
+            and body.get("effect") == effect.id
+            and effect.escaped
+            and actor in effect.departed
+            and effect.phase == "complete"
+            and effect.response_event == event
+            and answer.options in (("come",), ("refuse",))
+        )
+    if choice["kind"] == "harpy_capture_fact":
+        return bool(
+            choice["actor_id"] == str(declared.gm_controller)
+            and answer.flag is True
+            and body.get("effect") == effect.id
+            and effect.phase == "complete"
+            and effect.factual_source == effect.response_event == event
+            and effect.captor is not None
+            and core.custody == "captured"
+            and core.custodian == effect.captor
+        )
+    return False
+
+
+def _prove_ending(
+    game: "GameService", c: Connection, state: GameState, value: NeuralConnection
+) -> None:
+    from girlframe.services.m3_harpy_defeat import ended_actor_source
+
+    if value.ended_by is None or value.ended_event is None:
+        raise WorkflowError("Recover the actual original contact ending")
+    if ended_actor_source(game, c, state, value.ended_by) == value.ended_event:
+        return
+    if not _core_defeat_separation(game, c, value):
+        raise WorkflowError(
+            "Only an actual original ending or proved Core Defeat separates this contact"
+        )
+
+
 def prove(game: "GameService", c: Connection, state: GameState, identity: str) -> NeuralConnection:
     value = rules.connection(state, identity)
     source = rules.connection(_history(game, c, value.proposed_event), identity)
@@ -177,6 +369,8 @@ def prove(game: "GameService", c: Connection, state: GameState, identity: str) -
         _event(game, c, value.ended_event, author, "m3.neural_unplugged", identity)
         if rules.connection(_history(game, c, value.ended_event), identity) != value:
             raise WorkflowError("Recover the actual canonical physical unplug")
+    if value.phase == "ended":
+        _prove_ending(game, c, state, value)
     return value
 
 
@@ -334,17 +528,11 @@ def prepare_battery(
 
 
 def synchronize_endings(game: "GameService", c: Connection, event: str) -> None:
-    from girlframe.services.m3_harpy_defeat import ended_actor_source
-
     state = _history(game, c, event)
     for value in state.neural_connections:
         if value.phase != "ended" or value.ended_event != event:
             continue
         prove(game, c, state, value.id)
-        if value.ended_by is None or ended_actor_source(game, c, state, value.ended_by) != event:
-            raise WorkflowError(
-                "Only the actual original ending can interrupt this source connection"
-            )
         from girlframe.services.m3_janus_play import complete_ended_link
 
         for link in state.battery_links:

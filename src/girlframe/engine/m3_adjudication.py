@@ -2,11 +2,28 @@
 
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import current_ref
-from girlframe.engine.m3_adjudication_state import Decision, Required
+from girlframe.engine.m3_adjudication_state import CoreRestriction, Decision, Required
 from girlframe.engine.m3_lobotomy import blocked_play
 
 
 def validate(state: GameState, required: Required) -> None:
+    if isinstance(required.prohibition, CoreRestriction):
+        from girlframe.engine.m3_janus import find, has_tag
+
+        restriction = required.prohibition
+        core = find(state, required.actor)
+        if (
+            core is None
+            or not core.alive
+            or core.controller != required.patient_controller
+            or required.actor != restriction.core
+            or not has_tag(core, restriction.semantic)
+            or core.control_tags.get(restriction.semantic, core.baseline_tags[restriction.semantic])
+            != restriction.tag
+            or (required.adjudicator is None and state.handler != required.controller)
+        ):
+            raise ValueError("Recover this actual original Core's still-current Restrained Tag")
+        return
     if required.actor.kind == "external_pilot":
         from girlframe.engine.m3_harpy_defeat import harpy
         from girlframe.engine.m3_void_state import HarpyState

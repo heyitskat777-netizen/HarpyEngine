@@ -1,4 +1,10 @@
-# Owner November8: minimum interim functional checks; most automation at P1 end.
-# Check actual offline SDK startup after native route integration. Full candidate
-# mode discovers ALL tests, including DPS pagination and authored normal flows.
+# Current bounded pre-live packet; full candidate discovers the entire suite.
 tests/rules/test_p1_command_surface.py
+tests/rules/test_flirt_reciprocal_question.py
+tests/rules/test_mockingbird_janus_prelive.py
+tests/rules/test_harpy_flirt.py
+tests/rules/test_harpy_beneath.py
+tests/rules/test_harpy_bond_void.py
+tests/rules/test_harpy_bond_void_ui.py
+tests/rules/test_janus_defeat_body.py
+tests/rules/test_harpy_defeat.py::test_mid_message_deepens_actual_original_bond_and_finishes_real_damage_source

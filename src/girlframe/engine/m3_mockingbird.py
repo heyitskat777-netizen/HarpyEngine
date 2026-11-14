@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from girlframe.engine.m3_world_state import AdversaryPilot, Gorgon, Npc, WorldTag
 
 RISK = "girl.mockingbird.risk-factor"
+NATIVE_RISK = "girl.mockingbird.native-risk-factor"
 CALL = "girl.mockingbird.call-of-the-void"
 PERSON = "girl.mockingbird.bad-at-being-a-person"
 SEX = "girl.mockingbird.sex-play"

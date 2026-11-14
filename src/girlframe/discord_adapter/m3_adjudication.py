@@ -43,8 +43,10 @@ async def open_adjudication(
     form = NativeForm(
         viewer.user_id,
         "Manual adjudication — " + clean(data["patient"]),
-        "The original Girl cannot roll this mandatory Play after surgery. Assign the whole "
-        "pre-Tag total and describe your ruling. No RNG, dice faces or automatic favorable "
+        "This original actor cannot roll: "
+        + clean(data.get("restriction_reason", "the original source prohibition"))
+        + ". Assign the whole pre-Tag total and describe your ruling. "
+        "No RNG, dice faces or automatic favorable "
         "result is generated. Play: " + data["play"].replace("_", " "),
         [
             Field("total", "Assigned total before Tags"),

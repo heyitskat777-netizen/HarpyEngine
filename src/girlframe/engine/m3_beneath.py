@@ -41,7 +41,13 @@ class Outcome(Model):
 
 
 def rejection_blocked(state: GameState, owner: int, tag: str) -> bool:
+    from girlframe.engine.m3_actor_bonds import current_ref
+    from girlframe.engine.m3_harpy_beneath import locks
+
     sheet = state.sheets.get(str(owner))
+    if sheet is not None and sheet.character_id is not None:
+        if any(x.state != "fulfilled" for x in locks(state, current_ref(state, owner), tag)):
+            return True
     return bool(
         sheet
         and any(

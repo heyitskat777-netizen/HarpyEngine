@@ -69,5 +69,16 @@ class Approval(BaseModel):
     subsystems: frozenset[
         Literal["missions", "discipline", "economy", "plays", "strain", "world", "playbooks"]
     ]
+    native_risk_plays: frozenset[
+        Literal[
+            "keep_your_head",
+            "check_sensors",
+            "engage",
+            "disobey_orders",
+            "flirt",
+            "put_someone_beneath_you",
+            "living_battery",
+        ]
+    ] = Field(default=frozenset(), exclude_if=lambda value: not value)
     reviewer: str = Field(min_length=1, max_length=120)
     reference: str = Field(min_length=1, max_length=240)

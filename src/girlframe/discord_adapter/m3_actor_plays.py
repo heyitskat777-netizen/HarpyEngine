@@ -55,6 +55,8 @@ async def open_actor_play(
     harpy_mode = actor.get("girl") == "harpy"
     basic = (("keep_your_head", "Keep Your Head"),) + (
         (
+            ("flirt", "Flirt — actual original Girl"),
+            ("put_someone_beneath_you", "Put Someone Beneath You"),
             ("dive_deep", "Dive Deep"),
             ("check_sensors", "Check Sensors — honest questions"),
             ("engage", "Engage the Enemy"),
@@ -75,6 +77,13 @@ async def open_actor_play(
             for x in ("girl.mockingbird.bad-at-being-a-person", "girl.mockingbird.sex-play")
         ):
             options += (("mockingbird", "Retained Mockingbird Plays"),)
+    if harpy_mode and parent is None and source_work is None:
+        for item in owed:
+            if (
+                item["kind"] == "harpy_flirt_followthrough"
+                and ActorRef.model_validate_json(item["details"]["actor"]) == ref
+            ):
+                options += (("harpy_follow:" + item["id"], "Follow through on her actual request"),)
     if not source_work:
         if data.get("snoop_targets"):
             options += (("snoop", "Snoop — actual known person's stuff"),)
@@ -82,6 +91,22 @@ async def open_actor_play(
             options += (("enforcement_initiative", "Enforcement Initiative — take hold"),)
 
     async def choose(current: discord.Interaction, token: str) -> None:
+        if token == "put_someone_beneath_you":
+            from girlframe.discord_adapter.m3_harpy_beneath import open_beneath
+
+            await open_beneath(current, game, ref, channel=channel, parent=parent)
+            return
+        if token == "flirt":
+            from girlframe.discord_adapter.m3_harpy_flirt import open_flirt
+
+            await open_flirt(current, game, ref, channel=channel, parent=parent)
+            return
+        if token.startswith("harpy_follow:"):
+            from girlframe.discord_adapter.m3_harpy_flirt import open_followthrough
+
+            item = next(x for x in owed if x["id"] == token.removeprefix("harpy_follow:"))
+            await open_followthrough(current, game, item, channel=channel)
+            return
         if token == "handler_tags":
             from girlframe.discord_adapter.m3_handler_tags import open_handler_tags
 

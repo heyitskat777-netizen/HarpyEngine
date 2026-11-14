@@ -320,7 +320,10 @@ class ActorPlayService:
                 not in (
                     "disobey_orders",
                     "keep_your_head",
-                    *(("flirt", "clone_followthrough") if ref.kind == "clone_am" else ()),
+                    "flirt",
+                    "put_someone_beneath_you",
+                    "harpy_followthrough",
+                    *(("clone_followthrough",) if ref.kind == "clone_am" else ()),
                     "dive_deep",
                     "check_sensors",
                     "engage",
@@ -354,13 +357,13 @@ class ActorPlayService:
                 battle_play
                 or prepared.play in ("engage", "snoop", "enforcement_initiative")
                 or mockingbird_play
-                or ref.kind == "clone_am"
-                and prepared.play == "flirt"
+                or prepared.play in ("flirt", "put_someone_beneath_you")
             )
             or prepared.source_work is not None
             and prepared.play != "dive_deep"
             and not mockingbird_play
             and not (ref.kind == "clone_am" and prepared.play == "clone_followthrough")
+            and prepared.play != "harpy_followthrough"
         ):
             raise WorkflowError("UNSUPPORTED_RULE: select an implemented actual-role Play.")
 
@@ -407,6 +410,26 @@ class ActorPlayService:
                 from girlframe.services.m3_clone_am_plays import prepare as clone_prepare
 
                 clone_flirt = clone_prepare(self.game, c, state, cast, ref, prepared)
+            harpy_flirt = None
+            harpy_followthrough = None
+            if ref.kind != "clone_am" and prepared.play in ("flirt", "harpy_followthrough"):
+                from girlframe.services.m3_harpy_flirt import prepare as prepare_flirt
+                from girlframe.services.m3_harpy_flirt import prepare_followthrough
+
+                if actor.girl != "harpy":
+                    raise ValueError("Use the actual Harpy/Core source for this Flirt port")
+                if prepared.play == "flirt":
+                    harpy_flirt = prepare_flirt(self.game, c, state, cast, ref, prepared)
+                else:
+                    harpy_followthrough = prepare_followthrough(
+                        self.game, c, state, cast, ref, prepared
+                    )
+            harpy_beneath = None
+            if prepared.play == "put_someone_beneath_you":
+                from girlframe.services.m3_harpy_beneath import prepare as prepare_harpy_beneath
+
+                harpy_beneath = prepare_harpy_beneath(self.game, c, state, cast, ref, prepared)
+            harpy_beneath_response = None
             parent = self.game.action(c, prepared.parent) if prepared.parent else None
             counter = None
             dive = None
@@ -419,6 +442,7 @@ class ActorPlayService:
             snoop = None
             enforcement = None
             gorgon_counter = None
+            harpy_escape = None
             virus_disobey = None
             if virus_disobey_play:
                 from girlframe.services.m3_virus_orders import prepare_disobey
@@ -493,7 +517,17 @@ class ActorPlayService:
 
                 if parent["scene_id"] != cast.id or int(parent["channel_id"]) != channel:
                     raise ValueError("Continue this counter-Play in its original source scene")
-                if parent["data"].get("gorgon_play"):
+                if parent["data"].get("harpy_flirt"):
+                    from girlframe.services.m3_harpy_flirt import validate_escape_child
+
+                    harpy_escape = validate_escape_child(self.game, c, parent, ref, prepared)
+                elif parent["data"].get("harpy_beneath"):
+                    from girlframe.services.m3_harpy_beneath import validate_response_child
+
+                    harpy_beneath_response = validate_response_child(
+                        self.game, c, parent, ref, prepared
+                    )
+                elif parent["data"].get("gorgon_play"):
                     from girlframe.services.m3_gorgon_play import validate_child
 
                     gorgon_counter = validate_child(self.game, c, parent, ref, prepared)
@@ -520,7 +554,12 @@ class ActorPlayService:
             if prepared.play == "check_sensors":
                 if actor.girl != "harpy" or commitment != Commitment(heat=0):
                     raise ValueError("A Harpy asks honest Sensor questions without dice or Heat")
-            elif not rejection and required_adjudication is None and harpy_rest is None:
+            elif (
+                not rejection
+                and required_adjudication is None
+                and harpy_rest is None
+                and harpy_followthrough is None
+            ):
                 commit(state, ref, profiles(c, self.store.campaign_id), commitment, expected)
             if rejection:
                 item = next((x for x in state.obligations if x.id == rejection), None)
@@ -579,12 +618,27 @@ class ActorPlayService:
                 cast_sha256=fingerprint(cast),
                 table=participants,
             )
-            if ref.kind == "clone_am":
+            if (
+                ref.kind == "clone_am"
+                or harpy_flirt is not None
+                or harpy_followthrough is not None
+                or harpy_beneath is not None
+            ):
                 data["character_ids"] = {
                     x.actor.entity: x.actor.incarnation
                     for x in cast.roles
                     if x.actor.kind == "pilot"
                 }
+            if harpy_beneath is not None:
+                data["harpy_beneath"] = harpy_beneath
+            if harpy_beneath_response is not None:
+                data["harpy_beneath_response_source"] = harpy_beneath_response
+            if harpy_flirt is not None:
+                data["harpy_flirt"] = harpy_flirt
+            if harpy_followthrough is not None:
+                data["harpy_followthrough"] = harpy_followthrough
+            if harpy_escape is not None:
+                data["harpy_flirt_escape_source"] = harpy_escape
             if clone_followthrough is not None:
                 data["clone_followthrough"] = clone_followthrough
             if clone_flirt is not None:
@@ -814,6 +868,14 @@ class ActorPlayService:
             action["state"] = "awaiting_choices"
             action["data"]["result"]["questions"] = action["data"]["prepared"]["context"]
             self.game.request(c, action, meta["adjudicator_controller"], "harpy_sensor_answers")
+        elif action["data"].get("harpy_followthrough"):
+            action["state"] = "awaiting_choices"
+            self.game.request(
+                c,
+                action,
+                action["data"]["harpy_followthrough"]["target_controller"],
+                "harpy_flirt_followthrough_confirm",
+            )
         elif action["data"].get("clone_followthrough"):
             action["state"] = "awaiting_choices"
             self.game.request(
@@ -833,6 +895,9 @@ class ActorPlayService:
                     c, viewer, state, actor.ref, item.details["tag"]
                 )
             rules.reject(state, actor.ref, item.details["tag"])
+            from girlframe.engine.m3_harpy_flirt import clear_tag_debt
+
+            clear_tag_debt(state, actor.ref, item.details["tag"])
             item.state = "fulfilled"
             self.finish(c, state, action)
         else:
@@ -938,6 +1003,10 @@ class ActorPlayService:
         return {"action_id": action["id"], "receipt": action["data"]["receipt"]}
 
     def finish(self, c: Connection, state: GameState, action: dict[str, Any]) -> None:
+        from girlframe.services.m3_harpy_bond_void import hold_action
+
+        if hold_action(self.game, c, state, action):
+            return
         if self.game.pending(c, action["id"]):
             raise ValueError("Mandatory actual-role responses remain pending")
         from girlframe.services.m3_mockingbird import intercept_finish
@@ -968,7 +1037,15 @@ class ActorPlayService:
     def synchronize(
         self, c: Connection, action: dict[str, Any], event: str, viewer: GuildViewer, key: str
     ) -> None:
-        if (
+        if action["state"] == "complete" and action["data"].get("harpy_beneath_response_source"):
+            from girlframe.services.m3_harpy_beneath import complete_response_child
+
+            complete_response_child(self.game, c, action, event)
+        if action["state"] == "complete" and action["data"].get("harpy_flirt_escape_source"):
+            from girlframe.services.m3_harpy_flirt import complete_escape_child
+
+            complete_escape_child(self.game, c, action, event)
+        elif (
             action["state"] == "complete"
             and action.get("parent_id")
             and action["data"].get("battle_counter_source")
@@ -994,7 +1071,16 @@ class ActorPlayService:
         state = state or load_state(c, self.store.campaign_id)
         if intercept_results(self.game, c, state, action):
             return
-        if action["data"].get("clone_flirt"):
+        if action["data"].get("harpy_beneath"):
+            from girlframe.services.m3_harpy_beneath import results as harpy_beneath_results
+
+            harpy_beneath_results(self.game, c, state, action)
+            return
+        if action["data"].get("harpy_flirt"):
+            from girlframe.services.m3_harpy_flirt import results as harpy_flirt_results
+
+            harpy_flirt_results(self.game, c, state, action)
+        elif action["data"].get("clone_flirt"):
             from girlframe.services.m3_clone_am_plays import results as clone_results
 
             clone_results(self.game, c, state, action)
@@ -1102,7 +1188,18 @@ class ActorPlayService:
         owner, kind = int(row["actor_id"]), row["kind"]
         body, meta = json.loads(row["body_json"]), action["data"]["actor_basic"]
         judge = meta["adjudicator_controller"]
-        if kind.startswith("clone_flirt_") and (
+        if kind.startswith("harpy_beneath_") and action["data"].get("harpy_beneath"):
+            from girlframe.services.m3_harpy_beneath import apply as apply_harpy_beneath
+
+            apply_harpy_beneath(self.game, c, state, action, row, answer)
+            return
+        if kind.startswith("harpy_flirt_") and (
+            action["data"].get("harpy_flirt") or action["data"].get("harpy_followthrough")
+        ):
+            from girlframe.services.m3_harpy_flirt import respond as harpy_flirt_respond
+
+            harpy_flirt_respond(self.game, c, state, action, row, answer)
+        elif kind.startswith("clone_flirt_") and (
             action["data"].get("clone_flirt") or action["data"].get("clone_followthrough")
         ):
             from girlframe.services.m3_clone_am_plays import respond as clone_respond
@@ -1140,6 +1237,12 @@ class ActorPlayService:
             from girlframe.services.m3_engage import apply as engage_apply
 
             engage_apply(self.game, c, state, action, row, answer)
+        elif (
+            action["data"].get("harpy_flirt") or action["data"].get("harpy_beneath")
+        ) and kind.startswith("battle_"):
+            from girlframe.services.m3_battle import apply_damage_response
+
+            apply_damage_response(self.game, c, state, action, row, answer)
         elif action["data"].get("clone_flirt") and kind.startswith("battle_"):
             from girlframe.services.m3_battle import apply_damage_response
 
@@ -1252,6 +1355,9 @@ class ActorPlayService:
             tag = next(x for x in rules.tags(state, actor.ref) if x.id == body["tag"])
             if answer.options == ("embrace",):
                 rules.embrace(state, actor.ref, tag.id, answer.denied)
+                from girlframe.engine.m3_harpy_flirt import clear_tag_debt
+
+                clear_tag_debt(state, actor.ref, tag.id)
             elif answer.options == ("reject",) and not answer.denied:
                 if actor.ref.kind == "external_pilot":
                     from girlframe.services.m3_tag_permissions import PermissionService
@@ -1380,6 +1486,22 @@ class ActorPlayService:
             "channel": int(action["channel_id"]),
             "context": action["data"]["prepared"]["context"],
         }
+        if action["data"].get("harpy_beneath") and row["kind"].startswith("harpy_beneath_"):
+            from girlframe.services.m3_harpy_beneath import projection as harpy_beneath_projection
+
+            result["harpy_beneath"] = harpy_beneath_projection(self.game, c, state, action, row)
+        if (action["data"].get("harpy_flirt") or action["data"].get("harpy_followthrough")) and row[
+            "kind"
+        ].startswith("harpy_flirt_"):
+            from girlframe.services.m3_harpy_flirt import projection as harpy_flirt_projection
+
+            result["harpy_flirt"] = harpy_flirt_projection(self.game, c, state, action, row)
+        if (action["data"].get("harpy_flirt") or action["data"].get("harpy_beneath")) and row[
+            "kind"
+        ].startswith("battle_"):
+            from girlframe.services.m3_battle import damage_projection
+
+            result["battle"] = damage_projection(self.game, c, state, action, row)
         if (action["data"].get("clone_flirt") or action["data"].get("clone_followthrough")) and row[
             "kind"
         ].startswith("clone_flirt_"):

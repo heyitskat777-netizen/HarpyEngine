@@ -747,6 +747,11 @@ class InboxView(discord.ui.View):
                 CasualtyReplacementService(GameService(self.service.store)),
                 item.identity,
             )
+        elif item.task == "m3_harpy_bond_void":
+            from girlframe.discord_adapter.m3_harpy_bond_void import open_temptation
+            from girlframe.services.m2_game import GameService
+
+            await open_temptation(interaction, GameService(self.service.store), item.identity)
         elif item.task == "m3_npc_flirt":
             from girlframe.discord_adapter.m3_npc_flirt import open_npc_flirt
             from girlframe.services.m2_game import GameService
@@ -1158,6 +1163,18 @@ class InboxView(discord.ui.View):
             await open_advancement(
                 interaction, HandlerAdvancementService(self.service.store), item.identity
             )
+        elif item.task == "m3_harpy_followthrough":
+            from girlframe.discord_adapter.m3_harpy_flirt import open_followthrough
+            from girlframe.services.m2_game import GameService
+
+            game = GameService(self.service.store)
+            owed = await asyncio.to_thread(
+                game.own_obligations, viewer_from_interaction(interaction)
+            )
+            obligation = next((x for x in owed if x["id"] == item.identity), None)
+            if obligation is None:
+                raise WorkflowError("This actual follow-through is no longer pending")
+            await open_followthrough(interaction, game, obligation)
         elif item.task == "m3_clone_am":
             from girlframe.discord_adapter.m3_clone_am import open_clone
             from girlframe.services.m2_game import GameService

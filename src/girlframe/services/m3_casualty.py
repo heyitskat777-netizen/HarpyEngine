@@ -186,6 +186,19 @@ def _resistance_work(
             )
         ):
             raise WorkflowError("Use the actual affected original Dormant victim's pending onset")
+    elif source_kind == "harpy_bond_void":
+        from girlframe.services.m3_harpy_bond_void import current as current_temptation
+        from girlframe.services.m3_harpy_bond_void import source as temptation_source
+
+        temptation = temptation_source(game, c, state, work)
+        current_temptation(game, c, state, temptation)
+        if (
+            row["kind"] != "harpy_bond_void"
+            or temptation.phase != "rewrite"
+            or temptation.actor != actor
+            or temptation.gain_event is not None
+        ):
+            raise WorkflowError("Use the actual affected Girl's pending Harpy Bond Void onset")
     elif source_kind == "budget_cleanup":
         from girlframe.services.m3_budget_cleanup import current, source
 
@@ -226,6 +239,11 @@ def _prove_work_resistance(
         and payload.get("cleanup") == value.work
         and payload.get("action") == "rewrite"
     )
+    if value.source_kind == "harpy_bond_void":
+        from girlframe.services.m3_harpy_bond_void import prove_gain
+
+        temptation = prove_gain(game, c, original, value.work or "")
+        expected = temptation.gain_event == item.event and temptation.actor == item.actor
     sheet = prior.sheets.get(item.actor.entity)
     asset = next((x for x in sheet.assets if x.id == value.asset), None) if sheet else None
     actual = resolve(
@@ -550,7 +568,7 @@ def stage_work_resistance(
     event: str,
     part: str,
     account: str,
-    source_kind: Literal["dormant", "budget_cleanup"],
+    source_kind: Literal["dormant", "budget_cleanup", "harpy_bond_void"],
     step: int = 0,
 ) -> None:
     """Stage an owned real work onset, without inventing a Play or response row."""

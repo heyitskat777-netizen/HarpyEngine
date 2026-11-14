@@ -31,6 +31,7 @@ class RolePunishment(Model):
         "red_queen",
         "trainee",
         "succubus_npc_disobey",
+        "harpy_beneath",
     ]
     action: str | None = None
     source_work: str | None = None
@@ -121,8 +122,9 @@ class RolePunishment(Model):
         if self.executor.kind == "external_pilot" and self.source_kind not in (
             "enforcement_initiative",
             "compliance_virus",
+            "harpy_beneath",
         ):
-            raise ValueError("Use the actual retained Harpy Initiative or Virus source")
+            raise ValueError("Use the actual source-proved Harpy Punishment producer")
         if self.executor == self.subject and self.source_kind != "compliance_virus":
             raise ValueError("Only an actual Compliance Virus self-purge requires self-Punishment")
         npc_dose = self.source_kind == "dose_up" and self.executor.kind == "npc"

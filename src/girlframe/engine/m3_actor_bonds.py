@@ -251,11 +251,13 @@ def change(
     state = set_depth(original, first, second, value, source_event)
     from girlframe.engine.m3_bond_operations import record
 
-    record(state, first, second, delta, old, value, source_event)
+    changed = record(state, first, second, delta, old, value, source_event)
     if delta == 1 and old == 2:
         for actor in (first, second):
             _heat(state, actor, source_event)
-    return state
+    from girlframe.engine.m3_harpy_bond_void import produce
+
+    return produce(state, changed)
 
 
 def migrate_actor(original: GameState, actor: ActorRef, source_event: str) -> GameState:

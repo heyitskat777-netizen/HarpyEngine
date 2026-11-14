@@ -31,6 +31,14 @@ from girlframe.services.m2_game import PUBLIC_FIELDS, GameService
 from girlframe.services.onboarding import WorkflowError
 
 YES = (("yes", "Yes"), ("no", "No"))
+FLIRT_QUESTION_TEXT = {
+    "hurt": "Who would you like me to hurt?",
+    "be": "Who would you like me to be?",
+    "hide": "What would you like me to hide?",
+    "fears": "How can I ease your fears?",
+    "name": "What name would you like me to use?",
+    "intimacy": "Do you want to be intimate with me?",
+}
 
 
 def menu(
@@ -38,12 +46,7 @@ def menu(
 ) -> Field:
     labels = {
         **SENSOR_QUESTION_TEXT,
-        "hurt": "Who would you like me to hurt?",
-        "be": "Who would you like me to be?",
-        "hide": "What would you like me to hide?",
-        "fears": "How can I ease your fears?",
-        "name": "What name would you like me to use?",
-        "intimacy": "Do you want to be intimate with me?",
+        **FLIRT_QUESTION_TEXT,
         "kicked_care": "How do you want to care for me?",
     }
     return Field(
@@ -84,6 +87,14 @@ def one(values: dict[str, Any], key: str, default: Any = None) -> Any:
 
 
 def choice_fields(decision: dict[str, Any]) -> list[Field]:
+    if decision.get("harpy_beneath"):
+        from girlframe.discord_adapter.m3_harpy_beneath import choice_fields as beneath_fields
+
+        return beneath_fields(decision)
+    if decision.get("harpy_flirt"):
+        from girlframe.discord_adapter.m3_harpy_flirt import choice_fields as harpy_fields
+
+        return harpy_fields(decision)
     if decision.get("clone_flirt"):
         from girlframe.discord_adapter.m3_clone_am import choice_fields as clone_fields
 
@@ -355,13 +366,17 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
                 ]
             )
     elif kind == "target_flirt":
-        fields = [text("text", "Your answer"), unmark(1 if level == "low" else 2)]
-        if level == "low":
-            fields.append(menu("options", "Optional return question", FLIRT_QUESTIONS, 0, 1, False))
-        elif result.get("question") == "intimacy":
+        fields = [
+            text("text", "Your answer"),
+            unmark(1 if level == "low" else 2),
+            menu("options", "Optional return question", FLIRT_QUESTIONS, 0, 1, False),
+        ]
+        if level != "low" and result.get("question") == "intimacy":
             fields.append(flags("Explicitly agree to this interaction?"))
     elif kind == "actor_flirt_answer":
         fields = [text("text", "Your answer to the return question")]
+        if result.get("return_question") == "intimacy":
+            fields.append(flags("Explicitly agree to this interaction?"))
     elif kind == "flirt_escape":
         fields = [
             menu("options", "Choose your response", ("helpless", "damage", "play")),
@@ -564,6 +579,13 @@ def answer_values(values: dict[str, Any]) -> ChoiceAnswer:
 
 async def open_choice(interaction: discord.Interaction, game: GameService, identity: str) -> None:
     decision = await threaded(lambda: game.decision(viewer_from_interaction(interaction), identity))
+    if decision["kind"] == "harpy_bond_void":
+        from girlframe.discord_adapter.m3_harpy_bond_void import (
+            open_choice as open_temptation_choice,
+        )
+
+        await open_temptation_choice(interaction, game, decision)
+        return
     if decision["kind"] == "gender_partner_paired":
         from girlframe.discord_adapter.m3_gender_designation import (
             open_choice as open_gender_choice,
@@ -586,6 +608,25 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         from girlframe.services.m3_changeling import ChangelingService
 
         await open_changeling(interaction, ChangelingService(game), decision["detail"]["source"])
+        return
+    if decision["kind"] == "harpy_beneath_punishment":
+        from girlframe.discord_adapter.m3_role_punishments import open_role_punishment
+        from girlframe.services.m3_role_punishments import RolePunishmentService
+
+        await open_role_punishment(
+            interaction, RolePunishmentService(game), decision["body"]["case"]
+        )
+        return
+    if decision["kind"] == "harpy_beneath_response_play":
+        from girlframe.engine.m3_actor_state import ActorRef
+
+        actual = ActorRef.model_validate(decision["body"]["actor"])
+        if actual.kind == "external_pilot":
+            from girlframe.discord_adapter.m3_actor_plays import open_actor_play
+
+            await open_actor_play(interaction, game, actual, parent=decision)
+        else:
+            await open_play(interaction, game, parent=decision)
         return
     if decision["kind"].startswith("npc_flirt_"):
         from girlframe.discord_adapter.m3_npc_flirt import open_choice as open_npc_flirt_choice
@@ -866,6 +907,17 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
 
         await open_adjudication(interaction, AdjudicationService(game.store), identity)
         return
+    if (
+        decision["kind"] == "escape_play"
+        and decision.get("body", {}).get("actor", {}).get("kind") == "external_pilot"
+    ):
+        from girlframe.discord_adapter.m3_actor_plays import open_actor_play
+        from girlframe.engine.m3_actor_state import ActorRef
+
+        await open_actor_play(
+            interaction, game, ActorRef.model_validate(decision["body"]["actor"]), parent=decision
+        )
+        return
     if decision["kind"] in ("defeat_void_threshold", "dive_void_threshold", "void_keep_threshold"):
         from girlframe.discord_adapter.m3_void import open_void
         from girlframe.services.m3_void import VoidService
@@ -999,11 +1051,18 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         instructions += "\nAnswer these questions honestly: " + clean(
             decision["result"]["questions"]
         )
-    if decision["kind"] == "target_flirt":
+    if decision.get("harpy_beneath"):
+        from girlframe.discord_adapter.m3_harpy_beneath import choice_description
+
+        instructions += "\n" + choice_description(decision)
+    if decision["kind"] in ("target_flirt", "harpy_flirt_target"):
         instructions += "\nQuestion: " + str(
             decision["result"].get("question_text")
             or decision["result"].get("question", "Why did you withdraw?")
         )
+    if decision["kind"] in ("actor_flirt_answer", "harpy_flirt_answer"):
+        question = decision["result"]["return_question"]
+        instructions += "\nReturn question: " + clean(FLIRT_QUESTION_TEXT.get(question, question))
     if decision.get("cute_uniforms"):
         instructions += (
             "\nThe uniform also makes you seem helpless and adorable; "
@@ -1263,6 +1322,32 @@ async def open_play(
 
         rows = await threaded(optional_npc_targets)
         npc_flirt_targets = {"npc:" + x["ref"]["entity"]: x for x in rows}
+    if approval is not None and "plays" in approval.subsystems and "flirt" in plays:
+        from girlframe.engine.m3_actor_bonds import current_ref
+        from girlframe.engine.m3_actors import resolve
+        from girlframe.services.m2_state import load_state
+        from girlframe.services.m3_actor_plays import ActorPlayService
+        from girlframe.services.m3_actors import profiles
+
+        def actual_harpy_targets() -> list[dict[str, Any]]:
+            with game.store.engine.connect() as c:
+                state = load_state(c, game.store.campaign_id)
+                acting = resolve(
+                    state, current_ref(state, viewer.user_id), profiles(c, game.store.campaign_id)
+                )
+                _, actors = ActorPlayService(game).actors(c, state, channel)
+                return [
+                    dict(ref=x.ref.model_dump(mode="json"), label=x.label)
+                    for x in actors
+                    if x.ref.kind == "external_pilot"
+                    and x.girl == "harpy"
+                    and x.cell is not None
+                    and x.cell == acting.cell
+                    and not x.offstage_source
+                ]
+
+        for target in await threaded(actual_harpy_targets):
+            npc_flirt_targets["harpy:" + target["ref"]["entity"]] = target
     sleeping_doll_targets: dict[str, Any] = {}
     if parent and parent["kind"] == "alpha_sex_counter_play" and "unassuming_doll" in plays:
         from girlframe.engine.m3_actor_bonds import current_ref
@@ -1288,7 +1373,10 @@ async def open_play(
             "target",
             "Target for Flirt or Put Someone Beneath You",
             tuple((str(x), scene["labels"][str(x)]) for x in scene["pilots"] if x != viewer.user_id)
-            + tuple((key, "NPC: " + row["label"]) for key, row in npc_flirt_targets.items()),
+            + tuple(
+                (key, ("Harpy: " if key.startswith("harpy:") else "NPC: ") + row["label"])
+                for key, row in npc_flirt_targets.items()
+            ),
             0,
             1,
             required=False,
@@ -1526,8 +1614,10 @@ async def open_play(
         if selected_target in npc_flirt_targets:
             from girlframe.engine.m3_actor_state import ActorRef
 
-            if play != "flirt":
-                raise WorkflowError("Use this actual NPC target for Flirt")
+            if play != "flirt" and not (
+                play == "put_someone_beneath_you" and selected_target.startswith("harpy:")
+            ):
+                raise WorkflowError("Use this actual target for its supported social Play")
             target_actor = ActorRef.model_validate(npc_flirt_targets[selected_target]["ref"])
         if play == "enforcement_initiative":
             from girlframe.engine.m3_actor_state import ActorRef

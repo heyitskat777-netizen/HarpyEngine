@@ -1,6 +1,26 @@
-# Current P1 queue — verified candidate, review pending
+# Current P1 queue — scoped pre-live candidate freeze
 
-Exact automated candidate: `a36acabd8a4f9abd21b78f054c7f368ab45cef35` on
+The owner-authorized source review and bounded native repairs are integrated.
+Bot OFF. The current source **needs its exact final regression**; the earlier
+3,300-test baseline below remains historical evidence. No deployment, live
+migration, environment publication, model call or shared-main merge occurred.
+
+| Current work | Owner / dependency | Next concrete action | Evidence / completion boundary |
+|---|---|---|---|
+| Native Flirt and Harpy/Core social Plays | Root; separate component source reviewers | Preserve integrated source through final regression | Native reciprocal mid/high, actual HarpyFlirt8 and Beneath7 normals pass across retained runs; owned Tag/refusal/real child/Punishment/Sin paths reviewed. |
+| Source-proved native Void and Risk | Root; genuine scoped child contracts | Freeze explicit campaign opt-in and reviewed registry digest | Sin6backend+UI1 pass; child-only/unreviewed2pass. Native Risk Battery with source/receipt/policy negatives passes1/4.10s. Required broad parents remain partial. |
+| Original Core body/mandatory Defeat | Root; combined independent A/B review | Final exact regression, preserving old surgery/Harpy paths | Actual connectedCore2pass/7.85s: truthful restraint adjudication, lawful brain speech, body-only escape/contact ending, Girl-owned Sin, actual Core death and original Frame preservation. |
+| Final exact candidate | Root; frozen integrated source | Publish sanitized branch and run full CI/global/migration/privacy/restore gates once | Pending new full run. Successful focused evidence is not called full regression. |
+| Concrete first live policy | Owner/facilitator review; reviewed source and final candidate | Prepare private unapplied proposal with exact digest and explicit native Risk IDs; review then restart separately | First cohort is original native Pilot/Core base. Optional Requisitions, advanced powers, other role/resource ports and full-M3 remain separately gated. No fixture approval is installed live. |
+| Human P1 acceptance | Handler/facilitator/distinct players | Run first scoped session, then rotate the all-type/player plan under its actual reviewed scope | Not run. This first cohort does not imply all-type acceptance or complete P1/M3 certification. |
+
+Source/review details: [pre-live packet](reviews/P1_PRELIVE_SOURCE_REVIEW_20261114.md)
+and [native first-roster contracts](reviews/P1_FIRST_ROSTER_SOURCE_REVIEW_20261114.md).
+The registry records6 verified required entries plus2 verified optional native
+ports among479 inventory entries. Required broad parents and full-M3 remain
+RULES_SUBSET. These unequal entries are not a completion percentage.
+
+Previously verified automated candidate: `a36acabd8a4f9abd21b78f054c7f368ab45cef35` on
 `codex/r285-integration-20261114`. [Full CI43620925690](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43620925690)
 passes3,300 tests with0 failures/errors/skips, plus global static, CLI, registry,
 planning and publishable-file checks. Bot OFF; RULES_SUBSET. No shared merge,
@@ -8,7 +28,7 @@ live migration, deployment, environment publication or model calls.
 
 | Remaining work | Owner / dependency | Next concrete action | Evidence / completion boundary |
 |---|---|---|---|
-| Independent rules and clarity review | Independent reviewer +owner; declared P1 scope | Review intended enabled source contracts, recorded rulings and per-type boundaries; record genuine approvals | Pending;477 registry entries,0 independently verified. Technical review and synthetic test approvals are separate. |
+| Independent rules and clarity review | Independent reviewer +owner; declared P1 scope | Review intended enabled source contracts, recorded rulings and per-type boundaries; record genuine approvals | Bounded review now records3required native entries +1optional native Sin port;478entries/full-M3 remains subset. Whole Core/all-type review and real campaign scope remain pending. |
 | Real scoped campaign policy and private test setup | Owner/facilitator; genuine reviewed scope | Match normalized registry/rulings digest, prepare private campaign backup, approve exact candidate and restart separately | Pending; no live policy changed and bot remains OFF. |
 | Human P1 acceptance | Handler, facilitator and distinct players; authorized private test session | Follow player test plan across selected types and one complete mission→consequences→Off-Duty/recovery→next mission | Not run. Ordinary automated normals do not establish whole-type human acceptance. |
 | P2 AI assistance | P1 acceptance +separate authorization | Audience-filtered chronology/knowledge and typed proposals through existing services | Planning only; no model/provider calls authorized. |

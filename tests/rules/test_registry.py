@@ -16,7 +16,16 @@ def data():
 def test_inventory_is_not_certification_and_strain_columns_are_distinct():
     registry = Registry.model_validate_json(json.dumps(data()))
     assert registry.coverage == "RULES_SUBSET"
-    assert registry.summary()["verified"] == 0
+    assert {x.id for x in registry.entries if x.verified} == {
+        "play.basic.keep_your_head",
+        "play.basic.receive_orders",
+        "play.basic.check_sensors",
+        "harpy.harpy.sin-of-temptation-native-pilot",
+        "girl.mockingbird.native-risk-factor",
+        "frame.janus.harpy-core",
+        "frame.janus.living-battery",
+        "frame.janus.permission-trigger",
+    }
     cells = [x for x in registry.entries if x.kind == "table_event"]
     assert len(cells) == 72
     assert len({x.id for x in cells}) == 72

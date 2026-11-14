@@ -90,7 +90,11 @@ def prove(game: GameService, c: Connection, state: GameState, point: rules.Store
     )
     source = GameState.model_validate_json(raw) if raw else None
     original = next((x for x in rules.points(source) if x.id == point.id), None) if source else None
-    action = {} if point.source_kind == "budget_cleanup" else game.action(c, point.action)
+    action = (
+        {}
+        if point.source_kind in ("budget_cleanup", "harpy_bond_void")
+        else game.action(c, point.action)
+    )
     response = c.scalar(
         sa.select(t.m2["m2_responses"].c.choice_id).where(
             t.m2["m2_responses"].c.campaign_id == game.store.campaign_id,
@@ -168,7 +172,20 @@ def prove_gain_source(
     )
     if event is None:
         raise WorkflowError("Recover the actual stored-gain source event")
-    if point.source_kind == "budget_cleanup":
+    if point.source_kind == "harpy_bond_void":
+        from girlframe.services.m3_harpy_bond_void import prove_gain as prove_temptation
+
+        temptation = prove_temptation(game, c, source, point.choice)
+        if (
+            temptation.actor != point.actor
+            or not temptation.storage
+            or temptation.asset != point.asset
+            or temptation.description != point.description
+            or temptation.gain_event != point.source_event
+            or point.action != temptation.id
+        ):
+            raise WorkflowError("Recover the actual Girl's original Harpy Bond Storage choice")
+    elif point.source_kind == "budget_cleanup":
         from girlframe.services.m3_budget_cleanup import prove_gain
 
         cleanup = prove_gain(game, c, source, point.choice)

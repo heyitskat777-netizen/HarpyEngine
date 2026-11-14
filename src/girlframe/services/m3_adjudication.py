@@ -13,7 +13,7 @@ from girlframe.engine import m3_adjudication as rules
 from girlframe.engine.m2 import GameState, PlayInput
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef
-from girlframe.engine.m3_adjudication_state import Decision, Required
+from girlframe.engine.m3_adjudication_state import CoreRestriction, Decision, Required
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_lobotomy import blocked_play
 from girlframe.engine.m3_policy import RULESET
@@ -181,6 +181,82 @@ def prepare_required_dive(
     return required.model_dump(mode="json")
 
 
+def _verify_core_restriction(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    actor: ActorRef,
+    restriction: CoreRestriction,
+    proof: GameState | None,
+) -> None:
+    from girlframe.engine.m3_janus import has_tag
+    from girlframe.services.m3_janus import prove_core
+
+    current = prove_core(c, game, state, actor)
+    if proof is None:
+        raise WorkflowError("Recover the original Core restriction's canonical history")
+    original = prove_core(c, game, proof, actor)
+    if (
+        actor != restriction.core
+        or current.body_vessel != original.body_vessel
+        or current.controller != original.controller
+        or not current.alive
+        or not original.alive
+        or original.state_event != restriction.source_event
+        or not has_tag(current, restriction.semantic)
+        or not has_tag(original, restriction.semantic)
+        or current.control_tags.get(
+            restriction.semantic, current.baseline_tags[restriction.semantic]
+        )
+        != restriction.tag
+        or original.control_tags.get(
+            restriction.semantic, original.baseline_tags[restriction.semantic]
+        )
+        != restriction.tag
+        or not any(x.id == restriction.tag for x in original.tags)
+    ):
+        raise WorkflowError(
+            "Recover the actual original Core's source-proved current Restrained Tag"
+        )
+
+
+def prepare_core_restriction(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    actor: ActorRef,
+) -> CoreRestriction | None:
+    """Select a real current printed Tag before creating its mandatory source declaration."""
+    from girlframe.engine.m3_janus import find, has_tag
+    from girlframe.services.m3_janus import prove_core
+
+    value = find(state, actor)
+    if value is None or not has_tag(value, "restrained"):
+        return None
+    value = prove_core(c, game, state, actor)
+    restriction = CoreRestriction(
+        core=actor,
+        tag=value.control_tags.get("restrained", value.baseline_tags["restrained"]),
+        source_event=value.state_event,
+    )
+    raw = c.scalar(
+        sa.select(t.m2["m2_state_history"].c.body_json).where(
+            t.m2["m2_state_history"].c.campaign_id == game.store.campaign_id,
+            t.m2["m2_state_history"].c.event_id == restriction.source_event,
+        )
+    )
+    if not c.scalar(
+        sa.select(t.events.c.id).where(
+            t.events.c.campaign_id == game.store.campaign_id,
+            t.events.c.id == restriction.source_event,
+        )
+    ):
+        raise WorkflowError("Recover the canonical event for this real Core restriction")
+    proof = GameState.model_validate_json(raw) if raw else None
+    _verify_core_restriction(game, c, state, actor, restriction, proof)
+    return restriction
+
+
 def verify(game: "GameService", c: Connection, state: GameState, required: Required) -> None:
     rules.validate(state, required)
     from girlframe.services.m3_medical import MedicalService
@@ -207,21 +283,26 @@ def verify(game: "GameService", c: Connection, state: GameState, required: Requi
             t.events.c.id == required.prohibition.source_event,
         )
     ).first()
-    if proof is None or event is None or event.kind != "m3.punishment_applied":
-        raise WorkflowError("Recover the actual original surgery source before adjudicating.")
-    surgery = next((x for x in proof.lobotomies if x.id == required.prohibition.surgery), None)
-    if (
-        surgery is None
-        or surgery.phase != "applied"
-        or surgery.subject
-        != (
-            next(x.origin for x in state.harpy_states if x.id == required.actor.entity)
-            if required.actor.kind == "external_pilot"
-            else required.actor
-        )
-        or (event.actor_id != surgery.inflictor.entity)
-    ):
-        raise WorkflowError("The actual source surgery and original patient have changed.")
+    if isinstance(required.prohibition, CoreRestriction):
+        if event is None:
+            raise WorkflowError("Recover the canonical event proving the actual Core restriction")
+        _verify_core_restriction(game, c, state, required.actor, required.prohibition, proof)
+    else:
+        if proof is None or event is None or event.kind != "m3.punishment_applied":
+            raise WorkflowError("Recover the actual original surgery source before adjudicating.")
+        surgery = next((x for x in proof.lobotomies if x.id == required.prohibition.surgery), None)
+        if (
+            surgery is None
+            or surgery.phase != "applied"
+            or surgery.subject
+            != (
+                next(x.origin for x in state.harpy_states if x.id == required.actor.entity)
+                if required.actor.kind == "external_pilot"
+                else required.actor
+            )
+            or (event.actor_id != surgery.inflictor.entity)
+        ):
+            raise WorkflowError("The actual source surgery and original patient have changed.")
     if required.source_kind == "dormant_dive_work":
         from girlframe.services.m3_battle_dormant import DormantService, actual_actor
 
@@ -697,6 +778,16 @@ class AdjudicationService:
                 play=required.play,
                 patient=patient,
                 can_act=row["state"] == "pending" and viewer.user_id == required.controller,
+                prohibition_kind=(
+                    "core_restriction"
+                    if isinstance(required.prohibition, CoreRestriction)
+                    else "surgery"
+                ),
+                restriction_reason=(
+                    "The actual Core's printed Restrained Tag prevents making Plays."
+                    if isinstance(required.prohibition, CoreRestriction)
+                    else "The original Girl cannot roll this mandatory Play after surgery."
+                ),
                 receipt=action["data"].get("receipt"),
             )
 

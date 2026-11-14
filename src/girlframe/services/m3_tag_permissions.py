@@ -166,6 +166,10 @@ class PermissionService:
             raise WorkflowError(
                 "SOURCE_TAG_PERMISSION_MISSING: recover the original effect and decision."
             )
+        if gate.details.get("source_kind") == "harpy_beneath":
+            from girlframe.services.m3_harpy_beneath import prove_permission
+
+            prove_permission(self.game, c, state, gate)
         if gate.state == "fulfilled":
             events = c.execute(
                 sa.select(t.events)

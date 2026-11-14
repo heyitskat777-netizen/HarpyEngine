@@ -54,11 +54,86 @@ def released(game: "GameService") -> bool:
     return True
 
 
+NATIVE_RISK_PLAYS = frozenset(
+    {
+        "keep_your_head",
+        "check_sensors",
+        "engage",
+        "disobey_orders",
+        "flirt",
+        "put_someone_beneath_you",
+        "living_battery",
+    }
+)
+
+
+def native_released(
+    game: "GameService", c: Connection, state: GameState, action: dict[str, Any]
+) -> bool:
+    """Only the independently reviewed original native cohort; broad Anyroll stays gated."""
+    from girlframe.services.m3_access import digest, load_registry
+
+    ref = actor(action)
+    approval = game.store.policy.m3_approval
+    sheet = state.sheets.get(ref.entity) if ref is not None and ref.kind == "pilot" else None
+    if (
+        ref is None
+        or sheet is None
+        or ref.entity != str(action["actor_id"])
+        or sheet.character_id != ref.incarnation
+        or action["data"].get("character_ids", {}).get(ref.entity) != ref.incarnation
+        or action["data"].get("prepared", {}).get("play") != action["data"].get("play")
+        or not rules.owns(state, ref, rules.RISK)
+        or action["data"].get("actor_basic")
+        or action["data"]["play"] not in NATIVE_RISK_PLAYS
+        or approval is None
+        or "plays" not in approval.subsystems
+        or action["data"]["play"] not in approval.native_risk_plays
+        or game.store.policy.owner_m3_rulings is None
+    ):
+        return False
+    frozen = game.action(c, action["id"])
+    if (
+        frozen["actor_id"] != action["actor_id"]
+        or frozen["data"].get("actor_basic")
+        or any(
+            frozen["data"].get(k) != action["data"].get(k)
+            for k in ("play", "prepared", "character_ids")
+        )
+    ):
+        return False
+    receipt = action["data"].get("receipt")
+    if not isinstance(receipt, dict) or not receipt.get("id"):
+        return False
+    saved = c.scalar(
+        sa.select(t.m2["m2_receipts"].c.body_json).where(
+            t.m2["m2_receipts"].c.campaign_id == game.store.campaign_id,
+            t.m2["m2_receipts"].c.action_id == action["id"],
+            t.m2["m2_receipts"].c.id == receipt["id"],
+        )
+    )
+    if saved is None or json.loads(saved) != receipt:
+        return False
+    registry = load_registry()
+    if approval.registry_sha256 != digest(registry):
+        return False
+    try:
+        registry.require_available(rules.NATIVE_RISK)
+    except ValueError:
+        return False
+    return True
+
+
 def intercept_results(
     game: "GameService", c: Connection, state: GameState, action: dict[str, Any]
 ) -> bool:
     data = action["data"]
-    if not released(game) or data.get("adjudication") or not data.get("receipt"):
+    full_release = released(game)
+    if (
+        (not full_release and not native_released(game, c, state, action))
+        or data.get("adjudication")
+        or not data.get("receipt")
+    ):
         return False
     meta = data.get("risk_factor")
     if meta is not None:
@@ -84,6 +159,10 @@ def intercept_results(
         eligible=eligible,
         followups=[],
     )
+    if not full_release:
+        approval = game.store.policy.m3_approval
+        assert approval is not None
+        data["risk_factor"]["native_scope_registry"] = approval.registry_sha256
     if lesson is not None:
         from girlframe.services.m3_learned_plays import _keep_raw_roll
 
@@ -140,6 +219,16 @@ def apply(
         raise WorkflowError("Finish the real Void consequence; an acknowledgment cannot dismiss it")
     meta = action["data"]["risk_factor"]
     ref = ActorRef.model_validate(meta["actor"])
+    if meta.get("native_scope_registry") is not None:
+        approval = game.store.policy.m3_approval
+        if (
+            approval is None
+            or meta["native_scope_registry"] != approval.registry_sha256
+            or actor(action) != ref
+            or meta.get("learned_source") is not None
+            or not native_released(game, c, state, action)
+        ):
+            raise WorkflowError("M3_POLICY_CHANGED: recover this original native Risk source")
     from girlframe.services.m3_casualty_support import require_god, resistance_answer
 
     answer, casualty_part, casualty_site = resistance_answer(answer)

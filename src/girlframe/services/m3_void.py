@@ -142,6 +142,11 @@ def source(
 
             prove_renovation_void(game, c, first, body, actor)
             return current, body, actor
+        if body.get("reason") == "harpy_bond_void":
+            from girlframe.services.m3_harpy_bond_void import prove_void_source as prove_temptation
+
+            prove_temptation(game, c, first, body, actor)
+            return current, body, actor
         if body.get("reason") == "budget_cleanup":
             from girlframe.services.m3_budget_cleanup import prove_void_source as prove_cleanup
 
@@ -515,6 +520,10 @@ def complete(
             from girlframe.services.m3_consume import resume_pending
 
             resume_pending(game, c, event)
+        elif body.get("reason") == "harpy_bond_void":
+            from girlframe.services.m3_harpy_bond_void import complete_void as complete_temptation
+
+            complete_temptation(game, c, identity, event, viewer, key)
         elif body.get("reason") == "budget_cleanup":
             from girlframe.services.m3_budget_cleanup import complete_void as complete_cleanup
 

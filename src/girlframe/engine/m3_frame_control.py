@@ -410,6 +410,13 @@ def prepare_endings(previous: GameState, state: GameState, event: str) -> GameSt
         for x in state.harpy_states
         if not x.alive and x.condition_event == event
     ]
+    ended += [
+        ActorRef(kind="external_pilot", entity=x.id)
+        for x in state.janus_cores
+        if not x.alive
+        and x.condition_event == event
+        and any(y.id == x.id and y.alive for y in previous.janus_cores)
+    ]
     if state.world and previous.world:
         ended += [
             ActorRef(kind="external_pilot", entity=x.id)

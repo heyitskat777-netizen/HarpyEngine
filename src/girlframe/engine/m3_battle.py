@@ -85,6 +85,7 @@ def category(state: GameState, actor: ActorRef) -> Category:
         return (
             "harpy"
             if any(x.id == actor.entity for x in state.harpy_states)
+            or any(x.id == actor.entity for x in state.janus_cores)
             or (
                 state.world is not None
                 and any(x.id == actor.entity and x.kind == "harpy" for x in state.world.pilots)

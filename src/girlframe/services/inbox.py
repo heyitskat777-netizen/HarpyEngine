@@ -511,7 +511,7 @@ class InboxService:
             from girlframe.services.m2_game import GameService
 
             for play_row in GameService(self.store).pending_choices(connection, viewer):
-                if play_row["kind"] in ("dive_call", "dive_handler_void"):
+                if play_row["kind"] in ("dive_call", "dive_handler_void", "harpy_bond_void"):
                     continue
                 items.append(
                     InboxItem(
@@ -617,6 +617,25 @@ class InboxService:
                     )
                 )
             for item in canon.obligations:
+                if item.kind == "harpy_flirt_followthrough" and item.owner == viewer.user_id:
+                    items.append(
+                        InboxItem(
+                            "harpy-followthrough:" + item.id,
+                            "harpy_flirt_followthrough",
+                            item.id,
+                            canon.revision,
+                            "plays",
+                            "Actual Harpy/Girl follow-through",
+                            "Original performer",
+                            item.state,
+                            item.state == "pending",
+                            False,
+                            "Fulfill the original partner's request.",
+                            "The actual recipient confirms before the original Bond changes.",
+                            "Record your follow-through",
+                            task="m3_harpy_followthrough",
+                        )
+                    )
                 if item.kind == "clone_flirt_followthrough" and item.owner == viewer.user_id:
                     items.append(
                         InboxItem(
@@ -768,6 +787,7 @@ class InboxService:
                         task="m3_comforts" if needs else None,
                     )
                 )
+            from girlframe.engine.m3_harpy_bond_void import cases as temptation_cases
             from girlframe.services.m3_budget_anarchy import AnarchyService
             from girlframe.services.m3_budget_candidate import CandidateService
             from girlframe.services.m3_budget_cleanup import CleanupService
@@ -775,6 +795,31 @@ class InboxService:
             from girlframe.services.m3_budget_patron import PatronService
             from girlframe.services.m3_collective_handler_tags import CollectiveTagService
             from girlframe.services.m3_political_function import FunctionService
+
+            for temptation in temptation_cases(canon):
+                if temptation.controller != viewer.user_id or temptation.phase == "complete":
+                    continue
+                needs = temptation.phase == "rewrite"
+                items.append(
+                    InboxItem(
+                        "harpy-bond-void:" + temptation.id,
+                        "harpy_bond_void",
+                        temptation.id,
+                        canon.revision,
+                        "plays",
+                        "Your Harpy Bond: required Void",
+                        "Original affected Girl",
+                        "pending" if needs else "waiting",
+                        needs,
+                        False,
+                        "Choose your actual Asset alteration."
+                        if needs
+                        else "Finish your owned Void consequence.",
+                        "The original Bond change and receipt remain saved.",
+                        "Review your Void consequence",
+                        task="m3_harpy_bond_void",
+                    )
+                )
 
             for cleanup in CleanupService(self.store).available(connection, viewer):
                 items.append(
@@ -3603,6 +3648,7 @@ class InboxService:
                     "girl_playbook_transition",
                     "girl_standards",
                     "void_threshold",
+                    "harpy_bond_void",
                     "defeat_void_threshold",
                     "frame_swap",
                     "personal_firearm_return",

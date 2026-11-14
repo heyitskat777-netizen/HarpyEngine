@@ -270,7 +270,47 @@ def apply_returned_death_tags(original: GameState, actor: ActorRef, event: str) 
     return state
 
 
+def separate_core(original: GameState, actor: ActorRef, event: str) -> GameState:
+    """Actual Defeat disposition separates the Core, never its other Pilot's Frame.
+
+    Delegated campaign interpretation; called only by real escape/capture outcomes.
+    This grants no Pet entitlement, new hardware, repair or general extraction API.
+    """
+    body = harpy(original, actor)
+    if not isinstance(body, JanusCore) or not (body.attached or body.linked):
+        return original
+    from girlframe.engine.m3_actors import frame_position
+    from girlframe.engine.m3_frame_control import unplug
+    from girlframe.engine.m3_janus import position
+
+    state = update(
+        original,
+        actor,
+        attached=False,
+        linked=False,
+        custody="free",
+        custodian=None,
+        custody_event=event,
+        cell=position(original, body),
+        frame_cell=frame_position(original, body.frame_owner, body.frame_instance),
+        condition_event=event,
+        state_event=event,
+    )
+    for contact in list(state.neural_connections):
+        if actor in (contact.caster, contact.battery) and contact.phase == "connected":
+            state = unplug(
+                state,
+                contact.id,
+                actor,
+                event,
+                "The original Core's actual Defeat disposition ends this physical contact",
+                ended=True,
+            )
+    return state
+
+
 def escape(original: GameState, actor: ActorRef, event: str) -> GameState:
+    original = separate_core(original, actor, event)
     body = harpy(original, actor)
     if body.subsumed or not body.vitals_active:
         raise ValueError("Actual subsumption/extraction must resolve without inventing revival")
@@ -308,7 +348,7 @@ def die(original: GameState, actor: ActorRef, event: str) -> GameState:
 
     state = GameState.model_validate_json(original.model_dump_json())
     body = harpy(state, actor)
-    if isinstance(body, HarpyState):
+    if isinstance(body, (HarpyState, JanusCore)):
         state = update(state, actor, alive=False, body_incapacitated=True, condition_event=event)
     else:
         assert state.world is not None

@@ -15,6 +15,10 @@ def signature(gate: Obligation) -> tuple[object, ...]:
 
 
 def original_role(gate: Obligation, *, locker: bool) -> ActorRef:
+    if gate.details.get("source_kind") == "harpy_beneath":
+        from girlframe.engine.m3_harpy_beneath import participants as actual_participants
+
+        return actual_participants(gate)[0 if locker else 1]
     owner = gate.owner if locker else gate.target
     character = gate.details.get("owner_character" if locker else "target_character")
     if owner is None or not character or character == "None":
@@ -173,20 +177,52 @@ def locks(state: GameState, actor: ActorRef, tag_id: str) -> tuple[Obligation, .
     candidates = [
         x
         for x in state.obligations
-        if x.kind == "tag_rejection_permission" and x.details.get("tag") == tag_id
+        if x.kind == "tag_rejection_permission"
+        and x.details.get("tag") == tag_id
+        and x.details.get("source_kind") != "harpy_beneath"
     ]
+    from girlframe.engine.m3_harpy_beneath import locks as actual_locks
+
+    fresh = actual_locks(state, actor, tag_id)
     if not candidates:
-        return ()
+        return fresh
     original = actor
     if actor.kind == "external_pilot" and any(x.id == actor.entity for x in state.harpy_states):
         body, marker = conversion(state, actor)
         if tag_id not in marker["retained_tag_ids"]:
             raise ValueError("A discarded/copied Tag cannot impersonate the original retained lock")
         original = body.origin
-    return tuple(x for x in candidates if original_role(x, locker=False) == original)
+    return (*fresh, *(x for x in candidates if original_role(x, locker=False) == original))
 
 
 def participants(state: GameState, gate: Obligation) -> tuple[ActorRef | None, ActorRef | None]:
+    if gate.details.get("source_kind") == "harpy_beneath":
+        from girlframe.engine.m3_harpy_beneath import participants as actual_participants
+
+        first, second = actual_participants(gate)
+
+        def current(actor: ActorRef) -> bool:
+            if actor.kind == "pilot":
+                return _current_pilot(state, actor)
+            if actor.kind != "external_pilot":
+                return False
+            from girlframe.engine.m3_harpy_defeat import harpy
+            from girlframe.engine.m3_janus_state import JanusCore
+
+            value = harpy(state, actor)
+            return (
+                value.alive
+                if isinstance(value, (HarpyState, JanusCore))
+                else bool(
+                    state.world
+                    and any(x.id == actor.entity and x.alive for x in state.world.pilots)
+                )
+            )
+
+        return (
+            first if current(first) else None,
+            second if current(second) and present(state, second, gate.details["tag"]) else None,
+        )
     locker = representation(state, original_role(gate, locker=True))
     bearer = representation(state, original_role(gate, locker=False))
     if locker is not None and locker.kind == "external_pilot":

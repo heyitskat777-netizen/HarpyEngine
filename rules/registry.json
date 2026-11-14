@@ -7609,6 +7609,22 @@
       "revision": 1,
       "implementation_note": "Private source-bound services and native original-owner decisions; actual outcomes and receipt/history remain required. No independent certification or deployment approval.",
       "change_impact": "Normalized campaign ruling digest changes; genuine matching approval and printed clarity review remain pending. Existing records/events and declared scope are preserved."
+    },
+    {
+      "id": "janus-core-defeat-body-disposition",
+      "summary": "A genuine granted Core Defeat escape or confirmed body capture separates only the original Core, preserves original JANUS hardware/other Pilot, and ends actual Core contact authority. Restrained mandatory Defeat uses owned no-RNG adjudication.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF68/printed66 Harpy Core and PDF182/printed180 Harpy Defeat; owner delegation to Codex recommendations.",
+      "rationale": "Normal Harpy inheritance grants actual escape/capture but does not define shared JANUS attachment. A source-bound body-only disposition realizes the result without copying or moving the other Pilot/Frame.",
+      "alternatives": [
+        "Require separate extraction for every otherwise granted escape.",
+        "Automatically take the whole shared JANUS Frame on Core escape."
+      ],
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Only engine.m3_harpy_defeat.separate_core called by genuine Defeat escape/confirmed capture may detach the original Core; actual contact endings preserve source costs/resources. Core death and typed Restrained adjudication keep original body/controller identities. No Pet, new Frame, repair, general extraction or implicit companion transfer.",
+      "change_impact": "Changing this interpretation requires matching body/physical/contact/adjudication source changes and verification. Full-M3 or independent feature approval is not granted by this ruling."
     }
   ],
   "entries": [
@@ -8398,17 +8414,75 @@
         "heading": "Keep Your Head"
       },
       "required": true,
-      "implementation": "subset",
-      "source_audit": "inventoried",
-      "independent_review": "pending",
-      "reviewer": null,
-      "review_reference": null,
-      "contract": null,
+      "implementation": "implemented",
+      "source_audit": "audited",
+      "independent_review": "approved",
+      "reviewer": "Independent Codex source review /root/p1_core_rules_review, native base scope, 2026-11-14",
+      "review_reference": "docs/reviews/P1_PRELIVE_SOURCE_REVIEW_20261114.md#reviewed-native-base-entries",
+      "contract": {
+        "trigger": "The original Pilot describes what she is trying to make it through and declares Keep Your Head.",
+        "actor_type": "Original native Pilot under Girl rules. This is the base Play; independently sourced playbook/retained-body exceptions require their own separately reviewed providers.",
+        "pre_roll_sources": [
+          "Original sheet/character/scene participants and explicit trigger/context; actual pre-roll Heat and optional eligible Identity commitment.",
+          "Held scene lock and one OS-backed 2d6 receipt; no RNG or charge before actual lock acknowledgement."
+        ],
+        "roll_kind": "2d6",
+        "allowed_modifiers": [
+          "Committed Heat, plus only separately authorized source modifiers.",
+          "One relevant owned/observed post-roll Tag proposal; Personal/Intense \u00b12 uses the explicit owner ruling and actual source Bond."
+        ],
+        "tier_options": {
+          "low": [
+            "Actor picks one positive trait; all remaining printed traits are negative.",
+            "Original Handler answers whether that is enough."
+          ],
+          "mid": [
+            "Actor picks two positive traits and one distinct negative trait.",
+            "Original Handler answers whether that is enough."
+          ],
+          "high": [
+            "Desperate/sexy/tough/vicious are positive; in_control is negative.",
+            "Actor supplies the actual taken Tag; original Handler answers whether enough."
+          ]
+        },
+        "choice_ownership": "Original actor selects owned traits/Tag. Original Handler supplies its own actual enough/not-enough answer and outcome. No other controller or administrator supplies those answers.",
+        "target_policy": "No independent target is needed for the native ordinary Keep. An actual directed or recovery source retains its own original lineage; this base contract does not certify those separate source exceptions.",
+        "post_roll_effects": [
+          "Save actual positive/negative traits, actual high Tag and original Handler outcome.",
+          "No inferred success/cancellation of another committed Girl Play."
+        ],
+        "mandatory_followups": [
+          "Keep the actual Handler answer pending until explicitly supplied.",
+          "Preserve mandatory separately generated work before source completion and scene release."
+        ],
+        "handler_or_gm_intervention": "Required original Handler answer is a human-owned ruling, with OOC pause always available; no AI/user-consent inference.",
+        "test_fixture_ids": [
+          "tests/test_m2_game.py::test_keep_three_tiers_and_handler_ownership[faces0-positive0-negative0-]",
+          "tests/test_m2_game.py::test_keep_three_tiers_and_handler_ownership[faces1-positive1-negative1-]",
+          "tests/test_m2_game.py::test_keep_three_tiers_and_handler_ownership[faces2-positive2-negative2-SYNTHETIC_TAG]",
+          "tests/test_m2_game.py::test_stale_forms_pauses_replay_restart_and_unsupported_no_rng",
+          "tests/test_m2_ui.py::test_native_form_owner_selection_and_explicit_confirmation",
+          "tests/test_m2_ui.py::test_each_owned_response_has_native_fields[actor_keep-low]",
+          "tests/test_m2_ui.py::test_each_owned_response_has_native_fields[actor_keep-mid]",
+          "tests/test_m2_ui.py::test_each_owned_response_has_native_fields[actor_keep-high]",
+          "tests/test_m2_ui.py::test_each_owned_response_has_native_fields[handler_keep-low]",
+          "tests/test_m2_ui.py::test_each_owned_response_has_native_fields[handler_keep-mid]",
+          "tests/test_m2_ui.py::test_each_owned_response_has_native_fields[handler_keep-high]"
+        ]
+      },
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_actor_resources.py",
-        "tests/rules/test_actor_plays.py",
-        "tests/rules/test_actor_play_service.py"
+        "tests/test_m2_game.py::test_keep_three_tiers_and_handler_ownership[faces0-positive0-negative0-]",
+        "tests/test_m2_game.py::test_keep_three_tiers_and_handler_ownership[faces1-positive1-negative1-]",
+        "tests/test_m2_game.py::test_keep_three_tiers_and_handler_ownership[faces2-positive2-negative2-SYNTHETIC_TAG]",
+        "tests/test_m2_game.py::test_stale_forms_pauses_replay_restart_and_unsupported_no_rng",
+        "tests/test_m2_ui.py::test_native_form_owner_selection_and_explicit_confirmation",
+        "tests/test_m2_ui.py::test_each_owned_response_has_native_fields[actor_keep-low]",
+        "tests/test_m2_ui.py::test_each_owned_response_has_native_fields[actor_keep-mid]",
+        "tests/test_m2_ui.py::test_each_owned_response_has_native_fields[actor_keep-high]",
+        "tests/test_m2_ui.py::test_each_owned_response_has_native_fields[handler_keep-low]",
+        "tests/test_m2_ui.py::test_each_owned_response_has_native_fields[handler_keep-mid]",
+        "tests/test_m2_ui.py::test_each_owned_response_has_native_fields[handler_keep-high]"
       ],
       "m2_play_id": "keep_your_head",
       "module": "core"
@@ -8455,14 +8529,63 @@
         "heading": "Receive Orders"
       },
       "required": true,
-      "implementation": "subset",
-      "source_audit": "inventoried",
-      "independent_review": "pending",
-      "reviewer": null,
-      "review_reference": null,
-      "contract": null,
+      "implementation": "implemented",
+      "source_audit": "audited",
+      "independent_review": "approved",
+      "reviewer": "Independent Codex source review /root/p1_core_rules_review, native base scope, 2026-11-14",
+      "review_reference": "docs/reviews/P1_PRELIVE_SOURCE_REVIEW_20261114.md#reviewed-native-base-entries",
+      "contract": {
+        "trigger": "A genuine direct order is issued to the original Pilot by a current superior, or by a separately proved printed order-authority exception.",
+        "actor_type": "Original ordered native Pilot. In-world Handler/Pilot rank is distinct from OOC administrator status.",
+        "pre_roll_sources": [
+          "Persisted original direct-order text, issuer/recipient, scene/cast and actual current superior authority.",
+          "Any alternate authority, such as an accepted Secretary or printed rule, needs its own independently reviewed source; this base contract does not grant it."
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "diceless": [
+            "Follow obediently.",
+            "Follow immediately/without thinking.",
+            "Follow hesitantly, mouthing off, or with gritted teeth.",
+            "Choose actual Disobey Orders continuation."
+          ]
+        },
+        "choice_ownership": "Only the actual ordered actor chooses its response. Original issuer authors the order; nobody forges the recipient response or required later Plays.",
+        "target_policy": "Actual direct order must identify a current eligible recipient in the source scene. No account alias, invalid successor or broad administrator permission creates superior authority.",
+        "post_roll_effects": [
+          "Save the recipient's actual declared response and original order source.",
+          "Disobey response opens a real original-source child Play; no automatic favorable refusal."
+        ],
+        "mandatory_followups": [
+          "Make actual further Plays when the Conversation requires them.",
+          "A selected Disobey continuation must resolve its real roll/effects before parent completion."
+        ],
+        "handler_or_gm_intervention": "Human issuers/recipients keep their separate decisions. Following response is a declared fictional response, not invented mechanical compliance with an unperformed follow-up.",
+        "test_fixture_ids": [
+          "tests/rules/test_beneath_discipline.py::test_low_counter_punishment_can_use_only_its_own_actual_followed_superior_order",
+          "tests/test_m2_game.py::test_disobey_requires_recorded_superior_order_and_low_halts[faces0]",
+          "tests/test_m2_game.py::test_disobey_requires_recorded_superior_order_and_low_halts[faces1]",
+          "tests/test_m2_game.py::test_disobey_requires_recorded_superior_order_and_low_halts[faces2]",
+          "tests/test_m2_game.py::test_stale_forms_pauses_replay_restart_and_unsupported_no_rng",
+          "tests/test_m2_ui.py::test_native_form_owner_selection_and_explicit_confirmation",
+          "tests/test_m2_ui.py::test_each_owned_response_has_native_fields[order_response-low]",
+          "tests/test_m2_ui.py::test_each_owned_response_has_native_fields[order_response-mid]",
+          "tests/test_m2_ui.py::test_each_owned_response_has_native_fields[order_response-high]"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_beneath_discipline.py::test_low_counter_punishment_can_use_only_its_own_actual_followed_superior_order",
+        "tests/test_m2_game.py::test_disobey_requires_recorded_superior_order_and_low_halts[faces0]",
+        "tests/test_m2_game.py::test_disobey_requires_recorded_superior_order_and_low_halts[faces1]",
+        "tests/test_m2_game.py::test_disobey_requires_recorded_superior_order_and_low_halts[faces2]",
+        "tests/test_m2_game.py::test_stale_forms_pauses_replay_restart_and_unsupported_no_rng",
+        "tests/test_m2_ui.py::test_native_form_owner_selection_and_explicit_confirmation",
+        "tests/test_m2_ui.py::test_each_owned_response_has_native_fields[order_response-low]",
+        "tests/test_m2_ui.py::test_each_owned_response_has_native_fields[order_response-mid]",
+        "tests/test_m2_ui.py::test_each_owned_response_has_native_fields[order_response-high]"
+      ],
       "m2_play_id": "receive_orders",
       "module": "core"
     },
@@ -8687,14 +8810,72 @@
         "heading": "Check Sensors"
       },
       "required": true,
-      "implementation": "subset",
-      "source_audit": "inventoried",
-      "independent_review": "pending",
-      "reviewer": null,
-      "review_reference": null,
-      "contract": null,
+      "implementation": "implemented",
+      "source_audit": "audited",
+      "independent_review": "approved",
+      "reviewer": "Independent Codex source review /root/p1_core_rules_review, native base scope, 2026-11-14",
+      "review_reference": "docs/reviews/P1_PRELIVE_SOURCE_REVIEW_20261114.md#reviewed-native-base-entries",
+      "contract": {
+        "trigger": "Original Pilot takes stock of the situation and declares Check Sensors.",
+        "actor_type": "Original native Pilot under the base Frame-Play rule. Separately acquired extra questions/modifiers need their own reviewed source.",
+        "pre_roll_sources": [
+          "Original actor sheet, scene and context; actual pre-roll Heat/Identity commitment and confirmed scene lock.",
+          "Actual one 2d6 receipt; unpiloted Frame Play use is not categorically forbidden."
+        ],
+        "roll_kind": "2d6",
+        "allowed_modifiers": [
+          "Committed Heat and independently source-proved modifiers.",
+          "One source-qualified post-roll Tag proposal, using the explicit Bond-depth modifier ruling when applicable."
+        ],
+        "tier_options": {
+          "low": [
+            "Actor chooses one listed printed question; Handler owns its answer."
+          ],
+          "mid": [
+            "Actor chooses any two questions, including custom questions; Handler owns both answers."
+          ],
+          "high": [
+            "Actor chooses any three questions.",
+            "For any genuinely off-list question, Handler records incomplete information or an owed later Punishment."
+          ]
+        },
+        "choice_ownership": "Actor owns questions; actual Handler owns each required answer and the printed high off-list consequence. A typed menu ID and its exact printed wording classify as the same listed question.",
+        "target_policy": "No invented in-world facts or private knowledge are generated. Human Handler authors answers in the authorized source scene; OOC GM knowledge is not automatically Handler knowledge.",
+        "post_roll_effects": [
+          "Preserve ordered actual questions and answers.",
+          "Create a durable real Punishment obligation only if the Handler selects the printed later-Punishment alternative."
+        ],
+        "mandatory_followups": [
+          "Retain the required owned Handler answers before completing the source.",
+          "Any actual later Punishment remains separately owed; recording an answer does not execute it."
+        ],
+        "handler_or_gm_intervention": "Mandatory original Handler answers; high off-list uncertainty/consequence choice remains explicit and source-owned.",
+        "test_fixture_ids": [
+          "tests/test_m2_game.py::test_sensors_exact_questions_and_human_answers[faces0-1]",
+          "tests/test_m2_game.py::test_sensors_exact_questions_and_human_answers[faces1-2]",
+          "tests/test_m2_game.py::test_sensors_exact_questions_and_human_answers[faces2-3]",
+          "tests/test_m2_game.py::test_high_sensors_printed_custom_questions_are_listed[foundation-and-satellites]",
+          "tests/test_m2_game.py::test_high_sensors_printed_custom_questions_are_listed[rest-civilians-orders]",
+          "tests/test_m2_game.py::test_low_sensors_still_requires_one_listed_question",
+          "tests/test_m2_game.py::test_mid_sensors_custom_question_keeps_two_answer_quota_without_consequence",
+          "tests/test_m2_game.py::test_stale_forms_pauses_replay_restart_and_unsupported_no_rng",
+          "tests/test_m2_ui.py::test_native_form_owner_selection_and_explicit_confirmation",
+          "tests/test_m2_ui.py::test_sensors_menu_uses_exact_printed_questions_and_conservative_matching"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/test_m2_game.py::test_sensors_exact_questions_and_human_answers[faces0-1]",
+        "tests/test_m2_game.py::test_sensors_exact_questions_and_human_answers[faces1-2]",
+        "tests/test_m2_game.py::test_sensors_exact_questions_and_human_answers[faces2-3]",
+        "tests/test_m2_game.py::test_high_sensors_printed_custom_questions_are_listed[foundation-and-satellites]",
+        "tests/test_m2_game.py::test_high_sensors_printed_custom_questions_are_listed[rest-civilians-orders]",
+        "tests/test_m2_game.py::test_low_sensors_still_requires_one_listed_question",
+        "tests/test_m2_game.py::test_mid_sensors_custom_question_keeps_two_answer_quota_without_consequence",
+        "tests/test_m2_game.py::test_stale_forms_pauses_replay_restart_and_unsupported_no_rng",
+        "tests/test_m2_ui.py::test_native_form_owner_selection_and_explicit_confirmation",
+        "tests/test_m2_ui.py::test_sensors_menu_uses_exact_printed_questions_and_conservative_matching"
+      ],
       "m2_play_id": "check_sensors",
       "module": "core"
     },
@@ -9213,11 +9394,80 @@
       "dependencies": [
         "core.core.void",
         "core.core.assets",
-        "play.basic.keep_your_head"
+        "play.basic.keep_your_head",
+        "girl.mockingbird.native-risk-factor"
       ],
       "test_evidence": [
         "tests/rules/test_mockingbird_risk.py",
         "tests/rules/test_mockingbird_call.py::test_risk_immunity_preserves_outside_girl_while_actual_fully_void_frame_becomes_gorgon"
+      ],
+      "m2_play_id": null,
+      "module": "core"
+    },
+    {
+      "id": "girl.mockingbird.native-risk-factor",
+      "title": "Risk Factor \u2014 native first-session shared rolls",
+      "scope": "girl",
+      "kind": "mechanic",
+      "source": {
+        "document": "rulebook",
+        "pdf_page": 35,
+        "printed_page": 33,
+        "heading": "Risk Factor"
+      },
+      "required": false,
+      "implementation": "implemented",
+      "source_audit": "audited",
+      "independent_review": "approved",
+      "reviewer": "Independent Codex source review /root/p1_first_roster_review, 2026-11-14; not author of Risk engine/service or new admission helper",
+      "review_reference": "docs/reviews/P1_FIRST_ROSTER_SOURCE_REVIEW_20261114.md#mockingbird-risk-native-cohort",
+      "contract": {
+        "trigger": "Actual original native Pilot with currently owned Risk Factor reaches the shared result boundary of exactly these Play IDs: keep_your_head, check_sensors, engage, disobey_orders, flirt, put_someone_beneath_you, living_battery. After recorded original dice and actual Tag modifiers, original owner may decline or take real Void to choose8,9or10.",
+        "actor_type": "Actual kind=pilot original UID/incarnation matching action actor, frozen character_ids and current sheet; genuine owned Risk only. Not learned borrowing, actor_basic, converted/retained Harpy, Handler, clone-AM, Gorgon or controller proxy.",
+        "pre_roll_sources": [
+          "Trusted campaign explicitly selects this source ID in m3_approval.native_risk_plays; default empty preserves existing campaign behavior.",
+          "Hard current policy registry digest/subsystem/ruling and verified optional child; required full Anyroll parent remains partial/pending.",
+          "prepared.play equals data.play and belongs to exact7 whitelist. actor(action) is actual native original Pilot; paid meta.actor must equal original actor again on apply.",
+          "Real receipt selected by campaign+original action ID+receipt ID and exact saved immutable body equals current raw receipt. No missing/diceless/adjudicated outcome admitted.",
+          "Current real native Risk ownership, actual eligible uncorrupted assets and true body/Frame source facts; no learned source consumed by child."
+        ],
+        "roll_kind": "special",
+        "allowed_modifiers": [
+          "Preserve raw faces, Heat, cost and preexisting actual modifiers. Append only chosen8/9/10 minus frozen before-total after real original owner payment."
+        ],
+        "tier_options": {
+          "owner choice": [
+            "Decline without Void cost or reroll",
+            "Pay one real eligible original-owner Void alteration and choose8,9or10",
+            "Actual available Storage/Sup/Casualty alternatives retain their separate paid/source/body gates."
+          ]
+        },
+        "choice_ownership": "Only the original native roller chooses this unused original receipt shift and its actual private payment. Wrong actor/character/receipt, duplicate pay, stale or changed scope fails closed; threshold/Keep answers retain their actual owners.",
+        "target_policy": "Native first-session7 source IDs only, including ordinary native shared basics and actual JANUS Battery. Native Pilot HarpyFlirt/Beneath paths use their repaired Risk interceptors. No broad Anyroll/other source, role, lesson or advanced context certification.",
+        "post_roll_effects": [
+          "One authenticated real Void payment fact, unchanged original RNG receipt and no repeated Heat/Identity cost.",
+          "Original primary source effects use chosen final result; real Void followups remain held and source-proved.",
+          "Existing real fully-Void native Mockingbird Frame immunity/resistance and original threshold coalescing retain their actual source proof."
+        ],
+        "mandatory_followups": [
+          "Revalidate original native source and stored native_scope_registry on apply; payment meta.actor must equal actor(action), no learned_source.",
+          "Actual original source/receipt/character and scope remain held through original choices and real owned Void continuations.",
+          "Payment corruption, unknown pose, changed policy or absent asset cannot silently finish or create a free shift."
+        ],
+        "handler_or_gm_intervention": "Actual source-owned physical review/facilitator and printed Keep/in-control resistance only; no automatic answers, body creation or human approval. This optional contract certifies only declared native source port, not whole printed Anyroll or whole Mockingbird.",
+        "test_fixture_ids": [
+          "tests/rules/test_mockingbird_risk.py",
+          "tests/rules/test_mockingbird_janus_prelive.py::test_native_mockingbird_risk_shifts_actual_janus_battery_before_owned_benefits"
+        ]
+      },
+      "dependencies": [
+        "core.core.void",
+        "core.core.assets",
+        "play.basic.keep_your_head"
+      ],
+      "test_evidence": [
+        "tests/rules/test_mockingbird_risk.py",
+        "tests/rules/test_mockingbird_janus_prelive.py::test_native_mockingbird_risk_shifts_actual_janus_battery_before_owned_benefits"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -10986,16 +11236,80 @@
         "heading": "Harpy Core"
       },
       "required": true,
-      "implementation": "subset",
-      "source_audit": "inventoried",
-      "independent_review": "pending",
-      "reviewer": null,
-      "review_reference": null,
-      "contract": null,
+      "implementation": "implemented",
+      "source_audit": "audited",
+      "independent_review": "approved",
+      "reviewer": "Combined independent Codex source review /root/p1_core_rules_review and /root/p1_first_roster_review, component author/reviewer separation recorded, original Core base scope, 2026-11-14",
+      "review_reference": "docs/reviews/P1_PRELIVE_SOURCE_REVIEW_20261114.md#original-core-base",
+      "contract": {
+        "trigger": "Existing original JANUS/JANUS-B owner requests its printed original Harpy Core; real selected controller confirms actual existing facts and Foundation source reviewer approves. Later use retains the exact original Core and physical Frame authority.",
+        "actor_type": "Distinct original unnamed ex-Girl Harpy Core, actual external_pilot identity/controller/body vessel and original source-bound JANUS Frame; never its controller Pilot, former PC/archive, new Frame or acquired Requisition.",
+        "pre_roll_sources": [
+          "Actual owner/current JANUS frame identity, member/controller facts, source admission proposal and actual reviewed canonical history. No automatic invented Heat/Identity/Asset baseline.",
+          "Later ordinary inherited providers retain their own actual trigger, body/custody/link, scene, owned resources, explicit human choices and independent source/release gates."
+        ],
+        "roll_kind": "special",
+        "allowed_modifiers": [
+          "Admission creates no roll or modifier. Inherited normal Plays use their actual provider receipts and printed adjustments; no controller Pilot Status or resources.",
+          "Actual mandatory Restrained Defeat uses recorded source-GM manual whole total with no RNG/Heat/faces, not an invented successful roll."
+        ],
+        "tier_options": {
+          "admission": [
+            "One exact original Core with four original semantic Tags: Drugged makes her Helpless, Restrained prevents Plays, Muzzled prevents speech without separately printed channel override, Recovering from Surgery records actual pain."
+          ],
+          "ordinary_inheritance": [
+            "Ordinary Harpy provider clauses retain beautiful Keep, arbitrary diceless honest Sensors, optional extra Engage maneuver on Engage/Assault, actual free-body Voidspace OffDuty and mandatory Harpy Defeat results. Real Flirt/Beneath and mandatory Sin effects retain source-owned choices and receipts."
+          ],
+          "mandatory_defeat": [
+            "Actual initial Restrained Core cannot roll; exact current printed Tag and canonical source route to source-appointed human manual adjudication. Genuine escape/capture disposition separates only Core under recorded campaign interpretation; actual original death marks Core dead."
+          ]
+        },
+        "choice_ownership": "Owner requests original Frame/Core setup; selected Core controller supplies its own body facts; actual Foundation source reviewer owns review. Later actual actor/recipient/GM each owns printed responses, permission and voluntary consent; Core controller never answers as another original Girl.",
+        "target_policy": "Keep original Core/controller/body/Frame binding. Shared current/parked Frame assets have one canonical authority; detached-unlinked Core has only actual own/carried resources. Initial Tags are live source restrictions, not labels. Admission/inherited routing does not confer unreviewed advanced Harpy abilities, free acquired rules, another body or fictional Handler knowledge.",
+        "post_roll_effects": [
+          "Admission preserves original existing Frame resources, position, other Pilot sheets and all source IDs. Printed control removal/Punishment and Foundation replacement use actual source workflows.",
+          "Real Core separation ends actual contact/commands/temporary Battery authority and preserves other original Pilot/Frame position/resources. No Pet entitlement, new hardware, repair, resurrection or unrelated teleport.",
+          "Real Intense Bond deepening produces original affected Girl Sin choice once and holds required source until owned gain/threshold work resolves."
+        ],
+        "mandatory_followups": [
+          "Retain actual incomplete setup/review/permission/physical source and mandatory consequences as pending; no timeout or text acknowledgement fabricates consent or completion.",
+          "Required child Plays, Handler effects, Defeat damagework, original Core contact endings and owned Void gain/thresholds finish through actual source-aware services with unchanged original receipts.",
+          "Whole Harpy/Frame advancement mechanics remain individually gated and listed outside this base-entry scope; required unimplemented parents keep fullM3 coverage incomplete."
+        ],
+        "handler_or_gm_intervention": "Actual source reviewer and original appointed human adjudicator decide their own facts/manual whole totals/printed consequences. Recorded campaign interpretations remain identified for later printed-rule clarity review. This source contract is not campaign enablement, human acceptance, environment publication or live deployment approval.",
+        "test_fixture_ids": [
+          "tests/rules/test_janus_core.py",
+          "tests/rules/test_janus_core_service.py",
+          "tests/rules/test_janus_defeat_body.py::test_actual_restrained_core_manual_message_waits_for_true_girl_void_and_preserves_frame",
+          "tests/rules/test_janus_defeat_body.py::test_actual_restrained_core_manual_death_marks_original_dead_and_tags_actual_killer",
+          "tests/rules/test_harpy_actor_plays.py",
+          "tests/rules/test_harpy_sensors.py",
+          "tests/rules/test_engage_actual.py",
+          "tests/rules/test_harpy_assault.py",
+          "tests/rules/test_harpy_off_duty.py",
+          "tests/rules/test_harpy_defeat.py",
+          "tests/rules/test_harpy_flirt.py",
+          "tests/rules/test_harpy_beneath.py",
+          "tests/rules/test_harpy_bond_void.py",
+          "tests/rules/test_harpy_bond_void_ui.py"
+        ]
+      },
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_janus_requisitions.py",
-        "tests/rules/test_janus_core_service.py"
+        "tests/rules/test_janus_core.py",
+        "tests/rules/test_janus_core_service.py",
+        "tests/rules/test_janus_defeat_body.py::test_actual_restrained_core_manual_message_waits_for_true_girl_void_and_preserves_frame",
+        "tests/rules/test_janus_defeat_body.py::test_actual_restrained_core_manual_death_marks_original_dead_and_tags_actual_killer",
+        "tests/rules/test_harpy_actor_plays.py",
+        "tests/rules/test_harpy_sensors.py",
+        "tests/rules/test_engage_actual.py",
+        "tests/rules/test_harpy_assault.py",
+        "tests/rules/test_harpy_off_duty.py",
+        "tests/rules/test_harpy_defeat.py",
+        "tests/rules/test_harpy_flirt.py",
+        "tests/rules/test_harpy_beneath.py",
+        "tests/rules/test_harpy_bond_void.py",
+        "tests/rules/test_harpy_bond_void_ui.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -11044,17 +11358,58 @@
         "heading": "Janus Permission trigger"
       },
       "required": true,
-      "implementation": "subset",
-      "source_audit": "inventoried",
-      "independent_review": "pending",
-      "reviewer": null,
-      "review_reference": null,
-      "contract": null,
-      "dependencies": [],
+      "implementation": "implemented",
+      "source_audit": "audited",
+      "independent_review": "approved",
+      "reviewer": "Codex /root/p1_first_roster_review \u2014 independent source review of a36acab",
+      "review_reference": "docs/reviews/P1_FIRST_ROSTER_SOURCE_REVIEW_20261114.md#frame-janus-permission-trigger",
+      "contract": {
+        "trigger": "Actual original JANUS owner GoOffDuty qualifying source, with a real claim that she demonstrated the actual Harpy Core harmless to a Foundation official including her Handler.",
+        "actor_type": "Original Pilot who held this actual Frame at the qualifying roll; owner character and physical Frame instance remain frozen.",
+        "pre_roll_sources": [
+          "Actual qualifying source Play/receipt, original character/Frame context and current owner-bound pending reward work",
+          "Actual Foundation official; hidden unknown NPCs are excluded from the owner selector",
+          "Original owner claims actual performance, not a fabricated backend observation"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "fulfilled": [
+            "Grant one additional Permission to the original qualifying JANUS owner exactly once"
+          ],
+          "not fulfilled": [
+            "Record no trigger with no bonus"
+          ]
+        },
+        "choice_ownership": "Actual original owner confirms whether the printed trigger occurred and which known actual Foundation official witnessed it; factual truth remains a human table responsibility.",
+        "target_policy": "Original owner and source-held JANUS/JANUS-B. Not a new Frame after a swap or another current user. No hidden official identities are disclosed through generic selectors.",
+        "post_roll_effects": [
+          "Once-only extra Permission and source receipt on a genuine fulfilled claim",
+          "No bonus for a non-trigger; preserve actual frozen Frame/source and leave unrelated resources unchanged"
+        ],
+        "mandatory_followups": [
+          "Pending original-owner review resolves before its genuine OffDuty progress closes",
+          "Preserve stale/pause/changed-policy guards, rollback, identical retry and original source readback"
+        ],
+        "handler_or_gm_intervention": "The book does not give software omniscience over the demonstration; original table participants verify the fiction. Existing owner-approved observation-route/frame-reward timing rulings remain named campaign interpretations rather than printed additions.",
+        "test_fixture_ids": [
+          "tests/rules/test_frame_reward_service.py::test_janus_bonus_is_owned_post_roll_exactly_once_private_and_replay_safe",
+          "tests/rules/test_frame_reward_service.py::test_no_trigger_cannot_be_forged_for_another_owner_and_has_no_reward",
+          "tests/rules/test_frame_reward_service.py::test_frame_reward_private_projection_never_lists_hidden_officials",
+          "tests/rules/test_frame_rewards.py"
+        ]
+      },
+      "dependencies": [
+        "frame.janus.harpy-core",
+        "play.basic.go_off_duty"
+      ],
       "test_evidence": [
         "tests/rules/test_frame_reward_service.py",
         "tests/rules/test_frame_reward_ui.py",
-        "tests/rules/test_frame_rewards.py"
+        "tests/rules/test_frame_rewards.py",
+        "tests/rules/test_frame_reward_service.py::test_janus_bonus_is_owned_post_roll_exactly_once_private_and_replay_safe",
+        "tests/rules/test_frame_reward_service.py::test_no_trigger_cannot_be_forged_for_another_owner_and_has_no_reward",
+        "tests/rules/test_frame_reward_service.py::test_frame_reward_private_projection_never_lists_hidden_officials"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -11074,16 +11429,67 @@
         "heading": "Living Battery"
       },
       "required": true,
-      "implementation": "subset",
-      "source_audit": "inventoried",
-      "independent_review": "pending",
-      "reviewer": null,
-      "review_reference": null,
-      "contract": null,
-      "dependencies": [],
+      "implementation": "implemented",
+      "source_audit": "audited",
+      "independent_review": "approved",
+      "reviewer": "Independent Codex source review /root/p1_first_roster_review, native Pilot and original Core; repair components separately reviewed",
+      "review_reference": "docs/reviews/P1_FIRST_ROSTER_SOURCE_REVIEW_20261114.md#frame-janus-living-battery",
+      "contract": {
+        "trigger": "Actual original JANUS Pilot performs one source-reviewed neural-link plug into the actual bound living original Harpy Core spinal cord; one roll per real connection.",
+        "actor_type": "Original Pilot and distinct actual Core mind/controller. Universal Plug targets require their separately reviewed acquired entitlement; an account UID never proxies the Core body.",
+        "pre_roll_sources": [
+          "Exact original actor/Core ActorRefs, original physical Frame and real separate vessel endpoints",
+          "Actual admitted Core and current reviewed spinal contact/cast; actual live battery Tag IDs frozen before the roll",
+          "Original source registry approval and one committed raw2d6 receipt; no Heat expenditure for the Battery roll"
+        ],
+        "roll_kind": "2d6",
+        "allowed_modifiers": [
+          "+1 per actual battery Tag frozen before the roll",
+          "Actual separately supported shared Tag response; Mockingbird Risk is separately gated and not certified by this contract"
+        ],
+        "tier_options": {
+          "7-": [
+            "Erase one actual current battery Tag, then select exactly one of the six printed benefits"
+          ],
+          "8-10": [
+            "Select exactly two distinct printed benefits"
+          ],
+          "11+": [
+            "Select exactly four distinct printed benefits"
+          ]
+        },
+        "choice_ownership": "Original Pilot selects actual Tag erasure and printed benefits/details. Actual other mind controller authors private response; shared human control never automatically answers either fictional role.",
+        "target_policy": "Real source-bound living original Core, existing actual spinal contact and actual original controller. No self-loop, fresh invented endpoint, fake consent or copied Pilot/Frame resources.",
+        "post_roll_effects": [
+          "Chosen Heat gives1\u20134 to original caster; chosen Bond deepens the actual caster/Core relation; chosen Identities unmark at most2 actual currently marked caster slots",
+          "Harpy Cognition and Offset Emotional Load are exact additional Girl Assets linked to this source; actual unplug/ending removes only these link Assets",
+          "The question option opens an actual private two-mind channel with human-authored response; Muzzled physical speech remains separate",
+          "An actual final Tag erasure corrupts all original Frame Assets and permits real original Core takeover; original Pilot control is not falsely retained"
+        ],
+        "mandatory_followups": [
+          "Low-result real Tag erasure precedes benefits; unknown or absent Tags are never manufactured",
+          "Actual last-Tag corruption/takeover and real source-owned Void/Keep consequences must finish before source completion",
+          "Any selected private question retains actual other-controller ownership; no public/Handler disclosure or synthetic response",
+          "Actual Harpy/Girl Bond reaching Intense or strengthening while Intense owes source-proved Girl Void; the reviewed native Pilot consequence holds the original receipt through real owned work. Other resource roles require their separately supported full source."
+        ],
+        "handler_or_gm_intervention": "Foundation/Handler separately judges original unspecified Core and spinal-access facts. Actual source choices/effects/receipt survive retry and rollback. Existing delegated JANUS resource/contact/channel rulings remain explicit; no live campaign approval is implied.",
+        "test_fixture_ids": [
+          "tests/rules/test_janus_battery.py",
+          "tests/rules/test_janus_control_lifecycle.py",
+          "tests/rules/test_frame_control.py"
+        ]
+      },
+      "dependencies": [
+        "frame.janus.harpy-core"
+      ],
       "test_evidence": [
         "tests/rules/test_janus_requisitions.py",
-        "tests/rules/test_janus_core_service.py"
+        "tests/rules/test_janus_core_service.py",
+        "tests/rules/test_janus_battery.py",
+        "tests/rules/test_janus_control_lifecycle.py",
+        "tests/rules/test_frame_control.py",
+        "tests/rules/test_harpy_bond_void.py",
+        "tests/rules/test_mockingbird_janus_prelive.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -20772,14 +21178,106 @@
         "heading": "Sin of Temptation"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "An actual living Harpy/Core and a Girl undergo a recorded Bond deepening from1 to2 or capped2 to2, excluding restoration and weakening.",
+        "actor_type": "Actual Harpy/Core and actual affected Girl-rule actor, with original controller and immutable Bond-change endpoints. Native Pilot resources are implemented; Handler-Girl/clone resources remain explicit owned pending work, never a controller-sheet proxy.",
+        "pre_roll_sources": [
+          "Real original Bond Change and canonical history/event; deterministic single consequence per change and affected actor.",
+          "Existing source Play retains its receipt/action and owned decision; non-Play changes retain original required-work provenance."
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "required": [
+            "Affected original Girl selects an actual eligible uncorrupted Girl or Frame Asset and describes its Void alteration.",
+            "Actual paid Storage, Sup growth or Casualty resistance require their own genuine entitlements and original resource/source proofs.",
+            "Real full-family Void creates existing private threshold work; source completion waits for the genuine result."
+          ]
+        },
+        "choice_ownership": "Only the original affected Girl controller reads and answers the private alteration. The Harpy controller, Handler and unrelated administrator cannot substitute consent, resources or description.",
+        "target_policy": "Original genuine Harpy/Core and native Pilot within implemented resource port. Other actual Girl-rule roles keep a named durable pending resource-port boundary.",
+        "post_roll_effects": [
+          "One actual source-owned Void onset, immutable original source and once-only gain proof.",
+          "Original Asset family/identity, temporary Storage projection and actual follow-up ownership remain preserved."
+        ],
+        "mandatory_followups": [
+          "Hold original source until owned alteration and all actual threshold continuations resolve.",
+          "Unavailable rule approval rolls back the original choice without spending its receipt; retries preserve source, gain and charge.",
+          "Do not silently discard an onset or corrupt the controller's unrelated character."
+        ],
+        "handler_or_gm_intervention": "No additional dice or fabricated outcome. Unrepresentable original resource types remain explicit pending work. This audited subset is not whole-rule independent certification or live campaign approval.",
+        "test_fixture_ids": [
+          "tests/rules/test_harpy_bond_void.py"
+        ]
+      },
+      "dependencies": [
+        "harpy.harpy.sin-of-temptation-native-pilot"
+      ],
+      "test_evidence": [
+        "tests/rules/test_harpy_bond_void.py"
+      ],
+      "m2_play_id": null,
+      "module": "core"
+    },
+    {
+      "id": "harpy.harpy.sin-of-temptation-native-pilot",
+      "title": "Sin of Temptation \u2014 actual native Pilot consequence",
+      "scope": "harpy",
+      "kind": "mechanic",
+      "source": {
+        "document": "rulebook",
+        "pdf_page": 180,
+        "printed_page": 178,
+        "heading": "Sin of Temptation"
+      },
+      "required": false,
+      "implementation": "implemented",
+      "source_audit": "audited",
+      "independent_review": "approved",
+      "reviewer": "Independent Codex source review /root/p1_first_roster_review, 2026-11-14; not implementation author of engine/service provider",
+      "review_reference": "docs/reviews/P1_FIRST_ROSTER_SOURCE_REVIEW_20261114.md#sin-of-temptation-native-pilot",
+      "contract": {
+        "trigger": "An actual living Harpy/Core and a Girl undergo a recorded Bond deepening from1 to2 or capped2 to2, excluding restoration and weakening.",
+        "actor_type": "An actual original living Harpy/Core and affected kind=pilot Girl with exact character incarnation and original controller; this entry does not admit Handler-Girl, clone-AM, external Rebel or a controller proxy.",
+        "pre_roll_sources": [
+          "Real original Bond Change and canonical history/event; deterministic single consequence per change and affected actor.",
+          "Existing source Play retains its receipt/action and owned decision; non-Play changes retain original required-work provenance."
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "required": [
+            "Affected original Girl selects an actual eligible uncorrupted Girl or Frame Asset and describes its Void alteration.",
+            "Actual paid Storage, Sup growth or Casualty resistance require their own genuine entitlements and original resource/source proofs.",
+            "Real full-family Void creates existing private threshold work; source completion waits for the genuine result."
+          ]
+        },
+        "choice_ownership": "Only the original affected Girl controller reads and answers the private alteration. The Harpy controller, Handler and unrelated administrator cannot substitute consent, resources or description.",
+        "target_policy": "A genuine recorded +1 Bond Change from1\u21922 or capped2\u21922 between actual Harpy/Core and native Pilot. Hard actor-kind and immutable original onset/source matching must precede native-child fallback admission.",
+        "post_roll_effects": [
+          "One actual source-owned Void onset, immutable original source and once-only gain proof.",
+          "Original Asset family/identity, temporary Storage projection and actual follow-up ownership remain preserved."
+        ],
+        "mandatory_followups": [
+          "Hold original source until owned alteration and all actual threshold continuations resolve.",
+          "Unavailable rule approval rolls back the original choice without spending its receipt; retries preserve source, gain and charge.",
+          "Do not silently discard an onset or corrupt the controller's unrelated character.",
+          "Original source remains held until genuine native Asset/Storage/Sup/Casualty choice and any existing threshold continuation settle; those delegates retain their own reviewed rules and entitlements."
+        ],
+        "handler_or_gm_intervention": "No invented dice, physical facts, costs, consent or generic text completion. Only affected original Pilot owns the rewrite; Handler/Harpy controller cannot replace her. Required full parent remains subset and full-M3 blocked; this bounded port is not campaign/human/live acceptance.",
+        "test_fixture_ids": [
+          "tests/rules/test_harpy_bond_void.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_harpy_bond_void.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -20795,14 +21293,22 @@
         "heading": "Check Sensors"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_harpy_sensors.py::test_harpy_questions_have_no_roll_modifiers_heat_or_resource_award_and_private_honest_reply",
+        "tests/rules/test_harpy_sensors.py::test_harpy_questions_reject_heat_or_identity_commitment_before_creating_action",
+        "tests/rules/test_harpy_sensors.py::test_harpy_question_recovers_same_owned_question_after_restart_without_fake_receipt",
+        "tests/rules/test_harpy_sensors.py::test_native_question_controls_offer_no_heat_and_actual_gm_answers_privately",
+        "tests/rules/test_harpy_sensors.py::test_actual_selected_director_owns_harpy_sensor_answer_instead_of_campaign_gm",
+        "tests/rules/test_harpy_sensors.py::test_real_converted_harpy_can_ask_without_recovered_pc_or_reusing_prior_roll",
+        "tests/rules/test_harpy_sensors.py::test_original_director_human_can_finish_owned_question_after_actual_death_without_new_authority"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -20856,8 +21362,36 @@
       },
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_harpy_assault.py",
-        "tests/rules/test_engage_actual.py"
+        "tests/rules/test_engage_actual.py::test_last_actual_harpy_frame_asset_opens_real_defeat_then_escape_finishes_original_engage",
+        "tests/rules/test_engage_actual.py::test_each_printed_maneuver_uses_the_actual_asset_and_keeps_circumstances[pin]",
+        "tests/rules/test_engage_actual.py::test_each_printed_maneuver_uses_the_actual_asset_and_keeps_circumstances[advance]",
+        "tests/rules/test_engage_actual.py::test_each_printed_maneuver_uses_the_actual_asset_and_keeps_circumstances[drive_back]",
+        "tests/rules/test_engage_actual.py::test_each_printed_maneuver_uses_the_actual_asset_and_keeps_circumstances[reposition]",
+        "tests/rules/test_engage_actual.py::test_each_printed_maneuver_uses_the_actual_asset_and_keeps_circumstances[cover]",
+        "tests/rules/test_engage_actual.py::test_each_printed_maneuver_uses_the_actual_asset_and_keeps_circumstances[shatter]",
+        "tests/rules/test_engage_actual.py::test_each_printed_maneuver_uses_the_actual_asset_and_keeps_circumstances[protect]",
+        "tests/rules/test_engage_actual.py::test_each_printed_maneuver_uses_the_actual_asset_and_keeps_circumstances[lure]",
+        "tests/rules/test_engage_actual.py::test_exact_distinct_maneuvers_allow_one_real_asset_for_multiple_uses[False-low-1]",
+        "tests/rules/test_engage_actual.py::test_exact_distinct_maneuvers_allow_one_real_asset_for_multiple_uses[False-mid-2]",
+        "tests/rules/test_engage_actual.py::test_exact_distinct_maneuvers_allow_one_real_asset_for_multiple_uses[False-high-3]",
+        "tests/rules/test_engage_actual.py::test_exact_distinct_maneuvers_allow_one_real_asset_for_multiple_uses[True-low-1]",
+        "tests/rules/test_engage_actual.py::test_exact_distinct_maneuvers_allow_one_real_asset_for_multiple_uses[True-mid-2]",
+        "tests/rules/test_engage_actual.py::test_exact_distinct_maneuvers_allow_one_real_asset_for_multiple_uses[True-high-3]",
+        "tests/rules/test_engage_actual.py::test_harpy_assault_extra_is_optional_and_adds_no_second_damage_rule[low]",
+        "tests/rules/test_engage_actual.py::test_harpy_assault_extra_is_optional_and_adds_no_second_damage_rule[mid]",
+        "tests/rules/test_engage_actual.py::test_harpy_assault_extra_is_optional_and_adds_no_second_damage_rule[high]",
+        "tests/rules/test_engage_actual.py::test_pilot_engage_records_actual_maneuvers_damages_used_asset_and_releases_chat[faces0-1]",
+        "tests/rules/test_engage_actual.py::test_pilot_engage_records_actual_maneuvers_damages_used_asset_and_releases_chat[faces1-2]",
+        "tests/rules/test_engage_actual.py::test_pilot_engage_records_actual_maneuvers_damages_used_asset_and_releases_chat[faces2-3]",
+        "tests/rules/test_engage_actual.py::test_actual_harpy_extra_engage_never_damages_controllers_other_pc",
+        "tests/rules/test_engage_actual.py::test_engage_rejects_stale_target_before_roll_without_spending_or_reroll",
+        "tests/rules/test_engage_actual.py::test_pilot_last_frame_engage_requires_actual_defeat_and_escape_before_parent_releases",
+        "tests/rules/test_engage_actual.py::test_native_harpy_engage_target_and_owned_asset_controls_execute_actual_choice",
+        "tests/rules/test_harpy_assault.py::test_real_harpy_mid_assault_extra_then_actual_target_damage_once[False]",
+        "tests/rules/test_harpy_assault.py::test_real_harpy_mid_assault_extra_then_actual_target_damage_once[True]",
+        "tests/rules/test_harpy_assault.py::test_real_harpy_low_extra_keeps_primary_damage_and_actual_mandatory_handler_play",
+        "tests/rules/test_harpy_assault.py::test_real_harpy_high_extra_keeps_original_handler_selected_self_damage",
+        "tests/rules/test_harpy_assault.py::test_harpy_extra_choice_rejects_unowned_asset_and_replays_exactly_once"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -20875,7 +21409,7 @@
       },
       "required": true,
       "implementation": "subset",
-      "source_audit": "inventoried",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
@@ -20923,7 +21457,11 @@
       },
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_harpy_off_duty.py"
+        "tests/rules/test_harpy_off_duty.py::test_real_harpy_all_tiers_hide_adjust_and_repair_without_pc_resources_or_repeat_return_recovery[faces0]",
+        "tests/rules/test_harpy_off_duty.py::test_real_harpy_all_tiers_hide_adjust_and_repair_without_pc_resources_or_repeat_return_recovery[faces1]",
+        "tests/rules/test_harpy_off_duty.py::test_real_harpy_all_tiers_hide_adjust_and_repair_without_pc_resources_or_repeat_return_recovery[faces2]",
+        "tests/rules/test_harpy_off_duty.py::test_native_harpy_hide_uses_owned_identity_and_real_judge_review_with_pause_and_reproposal",
+        "tests/rules/test_harpy_off_duty.py::test_actual_original_death_closes_only_impossible_hide_without_repair_or_human_answer"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -20940,14 +21478,22 @@
         "heading": "Keep Your Head"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_harpy_actor_plays.py::test_native_harpy_keep_all_tiers_has_one_real_roll_owned_traits_and_actual_gm[faces0-positive0-negative0-]",
+        "tests/rules/test_harpy_actor_plays.py::test_native_harpy_keep_all_tiers_has_one_real_roll_owned_traits_and_actual_gm[faces1-positive1-negative1-]",
+        "tests/rules/test_harpy_actor_plays.py::test_native_harpy_keep_all_tiers_has_one_real_roll_owned_traits_and_actual_gm[faces2-positive2-negative2-PRIVATE_SELF_TAG]",
+        "tests/rules/test_harpy_actor_plays.py::test_actual_harpy_mark_spend_and_retry_never_change_its_humans_other_character",
+        "tests/rules/test_harpy_actor_plays.py::test_native_role_picker_separates_harpy_from_same_humans_pc_and_preserves_no_write_preview",
+        "tests/rules/test_harpy_actor_plays.py::test_known_harpy_roll_recovers_with_same_receipt_resources_and_prior_answers",
+        "tests/rules/test_harpy_actor_plays.py::test_harpy_safety_pause_and_actual_incapacity_block_voluntary_keep_before_rng"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

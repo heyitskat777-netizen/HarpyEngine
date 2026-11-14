@@ -4531,3 +4531,35 @@ This is a precise source-applicability recommendation, requiring printed clarity
 `handler-rescue-actual-release` (Defeat PDF29/printed27) closes the otherwise permanent protective hold left by actual Handler/agent rescue. Retain the original rolled rescue, body, vessel and custodian; complete required real medical waking/Play exchange first. Original Handler proposes witnessed current release at their actual known location, and the original rescued player confirms the exact body/source/location facts. Clear only that rescue hold; preserve actual Frame position, damage, vessel and independent locks/obligations.
 
 When Handler position is genuinely unknown, a witnessed initial-presence record is restricted to this actual rescue and valid known map location. It does not move an already placed Handler or substitute a generic custody reset. Patient confirmation is OOC source evidence, not invented in-fiction dialogue. Permanent captivity and arbitrary position reset are rejected alternatives. This is a delegated campaign interpretation requiring printed clarity review and legitimate matching approval; no charge, cure, transport or release certification is invented.
+
+## Original JANUS Core disposition after Defeat
+
+`janus-core-defeat-body-disposition` — delegated recommendation, revision1,
+**printed-rule clarity review required**. The rulebook makes the original Core
+still-attached but otherwise a normal Harpy (PDF68/p66); Harpy Defeat grants
+actual escape and capture outcomes without describing shared JANUS hardware
+(PDF182/p180).
+
+When a genuine, source-proved Defeat outcome makes the original Core escape or
+places its body into actual confirmed capture, separate that original body from
+the original Frame: `attached=false`, `linked=false`. Keep the original JANUS
+hardware at its last actually known Frame location and preserve the other Pilot's
+permanent resources. End actual Core neural-contact authority, including its
+source-linked temporary Assets. Only actual selected escaping/captured actors
+move; any printed kidnapped or consenting companion retains its own original
+physical/consent source. Do not create a second Frame, repair damage, grant Pet,
+change ownership or infer a general extraction entitlement.
+
+Actual Core death sets that Core's `alive=false` and ends its original active
+contact authority; it does not kill the controller's other character. A genuinely
+Restrained Core cannot roll mandatory Defeat: use original-owner/source-GM
+adjudication with the real semantic Tag proof, without a fabricated surgery,
+extra RNG, cost or Tag removal.
+
+The alternative of automatically taking the entire shared Frame was rejected
+because it can move the other Pilot/hardware without its real source. Requiring
+separate extraction for every granted escape would leave the normal printed
+outcome unusable. This explicit body-only interpretation has independent source
+rationale recorded in the first-roster review and applies only through genuine
+Defeat disposition code. Adjusting it requires corresponding source/physical
+proof changes and renewed verification, not merely editing the registry text.

@@ -1346,7 +1346,9 @@ class HarpyDefeatService:
                 ),
                 m3_shared=dict(registry=declared.registry),
             )
-            prohibition = next(
+            from girlframe.services.m3_adjudication import prepare_core_restriction
+
+            prohibition = prepare_core_restriction(self.game, c, state, actor) or next(
                 (x for x in body.blocked_plays if x.play in ("defeat", "harpy_defeat")), None
             )
             if prohibition:
@@ -1792,6 +1794,12 @@ class HarpyDefeatService:
 
         declared = self._declaration(c, action)
         kind = row["kind"]
+        if kind == "harpy_bond_void":
+            from girlframe.services.m3_harpy_bond_void import apply as apply_void
+
+            apply_void(self.game, c, state, action, row, answer)
+            self._finish(c, state, action)
+            return
         if kind == "tag_window":
             if answer.options == ("pass",):
                 if (
@@ -1945,6 +1953,10 @@ class HarpyDefeatService:
         return value
 
     def _finish(self, c: Connection, state: GameState, action: dict[str, Any]) -> None:
+        from girlframe.services.m3_harpy_bond_void import hold_action
+
+        if hold_action(self.game, c, state, action):
+            return
         if self.game.pending(c, action["id"]):
             return
         declared = self._declaration(c, action)
@@ -2014,6 +2026,15 @@ class HarpyDefeatService:
                 if girl not in rules.girls(state, declared.cast):
                     raise WorkflowError("Choose an actual current original Girl in this scene.")
                 effect = effect.model_copy(update={"girl": girl})
+                if choice in ("message", "plead"):
+                    from girlframe.engine.m3_janus import can_speak
+                    from girlframe.engine.m3_janus_link import has_mental_channel
+
+                    can_speak(
+                        state,
+                        declared.actor,
+                        mental_link=has_mental_channel(state, declared.actor, girl),
+                    )
                 if choice == "message":
                     _copy(state, change(state, declared.actor, girl, 1, source))
                     _copy(state, rules.escape(state, declared.actor, source))
@@ -2330,8 +2351,11 @@ class HarpyDefeatService:
                     require_current_profile=False,
                 )
                 harpy_body = rules.harpy(state, declared.actor)
+                attached_core = isinstance(harpy_body, JanusCore) and harpy_body.attached
                 if harpy_body.subsumed or (
-                    harpy_body.custody != "free" and harpy_body.custodian != captor
+                    harpy_body.custody != "free"
+                    and harpy_body.custodian != captor
+                    and not attached_core
                 ):
                     raise WorkflowError(
                         "Resolve actual extraction or the existing custodian before a new capture."
@@ -2341,10 +2365,20 @@ class HarpyDefeatService:
                     if state.world and captor.kind == "npc"
                     else None
                 )
+                captured_cell = (
+                    resolve(
+                        state,
+                        declared.actor,
+                        profiles(c, self.store.campaign_id),
+                        require_current_profile=False,
+                    ).cell
+                    if attached_core
+                    else harpy_body.cell
+                )
                 if (
                     view.cell is None
-                    or harpy_body.cell is None
-                    or view.cell != harpy_body.cell
+                    or captured_cell is None
+                    or view.cell != captured_cell
                     or not (
                         captor.kind in ("pilot", "handler")
                         or (npc and npc.employment == "foundation")
@@ -2354,6 +2388,8 @@ class HarpyDefeatService:
                         "Choose the actual present Foundation captor; no capture or location is "
                         "invented."
                     )
+                if attached_core:
+                    _copy(state, rules.separate_core(state, declared.actor, source))
                 _copy(
                     state,
                     rules.update(
@@ -2540,6 +2576,20 @@ class HarpyDefeatService:
     def decision(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
         with self.store.engine.connect() as c:
             row, action = self._owned(c, viewer, identity)
+            if row["kind"] == "harpy_bond_void":
+                from girlframe.services.m3_harpy_bond_void import HarpyBondVoidService
+
+                body = json.loads(row["body_json"])
+                return dict(
+                    id=identity,
+                    action_id=action["id"],
+                    revision=row["revision"],
+                    kind=row["kind"],
+                    state=row["state"],
+                    body=body,
+                    result=dict(tier=action["data"]["result"].get("tier")),
+                    harpy_bond_void=HarpyBondVoidService(self.game).view(viewer, body["work_id"]),
+                )
             state = load_state(c, self.store.campaign_id)
             declared = self._declaration(c, action)
             body = rules.harpy(state, declared.actor)
@@ -3293,3 +3343,29 @@ class HarpyDefeatService:
             operation,
             auto_audit=False,
         )
+
+
+def resume_void_source(
+    game: "GameService",
+    c: Connection,
+    action_id: str,
+    event: str,
+    viewer: GuildViewer | None,
+    key: str,
+) -> None:
+    """Resume the same mandatory Defeat source after its actual Girl's Void ends."""
+    service = HarpyDefeatService(game.store, game)
+    action = game.action(c, action_id)
+    if not action["data"].get("harpy_defeat"):
+        raise WorkflowError("Recover the actual original Harpy Defeat continuation")
+    declared = service._declaration(c, action)
+    row = service._row(c, declared.work)
+    if row["state"] == "resolved":
+        return
+    if action["state"] == "aborted":
+        raise WorkflowError("Recover the held original Harpy Defeat before completing Void")
+    state = load_state(c, game.store.campaign_id)
+    service._finish(c, state, action)
+    game.save_action(c, action)
+    if action["state"] == "complete":
+        service._complete_work(c, action, event, viewer, key)

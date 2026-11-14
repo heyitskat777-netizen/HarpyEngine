@@ -104,6 +104,7 @@ def open_case(
         "red_queen",
         "trainee",
         "succubus_npc_disobey",
+        "harpy_beneath",
     ],
     action: str | None,
     source_event: str,
@@ -375,6 +376,10 @@ def case_proof(c: Connection, game: GameService, identity: str) -> RolePunishmen
             raise WorkflowError(
                 "SOURCE_CONSULTATION_MISSING: recover the exact Handler instruction/approval."
             )
+    if case.source_kind == "harpy_beneath":
+        from girlframe.services.m3_harpy_beneath import prove_punishment
+
+        prove_punishment(game, c, state, case)
     if case.source_kind == "succubus_npc_disobey":
         from girlframe.services.m3_succubus import validate_role_case
 
@@ -463,6 +468,11 @@ def current(c: Connection, game: GameService, state: GameState, case: RolePunish
         or target.controller != case.subject_controller
     ):
         raise WorkflowError("Recover the actual original executor, Frame and affected person.")
+    if case.source_kind == "harpy_beneath":
+        from girlframe.services.m3_harpy_beneath import prove_punishment
+
+        prove_punishment(game, c, state, case)
+        return
     if case.source_kind == "succubus_npc_disobey":
         from girlframe.services.m3_succubus import validate_role_case
 
@@ -768,7 +778,11 @@ def synchronize(
         )
         for identity in completed_cases:
             completed = next(x for x in state.role_punishments if x.id == identity)
-            if completed.source_kind == "handler_play":
+            if completed.source_kind == "harpy_beneath":
+                from girlframe.services.m3_harpy_beneath import complete_punishment
+
+                complete_punishment(game, c, completed, completion_id)
+            elif completed.source_kind == "handler_play":
                 from girlframe.services.m3_handler_plays import complete_role_case
 
                 complete_role_case(c, game, completed, completion_id)

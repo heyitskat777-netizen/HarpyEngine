@@ -72,7 +72,7 @@ REGISTRY: dict[str, Any] = {
             "actor": "pilot",
             "tiers": {
                 "low": "weaken Bond; target answer, optional unmark/question",
-                "mid": "question and two-party unmark; conditional follow-through",
+                "mid": "each may ask one question and unmark two; each may follow through for Bond",
                 "high": "mid plus one of all three printed extra branches",
             },
         },

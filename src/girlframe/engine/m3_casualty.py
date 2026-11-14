@@ -124,7 +124,14 @@ class Resistance(Model):
     choice: str | None = None
     work: str | None = None
     step: int
-    source_kind: Literal["dive_deep", "risk_factor", "mockingbird_sex", "dormant", "budget_cleanup"]
+    source_kind: Literal[
+        "dive_deep",
+        "risk_factor",
+        "mockingbird_sex",
+        "dormant",
+        "budget_cleanup",
+        "harpy_bond_void",
+    ]
     part: str
     account: str
     change: str
@@ -138,7 +145,7 @@ class Resistance(Model):
                 not self.work
                 or self.action is not None
                 or self.choice is not None
-                or self.source_kind not in ("dormant", "budget_cleanup")
+                or self.source_kind not in ("dormant", "budget_cleanup", "harpy_bond_void")
             ):
                 raise ValueError("Use the actual original required-work resistance context")
         elif not self.action or not self.choice:

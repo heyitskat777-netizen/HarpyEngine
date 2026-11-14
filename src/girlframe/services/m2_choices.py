@@ -57,6 +57,24 @@ class ChoiceEngine:
     def __init__(self, game: "GameService"):
         self.game = game
 
+    def flirt_intense(self, c: Connection, state: GameState, desiring: int, other: int) -> bool:
+        """Use the actual respondent's relationship, including its own one-sided benefit."""
+        if state.bonds.get(pair_key(desiring, other), 0) == 2:
+            return True
+        first, second = state.sheets[str(desiring)], state.sheets[str(other)]
+        if not first.character_id or not second.character_id:
+            return False
+        from girlframe.engine.m3_actor_state import ActorRef
+        from girlframe.services.m3_ankou_bonds import intense_benefit
+
+        return intense_benefit(
+            self.game,
+            c,
+            state,
+            ActorRef(kind="pilot", entity=str(desiring), incarnation=first.character_id),
+            ActorRef(kind="pilot", entity=str(other), incarnation=second.character_id),
+        )
+
     def duplicate_labels(self) -> bool:
         policy = self.game.store.policy
         return bool(
@@ -108,6 +126,9 @@ class ChoiceEngine:
         from girlframe.services.m3_npc_flirt import tag_resolved as npc_flirt_tag_resolved
 
         npc_flirt_tag_resolved(state, current_ref(state, owner), tag)
+        from girlframe.engine.m3_harpy_flirt import clear_tag_debt
+
+        clear_tag_debt(state, current_ref(state, owner), tag)
         for item in state.obligations:
             if (
                 item.owner == owner
@@ -291,6 +312,23 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         sheet = state.sheets.get(str(owner))
         body = json.loads(request["body_json"])
+        if kind.startswith("harpy_beneath_") and action["data"].get("harpy_beneath"):
+            from girlframe.services.m3_harpy_beneath import apply as apply_harpy_beneath
+
+            apply_harpy_beneath(self.game, c, state, action, request, answer)
+            return
+        if kind.startswith("harpy_flirt_") and (
+            action["data"].get("harpy_flirt") or action["data"].get("harpy_followthrough")
+        ):
+            from girlframe.services.m3_harpy_flirt import respond
+
+            respond(self.game, c, state, action, request, answer)
+            return
+        if action["data"].get("harpy_flirt") and kind.startswith("battle_"):
+            from girlframe.services.m3_battle import apply_damage_response
+
+            apply_damage_response(self.game, c, state, action, request, answer)
+            return
         if kind.startswith("npc_flirt_") and action["data"].get("npc_flirt"):
             from girlframe.services.m3_npc_flirt import apply_choice as apply_npc_flirt
 
@@ -993,31 +1031,15 @@ class ChoiceEngine:
             self.unmark(c, state, sheet, answer.denied, 1 if level == "low" else 2)
             sheet.revision += 1
             result["target_answer"] = answer.text
+            picks(answer.options, set(FLIRT_QUESTIONS), 0, 1)
+            if answer.options:
+                result["return_question"] = answer.options[0]
+                self.game.request(c, action, actor, "actor_flirt_answer")
             if level == "low":
-                picks(answer.options, set(FLIRT_QUESTIONS), 0, 1)
-                if answer.options:
-                    result["return_question"] = answer.options[0]
-                    self.game.request(c, action, actor, "actor_flirt_answer")
-                else:
+                if not answer.options:
                     self.finish(c, state, action)
             else:
-                intense_desire = state.bonds.get(pair_key(actor, owner), 0) == 2
-                if not intense_desire and acting.character_id and sheet.character_id:
-                    from girlframe.engine.m3_actor_state import ActorRef as IntimacyActor
-                    from girlframe.services.m3_ankou_bonds import intense_benefit
-
-                    # The responder's one-sided benefit never assigns desire to the other side.
-                    intense_desire = intense_benefit(
-                        self.game,
-                        c,
-                        state,
-                        IntimacyActor(
-                            kind="pilot", entity=str(owner), incarnation=sheet.character_id
-                        ),
-                        IntimacyActor(
-                            kind="pilot", entity=str(actor), incarnation=acting.character_id
-                        ),
-                    )
+                intense_desire = self.flirt_intense(c, state, owner, actor)
                 if result["question"] == "intimacy" and intense_desire:
                     require(
                         answer.flag is True,
@@ -1063,7 +1085,19 @@ class ChoiceEngine:
             return
         if kind == "actor_flirt_answer":
             require(bool(answer.text.strip()), "The actor must answer the other player's question.")
+            target = int(action["data"]["prepared"]["target"])
+            if result.get("return_question") == "intimacy" and self.flirt_intense(
+                c, state, actor, target
+            ):
+                require(
+                    answer.flag is True,
+                    "Consent is not inferred. Use safety pause for an unwanted interaction.",
+                )
             result["actor_answer"] = answer.text
+            if level != "low":
+                self.game.obligation(
+                    state, action, "flirt_followthrough", target, actor, wanted=answer.text
+                )
             self.finish(c, state, action)
             return
         if kind == "flirt_escape":
@@ -1578,6 +1612,24 @@ class ChoiceEngine:
 
             finish_beautiful_flirt(self.game, c, state, action, action["data"]["response_event"])
         self.set_total(action)
+        if action["data"].get("harpy_beneath"):
+            from girlframe.services.m3_harpy_beneath import results as harpy_beneath_results
+            from girlframe.services.m3_mockingbird import intercept_results as beneath_risk
+
+            if beneath_risk(self.game, c, state, action):
+                return
+            action["state"] = "awaiting_choices"
+            harpy_beneath_results(self.game, c, state, action)
+            return
+        if action["data"].get("harpy_flirt"):
+            from girlframe.services.m3_harpy_flirt import results
+            from girlframe.services.m3_mockingbird import intercept_results
+
+            if intercept_results(self.game, c, state, action):
+                return
+            action["state"] = "awaiting_choices"
+            results(self.game, c, state, action)
+            return
         if action["data"].get("npc_flirt"):
             from girlframe.services.m3_npc_flirt import results as npc_flirt_results
 
@@ -1795,6 +1847,10 @@ class ChoiceEngine:
         self.game.request(c, action, actor, kind)
 
     def finish(self, c: Connection, state: GameState, action: dict[str, Any]) -> None:
+        from girlframe.services.m3_harpy_bond_void import hold_action
+
+        if hold_action(self.game, c, state, action):
+            return
         if action["data"].get("virus_order"):
             from girlframe.services.m3_virus_orders import finish_order
 
@@ -1808,7 +1864,16 @@ class ChoiceEngine:
             offer_ritual(self.game, c, state, action)
         if any(x["kind"] == "control_ritual_create" for x in self.game.pending(c, action["id"])):
             return
-        require(not self.game.pending(c, action["id"]), "Mandatory decisions remain pending.")
+        pending = self.game.pending(c, action["id"])
+        if (
+            pending
+            and action["data"]["play"] == "flirt"
+            and action["data"]["result"].get("return_question")
+        ):
+            # Either participant can finish its own answer/complication first.
+            # The original source remains held until all mandatory decisions end.
+            return
+        require(not pending, "Mandatory decisions remain pending.")
         if action["data"].get("void_keep"):
             from girlframe.services.m3_void_keep import finish_keep
 
@@ -1962,6 +2027,9 @@ class ChoiceEngine:
             )
         ):
             # Settle this exact counter only after its real saved completion event.
+            return
+        if action["data"].get("harpy_beneath_response_source"):
+            # Complete the original typed parent's choice after this child audit.
             return
         if (
             action["parent_id"]

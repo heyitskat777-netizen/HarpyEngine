@@ -173,8 +173,32 @@ def test_real_harpy_roll_uses_one_pair_plus_actual_scene_bond_not_heat_or_human_
     assert game.dice.calls == 1
 
 
-def test_mid_message_deepens_actual_original_bond_and_finishes_real_damage_source(ledger):
-    service, game, worker, gateway, ref, work, grant, action = rolled(ledger)
+def test_mid_message_deepens_actual_original_bond_and_finishes_real_damage_source(
+    ledger, tmp_path, monkeypatch
+):
+    from test_enforcer_requisitions import approved
+    from test_physical_operations import place
+
+    from girlframe.engine import m3_harpy_bond_void as sin
+    from girlframe.services.m3_harpy_bond_void import HarpyBondVoidService
+
+    service, game, worker, gateway, ref, work, grant = ready(ledger)
+    approved(ledger, game, tmp_path, monkeypatch, extra=(sin.RULE,))
+    with ledger.transaction() as c:
+        prior = place(state(game), 3, mode="outside_frame")
+        event = str(uuid4())
+        prior = set_depth(prior, ref, current_ref(prior, 3), 1, event)
+        game.event(
+            c, 1, str(uuid4()), "synthetic.prior_personal_harpy_message_bond", prior, event_id=event
+        )
+    action = service.begin(PLAYER, "actual-defeat-confirm", work, channel=900)["action_id"]
+    tick(worker, gateway, 1)
+    with ledger.engine.connect() as c:
+        if game.action(c, action)["data"].get("receipt") is None:
+            service.roll(PLAYER, "actual-harpy-roll", action)
+    for viewer in (PLAYER, OTHER, ADMIN):
+        choose(service, game, viewer, "tag_window", options=("pass",))
+    receipt = service.inspect(PLAYER, action)["receipt"]
     original = current_ref(state(game), 3)
     original_body = harpy(state(game), ref)
     original_assets = next(x for x in state(game).world.pilots if x.id == ref.entity).assets
@@ -188,7 +212,7 @@ def test_mid_message_deepens_actual_original_bond_and_finishes_real_damage_sourc
         text="My actual final comms message to you",
     )
     canon = state(game)
-    assert depth(canon, ref, original) == 1
+    assert depth(canon, ref, original) == 2
     assert canon.harpy_defeats[-1].account == "My actual final comms message to you"
     escaped = harpy(canon, ref)
     assert escaped.cell is None and escaped.frame_cell is None
@@ -199,6 +223,32 @@ def test_mid_message_deepens_actual_original_bond_and_finishes_real_damage_sourc
     assert canon.harpy_defeats[-1].escaped
     assert canon.harpy_defeats[-1].departed == (ref,)
     assert not any(x.actor == ref for x in canon.scene_casts[0].roles)
+    effect = next(x for x in sin.cases(canon) if x.source_action == action)
+    assert effect.actor == original and effect.harpy == ref and effect.controller == OTHER.user_id
+    assert service.inspect(PLAYER, action)["state"] != "complete"
+    assert next(x for x in canon.handler_plays if x.id == grant).state != "complete"
+    with ledger.engine.connect() as c:
+        assert service._row(c, work)["state"] == "pending"
+    row = next(x for x in game.choices(OTHER) if x["kind"] == "harpy_bond_void")
+    decision = game.decision(OTHER, row["id"])
+    view = HarpyBondVoidService(game).view(OTHER, effect.id)
+    assert decision["harpy_bond_void"]["actor"] == original.model_dump(mode="json")
+    asset = view["assets"][0]["id"]
+    owned = ChoiceAnswer(
+        options=(asset,), text="Actual Girl chooses the real Void from the final message"
+    )
+    with pytest.raises(WorkflowError):
+        game.respond(
+            PLAYER, "cannot-answer-other-girls-message-void", row["id"], row["revision"], owned
+        )
+    result = game.respond(OTHER, "actual-owned-message-void", row["id"], row["revision"], owned)
+    assert (
+        game.respond(OTHER, "actual-owned-message-void", row["id"], row["revision"], owned)
+        == result
+    )
+    canon = state(game)
+    assert sin.get(canon, effect.id).phase == "complete"
+    assert game.dice.calls == 1 and service.inspect(PLAYER, action)["receipt"] == receipt
     assert service.inspect(PLAYER, action)["state"] == "complete"
     assert next(x for x in canon.handler_plays if x.id == grant).state == "complete"
     with ledger.engine.connect() as c:
@@ -209,8 +259,8 @@ def test_mid_message_deepens_actual_original_bond_and_finishes_real_damage_sourc
                 .select_from(t.m2["m2_responses"])
                 .where(t.m2["m2_responses"].c.actor_id == "3")
             )
-            == 1
-        )  # Actual Tag pass, no fabricated Girl reply.
+            == 2
+        )  # Actual Tag pass and the actual Girl-owned Void choice; no fabricated reply.
     tick(worker, gateway, 5)
     with ledger.engine.connect() as c:
         assert game.lock(c, 900)["state"] == "released"

@@ -11,6 +11,24 @@ from girlframe.engine.m3_lobotomy_state import BlockedPlay
 MandatoryPlay = Literal["defeat", "go_off_duty", "void_observation", "harpy_defeat", "dive_deep"]
 
 
+class CoreRestriction(Model):
+    """Printed live Core Tag, not a fictitious inherited surgery prohibition."""
+
+    kind: Literal["core_restriction"] = "core_restriction"
+    play: Literal["harpy_defeat"] = "harpy_defeat"
+    core: ActorRef
+    semantic: Literal["restrained"] = "restrained"
+    tag: str = Field(min_length=1)
+    source_event: str = Field(min_length=1)
+    source_rule: Literal["frame.janus.harpy-core"] = "frame.janus.harpy-core"
+
+    @model_validator(mode="after")
+    def actual_core(self) -> "CoreRestriction":
+        if self.core.kind != "external_pilot":
+            raise ValueError("Use the actual original Core, never its controller's Pilot")
+        return self
+
+
 class Required(Model):
     play: MandatoryPlay
     actor: ActorRef
@@ -19,7 +37,7 @@ class Required(Model):
     handler: ActorRef | None = None
     gm_controller: Snowflake | None = None
     appointment: str | None = None
-    prohibition: BlockedPlay
+    prohibition: BlockedPlay | CoreRestriction
     source_kind: Literal[
         "defeat_work", "defeat_response", "off_duty", "harpy_defeat_work", "dormant_dive_work"
     ]
@@ -59,6 +77,12 @@ class Required(Model):
             raise ValueError("The historical Handler body cannot impersonate a different human GM")
         if self.play == "dive_deep" and self.channel is None:
             raise ValueError("Keep the actual mandatory Dive scene source")
+        if isinstance(self.prohibition, CoreRestriction) and (
+            self.play != "harpy_defeat"
+            or self.actor != self.prohibition.core
+            or self.source_kind != "harpy_defeat_work"
+        ):
+            raise ValueError("The actual restrained Core's mandatory Defeat owns this restriction")
         actual_play = self.prohibition.play
         if (
             actual_play != self.play

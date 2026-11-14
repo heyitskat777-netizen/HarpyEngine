@@ -1,6 +1,12 @@
-# P1 player testing — candidate review handoff
+# P1 player testing — scoped pre-live review handoff
 
-Offline candidate `a36acabd8a4f9abd21b78f054c7f368ab45cef35` passes its complete
+The current native repair packet has genuine component reviews and focused
+checks; its new exact final regression is pending. The first proposed live scope
+is original native Pilot/Core gameplay with explicitly reviewed sources. Broader
+all-type acceptance remains pending and is not inferred from this first session.
+No live policy is installed and the bot remains OFF.
+
+Previously verified offline candidate `a36acabd8a4f9abd21b78f054c7f368ab45cef35` passes its complete
 3,300-test CI run, global checks and actual synthetic restore/reopen gate.
 See [the evidence and review limits](../reports/P1_FINAL_CANDIDATE_20261114.md).
 **Live-session activation remains pending. Bot OFF.** Independent rules/clarity
@@ -58,3 +64,30 @@ untested type/branch is not accepted by implication. Fix demonstrated blockers a
 repeat the failed scenario plus directly affected behavior; avoid speculative test
 matrices. Player feedback, owner acceptance, final rules certification and live
 release approval remain separate outcomes.
+
+## Additional pre-live review scenarios
+
+The separate November14 source review found ordinary Flirt and Harpy/Core
+inheritance gaps after the green baseline. See
+[the active repair/review packet](reviews/P1_PRELIVE_SOURCE_REVIEW_20261114.md).
+These scenarios become live-test candidates only after that exact integration
+passes its new regression and matching scope approval. They have not been run by
+players.
+
+Use the saved SORROW Mockingbird/JANUS-B character only after its own actual review
+and activation. A Core has its own fictional identity and consenting human
+controller; that controller's separate Pilot supplies neither the Core's resources
+nor its Bond endpoint. JANUS-B continues to use official JANUS rules.
+
+| Scenario | Owned actions and acceptance |
+|---|---|
+| Reciprocal ordinary Flirt | Original actor asks a question; actual target privately answers and optionally asks its own return question. Reopen the original actor's form and verify the saved question. Each owns its reply/unmarks and later recipient-confirmed followthrough. High-tier work stays pending independently. |
+| Actual Harpy/Core Flirt | Make the ordinary interaction in both supported directions. Verify actual Core Heat/Identities/Tags, the original Girl's resources and private questions. A required real escape/Handler/owed-Tag consequence must retain the original source and scene pause. Resolving the owed Tag clears only its genuine refusal restriction. |
+| Living Battery and Sin of Temptation | Establish the actual reviewed spinal contact, resolve the Battery roll and choose Bond when it genuinely becomes Intense. The affected Girl alone receives the owned Void choice. Choose an actual eligible Asset; preserve its identity/family, original roll and costs. A capped2→2 change from a genuinely fresh contact produces one new onset; replay of the old response does not. Actual full-family Void keeps its threshold pending. |
+| Harpy/Core Beneath | Use the actual Harpy/Girl endpoints, choose the printed tier result and resolve the actual recipient's response. Harpies remain outside the ordinary Status system. Any Punishment, damage or required response must use the original actor/source and finish before the held scene releases. |
+
+For each test, an unrelated member should be unable to open private replies or
+submit another participant's form. Test ordinary saved-progress reopening; actual
+Discord rendering, permissions and player understanding remain human observations.
+Do not use automated user accounts to invoke slash commands. Synthetic adapter
+checks use simulated transport and do not establish live-server acceptance.

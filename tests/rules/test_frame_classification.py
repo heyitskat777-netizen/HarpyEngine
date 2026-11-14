@@ -107,7 +107,12 @@ def test_complete_frame_classification_is_not_runtime_implementation_or_certific
         "class_requisition": 13,
     }
     assert len({x for entry in frame_entries for x in entry.aliases}) == 13
-    assert rules.coverage == "RULES_SUBSET" and rules.summary()["verified"] == 0
+    assert rules.coverage == "RULES_SUBSET"
+    assert {x.id for x in rules.entries if x.scope == "frame" and x.verified} == {
+        "frame.janus.harpy-core",
+        "frame.janus.living-battery",
+        "frame.janus.permission-trigger",
+    }
 
 
 @pytest.mark.parametrize(

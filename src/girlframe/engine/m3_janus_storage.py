@@ -44,6 +44,7 @@ class GainSource(Model):
         "dormant_void",
         "call_guest",
         "budget_cleanup",
+        "harpy_bond_void",
     ]
     action: str | None = None
 

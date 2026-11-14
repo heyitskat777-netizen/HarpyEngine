@@ -281,8 +281,8 @@ def request_from_play(
                 "The required Handler Play must affect the actual original All-Out actor."
             )
     if source_play == "flirt":
-        if action["data"].get("clone_flirt"):
-            meta = action["data"]["clone_flirt"]
+        if action["data"].get("clone_flirt") or action["data"].get("harpy_flirt"):
+            meta = action["data"].get("clone_flirt") or action["data"]["harpy_flirt"]
             expected = {
                 ActorRef.model_validate(meta["actor"]),
                 ActorRef.model_validate(meta["target"]),
@@ -997,7 +997,7 @@ def finish_callback(
                 from girlframe.services.m3_npc_flirt import complete_external
 
                 complete_external(game, c, action, event)
-            elif action["data"].get("clone_flirt"):
+            elif action["data"].get("actor_basic"):
                 from girlframe.services.m3_actor_plays import ActorPlayService
 
                 ActorPlayService(game).finish(c, load_state(c, game.store.campaign_id), action)
