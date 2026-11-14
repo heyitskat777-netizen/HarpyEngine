@@ -1,9 +1,9 @@
 {
-  "status": "ORDINARY_PACKET_FROZEN_FOR_FINAL_REGRESSION",
+  "status": "AUTOMATED_CANDIDATE_PASSED_REVIEW_PENDING",
   "baseline": "b265003783c0870c6b8fd855a836010380d11b89",
   "input_archive_sha256": "e73c7ec7145f6bac848e49188078b187c148ab2f0d6a8649fa82ff85a4f46076",
   "scope": "10Girl labels +10Frame labels /9official Frame rulesets. JANUS-B is alias. Rows are unequal source groups, not percentages.",
-  "evidence_limits": "Retained focused evidence is historical/package evidence; no whole-type or independent/human acceptance. Current exact integrated smoke is reported separately.",
+  "evidence_limits": "Complete authored suite passes on exact a36acab; rows retain historical source-specific evidence/limits. No whole-type certification, independent rules approval or human acceptance.",
   "rows": [
     {
       "category": "Girl",
@@ -189,5 +189,24 @@
   "integration_evidence": "reports/R285_INTEGRATION.md:19 Check Sensors +10 integrated workflows +2 affected AM consumers +1 failed-only migration retry; not full regression.",
   "shared_ordinary_closures": [
     "Source-bound Handler rescue discharge: two genuine positive AM consumer chains and one distinct high-rescue native episode pass; actual source/body/medical/placement/owner proof, no raw custody reset."
-  ]
+  ],
+  "automated_candidate": {
+    "commit": "a36acabd8a4f9abd21b78f054c7f368ab45cef35",
+    "ci_run": 43620925690,
+    "ci_url": "https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43620925690",
+    "tests": 3300,
+    "passed": 3300,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 4512.93,
+    "pagination_tests": 4,
+    "existing_session_mix_tests": 5,
+    "runtime_tree": "d5d487bf5d9cd1c6a5ee5fa28246d5ef693d4b5f",
+    "rules_status": "RULES_SUBSET",
+    "independently_verified_registry_entries": 0,
+    "live_policy_changed": false,
+    "bot": "off",
+    "review_report": "reports/P1_FINAL_CANDIDATE_20261114.md"
+  }
 }

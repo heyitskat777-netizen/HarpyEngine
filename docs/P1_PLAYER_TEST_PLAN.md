@@ -1,15 +1,19 @@
-# P1 player testing — preparation draft
+# P1 player testing — candidate review handoff
 
-**Not yet a test-ready candidate.** Bot OFF. Candidate commit and release approval
-are unset. The active queue and all-type matrix remain authoritative; this plan
-does not close an ordinary implementation gap or authorize deployment.
+Offline candidate `a36acabd8a4f9abd21b78f054c7f368ab45cef35` passes its complete
+3,300-test CI run, global checks and actual synthetic restore/reopen gate.
+See [the evidence and review limits](../reports/P1_FINAL_CANDIDATE_20261114.md).
+**Live-session activation remains pending. Bot OFF.** Independent rules/clarity
+review, matching real scoped campaign policy and an authorized restart are still
+required; no test approval has been installed into a live campaign.
 
 ## Before scheduling the session
 
 - Close each ordinary Girl/Frame source checklist and review every declared boundary.
-- Freeze an exact integrated source commit. Run its full regression, including
-  Deep-Brain-Spikes pagination, global static and relevant migration/privacy/
-  backup-restore checks. Preserve CI artifacts and disclose any gaps.
+- Use the exact verified candidate and retained full CI artifacts. Its pagination,
+  global static, migrations/privacy and actual restore/reopen checks pass. New
+  runtime changes require relevant verification and a new exact candidate; do not
+  infer acceptance of a different source revision.
 - Obtain independent source/clarity review. Keep RULES_SUBSET and original full-M3
   backlog intact; do not infer rules certification from passing tests.
 - Prepare a private test database and restorable backup. Approve the exact test

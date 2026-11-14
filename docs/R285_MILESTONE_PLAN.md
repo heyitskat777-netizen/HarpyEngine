@@ -13,6 +13,17 @@ focused examples, implementation-unverified branches, real support guards and
 independent/human gates remain separate. Entry/test counts are not completion
 percentages or equal-sized tasks.
 
+## Current handoff — automated P1 candidate verified
+
+Exact a36acabd8a4f9abd21b78f054c7f368ab45cef35 passes complete CI43620925690:
+3,300 tests, zero failures/errors/skips, global static and required operational
+checks. The ordinary implementation/failure-repair queue is closed for this
+candidate. See the current queue and final candidate report for exact evidence.
+Independent rules/clarity review, real scoped campaign policy, authorized restart
+and human acceptance remain pending; bot OFF, RULES_SUBSET,0 independently verified.
+The implementation packages below are retained historical scope, not instructions
+to restart completed work. P2/P3 remain separately authorized later milestones.
+
 ## P1 — finish the human-operated campaign
 
 | Bounded deliverable | Concrete completion evidence | Dependency / limits |
@@ -56,7 +67,7 @@ core certification at a genuine full-core candidate. Ancillary is a separately
 enabled module and stays OFF by default. Ordinary body/identity/Frame/court/Pair
 mechanics cannot move here merely because implementation is difficult.
 
-## First work package after this integration
+## Historical first work package after this integration
 
 Freeze the intended P1 ordinary session/target list against the merged source and
 finish the Doctor NPC/ordinary Wings dependency group first. Its acceptance is

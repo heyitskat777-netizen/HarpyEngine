@@ -1919,3 +1919,27 @@ replacement/hardware return and high AM learning acquisition have current
 focused evidence. Casualty NPC high, actual Handler-rescue discharge and positive
 AM use remain active. Final regression/global static/migration/privacy/restore,
 independent rules/scoped release and human acceptance remain pending. Bot OFF.
+
+
+## Final automated P1 candidate — a36acab
+
+Exact `a36acabd8a4f9abd21b78f054c7f368ab45cef35` passes complete [CI43620925690](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43620925690):
+**3,300 passed,0 failed,0 errors,0 skipped in4,512.93s**. Artifact scope is full;
+all four memory-pagination tests and all five authorized existing session-mix tests
+pass. Global Ruff/format1,897 files, mypy903 source files, CLI, registry, planning
+and repository checks pass;1,996 publishable files/40 manifest entries/0 findings.
+The new neural endpoint guard is included. No focused result substitutes for this
+full run. Earlier red runs and failed-node retries above remain historical evidence.
+
+Actual current-source synthetic backup→0600 isolated restore→fresh-process reopen
+preserves45 tables and canonical state, with source DB/WAL bytes unchanged;
+restored migration/schema checks pass. Its runtime source tree is identical to
+a36acab (the follow-up only changed a test and documentation). Private detailed
+artifacts stay under ignored var/. No test-speed improvement is inferred from
+run durations on different machines.
+
+The candidate is ready for owner/rules review; live activation, genuine scoped
+policy approval and human testing remain pending. RULES_SUBSET and477 entries/
+0 independently verified remain. Bot OFF; main unchanged; no deployment,
+environment publication, model call or live migration. See
+[the concise handoff](P1_FINAL_CANDIDATE_20261114.md).
