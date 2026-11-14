@@ -98,9 +98,8 @@ def test_real_npc_nanobot_relief_preserves_stim_drug_other_effect_and_expiry(
     game.dice.faces = (4, 4)
     # Zero spent Heat isolates the supported removal/expiry path. Positive
     # mandatory awards remain pending (test_doctor_npc_nanobot).
-    treatment = roll_nanobot(game, patient, 0)
-    tick(worker, gateway, 3)
-    pass_tags(game)
+    treatment = roll_nanobot(game, patient, 0, worker=worker, gateway=gateway)
+    tick(worker, gateway, 3)  # The legacy helper already passed the original Tag window.
     choice = next(x for x in game.choices(PLAYER) if x["kind"] == "doctor_nanobot_benefits")
     effect_id = "stim_helpless:" + effect.id
     detail = game.decision(PLAYER, choice["id"])["doctor"]
@@ -112,8 +111,9 @@ def test_real_npc_nanobot_relief_preserves_stim_drug_other_effect_and_expiry(
         await open_choice(own, DoctorService(game), choice["id"])
         form = own.edit_original_response.call_args.kwargs["view"]
         form.values.update(choices=("remove",), effect=(effect_id,))
-        await form.confirm.callback(current(2, 997502))
-        assert form.completed
+        submitted = current(2, 997502)
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
         assert is_helpless(state(game), patient)
         response = next(x for x in game.choices(ADMIN) if x["kind"] == "doctor_patient")
         with pytest.raises(WorkflowError):
@@ -132,7 +132,7 @@ def test_real_npc_nanobot_relief_preserves_stim_drug_other_effect_and_expiry(
         form.values.update(confirm=("confirm",))
         submitted = current(1, 997504)
         await form.confirm.callback(submitted)
-        assert form.completed
+        assert form.completed, submitted.edit_original_response.call_args_list
         await form.confirm.callback(submitted)
 
     asyncio.run(care())

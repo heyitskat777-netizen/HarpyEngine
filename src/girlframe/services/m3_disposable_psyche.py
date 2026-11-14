@@ -108,7 +108,23 @@ def record_disposal(
         disposable_heat=prepared.disposable_heat,
         learned_psyche=permit,
     )
-    spend_heat(sheet, prepared.heat)
+    if prepared.kicked_puppy_basis or action["data"].get("nightmare_core"):
+        # These source-proved rolls use actual Assets instead of Heat. Match the
+        # original roll path when replaying the removal; retained Heat is not a
+        # second Heat-spending Play and may legitimately remain above four.
+        source = action["data"].get(
+            "kicked_puppy" if prepared.kicked_puppy_basis else "nightmare_core"
+        )
+        if (
+            prepared.heat != 0
+            or not source
+            or source.get("actor") != actor.model_dump(mode="json")
+            or prepared.kicked_puppy_basis
+            and not source.get("use_basis")
+        ):
+            raise WorkflowError("Retain the actual original non-Heat modifier source")
+    else:
+        spend_heat(sheet, prepared.heat)
     actual = state.sheets[actor.entity]
     if actual.identities != sheet.identities or actual.heat != sheet.heat:
         raise WorkflowError("Retain the original actual Identity removal and complete Heat debit")

@@ -206,15 +206,24 @@ def high(store, tmp_path, monkeypatch, *, marked=False, shield=False, body=False
         game.respond(
             PLAYER, str(uuid4()), row["id"], row["revision"], ChoiceAnswer(options=("backup",))
         )
-    for unsupported in ("branch", "records"):
-        with pytest.raises(WorkflowError):
-            game.respond(
-                OTHER,
-                str(uuid4()),
-                row["id"],
-                row["revision"],
-                ChoiceAnswer(options=(unsupported,)),
-            )
+    # Branch is a legal printed choice. It still needs the real vessel child;
+    # offering it creates no branch. This source has no pre-RNG records dossier.
+    unchanged = state(game)
+    unchanged_calls = game.dice.calls
+    unchanged_receipt = copy.deepcopy(game.inspect(PLAYER, action)["receipt"])
+    assert code.session(unchanged, identity).branch is None
+    assert code.session(unchanged, identity).records_access is None
+    with pytest.raises(WorkflowError):
+        game.respond(
+            OTHER,
+            str(uuid4()),
+            row["id"],
+            row["revision"],
+            ChoiceAnswer(options=("records",)),
+        )
+    assert state(game) == unchanged and game.dice.calls == unchanged_calls
+    assert game.inspect(PLAYER, action)["receipt"] == unchanged_receipt
+    assert code.session(state(game), identity).branch is None
 
     async def backup():
         owner = current(3, 975007)
@@ -225,6 +234,7 @@ def high(store, tmp_path, monkeypatch, *, marked=False, shield=False, body=False
             "identities",
             "backup",
             "body",
+            "branch",
         }
         form.values.update(options=("body", "backup") if body else ("backup",))
         result = current(3, 975008)

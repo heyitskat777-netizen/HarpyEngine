@@ -86,12 +86,33 @@ def test_truthy_or_replaced_ooc_provenance_cannot_authorize_a_setter(ledger, cha
 
 
 def test_ooc_human_matching_mentor_uid_does_not_gain_mentor_tag_exception(ledger):
-    _, game, _ = created(ledger)
-    girl = state(game).sheets["2"].model_copy(update={"girl": "NEWGIRL", "mentor": 3})
-    ordinary = TagState(id="actual-mentor-tag", label="Actual mentor Tag", giver=3)
-    assert mentor_tag(girl, ordinary, state(game))
+    from test_mission_service import service
+
+    from girlframe.services.m3_mentorship import original_mentor
+
+    # Genuine creation/review/activation supplies the original accepted Mentor
+    # relationship; changing a detached sheet label never establishes that source.
+    _, game = service(ledger, girl="NEWGIRL")
+    actual = state(game)
+    girl = actual.sheets["2"]
+    learner = current_ref(actual, 2)
+    with ledger.engine.connect() as c:
+        mentor, source_event = original_mentor(game, c, actual, learner)
+    assert mentor == current_ref(actual, 3) and source_event
+    ordinary = TagState(
+        id="actual-mentor-tag",
+        label="Actual mentor Tag",
+        giver=3,
+        giver_actor=mentor,
+        giver_character=mentor.incarnation,
+        observers=(2, 3),
+    )
+    before = actual.model_dump_json()
+    assert mentor_tag(girl, ordinary, actual)
+    # The same human's OOC authorship is not this original Mentor's in-fiction gift.
     ooc = ordinary.model_copy(update={"gm_setter_appointment": "actual-other-gm-appointment"})
-    assert not mentor_tag(girl, ooc, state(game))
+    assert not mentor_tag(girl, ooc, actual)
+    assert actual.model_dump_json() == before and state(game) == actual
 
 
 def test_shared_tag_choice_rechecks_actual_ooc_principal_and_rolls_back_forged_claim(ledger):

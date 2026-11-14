@@ -2,7 +2,7 @@
 
 import asyncio
 import json
-from uuid import uuid4
+from uuid import NAMESPACE_URL, uuid4, uuid5
 
 import pytest
 from test_enforcer_requisitions import approved
@@ -26,6 +26,13 @@ from girlframe.services.m3_bonded import BondedService, original_pair, prove
 from girlframe.services.onboarding import WorkflowError
 
 PEOPLE = {2: PLAYER, 3: OTHER, 4: FOUR}
+
+
+class BondedGateway(Gateway):
+    async def actor(self, identity):
+        if identity == FOUR.user_id:
+            return FOUR
+        return await super().actor(identity)
 
 
 def bonded_game(
@@ -252,7 +259,7 @@ def bonded_game(
     game.bind_scene(ADMIN, str(uuid4()), 900)
     for owner in (PLAYER, OTHER, FOUR, ADMIN) if three else (PLAYER, OTHER, ADMIN):
         game.join_scene(owner, str(uuid4()), 900)
-    return game, GameWorker(game), Gateway(), game.dice
+    return game, GameWorker(game), BondedGateway(), game.dice
 
 
 def ready(
@@ -309,7 +316,7 @@ def ready(
         game.event(
             c, 1, str(uuid4()), "synthetic.original_Pair_prior_physical_resource_context", actual
         )
-    return game, GameWorker(game), Gateway(), BondedService(game)
+    return game, GameWorker(game), BondedGateway(), BondedService(game)
 
 
 def show(controls, viewer=PLAYER, identity=None, number=87000):
@@ -551,8 +558,18 @@ def test_high_side_actual_found_weapon_is_item_and_not_asset(ledger, tmp_path, m
     )
     actual = state(game)
     assert actual.sheets["2"].assets == before.sheets["2"].assets
-    item = next(x for x in actual.held_items if x.source.startswith("bonded-weapon:"))
-    assert item.holder == current_ref(actual, 2)
+    origin = rules.get(actual, source)
+    item_id = "bonded-weapon:" + str(uuid5(NAMESPACE_URL, source))
+    item = next(x for x in actual.held_items if x.id == item_id)
+    assert item.holder == item.source_owner == current_ref(actual, 2)
+    assert item.factual_source_action == origin.action and item.proposed_event == origin.event
+    assert item.confirmed_by == origin.actor and item.confirmed_controller == PLAYER.user_id
+    assert item.confirmed_event == item.source_event and item.weapon
+    assert item.asset_id is None and item.asset_json is None
+    from girlframe.services.m3_items import prove_item
+
+    with ledger.engine.connect() as c:
+        assert prove_item(c, game, actual, item.id) == item
     assert controls.view(PLAYER, source)["phase"] == "complete"
 
 
@@ -752,7 +769,16 @@ def test_real_witnessed_affection_owned_tag_or_real_child_silence(
         )["action_id"]
         tick(worker, gateway, 3)
         pass_tags(game)
-        pick(game, PLAYER, "flirt_questions", ("hurt",))
+        receipt = game.inspect(PLAYER, action)["receipt"]
+        assert receipt["pre_total"] == 8 and game.dice.calls == 1
+        answer(game, PLAYER, "actor_flirt", options=("hurt",))
+        assert game.inspect(PLAYER, action)["state"] != "complete"
+        assert rules.can_disclose(state(game), current_ref(state(game), 4), source)
+        answer(
+            game, FOUR, "target_flirt", text="The actual onlooker's independently authored answer"
+        )
+        assert game.inspect(PLAYER, action)["state"] == "complete"
+        assert game.inspect(PLAYER, action)["receipt"] == receipt and game.dice.calls == 1
         assert action and not rules.can_disclose(state(game), current_ref(state(game), 4), source)
     elif outcome.endswith("tag"):
         recipient = "3" if outcome == "pair_tag" else "4"
@@ -1264,6 +1290,9 @@ def test_delegated_am_native_uses_real_counterpart_receipt_without_extra_roll(
     )["action_id"]
     tick(worker, gateway, 3)
     pass_tags(game)
+    with ledger.engine.connect() as c:
+        assert game.action(c, action)["actor_id"] == str(FOUR.user_id)
+    assert game.inspect(FOUR, action)["state"] == "complete" and game.dice.calls == 1
     calls = game.dice.calls
     balances = {
         uid: (x.heat, tuple(y.marked for y in x.identities))

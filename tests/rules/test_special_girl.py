@@ -332,7 +332,33 @@ def test_native_special_girl_real_handler_token_cap_bonus_all_printed_counters_a
 def test_grafted_special_girl_source_suspension_preserves_token_and_status_rechecks_before_rng(
     ledger, tmp_path, monkeypatch
 ):
+    from test_physical_operations import place
+    from test_world import initial
+
+    from girlframe.engine import m3_consume as consume
+
     game, source = ready(ledger, tmp_path, monkeypatch, frame="CONSUME")
+    approved(ledger, game, tmp_path, monkeypatch, extra=(rules.RULE, consume.STARVATION))
+    approval = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update={
+            "m3_approval": approval.model_copy(
+                update={"subsystems": approval.subsystems | {"world", "playbooks"}}
+            )
+        }
+    )
+    before_context = state(game)
+    with ledger.transaction() as c:
+        actual = state(game)
+        actual.world = initial()
+        # Actual prior original bodies, before the graft; inside_frame does not
+        # fabricate a new CONSUME piloting link or its separate +3 Heat.
+        actual = place(actual, 2, mode="inside_frame")
+        actual = place(actual, 3, mode="outside_frame")
+        game.event(
+            c, 1, str(uuid4()), "synthetic.prior_original_consume_graft_body_context", actual
+        )
+    assert state(game).sheets == before_context.sheets and game.dice.calls == 0
     paid = acquire_token(game, source, donor="THE ENFORCER", number=995200)
     assert paid["cost"] == 3
     complete_token(game, source, paid, number=995210)

@@ -264,6 +264,30 @@ def test_obsession_directional_benefit_real_tag_no_false_reciprocal_bond(
     ledger, tmp_path, monkeypatch
 ):
     game, _, _, controls = ready(ledger, tmp_path, monkeypatch)
+    from test_cast_service import change as cast_change
+
+    from girlframe.services.m3_actors import ActorService
+    from girlframe.services.m3_cast import CastService
+    from girlframe.services.m3_missions import MissionService
+
+    approval = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update={
+            "m3_approval": approval.model_copy(
+                update={"subsystems": approval.subsystems | {"world"}}
+            )
+        }
+    )
+    cast = CastService(ActorService(MissionService(ledger)))
+    owner = current_ref(state(game), PLAYER.user_id)
+    # Establish the actual canonical role before its Obsession exists. No
+    # departure/absence consequence is invented while aligning this fixture.
+    cast_change(cast, PLAYER, "withdraw", owner)
+    cast_change(cast, PLAYER, "join", owner)
+    current_casts = [
+        x for x in state(game).scene_casts if x.open and any(r.actor == owner for r in x.roles)
+    ]
+    assert len(current_casts) == 1 and current_casts[0].channel == 900
     buy(controls, rules.OBSESSIVE)
     actual = state(game)
     own, target = current_ref(actual, 2), current_ref(actual, 3)
@@ -318,7 +342,9 @@ def test_actual_interrupt_decline_resumes_original_known_receipt_and_real_keep_e
         "death",
         "Actual NPC death hearing, not a fabricated death",
     )
-    game.dice.faces = (3, 4)
+    # The original counterpart actually has no Heat in this starting context.
+    assert state(game).sheets["3"].heat == 0
+    game.dice.faces = (4, 4)
     action = game.begin(
         OTHER,
         str(uuid4()),
@@ -328,11 +354,12 @@ def test_actual_interrupt_decline_resumes_original_known_receipt_and_real_keep_e
             play="keep_your_head",
             context="My actual danger and response",
             trigger_confirmed=True,
-            heat=1,
+            heat=0,
         ),
     )["action_id"]
     tick(worker, gateway, 3)
     original = game.roll(OTHER, str(uuid4()), action)["receipt"]
+    assert original["heat"] == 0 and original["pre_total"] == 8
     pass_tags(game)
     answer(game, PLAYER, "ankou_interrupt", flag=False, text="I do not erase a Tag or interrupt")
     answer(game, OTHER, "actor_keep", options=("tough", "in_control"), denied=("desperate",))
@@ -456,14 +483,25 @@ def test_standalone_feedback_real_owned_effects_and_true_reprisal_not_a_fabricat
                 source_work=step.id,
             ),
         )["action_id"]
-        tick(worker, gateway, 3)
+        # Select this original draw before the normal worker can consume it.
         game.dice.faces = (1, 1)
-        game.roll(PLAYER, str(uuid4()), child)
+        tick(worker, gateway, 3)
+        receipt = game.roll(PLAYER, str(uuid4()), child)["receipt"]
         pass_tags(game)
-        answer(game, PLAYER, "actor_flirt", options=("name", "extra", "owe"))
+        assert receipt["faces"] == [1, 1] and receipt["heat"] == 9
+        assert receipt["pre_total"] == sum(receipt["faces"]) + receipt["heat"] == 11
+        answer(
+            game,
+            PLAYER,
+            "actor_flirt",
+            options=("name",),
+            fields={"extra": "owe"},
+            text="I press the actual question too far",
+        )
         answer(game, OTHER, "target_flirt", text="My actual owned answer to her real Flirt")
         answer(game, OTHER, "flirt_owe_tag", text="Actual reprisal noticed")
         assert game.inspect(PLAYER, child)["state"] == "complete"
-        assert game.dice.calls == 1
+        assert game.inspect(PLAYER, child)["receipt"] == receipt
+        assert state(game).sheets["2"].heat == 0 and game.dice.calls == 1
     if outcome != "die":
         assert rules.get(state(game), rules.FeedbackSequence, sequence.id).completed_event

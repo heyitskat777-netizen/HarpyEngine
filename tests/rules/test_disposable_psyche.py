@@ -17,7 +17,7 @@ from test_physical_operations import place
 from test_strain_effect_service import selected
 from test_strain_service import D6
 from test_strain_service import prepared as prepare_strain
-from test_world import initial
+from test_world import gorgon, initial
 
 from girlframe.database import tables as t
 from girlframe.delivery.m2_worker import GameWorker
@@ -26,7 +26,7 @@ from girlframe.engine import m3_dose_up as drugs
 from girlframe.engine.m2 import GameState, PlayInput, mark_identity
 from girlframe.engine.m3_off_duty import RecoveryChoice
 from girlframe.engine.m3_strain_effects import Choice
-from girlframe.engine.m3_world_state import Faction
+from girlframe.engine.m3_world_state import Asset, CorePlan, Faction
 from girlframe.services.inbox import InboxService
 from girlframe.services.m3_disposable_psyche import PsycheService, prove_disposal
 from girlframe.services.m3_missions import MissionService
@@ -100,6 +100,43 @@ def mark_native(game, identity, gain, extra, heat):
 
 
 def real_period(missions, game):
+    original = state(game)
+    void_count = sum(any(x.void for x in sheet.assets) for sheet in original.sheets.values())
+    if 2 * void_count >= len(original.order):
+        assert original.world is not None
+        if not any(not x.alive and "growth" not in x.types for x in original.world.gorgons):
+            # Explicit synthetic historical facts BEFORE the real period source:
+            # the actual High Void consumer below revives this prior original body.
+            prior_event = str(uuid4())
+            prior = gorgon(
+                "benevolent",
+                "synthetic-prior-defeated:" + prior_event,
+                original.world.board.minimum,
+            )
+            prior = prior.model_copy(
+                update={
+                    "alive": False,
+                    "exposed": True,
+                    "position_event": prior_event,
+                    "assets": tuple(x.model_copy(update={"damaged": True}) for x in prior.assets),
+                }
+            )
+            original.world = original.world.model_copy(
+                update={"gorgons": (*original.world.gorgons, prior)}
+            )
+            with game.store.transaction() as c:
+                game.event(
+                    c,
+                    1,
+                    str(uuid4()),
+                    "synthetic.historical_defeated_gorgon_before_period",
+                    original,
+                    event_id=prior_event,
+                )
+    original_void = {
+        uid: tuple(x.id for x in sheet.assets if x.void)
+        for uid, sheet in state(game).sheets.items()
+    }
     strain = StrainService(OffDutyService(missions), dice=D6())
     identity = prepare_strain(strain, game)
     effects = EffectService(strain)
@@ -132,10 +169,45 @@ def real_period(missions, game):
         ),
     ):
         request = next(x for x in state(game).strain.requests if x.track == track)
+        if track == "void" and request.severity == "high":
+            prior = next(
+                x for x in state(game).world.gorgons if not x.alive and "growth" not in x.types
+            )
+            new_assets = tuple(
+                Asset(
+                    id=request.id + ":returned:" + str(i),
+                    name="Actual returned capability " + str(i),
+                    description="New altered capability from this actual High Void result",
+                    family="gorgon",
+                )
+                for i in range(2)
+            )
+            face, column = 3, 1
+            choice = Choice(
+                rule_id="strain.void.high.3.1",
+                account="The established prior defeated Gorgon returns altered",
+                target=prior.id,
+                new_assets=new_assets,
+                new_type="growth",
+                core_plan=CorePlan(
+                    assets=(new_assets[0].id,), weakness="Actual new Core condition"
+                ),
+            )
         strain.dice.face = face
         strain.roll(ADMIN, str(uuid4()), request.id, 1, state(game).revision)
         strain.choose(ADMIN, str(uuid4()), request.id, 2, state(game).revision, column)
+        saved = next(x for x in state(game).strain.events if x.id == request.id)
+        assert saved.severity == request.severity and saved.rule_id == choice.rule_id
         effects.apply(ADMIN, str(uuid4()), request.id + ":effect", 1, state(game).revision, choice)
+        if track == "void" and request.severity == "high":
+            returned = next(x for x in state(game).world.gorgons if x.id == prior.id)
+            assert returned.alive and returned.assets[:-2] == prior.assets
+            assert returned.assets[-2:] == new_assets and returned.types == (*prior.types, "growth")
+    assert strain.dice.calls == 3
+    assert {
+        uid: tuple(x.id for x in sheet.assets if x.void)
+        for uid, sheet in state(game).sheets.items()
+    } == original_void
     cycle = CycleService(strain.periods)
     activate(cycle, game, identity)
     return cycle, identity
@@ -369,6 +441,7 @@ def test_native_off_duty_disposal_keeps_status_roll_and_actual_heat_receipt(
 def test_actual_paid_non_heat_basis_disposal_keeps_source_modifier_and_receipt(
     ledger, tmp_path, monkeypatch, basis
 ):
+    from girlframe.engine import m3_consume as consume
     from girlframe.engine import m3_kicked_puppy as puppy
     from girlframe.engine import m3_nightmare as nightmare
     from girlframe.engine.m3_actor_bonds import current_ref
@@ -379,9 +452,32 @@ def test_actual_paid_non_heat_basis_disposal_keeps_source_modifier_and_receipt(
     frame = "CONSUME" if is_nightmare else "WYVERN 0.4"
     _, game = service(ledger, girl="STIM-BLISSED", frame=frame)
     source_rule = nightmare.RULE if is_nightmare else puppy.RULE
-    approved(ledger, game, tmp_path, monkeypatch, extra=(rules.RULE, source_rule))
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(rules.RULE, source_rule, consume.STARVATION)
+        if is_nightmare
+        else (rules.RULE, source_rule),
+    )
+    if is_nightmare:
+        approval = ledger.policy.m3_approval
+        ledger.policy = ledger.policy.model_copy(
+            update={
+                "m3_approval": approval.model_copy(
+                    update={"subsystems": approval.subsystems | {"world", "playbooks"}}
+                )
+            }
+        )
     with ledger.transaction() as c:
         actual = state(game)
+        if is_nightmare:
+            actual.world = initial()
+            # A real prior body in its Frame, without inventing a fresh neural link
+            # (and its separate +3 Heat consequence) during this mark/disposal test.
+            actual = place(actual, 2, mode="inside_frame")
+            actual = place(actual, 3, mode="outside_frame")
         sheet = actual.sheets["2"]
         sheet.permissions = 2
         sheet.heat = 5
@@ -420,10 +516,24 @@ def test_actual_paid_non_heat_basis_disposal_keeps_source_modifier_and_receipt(
         ),
     )["action_id"]
     assert state(game).sheets["2"] == before.sheets["2"]
+    # The worker deliberately retains source failures for recovery. Expose the
+    # original reason here instead of masking it with a later None subscript.
+    original_roll = game.roll
+    source_errors = []
+
+    def observed_roll(*args, **kwargs):
+        try:
+            return original_roll(*args, **kwargs)
+        except WorkflowError as error:
+            source_errors.append(str(error))
+            raise
+
+    monkeypatch.setattr(game, "roll", observed_roll)
     game.dice.faces = (3, 3)
     tick(GameWorker(game), Gateway(), 3)
     actual = state(game)
     receipt = game.inspect(PLAYER, action)["receipt"]
+    assert receipt is not None, source_errors
     assert receipt["modifier_source"] == (
         "Void Assets (Nightmare Core)" if is_nightmare else "Damaged Girl Assets (Kicked Puppy)"
     )

@@ -1898,8 +1898,13 @@ class ChoiceEngine:
         if action["data"].get("consume_child"):
             # Its actual source is completed after this canonical child event exists.
             return
-        if action["data"].get("princess_child") and action["data"].get("battle"):
-            # Battle finishes after the response event; persist its directed source separately.
+        if action["data"].get("princess_child") and (
+            action["data"].get("battle")
+            or action["data"].get("play") == "engage"
+            and action["data"].get("engage")
+        ):
+            # These actual battlefield providers finish after the response event;
+            # persist their directed source through its existing completion adapter.
             return
         if action["data"].get("princess_child") and action["data"].get("easy_target"):
             # Real reactions, separate performances and consequences finish first.

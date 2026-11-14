@@ -273,13 +273,13 @@ class HandlerRecoveryService:
 
     def get(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
         with self.store.engine.connect() as c:
-            self._access(c, viewer)
+            self.game.authorize(c, viewer, game=False)
             return self._view(c, viewer, load_state(c, self.store.campaign_id), identity)
 
     def _tasks(
         self, c: Connection, viewer: GuildViewer, *, history: bool = False
     ) -> list[dict[str, Any]]:
-        self._access(c, viewer)
+        self.game.authorize(c, viewer, game=False)
         state = load_state(c, self.store.campaign_id)
         result = []
         for fact in state.facts:

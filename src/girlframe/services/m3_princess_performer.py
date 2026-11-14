@@ -47,6 +47,16 @@ def acting_owner(
     return viewer.user_id
 
 
+def _battle_metadata(action: dict[str, Any]) -> dict[str, Any] | None:
+    """Only actual directed Assault or Engage providers share completion proof."""
+    data = action["data"]
+    if data.get("play") == "all_out_assault" and data.get("battle") and not data.get("engage"):
+        return dict(data["battle"])
+    if data.get("play") == "engage" and data.get("engage") and not data.get("battle"):
+        return dict(data["engage"])
+    return None
+
+
 def _battle_trigger(game: "GameService", c: Connection, action: dict[str, Any], event: str) -> int:
     audit = (
         c.execute(
@@ -85,7 +95,10 @@ def _battle_trigger(game: "GameService", c: Connection, action: dict[str, Any], 
         if audit["actor_id"] == expected:
             return int(audit["actor_id"])
     work = t.m3["m3_required_work"]
-    followups = action["data"]["battle"].get("followups", ())
+    metadata = _battle_metadata(action)
+    if metadata is None:
+        raise WorkflowError("Retain the actual directed Assault or Engage source provider")
+    followups = metadata.get("followups", ())
     if followups and c.scalar(
         sa.select(work.c.id)
         .where(
@@ -112,7 +125,7 @@ def complete_battle(
     state = load_state(c, game.store.campaign_id)
     child = game.action(c, action["id"])
     scope = child["data"].get("princess_child")
-    if not scope or not child["data"].get("battle") or child["state"] != "complete":
+    if not scope or _battle_metadata(child) is None or child["state"] != "complete":
         return
     direction = princess.direction(state, scope["direction"])
     if direction.completed_event:
@@ -153,7 +166,7 @@ def prove_battle_completion(
         or child.get("parent_id") != value.parent
         or child["actor_id"] != value.actor.entity
         or (child["data"].get("princess_child") or {}).get("direction") != value.id
-        or not child["data"].get("battle")
+        or _battle_metadata(child) is None
         or child["state"] != "complete"
         or receipt is None
         or json.loads(receipt) != child["data"].get("receipt")

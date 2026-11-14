@@ -1,4 +1,4 @@
-"""Unsupported NPC treatment is refused before dice, costs or a scene lock."""
+"""Unconfigured NPC treatment is refused before dice, costs or a scene lock."""
 
 import asyncio
 from uuid import uuid4
@@ -32,9 +32,12 @@ def test_npc_nanobot_unavailable_before_roll_without_partial_effects(ledger, tmp
         await interaction.response.defer(ephemeral=True)
         await open_roll(interaction, DoctorService(game))
         form = interaction.edit_original_response.call_args.kwargs["view"]
-        assert "New NPC Nanobot Injection is unavailable" in form.instructions
         assert (
-            "Previously rolled NPC actions retain their pending recovery choices"
+            "NPC Nanobot patients need their own established treatment resources."
+            in form.instructions
+        )
+        assert (
+            "The NPC controller chooses their actual repairs and Identity details."
             in form.instructions
         )
         assert "Nanobot mid-result effect removal only" not in form.instructions
@@ -43,7 +46,7 @@ def test_npc_nanobot_unavailable_before_roll_without_partial_effects(ledger, tmp
     with ledger.engine.connect() as c:
         lock = game.lock(c, 900)
         pending = game.pending_actions(c)
-    with pytest.raises(WorkflowError, match="NPC Nanobot Injection is unavailable before rolling"):
+    with pytest.raises(WorkflowError, match="NPC_RESOURCE_SETUP_REQUIRED"):
         game.begin(
             PLAYER,
             str(uuid4()),

@@ -27,8 +27,26 @@ checkout; its ordinary mechanics, exact-candidate and approval gates remain.
 | P3 | Source-specific exceptional classification | Remaining unusual automation and eventual full-core review; Ancillary separate/default OFF | Historical full-M3 backlog preserved |
 
 Current ordinary packet has16 distinct focused normal passes across these named
-paths, global Ruff/format passes and global mypy903-source pass. This is not a
-full regression or independent rules approval. Exact final regression is next.
+paths. The exact published `b0243c3` full regression completed: **3,155 passed,
+144 failed, 3,299 collected, 4,867.94s**. All five existing session-mix tests
+passed. This is a completed red regression, not a test-ready candidate.
+
+| Active final repair | Owner / dependency | Next action | Evidence/status |
+|---|---|---|---|
+| Shared readback, original-source proof and normal fixtures | Root; isolated worker proposals, frozen b0243c3 originals | Preserve verified repair packet | All original failed nodes now pass focused retries; source gates retained |
+| Vatgrown NPC social Punishment | p1_doctor_npc; original observed Doll action | Include native consequence/benefit and privacy checks in final regression | Actual native normal passes; bounded independent technical review found no concrete defect |
+| Wyvern Renovation and physical context | Root integration; independently reviewed worker repair | Include preserved flat/typed records and legacy reads in full regression | Three Renovation variants, actual Sprite interception and protected-target normal pass |
+| NPC/Handler Court assignment Tag | p1_wings_return; printed assigned-AM rule and actual memory source | Include central assignment/mark/reset lifecycle and legacy Tag compatibility in final regression | Native restore/retry/mark/recall passes; unrelated same-label Tag preserved; bounded technical review found no concrete defect |
+| Exact final candidate | Root; all demonstrated failures resolved | Publish sanitized checkpoint, full regression/global static and required restore/reopen evidence | Pending; earlier focused CI and red full run do not close this gate |
+
+Independent source/clarity review, matching campaign approval, human testing and
+any bot restart remain separate gates. Registry remains477 entries,0 independently
+verified; no approval is inferred from technical review or synthetic fixtures.
+
+Failed-node reconciliation now has all144 original nodes passing targeted
+retries. Successful retries are not aggregated into a green full
+regression. Required final full mode will discover the complete suite, including
+memory pagination, both existing session-mix files and the new endpoint guard.
 
 Final integration evidence and per-type assessment are recorded in
 `reports/R285_INTEGRATION.md` and `docs/R285_MILESTONE_PLAN.md`.

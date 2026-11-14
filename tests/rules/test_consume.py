@@ -100,6 +100,7 @@ def roll(
     heat=1,
     source_work=None,
     piloting=False,
+    parent=None,
 ):
     game.dice.faces = faces
     action = game.begin(
@@ -113,6 +114,7 @@ def roll(
             heat=heat,
             source_work=source_work,
             piloting=piloting,
+            parent=parent,
             context="I actually lunge at this person"
             if play == "consume_eat"
             else "I actually succumb to this impulse"
@@ -325,9 +327,22 @@ def test_real_feral_source_tags_bonuses_and_required_original_owned_continuation
     if branch == "high":
         child = rules.records(state(game), rules.Reaffirmation)[-1]
         assert game.inspect(PLAYER, action)["state"] != "complete"
+        feral_receipt = game.inspect(PLAYER, action)["receipt"]
+        assert feral_receipt["pre_total"] == 11
         actual = roll(
-            game, worker, gateway, play="check_sensors", faces=(3, 4), heat=0, source_work=child.id
+            game,
+            worker,
+            gateway,
+            play="check_sensors",
+            faces=(3, 4),
+            heat=0,
+            source_work=child.id,
+            parent=action,
         )
+        child_receipt = game.inspect(PLAYER, actual)["receipt"]
+        assert child_receipt["pre_total"] == 8 and child_receipt["heat"] == 0
+        with ledger.engine.connect() as c:
+            assert game.action(c, actual)["parent_id"] == action
         answer(game, PLAYER, "actor_sensors", options=QUESTIONS[:2])
         answer(
             game,
@@ -340,6 +355,10 @@ def test_real_feral_source_tags_bonuses_and_required_original_owned_continuation
         assert next(
             x for x in rules.records(state(game), rules.Reaffirmation) if x.id == child.id
         ).completed_event
+        assert game.inspect(PLAYER, action)["state"] == "complete"
+        assert game.inspect(PLAYER, action)["receipt"] == feral_receipt
+        assert game.inspect(PLAYER, actual)["receipt"] == child_receipt
+        assert game.dice.calls == 2
     elif branch == "low":
         assert rules.disobey_low(state(game), actor)
         tick(worker, gateway, 6)
@@ -433,8 +452,34 @@ def test_actual_dive_partake_changes_real_assets_or_original_appearance(
         canon = state(game)
         next(x for x in canon.sheets["2"].assets if x.id == frame).damaged = True
         game.event(c, 1, str(uuid4()), "synthetic.actual_prior_frame_damage", canon)
+    prior_heat = state(game).sheets["2"].heat
     cockpit(game, "pilot")
+    actor = current_ref(state(game), PLAYER.user_id)
+    assert state(game).sheets["2"].heat == prior_heat + 3
+    assert rules.hunger(state(game), actor) == "Gnawing"
     action = roll(game, worker, gateway, play="dive_deep", heat=0, faces=(4, 5), piloting=True)
+    receipt = game.inspect(PLAYER, action)["receipt"]
+    assert receipt["pre_total"] == 9 and receipt["heat"] == 0
+    # The original Dive's actual chosen effect precedes optional Partake. Use a
+    # different real Void site, preserving the original Girl Asset for its choice.
+    answer(
+        game,
+        PLAYER,
+        "dive_select",
+        options=("void_and_unmark_all",),
+        text="Actual ordinary communion",
+    )
+    current = next(x for x in state(game).sheets["2"].assets if not x.void and x.id != girl)
+    assert current.id != girl
+    answer(
+        game,
+        PLAYER,
+        "dive_effect",
+        fields={"asset": current.id},
+        text="Actual source-owned Void manifestation",
+    )
+    assert game.inspect(PLAYER, action)["state"] != "complete"
+    assert any(x["kind"] == "consume_partake" for x in game.choices(PLAYER))
     fields = {"girl_asset": girl}
     if option == "regrow":
         fields["frame_assets"] = json.dumps([frame])
@@ -463,22 +508,9 @@ def test_actual_dive_partake_changes_real_assets_or_original_appearance(
     else:
         assert next(x for x in canon.sheets["2"].assets if x.id == girl).void
         assert rules.records(canon, rules.Partaking)[-1].appearance == fields["appearance"]
-    answer(
-        game,
-        PLAYER,
-        "dive_select",
-        options=("void_and_unmark_all",),
-        text="Actual ordinary communion",
-    )
-    current = next(x for x in state(game).sheets["2"].assets if not x.void)
-    answer(
-        game,
-        PLAYER,
-        "dive_effect",
-        fields={"asset": current.id},
-        text="Actual source-owned Void manifestation",
-    )
     assert game.inspect(PLAYER, action)["state"] == "complete"
+    assert game.inspect(PLAYER, action)["receipt"] == receipt and game.dice.calls == 1
+    assert rules.hunger(state(game), actor) == "Gnawing"
 
 
 def test_real_cannibal_target_hierarchy_then_original_voluntary_two_permission_receipt(

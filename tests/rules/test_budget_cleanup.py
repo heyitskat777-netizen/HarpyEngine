@@ -135,8 +135,9 @@ def select(effects, mission, work, mode):
             cleanup_mode=(mode,),
             account="The Cadre's actual cleanup duty at this completed mission site",
         )
-        await form.confirm.callback(current(1, 28701))
-        assert form.completed
+        confirmation = current(1, 28701)
+        await form.confirm.callback(confirmation)
+        assert form.completed, confirmation.edit_original_response.call_args_list
 
     asyncio.run(action())
 
@@ -282,6 +283,10 @@ def test_cleanup_actual_single_draw_can_store_owned_void_in_genuinely_connected_
     )
     with ledger.transaction() as c:
         canon = state(game)
+        # The contact fixture has only a bounded empty board. Establish the
+        # actual mission map before selecting a past-mission cleanup site.
+        assert canon.world is not None and not canon.world.locations
+        canon.world = initial()
         canon.sheets["2"].permissions = 2
         game.event(c, 1, str(uuid4()), "synthetic.existing_storage_funds", canon)
     purchase = JanusRequisitionService(game)

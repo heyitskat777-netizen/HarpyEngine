@@ -184,8 +184,12 @@ def test_original_payment_source_cannot_be_substituted_for_another_receipt_or_re
         }[change]
         canon.requisitions[0] = receipt.model_copy(update=updates)
         game.event(c, 1, "synthetic-paid-receipt-corruption", "synthetic.state", canon)
-    with pytest.raises(WorkflowError, match="SOURCE_PURCHASE_MISSING"):
+    corrupted = state(game).model_dump_json()
+    # The shared Requisition proof rejects the altered source before the
+    # later purchase-specific projection can expose a private receipt.
+    with pytest.raises(WorkflowError, match="SOURCE_REQUISITION_MISSING"):
         svc.paid_receipt(OTHER if change == "owner" else PLAYER, identity)
+    assert state(game).model_dump_json() == corrupted
 
 
 def test_native_waiting_paid_receipt_rechecks_membership_instead_of_using_cached_private_account(

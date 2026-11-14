@@ -74,12 +74,14 @@ def test_native_owned_janus_purchase_treatment_and_training_preserve_next_screen
 
 
 def test_actual_pandora_native_multistep_confirm_preserves_new_forms(ledger, tmp_path, monkeypatch):
+    from test_frame_control import place_original
     from test_ledger import ADMIN
     from test_m2_game import Gateway, pass_tags, tick
     from test_off_duty_cycle import activate, prepared
 
     from girlframe.delivery.m2_worker import GameWorker
     from girlframe.discord_adapter.m3_janus_requisitions import open_pandora, open_pandora_child
+    from girlframe.engine.m3_actor_bonds import current_ref
     from girlframe.engine.m3_janus_pandora import pregnancies
     from girlframe.engine.m3_janus_requisitions import PANDORA
     from girlframe.services.m3_missions import MissionService
@@ -88,6 +90,8 @@ def test_actual_pandora_native_multistep_confirm_preserves_new_forms(ledger, tmp
 
     _, game, period = prepared(ledger)
     approved(ledger, game, tmp_path, monkeypatch, extra=(PANDORA,))
+    place_original(game, current_ref(state(game), 2))
+    original_pose = state(game).placements[-1]
     with ledger.transaction() as c:
         actual = state(game)
         actual.sheets["2"].permissions = 2
@@ -110,7 +114,7 @@ def test_actual_pandora_native_multistep_confirm_preserves_new_forms(ledger, tmp
         confirmed = current(2, 996102)
         confirmed.channel_id = 900
         await form.confirm.callback(confirmed)
-        assert form.completed
+        assert form.completed, confirmed.edit_original_response.call_args_list
 
     asyncio.run(prepare())
     tick(GameWorker(game), Gateway(), 3)
@@ -148,4 +152,9 @@ def test_actual_pandora_native_multistep_confirm_preserves_new_forms(ledger, tmp
         assert details.completed
 
     asyncio.run(describe())
-    assert pregnancies(state(game))[-1].child is not None and game.dice.calls == 1
+    actual = state(game)
+    birth = pregnancies(actual)[-1]
+    assert birth.child is not None and game.dice.calls == 1
+    newborn = next(x for x in actual.world.gorgons if x.id == birth.child.entity)
+    assert birth.birth_cell == newborn.cell == original_pose.frame_cell
+    assert birth.frame == original_pose.frame_instance and original_pose in actual.placements

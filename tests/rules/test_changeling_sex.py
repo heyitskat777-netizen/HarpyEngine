@@ -37,6 +37,7 @@ from girlframe.services.m3_handler_ordinary import HandlerOrdinaryService
 from girlframe.services.m3_handler_pr import HandlerPRService
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_movement import MovementService
+from girlframe.services.m3_npc_roles import NpcRoleService
 from girlframe.services.m3_oldgen_sex import OldgenSexService
 from girlframe.services.m3_world import WorldService
 from girlframe.services.onboarding import WorkflowError
@@ -205,20 +206,24 @@ def am_ready(store, tmp_path, monkeypatch):
         }
     )
     with store.transaction() as c:
-        canon = place(place(state(game), 2, mode="outside_frame"), 3, mode="outside_frame")
+        canon = state(game)
         canon.world = initial()
+        canon = place(place(canon, 2, mode="outside_frame"), 3, mode="outside_frame")
         canon.sheets["2"].permissions = 10
         game.event(c, 1, str(uuid4()), "synthetic.original_AM_body_and_resources", canon)
     npc = Npc(
         id="original-human-civilian",
         name="Actual civilian",
         jobs=("civilian",),
+        detail="The actual civilian in this original bodily-access scene",
         controller=3,
         cell=(0, 0),
         revealed=True,
     )
     missions = MissionService(store)
-    WorldService(missions).npc(ADMIN, str(uuid4()), state(game).revision, npc)
+    roles = NpcRoleService(WorldService(missions))
+    proposal = roles.offer(ADMIN, str(uuid4()), state(game).revision, npc)
+    roles.respond(OTHER, str(uuid4()), proposal["id"], state(game).revision, "accept")
     cast = CastService(ActorService(missions))
     current = cast.view(OTHER, 900)
     target = ActorRef(kind="npc", entity=npc.id)

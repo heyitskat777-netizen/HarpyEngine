@@ -119,6 +119,7 @@ def test_actual_paid_training_removes_control_tag_and_applies_real_nonlethal_pun
 def test_actual_universal_plug_uses_other_original_body_and_earns_optional_tag(
     ledger, tmp_path, monkeypatch
 ):
+    from test_frame_control import place_original
     from test_janus_battery import start
     from test_janus_core_service import cast_core
     from test_ledger import ADMIN
@@ -132,12 +133,16 @@ def test_actual_universal_plug_uses_other_original_body_and_earns_optional_tag(
     service, game, core = training(ledger, tmp_path, monkeypatch, rule=UNIVERSAL)
     target = current_ref(state(game), 3)
     cast_core(service, game, core)
+    caster = current_ref(state(game), 2)
+    place_original(game, caster, mode="outside_frame")
+    place_original(game, target, mode="outside_frame")
+    original_poses = state(game).placements
     contact = FrameControlService(game)
     identity = contact.propose(
         PLAYER,
         str(uuid4()),
         900,
-        current_ref(state(game), 2),
+        caster,
         target,
         "My actual neural jack connects to the other original Girl's spinal port",
     )["id"]
@@ -174,17 +179,20 @@ def test_actual_universal_plug_uses_other_original_body_and_earns_optional_tag(
     assert actual.sheets["3"].tags[-1].giver_actor == current_ref(actual, 2)
     assert game.inspect(PLAYER, action)["state"] == "complete" and game.dice.calls == 1
     assert len(actual.janus_cores[-1].tags) == 4
+    assert actual.placements == original_poses
 
 
 def test_actual_pandora_off_duty_birth_creates_handler_authored_obedient_child(
     ledger, tmp_path, monkeypatch
 ):
+    from test_frame_control import place_original
     from test_ledger import ADMIN
     from test_m2_game import Gateway, answer, pass_tags, tick
     from test_off_duty_cycle import activate, prepared
 
     from girlframe.delivery.m2_worker import GameWorker
     from girlframe.engine.m2 import PlayInput
+    from girlframe.engine.m3_actor_bonds import current_ref
     from girlframe.engine.m3_actors import owned_refs
     from girlframe.engine.m3_janus_pandora import ChildProposal, pregnancies
     from girlframe.engine.m3_janus_requisitions import PANDORA
@@ -192,6 +200,8 @@ def test_actual_pandora_off_duty_birth_creates_handler_authored_obedient_child(
 
     cycle, game, period = prepared(ledger)
     approved(ledger, game, tmp_path, monkeypatch, extra=(PANDORA,))
+    place_original(game, current_ref(state(game), 2))
+    original_pose = state(game).placements[-1]
     with ledger.transaction() as c:
         current = state(game)
         current.sheets["2"].permissions = 2
@@ -246,6 +256,9 @@ def test_actual_pandora_off_duty_birth_creates_handler_authored_obedient_child(
     assert game.inspect(PLAYER, action)["state"] == "complete"
     body = next(x for x in actual.world.gorgons if x.id == child.entity)
     assert len(body.assets) == 2 and body.gorgon_class == "benevolent"
+    assert pregnancies(actual)[-1].birth_cell == body.cell == original_pose.frame_cell
+    assert pregnancies(actual)[-1].frame == original_pose.frame_instance
+    assert original_pose in actual.placements
     with ledger.engine.connect() as c:
         assert child in owned_refs(actual, 2, profiles(c, ledger.campaign_id))
 
@@ -253,6 +266,7 @@ def test_actual_pandora_off_duty_birth_creates_handler_authored_obedient_child(
 def test_actual_pet_qualifying_battery_next_off_duty_carry_and_return(
     ledger, tmp_path, monkeypatch
 ):
+    from test_frame_control import place_original
     from test_janus_core import facts
     from test_janus_core_service import cast_core, change
     from test_ledger import ADMIN
@@ -287,6 +301,9 @@ def test_actual_pet_qualifying_battery_next_off_duty_carry_and_return(
     change(setup, ADMIN, request, approve=True, account="Actual source original Core facts")
     core = ref(state(game).janus_cores[-1])
     cast_core(setup, game, core)
+    caster = current_ref(state(game), 2)
+    place_original(game, caster)
+    original_pose = state(game).placements[-1]
     with ledger.transaction() as c:
         actual = state(game)
         actual.sheets["2"].permissions = 2
@@ -301,7 +318,7 @@ def test_actual_pet_qualifying_battery_next_off_duty_carry_and_return(
         PLAYER,
         str(uuid4()),
         900,
-        current_ref(state(game), 2),
+        caster,
         core,
         "Actual jack reaches and connects to own original Core",
     )["id"]
@@ -352,6 +369,7 @@ def test_actual_pet_qualifying_battery_next_off_duty_carry_and_return(
     )
     carried = state(game).janus_cores[-1]
     assert not carried.attached and not carried.linked and len(carried.tags) == len(before.tags)
+    assert carried.custodian == caster and carried.cell == original_pose.frame_cell
     assert any(x.get("kind") == "janus_pet_leash_and_collar" for x in state(game).facts)
     service.return_core(
         PLAYER,
@@ -362,6 +380,8 @@ def test_actual_pet_qualifying_battery_next_off_duty_carry_and_return(
     )
     returned = state(game).janus_cores[-1]
     assert returned.attached and returned.linked and has_tag(returned, "drugged")
+    assert original_pose in state(game).placements
+    assert returned.id == carried.id == before.id
     assert returned.control_tags and set(returned.control_tags.values()).isdisjoint(
         before.baseline_tags.values()
     )

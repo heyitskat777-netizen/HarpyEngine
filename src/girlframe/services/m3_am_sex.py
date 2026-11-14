@@ -961,7 +961,7 @@ def lessons(
 ) -> tuple[dict[str, str], ...]:
     try:
         load_registry().require_available(RULE)
-    except ValueError:
+    except (ValueError, WorkflowError):
         return ()
     sheet = state.sheets.get(actor.entity) if actor.kind == "pilot" else None
     if sheet is None or sheet.character_id != actor.incarnation:

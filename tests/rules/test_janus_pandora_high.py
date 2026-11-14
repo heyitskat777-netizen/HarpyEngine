@@ -17,6 +17,7 @@ def test_actual_pandora_high_birth_creates_willful_child_and_preserves_mother(
     from test_ledger import ADMIN
     from test_m2_game import Gateway, answer, pass_tags, tick
     from test_off_duty_cycle import activate, prepared
+    from test_physical_operations import place
 
     from girlframe.delivery.m2_worker import GameWorker
     from girlframe.engine.m2 import PlayInput
@@ -29,8 +30,15 @@ def test_actual_pandora_high_birth_creates_willful_child_and_preserves_mother(
     approved(ledger, game, tmp_path, monkeypatch, extra=(PANDORA,))
     with ledger.transaction() as c:
         current = state(game)
+        assert current.world is not None
+        assert not any(
+            x.actor.entity == "2" and x.actor.kind == "pilot" for x in current.placements
+        )
+        current = place(current, 2, mode="inside_frame", cell=(0, 0))
         current.sheets["2"].permissions = 2
-        game.event(c, 1, str(uuid4()), "synthetic.actual_pandora_funds", current)
+        game.event(
+            c, 1, str(uuid4()), "synthetic.actual_pandora_funds_and_original_birthplace", current
+        )
     service = JanusRequisitionService(game)
     data = service.menu(PLAYER)
     service.buy_rule(
@@ -47,6 +55,9 @@ def test_actual_pandora_high_birth_creates_willful_child_and_preserves_mother(
     cycle = CycleService(OffDutyService(MissionService(ledger)))
     activate(cycle, game, period)
     assert pregnancies(state(game))[-1].phase == "inseminated"
+    before_birth = state(game)
+    original_pose = next(x for x in before_birth.placements if x.actor.entity == "2")
+    assert original_pose.frame_cell == (0, 0)
     game.dice.faces = (6, 6)
     action = game.begin(
         PLAYER,
@@ -81,6 +92,12 @@ def test_actual_pandora_high_birth_creates_willful_child_and_preserves_mother(
     assert game.inspect(PLAYER, action)["state"] == "complete"
     body = next(x for x in actual.world.gorgons if x.id == child.entity)
     assert len(body.assets) == 3 and body.gorgon_class == "aggressive"
+    assert pregnancies(actual)[-1].birth_cell == body.cell == original_pose.frame_cell
+    assert pregnancies(actual)[-1].frame == original_pose.frame_instance
+    assert actual.placements == before_birth.placements
+    assert actual.janus_cores == before_birth.janus_cores
+    assert actual.sheets["2"].assets == before_birth.sheets["2"].assets
+    assert actual.sheets["2"].identities == before_birth.sheets["2"].identities
     with ledger.engine.connect() as c:
         assert child not in owned_refs(actual, 2, profiles(c, ledger.campaign_id))
 

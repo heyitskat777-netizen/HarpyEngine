@@ -5,10 +5,11 @@ from uuid import NAMESPACE_URL, uuid5
 
 from pydantic import Field
 
-from girlframe.engine.m2 import GameState, IdentityState
+from girlframe.engine.m2 import GameState, IdentityState, TagState
 from girlframe.engine.m3_actor_state import ActorRef, Model, SceneCast
 from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
+from girlframe.engine.m3_world_state import WorldTag
 from girlframe.engine.shared_setup import AM_ROLES
 
 FRAME = "THE RED QUEEN"
@@ -362,6 +363,203 @@ def bootstrap(state: GameState, value: Court) -> None:
         )
 
 
+def assignment_tag_id(value: CourtAM) -> str:
+    return identity(
+        "assigned-tag", value.id, value.bearer.token, value.assigned_event or value.event
+    )
+
+
+def sync_assignment_tag(
+    state: GameState,
+    value: CourtAM,
+    event: str,
+    *,
+    remove: bool = False,
+    marked: bool | None = None,
+) -> None:
+    """One source-bound Tag for an AM held by an actual NPC or Handler."""
+    if value.bearer.kind not in ("npc", "handler"):
+        return
+    from girlframe.engine import m3_red_queen_effects as effects
+    from girlframe.engine.m3_handler_consequences import same_handler_body
+
+    court = get(state, Court, value.court)
+    assigned_event = value.assigned_event or value.event
+    source = next(
+        (
+            x.id
+            for x in records(state, Assignment)
+            if x.am == value.id and x.target == value.bearer and x.event == assigned_event
+        ),
+        None,
+    )
+    if (
+        source is None
+        and assigned_event == court.event
+        and court.initial.get(value.role) == value.bearer
+    ):
+        source = court.id
+    if source is None or not event:
+        raise ValueError("Preserve the actual AM assignment source before treating it as a Tag")
+    npc = (
+        next((x for x in state.world.npcs if x.id == value.bearer.entity), None)
+        if state.world
+        else None
+    )
+    current: TagState | WorldTag | None
+    if value.bearer.kind == "handler":
+        if not same_handler_body(state, value.bearer):
+            if remove or marked is False:
+                return  # Never edit the successor Handler's Tags.
+            raise ValueError("Use the original current Handler body for this assigned AM Tag")
+        current = next((x for x in state.handler_tags if x.id == assignment_tag_id(value)), None)
+    else:
+        if npc is None:
+            if remove:
+                return
+            raise ValueError("Recover the actual original NPC holding this AM")
+        if not npc.alive and not remove and marked is not False:
+            raise ValueError("Assign or mark an AM only on its original living NPC")
+        current = next((x for x in npc.tags if x.id == assignment_tag_id(value)), None)
+    canonical_id = assignment_tag_id(value)
+    tag_rows = (
+        tuple(state.handler_tags) if value.bearer.kind == "handler" else npc.tags if npc else ()
+    )
+    legacy_ids: set[str] = set()
+    for legacy in effects.records(state, effects.TagGift):
+        original_mark = next((x for x in records(state, Mark) if x.id == legacy.source), None)
+        actual = next((x for x in tag_rows if x.id == legacy.id), None)
+        if original_mark is None or actual is None:
+            continue
+        if (
+            original_mark.am == value.id
+            and original_mark.court == value.court
+            and original_mark.target == value.bearer
+            and legacy.target == value.bearer
+            and legacy.giver == original_mark.actor
+            and legacy.event == original_mark.event
+            and legacy.label == actual.label == value.role
+            and legacy.id
+            == identity(
+                "tag",
+                original_mark.id,
+                original_mark.actor.token,
+                original_mark.target.token,
+                original_mark.event,
+            )
+            and (
+                actual.giver_actor == legacy.giver
+                if isinstance(actual, TagState)
+                else actual.giver_entity == legacy.giver.model_dump_json()
+            )
+        ):
+            legacy_ids.add(legacy.id)
+    tag_id = canonical_id
+    if current is None and legacy_ids:
+        tag_id = next(x.id for x in tag_rows if x.id in legacy_ids)
+        current = next(x for x in tag_rows if x.id == tag_id)
+    gift = next((x for x in effects.records(state, effects.TagGift) if x.id == tag_id), None)
+    if (
+        current is not None
+        and tag_id == canonical_id
+        and (
+            current.label != value.role
+            or gift is None
+            or (gift.source, gift.giver, gift.target, gift.label)
+            != (source, court.actor, value.bearer, value.role)
+            or (
+                current.giver_actor != court.actor
+                if isinstance(current, TagState)
+                else current.giver_entity != court.actor.model_dump_json()
+            )
+        )
+    ):
+        raise ValueError("Preserve the exact original assigned AM Tag provenance")
+    obsolete = legacy_ids | (
+        {canonical_id} if current is not None and tag_id == canonical_id else set()
+    )
+    if remove:
+        if current is None:
+            return
+        if value.bearer.kind == "handler":
+            state.handler_tags = [x for x in state.handler_tags if x.id not in obsolete]
+        else:
+            assert state.world is not None and npc is not None
+            state.world = state.world.model_copy(
+                update={
+                    "npcs": tuple(
+                        x.model_copy(
+                            update={"tags": tuple(t for t in x.tags if t.id not in obsolete)}
+                        )
+                        if x.id == npc.id
+                        else x
+                        for x in state.world.npcs
+                    )
+                }
+            )
+        return
+    is_marked = bool(value.marked_event) if marked is None else marked
+    if current is None:
+        effects.put(
+            state,
+            effects.TagGift(
+                id=tag_id,
+                giver=court.actor,
+                target=value.bearer,
+                label=value.role,
+                source=source,
+                event=event,
+            ),
+        )
+    if value.bearer.kind == "handler":
+        assert current is None or isinstance(current, TagState)
+        tag = (
+            TagState(
+                id=tag_id,
+                label=value.role,
+                giver=int(court.actor.entity),
+                giver_actor=court.actor,
+                observers=tuple(sorted({int(court.actor.entity), int(value.bearer.entity)})),
+                marked=is_marked,
+            )
+            if current is None
+            else current.model_copy(update={"marked": is_marked})
+        )
+        state.handler_tags = [x for x in state.handler_tags if x.id not in obsolete | {tag_id}] + [
+            tag
+        ]
+    else:
+        assert state.world is not None and npc is not None
+        assert current is None or isinstance(current, WorldTag)
+        world_tag = (
+            WorldTag(
+                id=tag_id,
+                label=value.role,
+                giver_entity=court.actor.model_dump_json(),
+                marked=is_marked,
+            )
+            if current is None
+            else current.model_copy(update={"marked": is_marked})
+        )
+        state.world = state.world.model_copy(
+            update={
+                "npcs": tuple(
+                    x.model_copy(
+                        update={
+                            "tags": (
+                                *tuple(t for t in x.tags if t.id not in obsolete | {tag_id}),
+                                world_tag,
+                            )
+                        }
+                    )
+                    if x.id == npc.id
+                    else x
+                    for x in state.world.npcs
+                )
+            }
+        )
+
+
 def assign(
     state: GameState, value: CourtAM, target: ActorRef, source: str, source_event: str, event: str
 ) -> Assignment:
@@ -386,6 +584,7 @@ def assign(
                 require_unlocked(old.identities, (selected.id,))
             old.identities = [x for x in old.identities if x.id != value.installed_identity]
             old.revision += 1
+    sync_assignment_tag(state, value, event, remove=True)
     result = Assignment(
         id=identity("assignment", value.id, event),
         court=value.court,
@@ -405,6 +604,7 @@ def assign(
         ),
     )
     put(state, result)
+    sync_assignment_tag(state, get(state, CourtAM, value.id), event)
     return result
 
 
@@ -423,10 +623,12 @@ def mark(state: GameState, value: CourtAM, source: Mark) -> None:
             if item.id == value.installed_identity:
                 item.marked = True
     put(state, source)
+    sync_assignment_tag(state, get(state, CourtAM, value.id), source.event, marked=True)
 
 
 def unmark(state: GameState, value: CourtAM, event: str) -> None:
     put(state, value.model_copy(update=dict(marked_event=None, state_event=event)))
+    sync_assignment_tag(state, get(state, CourtAM, value.id), event, marked=False)
     if value.installed_identity and value.bearer.kind == "pilot":
         sheet = state.sheets.get(value.bearer.entity)
         if sheet and sheet.character_id == value.bearer.incarnation:

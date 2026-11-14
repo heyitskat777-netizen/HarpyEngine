@@ -110,7 +110,7 @@ def lessons(
         return ()
     try:
         load_registry().require_available(rule)
-    except ValueError:
+    except (ValueError, WorkflowError):
         return ()
     play, book, _ = SOURCES[rule]
     runtime = sheet.girl_runtime or GirlRuntime()

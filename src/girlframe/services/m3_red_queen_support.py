@@ -146,7 +146,14 @@ def mark_effect(
 
     if mark.target.kind not in ("pilot", "npc", "gorgon", "handler"):
         raise WorkflowError("SOURCE_COURT_BODY_PORT_REQUIRED: preserve this actual subject's rules")
-    if mark.target.kind in ("npc", "gorgon", "handler"):
+    if mark.target.kind in ("npc", "handler"):
+        # rules.mark synchronizes the existing assignment Tag; marking the AM
+        # must not give a second permanent same-label Tag to its actual holder.
+        rules.sync_assignment_tag(
+            state, rules.get(state, rules.CourtAM, mark.am), event, marked=True
+        )
+        return ()
+    if mark.target.kind == "gorgon":
         am = rules.get(state, rules.CourtAM, mark.am)
         tag_effect(game, c, state, mark.actor, mark.target, am.role, mark.id, event)
         return ()

@@ -191,29 +191,51 @@ def test_work_context_is_required_exclusive_and_bound_to_campaign(ledger):
     assert svc.get(ADMIN, started["id"])["pending_count"] == 5
 
 
-def test_0013_preserves_existing_mission_work_and_append_only_triggers(ledger):
-    missions, game = service(ledger)
+def test_0013_preserves_existing_mission_work_and_append_only_triggers(
+    ledger, monkeypatch, tmp_path
+):
+    from historical_database import historical_database
+
+    from girlframe.services.m2_game import GameService
+    from girlframe.services.onboarding import OnboardingStore
+
+    missions, _ = service(ledger)
     identity, revision = launched(missions)
     missions.end(ADMIN, "end", identity, revision, True)
     config = Config(str(Path(__file__).resolve().parents[2] / "alembic.ini"))
-    command.downgrade(config, "0012")
-    with ledger.engine.connect() as c:
-        names = set(sa.inspect(c).get_table_names()) - {"alembic_version"}
-        columns = {name: [x["name"] for x in sa.inspect(c).get_columns(name)] for name in names}
-        before = {name: list(c.execute(sa.text('SELECT * FROM "' + name + '"'))) for name in names}
-    assert len(before) == 34 and before["m3_required_work"]
-    command.upgrade(config, "head")
-    command.check(config)
-    with ledger.engine.connect() as c:
-        for name in names:
-            quoted = ", ".join('"' + column + '"' for column in columns[name])
+    with historical_database(
+        ledger.engine, config, "0012", tmp_path / "populated-0012.db", monkeypatch
+    ) as historical:
+        with historical.connect() as c:
+            names = set(sa.inspect(c).get_table_names()) - {"alembic_version"}
+            columns = {name: [x["name"] for x in sa.inspect(c).get_columns(name)] for name in names}
+            before = {
+                name: list(c.execute(sa.text('SELECT * FROM "' + name + '"'))) for name in names
+            }
+        assert len(before) == 34 and before["m3_required_work"]
+        assert before["m3_missions"] and before["m3_mission_history"]
+        command.upgrade(config, "head")
+        command.check(config)
+        with historical.connect() as c:
+            for name in names:
+                quoted = ", ".join('"' + column + '"' for column in columns[name])
+                assert (
+                    list(c.execute(sa.text("SELECT " + quoted + ' FROM "' + name + '"')))
+                    == before[name]
+                )
+            assert c.scalar(sa.text("PRAGMA integrity_check")) == "ok"
+            assert c.execute(sa.text("PRAGMA foreign_key_check")).all() == []
+        with historical.begin() as c:
+            with pytest.raises(IntegrityError):
+                c.execute(t.m3["m3_required_work"].update().values(state="resolved"))
+            with pytest.raises(IntegrityError):
+                c.execute(t.m3["m3_required_work"].delete())
+        migrated = GameService(OnboardingStore(historical, ledger.policy))
+        assert state(migrated).sheets["2"].permissions == 2
+        with historical.connect() as c:
+            work_columns = ", ".join('"' + column + '"' for column in columns["m3_required_work"])
             assert (
-                list(c.execute(sa.text("SELECT " + quoted + ' FROM "' + name + '"')))
-                == before[name]
+                list(c.execute(sa.text("SELECT " + work_columns + ' FROM "m3_required_work"')))
+                == before["m3_required_work"]
             )
-        assert c.scalar(sa.text("PRAGMA integrity_check")) == "ok"
-        assert c.execute(sa.text("PRAGMA foreign_key_check")).all() == []
-    with ledger.transaction() as c:
-        with pytest.raises(IntegrityError):
-            c.execute(t.m3["m3_required_work"].update().values(state="resolved"))
-    assert state(game).sheets["2"].permissions == 2
+            assert c.execute(sa.text("PRAGMA foreign_key_check")).all() == []

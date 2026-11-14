@@ -570,6 +570,11 @@ class FrameControlService:
                 raise WorkflowError(
                     "Use the actual original caster, distinct battery and real assigned Frame"
                 )
+            if actual.vessel_id is None or target.vessel_id is None:
+                raise WorkflowError(
+                    "SOURCE_NEURAL_ENDPOINT_REQUIRED: establish both actual original "
+                    "physical vessels before proposing their spinal contact"
+                )
             if not account.strip() or len(account) > 1200:
                 raise WorkflowError(
                     "Describe the actual jack, exposure, reach and performed spinal contact"

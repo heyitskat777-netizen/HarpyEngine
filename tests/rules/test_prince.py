@@ -495,10 +495,10 @@ def test_power_imbalance_real_lower_status_flirt_and_source_authored_fan_members
 ):
     game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch)
     buy(controls, game, rules.HERO)
-    buy(controls, game, rules.POWER)
+    power = buy(controls, game, rules.POWER)
     actor, target = current_ref(state(game), 2), current_ref(state(game), 3)
     fans = controls.menu(PLAYER, 900)["fanbase"]
-    controls.member(
+    membership = controls.member(
         OTHER,
         str(uuid4()),
         state(game).revision,
@@ -507,6 +507,7 @@ def test_power_imbalance_real_lower_status_flirt_and_source_authored_fan_members
         fans["demographics"][0]["id"],
         "My actual original Girl is really a member of this fan demographic",
     )
+    assert higher(state(game), 2, 3)
     game.dice.faces = (3, 3)
     action = game.begin(
         PLAYER,
@@ -524,10 +525,19 @@ def test_power_imbalance_real_lower_status_flirt_and_source_authored_fan_members
     tick(worker, gateway, 3)
     pass_tags(game)
     with ledger.engine.connect() as c:
-        modifiers = [
-            x for x in game.action(c, action)["data"]["modifiers"] if x["source"] == rules.POWER
-        ]
-        assert len(modifiers) == 1 and modifiers[0]["amount"] == 2
+        saved = game.action(c, action)["data"]
+        # Roll-time source modifiers belong to the raw receipt total. The
+        # action's later modifiers list contains the separate Tag response.
+        receipt = saved["receipt"]
+        assert receipt["pre_total"] == sum(receipt["faces"]) + receipt["heat"] + 2 == 8
+        assert saved["prince_flirt"] == dict(
+            source=rules.POWER,
+            amount=2,
+            actor=2,
+            grant=power["id"],
+            target=target.model_dump(mode="json"),
+            membership=membership["id"],
+        )
     answer(game, PLAYER, "actor_flirt", options=("name",))
     answer(game, OTHER, "target_flirt", text="An actually authored name")
     assert game.inspect(PLAYER, action)["state"] == "complete"

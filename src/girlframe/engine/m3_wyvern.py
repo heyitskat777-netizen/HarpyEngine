@@ -315,9 +315,34 @@ def identity(kind: str, *parts: str) -> str:
     return str(uuid5(NAMESPACE_URL, "girlframe:wyvern:" + kind + ":" + ":".join(parts)))
 
 
+RENOVATION_RECORD = "wyvern_renovation_record"
+
+
+def _record_fact(item: dict[str, str], model: type[Model]) -> bool:
+    kind = item.get("kind")
+    if model is not Renovation:
+        return kind == KINDS[model]
+    if kind == RENOVATION_RECORD:
+        return True
+    if kind != KINDS[Renovation]:
+        return False
+    if "body" in item:
+        return True  # Existing saved typed records retain their original source.
+    # The installed-Asset proof historically shared the workflow kind and id.
+    # Recognize its exact shape; malformed typed records must never disappear.
+    if set(item) != {"kind", "id", "event", "actor", "asset"} or any(
+        not item[key].strip() for key in ("id", "event", "actor", "asset")
+    ):
+        raise ValueError("Preserve the typed Renovation body or exact installed-Asset proof")
+    actor = ActorRef.model_validate_json(item["actor"])
+    if actor.kind != "pilot":
+        raise ValueError("Preserve the original Pilot in this Renovation Asset proof")
+    return False
+
+
 def records[T: Model](state: GameState, model: type[T]) -> tuple[T, ...]:
     return tuple(
-        model.model_validate_json(x["body"]) for x in state.facts if x.get("kind") == KINDS[model]
+        model.model_validate_json(x["body"]) for x in state.facts if _record_fact(x, model)
     )
 
 
@@ -325,17 +350,20 @@ def all_records(
     state: GameState, models: tuple[type[Model], ...] | None = None
 ) -> tuple[Source, ...]:
     return tuple(
-        cast(Source, model.model_validate_json(item["body"]))
+        cast(Source, record)
         for model in (models or tuple(KINDS))
-        for item in state.facts
-        if item.get("kind") == KINDS[model]
+        for record in records(state, model)
     )
 
 
 def put(state: GameState, source: Source) -> None:
-    kind = KINDS[type(source)]
+    model = type(source)
+    # Validate existing typed sources before replacing one; no malformed payload
+    # can be silently discarded during an update with the same id.
+    records(state, model)
+    kind = RENOVATION_RECORD if model is Renovation else KINDS[model]
     state.facts = [
-        x for x in state.facts if not (x.get("kind") == kind and x.get("id") == source.id)
+        x for x in state.facts if not (_record_fact(x, model) and x.get("id") == source.id)
     ]
     state.facts.append(dict(kind=kind, id=source.id, body=source.model_dump_json()))
 

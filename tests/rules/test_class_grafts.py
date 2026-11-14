@@ -11,13 +11,16 @@ from test_ledger import ledger as ledger
 from test_m2_game import Gateway, answer, pass_tags, start, state, tick
 from test_mission_service import service
 from test_mission_ui import current
+from test_physical_operations import place
 from test_privileges import change
 from test_repair_service import ready as repairs_ready
 from test_strain import facts
+from test_world import initial
 
 from girlframe.delivery.m2_worker import GameWorker
 from girlframe.discord_adapter.m3_untouchable import open_purchase
 from girlframe.engine import m3_class_grafts as grafts
+from girlframe.engine import m3_consume as consume
 from girlframe.engine import m3_dampener as dampener
 from girlframe.engine import m3_kicked_puppy as kicked
 from girlframe.engine import m3_martyr as martyr
@@ -42,6 +45,19 @@ from girlframe.services.m3_punishments import PunishmentService
 from girlframe.services.m3_strain import StrainService
 from girlframe.services.m3_untouchable import UntouchableService
 from girlframe.services.onboarding import WorkflowError
+
+
+def consume_context(game):
+    """Actual original CONSUME bodies, before any graft or source Play is begun."""
+    with game.store.transaction() as c:
+        actual = state(game)
+        if actual.world is None:
+            actual.world = initial()
+        actual = place(actual, 2, mode="inside_frame")
+        actual = place(actual, 3, mode="inside_frame")
+        game.event(c, 1, str(uuid4()), "synthetic.original_grafted_consume_bodies", actual)
+    # These sitting bodies do not establish a new Neural Link or award Heat.
+    assert consume.hunger(state(game), current_ref(state(game), 2)) == "Quiet"
 
 
 def funds(game, amount=6):
@@ -96,7 +112,8 @@ def test_grafted_untouchable_native_purchase_and_actual_engage_tag_substitution(
     ledger, tmp_path, monkeypatch
 ):
     _, game = service(ledger, frame="CONSUME")
-    approved(ledger, game, tmp_path, monkeypatch, extra=(untouchable.RULE,))
+    approved(ledger, game, tmp_path, monkeypatch, extra=(untouchable.RULE, consume.STARVATION))
+    consume_context(game)
     funds(game, 3)
     data = UntouchableService(game).menu(PLAYER)
     before = state(game)
@@ -160,7 +177,8 @@ def test_grafted_dampener_uses_smaller_basis_and_actual_full_heat_cost(
     ledger, tmp_path, monkeypatch
 ):
     _, game = service(ledger, frame="CONSUME")
-    approved(ledger, game, tmp_path, monkeypatch, extra=(dampener.RULE,))
+    approved(ledger, game, tmp_path, monkeypatch, extra=(dampener.RULE, consume.STARVATION))
+    consume_context(game)
     funds(game)
     paid = acquire(game, DampenerService(game))
     with ledger.transaction() as c:
@@ -185,7 +203,8 @@ def test_grafted_kicked_puppy_actual_damaged_basis_target_gift_and_care_question
     ledger, tmp_path, monkeypatch
 ):
     _, game = service(ledger, frame="CONSUME")
-    approved(ledger, game, tmp_path, monkeypatch, extra=(kicked.RULE,))
+    approved(ledger, game, tmp_path, monkeypatch, extra=(kicked.RULE, consume.STARVATION))
+    consume_context(game)
     funds(game)
     paid = acquire(game, KickedPuppyService(game))
     with ledger.transaction() as c:

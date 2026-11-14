@@ -273,13 +273,18 @@ def test_native_owned_position_operations_and_actual_frame_response_then_extract
 def test_native_voluntary_exit_reopens_as_owned_cockpit_enter_controls(ledger):
     svc, game = placed(ledger)
 
+    def cockpit_interaction(user, identity):
+        value = current(user, identity)
+        value.channel_id = 900
+        return value
+
     async def run():
-        pilot = current(2, 60401)
+        pilot = cockpit_interaction(2, 60401)
         await pilot.response.defer(ephemeral=True)
         await open_initial(pilot, svc)
         form = pilot.edit_original_response.call_args.kwargs["view"]
         form.values.update(operation=("exit",), account="I actually leave")
-        await form.confirm.callback(current(2, 60402))
+        await form.confirm.callback(cockpit_interaction(2, 60402))
         assert form.completed
         await open_initial(pilot, svc)
         reopened = pilot.edit_original_response.call_args.kwargs["view"]
@@ -288,7 +293,7 @@ def test_native_voluntary_exit_reopens_as_owned_cockpit_enter_controls(ledger):
             "pilot",
         }
         reopened.values.update(operation=("pilot",), account="I actually pilot again")
-        await reopened.confirm.callback(current(2, 60403))
+        await reopened.confirm.callback(cockpit_interaction(2, 60403))
         assert reopened.completed
 
     asyncio.run(run())

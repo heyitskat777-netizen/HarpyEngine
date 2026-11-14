@@ -102,8 +102,20 @@ class RolePunishment(Model):
             or self.action is None
         ):
             raise ValueError("Preserve Show Dog's actual original Handler and duty source")
-        if self.source_kind == "vatgrown_doll" and self.executor.kind not in ("pilot", "handler"):
-            raise ValueError("Use this actual Doll source's supported original executor")
+        if self.source_kind == "vatgrown_doll":
+            if self.executor.kind not in ("pilot", "npc", "handler"):
+                raise ValueError("Use this actual Doll source's supported original executor")
+            if self.executor.kind == "npc" and (
+                self.chooser != self.executor
+                or self.chooser_controller != self.executor_controller
+                or self.subject.kind != "pilot"
+                or not self.action
+                or self.source_work is not None
+                or self.pc_work is not None
+            ):
+                raise ValueError(
+                    "Preserve the actual noticed NPC observer and original rolled Doll source"
+                )
         if self.executor.kind not in ("pilot", "npc", "handler", "external_pilot"):
             raise ValueError("Use an actual source-proved executor")
         if self.executor.kind == "external_pilot" and self.source_kind not in (

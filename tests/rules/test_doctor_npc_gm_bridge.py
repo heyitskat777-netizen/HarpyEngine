@@ -7,7 +7,7 @@ import pytest
 from test_doctor_npc_nanobot import roll_nanobot, setup
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger
-from test_m2_game import pass_tags, state, tick
+from test_m2_game import state, tick
 from test_mission_ui import current
 
 from girlframe.discord_adapter.m3_doctor import open_choice
@@ -24,9 +24,8 @@ def test_high_npc_nanobot_opens_durable_gm_request_without_completing_treatment(
     facilitator.configure(ADMIN, str(uuid4()), "user", OTHER.user_id)
     before = state(game)
     game.dice.faces = (6, 6)
-    action = roll_nanobot(game, patient, 1)
+    action = roll_nanobot(game, patient, 1, worker=worker, gateway=gateway)
     tick(worker, gateway, 3)
-    pass_tags(game)
     row = next(x for x in game.choices(ADMIN) if x["kind"] == "doctor_patient")
     receipt = game.inspect(PLAYER, action)["receipt"]
 

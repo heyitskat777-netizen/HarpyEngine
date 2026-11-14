@@ -286,6 +286,8 @@ def test_bot_registers_setup_join_character_sheet_when_store_enabled(store):
                 "play",
                 "choice",
                 "mission",
+                "facilitator",
+                "shelving",
             }
             assert not bot.tree.get_commands()
 

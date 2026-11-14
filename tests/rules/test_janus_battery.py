@@ -15,7 +15,10 @@ from girlframe.services.onboarding import WorkflowError
 
 
 def connected(store, tmp_path, monkeypatch, faces=(2, 2)):
-    game, caster, core = exposed_core(store, tmp_path, monkeypatch, exposed=False)
+    game, caster, core = exposed_core(
+        store, tmp_path, monkeypatch, exposed=False, caster_mode="inside_frame"
+    )
+    caster_pose = next(x for x in state(game).placements if x.actor == caster)
     contact = FrameControlService(game)
     identity = contact.propose(
         PLAYER,
@@ -33,6 +36,12 @@ def connected(store, tmp_path, monkeypatch, faces=(2, 2)):
         True,
         "Actual original jack is connected to this Core's actual spinal cord",
     )
+    actual = state(game)
+    connection = next(x for x in actual.neural_connections if x.id == identity)
+    assert connection.caster == caster and connection.caster_vessel == caster_pose.vessel_id
+    assert connection.battery == core
+    assert connection.battery_vessel == actual.janus_cores[-1].body_vessel
+    assert connection.caster_vessel != connection.battery_vessel
     game.dice.faces = faces
     return game, GameWorker(game), Gateway(), core, identity
 
@@ -295,3 +304,22 @@ def test_actual_effect_transaction_rollback_stale_response_and_raw_receipt_repla
     assert game.dice.calls == 1 and len(state(game).battery_links) == 1
     game.rebuild()
     assert len(state(game).battery_links) == 1
+
+
+def test_missing_original_caster_endpoint_does_not_create_neural_contact(
+    ledger, tmp_path, monkeypatch
+):
+    game, caster, core = exposed_core(ledger, tmp_path, monkeypatch, exposed=False)
+    before = state(game)
+    assert not any(x.actor == caster for x in before.placements)
+    with pytest.raises(WorkflowError, match="SOURCE_NEURAL_ENDPOINT_REQUIRED"):
+        FrameControlService(game).propose(
+            PLAYER,
+            str(uuid4()),
+            900,
+            caster,
+            core,
+            "A real Core alone supplies no original Pilot body endpoint",
+        )
+    assert state(game) == before
+    assert not before.neural_connections

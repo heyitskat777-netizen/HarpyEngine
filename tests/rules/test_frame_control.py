@@ -18,7 +18,7 @@ from girlframe.services.m3_frame_control import FrameControlService, prepare_bat
 from girlframe.services.onboarding import WorkflowError
 
 
-def exposed_core(store, tmp_path, monkeypatch, *, exposed=True):
+def exposed_core(store, tmp_path, monkeypatch, *, exposed=True, caster_mode=None):
     service, game = ready(store, tmp_path, monkeypatch)
     identity = service.request(PLAYER, "actual-original-core-contact-setup", 3)["id"]
     change(service, OTHER, identity, facts=facts().model_copy(update={"exposed": exposed}))
@@ -31,13 +31,18 @@ def exposed_core(store, tmp_path, monkeypatch, *, exposed=True):
     )
     core = ref(state(game).janus_cores[0])
     cast_core(service, game, core)
-    return game, current_ref(state(game), 2), core
+    caster = current_ref(state(game), 2)
+    if caster_mode is not None:
+        # Only callers asking for actual prior physical facts get a placement;
+        # other source fixtures establish their own original body independently.
+        place_original(game, caster, mode=caster_mode)
+    return game, caster, core
 
 
 def test_actual_restrained_exposed_core_contact_has_judge_facts_without_fictional_consent(
     ledger, tmp_path, monkeypatch
 ):
-    game, caster, core = exposed_core(ledger, tmp_path, monkeypatch)
+    game, caster, core = exposed_core(ledger, tmp_path, monkeypatch, caster_mode="outside_frame")
     service = FrameControlService(game)
     before = state(game)
     value = service.propose(
@@ -99,7 +104,9 @@ def test_actual_restrained_exposed_core_contact_has_judge_facts_without_fictiona
 def test_unknown_spinal_access_stays_pending_until_real_review_and_duplicate_is_rejected(
     ledger, tmp_path, monkeypatch
 ):
-    game, caster, core = exposed_core(ledger, tmp_path, monkeypatch, exposed=False)
+    game, caster, core = exposed_core(
+        ledger, tmp_path, monkeypatch, exposed=False, caster_mode="outside_frame"
+    )
     service = FrameControlService(game)
     before = state(game)
     identity = service.propose(
@@ -128,10 +135,11 @@ def test_unknown_spinal_access_stays_pending_until_real_review_and_duplicate_is_
     assert not state(game).janus_cores[-1].exposed
 
 
-def place_original(game, actor, *, outside=False):
+def place_original(game, actor, *, outside=False, mode=None):
     from uuid import uuid4
 
     from girlframe.engine import m3_physical
+    from girlframe.engine.m3_actors import resolve
     from girlframe.engine.m3_physical_state import InitialPlacement
     from girlframe.engine.m3_world_state import Board, World
     from girlframe.services.m3_actors import profiles
@@ -140,7 +148,9 @@ def place_original(game, actor, *, outside=False):
         canon = state(game)
         if canon.world is None:
             canon.world = World(board=Board(minimum=(-2, -2), maximum=(2, 2)), locations=())
-        frame = canon.janus_cores[-1].frame_instance
+        assert not any(x.actor == actor for x in canon.placements)
+        frame = resolve(canon, actor, profiles(c, game.store.campaign_id)).frame_instance
+        assert frame is not None
         canon = m3_physical.initial(
             canon,
             profiles(c, game.store.campaign_id),
@@ -149,11 +159,11 @@ def place_original(game, actor, *, outside=False):
                 frame_instance=frame,
                 girl_cell=(0, 0),
                 frame_cell=(1, 1) if outside else (0, 0),
-                mode="outside_frame" if outside else "inside_frame",
+                mode=mode or ("outside_frame" if outside else "inside_frame"),
                 account="Actual original known body/cockpit and Frame facts",
                 facts_confirmed=True,
             ),
-            "actual-original-physical-vessel",
+            "actual-original-physical-vessel:" + actor.token,
             str(uuid4()),
             str(uuid4()),
         )
@@ -210,7 +220,7 @@ def test_actual_separated_body_and_frame_reject_spinal_reach_without_teleport(
 def test_real_neural_contact_native_nested_next_form_keeps_original_judge_question(
     ledger, tmp_path, monkeypatch
 ):
-    game, caster, core = exposed_core(ledger, tmp_path, monkeypatch)
+    game, caster, core = exposed_core(ledger, tmp_path, monkeypatch, caster_mode="outside_frame")
     service = FrameControlService(game)
 
     async def propose():
@@ -238,8 +248,9 @@ def test_real_neural_contact_native_nested_next_form_keeps_original_judge_questi
 def test_optional_other_body_contact_needs_its_actual_confirmation_then_separate_judge(
     ledger, tmp_path, monkeypatch
 ):
-    game, caster, _ = exposed_core(ledger, tmp_path, monkeypatch)
+    game, caster, _ = exposed_core(ledger, tmp_path, monkeypatch, caster_mode="outside_frame")
     battery = current_ref(state(game), 3)
+    place_original(game, battery, mode="outside_frame")
     service = FrameControlService(game)
     identity = service.propose(
         PLAYER,
@@ -287,7 +298,7 @@ def test_actual_original_end_interrupts_authority_without_fake_unplug_and_rolls_
     from girlframe.services import m3_frame_control as controls
     from girlframe.services.m3_careers import end_in_transaction, synchronize_end
 
-    game, caster, core = exposed_core(ledger, tmp_path, monkeypatch)
+    game, caster, core = exposed_core(ledger, tmp_path, monkeypatch, caster_mode="outside_frame")
     service = FrameControlService(game)
     identity = service.propose(
         PLAYER,

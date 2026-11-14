@@ -133,7 +133,10 @@ def test_implicit_rollback_blocks_following_autocommit_writes(tmp_path: Path) ->
             "WITH source(id, guild_id) AS (VALUES (?, ?)) "
             "INSERT INTO campaigns(id, guild_id) SELECT id, guild_id FROM source"
         )
-        with pytest.raises(CaptureError, match="transaction ended"):
+        with pytest.raises(
+            CaptureError,
+            match="Source transaction or managed step ended without complete validation",
+        ):
             with capture_writes(connection, exclusive_authorizer=True) as capture:
                 # Prime the raw statement cache while the source transaction lives.
                 raw.execute(statement, ("original", "11"))

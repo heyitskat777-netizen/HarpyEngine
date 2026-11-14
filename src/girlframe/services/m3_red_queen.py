@@ -1532,7 +1532,9 @@ class RedQueenService:
                 require_rule(self.game, c, state, court.actor, rules.PERSONALITY)
                 action = self.game.action(c, cast(str, roll))
                 if (
-                    action["state"] not in ("awaiting_lock", "ready_to_roll")
+                    action["state"] not in ("awaiting_lock", "acquiring", "ready_to_roll")
+                    or action["data"].get("receipt") is not None
+                    or _opponent(action) != value.person
                     or value.bearer.kind != "pilot"
                     or action["actor_id"] != value.bearer.entity
                     or action["data"].get("character_ids", {}).get(value.bearer.entity)

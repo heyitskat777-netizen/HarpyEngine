@@ -190,13 +190,46 @@ def test_native_npc_low_actual_tag_before_owned_benefit(ledger, tmp_path, monkey
 def test_native_npc_low_real_social_punishment_before_benefit(ledger, tmp_path, monkeypatch):
     game, worker, gateway, controls, npc = npc_ready(ledger, tmp_path, monkeypatch)
     action = native_roll(game, worker, gateway, npc, (1, 1))
-    choose(game, ADMIN, "vat_doll_attention", ("punish",), native=True)
+    from girlframe.discord_adapter.m3_vatgrown import open_choice
+
+    row = next(x for x in game.choices(ADMIN) if x["kind"] == "vat_doll_attention")
+
+    async def punish():
+        interaction = current(ADMIN.user_id, uuid4().int % 1000000000)
+        await interaction.response.defer(ephemeral=True)
+        await open_choice(interaction, game, game.decision(ADMIN, row["id"]))
+        form = interaction.edit_original_response.call_args.kwargs["view"]
+        form.values.update(options=("punish",), text="")
+        response = current(ADMIN.user_id, uuid4().int % 1000000000)
+        await form.confirm.callback(response)
+        assert form.completed, response.edit_original_response.call_args_list
+        saved = state(game)
+        args = (
+            ADMIN,
+            str(response.id),
+            row["id"],
+            row["revision"],
+            ChoiceAnswer(options=("punish",)),
+        )
+        replay = game.respond(*args)
+        assert game.respond(*args) == replay
+        assert state(game) == saved
+
+    asyncio.run(punish())
     before = state(game)
     case = before.role_punishments[-1]
     assert case.source_kind == "vatgrown_doll" and case.executor == npc and case.chooser == npc
     assert case.subject == current_ref(before, 2)
     assert case.executor_controller == 1 and case.chooser_controller == 1
-    assert case.pc_work is None
+    assert case.pc_work is None and case.source_work is None
+    assert case.action == action and len(before.role_punishments) == 1
+    reopened = RolePunishmentService(GameService(ledger))
+    pending = reopened.get(ADMIN, case.id)
+    assert pending["case"]["executor"] == npc.model_dump(mode="json")
+    assert pending["case"]["chooser"] == npc.model_dump(mode="json")
+    assert set(pending["kinds"]) == {"quality_time", "reduced_socialization"}
+    with pytest.raises(WorkflowError):
+        reopened.get(OTHER, case.id)
     assert not any(x["kind"] == "vat_doll_benefits" for x in game.choices(PLAYER))
     role = RolePunishmentService(game)
 
@@ -216,6 +249,10 @@ def test_native_npc_low_real_social_punishment_before_benefit(ledger, tmp_path, 
     final = state(game)
     done = next(x for x in final.role_punishments if x.id == case.id)
     assert done.effect_event and done.completion_event
+    completed = RolePunishmentService(GameService(ledger)).get(ADMIN, case.id)
+    assert completed["case"]["completion_event"] == done.completion_event
+    with pytest.raises(WorkflowError):
+        reopened.get(OTHER, case.id)
     assert (
         depth(final, current_ref(final, 2), npc) == depth(before, current_ref(before, 2), npc) + 1
     )
@@ -228,4 +265,6 @@ def test_native_npc_low_real_social_punishment_before_benefit(ledger, tmp_path, 
     tick(worker, gateway, 6)
     with ledger.engine.connect() as c:
         assert game.lock(c, 900)["state"] == "released"
+    assert "PRIVATE_DOLL_NPC_SOURCE" not in str(gateway.messages)
+    assert "PRIVATE_DOLL_NPC_DETAIL" not in str(gateway.messages)
     assert game.dice.calls == 1

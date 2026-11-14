@@ -301,7 +301,7 @@ class NpcResourcesService:
 
     def view(self, viewer: GuildViewer, target: ActorRef) -> dict[str, Any]:
         with self.store.engine.connect() as c:
-            self._access(c, viewer)
+            self.game.authorize(c, viewer, game=False)
             state = load_state(c, self.store.campaign_id)
             actual, _ = _body(self.game, c, state, target)
             value = prove(self.game, c, state, target)

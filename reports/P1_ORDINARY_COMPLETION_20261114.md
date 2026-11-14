@@ -90,6 +90,99 @@ policy, then human tests/owner acceptance. The owner explicitly authorized both 
 offline regression on2026-11-14; hourly/new simulation automation stays paused. No focused green
 or technical review substitutes for any of those gates.
 
+## Completed frozen b0243c3 full regression
+
+Exact published source: `b0243c3dab1a02caeaa4a54ce09b9460edeabb00`.
+`pytest -q --tb=short -p var.p1_regression_observer
+--junitxml=var/p1-full-b0243c3.xml` completed **144 failed,3,155 passed in
+4,867.94s**; all3,299 tests were collected. The observer only records results;
+it neither selects nor skips tests. All five session-mix tests passed. Both
+pagination boundary tests passed; its two native history tests exposed stale
+expected text missing genuinely saved contributions, retained in the repair.
+
+Default focused CI on this commit passed:
+[43580820173](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43580820173).
+Global Ruff, format1,895 Python files and mypy903 source files passed. Neither
+focused CI nor static checks convert the red full result into acceptance.
+
+Actual synthetic backup→restore to a new0600 private database→fresh-interpreter
+reopen compared45 tables and canonical state successfully. Restored-database
+`alembic upgrade head` and `alembic check` passed. Private operational evidence:
+`var/p1-restore-b0243c3-am-body/evidence.json`. No live campaign was migrated and
+no bot was started.
+
+The full failure list is retained. Repairs are grouped by demonstrated causes:
+read-only Inbox authorization, source-owned neural endpoints and physical-context
+fixtures, actual historical-schema migration tests without downgrading head,
+Princess directed Engage completion persistence, Red Queen unrolled acquisition,
+Vatgrown NPC social Punishment validation, and Wyvern typed/flat record identity.
+Existing source ownership, consent, strict schema, rollback and idempotency guards
+remain the baseline. Tests with stale assumptions are repaired through genuine
+prior sources rather than weakening the corresponding production guards.
+
+Isolated proposals were checked against original/proposed hashes before root
+integration. Bounded independent technical reviews found no additional concrete
+production defect in the declared proposals. Two proposed Vatgrown public-message
+canaries were not in the initially integrated test; do not claim they ran.
+Failed-node retries and the repaired exact-candidate full regression remain
+pending. This is not independent rule certification or human acceptance.
+
+## Failed-node repair checkpoint
+
+The first actual failed-only retry completed121 passed/18 failed230.18s; five
+Wyvern nodes were deliberately held for their isolated repair. Subsequent scoped
+retries completed7 passed/2 failed11.88s,10 passed/7 failed44.07s and3 passed/
+4 failed20.98s. One existing ordinary Heat-disposal consumer was included for the
+changed replay path. Latest distinct original-node reconciliation:140 passed,
+four still failing. Preserve these as focused evidence, not a combined full run.
+
+Confirmed production fixes include read-only Inbox access without enabling
+mutations, directed Engage's actual durable completion, genuine unrolled
+Personality binding, exact NPC Doll social Punishment admission, and lossless
+Wyvern typed/flat record coexistence with legacy reads. Disposable Psyche replay
+now mirrors the already validated Nightmare/Kicked Puppy Asset basis instead of
+wrongly demanding a second Heat expenditure. Both paid alternative normals and
+an existing ordinary Heat normal pass. Independent bounded technical delta
+reviews found no concrete new defect; no rules were certified.
+
+Doctor legacy helpers now use the same Gateway that confirmed their scene lock;
+they no longer consume a second Tag window or trigger fictitious drift. Real
+NPC/Director introductions use Handler invitations and actual controller consent.
+These are fixture corrections, without relaxing production ownership or locks.
+The last Court checks exposed an actual missing assigned-AM Tag producer; its
+repair remains active. Global Ruff/format and903-source mypy pass after current
+integration. Final source must be frozen and fully regressed after that repair.
+
+## Repaired source freeze
+
+All144 original failing nodes now have focused passing evidence. The final
+protected-target normal passed1/3.41s; the three remaining Court cases passed
+3/7.98s. This reconciliation is not a complete regression on repaired source.
+
+The printed NPC/Handler assigned-AM rule now runs through the existing central
+domain assignment, marking and reset operations, including extraction-driven
+reassignment. It creates one actual source-bound role Tag, removes only that
+role's proved Tag on recall, and recognizes exact legacy Mark/TagGift provenance
+without deleting unrelated same-label Tags or changing old receipts/events.
+The extended normal performs actual restoration and identical retry, marking,
+cockpit entry and a genuine Consult recall; the separately earned same-label
+Director Tag remains. Existing source/permission/privacy gates are retained.
+Bounded independent technical delta review found no concrete defect; this does
+not certify the rules or approve a campaign release.
+
+Final pre-freeze Ruff and format pass1,896 Python files; mypy passes903 source
+files. Registry remains477 entries/0 independently verified. The initially omitted
+Vatgrown public-message canaries are restored for the final full regression;
+their earlier focused result does not claim those assertions ran.
+
+The workspace disconnected before the original freeze/commit attempt could
+execute. On reconnection the existing checkout, uncommitted source and logs
+survived; the final worker source/test hashes match their frozen manifest.
+No repairs were reapplied over newer work. Final exact-commit full regression,
+CI evidence and renewed actual restore/reopen remain to be recorded. No bot
+startup, live migration, model call, environment publication or rules promotion
+occurred.
+
 
 ## Ordinary packet freeze update
 

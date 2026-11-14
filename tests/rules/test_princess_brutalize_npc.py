@@ -153,7 +153,10 @@ def test_native_directed_brutalize_npc_injury_or_death_uses_original_alpha(
             ChoiceAnswer(options=("kill",) if killed else ("injure",), text="Not my decision"),
         )
     native(
-        game, PLAYER, "alpha_npc_damage", **({} if killed else {"injury": "Actual torn shoulder"})
+        game,
+        PLAYER,
+        "alpha_npc_damage",
+        **({"effect": ("kill",)} if killed else {"injury": "Actual torn shoulder"}),
     )
     final = state(game)
     actual = next(x for x in final.world.npcs if x.id == npc.entity)

@@ -58,7 +58,10 @@ def test_native_cohort_joins_real_npc_protection_without_roll_or_failure_tag(
     before = state(game)
     submit(
         helper,
-        dict(account="PRIVATE_COHORT I actually join the guard and watch the corridor"),
+        dict(
+            outcome=("participate",),
+            account="PRIVATE_COHORT I actually join the guard and watch the corridor",
+        ),
         99630,
     )
     actual = state(game)
@@ -130,7 +133,13 @@ def test_failed_protection_pending_cohort_acknowledges_without_erasing_failure(
     )
     assert controls.view(PLAYER, work)["can_failure_tag"]
     before = state(game)
-    submit(helper, dict(account="PRIVATE_MISSED I missed the opportunity before it failed"), 99730)
+    submit(
+        helper,
+        dict(
+            outcome=("missed",), account="PRIVATE_MISSED I missed the opportunity before it failed"
+        ),
+        99730,
+    )
     actual = state(game)
     acknowledgment = rules.records(actual, rules.ProtectionCohort)[-1]
     assert acknowledgment.outcome == "missed" and acknowledgment.failure == failure["id"]

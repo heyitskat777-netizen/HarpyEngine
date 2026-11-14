@@ -10,11 +10,14 @@ from test_ledger import ledger as ledger
 from test_m2_game import Gateway, pass_tags, state, tick
 from test_mission_service import service
 from test_mission_ui import current
+from test_physical_operations import place
+from test_world import initial
 
 from girlframe.delivery.m2_worker import GameWorker
 from girlframe.discord_adapter.m2_receipt_text import expression
 from girlframe.discord_adapter.m2_ui import open_choice, open_play
 from girlframe.discord_adapter.m3_nightmare import open_purchase
+from girlframe.engine import m3_consume as consume
 from girlframe.engine import m3_nightmare as rules
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.services.m3_nightmare import NightmareService
@@ -24,9 +27,20 @@ def test_native_nightmare_keep_uses_void_without_heat_and_preserves_owned_traits
     ledger, tmp_path, monkeypatch
 ):
     _, game = service(ledger, girl="ALPHA", frame="CONSUME")
-    approved(ledger, game, tmp_path, monkeypatch, extra=(rules.RULE,))
+    approved(ledger, game, tmp_path, monkeypatch, extra=(rules.RULE, consume.STARVATION))
+    approval = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update={
+            "m3_approval": approval.model_copy(
+                update={"subsystems": approval.subsystems | {"world", "playbooks"}}
+            )
+        }
+    )
     with ledger.transaction() as c:
         actual = state(game)
+        actual.world = initial()
+        # Real prior body/Frame context, without a new piloting link or +3 Heat.
+        actual = place(actual, 2, mode="inside_frame")
         actual.sheets["2"].permissions = 2
         actual.sheets["2"].heat = 5
         for family in ("girl", "frame"):
@@ -59,8 +73,10 @@ def test_native_nightmare_keep_uses_void_without_heat_and_preserves_owned_traits
             trigger=("yes",),
             context="I keep my head while my actual Void alterations terrify the opposition",
         )
-        await form.confirm.callback(current(2, 999604))
-        assert form.completed and game.dice.calls == 0
+        confirmed = current(2, 999604)
+        await form.confirm.callback(confirmed)
+        assert form.completed, confirmed.edit_original_response.call_args_list
+        assert game.dice.calls == 0
 
     asyncio.run(buy_and_prepare())
     actual = state(game)

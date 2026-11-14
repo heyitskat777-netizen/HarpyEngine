@@ -269,43 +269,51 @@ def test_inbox_exposes_absent_dogs_work_without_the_private_mission_objective(le
         svc.get(OTHER, identity)
 
 
-def test_0012_preserves_populated_0011_and_does_not_activate_m3(ledger, monkeypatch):
+def test_0012_preserves_populated_0011_and_does_not_activate_m3(ledger, monkeypatch, tmp_path):
     from alembic import command
     from alembic.config import Config
+    from historical_database import historical_database
     from test_m2_game import start
 
-    svc, game = service(ledger)
+    from girlframe.services.m2_game import GameService
+    from girlframe.services.onboarding import OnboardingStore
+
+    # Produce genuine synthetic M2 rows; never downgrade the source head DB.
+    _, game = service(ledger)
     action = start(game)
     ledger.roll_basic(PLAYER, "synthetic-raw-roll", ledger.status(PLAYER)["revision"])
     config = Config(str(Path(__file__).resolve().parents[2] / "alembic.ini"))
-    # Only additive M3 tables are removed, on a synthetic disposable DB.
-    command.downgrade(config, "0011")
+    with historical_database(
+        ledger.engine, config, "0011", tmp_path / "populated-0011.db", monkeypatch
+    ) as historical:
 
-    def snapshot():
-        with ledger.engine.connect() as c:
-            names = set(sa.inspect(c).get_table_names()) - {"alembic_version"}
-            return {
-                name: sorted(
-                    tuple(row) for row in c.execute(sa.text('SELECT * FROM "' + name + '"'))
-                )
-                for name in names
-            }
+        def snapshot():
+            with historical.connect() as c:
+                names = set(sa.inspect(c).get_table_names()) - {"alembic_version"}
+                return {
+                    name: sorted(
+                        tuple(row) for row in c.execute(sa.text('SELECT * FROM "' + name + '"'))
+                    )
+                    for name in names
+                }
 
-    before = snapshot()
-    assert len(before) == 31 and before["m2_actions"] and before["roll_receipts"]
-    disabled = ledger.policy.model_copy(update={"m3_approval": None, "owner_m3_rulings": None})
-    ledger.policy = disabled
-    monkeypatch.setenv("GIRLFRAME_RULES_REGISTRY", "/nonexistent/disabled-m3-registry.json")
-    command.upgrade(config, "head")
-    command.check(config)
-    after = snapshot()
-    assert len(after) == 37 and {name: after[name] for name in before} == before
-    assert len(after["m3_scene_contexts"]) == 1
-    assert all(after[name] == [] for name in set(after) - set(before) - {"m3_scene_contexts"})
-    assert game.inspect(PLAYER, action)["id"] == action
-    assert MissionService(ledger).access.registry is None
-    with pytest.raises(WorkflowError, match="M3_REVIEW_PENDING"):
-        svc.offer(ADMIN, "not-released", "Not implicitly enabled by migration", (2,))
-    with ledger.engine.connect() as c:
-        assert c.scalar(sa.text("PRAGMA integrity_check")) == "ok"
-        assert c.execute(sa.text("PRAGMA foreign_key_check")).all() == []
+        before = snapshot()
+        assert len(before) == 31 and before["m2_actions"] and before["roll_receipts"]
+        disabled = ledger.policy.model_copy(update={"m3_approval": None, "owner_m3_rulings": None})
+        monkeypatch.setenv("GIRLFRAME_RULES_REGISTRY", "/nonexistent/disabled-m3-registry.json")
+        command.upgrade(config, "head")
+        command.check(config)
+        after = snapshot()
+        assert set(after) == set(t.metadata.tables)
+        assert {name: after[name] for name in before} == before
+        assert len(after["m3_scene_contexts"]) == 1
+        assert all(after[name] == [] for name in set(after) - set(before) - {"m3_scene_contexts"})
+        restored = OnboardingStore(historical, disabled)
+        assert GameService(restored).inspect(PLAYER, action)["id"] == action
+        missions = MissionService(restored)
+        assert missions.access.registry is None
+        with pytest.raises(WorkflowError, match="M3_REVIEW_PENDING"):
+            missions.offer(ADMIN, "not-released", "Not implicitly enabled by migration", (2,))
+        with historical.connect() as c:
+            assert c.scalar(sa.text("PRAGMA integrity_check")) == "ok"
+            assert c.execute(sa.text("PRAGMA foreign_key_check")).all() == []

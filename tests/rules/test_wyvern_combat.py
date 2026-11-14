@@ -231,9 +231,11 @@ def test_actual_sprite_crush_waits_for_real_optional_interception_then_destroys_
     buy(source, rules.CRUSH)
     with ledger.transaction() as c:
         canon = state(game)
+        leader = canon.world.gorgons[0]
+        assert leader.gorgon_class != "sprite" and leader.alive
         for entity in (
-            gorgon("sprite", "actual-small", revealed=True),
-            gorgon("sprite", "actual-shield", revealed=True, follows="actual-small"),
+            gorgon("sprite", "actual-small", revealed=True, follows=leader.id, types=leader.types),
+            gorgon("sprite", "actual-shield", revealed=True, follows=leader.id, types=leader.types),
         ):
             canon.world = introduce_gorgon(canon.world, entity).world
         game.event(

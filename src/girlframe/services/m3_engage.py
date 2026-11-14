@@ -397,6 +397,15 @@ def synchronize(
         ):
             return
     if action["data"]["engage"]["applied"] and not game.pending(c, action["id"]):
+        directed = bool(action["data"].get("princess_child") and action["data"]["play"] == "engage")
+        if directed and action["data"]["engage"]["followups"]:
+            from girlframe.services.m3_collateral import latest
+
+            if any(
+                latest(game, c, work)["state"] != "resolved"
+                for work in action["data"]["engage"]["followups"]
+            ):
+                return
         state = load_state(c, game.store.campaign_id)
         if action["data"].get("actor_basic"):
             from girlframe.services.m3_actor_plays import ActorPlayService
@@ -407,6 +416,10 @@ def synchronize(
 
             ChoiceEngine(game).finish(c, state, action)
         game.save_action(c, action)
+        if directed and action["state"] == "complete":
+            from girlframe.services.m3_princess_performer import complete_battle
+
+            complete_battle(game, c, action, event)
         if action["data"].get("ankou_feedback_child"):
             from girlframe.services.m3_ankou_feedback import finish_engage_reprisal
 

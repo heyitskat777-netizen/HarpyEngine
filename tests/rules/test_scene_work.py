@@ -242,14 +242,35 @@ def test_downgrade_refuses_to_discard_real_scene_or_campaign_work(ledger):
     with ledger.transaction() as c:
         append(ledger, c, source(game, c), scene_id=scene(game))
     config = Config(str(Path(__file__).resolve().parents[2] / "alembic.ini"))
-    with pytest.raises(RuntimeError, match="Refuse to discard"):
+
+    def snapshot():
+        with ledger.engine.connect() as c:
+            return (
+                c.scalar(sa.text("SELECT version_num FROM alembic_version")),
+                list(
+                    c.execute(
+                        sa.text(
+                            "SELECT type, name, tbl_name, sql FROM sqlite_master "
+                            "ORDER BY type, name"
+                        )
+                    )
+                ),
+                list(c.execute(sa.select(t.m3["m3_required_work"]))),
+            )
+
+    before = snapshot()
+    assert len(before[2]) == 1
+    with pytest.raises(RuntimeError, match="Do not remove the draining barrier"):
         command.downgrade(config, "0013")
-    with ledger.engine.connect() as c:
-        assert c.scalar(sa.text("SELECT version_num FROM alembic_version")) == "0014"
-        assert c.scalar(sa.select(sa.func.count()).select_from(t.m3["m3_required_work"])) == 1
+    assert snapshot() == before
 
 
-def test_0014_preserves_populated_period_history_and_work_and_backfills_historical_scenes(ledger):
+def test_0014_preserves_populated_period_history_and_work_and_backfills_historical_scenes(
+    ledger,
+    monkeypatch,
+    tmp_path,
+):
+    from historical_database import historical_database
     from test_off_duty_cycle import prepared
 
     cycle, game, period = prepared(ledger)
@@ -257,65 +278,92 @@ def test_0014_preserves_populated_period_history_and_work_and_backfills_historic
     game.close_scene(ADMIN, "historical-close-before-migration", 900)
     game.bind_scene(ADMIN, "historical-rebind-before-migration", 900)
     config = Config(str(Path(__file__).resolve().parents[2] / "alembic.ini"))
-
-    def snapshot():
-        with ledger.engine.connect() as c:
+    with historical_database(
+        ledger.engine, config, "0013", tmp_path / "populated-0013.db", monkeypatch
+    ) as historical:
+        with historical.connect() as c:
             inspector = sa.inspect(c)
-            result = {}
-            for name in inspector.get_table_names():
-                if name in ("alembic_version", "m3_scene_contexts"):
-                    continue
-                columns = [
-                    x["name"]
-                    for x in inspector.get_columns(name)
-                    if name != "m3_required_work"
-                    or x["name"] not in ("scene_id", "campaign_context")
-                ]
-                projection = ", ".join('"' + x + '"' for x in columns)
-                result[name] = sorted(
-                    tuple(x)
-                    for x in c.execute(sa.text("SELECT " + projection + ' FROM "' + name + '"'))
-                )
-            return result
+            names = set(inspector.get_table_names()) - {"alembic_version"}
+            columns = {name: [x["name"] for x in inspector.get_columns(name)] for name in names}
 
-    before = snapshot()
-    assert before["m3_off_duty"] and before["m3_off_duty_history"] and before["m3_required_work"]
-    command.downgrade(config, "0013")
-    assert snapshot() == before
-    command.upgrade(config, "head")
-    command.check(config)
-    assert snapshot() == before
-    with ledger.engine.connect() as c:
-        contexts = list(c.execute(sa.select(t.m3["m3_scene_contexts"])).mappings())
-        assert len(contexts) == 2 and original in {x["id"] for x in contexts}
-        assert all(
-            x["scene_id"] is None and not x["campaign_context"]
-            for x in c.execute(sa.select(t.m3["m3_required_work"])).mappings()
-        )
-        assert c.scalar(sa.text("PRAGMA integrity_check")) == "ok"
-        assert not c.execute(sa.text("PRAGMA foreign_key_check")).all()
+        def snapshot():
+            with historical.connect() as c:
+                result = {}
+                for name in names:
+                    projection = ", ".join('"' + x + '"' for x in columns[name])
+                    result[name] = sorted(
+                        (
+                            tuple(x)
+                            for x in c.execute(
+                                sa.text("SELECT " + projection + ' FROM "' + name + '"')
+                            )
+                        ),
+                        key=repr,
+                    )
+                return result
+
+        before = snapshot()
+        assert before["m3_off_duty"] and before["m3_off_duty_history"]
+        assert before["m3_required_work"] and "m3_scene_contexts" not in names
+        # The copied records genuinely fit the old mission/off-duty-only schema.
+        assert "scene_id" not in columns["m3_required_work"]
+        assert "campaign_context" not in columns["m3_required_work"]
+        command.upgrade(config, "head")
+        command.check(config)
+        assert snapshot() == before
+        with historical.connect() as c:
+            contexts = list(c.execute(sa.select(t.m3["m3_scene_contexts"])).mappings())
+            assert len(contexts) == 2 and original in {x["id"] for x in contexts}
+            assert all(
+                x["scene_id"] is None and not x["campaign_context"]
+                for x in c.execute(sa.select(t.m3["m3_required_work"])).mappings()
+            )
+            assert c.scalar(sa.text("PRAGMA integrity_check")) == "ok"
+            assert not c.execute(sa.text("PRAGMA foreign_key_check")).all()
 
 
 def test_actual_scene_identity_is_not_inferred_from_current_profile_or_channel_row_on_upgrade(
     ledger,
+    monkeypatch,
+    tmp_path,
 ):
+    from historical_database import historical_database
+
     game, *_ = setup_game(ledger)
     original = scene(game)
     config = Config(str(Path(__file__).resolve().parents[2] / "alembic.ini"))
-    command.downgrade(config, "0013")
-    # Synthetic malformed operational projection: no bind event exists for this ID.
-    unknown = str(uuid4())
-    with ledger.transaction() as c:
-        c.execute(
-            t.m2["m2_scenes"]
-            .update()
-            .where(t.m2["m2_scenes"].c.channel_id == "900")
-            .values(id=unknown)
-        )
-    command.upgrade(config, "head")
-    with ledger.engine.connect() as c:
-        ids = set(c.scalars(sa.select(t.m3["m3_scene_contexts"].c.id)))
-        assert original in ids and unknown not in ids
+    with historical_database(
+        ledger.engine, config, "0013", tmp_path / "scene-evidence-0013.db", monkeypatch
+    ) as historical:
+        # Synthetic malformed operational projection: no bind event exists for this ID.
+        unknown = str(uuid4())
+        with historical.begin() as c:
+            c.execute(
+                t.m2["m2_scenes"]
+                .update()
+                .where(t.m2["m2_scenes"].c.channel_id == "900")
+                .values(id=unknown)
+            )
+            assert (
+                c.scalar(
+                    sa.select(t.m2["m2_scenes"].c.id).where(t.m2["m2_scenes"].c.channel_id == "900")
+                )
+                == unknown
+            )
+        command.upgrade(config, "head")
+        command.check(config)
+        with historical.connect() as c:
+            ids = set(c.scalars(sa.select(t.m3["m3_scene_contexts"].c.id)))
+            assert original in ids and unknown not in ids
+            # Backfill reads actual bind events without rewriting the current projection.
+            assert (
+                c.scalar(
+                    sa.select(t.m2["m2_scenes"].c.id).where(t.m2["m2_scenes"].c.channel_id == "900")
+                )
+                == unknown
+            )
+            assert c.scalar(sa.text("PRAGMA integrity_check")) == "ok"
+            assert not c.execute(sa.text("PRAGMA foreign_key_check")).all()
 
 
 def test_a_new_revision_cannot_move_a_required_decision_to_another_scene_or_campaign(ledger):

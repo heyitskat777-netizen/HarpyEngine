@@ -187,8 +187,13 @@ def episode(ledger, tmp_path, monkeypatch, given, *, recipe="keep_your_head"):
         # Reject proof cycles before following any recursive source adapter.
         cyclic = held.model_copy(deep=True)
         feedback.put(cyclic, first.model_copy(update={"pin_source": second.pin_source}))
-        with pytest.raises(WorkflowError, match="resolved standalone accepted-purpose"):
+        cyclic_before = cyclic.model_dump_json()
+        with pytest.raises(
+            WorkflowError, match="Preserve this resolved native Beneath Feedback parent"
+        ):
             source_binding(game, c, cyclic, saved)
+        assert cyclic.model_dump_json() == cyclic_before
+        assert state(game) == held
     with pytest.raises(WorkflowError):
         FeedbackService(game).view(ADMIN, second.id)
     choice = next(x for x in game.choices(PLAYER) if x["kind"] == "ankou_feedback_choice")

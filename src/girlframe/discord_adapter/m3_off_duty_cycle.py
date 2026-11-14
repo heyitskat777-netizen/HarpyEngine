@@ -650,9 +650,21 @@ async def open_end(
         for x in projected["gorgons"]
         if x["id"] in snapshot["advancing_gorgons"]
     )
-    locations = tuple(Location.model_validate_json(json.dumps(x)) for x in projected["locations"])
+    # Official allegations are computed presentation metadata, not canonical
+    # Location/Npc fields. Keep strict domain validation for every other key;
+    # continue using the authorized projection, not an unfiltered world read.
+    locations = tuple(
+        Location.model_validate_json(
+            json.dumps({key: value for key, value in row.items() if key != "official_allegations"})
+        )
+        for row in projected["locations"]
+    )
     npcs = tuple(
-        Npc.model_validate_json(json.dumps(x)) for x in projected["npcs"] if x["cell"] is not None
+        Npc.model_validate_json(
+            json.dumps({key: value for key, value in row.items() if key != "official_allegations"})
+        )
+        for row in projected["npcs"]
+        if row["cell"] is not None
     )
     directed = [x for x in gorgons if x.alive and x.gorgon_class == "directed"]
     unplaced = [

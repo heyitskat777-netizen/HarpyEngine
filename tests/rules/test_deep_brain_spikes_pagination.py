@@ -201,6 +201,23 @@ def test_native_maximum_active_controls_both_returns_history_privacy_and_retry(
     identity = asyncio.run(begin())
     before = state(game)
     rolls = game.dice.calls
+    handler_contribution = difficult("HANDLER_CONTRIBUTION", 1200)
+    pilot_contribution = difficult("PILOT_CONTRIBUTION", 1200)
+    expected_context = (
+        "Played memory in channel 900; saved present "
+        + service.menu(ADMIN, identity)["present_scene"]
+        + ".\nBeginning: "
+        + clean(beginning)
+        + "\nCurrent circumstances: "
+        + clean(circumstances)
+    )
+    handler_context = "\nContribution 1 — handler 1:\n" + clean(handler_contribution)
+    pilot_context = "\nContribution 2 — pilot 2:\n" + clean(pilot_contribution)
+    conversation = (
+        "\nUse normal Conversation in that scene. "
+        "Only genuine legal current-actor Plays affect "
+        "current resources. Return when relevance is clear or discrepancies become too major."
+    )
 
     async def active():
         opening = current(1, uuid4().int % 1000000000)
@@ -224,7 +241,8 @@ def test_native_maximum_active_controls_both_returns_history_privacy_and_retry(
             "current resources. Return when relevance is clear or discrepancies become too major."
         )
         assert state(game) == before and game.dice.calls == rolls
-        form.values.update(operation=("contribute",), account="My actual remembered contribution")
+        form.values.update(operation=("contribute",))
+        await enter(form, "account", handler_contribution)
         saved = deepcopy(form.values)
         step = form.index
         previous = current(1, uuid4().int % 1000000000)
@@ -249,12 +267,13 @@ def test_native_maximum_active_controls_both_returns_history_privacy_and_retry(
         await opening.response.defer(ephemeral=True)
         await open_spikes(opening, service, identity)
         form = payload(opening)["view"]
+        assert await collect(form, opening) == expected_context + handler_context + conversation
         service.contribute(
             PLAYER,
             str(uuid4()),
             identity,
             state(game).revision,
-            "Actual other participant contributes before this old form is confirmed",
+            pilot_contribution,
         )
         after_contribution = state(game)
         form.values.update(operation=("return",), cause=(cause,), account=returned)
@@ -265,6 +284,9 @@ def test_native_maximum_active_controls_both_returns_history_privacy_and_retry(
         refreshed = current(1, uuid4().int % 1000000000)
         await open_spikes(refreshed, service, identity)
         form = payload(refreshed)["view"]
+        assert await collect(form, refreshed) == (
+            expected_context + handler_context + pilot_context + conversation
+        )
         original_revision = service.menu(ADMIN, identity)["revision"]
         form.values.update(operation=("return",), cause=(cause,))
         await enter(form, "account", returned)
@@ -296,6 +318,13 @@ def test_native_maximum_active_controls_both_returns_history_privacy_and_retry(
         assert isinstance(view, MemoryHistory)
         actual = await collect(view, opening)
         data = service.menu(PLAYER, identity)
+        assert [entry["account"] for entry in data["contributions"]] == [
+            handler_contribution,
+            pilot_contribution,
+        ]
+        assert [entry["actor"]["kind"] for entry in data["contributions"]] == ["handler", "pilot"]
+        assert [entry["actor"]["entity"] for entry in data["contributions"]] == ["1", "2"]
+        assert all(entry["action"] is None for entry in data["contributions"])
         expected = (
             "Played memory in channel 900; saved present "
             + data["present_scene"]
@@ -303,6 +332,8 @@ def test_native_maximum_active_controls_both_returns_history_privacy_and_retry(
             + clean(beginning)
             + "\nCurrent circumstances: "
             + clean(circumstances)
+            + handler_context
+            + pilot_context
             + "\nReturned because "
             + cause
             + ": "
@@ -311,7 +342,14 @@ def test_native_maximum_active_controls_both_returns_history_privacy_and_retry(
         assert actual == expected
         assert all(
             clean(marker) in actual
-            for marker in ("BEGIN_BEGINNING", "MIDDLE_CIRCUMSTANCES", "END_RETURN")
+            for marker in (
+                "BEGIN_BEGINNING",
+                "MIDDLE_CIRCUMSTANCES",
+                "END_RETURN",
+                "BEGIN_HANDLER_CONTRIBUTION",
+                "MIDDLE_PILOT_CONTRIBUTION",
+                "END_PILOT_CONTRIBUTION",
+            )
         )
         wrong = current(3, uuid4().int % 1000000000)
         index = view.index
@@ -346,5 +384,12 @@ def test_native_maximum_active_controls_both_returns_history_privacy_and_retry(
         public = str(list(c.scalars(sa.select(t.events.c.payload_json))))
         assert all(
             marker not in public
-            for marker in ("BEGIN_BEGINNING", "MIDDLE_CIRCUMSTANCES", "END_RETURN")
+            for marker in (
+                "BEGIN_BEGINNING",
+                "MIDDLE_CIRCUMSTANCES",
+                "END_RETURN",
+                "BEGIN_HANDLER_CONTRIBUTION",
+                "MIDDLE_PILOT_CONTRIBUTION",
+                "END_PILOT_CONTRIBUTION",
+            )
         )

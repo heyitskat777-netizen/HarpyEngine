@@ -46,7 +46,10 @@ def ready(store, tmp_path, monkeypatch):
         update={
             "m3_approval": approval.model_copy(
                 update={"subsystems": approval.subsystems | {"world", "playbooks"}}
-            )
+            ),
+            "owner_m3_rulings": store.policy.owner_m3_rulings.model_copy(
+                update={"beneath_private_choices": "affected_owner"}
+            ),
         }
     )
     with store.transaction() as c:
@@ -442,6 +445,48 @@ def test_renovation_actual_room_and_girl_asset_with_handler_past_answer_and_void
     assert bool(value.completed_event) or value.work
     assert not any(x.family == "frame" and x.id == actual.id for x in canon.sheets["2"].assets)
 
+    # Typed source and the same-id flat installation proof are distinct records.
+    proof = next(
+        x for x in canon.facts if x.get("kind") == "wyvern_renovation" and x.get("id") == value.id
+    )
+    assert set(proof) == {"kind", "id", "event", "actor", "asset"}
+    assert proof["asset"] == actual.id and proof["actor"] == value.actor.model_dump_json()
+    assert controls.view(PLAYER, value.id)["kind"] == "wyvern_renovation"
+    assert value in rules.all_records(canon)
+    legacy = canon.model_copy(deep=True)
+    typed = next(
+        x
+        for x in legacy.facts
+        if x.get("kind") == rules.RENOVATION_RECORD and x.get("id") == value.id
+    )
+    typed["kind"] = "wyvern_renovation"
+    assert rules.records(legacy, rules.Renovation) == rules.records(canon, rules.Renovation)
+    rules.put(legacy, value)
+    assert proof in legacy.facts and rules.records(legacy, rules.Renovation) == (value,)
+    assert (
+        sum(
+            x.get("kind") == rules.RENOVATION_RECORD and x.get("id") == value.id
+            for x in legacy.facts
+        )
+        == 1
+    )
+    malformed = legacy.model_copy(deep=True)
+    broken = next(x for x in malformed.facts if x.get("kind") == rules.RENOVATION_RECORD)
+    del broken["body"]
+    before_malformed = malformed.model_dump_json()
+    with pytest.raises(KeyError, match="body"):
+        rules.records(malformed, rules.Renovation)
+    with pytest.raises(KeyError, match="body"):
+        rules.put(malformed, value)
+    assert malformed.model_dump_json() == before_malformed
+    broken["kind"] = "wyvern_renovation"
+    before_legacy_malformed = malformed.model_dump_json()
+    with pytest.raises(ValueError, match="typed Renovation body"):
+        rules.records(malformed, rules.Renovation)
+    with pytest.raises(ValueError, match="typed Renovation body"):
+        rules.put(malformed, value)
+    assert malformed.model_dump_json() == before_legacy_malformed
+
 
 @pytest.mark.parametrize(
     "tier,faces,slot",
@@ -524,7 +569,8 @@ def test_protector_mid_real_shield_and_recipient_bond_choice_then_real_movement_
             state(game).sheets["2"].revision,
             PlayInput(
                 play="put_someone_beneath_you",
-                target_actor=target,
+                target=3,
+                piloting=True,
                 heat=0,
                 context="I try an actual Play against the protected person",
                 trigger_confirmed=True,

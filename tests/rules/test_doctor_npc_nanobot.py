@@ -90,13 +90,18 @@ def setup(ledger, tmp_path, monkeypatch):
     return game, GameWorker(game), Gateway(), patient, casts
 
 
-def roll_nanobot(game, patient, heat):
+def roll_nanobot(game, patient, heat, *, worker=None, gateway=None):
     """Seed a historical pre-r267 action, then restore production admission.
 
     This is NOT evidence that new NPC treatment is supported.  Retained tests
     exercise recovery/choices for actions already rolled by older candidates.
-    Only the new admission check is bypassed in this explicit legacy fixture;
-    ownership, physical contact, dice, costs and later continuations remain real.
+    This explicit legacy fixture restores the pre-resource admission/result
+    model only while creating the original action. Physical contact, dice and
+    costs stay real. It returns after the one actual Tag window is passed;
+    callers may drain delivery but must not pass another Tag window. Production
+    admission and continuations are restored before the caller resumes. Callers
+    that continue delivery pass their existing gateway so lock confirmation and
+    later drift checks observe the same actual channel overwrites.
     """
 
     def legacy_results(source, c, canon, action):
@@ -118,7 +123,10 @@ def roll_nanobot(game, patient, heat):
                 action,
                 meta["target_controller"],
                 "doctor_patient",
-                dict(unsupported="The legacy result has no actual NPC resource outcome port."),
+                dict(
+                    unsupported="This NPC Nanobot result needs an actual resource outcome port; "
+                    "the original result remains pending, without invented Assets or Identities."
+                ),
             )
 
     with (
@@ -126,7 +134,7 @@ def roll_nanobot(game, patient, heat):
         patch("girlframe.services.m3_doctor.results", side_effect=legacy_results),
     ):
         action = _roll_legacy_nanobot(game, patient, heat)
-        tick(GameWorker(game), Gateway(), 3)
+        tick(worker or GameWorker(game), gateway or Gateway(), 3)
         pass_tags(game)
         return action
 
@@ -147,8 +155,9 @@ def _roll_legacy_nanobot(game, patient, heat):
             heat=(str(heat),),
             account="PRIVATE_NANO_SOURCE I actually inject this original patient here",
         )
-        await form.confirm.callback(current(2, int(uuid4().int % 1000000000)))
-        assert form.completed
+        response = current(2, int(uuid4().int % 1000000000))
+        await form.confirm.callback(response)
+        assert form.completed, response.edit_original_response.call_args_list
 
     asyncio.run(begin())
     with game.store.engine.connect() as c:
@@ -202,9 +211,8 @@ def test_npc_nanobot_removes_real_dose_tag_after_owned_confirmation_preserves_ex
     before = state(game)
     controller_sheet = before.sheets["3"].model_copy(deep=True)
     game.dice.faces = (4, 4) if spent_heat == 0 else (3, 4)
-    action = roll_nanobot(game, patient, spent_heat)
-    tick(worker, gateway, 3)
-    pass_tags(game)
+    action = roll_nanobot(game, patient, spent_heat, worker=worker, gateway=gateway)
+    tick(worker, gateway, 3)  # The legacy helper already passed the original Tag window.
     assert game.dice.calls == 2
     assert state(game).sheets["2"].heat == before.sheets["2"].heat - spent_heat
     assert state(game).sheets["2"].obsolescence_marked == 1
@@ -226,8 +234,9 @@ def test_npc_nanobot_removes_real_dose_tag_after_owned_confirmation_preserves_ex
         await open_choice(own, DoctorService(game), row["id"])
         form = own.edit_original_response.call_args.kwargs["view"]
         form.values.update(choices=("remove",), effect=("tag:" + selected.id,))
-        await form.confirm.callback(current(2, 998902))
-        assert form.completed
+        submitted = current(2, 998902)
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
         assert selected.tag in actor_tags(state(game), patient)
         assert game.inspect(PLAYER, action)["state"] != "complete"
         response = next(x for x in game.choices(ADMIN) if x["kind"] == "doctor_patient")
@@ -248,7 +257,7 @@ def test_npc_nanobot_removes_real_dose_tag_after_owned_confirmation_preserves_ex
         form.values.update(confirm=("confirm",))
         submit = current(1, 998904)
         await form.confirm.callback(submit)
-        assert form.completed
+        assert form.completed, submit.edit_original_response.call_args_list
         await form.confirm.callback(submit)
 
     asyncio.run(select_and_confirm())
@@ -323,9 +332,8 @@ def test_npc_nanobot_high_keeps_original_cost_and_result_pending_without_fake_re
     game, worker, gateway, patient, _ = setup(ledger, tmp_path, monkeypatch)
     before = state(game)
     game.dice.faces = (6, 6)
-    action = roll_nanobot(game, patient, 1)
-    tick(worker, gateway, 3)
-    pass_tags(game)
+    action = roll_nanobot(game, patient, 1, worker=worker, gateway=gateway)
+    tick(worker, gateway, 3)  # The legacy helper already passed the original Tag window.
     row = next(x for x in game.choices(ADMIN) if x["kind"] == "doctor_patient")
     with pytest.raises(WorkflowError, match="remains pending"):
         game.respond(ADMIN, str(uuid4()), row["id"], row["revision"], ChoiceAnswer())

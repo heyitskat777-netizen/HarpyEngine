@@ -42,6 +42,14 @@ def ready(store, tmp_path, monkeypatch, *, inside=True):
         monkeypatch,
         extra=(rules.COURT, rules.TRANSFER, rules.CONSULT, *rules.REQUISITIONS),
     )
+    approval = store.policy.m3_approval
+    store.policy = store.policy.model_copy(
+        update={
+            "m3_approval": approval.model_copy(
+                update={"subsystems": approval.subsystems | {"world"}}
+            )
+        }
+    )
     with store.transaction() as c:
         canon = state(game)
         canon.world = initial()
@@ -477,7 +485,9 @@ def test_consort_actual_forced_flirt_child_real_tag_and_permission_restore(
     assert any(x.label == "Actually acting like a Consort" for x in state(game).sheets["2"].tags)
     tick(worker, gateway, 5)
     asyncio.run(SourcePauseWorker(game).tick(gateway))
-    assert gateway.values == gateway.original
+    assert {
+        kind + str(identity): value for (kind, identity), value in gateway.values.items()
+    } == gateway.original
 
 
 def test_knight_actual_source_bound_assault_damages_original_asset(ledger, tmp_path, monkeypatch):
@@ -534,7 +544,7 @@ def test_knight_actual_source_bound_assault_damages_original_asset(ledger, tmp_p
         indirect=False,
         evidence="The actual source opening and range",
     )
-    game.dice.faces = (5, 5)
+    game.dice.faces = (6, 6)
     action = game.begin(
         OTHER,
         str(uuid4()),
@@ -555,6 +565,24 @@ def test_knight_actual_source_bound_assault_damages_original_asset(ledger, tmp_p
     tick(worker, gateway, 3)
     game.roll(OTHER, str(uuid4()), action)
     pass_tags(game)
+    receipt = game.inspect(OTHER, action)["receipt"]
+    assert receipt["faces"] == [6, 6] and receipt["heat"] == 0
+    with ledger.engine.connect() as c:
+        pending = game.action(c, action)
+        assert pending["data"]["result"]["tier"] == "high"
+    for human in (ADMIN, PLAYER, OTHER):
+        answer(
+            game,
+            human,
+            "battle_assault_table",
+            flag=False,
+            text="My actual table judgement: this attack has no vast advantage",
+        )
+    answer(game, ADMIN, "battle_handler", options=("damage_actor_asset",))
+    paid_asset = next(x for x in state(game).sheets["3"].assets if not x.damaged)
+    answer(game, OTHER, "battle_actor_damage", fields={"asset": paid_asset.id})
+    assert next(x for x in state(game).sheets["3"].assets if x.id == paid_asset.id).damaged
+    assert game.inspect(OTHER, action)["receipt"] == receipt and game.dice.calls == 1
     assert next(
         x for x in state(game).sheets["2"].assets if x.id == declaration.target_asset
     ).damaged
@@ -615,11 +643,40 @@ def test_regiment_real_lower_rank_order_and_assigned_tag_double_modifier(
         "order",
         instruction="Guard the actual assigned hatch",
     )
-    issued = game.issue_order(PLAYER, str(uuid4()), 900, 3, "Guard the actual assigned hatch")
-    assert rules.get(state(game), rules.Mark, result["id"]).order == issued["order_id"]
+    # The original Court mark already materializes its real Receive Orders.
+    # Read that source instead of issuing a second unrelated lower-rank order.
+    import sqlalchemy as sa
+
+    marked = rules.get(state(game), rules.Mark, result["id"])
+    assert marked.order and marked.target == current_ref(state(game), 3)
+    with ledger.engine.connect() as c:
+        order = (
+            c.execute(
+                sa.select(t.m2["m2_orders"]).where(
+                    t.m2["m2_orders"].c.campaign_id == ledger.campaign_id,
+                    t.m2["m2_orders"].c.id == marked.order,
+                )
+            )
+            .mappings()
+            .one()
+        )
+        issued = next(
+            dict(x)
+            for x in c.execute(
+                sa.select(t.m2["m2_actions"]).where(
+                    t.m2["m2_actions"].c.campaign_id == ledger.campaign_id,
+                    t.m2["m2_actions"].c.actor_id == "3",
+                )
+            ).mappings()
+            if json.loads(x["body_json"]).get("order_id") == marked.order
+        )
+    body = json.loads(order["body_json"])
+    assert order["issuer_id"] == "2" and order["target_id"] == "3"
+    assert body["text"] == marked.instruction == "Guard the actual assigned hatch"
+    assert body["red_queen"]["id"] == marked.id
     tick(worker, gateway, 3)
     answer(game, OTHER, "order_response", options=("obedient",))
-    assert game.inspect(OTHER, issued["action_id"])["state"] == "complete"
+    assert game.inspect(OTHER, issued["id"])["state"] == "complete"
     from girlframe.services.m3_red_queen import regiment_amount
 
     with ledger.engine.connect() as c:
@@ -641,15 +698,18 @@ def test_regiment_real_lower_rank_order_and_assigned_tag_double_modifier(
 def test_actual_accusation_director_endorsement_and_real_typed_consequence(
     ledger, tmp_path, monkeypatch, kind
 ):
+    from test_intracadre_marriage import FOUR
+
     from girlframe.engine.m3_actor_state import ActorRef
-    from girlframe.engine.m3_world import require_usable
     from girlframe.engine.m3_world_state import Npc
     from girlframe.services.m3_missions import MissionService
-    from girlframe.services.m3_red_queen_accusation import official_allegations
+    from girlframe.services.m3_npc_roles import NpcRoleService
+    from girlframe.services.m3_red_queen_accusation import accusation_targets, official_allegations
     from girlframe.services.m3_world import WorldService
 
     game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch)
     initialize(controls)
+    ledger.join(FOUR, str(uuid4()))
     world = WorldService(MissionService(ledger))
     director = Npc(
         id="actual-source-director",
@@ -657,17 +717,20 @@ def test_actual_accusation_director_endorsement_and_real_typed_consequence(
         jobs=("director",),
         cell=(0, 0),
         detail="An actual human-controlled Director holds this office",
-        controller=1,
+        controller=FOUR.user_id,
         revealed=True,
         employment="foundation",
     )
-    world.npc(ADMIN, str(uuid4()), state(game).revision, director)
+    roles = NpcRoleService(world)
+    invitation = roles.offer(ADMIN, str(uuid4()), state(game).revision, director)
+    roles.respond(FOUR, str(uuid4()), invitation["id"], state(game).revision, "accept")
+    assert roles.get(FOUR, invitation["id"])["state"] == "accepted"
     director_ref = ActorRef(kind="npc", entity=director.id)
     if kind == "npc":
         target = Npc(
             id="actual-accused-npc",
             name="Actual official",
-            jobs=("politician",),
+            jobs=("public_relations",),
             cell=(0, 0),
             detail="A real original human-controlled official",
             controller=1,
@@ -710,14 +773,14 @@ def test_actual_accusation_director_endorsement_and_real_typed_consequence(
         director=director_ref,
     )
     source = rules.get(state(game), rules.Accusation, result["id"])
-    assert source.director == director_ref and source.director_controller == 1
+    assert source.director == director_ref and source.director_controller == FOUR.user_id
     assert not rules.held(state(game), current_ref(state(game), 2), rules.ACCUSATION)
     assert official_allegations(state(game), kind, ref)[0]["allegation"] == source.allegation
     unchanged = state(game)
     with pytest.raises(WorkflowError):
         controls.endorse(OTHER, str(uuid4()), unchanged.revision, source.id)
     assert state(game) == unchanged
-    args = (ADMIN, "true-director-endorses-once", unchanged.revision, source.id)
+    args = (FOUR, "true-director-endorses-once", unchanged.revision, source.id)
     endorsed = controls.endorse(*args)
     assert controls.endorse(*args) == endorsed
     if kind == "girl":
@@ -731,8 +794,13 @@ def test_actual_accusation_director_endorsement_and_real_typed_consequence(
     else:
         actual = next(x for x in state(game).world.locations if x.id == identifier)
         assert not actual.operational and actual.condition == location.condition
-        with pytest.raises(ValueError):
-            require_usable(state(game).world, actual.cell)
+        blocker = "red-queen-closure:" + source.id
+        assert actual.blocked_by == (*location.blocked_by, blocker)
+        public = next(x for x in world.get(PLAYER)["world"]["locations"] if x["id"] == actual.id)
+        assert public["operational"] is False and "blocked_by" not in public
+        with ledger.engine.connect() as c:
+            eligible = accusation_targets(game, c, state(game), PLAYER)
+        assert not any(x["kind"] == kind and x["target"] == actual.id for x in eligible)
     assert rules.get(state(game), rules.Accusation, source.id).completed_event
     assert controls.view(PLAYER, source.id)["source"]["director"] == director_ref.model_dump(
         mode="json"
@@ -744,34 +812,43 @@ def test_actual_accusation_director_endorsement_and_real_typed_consequence(
 def test_low_real_npc_memory_genuine_new_tag_restoration_and_owned_am_assignment(
     ledger, tmp_path, monkeypatch
 ):
+    from test_intracadre_marriage import FOUR
+
     from girlframe.engine.m3_actor_state import ActorRef
     from girlframe.engine.m3_am_memory import can_recall
     from girlframe.engine.m3_world_state import Npc
     from girlframe.services.m3_actors import ActorService
     from girlframe.services.m3_cast import CastService
     from girlframe.services.m3_missions import MissionService
+    from girlframe.services.m3_npc_roles import NpcRoleService
     from girlframe.services.m3_world import WorldService
 
     game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch, inside=False)
     initialize(controls)
+    ledger.join(FOUR, str(uuid4()))
     missions = MissionService(ledger)
     world = WorldService(missions)
-    for name, job in (("real-memory-npc", "politician"), ("real-memory-director", "director")):
-        world.npc(
-            ADMIN,
-            str(uuid4()),
-            state(game).revision,
-            Npc(
-                id=name,
-                name=name,
-                jobs=(job,),
-                cell=(0, 0),
-                detail="Actual source human-controlled person",
-                controller=1,
-                revealed=True,
-                employment="foundation",
-            ),
+    for name, job in (
+        ("real-memory-npc", "public_relations"),
+        ("real-memory-director", "director"),
+    ):
+        npc = Npc(
+            id=name,
+            name=name,
+            jobs=(job,),
+            cell=(0, 0),
+            detail="Actual source human-controlled person",
+            controller=FOUR.user_id if job == "director" else ADMIN.user_id,
+            revealed=True,
+            employment="foundation",
         )
+        if job == "director":
+            roles = NpcRoleService(world)
+            invitation = roles.offer(ADMIN, str(uuid4()), state(game).revision, npc)
+            roles.respond(FOUR, str(uuid4()), invitation["id"], state(game).revision, "accept")
+            assert roles.get(FOUR, invitation["id"])["state"] == "accepted"
+        else:
+            world.npc(ADMIN, str(uuid4()), state(game).revision, npc)
     target = ActorRef(kind="npc", entity="real-memory-npc")
     director = ActorRef(kind="npc", entity="real-memory-director")
     cast_service = CastService(ActorService(missions))
@@ -824,24 +901,26 @@ def test_low_real_npc_memory_genuine_new_tag_restoration_and_owned_am_assignment
         "The actual official mishandled records",
         "Give the actual associated reminder Tag",
         consequence_kind="npc_tag",
-        consequence_detail={"label": "Her forgotten colleague handled these records"},
+        consequence_detail={"label": "The Queen"},
         director=director,
     )
-    controls.endorse(ADMIN, str(uuid4()), state(game).revision, allegation["id"])
+    controls.endorse(FOUR, str(uuid4()), state(game).revision, allegation["id"])
     actual = rules.get(state(game), rules.Accusation, allegation["id"])
     tag = next(x for x in state(game).world.npcs if x.id == target.entity).tags[-1]
     queen = am(game, "The Queen")
-    controls.restore_memory(
+    restore_args = (
         ADMIN,
-        str(uuid4()),
+        "actual-associated-tag-restores-memory-once",
         state(game).revision,
         loss.id,
         actual.endorsement_event,
         tag.id,
         queen.id,
-        "This actual new Tag is associated with the genuinely lost colleague memory",
+        "This new Tag names the forgotten colleague's Court role and recalls the actual memory",
     )
+    restored = controls.restore_memory(*restore_args)
     final = state(game)
+    assert controls.restore_memory(*restore_args) == restored and state(game) == final
     assert can_recall(final, target, loss.memories[0], learned_revision=before.revision)
     assert rules.get(final, rules.CourtAM, queen.id).bearer == target
     assert any(
@@ -849,6 +928,120 @@ def test_low_real_npc_memory_genuine_new_tag_restoration_and_owned_am_assignment
         for x in next(x for x in final.world.npcs if x.id == target.entity).tags
     )
     assert set(final.sheets) == set(before.sheets)
+    assigned = rules.get(final, rules.CourtAM, queen.id)
+    assigned_tag = rules.assignment_tag_id(assigned)
+    npc_tags = next(x for x in final.world.npcs if x.id == target.entity).tags
+    actual_tag = next(x for x in npc_tags if x.id == assigned_tag)
+    assert (
+        actual_tag.label == "The Queen" and actual_tag.giver_entity == loss.actor.model_dump_json()
+    )
+    assert tag in npc_tags and tag.id != actual_tag.id and tag.label == actual_tag.label
+    mark_args = (ADMIN, "actual-npc-am-mark-once", 900, final.revision, queen.id, "status")
+    marked = controls.mark(*mark_args)
+    assert controls.mark(*mark_args) == marked
+    npc_tags = next(x for x in state(game).world.npcs if x.id == target.entity).tags
+    assert next(x for x in npc_tags if x.id == assigned_tag).marked
+    assert tag in npc_tags and sum(x.id == assigned_tag for x in npc_tags) == 1
+
+    # Backward read compatibility: the old producer stored the actual mark's
+    # TagGift under its mark-derived ID. Recreate that representation only in
+    # an isolated model copy, retaining the real original Mark/event/provenance.
+    from girlframe.engine import m3_red_queen_effects as effects
+
+    legacy = state(game).model_copy(deep=True)
+    original_mark = rules.get(legacy, rules.Mark, marked["id"])
+    legacy_id = rules.identity(
+        "tag",
+        original_mark.id,
+        original_mark.actor.token,
+        original_mark.target.token,
+        original_mark.event,
+    )
+    legacy_tag = next(x for x in npc_tags if x.id == assigned_tag).model_copy(
+        update={
+            "id": legacy_id,
+            "giver_entity": original_mark.actor.model_dump_json(),
+        }
+    )
+    legacy.world = legacy.world.model_copy(
+        update={
+            "npcs": tuple(
+                x.model_copy(
+                    update={"tags": (*tuple(t for t in x.tags if t.id != assigned_tag), legacy_tag)}
+                )
+                if x.id == target.entity
+                else x
+                for x in legacy.world.npcs
+            )
+        }
+    )
+    effects.put(
+        legacy,
+        effects.TagGift(
+            id=legacy_id,
+            giver=original_mark.actor,
+            target=target,
+            label=queen.role,
+            source=original_mark.id,
+            event=original_mark.event,
+        ),
+    )
+    rules.sync_assignment_tag(
+        legacy, rules.get(legacy, rules.CourtAM, queen.id), original_mark.event, marked=True
+    )
+    legacy_tags = next(x for x in legacy.world.npcs if x.id == target.entity).tags
+    assert legacy_tag in legacy_tags and tag in legacy_tags
+    assert sum(x.id in (assigned_tag, legacy_id) for x in legacy_tags) == 1
+    tick(worker, gateway, 5)
+
+    # The original Red Queen genuinely enters her own cockpit and recalls the
+    # same AM through Consult. Only that AM's source-bound Tag is removed.
+    from girlframe.engine.m3_physical_state import CockpitAction
+    from girlframe.services.m3_physical import PhysicalService
+
+    physical = PhysicalService(ledger)
+    entry = physical.preview(PLAYER)
+    physical.operate(
+        PLAYER,
+        str(uuid4()),
+        entry["game_revision"],
+        CockpitAction(
+            actor=current_ref(state(game), 2),
+            operation="sit",
+            expected_position=entry["position_sha256"],
+            account="I enter my actual original Red Queen cockpit to recall my Court",
+            confirmed=True,
+        ),
+    )
+    recall = roll(game, worker, gateway, faces=(3, 4))
+    answer(
+        game,
+        PLAYER,
+        "red_queen_consult",
+        options=(queen.id,),
+        text="The Court must preserve the actual records",
+    )
+    recalled = state(game)
+    assert game.inspect(PLAYER, recall)["state"] == "complete"
+    assert rules.get(recalled, rules.CourtAM, queen.id).bearer == current_ref(recalled, 2)
+    after_tags = next(x for x in recalled.world.npcs if x.id == target.entity).tags
+    assert tag in after_tags and all(x.id != assigned_tag for x in after_tags)
+    assert can_recall(recalled, target, loss.memories[0], learned_revision=before.revision)
+    actual_recall = next(
+        x
+        for x in rules.records(recalled, rules.Assignment)
+        if x.am == queen.id and x.source == recall
+    )
+    rules.assign(
+        legacy,
+        rules.get(legacy, rules.CourtAM, queen.id),
+        actual_recall.target,
+        actual_recall.source,
+        actual_recall.source_event,
+        actual_recall.event,
+    )
+    legacy_tags = next(x for x in legacy.world.npcs if x.id == target.entity).tags
+    assert tag in legacy_tags and all(x.id not in (assigned_tag, legacy_id) for x in legacy_tags)
 
 
 def test_judgement_actual_handler_watching_real_tag_then_status_reduction_once(
@@ -966,19 +1159,33 @@ def test_personality_actual_copy_advice_optional_and_signed_real_roll_modifier(
             target=3,
         ),
     )["action_id"]
-    controls.mark(
+    assert game.inspect(PLAYER, action)["state"] == "acquiring"
+    assert game.inspect(PLAYER, action)["receipt"] is None and game.dice.calls == 0
+    args = (
         PLAYER,
-        str(uuid4()),
+        "actual-personality-modifier-once",
         900,
         state(game).revision,
         copied,
         "modifier",
-        counterpart=target,
-        amount=1,
-        roll=action,
     )
+    options = dict(counterpart=target, amount=1, roll=action)
+    marked = controls.mark(*args, **options)
+    assert controls.mark(*args, **options) == marked
+    bound = rules.get(state(game), rules.Mark, marked["id"])
+    assert bound.roll == action and bound.counterpart == target and bound.amount == 1
+    assert controls.view(PLAYER, bound.id)["source"]["roll"] == action
+    assert game.dice.calls == 0
     tick(worker, gateway, 3)
     game.roll(PLAYER, str(uuid4()), action)
+    before_retry = state(game)
+    receipt = game.inspect(PLAYER, action)["receipt"]
+    with pytest.raises(WorkflowError, match="real current unrolled Play"):
+        controls.mark(
+            PLAYER, str(uuid4()), 900, before_retry.revision, copied, "modifier", **options
+        )
+    assert state(game) == before_retry
+    assert game.inspect(PLAYER, action)["receipt"] == receipt and game.dice.calls == 1
     pass_tags(game)
     answer(game, PLAYER, "actor_flirt", options=("name",))
     answer(game, OTHER, "target_flirt", text="My own actual reply to the Flirt")
@@ -987,7 +1194,16 @@ def test_personality_actual_copy_advice_optional_and_signed_real_roll_modifier(
         from girlframe.services.m3_red_queen import prove_personality_modifier
 
         assert prove_personality_modifier(game, c, state(game), actual) == 1
-        assert actual["data"]["receipt"]["pre_total"] == 7
+        raw = actual["data"]["receipt"]
+        assert raw["faces"] == [3, 4] and raw["heat"] == raw["base_modifier"] == 0
+        assert raw["pre_modifiers"] == [{"source": "red_queen_personality", "amount": 1}]
+        assert (
+            raw["pre_total"]
+            == sum(raw["faces"])
+            + raw["base_modifier"]
+            + sum(x["amount"] for x in raw["pre_modifiers"])
+            == 8
+        )
         assert actual["data"]["result"]["total"] == 8
     assert game.inspect(PLAYER, action)["state"] == "complete" and game.dice.calls == 1
 

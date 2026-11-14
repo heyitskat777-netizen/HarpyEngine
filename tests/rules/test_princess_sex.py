@@ -504,6 +504,13 @@ def test_high_directed_beneath_applies_actual_tag_and_status_from_real_performer
     ledger, tmp_path, monkeypatch
 ):
     game, worker, gateway, service = setup(ledger, tmp_path, monkeypatch)
+    ledger.policy = ledger.policy.model_copy(
+        update={
+            "owner_m3_rulings": ledger.policy.owner_m3_rulings.model_copy(
+                update={"beneath_private_choices": "affected_owner"}
+            )
+        }
+    )
     identity, parent = roll(game, worker, gateway, service, (6, 6))
     pass_tags(game)
     princess, performer = current_ref(state(game), 2), current_ref(state(game), 3)
@@ -590,7 +597,16 @@ def test_high_directed_engage_records_actual_performer_asset_maneuvers(
     assert all(x.asset == asset.id and x.source_action == child for x in effects)
     assert game.inspect(PLAYER, child)["state"] == "complete"
     assert game.inspect(PLAYER, parent)["state"] == "complete"
-    assert rules.direction(state(game), direction.id).completed_event and game.dice.calls == 1
+    completed = rules.direction(state(game), direction.id)
+    assert completed.completed_event and game.dice.calls == 1
+    reopened = SexService(game).view(PLAYER, identity)
+    assert (
+        reopened["phase"] == "complete" and reopened["completed_event"] == completed.completed_event
+    )
+    from girlframe.services.m3_princess_sex import _direction
+
+    with ledger.engine.connect() as c:
+        assert _direction(game, c, state(game), direction.id) == completed
 
 
 def test_high_directed_assault_uses_actual_review_and_declared_target_asset(
