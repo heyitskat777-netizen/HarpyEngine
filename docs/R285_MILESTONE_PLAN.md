@@ -25,11 +25,13 @@ percentages or equal-sized tasks.
 | Release and final exact-candidate validation | Source-backed contracts, genuine independent/clarity review; normalized Registry model digest and scoped campaign approval; exact-commit full pytest/global Ruff/format/mypy, migrations, privacy/isolation, backup→restore and restart/recovery | No mass registry promotion. Current477 entries all independent-review pending,410 null contracts. Default CI checks startup only; historical2,200 tests and archive19 Check Sensors passes are not final evidence |
 | Human P1 acceptance | Private Discord session covers every selected type and mission→social/combat→consequences→Off-Duty/recovery→next mission; permissions/pause/delivery and private records survive reopen | No model/provider needed. Agree exact enabled scope and real policy after genuine reviews. Separate owner acceptance and deployment authorization; bot stays OFF until then |
 
-Session-mix and Director-interference simulations remain paused. Do not start them
-or hourly automation from historical queue text. Final full-suite scheduling must
-explicitly reconcile those paused scenario files; this integration uses only
-bounded source checks. A run excluding them cannot be called all-tests regression.
-No live campaign migration or live database read/write is part of this work.
+Owner clarification2026-11-14 authorizes both existing session-mix files
+(`test_session_mix_distinct_roster.py` and `test_session_mix_interference.py`) in
+the final offline regression. Their previous pause is lifted for that final run
+only. Hourly automation, new simulation work, model calls, bot startup and
+deployment remain separate. The complete run must include both files; focused
+checks still are not full regression. No live campaign migration or live database
+read/write is part of this work.
 
 ## P2 — audience-safe AI assistance, after P1 acceptance
 

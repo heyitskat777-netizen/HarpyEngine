@@ -786,6 +786,8 @@ class AnkouService:
                     candidates.extend(
                         ActorRef(kind="npc", entity=x.id) for x in state.world.npcs if x.alive
                     )
+                # Obsessive grants only its owner's benefits (PDF86/printed84),
+                # not the other person's nomination right without a real Bond.
                 people = tuple(
                     x for x in candidates if x != value.actor and depth(state, value.actor, x) == 2
                 )

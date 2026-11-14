@@ -7474,6 +7474,141 @@
       "revision": 1,
       "implementation_note": "Require min(request count, available unlocked marked Identities) distinct actual unmarks, retain counterpart response, genuine effects, source and receipt.",
       "change_impact": "Changes campaign ruling digest. Printed clarity and legitimate matching approval remain pending; no availability or release gate changed."
+    },
+    {
+      "id": "npc-status-pilot-hierarchy-scope",
+      "summary": "Oldgen Status effects apply only to actual ranked Pilots; an ordinary NPC has no Cadre rank and the native chooser omits that inapplicable option. Saved unsupported proposals remain unresolved until the original chooser selects actual applicable effects.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Status PDF14/printed12; Oldgen Sex PDF47/printed45. Owner delegated recommendations in development conversation.",
+      "authority": "delegated_recommendation",
+      "rationale": "The printed Status hierarchy explicitly ranks Pilots within their Cadre, with a separate Handler position; it supplies no ordinary NPC rank resource. Do not invent one or lower a controller Pilot instead.",
+      "alternatives": [
+        "Extend the Pilot hierarchy to every NPC as a new campaign mechanic.",
+        "Keep presenting an inapplicable NPC Status option and pause every such choice."
+      ],
+      "policy_key": "npc_status_scope",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Filter only new NPC-target Status choices; existing rejection/atomic rollback and voluntary original-owner alternative remain. No substitute effect is applied by the ruling.",
+      "change_impact": "Changes normalized campaign registry digest; legitimate scoped approval and printed clarity review still required."
+    },
+    {
+      "id": "npc-witnessed-treatment-resources",
+      "summary": "Before Nanobot treatment, the current Handler records witnessed Heat and zero or explicitly established ordinary Identities for the same living NPC brain/body; repairs use actual carried Assets. No automatic baseline or controller resource proxy.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Nanobot PDF72/printed70; NPC creation PDF188\u2013189/printed186\u2013187 and NPC harm PDF15/printed13.",
+      "authority": "delegated_recommendation",
+      "rationale": "Someone includes physical NPC patients but the book supplies no universal NPC Heat/Identity inventory. A sparse explicit witnessed resource record preserves printed gains without inventing a Girl sheet.",
+      "alternatives": [
+        "Exclude all NPC treatment.",
+        "Grant every NPC a full Girl sheet and four default Identities."
+      ],
+      "policy_key": "npc_witnessed_treatment_resources",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Source-bound native/private workflows; exact scope and verification recorded in the current P1 delivery report. Missing source prerequisites stay pending or fail before commitment.",
+      "change_impact": "Changes normalized campaign ruling digest; legitimate matching approval, independent printed clarity review and human acceptance remain pending."
+    },
+    {
+      "id": "borrowed-wings-lost-frame-destination",
+      "summary": "If the original donor Frame is lost/replaced, the Handler explicitly quotes recovery of the exact component into the original donor\u2019s actual current legal Frame; the donor confirms the exact package. Unchanged-original-Frame automatic return stays unchanged.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Borrowed Wings PDF72/printed70; Doctor scrapping PDF71/printed69.",
+      "authority": "delegated_recommendation",
+      "rationale": "The book mandates hardware return at Go Off-Duty but does not specify its destination after original Frame loss. Require actual custody/access and an explicit receiving package, preserving current damage/Void/links and owned capacity/threshold consequences.",
+      "alternatives": [
+        "Leave hardware pending forever after loss.",
+        "Silently give a pristine component to a replacement Frame."
+      ],
+      "policy_key": "borrowed_wings_lost_frame_destination",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Source-bound native/private workflows; exact scope and verification recorded in the current P1 delivery report. Missing source prerequisites stay pending or fail before commitment.",
+      "change_impact": "Changes normalized campaign ruling digest; legitimate matching approval, independent printed clarity review and human acceptance remain pending."
+    },
+    {
+      "id": "learned-am-circuit-prerequisites",
+      "summary": "A genuine one-use Scrutinized or Just Code lesson can be acquired through Vatgrown learning; use still requires an actual adjusted artificial mind and real discovery or circuit-access source. Learning supplies no anatomy, software, Jailbroken freedoms, Limiters or private knowledge.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Vatgrown PDF50/printed48; AM PDF55\u201356/printed53\u201354.",
+      "authority": "delegated_recommendation",
+      "rationale": "The printed learning selection grants one Play, including mandatory high first-two acquisition; the Play\u2019s own trigger and actual source resources remain necessary. Retain an unusable lesson without spending it or fabricating prerequisites.",
+      "alternatives": [
+        "Reject acquisition based solely on the learner\u2019s label.",
+        "Let learning create an AM brain and all related software/resources."
+      ],
+      "policy_key": "learned_am_circuit_prerequisites",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Source-bound native/private workflows; exact scope and verification recorded in the current P1 delivery report. Missing source prerequisites stay pending or fail before commitment.",
+      "change_impact": "Changes normalized campaign ruling digest; legitimate matching approval, independent printed clarity review and human acceptance remain pending."
+    },
+    {
+      "id": "consume-frame-hosted-copy-physical-target",
+      "summary": "The currently produced Clone AM is a mind contained in its paid/retained Frame, without an independent body for Eat\u2019s jaws-around-a-foe trigger. Target an actual embodied actor only through its own legal source; never treat the owner as a proxy.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Eat PDF66/printed64; Clone AM PDF92/printed90; actual paid/retained residency providers.",
+      "authority": "delegated_recommendation",
+      "rationale": "Separate personhood, Identity, cast and shared Heat do not create a separately corporeal foe. The actual source creates no copy vessel or physical Assets.",
+      "alternatives": [
+        "Invent an independent body for every copy.",
+        "Apply copy death/custody to the original owner."
+      ],
+      "policy_key": "consume_frame_hosted_copy_target",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Prove actual purchase and residency before the source-specific physical guard; preserve original body and copy state before any roll/cost. A future genuine separate vessel has a distinct explicit lifecycle dependency, not a permanent Clone-kind ban.",
+      "change_impact": "No entire type or native CONSUME outcome deferred; actual distinct copy-vessel death/custody/escape remains a source-specific later capability, not fabricated. Normalized approval digest changes."
+    },
+    {
+      "id": "ankou-relay-nomination-reciprocal-bond",
+      "summary": "Emotional Relay nomination uses an actual Intense Bond. The one-sided Obsessive benefit does not grant its target a nomination right when no actual Intense Bond exists.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Emotional Relay PDF85/printed83; Obsessive PDF86/printed84.",
+      "authority": "delegated_recommendation",
+      "rationale": "Obsessive explicitly grants only its owner the Intense benefits and says the other person gets nothing. Relay nomination is a right of that other person, with an obligation on ANKOU, so it is not granted by the unilateral benefit.",
+      "alternatives": [
+        "Treat the one-sided benefit as granting the target nomination rights as well."
+      ],
+      "policy_key": "ankou_relay_nomination_actual_bond",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Preserves the existing actual-depth candidate filter and original-controller optional nominations. Does not create symmetric Bonds, change other effective_intense consumers or bypass a genuine nominated Play.",
+      "change_impact": "Source ambiguity recorded with existing behavior; normalized campaign ruling digest needs legitimate matching approval. Independent clarity review remains pending."
+    },
+    {
+      "id": "casualty-witnessed-npc-outcomes",
+      "summary": "Casualty NPC outcomes use the same explicitly witnessed original NPC Heat and ordinary Identities; each beneficiary chooses3\u20134 Heat, optional unmarks remain owned, and mandatory NPC harm uses the printed attacker-owned replacement consequences.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Casualty PDF44/printed42; NPC damage PDF15/printed13.",
+      "authority": "delegated_recommendation",
+      "rationale": "Reuse sparse witnessed facts without a controller proxy or full NPC Girl sheet. Printed NPC damage substitutes real injury/Tag, advantage or death; an effect does not invent physical Asset inventory. Independent Heat/part choices precede harm so actual harm/death does not demand later living-body choices.",
+      "alternatives": [
+        "Leave mandatory mechanics permanently pending.",
+        "Invent resources or release bodies by resetting their placement without a real source."
+      ],
+      "policy_key": "casualty_witnessed_npc_outcomes",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Private source-bound services and native original-owner decisions; actual outcomes and receipt/history remain required. No independent certification or deployment approval.",
+      "change_impact": "Normalized campaign ruling digest changes; genuine matching approval and printed clarity review remain pending. Existing records/events and declared scope are preserved."
+    },
+    {
+      "id": "handler-rescue-actual-release",
+      "summary": "Actual Handler/agent Defeat rescue creates a source-bound protective hold, not permanent imprisonment. After required real medical wake/Play exchange, the original Handler proposes actual release at the Handler\u2019s known current location and the rescued player confirms original body/source/location facts.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Defeat PDF29/printed27; original medical source and actual physical placement.",
+      "authority": "delegated_recommendation",
+      "rationale": "The printed rescue has no permanent captivity. Preserve real custody until source-bound release; no arbitrary reset, healing or teleport. Previously unknown Handler presence may be witnessed only within this exact rescue source, never overwrite known movement. Patient confirmation records OOC physical facts rather than inventing dialogue or printed consent.",
+      "alternatives": [
+        "Leave mandatory mechanics permanently pending.",
+        "Invent resources or release bodies by resetting their placement without a real source."
+      ],
+      "policy_key": "handler_rescue_actual_release",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Private source-bound services and native original-owner decisions; actual outcomes and receipt/history remain required. No independent certification or deployment approval.",
+      "change_impact": "Normalized campaign ruling digest changes; genuine matching approval and printed clarity review remain pending. Existing records/events and declared scope are preserved."
     }
   ],
   "entries": [

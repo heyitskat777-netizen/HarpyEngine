@@ -19,8 +19,8 @@ async def open_choice(
     interaction: discord.Interaction, game: GameService, decision: dict[str, Any]
 ) -> None:
     data, kind = decision["detail"], decision["kind"]
-    if data.get("unsupported_npc"):
-        await interaction.edit_original_response(content=data["guidance"], view=None)
+    if data.get("unsupported_npc") or data.get("waiting"):
+        await reply(interaction, data["guidance"])
         return
     fields = []
     if data["options"] and kind != "casualty_focus":
@@ -57,7 +57,7 @@ async def open_choice(
                 required=False,
             )
         )
-    if kind == "casualty_high_asset":
+    if kind == "casualty_high_asset" and not data.get("npc_damage"):
         fields.append(
             Field(
                 "asset",
@@ -225,13 +225,21 @@ async def open_casualty(
             return
         summary = "Your actual Casualty intimacy source: " + data["phase"] + ". " + data["proposal"]
         if data["target"]["kind"] == "npc":
-            summary += (
-                " NPC high results need human adjudication for missing Heat and Asset effects; "
-                "the entire result remains pending, with no partial effect "
-                "or automatic completion. "
-                "NPC Identity unmark is unsupported: requesting it stays pending for adjudication. "
-                "Only the NPC controller's explicit decline resolves that optional choice."
-            )
+            if data.get("npc_resources_ready"):
+                summary += (
+                    " Each beneficiary chooses their own 3–4 Heat. NPC harm uses the "
+                    "actual attacker-owned printed consequence, and the NPC controller "
+                    "chooses the Casualty's real broken part. Optional NPC unmarks use "
+                    "witnessed original Identities."
+                )
+            else:
+                summary += (
+                    " NPC_RESOURCE_SETUP_REQUIRED: record this original NPC's actual "
+                    "resources before a new roll. A retained high result remains pending "
+                    "until real resources are supplied; its original roll is preserved. "
+                    "Optional Identity unmark remains pending without actual resources; "
+                    "the controller may explicitly decline it."
+                )
         if not data["can_confirm"] and not data["can_roll"]:
             await reply(
                 interaction,

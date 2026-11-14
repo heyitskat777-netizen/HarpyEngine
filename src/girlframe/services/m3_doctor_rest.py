@@ -59,11 +59,17 @@ def synchronize(c: Connection, game: "GameService", period: Period, event: str) 
             or any(x.id == original.id for x in donor.assets)
         ):
             continue
-        donor.assets.append(
-            original.model_copy(
-                update=dict(damaged=graft.damaged, void=graft.void, description=graft.description)
-            )
-        )
+        from girlframe.engine.m3_janus_storage import active as stored_void
+        from girlframe.engine.m3_supply_drop import current_asset, live
+
+        if (
+            any(x.asset_id == graft.id for x in state.held_items)
+            or any(x.asset == graft.id for x in stored_void(state, loan.doctor))
+            or any(current_asset(state, x) == graft.id for x in live(state, loan.doctor))
+        ):
+            # Preserve real linked custody; its explicit return package must move the link too.
+            continue
+        donor.assets.append(graft.model_copy(update=dict(id=original.id, family=original.family)))
         doc.assets = [x for x in doc.assets if x.id != graft.id]
         doc.revision += 1
         donor.revision += 1
@@ -96,3 +102,7 @@ def synchronize(c: Connection, game: "GameService", period: Period, event: str) 
             period=period.id,
             source_event=source,
         )
+
+    from girlframe.services.m3_doctor_return import synchronize_pending
+
+    synchronize_pending(c, game, state, initial, period, source)

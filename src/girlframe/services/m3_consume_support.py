@@ -168,9 +168,9 @@ def context(
     require_free(state, actor)
     require_free(state, target)
     if target.kind == "clone_am":
-        raise WorkflowError(
-            "SOURCE_CLONE_BODY_REQUIRED: actual same-copy consumption needs its lifecycle adapter"
-        )
+        from girlframe.services.m3_consume_clone import require_physical_target
+
+        require_physical_target(game, c, state, target)
     if target.kind == "pilot" and other.inside_frame is None:
         raise WorkflowError("Establish the actual target body's cockpit context")
     if state.world and target.kind in ("npc", "gorgon", "external_pilot"):

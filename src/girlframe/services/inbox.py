@@ -2378,6 +2378,7 @@ class InboxService:
                 )
             from girlframe.services.m3_doctor_care import CareService
             from girlframe.services.m3_doctor_procedures import ProcedureService
+            from girlframe.services.m3_doctor_return import ReturnService
             from girlframe.services.m3_janus import JanusService
             from girlframe.services.m3_janus_pet import PetService
             from girlframe.services.m3_janus_storage import StorageService
@@ -2405,6 +2406,50 @@ class InboxService:
                             task=doctor_task,
                         )
                     )
+
+            from girlframe.services.m3_handler_recovery import HandlerRecoveryService
+
+            for recovery in HandlerRecoveryService(GameService(self.store))._tasks(
+                connection, viewer
+            ):
+                items.append(
+                    InboxItem(
+                        "handler-recovery:" + recovery["id"],
+                        "handler_recovery",
+                        recovery["id"],
+                        recovery["revision"],
+                        "plays",
+                        recovery["label"],
+                        "Original rescued person and actual Handler",
+                        "pending",
+                        recovery["actionable"],
+                        False,
+                        "Complete the actual source-bound rescue release.",
+                        "Medical recovery does not silently reset custody or location.",
+                        "Review rescue release",
+                        task="m3_handler_recovery",
+                    )
+                )
+
+            for returned in ReturnService(GameService(self.store))._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "doctor-return:" + returned["id"],
+                        "doctor_request",
+                        returned["id"],
+                        returned["revision"],
+                        "plays",
+                        returned["label"],
+                        "Original donor, Doctor and current Handler",
+                        "pending",
+                        returned["actionable"],
+                        False,
+                        "Return the actual borrowed component through established custody.",
+                        "The loan remains outstanding until the real transfer.",
+                        "Review actual return",
+                        task="m3_doctor_return",
+                    )
+                )
 
             storage_tasks = StorageService(GameService(self.store))._tasks(connection, viewer)
             for stored_surgery in storage_tasks:
@@ -3542,6 +3587,7 @@ class InboxService:
                 primary, task_name = None, None
                 kind = work["kind"]
                 if kind in (
+                    "doctor_wings_return",
                     "show_dog",
                     "trainee_duty",
                     "creature_comforts",

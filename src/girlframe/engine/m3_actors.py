@@ -933,16 +933,22 @@ def _resolve(
         from girlframe.engine.m3_am_reset import prove as prove_reset
 
         reset = reset_body(state, ref)
-        reset_assets: tuple[AssetView, ...] = ()
-        if reset is not None:
-            prove_reset(state, reset)
-            from girlframe.engine.m3_items import mechanical_assets
+        from girlframe.engine.m3_items import mechanical_assets
+        from girlframe.engine.m3_npc_resources import current as npc_resources
 
+        resources = npc_resources(state, ref) if reset is None else None
+        if reset is not None:
             combined = {x.id: x for x in reset.assets}
             combined.update({x.id: x for x in mechanical_assets(state, ref)})
             reset_assets = assets(tuple(combined.values()))
+        else:
+            reset_assets = assets(mechanical_assets(state, ref))
+        if reset is not None:
+            prove_reset(state, reset)
             sources.append(fingerprint(reset))
-            sources.extend(fingerprint(x) for x in state.held_items if x.holder == ref)
+        if resources is not None:
+            sources.append(fingerprint(resources))
+        sources.extend(fingerprint(x) for x in state.held_items if x.holder == ref)
         if case is not None:
             sources.append(fingerprint(case))
         if journey is not None:
@@ -955,7 +961,17 @@ def _resolve(
             rules="director" if "director" in npc.jobs else "npc",
             jobs=npc.jobs,
             assets=reset_assets,
-            identities=identities(reset.identities) if reset else (),
+            identities=identities(reset.identities)
+            if reset
+            else tuple(
+                IdentityView(
+                    id=x.id, name=x.name, marked=x.marked, protected=False, paired=False, slot=None
+                )
+                for x in resources.identities
+            )
+            if resources
+            else (),
+            heat=resources.heat if resources else None,
             vessel_id=reset.body.vessel_id if reset else None,
             inside_frame=False if reset else None,
             piloting=False if reset else None,

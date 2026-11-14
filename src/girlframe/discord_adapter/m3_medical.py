@@ -130,7 +130,8 @@ async def open_medical(
             if data["stale"]
             else "\nWaiting for the original participant's actual decision."
             if data["stage"] != "complete"
-            else "\nActual waking and the owned Play exchange are recorded."
+            else "\nActual waking and the owned Play exchange are recorded. "
+            "Open Requests to review the source-bound Handler rescue release."
         ),
     )
 

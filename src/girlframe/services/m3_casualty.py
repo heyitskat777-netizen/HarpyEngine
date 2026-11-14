@@ -312,13 +312,33 @@ def prove_parts(game: GameService, c: Connection, state: GameState, actor: Actor
             )
             if choice is None or choice["action_id"] != item.source_action:
                 raise WorkflowError("Recover the exact source Play and original body-part chooser")
+            if item.reason == "sex":
+                source_action = game.action(c, item.source_action)
+                source_id = source_action["data"].get("casualty_sex", {}).get("session")
+                sex_source = _session(original, source_id or "")
+                if (
+                    source_action["data"]["play"] != rules.PLAY
+                    or sex_source.action != item.source_action
+                    or sex_source.actor != item.actor
+                    or sex_source.target != item.inflictor
+                ):
+                    raise WorkflowError(
+                        "Preserve the original Casualty counterpart and body chooser"
+                    )
+                if item.inflictor.kind == "npc":
+                    from girlframe.services.m3_casualty_npc import _prove_npc_contact
+
+                    _prove_npc_contact(game, c, sex_source)
+                chooser = sex_source.counterpart
+            else:
+                chooser = int(item.inflictor.entity)
             answer = _response(
                 game,
                 c,
                 item.source_action,
                 item.source_choice,
                 item.event,
-                int(item.inflictor.entity),
+                chooser,
                 choice["kind"],
             )
             if item.reason == "push_roll" and (
@@ -1572,6 +1592,13 @@ class CasualtyService:
                     and bonded.get(state, value.bonded_source).changeling_source is None
                 )
                 ended = cancelled(self.game, c, state, lesson)
+                from girlframe.services.m3_casualty_npc import resources_ready
+
+                npc_resources_ready = (
+                    resources_ready(self.game, c, state, value)
+                    if value.target.kind == "npc"
+                    else True
+                )
                 return dict(
                     id=identity,
                     kind="sex",
@@ -1591,9 +1618,11 @@ class CasualtyService:
                     can_confirm=not ended
                     and value.phase == "invited"
                     and viewer.user_id == value.counterpart,
+                    npc_resources_ready=npc_resources_ready,
                     can_roll=not ended
                     and value.phase == "accepted"
-                    and viewer.user_id == value.caster,
+                    and viewer.user_id == value.caster
+                    and npc_resources_ready,
                     outcomes=[
                         x.model_dump(mode="json")
                         for x in rules.records(state, rules.SexSelection)
@@ -1966,6 +1995,10 @@ def prepare(
     ):
         raise WorkflowError("Use this actual original voluntarily confirmed Sex source")
     _contact(game, c, state, value)
+    if value.target.kind == "npc":
+        from girlframe.services.m3_casualty_npc import require_result_resources
+
+        require_result_resources(game, c, state, value)
     from girlframe.engine.m3_handler_consequences import active_handler
 
     handler = active_handler(state)
@@ -2056,7 +2089,11 @@ def results(game: GameService, c: Connection, state: GameState, action: dict[str
     elif level == "high":
         for human in (value.caster, value.counterpart):
             _request(game, c, action, human, "casualty_high_heat")
-        _request(game, c, action, value.caster, "casualty_high_asset")
+        # Resolve independently owned pre-harm benefits/parts first. Actual NPC
+        # damage can move/kill its original person; no later voluntary answer or
+        # resource write should require pretending that original person is alive.
+        if value.target.kind != "npc":
+            _request(game, c, action, value.caster, "casualty_high_asset")
         _request(game, c, action, value.counterpart, "casualty_high_part")
     else:
         _request(game, c, action, value.caster, "casualty_unsatisfied")
@@ -2096,6 +2133,16 @@ def _finish(
         return
     value = _session(state, action["data"]["casualty_sex"]["session"])
     if value.phase == "complete":
+        return
+    if (
+        value.target.kind == "npc"
+        and value.tier == "high"
+        and not any(
+            x.session == value.id and x.kind == "casualty_high_asset"
+            for x in rules.records(state, rules.SexSelection)
+        )
+    ):
+        _request(game, c, action, value.caster, "casualty_high_asset")
         return
     if _pending_damage(game, c, state, value):
         rules.put(state, value.model_copy(update=dict(phase="damage")))
@@ -2171,10 +2218,15 @@ def apply_choice(
     if value.target.kind == "npc":
         _contact(game, c, state, value)
         if value.tier == "high":
-            raise WorkflowError(
-                "NPC Heat and Asset effects need human adjudication; "
-                "entire high result remains pending"
-            )
+            from girlframe.services.m3_casualty_npc import require_result_resources
+
+            try:
+                require_result_resources(game, c, state, value)
+            except (ValueError, WorkflowError) as error:
+                raise WorkflowError(
+                    "NPC_RESOURCE_SETUP_REQUIRED: record the original NPC resources; "
+                    "entire high result remains pending"
+                ) from error
     kind, event, owner = row["kind"], action["data"]["response_event"], int(row["actor_id"])
     person = value.actor if owner == value.caster else value.target
     if (
@@ -2223,9 +2275,13 @@ def apply_choice(
                 _request(game, c, action, human, "casualty_mutual_tag")
     elif kind == "casualty_unmark":
         if person.kind == "npc" and answer.options == ("unmark",):
-            raise WorkflowError(
-                "NPC Identity unmark needs human adjudication; optional choice remains pending"
-            )
+            from girlframe.services.m3_casualty_npc import resources_ready
+
+            if not resources_ready(game, c, state, value):
+                raise WorkflowError(
+                    "NPC Identity unmark needs human adjudication; "
+                    "record the original resources or decline; optional choice remains pending"
+                )
         if (
             answer.options not in (("unmark",), ("skip",))
             or answer.fields
@@ -2239,7 +2295,12 @@ def apply_choice(
         else:
             if len(answer.denied) != 1:
                 raise WorkflowError("Select one actually marked owned Identity")
-            ChoiceEngine(game).unmark(c, state, state.sheets[person.entity], answer.denied, 1)
+            if person.kind == "npc":
+                from girlframe.services.m3_npc_resources import unmark_identity
+
+                unmark_identity(game, c, state, person, answer.denied[0], event)
+            else:
+                ChoiceEngine(game).unmark(c, state, state.sheets[person.entity], answer.denied, 1)
     elif kind == "casualty_high_heat":
         if (
             answer.number not in (3, 4)
@@ -2251,20 +2312,34 @@ def apply_choice(
             raise WorkflowError("Each original beneficiary chooses their own3–4 Heat")
         from girlframe.engine.m3_leviathan_obsession import allowed_gain
 
-        state.sheets[person.entity].heat += allowed_gain(
-            state, person, answer.number, "Casualty Sex", event
-        )
-        state.sheets[person.entity].revision += 1
+        if person.kind == "npc":
+            from girlframe.services.m3_npc_resources import award_heat
+
+            award_heat(game, c, state, person, answer.number, action["id"], event)
+        else:
+            state.sheets[person.entity].heat += allowed_gain(
+                state, person, answer.number, "Casualty Sex", event
+            )
+            state.sheets[person.entity].revision += 1
     elif kind == "casualty_high_asset":
         if (
             owner != value.caster
-            or len(answer.denied) != 1
-            or answer.options
+            or (answer.denied != () if value.target.kind == "npc" else len(answer.denied) != 1)
+            or (
+                answer.options != ("npc_damage",)
+                if value.target.kind == "npc"
+                else bool(answer.options)
+            )
             or answer.fields
             or answer.number is not None
             or not answer.text.strip()
         ):
             raise WorkflowError("Choose the counterpart's real Asset you actually damage")
+        if value.target.kind == "npc" and any(
+            pending["kind"] in ("casualty_high_heat", "casualty_high_part")
+            for pending in game.pending(c, action["id"])
+        ):
+            raise WorkflowError("Complete the independently owned Heat and part choices first")
         from girlframe.services.m3_battle import damage_actor
 
         changed, work = damage_actor(
@@ -2272,7 +2347,7 @@ def apply_choice(
             c,
             state,
             target=value.target,
-            asset_id=answer.denied[0],
+            asset_id=None if value.target.kind == "npc" else answer.denied[0],
             source_action=action["id"],
             source_work=None,
             event=event,
@@ -2452,14 +2527,29 @@ def projection(
     kind = row["kind"]
     parts = rules.body(state, value.actor)
     person = value.actor if int(row["actor_id"]) == value.caster else value.target
-    if value.target.kind == "npc" and value.tier == "high":
-        return dict(
-            unsupported_npc=True,
-            guidance="NPC Heat and Asset effects need human adjudication; "
-            "entire high result remains pending",
-        )
+    npc = value.target.kind == "npc"
+    if npc and value.tier == "high":
+        from girlframe.services.m3_casualty_npc import resources_ready
+
+        if not resources_ready(game, c, state, value):
+            return dict(
+                unsupported_npc=True,
+                guidance="NPC_RESOURCE_SETUP_REQUIRED: record the original NPC resources; "
+                "entire high result remains pending with its original roll preserved",
+            )
+        if kind == "casualty_high_asset" and any(
+            pending["kind"] in ("casualty_high_heat", "casualty_high_part")
+            for pending in game.pending(c, action["id"])
+        ):
+            return dict(
+                waiting=True,
+                guidance="The original beneficiaries must choose their Heat and the "
+                "counterpart must choose the real broken part before NPC harm resolves.",
+            )
     options = (
-        (("focus", "Focus"), ("hesitate", "Hesitate"))
+        (("npc_damage", "Apply actual harm through the printed NPC consequences"),)
+        if npc and kind == "casualty_high_asset"
+        else (("focus", "Focus"), ("hesitate", "Hesitate"))
         if kind == "casualty_focus"
         else (
             (("unmark", "Unmark one real Identity"), ("skip", "Decline optional unmark"))
@@ -2471,7 +2561,14 @@ def projection(
             else ()
         )
     )
+    npc_identities = []
+    if person.kind == "npc" and kind == "casualty_unmark":
+        from girlframe.services.m3_casualty_npc import marked_identities, resources_ready
+
+        if resources_ready(game, c, state, value):
+            npc_identities = marked_identities(game, c, state, value)
     return dict(
+        npc_damage=npc and kind == "casualty_high_asset",
         options=options,
         minimum=0 if kind == "casualty_present" else 1,
         maximum=3 if kind == "casualty_present" else 1,
@@ -2488,13 +2585,15 @@ def projection(
             dict(id=x.id, label=x.name)
             for x in (state.sheets[person.entity].identities if person.kind == "pilot" else ())
             if x.marked
-        ],
+        ]
+        if person.kind == "pilot"
+        else npc_identities,
         assets=[
             dict(id=x.id, label=x.name)
             for x in state.sheets[value.target.entity].assets
             if not x.damaged
         ]
-        if kind == "casualty_high_asset"
+        if kind == "casualty_high_asset" and not npc
         else [],
         label="Your actual source account or authored Tag",
         heat=kind == "casualty_high_heat",
@@ -2506,6 +2605,18 @@ def synchronize(game: GameService, c: Connection, action: dict[str, Any], event:
     if not action["data"].get("casualty_sex"):
         return
     value = prove_sex(game, c, state, action["data"]["casualty_sex"]["session"])
+    if any(
+        fact.get("kind") == "battle_damage_stage"
+        and fact.get("event") == event
+        and fact.get("source_action") == action["id"]
+        and "requirement" in fact
+        for fact in state.facts
+    ):
+        # The original response event now contains the real staged harm. Only
+        # that immutable source can materialize its owned NPC/Sprite/etc work.
+        from girlframe.services.m3_battle import synchronize_damage
+
+        synchronize_damage(game, c, event)
     if value.phase != "damage" or _pending_damage(game, c, state, value):
         return
     finished = str(uuid4())

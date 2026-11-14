@@ -1,3 +1,8 @@
+> Owner clarification2026-11-14: final offline P1 regression includes both existing
+> `test_session_mix_distinct_roster.py` and `test_session_mix_interference.py`.
+> Their prior pause is lifted only for that run; hourly/new simulation automation,
+> bot startup/deployment and model calls remain separately unauthorized.
+
 # Active P1 workflow — November8 owner update
 
 Use `work_orders/P1_PLAYABLE_RELEASE.md` and `P1_CURRENT_QUEUE.md`. Close existing W0 integration first; then durable human-DM escalation and dependency-ready ordinary workflows for every Girl/Frame. AI follows accepted P1 under separate authorization; the original full-rule backlog remains. Bot OFF.

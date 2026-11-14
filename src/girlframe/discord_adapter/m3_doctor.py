@@ -175,8 +175,8 @@ async def open_roll(interaction: discord.Interaction, service: DoctorService) ->
         + str(data["track"])
         + "/8. Actual Nanobot use marks one box; it does not move either body. "
         "NPCs: Here for Support uses their own controller and Tags. "
-        "New NPC Nanobot Injection is unavailable: required NPC medical mechanics are "
-        "incomplete. Previously rolled NPC actions retain their pending recovery choices.",
+        "NPC Nanobot patients need their own established treatment resources. "
+        "The NPC controller chooses their actual repairs and Identity details.",
         [
             Field("play", "Actual ability", tuple((x["id"], x["label"]) for x in data["choices"])),
             Field(
@@ -236,8 +236,6 @@ async def open_choice(
             ("repair", "Repair two actual damaged Assets"),
             ("identity", "Patient may unmark an actual Identity"),
         )
-        if detail.get("npc"):
-            choices = ()
         if detail["effects"]:
             choices += (("remove", "Remove a supported actual ongoing effect"),)
         fields = [
@@ -259,12 +257,16 @@ async def open_choice(
                     required=False,
                 )
             )
-    elif detail.get("npc"):
+    elif detail.get("npc") and (
+        detail.get("heat_only")
+        or detail.get("legacy_benefits")
+        or (detail.get("effect") and "repair" not in data["body"])
+    ):
         fields = [
             Field(
                 "confirm",
-                "Confirm actual received treatment",
-                (("confirm", detail["effect"]["label"]),),
+                "Recover the original treatment",
+                (("confirm", "Confirm this actual received result"),),
             )
         ]
     else:
@@ -312,7 +314,7 @@ async def open_choice(
                 options=tuple(values["choices"]),
                 fields={"effect": values["effect"][0]} if values.get("effect") else {},
             )
-        elif detail.get("npc"):
+        elif detail.get("npc") and values.get("confirm"):
             answer = ChoiceAnswer(options=tuple(values["confirm"]))
         else:
             chosen = replacements(values)

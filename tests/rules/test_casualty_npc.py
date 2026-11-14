@@ -127,10 +127,10 @@ def test_actual_npc_low_mid_and_pending_high(ledger, tmp_path, monkeypatch):
         await open_casualty(interaction, service, identity)
         form = interaction.edit_original_response.call_args.kwargs["view"]
         text = form.text()
-        assert "NPC high results need human adjudication" in text
-        assert "entire result remains pending" in text
-        assert "NPC Identity unmark is unsupported" in text
-        assert "explicit decline" in text
+        assert "NPC_RESOURCE_SETUP_REQUIRED" in text
+        assert "retained high result remains pending" in text
+        assert "Optional Identity unmark remains pending" in text
+        assert "explicitly decline" in text
 
     asyncio.run(inspect_original_consent())
     before = state(game)
@@ -159,20 +159,26 @@ def test_actual_npc_low_mid_and_pending_high(ledger, tmp_path, monkeypatch):
 
     def perform(identity, faces):
         game.dice = Dice(faces)
-        action = game.begin(
-            PLAYER,
-            str(uuid4()),
-            900,
-            state(game).sheets["2"].revision,
-            PlayInput(
-                play=rules.PLAY,
-                source_work=identity,
-                target_actor=npc,
-                heat=0,
-                context="Actual confirmed original NPC interaction",
-                trigger_confirmed=True,
-            ),
-        )["action_id"]
+        # Recreate only historical admission. Production result/resource guards
+        # are restored before any result or response; this is not a new-start pass.
+        import girlframe.services.m3_casualty_npc as npc_source
+
+        with monkeypatch.context() as legacy:
+            legacy.setattr(npc_source, "require_result_resources", lambda *args: None)
+            action = game.begin(
+                PLAYER,
+                str(uuid4()),
+                900,
+                state(game).sheets["2"].revision,
+                PlayInput(
+                    play=rules.PLAY,
+                    source_work=identity,
+                    target_actor=npc,
+                    heat=0,
+                    context="Actual confirmed original NPC interaction",
+                    trigger_confirmed=True,
+                ),
+            )["action_id"]
         tick(worker, gateway, 3)
         tags(game)
         return action

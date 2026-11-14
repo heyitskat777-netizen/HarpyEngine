@@ -4488,3 +4488,46 @@ legitimate matching approval and final independent/human gates remain pending.
 ## Bonded mid exhausted unmarks — 2026-11-13
 
 `bonded-mid-exhausted-unmarks` (PDF59/printed57): choose shaping requests even if fewer marked Identities remain. Unmark every available unlocked Identity up to the number of requests; do not fabricate a resource or skip an available required unmark. Treating unmarks as limiting costs or as wholly optional are alternative readings. This delegated interpretation requires printed clarity review and a fresh legitimate approval of the changed campaign digest. Counterpart decisions and actual effects remain required.
+
+
+## Ordinary NPC Status scope — 2026-11-14
+
+`npc-status-pilot-hierarchy-scope`: Status (PDF14/printed12) explicitly ranks Pilots within their Cadre; Oldgen Sex (PDF47/printed45) does not create NPC ranks. Under the owner's delegated recommendations, omit Lower Status for ordinary NPC targets. Preserve actual ranked-Pilot effects, including an NPC's reciprocal choice against the Pilot. Previously saved or injected unsupported proposals remain atomic, unresolved and recoverable through the original chooser's applicable alternatives; no controller proxy, automatic substitution or fictitious rank decrease.
+
+Extending the hierarchy to NPCs is an alternative campaign extension, not assumed here. This precise applicability ruling requires printed-clarity review and legitimate approval of the changed registry digest. It is not implementation of NPC rank.
+
+
+## NPC treatment resources and return destinations — 2026-11-14
+
+`npc-witnessed-treatment-resources` (Nanobot PDF72/printed70; NPC PDF15/printed13 and PDF188–189/printed186–187): the current Handler may record established Heat and zero or explicitly named ordinary Identities for the same living original NPC brain/vessel before treatment. No automatic baseline, protected/paired slots, controller Pilot proxy or new NPC damage system. Actual repairs use genuine carried Asset provenance. This narrow campaign extension resolves the missing inventory; excluding all NPCs or granting full Girl sheets are alternatives. Doctor owns benefits; NPC controller owns actual repair/Identity details. Legacy receipts recover only missing effects, never repeat costs or removals.
+
+`borrowed-wings-lost-frame-destination` (PDF72/printed70; scrapping PDF71/printed69) supplements the existing same-original-Frame ruling only when that destination no longer exists. Handler quotes actual hardware recovery into the original donor's current legal Frame and the donor confirms that exact package. Actual access, custody, current damage/Void, capacity and consequences remain required. No pristine reconstruction, teleport or silent replacement inheritance. Linked/unreachable components stay precise mandatory work.
+
+Both are owner-delegated interpretations requiring printed clarity review. Their normalized registry changes need legitimate scoped campaign approval; they grant no independent certification or deployment approval.
+
+## Learned AM circuit Plays — 2026-11-14
+
+`learned-am-circuit-prerequisites` (Vatgrown PDF50/printed48; AM PDF55–56/printed53–54) preserves real one-use acquisition of Scrutinized/Just Code, including mandatory high first-two selections. It does not create a software mind, circuits, Jailbroken freedoms, Limiters, backups or private knowledge. Actual native source providers still establish the adjusted mind and newly confirmed discovery or real circuit access before an Action/cost. A currently unusable lesson stays saved and unspent. Native/permanent abilities do not consume an unrelated lesson. Blanket label-based acquisition refusal and invented AM anatomy are rejected alternatives. This delegated interpretation remains subject to printed clarity review and matching legitimate approval.
+
+
+## Eat and the actual Frame-hosted Clone — 2026-11-14
+
+`consume-frame-hosted-copy-physical-target` (Eat PDF66/printed64; Clone PDF92/printed90): the current paid/retained Clone source creates an artificial mind in its Frame, with its own Identity/Tags/Bonds and shared Heat, but no independent physical vessel. Personhood or joining a scene does not satisfy jaws around a physical foe. Prove the actual paid copy/residency, then reject that unembodied target before cost/roll/hunger/lock changes. Actual embodied Pilot/NPC/Gorgon targets retain their own legal providers; the owner is never substituted.
+
+This is a precise source-applicability recommendation, requiring printed clarity review, not completed copy damage/death/custody/escape automation. A future actual separate copy-vessel source gets a distinct mandatory lifecycle dependency; it cannot silently inherit this noncorporeal explanation. Inventing a body or treating the owner as a proxy are rejected alternatives. Normalized scoped approval must be renewed legitimately.
+
+
+## ANKOU Relay nominations and Obsessive — 2026-11-14
+
+`ankou-relay-nomination-reciprocal-bond` (Relay PDF85/printed83; Obsessive PDF86/printed84): keep the actual Intense-Bond nomination filter. Obsessive explicitly gives only ANKOU the benefits; the target gets nothing without a real Bond. A nomination is the target's right and ANKOU's obligation, so unilateral benefits do not create it. Treating that right as included is the alternative reading. This delegated recommendation preserves current code and independently owned optional nominations; it changes no symmetric Bonds or other effective-Intense consumers. It requires printed clarity review and matching scoped approval.
+
+
+## Casualty's actual NPC resources and harm — 2026-11-14
+
+`casualty-witnessed-npc-outcomes` (PDF44/printed42; NPC harm PDF15/printed13) uses established original NPC Heat/ordinary Identities, extending the sparse witnessed-resource ruling without a full NPC Girl sheet. Original beneficiaries independently choose3–4 Heat and optional actual Identity unmarks. The attacker-owned printed NPC replacement consequence remains real injury/Tag, advantage or death; no invented HP or compulsory carried-Asset loss. Heat and actual part choices precede harm to preserve their owners without demanding posthumous answers. Source completion waits for the real harm and Bond consequences. This delegated interpretation requires printed clarity review and matching scoped approval.
+
+## Actual discharge after Handler rescue — 2026-11-14
+
+`handler-rescue-actual-release` (Defeat PDF29/printed27) closes the otherwise permanent protective hold left by actual Handler/agent rescue. Retain the original rolled rescue, body, vessel and custodian; complete required real medical waking/Play exchange first. Original Handler proposes witnessed current release at their actual known location, and the original rescued player confirms the exact body/source/location facts. Clear only that rescue hold; preserve actual Frame position, damage, vessel and independent locks/obligations.
+
+When Handler position is genuinely unknown, a witnessed initial-presence record is restricted to this actual rescue and valid known map location. It does not move an already placed Handler or substitute a generic custody reset. Patient confirmation is OOC source evidence, not invented in-fiction dialogue. Permanent captivity and arbitrary position reset are rejected alternatives. This is a delegated campaign interpretation requiring printed clarity review and legitimate matching approval; no charge, cure, transport or release certification is invented.

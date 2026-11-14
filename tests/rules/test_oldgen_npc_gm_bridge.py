@@ -118,7 +118,10 @@ def test_oldgen_npc_status_opens_owned_durable_gm_request_without_partial_effect
     tick(worker, gateway, 3)
     pass_tags(game)
     row = next(x for x in game.choices(PLAYER) if x["kind"] == "oldgen_sex_effects")
-    assert game.decision(PLAYER, row["id"])["detail"]["unsupported_status"]
+    detail = game.decision(PLAYER, row["id"])["detail"]
+    assert detail["unsupported_status"]
+    assert "status" not in {key for key, _ in detail["options"]}
+    assert "no Cadre rank" in detail["status_scope"]
     facilitator = FacilitatorService(game)
     facilitator.configure(ADMIN, str(uuid4()), "user", OTHER.user_id)
     before_request = state(game)

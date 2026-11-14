@@ -1907,3 +1907,15 @@ recorded above; manifests/attempt hashes/commands `var/p1-am-sup-required-*`.
 Initial manifest preflight expected normal_nodes while AM handoff used normal;
 normalized metadata before tests ran, no source/runtime change. Final candidate
 full regression/global static/migration/privacy/restore/review/human gates pending.
+
+
+## November14 ordinary continuation after preserved r285 integration
+
+Current bounded implementation, focused successes/failures, ownership and
+review repairs are tracked in [the working delivery report](P1_ORDINARY_COMPLETION_20261114.md).
+It supersedes stale next-step headings only; historical evidence remains.
+NPC treatment, source-specific Clone physical applicability, original donor
+replacement/hardware return and high AM learning acquisition have current
+focused evidence. Casualty NPC high, actual Handler-rescue discharge and positive
+AM use remain active. Final regression/global static/migration/privacy/restore,
+independent rules/scoped release and human acceptance remain pending. Bot OFF.

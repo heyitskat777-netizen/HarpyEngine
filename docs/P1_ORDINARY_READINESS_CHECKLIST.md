@@ -1,3 +1,8 @@
+> Historical r259/r260 review below. Current source, rulings, concrete closures and
+> remaining gates are tracked in [the active queue](P1_CURRENT_QUEUE.md) and
+> [integrated coverage](R285_TYPE_COVERAGE.csv). Do not restart superseded gaps
+> solely from unchecked historical rows.
+
 # P1 ordinary-workflow readiness checklist — r259 baseline / r260 planning
 
 ## Scope and evidence discipline

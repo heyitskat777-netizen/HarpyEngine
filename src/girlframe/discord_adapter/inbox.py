@@ -1254,6 +1254,22 @@ class InboxView(discord.ui.View):
             from girlframe.services.m2_game import GameService
 
             await open_pet(interaction, GameService(self.service.store), item.identity)
+        elif item.task == "m3_handler_recovery":
+            from girlframe.discord_adapter.m3_handler_recovery import open_handler_recovery
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_handler_recovery import HandlerRecoveryService
+
+            await open_handler_recovery(
+                interaction, HandlerRecoveryService(GameService(self.service.store)), item.identity
+            )
+        elif item.task == "m3_doctor_return":
+            from girlframe.discord_adapter.m3_doctor_return import open_return as open_doctor_return
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_doctor_return import ReturnService
+
+            await open_doctor_return(
+                interaction, ReturnService(GameService(self.service.store)), item.identity
+            )
         elif item.task in ("m3_doctor_care", "m3_doctor_procedure"):
             from girlframe.discord_adapter.m3_doctor import open_care
             from girlframe.discord_adapter.m3_doctor import open_request as open_doctor_request

@@ -1,5 +1,5 @@
 {
-  "status": "SOURCE_INTEGRATED_FOCUSED_CHECKS_PASS_RELEASE_PENDING",
+  "status": "ORDINARY_PACKET_FROZEN_FOR_FINAL_REGRESSION",
   "baseline": "b265003783c0870c6b8fd855a836010380d11b89",
   "input_archive_sha256": "e73c7ec7145f6bac848e49188078b187c148ab2f0d6a8649fa82ff85a4f46076",
   "scope": "10Girl labels +10Frame labels /9official Frame rulesets. JANUS-B is alias. Rows are unequal source groups, not percentages.",
@@ -45,7 +45,7 @@
       "category": "Girl",
       "type": "Casualty",
       "implemented_groups": "Body/part damage, Identity\u2192repair, paid broken-part repair, effective-result push, resistance/finder, Sex, supplied component replacement",
-      "retained_evidence_and_gaps": "Genuine Bonded release r259; pilot-to-AM high consequence r274; actual missing-Link supply/install/re-pilot/Keep r283 FT. NPC mandatory high Heat/Asset effects unsupported; optional NPC Identity unmark needs decline; no all-body or full replacement certification.",
+      "retained_evidence_and_gaps": "Retained Bonded release, Pilot-to-AM high consequence and missing-Link supply/install/re-pilot/Keep focused evidence. Current NPC mid optional actual Identity unmark and high independently chosen3\u20134 Heat/part/printed NPC harm/Bond have two focused passes. Fixed original NPC controller proof and committed harm\u2192required-work materialization. New attempts preflight actual witnessed resources; old missing-resource records remain recoverable. Whole-type/global/independent/human gates pending.",
       "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
       "independent_review": "pending",
       "human_acceptance": "pending"
@@ -54,7 +54,7 @@
       "category": "Girl",
       "type": "Oldgen",
       "implemented_groups": "Maxims/advice, one-use rewrite/use, Sex owned consequences",
-      "retained_evidence_and_gaps": "Optional advice UI r271 and optional effects UI plus supported NPC Tag+Bond alternative r275 FT. NPC Status is still unsupported; private ruling request retains pending work, not rank mutation.",
+      "retained_evidence_and_gaps": "Retained advice/optional choices and original-owner NPC Tag+Bond alternative; current NPC native selection omits Status under the explicit Pilot-hierarchy ruling. One current normal passed. Legacy unsupported Status proposals stay atomic/pending until the original chooser voluntarily selects applicable effects. No NPC rank invented.",
       "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
       "independent_review": "pending",
       "human_acceptance": "pending"
@@ -81,7 +81,7 @@
       "category": "Girl",
       "type": "AM",
       "implemented_groups": "Native Jailbroken/body/circuits, Scrutinized/Limiters/reset, Just Code backup/body/branch/records/operator, body-specific Sex",
-      "retained_evidence_and_gaps": "Native service/test routes exist; fourth-Limiter reset exists despite old conditional error strings. Four native registry entries have pending approval provenance. Jailbroken/AM Sex full branch closure and learned Scrutinized/Just Code eligibility/consumer remain gaps. Native and learned AM are not equivalent. Clone consumption remains unsupported. Current integration preserves separate native and learned no-roll source namespaces, real performances and gifts. Native/learned/Pair counterpart/Court integration checks passed; learned Scrutinized/Just Code and genuine approval remain distinct gaps.",
+      "retained_evidence_and_gaps": "Native/learned no-roll Sex, Pair counterpart and Court focused integration checks retained. Current mandatory high Scrutinized/Just Code acquisition2passed; actual learning\u2192Defeat/playbook transition\u2192medical exchange\u2192source-bound Handler release\u2192one-use owned Scrutinized/Code outcomes2passed. Native/permanent abilities do not spend unrelated lessons; no invented circuits or anatomy. Frame-hosted Clone physical Eat scope has two source-specific passing checks; future actual copy-vessel lifecycle stays separate. Genuine approval/final gates pending.",
       "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
       "independent_review": "pending",
       "human_acceptance": "pending"
@@ -135,7 +135,7 @@
       "category": "Frame",
       "type": "DoctorDoctor Mk. II",
       "implemented_groups": "Pilot Nanobot, Borrowed Wings, Running Ragged, support, Cute Nurse, Metal Angel/replacement",
-      "retained_evidence_and_gaps": "r262 same-original-Frame return and r263 graft Void\u2192resistance\u2192Gorgon FT (loan remains outstanding). New NPC Nanobot pre-roll rejected; mandatory NPC resources absent, legacy positive Heat remains pending. Transformed/missing original Frame hardware return unresolved.",
+      "retained_evidence_and_gaps": "Current real NPC low/mid/high resource effects and legacy positive-Heat recovery have four focused passes; initial event-reference failures fixed. Current real donor scrapping/replacement/Off-Duty/native hardware-return normal passes; transformed non-core producer/package/transfer smoke passes, not full converted native chain. Linked core/protected/flesh, destroyed salvage and inaccessible custody remain precise mandatory work. Independent technical review identified NPC decision privacy/inbox actionability defects; targeted confirmation2passed after fixes. Final global/independent rules/human gates pending.",
       "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
       "independent_review": "pending",
       "human_acceptance": "pending"
@@ -171,7 +171,7 @@
       "category": "Frame",
       "type": "Project ANKOU",
       "implemented_groups": "Processor, Emotional Relay, Feedback/reprisal and actual child consequences",
-      "retained_evidence_and_gaps": "Repeated Identity token fix r268; nomination\u2192real Keep r271; tear\u2192Flirt\u2192Tag completion r273; NPC death\u2192Identity erasure/+4 Heat r274 FT. Multiple bounded physical source/actor/UI guards. Effective-Intense nomination interpretation, independent Clone actors and broader lifecycle remain uncertain/unsupported.",
+      "retained_evidence_and_gaps": "Retained repeated Identity-token fix, actual nomination\u2192Keep, tear\u2192Flirt\u2192Tag and NPC death\u2192Identity/+4Heat focused evidence. Explicit delegated source interpretation preserves actual Intense nomination: Obsessive gives its owner benefits, not the target nomination rights. Independent Clone psychic targets and exceptional lifecycle consumers remain separate source-specific scope; no whole-type certification.",
       "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
       "independent_review": "pending",
       "human_acceptance": "pending"
@@ -186,5 +186,8 @@
       "human_acceptance": "pending"
     }
   ],
-  "integration_evidence": "reports/R285_INTEGRATION.md:19 Check Sensors +10 integrated workflows +2 affected AM consumers +1 failed-only migration retry; not full regression."
+  "integration_evidence": "reports/R285_INTEGRATION.md:19 Check Sensors +10 integrated workflows +2 affected AM consumers +1 failed-only migration retry; not full regression.",
+  "shared_ordinary_closures": [
+    "Source-bound Handler rescue discharge: two genuine positive AM consumer chains and one distinct high-rescue native episode pass; actual source/body/medical/placement/owner proof, no raw custody reset."
+  ]
 }

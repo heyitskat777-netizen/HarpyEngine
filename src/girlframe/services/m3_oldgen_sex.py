@@ -752,17 +752,25 @@ def projection(
         if x.session == value.id and x.owner == value.actor
     }
     marked = maxims.marked_maxims(state, value.caster)
+    # Status is the actual Pilot hierarchy (PDF14/printed12), not an NPC's
+    # social standing. Preserve the old guard for saved/injected proposals,
+    # but do not offer an inapplicable effect in a new native selection.
     unsupported_status = value.target.kind == "npc" and value.phase != "reciprocal"
     if unsupported_status:
         labels["status"] = "NPC Status: unsupported; pause for facilitator"
     allowed = [
         x
         for x in rules.EFFECTS
-        if (value.phase != "additional" or x not in used) and (x != "unmark" or marked)
+        if (value.phase != "additional" or x not in used)
+        and (x != "unmark" or marked)
+        and (x != "status" or not unsupported_status)
     ]
     return dict(
         phase=value.phase,
         unsupported_status=unsupported_status,
+        status_scope="Status applies to ranked Pilots; this NPC has no Cadre rank."
+        if unsupported_status
+        else None,
         options=tuple((x, labels[x]) for x in allowed),
         minimum=2 if value.phase == "caster" else 0,
         maximum=2 if value.phase == "caster" else 1,

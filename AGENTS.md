@@ -6,6 +6,13 @@ Latest owner testing instruction supersedes older per-workflow/coherent-checkpoi
 
 Earlier instructions below describe the historical M3 development path; this active P1 direction and current owner messages take precedence when priorities conflict.
 
+Latest owner clarification2026-11-14: **include both existing session-mix files
+(`test_session_mix_distinct_roster.py` and `test_session_mix_interference.py`) in
+final offline P1 regression**. This supersedes their prior test pause for that
+final run only. It does not resume hourly automation, new simulation development,
+model calls, bot startup or deployment. Run the actual complete suite on the
+frozen integrated source and retain failures/gaps honestly.
+
 # HarpyEngine development instructions
 
 Read `README.md`, then the original handoff's `AGENTS.md` and active work order

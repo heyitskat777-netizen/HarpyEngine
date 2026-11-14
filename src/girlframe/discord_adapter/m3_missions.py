@@ -614,6 +614,19 @@ def register_missions(
         except WorkflowError as error:
             await reply(interaction, str(error))
 
+    @group.command(
+        name="npc_resources", description="Record or review witnessed NPC treatment resources"
+    )
+    async def npc_resources(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_npc_resources import open_npc_resources
+        from girlframe.services.m3_npc_resources import NpcResourcesService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_npc_resources(interaction, NpcResourcesService(service.game))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
     @group.command(name="contraband", description="Review your own private contraband finds")
     async def contraband(interaction: discord.Interaction) -> None:
         from girlframe.discord_adapter.m3_contraband import open_finds

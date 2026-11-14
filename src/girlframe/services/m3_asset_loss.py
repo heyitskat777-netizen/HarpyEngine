@@ -27,6 +27,7 @@ Reason = Literal[
     "consume_partake",
     "consume_starvation_expiry",
     "doctor_wings",
+    "doctor_wings_return",
 ]
 REASONS = (
     "supply_drop_expiry",
@@ -37,6 +38,7 @@ REASONS = (
     "consume_partake",
     "consume_starvation_expiry",
     "doctor_wings",
+    "doctor_wings_return",
 )
 
 
@@ -147,6 +149,12 @@ def create_loss_work(
         if source.get("piloting") != actual.piloting or source.get("in_battle") != in_battle:
             raise WorkflowError("Preserve the actual original consumption loss context.")
         source_action = source.get("source_action")
+    if reason == "doctor_wings_return":
+        from girlframe.services.m3_doctor_return import prove_loss_source as prove_return_loss
+
+        context = prove_return_loss(game, c, after, event, source_id, actor)
+        if context["piloting"] != actual.piloting:
+            raise WorkflowError("Preserve the actual returning component's loss context")
     if reason == "doctor_wings":
         from girlframe.services.m3_doctor_wings_void import prove_loss_source as prove_wings_loss
 
@@ -245,6 +253,10 @@ def prove_loss_work(
         context = prove_consume_loss(game, c, after, event, source_id, actor)
         if body.get("source_action") != context.get("source_action"):
             raise WorkflowError("Preserve the actual original consumption parent and receipt.")
+    elif reason == "doctor_wings_return":
+        from girlframe.services.m3_doctor_return import prove_loss_source as prove_return_loss
+
+        context = prove_return_loss(game, c, after, event, source_id, actor)
     elif reason == "doctor_wings":
         from girlframe.services.m3_doctor_wings_void import prove_loss_source as prove_wings_loss
 

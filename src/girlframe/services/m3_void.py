@@ -124,6 +124,7 @@ def source(
             "consume_partake",
             "consume_starvation_expiry",
             "doctor_wings",
+            "doctor_wings_return",
         ):
             from girlframe.services.m3_asset_loss import prove_loss_work
 
@@ -493,7 +494,12 @@ def complete(
             from girlframe.services.m3_battle_dormant import complete_void
 
             complete_void(game, c, identity, event, viewer, key)
-        elif body.get("reason") in ("supply_drop_expiry", "budget_removal", "doctor_wings"):
+        elif body.get("reason") in (
+            "supply_drop_expiry",
+            "budget_removal",
+            "doctor_wings",
+            "doctor_wings_return",
+        ):
             # These actual loss sources have no synthetic parent Play; source-scoped
             # required work was resolved above by the real owned Void outcome.
             continue

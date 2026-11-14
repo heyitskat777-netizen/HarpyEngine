@@ -80,3 +80,31 @@ def contact(
         assert value.npc_contact is not None
         if other.cell != value.npc_contact.cell:
             raise WorkflowError("Renew actual NPC contact after movement")
+
+
+def require_result_resources(
+    game: GameService, c: Connection, state: GameState, value: rules.SexSession
+) -> None:
+    """New starts need real potential high-result resources before cost or dice."""
+    from girlframe.services.m3_npc_resources import prove
+
+    prove(game, c, state, value.target)
+
+
+def resources_ready(
+    game: GameService, c: Connection, state: GameState, value: rules.SexSession
+) -> bool:
+    try:
+        require_result_resources(game, c, state, value)
+    except (ValueError, WorkflowError):
+        return False
+    return True
+
+
+def marked_identities(
+    game: GameService, c: Connection, state: GameState, value: rules.SexSession
+) -> list[dict[str, str]]:
+    from girlframe.services.m3_npc_resources import prove
+
+    inventory = prove(game, c, state, value.target)
+    return [dict(id=x.id, label=x.name) for x in inventory.identities if x.marked]

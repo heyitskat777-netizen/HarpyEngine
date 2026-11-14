@@ -73,6 +73,8 @@ SUPPORTED = {
     "girl.oldgen.old-dog-new-pups": ("old_dog_new_pups", "OLDGEN"),
     "girl.newgirl.easy-target": ("easy_target", "NEWGIRL"),
     "girl.mockingbird.bad-at-being-a-person": ("mockingbird_person", "MOCKINGBIRD"),
+    "girl.am.scrutinized": ("am_scrutinized", "AM"),
+    "girl.am.just-code": ("am_just_code", "AM"),
     NO_ONE_BETTER: ("all_out_assault", "CASUALTY"),
     BEAUTIFUL: ("keep_your_head", "PRINCESS"),
     ITCHING: ("keep_your_head", "ALPHA"),
@@ -87,6 +89,10 @@ def lesson_label(rule_id: str, play: str) -> str:
         return "Barely a Girl (erase an actual Identity to repair one Asset)"
     if rule_id == AM_SEX:
         return "AM Sex (one actual no-roll source; no circuit capability)"
+    if rule_id in ("girl.am.scrutinized", "girl.am.just-code"):
+        return (
+            "Scrutinized" if rule_id.endswith("scrutinized") else "Just Code"
+        ) + " (one use; requires an actual adjusted AM mind and source)"
     if rule_id in SEX_LESSONS:
         return SEX_LESSONS[rule_id].replace("-", " ").title() + " Sex (one voluntary source)"
     if rule_id in (SHOW_DOG, PSYCHE, DOLL):
@@ -331,6 +337,44 @@ def available(
                 raise WorkflowError("Recover this original lesson's own canonical reservation")
         return value
     return None
+
+
+def owns_source_rule(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    actor: ActorRef,
+    rule_id: str,
+    book: str,
+    action_id: str | None,
+) -> bool:
+    """Keep only the exact committed one-use source authorized for its responses.
+
+    Native eligibility and effects remain the caller's responsibility. A spent
+    lesson is never made available to a new source by this readback proof.
+    """
+    sheet = state.sheets.get(actor.entity) if actor.kind == "pilot" else None
+    if sheet is None or sheet.character_id != actor.incarnation:
+        return False
+    if has_rule(sheet, rule_id, book):
+        return True
+    if not action_id or sheet.girl_runtime is None:
+        return False
+    lesson = next(
+        (
+            value
+            for value in sheet.girl_runtime.learned_plays
+            if value.rule_id == rule_id
+            and value.actor == actor
+            and value.claimed_action == action_id
+            and value.rolled_event
+        ),
+        None,
+    )
+    if lesson is None:
+        return False
+    assert lesson.rolled_event is not None
+    return prove_consumed(game, c, state, game.action(c, action_id), rule_id, lesson.rolled_event)
 
 
 def claim(

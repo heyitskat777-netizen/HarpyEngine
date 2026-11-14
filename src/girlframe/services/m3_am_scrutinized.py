@@ -155,6 +155,8 @@ def _actual(
     *,
     require_alive: bool = True,
 ) -> None:
+    from girlframe.services.m3_learned_plays import owns_source_rule
+
     bound = profiles(c, game.store.campaign_id)
     actor = resolve(state, value.actor, bound, require_alive=require_alive)
     discoverer = resolve(state, value.discoverer, bound, require_alive=require_alive)
@@ -165,7 +167,7 @@ def _actual(
     if (
         value.actor.kind != "pilot"
         or actor.girl != "AM"
-        or not has_rule(state.sheets[value.actor.entity], rules.RULE, "AM")
+        or not owns_source_rule(game, c, state, value.actor, rules.RULE, "AM", value.action)
         or not (native or value.discoverer.kind == "npc" and discoverer.rules == "npc")
         or discoverer.controller != value.controller
         or (not native and value.controller != value.handler_controller)

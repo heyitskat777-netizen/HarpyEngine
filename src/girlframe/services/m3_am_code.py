@@ -164,6 +164,8 @@ def source(game: GameService, c: Connection, state: GameState, identity: str) ->
 
 
 def actual(game: GameService, c: Connection, state: GameState, value: rules.Maintenance) -> None:
+    from girlframe.services.m3_learned_plays import owns_source_rule
+
     if value.new_operator:
         access_source = Access(game.store)
         assert access_source.registry is not None
@@ -227,7 +229,7 @@ def actual(game: GameService, c: Connection, state: GameState, value: rules.Main
         or physical is None
         or not physical.vitals_active
         or physical.incapacitated
-        or not has_rule(sheet, rules.RULE, "AM")
+        or not owns_source_rule(game, c, state, value.actor, rules.RULE, "AM", value.action)
         or sheet.medical_state != "fit"
     ):
         raise WorkflowError(

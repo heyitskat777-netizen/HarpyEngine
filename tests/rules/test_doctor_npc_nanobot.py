@@ -98,8 +98,37 @@ def roll_nanobot(game, patient, heat):
     Only the new admission check is bypassed in this explicit legacy fixture;
     ownership, physical contact, dice, costs and later continuations remain real.
     """
-    with patch("girlframe.services.m3_doctor.require_nanobot_patient"):
-        return _roll_legacy_nanobot(game, patient, heat)
+
+    def legacy_results(source, c, canon, action):
+        # The original pre-resource result is genuinely absent from NPC state.
+        # Only creation is historical: later choices use production continuations.
+        from girlframe.services.m3_doctor import effects
+
+        meta = action["data"]["doctor"]
+        level = action["data"]["result"]["tier"]
+        amount = 5 if level == "high" else heat if level == "mid" else 0
+        action["data"]["result"]["npc_heat"] = dict(
+            printed_gain=amount, applied_gain=0, resource=None
+        )
+        if level == "mid" and effects(canon, patient, meta["actor_controller"]):
+            source.request(c, action, meta["actor_controller"], "doctor_nanobot_benefits")
+        else:
+            source.request(
+                c,
+                action,
+                meta["target_controller"],
+                "doctor_patient",
+                dict(unsupported="The legacy result has no actual NPC resource outcome port."),
+            )
+
+    with (
+        patch("girlframe.services.m3_doctor.require_nanobot_patient"),
+        patch("girlframe.services.m3_doctor.results", side_effect=legacy_results),
+    ):
+        action = _roll_legacy_nanobot(game, patient, heat)
+        tick(GameWorker(game), Gateway(), 3)
+        pass_tags(game)
+        return action
 
 
 def _roll_legacy_nanobot(game, patient, heat):
