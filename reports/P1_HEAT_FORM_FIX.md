@@ -62,3 +62,19 @@ Identity loss or invalidated spending still requires renewed confirmation. All13
 original failed nodes plus the3stale/budget cases then passed together:
 16passed in27.06s. No existing tests were removed or weakened; failures/artifacts
 are retained privately. A new exact-commit focused gate is required before startup.
+
+
+Final exact runtime source: `d2b4c853981ea7b00ced572aedbe1f16e11f44dd`,v0.1.3.
+[Focused CI43699349660](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43699349660)
+passed73tests/0failures/errors/skips in104.782s, including all original13failures,
+the3budget/intent checks and actual Clone shared-balance freshness. Static checks,
+CLI, registry/planning and repository checks pass. No full regression repeated.
+
+Deployment completed after successful authentication preflight: old process
+stopped gracefully, fresh0600consistent backup retained, new exact frozen source
+started with byte-identical private campaign policy. One process, Running v0.1.3
+presence,19guild commands and the preserved global launch are verified. Schema
+0020and the optional second-Bond policy remain unchanged. No player action or
+fictional Heat transaction was fabricated for live verification. Human UI results
+remain pending: reopen /play, check ordinary0Heat→only0spend, optional Identity gain,
+actual Paired split where eligible, and witness question only for Disobey Orders.

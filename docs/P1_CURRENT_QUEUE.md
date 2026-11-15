@@ -1,18 +1,20 @@
 # Current P1 queue — scoped native candidate verified
 
-Current live build: `ec592a65fb6c3accdf3fb5daf35f6acd935a3e68`, **v0.1.2**.
-The second starting Bond is OPTIONAL. The normal primary playbook Bond remains
-required, with the existing explicit Handler/admin test bypass available. Leave
-second choice blank, reopen `/character review` and save a fresh snapshot before
-activation. Any selected second Bond still requires actual Personal consent and
-a different character; it may be cleared. Existing sheets/choices are preserved.
-[Focused CI43695168640](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43695168640)
-passes **67 tests, zero failures/errors/skips**,94.132s, plus changed-source static
-and contract checks. This is not a new full regression or human acceptance.
-**Bot is ONLINE**: one pinned process, Running v0.1.2presence,19guild commands and
-one preserved global `/launch`. Fresh private backup and only the optional-policy
-flag change are verified; no schema change. Operational authority remains
-`var/discord-dev/p1-deployment.json`. See [Bond policy evidence](../reports/P1_STARTING_BONDS.md).
+Current live build: `d2b4c853981ea7b00ced572aedbe1f16e11f44dd`, **v0.1.3**.
+Native Heat forms now show the actual available budget plus selected eligible
+Identity/disposal gain, less any Paired share. They clear invalid spending choices
+and require confirmation again for real changed intent. Paired split appears only
+for an eligible Paired Identity; Foundation-witness refusal is asked only for
+Disobey Orders. Reopen `/play` to use the new controls.
+[Focused CI43699349660](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43699349660)
+passes **73 tests, zero failures/errors/skips**,104.782s; changed-source static,
+contracts and offline unchanged-policy checks pass. This is not a new full
+regression or human acceptance. **Bot is ONLINE** on one pinned process, with
+Running v0.1.3presence,19guild commands and the existing global `/launch` preserved.
+Fresh private backup is intact; policy/schema and existing sheets are unchanged.
+The second starting Bond remains optional; the existing per-profile test bypass
+remains available. Operational authority is `var/discord-dev/p1-deployment.json`.
+See [Heat-form evidence](../reports/P1_HEAT_FORM_FIX.md).
 
 The following live correction and deployment notes describe earlier releases.
 
