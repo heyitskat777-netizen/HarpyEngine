@@ -1,8 +1,14 @@
 # HarpyEngine — GIRL FRAME private Discord pilot
 
+Current live build: `4a7761e` adds current-nickname labels and Handler/Pilot
+roles on one account.47focused CI tests and changed-source static checks pass;
+the bot was backed up and restarted on pinned source with18guild/0global commands.
+See [the live setup correction](reports/P1_LIVE_SETUP_FIX.md). The full-regressed
+5412ee8 packet below is baseline evidence; the patch was not fully re-regressed.
+
 Latest exact offline candidate: `5412ee8` passes **3,328tests/0failures/errors/skips**
 and all global checks. The owner-authorized native Pilot/Core release is now
-ONLINE on that frozen source, with the private policy installed and backed-up,
+enabled with the private policy installed and backed-up,
 rehearsed migration to0020complete. Gateway/presence and18guild/0global commands
 are verified; human session outcomes remain pending.
 See [current evidence](reports/P1_PRELIVE_CANDIDATE_20261114.md) and

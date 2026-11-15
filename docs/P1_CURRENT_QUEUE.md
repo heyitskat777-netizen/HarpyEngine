@@ -1,5 +1,14 @@
 # Current P1 queue — scoped native candidate verified
 
+Current running source is the owner-requested live correction `4a7761e`: current
+nickname labels, shared-account Handler/Pilot, truthful creation guidance.
+[Focused CI43669102246](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43669102246)
+passes47cases/0failures/errors/skips; changed-source static and actual restart
+checks pass. Fresh private backup and existing policy are intact. Owner should
+reopen Status setup, confirm the full Pilot roster, complete the accepted starting
+Bond and save a fresh review before activation. Human retry remains pending.
+The complete5412ee8 regression below is baseline evidence, not a full patch run.
+
 The owner-authorized source review and bounded native repairs are integrated.
 Bot ONLINE on frozen source following explicit owner enablement. Exact
 `5412ee8c431cfee63ecbd8b5e4ff2db97b60c601` passes

@@ -1,5 +1,10 @@
 # P1 scoped pre-live repair candidate
 
+Current live source is4a7761e, the subsequent owner-requested nickname/dual-role
+correction.47focused CI cases pass and the bot has been backed up/restarted.
+See [the patch evidence](P1_LIVE_SETUP_FIX.md). The complete regression below
+certifies the5412ee8baseline, not the changed patch; no full patch run is claimed.
+
 The original native Pilot/Core packet is implemented, independently source-reviewed
 by component and passes its exact final regression. **Owner-authorized scoped
 release ONLINE; human testing pending.** Exact candidate

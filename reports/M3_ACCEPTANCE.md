@@ -6206,3 +6206,21 @@ controllers and a nonadministrator for chat locks. Human outcomes, broader
 all-type P1 acceptance and full-M3 certification remain open. No environment
 publication, AI/model call, Ancillary enablement, recovered-engine write or main
 merge occurred. Private operational records are under ignored var/.
+
+
+## Owner-requested live setup correction
+
+Exact4a7761e adds current Discord nickname labels and permits separate Handler
+and Pilot roles on one account. Typed native starting Bonds, ranking, owned
+creation/review and ordinary scene roles preserve their actual source/identity.
+[Focused CI43669102246](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43669102246) passes47tests/0failures/errors/skips in97.249s; all changed-source
+static and CLI/registry/planning/repository checks pass. This is focused evidence,
+not a repeated3,328-test full regression. Initial test-only fixture mistakes and
+failed-only retries are retained privately; production gates were not removed.
+
+The bot restarted gracefully after a fresh0600backup, preserving policy/schema
+0020and existing data. Exactly one pinned process, gateway/running presence and
+18guild/0global commands are verified. Player retry remains pending; no rank,
+Bond acceptance, review or activation was automatically chosen. Scope unchanged;
+no AI, Ancillary, environment publication, private-engine write or main merge.
+See reports/P1_LIVE_SETUP_FIX.md for precise scope and limits.

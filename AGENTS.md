@@ -4,7 +4,11 @@ Latest live-test correction: the owner explicitly requires current Discord serve
 nicknames for displayed member identities and permits Handler and Pilot on one
 account. Preserve distinct fictional roles/resources and stable internal IDs;
 never use nicknames as authorization or storage keys. The owner also explicitly
-authorized deploying this fix and restarting the bot. Check the current private
+authorized deploying this fix and restarting the bot. Current live build is
+`4a7761e3e22544b987d950de2a932e9836d6f104`:47focused CI cases pass; all affected
+source typing/lint passes. Restart, fresh private backup, pinned process and
+18guild/0global commands are verified. This is not a new full regression; the
+3,328-test5412ee8 result remains baseline evidence. Check the current private
 deployment record for the actual running source; older frozen-build references
 below are historical after that restart.
 

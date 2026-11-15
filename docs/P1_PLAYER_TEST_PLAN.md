@@ -1,5 +1,15 @@
 # P1 player testing — first scoped live session
 
+Current live correction is4a7761e:47focused CI cases pass; bot restarted and
+gateway/18guild commands verified. Status/review/member selectors show current
+Discord nicknames, with stable IDs retained internally. The Handler may also own
+a Pilot; its Status/resources and typed Bonds remain separate from Handler
+authority. Reopen `/campaign status_setup`, include that Pilot, confirm the full
+order, then complete the accepted starting Bond and save a fresh review before
+`/character activate`. Previously opened cards should be reopened through their
+commands. This patch has focused evidence; the full-regressed native packet below
+is the5412ee8baseline. Human outcomes still require a retry.
+
 The current native repair packet has genuine component reviews and passes its
 exact final regression: `5412ee8c431cfee63ecbd8b5e4ff2db97b60c601`,
 [full CI43657613489](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43657613489),
@@ -8,7 +18,7 @@ Its actual45-table synthetic restore/reopen and private offline policy check pas
 The owner-enabled live scope
 is original native Pilot/Core gameplay with explicitly reviewed sources. Broader
 all-type acceptance remains pending and is not inferred from this first session.
-The bot is ONLINE on frozen5412ee8. The matching private policy is installed;
+The bot is ONLINE on the subsequent frozen4a7761e correction. The matching private policy is installed;
 backed-up/rehearsed0011→0020migration preserves existing data. Gateway readiness,
 running presence and18guild/0global commands are verified. Human tests below
 remain **not tested** until actual participants report their results.
@@ -24,8 +34,8 @@ expanding its scope.
 
 ## First-session checklist — run in order
 
-Use test characters, one actual Handler and at least two players on separate
-accounts. Use a nonadministrator for chat-lock checks; Discord administrators
+Use test characters and at least two Pilots on separate accounts. The actual
+Handler may own one of those Pilots. Use a nonadministrator for chat-lock checks; Discord administrators
 bypass channel permission locks. Complete the campaign/Handler setup prompts.
 
 | Test | Expected live result |
@@ -63,7 +73,8 @@ initial session using the detailed scenarios below.
 ## Participants and starting state
 
 Use the agreed Discord test server, one actual Handler, a configured human
-facilitator and at least two players with separate accounts. Another member can
+facilitator and at least two Pilot profiles with separate accounts; the Handler
+may also own one of those Pilots. Another member can
 check unrelated-user privacy. Use synthetic campaign content. Assign an NPC to a
 real consenting controller when a scenario needs one; the Handler, NPC, facilitator
 and player remain distinct fictional/authorization roles even if a human fills
