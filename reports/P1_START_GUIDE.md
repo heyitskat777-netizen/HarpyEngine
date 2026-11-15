@@ -41,17 +41,28 @@ rules/planning and repository gates pass. CI scope/JUnit are retained privately.
 The exact frozen source also passes the unchanged live-policy offline check and
 registers19top-level commands offline.
 
-The authorized restart stopped the earlier4a7761e process and made a fresh0600
+Historical first attempt: the authorized restart stopped the earlier4a7761e process and made a fresh0600
 consistent backup. New startup failed with Discord LoginFailure; one read-only
 `/users/@me` check confirmed **HTTP401**. The new process exited; canonical private
-deployment metadata now records `blocked_credentials`, not a running bot. There
+deployment metadata then recorded `blocked_credentials`, not a running bot. There
 was no repeat login, deployment success or live `/start` verification. No state
 migration or release-policy change occurred. Existing18guild/0global commands are
 the prior registration, not evidence of this patch.
 
-Next: securely replace/save the environment's `DiscordBot` token; verify login
-before starting one pinned process, then read back19guild/0global commands.
-After startup, use `/start`: create/resume a test draft, confirm one choice and
+Credential recovery is complete after the owner corrected the environment's
+Bot Token. Read-only authentication returned200for the expected application
+before startup. The exact frozen source was checked against its Git archive;
+no other bot process was running. A fresh0600consistent backup was taken before
+starting one pinned process. Gateway readiness and running presence passed.
+Read-only Discord registration shows19guild commands including `/start` and one
+existing global `/launch`, which was preserved unchanged. The original zero-global
+assertion correctly exposed this changed registration; it was reconciled rather
+than deleting another command. Runtime/backup/policy checks now pass, and the
+canonical private deployment record says `verified_running`. No source, schema,
+release-scope or policy change was needed; the57-test focused evidence still
+applies. This does not constitute a full regression or human acceptance.
+
+Next owner check: use `/start`: create/resume a test draft, confirm one choice and
 reopen it; open Campaign setup as the actual Handler/admin; confirm requests are
 private and review/activation still require explicit confirmation. Existing
 characters should retain their saved choices. Human outcomes remain pending.

@@ -1,17 +1,16 @@
 # Current P1 queue — scoped native candidate verified
 
-Current setup guide: `70f9c7a36d16b0c84f35fadeaebf430fe84b9484` implements
+Current live build: `70f9c7a36d16b0c84f35fadeaebf430fe84b9484` implements
 private `/start` campaign/character progress, guided confirmed saves, requests and
 sheet/Play entry points. [Focused CI43686466268](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43686466268)
 passes **57 tests, zero failures/errors/skips** in87.428s; changed-source static
 checks and offline live-policy validation pass. This is not a new full regression.
-The authorized restart stopped the old4a7761e process after a fresh private backup,
-but Discord rejected the configured `DiscordBot` token (confirmed HTTP401).
-**Bot is OFFLINE pending secure credential replacement.** No new commands have
-been registered live; previous18guild/0global registration is historical.
-The existing release policy and database schema are unchanged. Deployment authority
-is the private `var/discord-dev/p1-deployment.json` record; do not retry with the
-known-rejected credential or claim live verification.
+The corrected Bot Token authenticates as the expected HarpyEngine application.
+**Bot is ONLINE** on one pinned process; gateway/presence and19guild commands,
+including `/start`, are verified. Discord also has one existing global `/launch`
+command, preserved unchanged. A fresh private backup is intact; release policy
+and database schema are unchanged. Operational authority remains the private
+`var/discord-dev/p1-deployment.json` record. Human guided-setup testing is pending.
 
 The following live correction and deployment notes describe earlier releases.
 
