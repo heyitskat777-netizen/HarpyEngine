@@ -45,3 +45,10 @@ in the test's direct callback invocation caused its first transport assertion to
 fail; the test was corrected, with original failure retained privately. No other
 concrete blocker was identified in the bounded review. CI includes this case;
 the earlier5normal passes remain scoped evidence, not full regression.
+
+Final confirmation safeguard: if a refresh invalidates a selected Identity or
+spending choice, show the changed controls and require explicit confirmation
+again. Never silently omit an intended mark and commit a different Play. The
+three Heat-form normal cases pass after this guard (3passed,1.33s), including an
+Identity marked elsewhere while the form is open. Original service transactions,
+revision checks and idempotency remain unchanged.

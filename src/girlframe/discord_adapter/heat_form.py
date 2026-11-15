@@ -7,6 +7,7 @@ from typing import Any, cast
 import discord
 
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
+from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_girl_runtime_state import has_rule
 
 
@@ -174,9 +175,18 @@ class HeatForm(NativeForm):
     ) -> None:
         if not await self.interaction_check(interaction):
             return
+        chosen = self.values.copy()
         if self.refresh_resources is not None:
             self.resources = await self.refresh_resources()
         self.controls()
+        if self.values != chosen:
+            await reply(
+                interaction,
+                "Resources or available options changed. "
+                "Review your choices before confirming again.",
+                self,
+            )
+            return
         callback = cast(
             Callable[[NativeForm, discord.Interaction, discord.ui.Button[Any]], Awaitable[None]],
             NativeForm.confirm,

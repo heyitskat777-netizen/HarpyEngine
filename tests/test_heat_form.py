@@ -146,5 +146,13 @@ def test_explicit_no_heat_counter_and_disposal_alias_preserve_source_budgets():
         )
         assert choices(minimum, "heat") == ("unavailable",)
         assert "1" not in choices(minimum, "heat")
+        await choose(form, "play", "dose_up", current(PLAYER, 89926))
+        await choose(form, "identity", "i", current(PLAYER, 89927))
+        await choose(form, "gain", "1", current(PLAYER, 89928))
+        await choose(form, "disposable", "0", current(PLAYER, 89929))
+        await choose(form, "heat", "0", current(PLAYER, 89930))
+        resources["identities"][0]["marked"] = True
+        await form.confirm.callback(current(PLAYER, 89931))
+        assert not form.completed and form.submit_action.await_count == 0
 
     asyncio.run(run())
