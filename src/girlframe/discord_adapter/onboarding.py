@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import time
 from collections import OrderedDict
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 import discord
@@ -32,6 +32,7 @@ from girlframe.services.provisioning import (
 )
 
 _action_buckets: OrderedDict[tuple[int | None, int, str], tuple[float, int]] = OrderedDict()
+SavedCallback = Callable[[discord.Interaction], Awaitable[None]]
 
 
 def allow_action(guild: int | None, user: int, action: str, now: float | None = None) -> bool:
@@ -41,7 +42,7 @@ def allow_action(guild: int | None, user: int, action: str, now: float | None = 
     start, count = _action_buckets.get(key, (current, 0))
     if current - start >= 10:
         start, count = current, 0
-    limit = 20 if action == "inbox_read" else 3
+    limit = 20 if action in {"inbox_read", "guided_progress"} else 3
     if count >= limit:
         return False
     _action_buckets[key] = (start, count + 1)
@@ -154,10 +155,13 @@ class SaveDraftView(discord.ui.View):
         revision: int,
         draft: DraftInput,
         tags: CharacterTagSynchronizer | None = None,
+        *,
+        on_saved: SavedCallback | None = None,
     ):
         super().__init__(timeout=300)
         self.store, self.owner, self.revision, self.draft = store, owner, revision, draft
         self.tags = tags
+        self.on_saved = on_saved
 
     @discord.ui.button(label="Save draft", style=discord.ButtonStyle.success)
     async def save(
@@ -165,7 +169,8 @@ class SaveDraftView(discord.ui.View):
     ) -> None:
         if not await action_gate(interaction, "metadata"):
             return
-        await interaction.response.defer(ephemeral=True, thinking=True)
+        if not interaction.response.is_done():
+            await interaction.response.defer(ephemeral=True, thinking=True)
         viewer = viewer_from_interaction(interaction)
         try:
             if viewer.user_id != self.owner:
@@ -195,7 +200,12 @@ class SaveDraftView(discord.ui.View):
                 text += (
                     "\nDraft is saved; Discord tags remain queued. Use /character sync to retry."
                 )
-        await reply(interaction, text)
+        if self.on_saved is not None:
+            if isinstance(getattr(interaction, "extras", None), dict):
+                interaction.extras["guided_save_notice"] = text
+            await self.on_saved(interaction)
+        else:
+            await reply(interaction, text)
 
 
 class PlaybookSelect(discord.ui.Select["CharacterSelectionView"]):
@@ -237,9 +247,13 @@ class CharacterSelectionView(discord.ui.View):
         owner: int,
         existing: dict[str, Any] | None,
         tags: CharacterTagSynchronizer | None = None,
+        *,
+        autosave: bool = False,
+        on_saved: SavedCallback | None = None,
     ):
         super().__init__(timeout=600)
         self.store, self.owner, self.existing, self.tags = store, owner, existing, tags
+        self.autosave, self.on_saved = autosave, on_saved
         data = existing or {}
         try:
             self.girl: str | None = canonical_girl(data.get("girl_playbook", ""))
@@ -264,8 +278,19 @@ class CharacterSelectionView(discord.ui.View):
         return (
             "**Choose character labels**\n"
             f"Girl: {self.girl or 'not selected'}\nFrame: {self.frame or 'not selected'}\n"
-            "Continue to enter the callsign and private notes. Saving assigns cosmetic Girl/Frame "
-            "roles and requests the callsign as your server nickname. Rules remain unverified."
+            "Continue to enter the callsign and private notes. "
+            + (
+                "Submitting that step saves your choices and continues the guide. "
+                if self.autosave
+                else ""
+            )
+            + "Saving assigns cosmetic Girl/Frame roles and requests the callsign as your "
+            "server nickname. "
+            + (
+                "Gameplay activation remains a separate confirmation."
+                if self.autosave
+                else "Rules remain unverified."
+            )
         )
 
     async def choose(self, family: str, value: str, interaction: discord.Interaction) -> None:
@@ -291,7 +316,16 @@ class CharacterSelectionView(discord.ui.View):
             if not self.girl or not self.frame:
                 raise WorkflowError("Choose both dropdowns first.")
             await interaction.response.send_modal(
-                DraftModal(self.store, self.owner, self.existing, self.girl, self.frame, self.tags)
+                DraftModal(
+                    self.store,
+                    self.owner,
+                    self.existing,
+                    self.girl,
+                    self.frame,
+                    self.tags,
+                    autosave=self.autosave,
+                    on_saved=self.on_saved,
+                )
             )
         except WorkflowError as error:
             await reply(interaction, str(error))
@@ -306,6 +340,9 @@ class DraftModal(discord.ui.Modal, title="Character draft — rules unverified")
         girl: str | None = None,
         frame: str | None = None,
         tags: CharacterTagSynchronizer | None = None,
+        *,
+        autosave: bool = False,
+        on_saved: SavedCallback | None = None,
     ):
         super().__init__(timeout=300)
         self.store, self.owner = store, owner
@@ -313,6 +350,9 @@ class DraftModal(discord.ui.Modal, title="Character draft — rules unverified")
         self.girl_value = canonical_girl(girl or data.get("girl_playbook", ""))
         self.frame_value = canonical_frame(frame or data.get("frame_playbook", ""))
         self.tags = tags
+        self.autosave, self.on_saved = autosave, on_saved
+        if autosave:
+            self.title = "Save character basics"
         self.revision = int(data.get("revision", 0))
         self.callsign: discord.ui.TextInput[Any] = discord.ui.TextInput(
             label="Callsign / server nickname", max_length=32, default=data.get("callsign", "")[:32]
@@ -344,13 +384,19 @@ class DraftModal(discord.ui.Modal, title="Character draft — rules unverified")
         except (WorkflowError, ValidationError):
             await reply(interaction, "Invalid draft or form owner. Reopen /character create.")
             return
+        confirmation = SaveDraftView(
+            self.store, self.owner, self.revision, draft, self.tags, on_saved=self.on_saved
+        )
+        if self.autosave:
+            await confirmation.save.callback(interaction)
+            return
         preview = sheet_text(
             {**draft.model_dump(), "id": "pending save", "revision": self.revision + 1}
         )
         await reply(
             interaction,
             preview + "\nSaving applies the selected label roles and server nickname.",
-            SaveDraftView(self.store, self.owner, self.revision, draft, self.tags),
+            confirmation,
         )
 
 
@@ -358,19 +404,27 @@ async def open_draft(
     interaction: discord.Interaction,
     store: OnboardingStore,
     tags: CharacterTagSynchronizer | None = None,
-) -> None:
+    *,
+    autosave: bool = False,
+    on_saved: SavedCallback | None = None,
+) -> CharacterSelectionView | None:
     if not await action_gate(interaction, "draft_form"):
-        return
+        return None
     viewer = viewer_from_interaction(interaction)
-    await interaction.response.defer(ephemeral=True, thinking=True)
+    if not interaction.response.is_done():
+        await interaction.response.defer(ephemeral=True, thinking=True)
     try:
         existing = await asyncio.wait_for(asyncio.to_thread(store.draft, viewer), timeout=2)
-        view = CharacterSelectionView(store, viewer.user_id, existing, tags)
+        view = CharacterSelectionView(
+            store, viewer.user_id, existing, tags, autosave=autosave, on_saved=on_saved
+        )
         await reply(interaction, view.summary(), view)
+        return view
     except WorkflowError as error:
         await reply(interaction, str(error))
     except Exception:
         await reply(interaction, "Draft form unavailable. Please try again shortly.")
+    return None
 
 
 class NewPlayerView(discord.ui.View):
@@ -395,7 +449,25 @@ class NewPlayerView(discord.ui.View):
     async def draft(
         self, interaction: discord.Interaction, button: discord.ui.Button[NewPlayerView]
     ) -> None:
+        from girlframe.discord_adapter.start_dashboard import StartController
+
+        controller = getattr(interaction.client, "start_dashboard", None)
+        if isinstance(controller, StartController):
+            await controller.show(interaction, "character")
+            return
         await open_draft(interaction, self.store, self.tags)
+
+    @discord.ui.button(label="Start / Resume", custom_id="harpyengine:start:v1")
+    async def start(
+        self, interaction: discord.Interaction, button: discord.ui.Button[NewPlayerView]
+    ) -> None:
+        from girlframe.discord_adapter.start_dashboard import StartController
+
+        controller = getattr(interaction.client, "start_dashboard", None)
+        if isinstance(controller, StartController):
+            await controller.show(interaction)
+        else:
+            await open_draft(interaction, self.store, self.tags)
 
     @discord.ui.button(label="My sheet", custom_id="harpyengine:sheet:v1")
     async def sheet(
@@ -616,6 +688,12 @@ def register_onboarding(
 
     @character.command(name="create", description="Create or resume your private character draft")
     async def create(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.start_dashboard import StartController
+
+        controller = getattr(interaction.client, "start_dashboard", None)
+        if isinstance(controller, StartController):
+            await controller.show(interaction, "character")
+            return
         await open_draft(interaction, store, tags)
 
     @character.command(

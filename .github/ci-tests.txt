@@ -19,3 +19,7 @@ tests/test_creation_review.py::test_native_review_sections_private_save_old_clic
 tests/test_creation_review.py::test_mutual_incoming_bond_can_be_explicitly_selected_in_two_pilot_cadre
 tests/rules/test_cast_service.py::test_legacy_cast_has_original_character_ids_and_facilitator_is_not_a_physical_handler
 tests/rules/test_deep_brain_spikes_pagination.py
+# Guided setup: native entry, resumable saves, explicit review and activation.
+tests/test_start_dashboard_state.py
+tests/test_start_dashboard_ui.py
+tests/test_wizard_creation_hooks.py

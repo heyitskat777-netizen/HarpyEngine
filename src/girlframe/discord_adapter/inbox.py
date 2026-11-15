@@ -2,6 +2,8 @@
 
 import asyncio
 import hashlib
+import re
+from dataclasses import replace
 from typing import Any, cast
 from uuid import uuid4
 
@@ -9,6 +11,7 @@ import discord
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.creation import clean
+from girlframe.discord_adapter.member_names import member_label, render_member_labels
 from girlframe.discord_adapter.onboarding import action_gate, reply
 from girlframe.engine.creation_details import Role
 from girlframe.engine.inbox import CATEGORIES, InboxItem, InboxPage
@@ -238,7 +241,7 @@ class InboxView(discord.ui.View):
                     "Refresh cannot authorize the old version.",
                     inline=False,
                 )
-            if item.state == "pending" and not item.incoming:
+            if item.state == "pending" and not item.incoming and not item.task:
                 embed.add_field(
                     name="Your role",
                     value=(
@@ -265,6 +268,23 @@ class InboxView(discord.ui.View):
             self.index,
             selected_key=self.focus_key,
             expected_revision=self.focus_revision,
+        )
+
+        async def named(item: InboxItem) -> InboxItem:
+            # This is the existing system-authored counterpart label, not the
+            # request's narrative, IDs, source proof or decision ownership.
+            match = re.fullmatch(r".+ \(([0-9]{15,20})\)", item.counterpart)
+            if match is None:
+                return item
+            label = await render_member_labels(
+                interaction, member_label(match.group(1)), markdown=False
+            )
+            return replace(item, counterpart=label)
+
+        self.page = replace(
+            self.page,
+            item=await named(self.page.item) if self.page.item else None,
+            window=tuple([await named(item) for item in self.page.window]),
         )
         self.index = self.page.index
         self.controls()

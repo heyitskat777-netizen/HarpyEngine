@@ -73,9 +73,16 @@ class FanbaseView(discord.ui.View):
         await reply(interaction, "Could not update this form. Reopen /character build to resume.")
 
     async def render(self, interaction: discord.Interaction, prefix: str = "") -> None:
+        if self.parent.autosave and not interaction.response.is_done():
+            await interaction.response.defer()
+        if not await self.parent.persist_guided(interaction):
+            return
         self.refresh()
         base = self.parent.draft.fanbase or Fanbase()
-        lines = ["**Prince fanbase — unsaved creation choices**"]
+        lines = [
+            "**Prince fanbase — "
+            + ("saved creation choices**" if self.parent.autosave else "unsaved creation choices**")
+        ]
         for field, label in (
             ("demographics", "Demographics"),
             ("demanded", "Demands you be"),
@@ -93,9 +100,19 @@ class FanbaseView(discord.ui.View):
             )
         lines.append(
             "Choose two in each menu. Custom choices need text in Details. "
-            "Then return and Save progress. No mechanics are applied here."
+            + (
+                "Confirmed choices save automatically. "
+                if self.parent.autosave
+                else "Then return and Save progress. "
+            )
+            + "No mechanics are applied here."
         )
-        await interaction.response.edit_message(
+        edit = (
+            interaction.edit_original_response
+            if self.parent.autosave and interaction.response.is_done()
+            else interaction.response.edit_message
+        )
+        await edit(
             content=prefix + "\n".join(lines),
             view=self,
             allowed_mentions=discord.AllowedMentions.none(),

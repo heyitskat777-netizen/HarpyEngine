@@ -2227,6 +2227,58 @@ class StatePages(discord.ui.View):
         await self.show(interaction)
 
 
+async def open_activation(interaction: discord.Interaction, game: GameService) -> NativeForm | None:
+    """Open the existing explicit activation confirmation for command and guide."""
+    await interaction.response.defer(ephemeral=True)
+    try:
+        game.gate()
+        review = await threaded(
+            lambda: CreationReviewService(game.store).get(viewer_from_interaction(interaction))
+        )
+
+        async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+            await threaded(
+                lambda: game.activate(
+                    viewer_from_interaction(current),
+                    str(current.id),
+                    review.fingerprint,
+                    tuple(values.get("public", ())),
+                )
+            )
+            return "Activated. /sheet shows saved state. Creation editors cannot reset it."
+
+        fields = [
+            menu(
+                "public",
+                "Optional public sheet fields",
+                sorted(PUBLIC_FIELDS),
+                0,
+                len(PUBLIC_FIELDS),
+                False,
+            ),
+            Field(
+                "ack",
+                "Confirm permanent activation",
+                (("yes", "Activate this reviewed character"),),
+            ),
+        ]
+        form = NativeForm(
+            interaction.user.id,
+            "Activate " + review.sheet.activation_callsign,
+            (
+                "Only selected fields become public. Saved resources cannot be "
+                "reset by activation. A current complete saved review is required."
+            ),
+            fields,
+            submit,
+        )
+        await reply(interaction, form.text(), form)
+        return form
+    except WorkflowError as error:
+        await reply(interaction, str(error))
+    return None
+
+
 def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameService) -> None:
     guild = discord.Object(id=guild_id)
     character = tree.get_command("character", guild=guild)
@@ -2239,52 +2291,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         name="activate", description="Review public fields and confirm your M2 character activation"
     )
     async def activate(interaction: discord.Interaction) -> None:
-        await interaction.response.defer(ephemeral=True)
-        try:
-            game.gate()
-            review = await threaded(
-                lambda: CreationReviewService(game.store).get(viewer_from_interaction(interaction))
-            )
-
-            async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
-                await threaded(
-                    lambda: game.activate(
-                        viewer_from_interaction(current),
-                        str(current.id),
-                        review.fingerprint,
-                        tuple(values.get("public", ())),
-                    )
-                )
-                return "Activated. /sheet shows saved state. Creation editors cannot reset it."
-
-            fields = [
-                menu(
-                    "public",
-                    "Optional public sheet fields",
-                    sorted(PUBLIC_FIELDS),
-                    0,
-                    len(PUBLIC_FIELDS),
-                    False,
-                ),
-                Field(
-                    "ack",
-                    "Confirm permanent activation",
-                    (("yes", "Activate this reviewed character"),),
-                ),
-            ]
-            form = NativeForm(
-                interaction.user.id,
-                "Activate " + review.sheet.activation_callsign,
-                (
-                    "Only selected fields become public. Saved resources cannot be "
-                    "reset by activation. A current complete saved review is required."
-                ),
-                fields,
-                submit,
-            )
-            await reply(interaction, form.text(), form)
-        except WorkflowError as error:
-            await reply(interaction, str(error))
+        await open_activation(interaction, game)
 
     @app_commands.command(
         name="play", description="Choose a supported Play and prepare your roll privately"

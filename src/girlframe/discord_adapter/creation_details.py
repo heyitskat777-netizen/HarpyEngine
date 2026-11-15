@@ -140,6 +140,10 @@ class DetailsView(discord.ui.View):
         await reply(interaction, "Girl setup unavailable. Reopen /character build.")
 
     async def render(self, interaction: discord.Interaction) -> None:
+        if self.parent.autosave and not interaction.response.is_done():
+            await interaction.response.defer()
+        if not await self.parent.persist_guided(interaction):
+            return
         for child in list(self.children):
             if isinstance(child, discord.ui.Select):
                 self.remove_item(child)
@@ -180,9 +184,17 @@ class DetailsView(discord.ui.View):
         )
         text += "\nShort labels refer to book PDF 32 (standards), 46 (maxims), 49 (investors)."
         await edit(
-            content="**Girl setup — unsaved edits**\n"
+            content=(
+                "**Girl setup — saved choices**\n"
+                if self.parent.autosave
+                else "**Girl setup — unsaved edits**\n"
+            )
             + text
-            + "\nBack to creation, then Save progress to persist.",
+            + (
+                "\nConfirmed choices save automatically."
+                if self.parent.autosave
+                else "\nBack to creation, then Save progress to persist."
+            ),
             embed=None,
             view=self,
             allowed_mentions=discord.AllowedMentions.none(),

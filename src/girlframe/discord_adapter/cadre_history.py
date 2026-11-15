@@ -95,6 +95,8 @@ class HistoryView(discord.ui.View):
     async def render(self, interaction: discord.Interaction, notice: str = "") -> None:
         if not interaction.response.is_done():
             await interaction.response.defer()
+        if not await self.parent.persist_guided(interaction):
+            return
         for child in list(self.children):
             if isinstance(child, discord.ui.Select):
                 self.remove_item(child)
@@ -102,7 +104,12 @@ class HistoryView(discord.ui.View):
             self.add_item(CounterpartSelect(self))
             self.add_item(MissionSelect(self))
         self.discussed.disabled = not self.cadre or set(self.choices) != set(self.cadre)
-        lines = ["**Newgirl: prior missions — unsaved edits**", notice]
+        lines = [
+            "**Newgirl: prior missions — saved choices**"
+            if self.parent.autosave
+            else "**Newgirl: prior missions — unsaved edits**",
+            notice,
+        ]
         lines.append(f"Declared: {len(self.choices)}/{len(self.cadre)} counterparts.")
         if self.selected in self.cadre:
             value = self.choices.get(self.selected)
@@ -114,7 +121,12 @@ class HistoryView(discord.ui.View):
         lines.append("Discussed with the Cadre: " + str(self.parent.draft.cadre_discussed))
         lines.append(
             "Tell each counterpart in your conversation, then confirm below. "
-            "This panel sends no message and assumes no agreement. Return and Save progress."
+            "This panel sends no message and assumes no agreement. "
+            + (
+                "Confirmed choices save automatically."
+                if self.parent.autosave
+                else "Return and Save progress."
+            )
         )
         await render_member_view(interaction, self)
         await interaction.edit_original_response(

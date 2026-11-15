@@ -209,6 +209,11 @@ class ReadOnlyDiscordBot(discord.Client):
             from girlframe.services.m3_missions import MissionService
 
             register_missions(self.tree, policy.guild_id, MissionService(store))
+            from girlframe.discord_adapter.start_dashboard import register_start
+
+            self.start_dashboard = register_start(
+                self.tree, policy.guild_id, store, self.game, self.tag_sync
+            )
 
     def _callback(
         self, name: ReadOnlyCommand
@@ -226,35 +231,28 @@ class ReadOnlyDiscordBot(discord.Client):
                     return
                 if name == "help":
                     await PrivateInteractionResponder(interaction).send(
-                        "HarpyEngine M1 draft sandbox\n"
-                        "/server setup — administrator setup preview\n"
-                        "/campaign create, /campaign join, /campaign status\n"
-                        "/character create (or /girl create), /character sync, /sheet\n"
-                        "/character build — save starting Assets and appearance\n"
-                        "/character review — validate and save a private review sheet\n"
-                        "/character pair_assets — accepted Pair chooses Bonded Assets\n"
-                        "/character court, mentor_callsign, requests — shared starting choices\n"
-                        "/campaign effective_status — private setup comparison\n"
-                        "/character bond, /character bonds — propose/review private setup Bonds\n"
-                        "/campaign handler, mentor, status_setup, setup — explicit starting setup\n"
-                        "/campaign creation_rules — Handler-confirmed starting resource rulings\n"
-                        "/roll basic — raw 2d6, public by default; publish:false is private\n"
-                        "/roll show — retrieve a permitted receipt\n/ledger — permitted events\n"
-                        "/safety pause, /safety resume — save or clear your own OOC pause\n"
-                        "/health — configured administrators only\n"
-                        "/play, /choice resume — M2 guided Plays and pending human responses\n"
-                        "/mission offer, inbox, show — M3 scoped approval required\n"
-                        "/character activate, /character followthrough — M2 character state\n"
-                        "/campaign scene_bind, scene_join, scene_close, order, play_recovery\n"
-                        "/girl am, alpha, princess, casualty, vatgrown, oldgen, stim "
-                        "— private sources\n"
-                        "/girl mentor, trainee, easy_target, newgirl_sex, oldgen_sex "
-                        "— owned choices\n"
-                        "/campaign frame — current Frame's source controls\n"
-                        "/campaign frame area:body — factual body setup and private records\n"
-                        "/facilitator request, inbox — source-bound human adjudication\n"
-                        "M2 gameplay requires the end-of-milestone release approval. "
-                        "Recovered-engine writes and AI remain disabled."
+                        "HarpyEngine — guided setup and scoped gameplay\n"
+                        "/start — campaign setup, create/resume character, requests and sheet\n"
+                        "Confirmed creation steps save as you go. Activation and other players' "
+                        "consent remain explicit. Handler and Pilot may share an account.\n\n"
+                        "/character requests — owned decisions and waiting requests\n"
+                        "/character review — current complete sheet and saved review\n"
+                        "/character activate — explicit permanent activation\n"
+                        "/character state, /sheet — private/current and approved public fields\n"
+                        "/play — choose your actual character and supported Play\n"
+                        "/choice resume, /choice show — pending work and original receipt\n"
+                        "/roll basic — raw dice, public by default; publish:false is private\n"
+                        "/roll show, /ledger — saved receipt/history readback\n"
+                        "/safety pause, /safety resume — OOC safety\n\n"
+                        "Staff: /start Campaign setup, /server setup, /campaign status_setup\n"
+                        "/campaign scene_bind, scene_join — scene controls\n"
+                        "/mission janus — actual original Core setup and owned Battery work\n"
+                        "/facilitator request, inbox — human adjudication\n"
+                        "/health — configured administrators only\n\n"
+                        "Discord's slash menu lists all registered specialist commands. "
+                        "Ownership, printed prerequisites and scoped release gates still apply. "
+                        "Mission dispatch, economy, Strain, Off-Duty, AI and Ancillary remain "
+                        "outside the current test release."
                     )
                 else:
                     await private_operation(

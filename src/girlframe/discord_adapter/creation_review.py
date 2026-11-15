@@ -14,7 +14,7 @@ from girlframe.discord_adapter.member_names import (
     render_member_labels,
     render_member_view,
 )
-from girlframe.discord_adapter.onboarding import action_gate, reply
+from girlframe.discord_adapter.onboarding import SavedCallback, action_gate, reply
 from girlframe.engine.bonds import starting_kind
 from girlframe.engine.creation_details import BODY_PARTS, MAXIMS
 from girlframe.engine.npc_bonds import NPC_ROLES
@@ -296,9 +296,12 @@ class ConfirmBond(discord.ui.View):
 
 
 class ReviewView(discord.ui.View):
-    def __init__(self, service: CreationReviewService, owner: int):
+    def __init__(
+        self, service: CreationReviewService, owner: int, *, on_saved: SavedCallback | None = None
+    ):
         super().__init__(timeout=600)
         self.service, self.owner = service, owner
+        self.on_saved = on_saved
         self.current: CurrentReview | None = None
         self.section, self.page_index = "Validation", 0
         self.page_count = 1
@@ -422,6 +425,14 @@ class ReviewView(discord.ui.View):
                 current.saved_revision,
                 current.fingerprint,
             )
+            if self.on_saved is not None:
+                if isinstance(getattr(interaction, "extras", None), dict):
+                    interaction.extras["guided_save_notice"] = (
+                        f"Review snapshot {result['revision']} saved privately. "
+                        "Gameplay remains inactive until you confirm activation."
+                    )
+                await self.on_saved(interaction)
+                return
             await self.present(
                 interaction,
                 f"Review snapshot {result['revision']} saved privately. Gameplay remains inactive.",

@@ -3884,7 +3884,9 @@ class InboxService:
                 x.state != "pending"
                 if value == "history"
                 else x.state == "pending"
-                and (value == "pending" or (x.incoming or x.stale) == (value == "you"))
+                and (
+                    value == "pending" or bool(x.task or x.incoming or x.stale) == (value == "you")
+                )
             )
 
         counts = {key: sum(matches(x, key) for x in items) for key in SCOPES}

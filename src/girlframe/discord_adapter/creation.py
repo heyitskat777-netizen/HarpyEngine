@@ -10,7 +10,7 @@ from pydantic import ValidationError
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.member_names import member_label
-from girlframe.discord_adapter.onboarding import action_gate, reply
+from girlframe.discord_adapter.onboarding import SavedCallback, action_gate, reply
 from girlframe.engine.creation import AssetChoice, CreationDraft, official_frame
 from girlframe.engine.creation_catalog import CATALOG
 from girlframe.engine.fanbase import Fanbase
@@ -25,7 +25,11 @@ def clean(value: str) -> str:
 
 
 def summary(
-    draft: CreationDraft, pair: PairChoice | None = None, shared: tuple[AcceptedSetup, ...] = ()
+    draft: CreationDraft,
+    pair: PairChoice | None = None,
+    shared: tuple[AcceptedSetup, ...] = (),
+    *,
+    guided: bool = False,
 ) -> str:
     missing = draft.missing(pair.names if pair else ())
     return (
@@ -67,7 +71,11 @@ def summary(
             for x in shared
         )
         + "\nBonds, Status, other playbook requirements and rules review remain before activation."
-        "\nChoose/edit below, then **Save progress**. Reopen /character build to resume."
+        + (
+            "\nConfirmed changes save automatically. Reopen /start to resume."
+            if guided
+            else "\nChoose/edit below, then **Save progress**. Reopen /character build to resume."
+        )
     )
 
 
@@ -243,10 +251,23 @@ class DetailsModal(discord.ui.Modal):
 
 
 class CreationView(discord.ui.View):
-    def __init__(self, service: CreationService, owner: int, progress: CreationProgress):
+    def __init__(
+        self,
+        service: CreationService,
+        owner: int,
+        progress: CreationProgress,
+        *,
+        autosave: bool = False,
+        on_saved: SavedCallback | None = None,
+    ):
         super().__init__(timeout=600)
         self.service, self.owner, self.progress = service, owner, progress
         self.draft, self.generation = progress.draft, 0
+        self.autosave, self.on_saved = autosave, on_saved
+        self._save_lock = asyncio.Lock()
+        self._save_uncertain = False
+        if on_saved is not None:
+            self.save.label = "Save and continue"
         if self.draft.girl_playbook != "NEWGIRL":
             self.remove_item(self.history)
         self.refresh_selects()
@@ -288,18 +309,103 @@ class CreationView(discord.ui.View):
             await reply(interaction, str(error))
             return False
 
-    async def render(self, interaction: discord.Interaction, prefix: str = "") -> None:
+    async def _save_guided(
+        self, interaction: discord.Interaction, *, explicit: bool = False
+    ) -> str | None:
+        """Save a confirmed draft edit using the same revisioned service as manual creation."""
+        submitted = self.draft
+        if not await self.interaction_check(interaction):
+            return None
+        if not await action_gate(interaction, "metadata" if explicit else "guided_progress"):
+            return None
+        if not interaction.response.is_done():
+            await interaction.response.defer(ephemeral=True)
+        async with self._save_lock:
+            if self._save_uncertain:
+                await reply(
+                    interaction,
+                    "This save's outcome is unknown. Reopen /start or /character build "
+                    "to read saved progress before editing again.",
+                )
+                return None
+            previous = self.progress
+            if previous.revision and not previous.playbooks_changed and submitted == previous.draft:
+                return "Progress is saved.\n"
+            try:
+                result = await asyncio.to_thread(
+                    self.service.save,
+                    viewer_from_interaction(interaction),
+                    str(interaction.id),
+                    previous.revision,
+                    previous.character_revision,
+                    submitted,
+                    expected_pair_token=previous.pair_choice.token
+                    if previous.pair_choice
+                    else None,
+                )
+            except WorkflowError as error:
+                await reply(interaction, str(error))
+                return None
+            except Exception:
+                self._save_uncertain = True
+                await reply(
+                    interaction,
+                    "Could not confirm this save. Reopen /start or /character build "
+                    "to read saved progress before trying again.",
+                )
+                return None
+            self.progress = CreationProgress(
+                result["revision"],
+                previous.character_revision,
+                submitted,
+                pair_choice=previous.pair_choice,
+                shared_choices=previous.shared_choices,
+            )
+            self.generation += 1
+            return "Progress saved.\n" + (
+                "Newer edits below still need saving.\n" if self.draft != submitted else ""
+            )
+
+    async def persist_guided(self, interaction: discord.Interaction) -> bool:
+        """Child panels save confirmed edits through their owner-bound parent."""
+        if not self.autosave:
+            return True
+        if not await self.interaction_check(interaction):
+            return False
+        if self.draft == self.progress.draft and not self._save_uncertain:
+            return True
+        return await self._save_guided(interaction) is not None
+
+    async def render(
+        self, interaction: discord.Interaction, prefix: str = "", *, _persist: bool = True
+    ) -> None:
+        if self.autosave and _persist and self.draft != self.progress.draft:
+            notice = await self._save_guided(interaction)
+            if notice is None:
+                return
+            prefix = notice + prefix
         if not interaction.response.is_done() and interaction.message is not None:
             await interaction.response.edit_message(
                 content=prefix
-                + summary(self.draft, self.progress.pair_choice, self.progress.shared_choices),
+                + summary(
+                    self.draft,
+                    self.progress.pair_choice,
+                    self.progress.shared_choices,
+                    guided=self.autosave,
+                ),
                 view=self,
                 allowed_mentions=discord.AllowedMentions.none(),
             )
             return
         await reply(
             interaction,
-            prefix + summary(self.draft, self.progress.pair_choice, self.progress.shared_choices),
+            prefix
+            + summary(
+                self.draft,
+                self.progress.pair_choice,
+                self.progress.shared_choices,
+                guided=self.autosave,
+            ),
             self,
         )
 
@@ -407,6 +513,17 @@ class CreationView(discord.ui.View):
 
     @discord.ui.button(label="Save progress", style=discord.ButtonStyle.primary, row=4)
     async def save(self, interaction: discord.Interaction, button: discord.ui.Button[Any]) -> None:
+        if self.autosave or self.on_saved is not None:
+            notice = await self._save_guided(interaction, explicit=True)
+            if notice is None:
+                return
+            if self.on_saved is not None and self.draft == self.progress.draft:
+                if isinstance(getattr(interaction, "extras", None), dict):
+                    interaction.extras["guided_save_notice"] = notice.strip()
+                await self.on_saved(interaction)
+            else:
+                await self.render(interaction, notice, _persist=False)
+            return
         if not await self.interaction_check(interaction):
             return
         if not await action_gate(interaction, "metadata"):
