@@ -1332,6 +1332,12 @@ async def open_play(
         def actual_harpy_targets() -> list[dict[str, Any]]:
             with game.store.engine.connect() as c:
                 state = load_state(c, game.store.campaign_id)
+                scene = game.scene(c, channel)
+                # Optional actual-role targets do not require an ordinary native
+                # scene to have an explicit cast. Existing casts still undergo
+                # every current-role/source check below.
+                if not any(x.id == scene["id"] and x.open for x in state.scene_casts):
+                    return []
                 acting = resolve(
                     state, current_ref(state, viewer.user_id), profiles(c, game.store.campaign_id)
                 )

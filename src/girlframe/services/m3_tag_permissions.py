@@ -113,6 +113,30 @@ def prove_birth(c: Connection, game: GameService, state: GameState, actor: Actor
         )
 
 
+def _native_tag_source(
+    game: GameService, c: Connection, state: GameState, actor: ActorRef, tag_id: str
+) -> bool:
+    """Prove source-derived presence; return the permanent collar exception."""
+    if actor.kind != "pilot":
+        return False
+    tag = next((x for x in rules.native_tags(state, actor) if x.id == tag_id), None)
+    if tag is None:
+        raise ValueError("Choose an actual current Tag of this original person")
+    from girlframe.engine.m3_control_ritual import owned as owned_rituals
+    from girlframe.services.m3_bomb_collar import prove_tag as prove_collar
+    from girlframe.services.m3_control_ritual import prove as prove_ritual
+    from girlframe.services.m3_cute_uniforms import prove_tag as prove_uniform
+
+    owner = int(actor.entity)
+    for ritual in owned_rituals(state, owner):
+        if ritual.tag is not None and ritual.tag.id == tag_id:
+            if ritual.actor != actor or ritual.tag != tag:
+                raise WorkflowError("Recover the actual original Girl's Control Ritual Tag")
+            prove_ritual(game, c, ritual)
+    prove_uniform(game, c, state, owner, tag)
+    return prove_collar(game, c, state, owner, tag)
+
+
 class PermissionService:
     def __init__(self, store: OnboardingStore):
         self.store, self.game = store, GameService(store)
@@ -319,6 +343,8 @@ class PermissionService:
         if actual.controller != viewer.user_id:
             raise WorkflowError("The actual original Tag bearer owns this rejection.")
         try:
+            if _native_tag_source(self.game, c, state, actor, tag_id):
+                raise WorkflowError("A permanent bomb collar Tag cannot be embraced or rejected")
             gates = rules.locks(state, actor, tag_id)
         except ValueError as error:
             raise WorkflowError(str(error)) from None
@@ -343,6 +369,7 @@ class PermissionService:
                     "Only this actual Tag bearer's human opens their consent requests."
                 )
             try:
+                _native_tag_source(self.game, c, state, actor, tag_id)
                 gates = rules.locks(state, actor, tag_id)
             except ValueError as error:
                 raise WorkflowError(str(error)) from None

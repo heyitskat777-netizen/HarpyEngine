@@ -1,7 +1,10 @@
 # Current P1 queue — scoped pre-live candidate freeze
 
 The owner-authorized source review and bounded native repairs are integrated.
-Bot OFF. The current source **needs its exact final regression**; the earlier
+Bot OFF. The current source **needs its repaired exact final regression**. The
+first native-packet full run on0fa91ec had3,275passes/53failures; all53failed nodes
+plus2directly affected new consumers now pass a focused retry55/258.725s. That
+retry is not a complete regression. The earlier
 3,300-test baseline below remains historical evidence. No deployment, live
 migration, environment publication, model call or shared-main merge occurred.
 
@@ -10,7 +13,7 @@ migration, environment publication, model call or shared-main merge occurred.
 | Native Flirt and Harpy/Core social Plays | Root; separate component source reviewers | Preserve integrated source through final regression | Native reciprocal mid/high, actual HarpyFlirt8 and Beneath7 normals pass across retained runs; owned Tag/refusal/real child/Punishment/Sin paths reviewed. |
 | Source-proved native Void and Risk | Root; genuine scoped child contracts | Freeze explicit campaign opt-in and reviewed registry digest | Sin6backend+UI1 pass; child-only/unreviewed2pass. Native Risk Battery with source/receipt/policy negatives passes1/4.10s. Required broad parents remain partial. |
 | Original Core body/mandatory Defeat | Root; combined independent A/B review | Final exact regression, preserving old surgery/Harpy paths | Actual connectedCore2pass/7.85s: truthful restraint adjudication, lawful brain speech, body-only escape/contact ending, Girl-owned Sin, actual Core death and original Frame preservation. |
-| Final exact candidate | Root; frozen integrated source | Publish sanitized branch and run full CI/global/migration/privacy/restore gates once | Pending new full run. Successful focused evidence is not called full regression. |
+| Final exact candidate | Root; frozen integrated source | Publish the bounded regression repairs and run exact full CI/global/migration/privacy/restore gates | First native-packet run red; all demonstrated failures fixed/retried. New full run pending. Successful focused evidence is not called full regression. |
 | Concrete first live policy | Owner/facilitator review; reviewed source and final candidate | Prepare private unapplied proposal with exact digest and explicit native Risk IDs; review then restart separately | First cohort is original native Pilot/Core base. Optional Requisitions, advanced powers, other role/resource ports and full-M3 remain separately gated. No fixture approval is installed live. |
 | Human P1 acceptance | Handler/facilitator/distinct players | Run first scoped session, then rotate the all-type/player plan under its actual reviewed scope | Not run. This first cohort does not imply all-type acceptance or complete P1/M3 certification. |
 
@@ -25,6 +28,12 @@ Previously verified automated candidate: `a36acabd8a4f9abd21b78f054c7f368ab45cef
 passes3,300 tests with0 failures/errors/skips, plus global static, CLI, registry,
 planning and publishable-file checks. Bot OFF; RULES_SUBSET. No shared merge,
 live migration, deployment, environment publication or model calls.
+
+## Historical baseline gates
+
+The following table records the earlier a36acab handoff. The current working
+table above and the component review packet supersede its review counts and
+pending source-review assignments; it is retained as historical evidence.
 
 | Remaining work | Owner / dependency | Next concrete action | Evidence / completion boundary |
 |---|---|---|---|

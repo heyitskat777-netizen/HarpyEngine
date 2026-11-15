@@ -89,13 +89,18 @@ def test_actual_retained_initiative_mid_grasp_and_original_owned_release_use_no_
 def test_actual_retained_harpy_high_instruction_and_actual_punishment_finishes_original_action(
     ledger, tmp_path, monkeypatch
 ):
+    from harpy_sin_scenario import place_sin_recipient
     from test_ledger import ADMIN
 
+    from girlframe.engine import m3_harpy_bond_void as sin
+    from girlframe.engine.m2 import ChoiceAnswer
     from girlframe.engine.m3_punishments import Details
     from girlframe.engine.m3_role_punishment_state import Instruction
+    from girlframe.services.m3_harpy_bond_void import HarpyBondVoidService
     from girlframe.services.m3_role_punishments import RolePunishmentService
 
     game, worker, gateway, actor, service = reborn(ledger, tmp_path, monkeypatch)
+    place_sin_recipient(game, OTHER, ADMIN)
     game.dice.faces = (6, 6)
     calls = game.dice.calls
     target = current_ref(state(game), 3)
@@ -104,6 +109,7 @@ def test_actual_retained_harpy_high_instruction_and_actual_punishment_finishes_o
     )
     tick(worker, gateway, 3)
     pass_tags(game)
+    receipt = game.inspect(PLAYER, action)["receipt"]
     case = state(game).role_punishments[-1]
     assert case.executor == actor and case.executor.kind == "external_pilot"
     assert case.pc_work is None and case.executor_frame is not None
@@ -120,7 +126,28 @@ def test_actual_retained_harpy_high_instruction_and_actual_punishment_finishes_o
     change(PLAYER, scene="Actual retained Harpy carries out the instructed source scene")
     change(OTHER, attest=True)
     change(PLAYER, execute=True, account="Actual original Harpy performs instructed Quality Time")
+    effect = next(x for x in sin.cases(state(game)) if x.source_action == action)
+    assert effect.harpy == actor and effect.actor == target and effect.phase == "rewrite"
+    assert effect.controller == OTHER.user_id
+    assert game.inspect(PLAYER, action)["state"] == "awaiting_choices"
+    assert state(game).role_punishments[-1].completion_event is not None
+    row = next(x for x in game.choices(OTHER) if x["kind"] == "harpy_bond_void")
+    view = HarpyBondVoidService(game).view(OTHER, effect.id)
+    asset = next(x["id"] for x in view["assets"] if x["family"] == "frame")
+    answer = ChoiceAnswer(
+        options=(asset,), text="The affected original Girl chooses her own Void alteration"
+    )
+    result = game.respond(
+        OTHER, "retained-quality-time-owned-void", row["id"], row["revision"], answer
+    )
+    assert (
+        game.respond(OTHER, "retained-quality-time-owned-void", row["id"], row["revision"], answer)
+        == result
+    )
     actual = state(game)
+    assert sin.get(actual, effect.id).phase == "complete"
+    assert len([x for x in sin.cases(actual) if x.source_action == action]) == 1
+    assert game.inspect(PLAYER, action)["receipt"] == receipt
     assert game.inspect(PLAYER, action)["state"] == "complete"
     assert actual.sheets["3"].tags[-1].giver_actor == actor
     assert "2" not in actual.sheets and game.dice.calls == calls + 1

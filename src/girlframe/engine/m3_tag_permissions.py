@@ -3,7 +3,7 @@
 import json
 from typing import Any
 
-from girlframe.engine.m2 import GameState, Obligation, PilotSheet
+from girlframe.engine.m2 import GameState, Obligation, PilotSheet, TagState
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_void_state import HarpyState
 
@@ -142,14 +142,33 @@ def representation(state: GameState, original: ActorRef) -> ActorRef | None:
     return found[0] if found else None
 
 
+def native_tags(state: GameState, actor: ActorRef) -> tuple[TagState, ...]:
+    """Actual original native inventory, including source-owned derived Tags.
+
+    A ritual remains restricted to its permitted refusal window. A collar remains
+    non-rejectable. Presence does not replace either source's permission/effect rules.
+    """
+    if actor.kind != "pilot" or not _current_pilot(state, actor):
+        return ()
+    from girlframe.engine.m3_bomb_collar import tags as collar_tags
+    from girlframe.engine.m3_control_ritual import tags as ritual_tags
+    from girlframe.engine.m3_cute_uniforms import tags as uniform_tags
+
+    owner = int(actor.entity)
+    inventory = (
+        *state.sheets[actor.entity].tags,
+        *ritual_tags(state, owner),
+        *uniform_tags(state, owner),
+        *collar_tags(state, owner),
+    )
+    if len({x.id for x in inventory}) != len(inventory):
+        raise ValueError("Recover this original Tag's one actual source authority")
+    return inventory
+
+
 def present(state: GameState, actor: ActorRef, tag_id: str) -> bool:
     if actor.kind == "pilot":
-        sheet = state.sheets.get(actor.entity)
-        return bool(
-            _current_pilot(state, actor)
-            and sheet is not None
-            and any(x.id == tag_id for x in sheet.tags)
-        )
+        return any(x.id == tag_id for x in native_tags(state, actor))
     if actor.kind == "external_pilot":
         from girlframe.engine.m3_harpy_defeat import harpy
 
@@ -243,4 +262,10 @@ def participants(state: GameState, gate: Obligation) -> tuple[ActorRef | None, A
 
 
 def can_reject(state: GameState, actor: ActorRef, tag_id: str) -> bool:
-    return all(x.state == "fulfilled" for x in locks(state, actor, tag_id))
+    gates = locks(state, actor, tag_id)
+    if actor.kind == "pilot":
+        from girlframe.engine.m3_bomb_collar import tags as collar_tags
+
+        if any(x.id == tag_id for x in collar_tags(state, int(actor.entity))):
+            return False
+    return all(x.state == "fulfilled" for x in gates)

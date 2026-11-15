@@ -6097,3 +6097,46 @@ policy approval and human testing remain pending. RULES_SUBSET and477 entries/
 0 independently verified remain. Bot OFF; main unchanged; no deployment,
 environment publication, model call or live migration. See
 [the concise handoff](P1_FINAL_CANDIDATE_20261114.md).
+
+## Scoped pre-live native repair packet — November14–15,2026
+
+The owner authorized independent source/clarity review, synthetic Discord work
+and preparation up to live testing. The native Pilot/Core packet adds reciprocal
+ordinary and actual Harpy/Core Flirt, actual Beneath, original Girl-owned Sin,
+real Core Defeat/body/contact consequences and explicitly scoped native Risk.
+Genuine separate component reviews support6required verified entries plus2optional
+native ports among479inventory entries. Broad parents and full-M3 remain
+RULES_SUBSET; no whole-type/human/campaign approval is inferred.
+
+The first exact native-packet full regression on
+`0fa91ec0cd79ab9a3188bc27ed81c0b672eef779`,
+[CI43650392581](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43650392581),
+ran3,328tests:3,275passed/53failed/0errors/0skipped in4,248.93s JUnit duration.
+All four pagination cases, both session-mix files/five cases, and new native
+Core/Flirt/Beneath/Sin cases pass. Ruff/format1,916files, mypy912source files and
+repository2,015publishable/40manifest/0findings pass. Later CLI/registry/planning
+steps were skipped after pytest failed; earlier local passes remain separate.
+
+Bounded repair:47failures shared an optional Harpy-target lookup incorrectly
+requiring explicit casting in ordinary native scenes;3rejections omitted genuine
+source-derived native Ritual/Uniform Tags;3old completion assertions now owed real
+Sin work. Actual cast/source/ownership/consent guards remain. The three test-only
+flows now resolve the original affected Girl's actual choice and preserve source
+holds, original receipt, no-extra-dice and identical retries. One neutral test
+helper reuses actual owner physical proposal and separate GM approval.
+
+Root ran the53original failed nodes plus2affected native consumers:
+**55passed/0failures/errors/skips in258.725s**. Frozen path hashes were unchanged
+through this retry. Separate reviewers inspected the small UI/Tag production
+repairs. This successful focused retry does not replace the required repaired
+candidate's complete exact full regression, which is pending.
+
+Actual synthetic CLI backup→new0600restore→two fresh interpreters on0fa91ec
+preserves45tables and canonical state, with DB/WAL byte hashes unchanged;
+restored upgrade/schema checks pass. An unapplied private policy proposal,
+preserved original policy and immutable source/migration scripts exist; local
+`start --check` passes without token/login. Live database remains0011, bot OFF,
+main unchanged. No deployment, environment publication, live migration, model
+call, synthetic fixture approval installation or human testing occurred.
+See [the current native packet](P1_PRELIVE_CANDIDATE_20261114.md) and
+[command/player plan](../docs/P1_PLAYER_TEST_PLAN.md).

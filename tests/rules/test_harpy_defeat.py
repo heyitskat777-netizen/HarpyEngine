@@ -620,14 +620,17 @@ def test_low_sever_link_releases_roll_but_source_fight_requires_real_helpless_co
 def test_converted_originals_real_forbidden_defeat_requires_owned_manual_no_dice_then_actual_tags(
     ledger,
 ):
+    from harpy_sin_scenario import place_sin_recipient
     from test_adjudication_service import forbid
     from test_void_service import five_no
     from test_void_service import ready as void_ready
     from test_void_service import respond as void_respond
 
+    from girlframe.engine import m3_harpy_bond_void as sin
     from girlframe.services.m3_actors import ActorService
     from girlframe.services.m3_adjudication import AdjudicationService
     from girlframe.services.m3_cast import CastService
+    from girlframe.services.m3_harpy_bond_void import HarpyBondVoidService
     from girlframe.services.m3_missions import MissionService
 
     void, game, worker, gateway, _, work = void_ready(ledger)
@@ -658,6 +661,7 @@ def test_converted_originals_real_forbidden_defeat_requires_owned_manual_no_dice
         "join",
         actor,
     )
+    place_sin_recipient(game, OTHER, ADMIN)
     plays = HandlerPlayService(ledger)
     frame_assets = [x.id for x in harpy(state(game), actor).assets if x.family == "frame"]
     for asset in frame_assets:
@@ -737,7 +741,33 @@ def test_converted_originals_real_forbidden_defeat_requires_owned_manual_no_dice
         fields={"girl": girl.token},
         text="The actual Harpy's comms after manual adjudication",
     )
+    # The original Personal relationship survived the actual rebirth; this
+    # message reaches Intense and owes the original Girl a separate Void gain.
+    effect = next(x for x in sin.cases(state(game)) if x.source_action == action)
+    assert effect.harpy == actor and effect.actor == girl and effect.phase == "rewrite"
+    assert effect.controller == OTHER.user_id
+    assert game.inspect(PLAYER, action)["state"] == "awaiting_choices"
+    with ledger.engine.connect() as c:
+        assert service._row(c, work)["state"] == "pending"
+    row = next(x for x in game.choices(OTHER) if x["kind"] == "harpy_bond_void")
+    view = HarpyBondVoidService(game).view(OTHER, effect.id)
+    asset = next(x["id"] for x in view["assets"] if x["family"] == "frame")
+    owned = ChoiceAnswer(options=(asset,), text="The actual original Girl alters her own Asset")
+    result = game.respond(
+        OTHER, "converted-manual-message-owned-void", row["id"], row["revision"], owned
+    )
+    assert (
+        game.respond(
+            OTHER, "converted-manual-message-owned-void", row["id"], row["revision"], owned
+        )
+        == result
+    )
+    assert sin.get(state(game), effect.id).phase == "complete"
+    assert len([x for x in sin.cases(state(game)) if x.source_action == action]) == 1
+    assert game.inspect(PLAYER, action)["receipt"] == receipt
     assert game.inspect(PLAYER, action)["state"] == "complete" and game.dice.calls == calls
+    with ledger.engine.connect() as c:
+        assert service._row(c, work)["state"] == "resolved"
     assert harpy(state(game), actor).blocked_plays[0].play == "defeat"
 
 

@@ -91,3 +91,41 @@ submit another participant's form. Test ordinary saved-progress reopening; actua
 Discord rendering, permissions and player understanding remain human observations.
 Do not use automated user accounts to invoke slash commands. Synthetic adapter
 checks use simulated transport and do not establish live-server acceptance.
+
+## First native-cohort command guide
+
+After the separately approved migration/policy/restart, use these existing
+controls. Record each result as passed, failed or not tested; no row is already
+accepted by a human.
+
+1. Each Pilot completes `/character build` and `/character review`, then confirms
+   `/character activate`. Inspect `/character state` and the public `/sheet`;
+   only the selected public fields should be shared.
+2. Staff binds the chosen test channel with `/campaign scene_bind`. Participating
+   Pilots join using `/campaign scene_join`. Use `/mission cast` for actual owned
+   roles; a Core's controller does not lend the Core their separate Pilot sheet.
+3. The JANUS owner opens `/mission janus` to register the original Core. Its
+   invited controller and required reviewer each complete their own saved step
+   through that menu or `/character requests` before using the Core.
+4. Use `/play`; when multiple eligible roles are controlled, choose the actual
+   character before selecting the Play. Test reciprocal ordinary Flirt, then
+   actual Harpy/Core Flirt and Beneath with the agreed applicable resources.
+5. Open `/mission janus` for Living Battery only after genuine contact and
+   physical facts are established. Resolve each person's own private choices;
+   a real Intense Bond change must leave the Girl's Void work pending for her.
+6. Reopen `/character requests` or `/choice resume` as the actual next decision
+   owner. Check that required work holds ordinary chat, owned responses preserve
+   earlier progress, and unrelated users cannot read or submit private fields.
+   `/choice show` reads the original action/receipt without another roll.
+7. Check `/safety pause` and `/safety resume` independently of ordinary completion.
+   Reopen saved work after a separately authorized restart and verify the same
+   choices, receipt and resources.
+
+The first policy proposal enables `plays`, `playbooks`, `world` and `discipline`
+only, with an explicit seven-Play native Risk opt-in. It does **not** enable
+mission dispatch, Strain, economy or Off-Duty. The complete campaign-loop and
+all-type rows above require their own reviewed scope; they are not passed or
+silently included by this initial session. An insufficient applicable menu or
+unavailable source should retain its durable guidance/block, never be cleared
+through a fabricated outcome. Live dice stay random; use the retained synthetic
+tests for deterministic tier coverage instead of changing a real receipt.
