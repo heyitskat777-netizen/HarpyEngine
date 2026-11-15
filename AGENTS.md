@@ -9,19 +9,23 @@ release gates. Existing active characters are not rebuilt. Record the ruling in
 docs/CAMPAIGN_RULINGS.md; policy owner_starting_bond_count selects1or2.
 Every runtime release must bump src/girlframe/__init__.py's __version__; package
 metadata and Discord lifecycle presence derive from that single source. Docs-only
-evidence commits do not require a version bump. The next release is0.1.1.
+evidence commits do not require a version bump. The current runtime release is0.1.1.
 
-Current live build: `70f9c7a36d16b0c84f35fadeaebf430fe84b9484` implements
-private `/start` campaign/character progress, guided confirmed saves, requests and
-sheet/Play entry points. [Focused CI43686466268](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43686466268)
-passes **57 tests, zero failures/errors/skips** in87.428s; changed-source static
-checks and offline live-policy validation pass. This is not a new full regression.
-The corrected Bot Token authenticates as the expected HarpyEngine application.
-**Bot is ONLINE** on one pinned process; gateway/presence and19guild commands,
-including `/start`, are verified. Discord also has one existing global `/launch`
-command, preserved unchanged. A fresh private backup is intact; release policy
-and database schema are unchanged. Operational authority remains the private
-`var/discord-dev/p1-deployment.json` record. Human guided-setup testing is pending.
+Current live build: `7aefb3de3674fe80cf7b3c951985b3733477b51c`, **v0.1.1**.
+The owner-requested two-starting-Bond house rule is enabled. Select the original
+playbook Bond plus an accepted Personal second Bond with a different character
+in `/character review`. Handler/configured administrator test exemptions use
+`/campaign bond_test member:<player> enabled:true|false`, explicit confirmation,
+then a fresh saved review. These exemptions waive Bonds only and create no
+agreements. Existing active characters remain intact.
+[Focused CI43694295895](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43694295895)
+passes **66 tests, zero failures/errors/skips**,93.686s, with changed-source static
+checks. This is not a new full regression or human acceptance. **Bot is ONLINE**:
+one pinned process, running v0.1.1presence,19guild commands including `/start`
+and the new Bond-test command. One existing global `/launch` remains unchanged.
+Fresh private backup and the sole requested policy change are verified; schema
+is unchanged. Operational authority: `var/discord-dev/p1-deployment.json`.
+See [the house-rule evidence](reports/P1_STARTING_BONDS.md).
 
 The following live correction and deployment notes describe earlier releases.
 

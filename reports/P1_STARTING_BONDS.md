@@ -38,3 +38,19 @@ is claimed. Exact source/CI and live evidence follow at release.
 Owner check after deployment: propose/accept two Bonds, select both in
 `/character review`, save review, then activate. For a setup-only test, confirm
 `/campaign bond_test`, reopen/save review and confirm activation separately.
+
+
+Exact runtime source: `7aefb3de3674fe80cf7b3c951985b3733477b51c`.
+[Focused CI43694295895](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43694295895)
+passed66tests/0failures/errors/skips in93.686s; changed-source typing/lint/format,
+CLI, runtime/planning and repository checks passed. This includes the final
+protected Mentor/Pair proposal limit and dashboard routing for the accepted
+second Bond. Artifacts retain exact source/base/scope and JUnit. No full run.
+
+Authorized deployment completed: authentication checked before stopping the old
+process; fresh0600consistent backup retained; frozen source starts with the
+existing policy plus only owner_starting_bond_count=2. One running process,
+Running v0.1.1presence,19guild commands and native campaign bond_test registration
+are verified. The existing global launch command is preserved. Schema remains
+0020; backup is intact. No grants, reviews, Bonds or character activations were
+fabricated in the real campaign. Human outcomes remain pending.
