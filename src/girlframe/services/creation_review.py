@@ -166,7 +166,11 @@ class CreationReviewService:
                 or x["source_id"] == str(viewer.user_id)
             )
         ]
-        required_bonds = self.store.policy.owner_starting_bond_count
+        optional_second = (
+            self.store.policy.owner_starting_bond_count == 2
+            and self.store.policy.owner_second_starting_bond_optional
+        )
+        required_bonds = 1 if optional_second else self.store.policy.owner_starting_bond_count
         test_bypass = any(
             x.user_id == viewer.user_id and x.character_revision == progress.character_revision
             for x in setup.starting_bond_test_bypasses
@@ -178,7 +182,7 @@ class CreationReviewService:
                     message="Choose an accepted starting Bond with your required role and depth.",
                 )
             )
-        if required_bonds == 2 and not test_bypass:
+        if (required_bonds == 2 or progress.draft.additional_starting_bond_id) and not test_bypass:
             extra = next(
                 (x for x in current_bonds if x["id"] == progress.draft.additional_starting_bond_id),
                 None,
@@ -201,7 +205,12 @@ class CreationReviewService:
                     ReviewIssue(
                         code="additional_starting_bond",
                         message="House rule: select a second accepted Personal Bond "
-                        "with a different character.",
+                        "with a different character."
+                        + (
+                            " You may clear this optional second choice instead."
+                            if optional_second
+                            else ""
+                        ),
                     )
                 )
         if progress.draft.girl_playbook == "NEWGIRL":
@@ -270,6 +279,7 @@ class CreationReviewService:
             setup_revision=setup_revision,
             creation=progress.draft,
             required_starting_bonds=required_bonds,
+            optional_second_starting_bond=optional_second,
             starting_bond_test_bypass=test_bypass,
             bonds=tuple(
                 SheetBond(

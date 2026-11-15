@@ -1,15 +1,17 @@
 # Active owner direction — P1
 
-Latest owner change: require two starting Bonds as a campaign house rule, with
-an explicit per-character setup-test bypass. Preserve the printed primary
-role/depth, require an accepted Personal second Bond to a distinct character,
+Latest owner change supersedes the earlier two-required-Bonds house rule:
+the second starting Bond is OPTIONAL. Preserve the printed primary
+role/depth; an optionally selected Personal second Bond uses a distinct character,
 and never invent consent. Only the Handler/configured administrator may confirm
 the revision-bound test exemption. It waives Bonds only, not other setup or
 release gates. Existing active characters are not rebuilt. Record the ruling in
-docs/CAMPAIGN_RULINGS.md; policy owner_starting_bond_count selects1or2.
+docs/CAMPAIGN_RULINGS.md; policy owner_starting_bond_count selects1or2slots and
+owner_second_starting_bond_optional=true makes the second optional. Preserve the
+per-character setup-test bypass for the primary requirement as well.
 Every runtime release must bump src/girlframe/__init__.py's __version__; package
 metadata and Discord lifecycle presence derive from that single source. Docs-only
-evidence commits do not require a version bump. The current runtime release is0.1.1.
+evidence commits do not require a version bump. The next runtime release is0.1.2.
 
 Current live build: `7aefb3de3674fe80cf7b3c951985b3733477b51c`, **v0.1.1**.
 The owner-requested two-starting-Bond house rule is enabled. Select the original

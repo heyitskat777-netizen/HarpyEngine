@@ -67,6 +67,7 @@ class ReviewSheet(BaseModel):
     creation: CreationDraft
     bonds: tuple[SheetBond, ...] = ()
     required_starting_bonds: Literal[1, 2] = 1
+    optional_second_starting_bond: bool = False
     starting_bond_test_bypass: bool = False
     shared: tuple[AcceptedSetup, ...] = ()
     received_court: tuple[AcceptedSetup, ...] = ()

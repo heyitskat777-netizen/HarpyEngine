@@ -16,6 +16,17 @@ separate: a ruling never makes an unimplemented rule executable or verified.
 
 ## Current decisions
 
+Latest owner amendment: the second starting Bond is **optional**, overriding the
+earlier required-two rule below. Set owner_starting_bond_count=2 to retain two
+proposal slots and owner_second_starting_bond_optional=true to require only the
+printed primary Bond. A blank second choice never blocks review/activation. If
+selected, the second must still be an accepted Personal Bond with a different
+character; clear a stale optional choice to continue without it. Existing saved
+choices and active characters are preserved. The Handler/admin test exemption
+continues to waive the starting-Bond requirement for a specific draft profile.
+
+The following paragraph records the superseded required-two house rule.
+
 Owner-requested starting-Bond house rule: use
 `owner_starting_bond_count: 2` in the trusted campaign policy (default1preserves
 other campaigns and old records). Require the playbook's original primary Bond

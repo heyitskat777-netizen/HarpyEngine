@@ -178,3 +178,26 @@ def test_package_and_presence_use_the_same_release_version():
     assert project["tool"]["hatch"]["version"]["path"] == "src/girlframe/__init__.py"
     assert activity("running").name == f"Running v{__version__}"
     assert activity("restarting").name == f"Restarting v{__version__}"
+
+
+def test_optional_second_bond_does_not_block_review_or_activation(ledger):
+    review, _, _ = ready(ledger)
+    approve(ledger)
+    ledger.policy = ledger.policy.model_copy(update={"owner_second_starting_bond_optional": True})
+    snapshot = review.get(PLAYER)
+    assert snapshot.sheet.required_starting_bonds == 1
+    assert snapshot.sheet.optional_second_starting_bond
+    assert snapshot.sheet.creation.additional_starting_bond_id is None
+    assert snapshot.sheet.ready_for_rules_review
+
+    async def show():
+        view = ReviewView(review, PLAYER.user_id)
+        await view.present(current(PLAYER, 89701))
+        assert view.second_bond in view.children and "optional" in view.second_bond.label
+
+    asyncio.run(show())
+    review.save(PLAYER, "optional-review", snapshot.saved_revision, snapshot.fingerprint)
+    GameService(ledger).activate(PLAYER, "optional-activation", snapshot.fingerprint)
+    with ledger.engine.connect() as c:
+        state = load_state(c, ledger.campaign_id)
+        assert len(state.bonds) == 1 and len(state.sheets["2"].review.bonds) == 1

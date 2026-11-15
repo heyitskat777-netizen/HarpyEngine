@@ -1,5 +1,15 @@
 # Two starting Bonds and versioned presence
 
+Owner amendment for v0.1.2: make the second starting Bond OPTIONAL. The trusted
+policy keeps two proposal slots and sets owner_second_starting_bond_optional=true.
+Blank second choices no longer block complete review or activation; any selected
+second still needs real acceptance and a distinct character, or can be cleared.
+The button and review text explicitly say optional. Primary playbook requirements
+and the separate Handler/admin setup-test bypass remain. A new normal-flow check
+passes: no second choice, optional button, complete saved review and actual
+one-Bond activation (1passed,1.47s). Exact CI/deployment evidence will follow.
+Earlier required-two release evidence below remains historical.
+
 Owner-authorized change: configurable two-Bond campaign house rule and explicit
 per-character setup test exemption; bump the next runtime release to0.1.1.
 

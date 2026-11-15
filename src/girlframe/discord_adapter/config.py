@@ -31,6 +31,7 @@ class BotPolicy(BaseModel):
     owner_initial_conditions: InitialConditions | None = None
     owner_intense_tag_bonus: Literal[1, 2] | None = None
     owner_starting_bond_count: Literal[1, 2] = 1
+    owner_second_starting_bond_optional: bool = False
     m2_approval: ReleaseApproval | None = None
     m3_approval: M3Approval | None = None
     owner_m3_rulings: M3Rulings | None = None

@@ -46,6 +46,8 @@ def pages(review: CurrentReview, section: str) -> list[str]:
             f"Starting Bonds required: {sheet.required_starting_bonds}"
             + (" (campaign house rule)." if sheet.required_starting_bonds == 2 else ".")
         )
+        if sheet.optional_second_starting_bond:
+            lines.append("A second Personal starting Bond is optional; leave it blank to continue.")
         if sheet.starting_bond_test_bypass:
             lines.append(
                 "TEST SETUP: starting-Bond requirement bypassed by Handler/admin approval. "
@@ -368,7 +370,15 @@ class ReviewView(discord.ui.View):
         self.current = await asyncio.to_thread(
             self.service.get, viewer_from_interaction(interaction)
         )
-        if self.current.sheet.required_starting_bonds == 2:
+        self.second_bond.label = (
+            "Choose second Bond (optional)"
+            if self.current.sheet.optional_second_starting_bond
+            else "Choose second Bond"
+        )
+        if (
+            self.current.sheet.required_starting_bonds == 2
+            or self.current.sheet.optional_second_starting_bond
+        ):
             if self.second_bond not in self.children:
                 self.add_item(self.second_bond)
         elif self.second_bond in self.children:
