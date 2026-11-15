@@ -64,3 +64,17 @@ Running v0.1.1presence,19guild commands and native campaign bond_test registrati
 are verified. The existing global launch command is preserved. Schema remains
 0020; backup is intact. No grants, reviews, Bonds or character activations were
 fabricated in the real campaign. Human outcomes remain pending.
+
+
+Optional-second release completed: exact runtime
+`ec592a65fb6c3accdf3fb5daf35f6acd935a3e68`,v0.1.2.
+[Focused CI43695168640](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43695168640)
+passes67tests/0failures/errors/skips in94.132s, including actual one-Bond
+activation with an empty optional second slot. Changed-source static, CLI,
+runtime/planning and repository checks pass; no new full regression.
+Authentication succeeded before graceful restart; fresh0600backup remains intact.
+One pinned process, Running v0.1.2presence and the optional policy flag are
+verified live.19guild commands and the existing global launch are preserved.
+Only owner_second_starting_bond_optional=true changed in the private policy.
+No real character, Bond or consent was created by verification. Human outcomes
+remain pending. Reopen old cards, save a fresh review and confirm activation.

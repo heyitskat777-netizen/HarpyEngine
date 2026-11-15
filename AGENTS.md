@@ -11,23 +11,21 @@ owner_second_starting_bond_optional=true makes the second optional. Preserve the
 per-character setup-test bypass for the primary requirement as well.
 Every runtime release must bump src/girlframe/__init__.py's __version__; package
 metadata and Discord lifecycle presence derive from that single source. Docs-only
-evidence commits do not require a version bump. The next runtime release is0.1.2.
+evidence commits do not require a version bump. The current runtime release is0.1.2.
 
-Current live build: `7aefb3de3674fe80cf7b3c951985b3733477b51c`, **v0.1.1**.
-The owner-requested two-starting-Bond house rule is enabled. Select the original
-playbook Bond plus an accepted Personal second Bond with a different character
-in `/character review`. Handler/configured administrator test exemptions use
-`/campaign bond_test member:<player> enabled:true|false`, explicit confirmation,
-then a fresh saved review. These exemptions waive Bonds only and create no
-agreements. Existing active characters remain intact.
-[Focused CI43694295895](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43694295895)
-passes **66 tests, zero failures/errors/skips**,93.686s, with changed-source static
-checks. This is not a new full regression or human acceptance. **Bot is ONLINE**:
-one pinned process, running v0.1.1presence,19guild commands including `/start`
-and the new Bond-test command. One existing global `/launch` remains unchanged.
-Fresh private backup and the sole requested policy change are verified; schema
-is unchanged. Operational authority: `var/discord-dev/p1-deployment.json`.
-See [the house-rule evidence](reports/P1_STARTING_BONDS.md).
+Current live build: `ec592a65fb6c3accdf3fb5daf35f6acd935a3e68`, **v0.1.2**.
+The second starting Bond is OPTIONAL. The normal primary playbook Bond remains
+required, with the existing explicit Handler/admin test bypass available. Leave
+second choice blank, reopen `/character review` and save a fresh snapshot before
+activation. Any selected second Bond still requires actual Personal consent and
+a different character; it may be cleared. Existing sheets/choices are preserved.
+[Focused CI43695168640](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43695168640)
+passes **67 tests, zero failures/errors/skips**,94.132s, plus changed-source static
+and contract checks. This is not a new full regression or human acceptance.
+**Bot is ONLINE**: one pinned process, Running v0.1.2presence,19guild commands and
+one preserved global `/launch`. Fresh private backup and only the optional-policy
+flag change are verified; no schema change. Operational authority remains
+`var/discord-dev/p1-deployment.json`. See [Bond policy evidence](reports/P1_STARTING_BONDS.md).
 
 The following live correction and deployment notes describe earlier releases.
 
