@@ -1,21 +1,24 @@
 # Current P1 queue — scoped native candidate verified
 
 The owner-authorized source review and bounded native repairs are integrated.
-Bot OFF. Exact `5412ee8c431cfee63ecbd8b5e4ff2db97b60c601` passes
+Bot ONLINE on frozen source following explicit owner enablement. Exact
+`5412ee8c431cfee63ecbd8b5e4ff2db97b60c601` passes
 [full CI43657613489](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43657613489):
 **3,328passed/0failures/errors/skips**, plus global static, CLI, registry,
 planning and repository checks. The actual current-source synthetic restore and
 offline private policy validation also pass. The earlier red run,55-node focused
-retry and3,300-test baseline remain historical evidence. No deployment, live
-migration, environment publication, model call or shared-main merge occurred.
+retry and3,300-test baseline remain historical evidence. Owner-authorized live
+migration/policy/startup are complete: private backup intact,31existing tables'
+rows preserved, schema0020/45tables; gateway/presence and18guild/0global commands
+verified. No environment publication, model call or shared-main merge occurred.
 
 | Current work | Owner / dependency | Next concrete action | Evidence / completion boundary |
 |---|---|---|---|
 | Native Flirt and Harpy/Core social Plays | Closed source/automated; separate component reviewers | Observe the declared normal scenarios with real players | Full exact run passes reciprocal native Flirt,8actual HarpyFlirt and7Beneath cases, including original ownership and source-derived Tag rejection. |
-| Source-proved native Void and Risk | Closed scoped source/automated | Review explicit campaign opt-in and registry digest before enabling | Full exact run includes native Sin/UI/source-negative/Risk checks and actual retained-Person Sin continuations. Broad required parents remain partial. |
+| Source-proved native Void and Risk | Closed scoped source/automated | Observe enabled native scope with the actual next decision owner | Matching digest and explicit native Risk opt-in are installed. Full exact run covers native Sin/source-negative/Risk checks; broad required parents remain partial. |
 | Original Core body/mandatory Defeat | Closed scoped source/automated; independent component reviews | Observe real-controller/body/channel behavior in the first scoped session | Both connected-Core scenarios pass full CI; old surgery/Harpy paths remain. No advanced-power or whole-heading approval is inferred. |
 | Final exact candidate | Closed automated; root | Preserve verified runtime/test/rules trees when publishing evidence-only docs |3,328green full tests; Ruff/format1,917files, mypy912source files; registry/planning/CLI/privacy/migration and45-table actual restore pass. |
-| Concrete first live policy | Owner/facilitator; verified candidate | Review prepared private unapplied policy, preserved original and backed-up0011→0020migration/restart scripts | First cohort is original native Pilot/Core base, with four proposed subsystems and explicit seven-Play native Risk opt-in. No live policy, approval fixture or migration is installed. |
+| Concrete first live policy | Closed authorized deployment; root | Preserve frozen release during development; begin player session | Original native Pilot/Core base, four scoped subsystems and explicit seven-Play native Risk opt-in installed; rehearsed migration, existing-row preservation and gateway registration verified. No fixture approval installed. |
 | Human P1 acceptance | Handler/facilitator/distinct players | Run first scoped session, then rotate the all-type/player plan under its actual reviewed scope | Not run. This first cohort does not imply all-type acceptance or complete P1/M3 certification. |
 
 Source/review details: [pre-live packet](reviews/P1_PRELIVE_SOURCE_REVIEW_20261114.md)
@@ -24,9 +27,9 @@ The registry records6 verified required entries plus2 verified optional native
 ports among479 inventory entries. Required broad parents and full-M3 remain
 RULES_SUBSET. These unequal entries are not a completion percentage.
 
-The proposed first session does not enable missions, economy, Strain or Off-Duty.
+The enabled first session does not enable missions, economy, Strain or Off-Duty.
 Broader source/campaign scope and all-type human acceptance remain open. This
-checkpoint is ready for scoped live-test review, not whole P1/M3 certification.
+checkpoint is ready for scoped live testing, not whole P1/M3 certification.
 
 Previously verified automated candidate: `a36acabd8a4f9abd21b78f054c7f368ab45cef35` on
 `codex/r285-integration-20261114`. [Full CI43620925690](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43620925690)

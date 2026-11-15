@@ -1,5 +1,20 @@
 # Active owner direction — P1
 
+Latest owner direction: **enable the newest tested bot and begin the first live
+session**. This supersedes the earlier bot-off hold below for the scoped release.
+The bot is running frozen runtime `5412ee8c431cfee63ecbd8b5e4ff2db97b60c601`,
+with owner-authorized plays/playbooks/world/discipline and explicit seven-Play
+native Risk opt-in. The private backup and rehearsed0011→0020migration passed,
+the policy is installed, gateway readiness/presence and18guild/0global commands
+are verified. Human outcomes remain pending. Preserve this frozen running release
+while developing; do not start a second bot or run from the mutable checkout.
+Private operational authority is `var/discord-dev/p1-deployment.json`; startup,
+PID, backup and pinned source are recorded there. A fresh environment must check
+the existing process/deployment before starting anything. Missions/economy/Strain/
+Off-Duty, broader all-type approval, AI, Ancillary, environment publication and
+private-engine writes remain outside this release. Historical bot-off and pending
+deployment statements below do not revoke this actual owner authorization.
+
 The owner approved the November8 milestone proposal and authorized continuation until **P1 is ready for player testing**. Follow `docs/work_orders/P1_PLAYABLE_RELEASE.md` and `docs/P1_CURRENT_QUEUE.md`. P1 covers ordinary gameplay for every catalogued Girl/Frame and working durable human-facilitator escalation. P2 AI and P3 remaining unusual automation are later, separately authorized milestones. Preserve the original full-M3 backlog and certification; P1 remains RULES_SUBSET. Ordinary body/identity/AM/Court/Pair dependencies cannot be deferred merely because they are difficult. JANUS-B uses official JANUS; Gorgon Leviathan does not implement Wyvern Leviathan Chassis. Keep the bot OFF, and keep deployment/environment publication/model calls/Ancillary/private-engine writes separate.
 
 Latest owner testing instruction supersedes older per-workflow/coherent-checkpoint demands: **defer most automated testing until the final P1 candidate**. During development use only the minimum likely-flow smoke needed for functionality, preserve tests and record what was not run. Workers author meaningful normal-flow tests without running pytest; root consolidates the minimum checks after integration. Do not repeatedly run existing successes, compatibility sweeps or speculative role/tier/lifecycle matrices. At final P1 freeze run full regression and required global static/migration/privacy/restore checks on the exact integrated candidate; independent and human approval remain pending until actual review. Use at most two implementation workers; root owns shared integration and freezes explicit ownership. Existing sanitized source publication remains authorized; it is not deployment approval.

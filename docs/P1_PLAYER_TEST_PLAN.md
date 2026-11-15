@@ -1,22 +1,51 @@
-# P1 player testing — scoped pre-live review handoff
+# P1 player testing — first scoped live session
 
 The current native repair packet has genuine component reviews and passes its
 exact final regression: `5412ee8c431cfee63ecbd8b5e4ff2db97b60c601`,
 [full CI43657613489](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43657613489),
 3,328passed/0failures/errors/skips plus all global/runtime/planning/privacy gates.
 Its actual45-table synthetic restore/reopen and private offline policy check pass.
-The first proposed live scope
+The owner-enabled live scope
 is original native Pilot/Core gameplay with explicitly reviewed sources. Broader
 all-type acceptance remains pending and is not inferred from this first session.
-No live policy is installed and the bot remains OFF.
+The bot is ONLINE on frozen5412ee8. The matching private policy is installed;
+backed-up/rehearsed0011→0020migration preserves existing data. Gateway readiness,
+running presence and18guild/0global commands are verified. Human tests below
+remain **not tested** until actual participants report their results.
 
 Previously verified offline candidate `a36acabd8a4f9abd21b78f054c7f368ab45cef35` passes its complete
 3,300-test CI run, global checks and actual synthetic restore/reopen gate.
 See [the evidence and review limits](../reports/P1_FINAL_CANDIDATE_20261114.md).
-**Live-session activation remains pending. Bot OFF.** Independent component
-source review is recorded for the first native cohort. A genuine matching scoped
-campaign policy and backed-up migration/authorized restart remain required;
-broader all-type review is open. No fixture approval is installed live.
+Independent component source review and owner-authorized scoped deployment are
+recorded for the first native cohort. Broader all-type review is open. No fixture
+approval is installed live. Older pre-live approval instructions below describe
+the preparation gate; they are completed for this release and still apply before
+expanding its scope.
+
+## First-session checklist — run in order
+
+Use test characters, one actual Handler and at least two players on separate
+accounts. Use a nonadministrator for chat-lock checks; Discord administrators
+bypass channel permission locks. Complete the campaign/Handler setup prompts.
+
+| Test | Expected live result |
+|---|---|
+|1. Online/private replies — `/help`, `/health`, `/campaign status` | Bot responds; private replies stay private. `/health` remains administrator-only. |
+|2. Draft dropdowns and Discord labels | Create/edit SORROW as Mockingbird/JANUS-B; selected roles/nickname sync, or an explicit hierarchy/permission warning. |
+|3. Saved build — `/character build` | Choose Assets/details, save and reopen. Selections persist; another player cannot edit the draft. |
+|4. Canonical sheet — `/character review`, `/character activate`, `/character state`, `/sheet` | Complete listed requests, confirm activation, and see actual resources. Only approved public fields appear publicly. |
+|5. Real scene setup | Handler sets world/positions; owners confirm facts. Bind the test channel with `/campaign scene_bind`, join with `/campaign scene_join`, select actual roles through `/mission cast`. |
+|6. Roll/receipt — `/roll basic`, `/roll show` | One public receipt by default; reopening its ID retains the original dice. |
+|7. Guided Flirt/inbox — `/play`, `/character requests`, `/choice resume` | Correct role/target dropdowns; actual owners answer reciprocal questions and their next decisions. Reopening preserves progress; wrong-user controls are denied. |
+|8. Chat hold and safety | Leave real Play work pending: ordinary member chat pauses and restores after genuine completion. `/safety pause` blocks new rolls/Plays; `/safety resume` clears that safety pause without clearing unfinished choices. |
+|9. Original Core/Battery/Sin — `/mission janus` | Actual invited Core controller accepts setup, contact and owned answers. When a real Bond change reaches/deepens Intense, only the Girl receives the required Void choice; original receipt/costs remain. |
+|10. Actual Harpy/Core social Plays — `/play` | Flirt/Beneath use that actual character's resources and decisions. Harpies gain no ordinary Status, controller Pilot resources are not substituted, and required consequences stay pending until genuinely resolved. |
+
+Mark each row passed/failed/not-tested and report the command, expected versus
+observed result and receipt/action ID if available. Keep private responses out of
+public reports. Do not force live dice to cover every tier; an untriggered branch
+is not tested. Core damage/Defeat and restart-with-pending-work can follow the
+initial session using the detailed scenarios below.
 
 ## Before scheduling the session
 
@@ -99,7 +128,7 @@ checks use simulated transport and do not establish live-server acceptance.
 
 ## First native-cohort command guide
 
-After the separately approved migration/policy/restart, use these existing
+The separately approved migration/policy/startup is complete. Use these existing
 controls. Record each result as passed, failed or not tested; no row is already
 accepted by a human.
 
@@ -129,7 +158,7 @@ accepted by a human.
    Reopen saved work after a separately authorized restart and verify the same
    choices, receipt and resources.
 
-The first policy proposal enables `plays`, `playbooks`, `world` and `discipline`
+The installed first policy enables `plays`, `playbooks`, `world` and `discipline`
 only, with an explicit seven-Play native Risk opt-in. It does **not** enable
 mission dispatch, Strain, economy or Off-Duty. The complete campaign-loop and
 all-type rows above require their own reviewed scope; they are not passed or

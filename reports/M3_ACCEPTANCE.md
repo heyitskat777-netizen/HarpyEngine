@@ -6174,3 +6174,35 @@ not enabled by that proposal. Real campaign approval, backed-up0011→0020live
 migration/restart, broader all-type review and human P1 acceptance remain open.
 Bot OFF; RULES_SUBSET; no shared-main merge, deployment, environment publication,
 model call, Ancillary enablement or recovered-engine write occurred.
+
+## Owner-authorized scoped live enablement
+
+The owner explicitly requested enabling the newest tested bot and a first-session
+checklist. The runtime remains exact5412ee8; published c0a2b70added evidence only.
+Read-only Discord checks confirmed application identity, target-guild access and
+required existing permissions. No running bot existed before startup.
+
+A new0600private backup was verified, then restored privately for a real-data
+migration rehearsal. Archived candidate migrations upgraded that isolated copy
+0011→0020and passed `alembic check`. The active database was unchanged during
+rehearsal. Its subsequent authorized upgrade/check passed, preserving every row
+and column in31existing tables;45tables now exist. The original backup byte hash
+remained unchanged. Original policy is privately preserved; the approved scoped
+policy is now installed. No private data, policy identities or backup contents
+are published.
+
+One detached process runs the immutable tested source/registry and active policy.
+Its actual process environment confirms those pinned paths. Gateway readiness
+and sending `Running v0.1.0` presence are observed; REST readback confirms18guild
+commands and0global commands. The package's existing display version is0.1.0;
+the exact deployed build is5412ee8. No code/version change or redundant full
+regression was introduced by this deployment.
+
+Live enabled scope is plays/playbooks/world/discipline and explicit seven-Play
+native Risk opt-in. Missions/economy/Strain/Off-Duty remain excluded. Player
+commands, Discord client rendering and human acceptance are **not tested** yet.
+The first-session checklist in docs/P1_PLAYER_TEST_PLAN.md uses separate real
+controllers and a nonadministrator for chat locks. Human outcomes, broader
+all-type P1 acceptance and full-M3 certification remain open. No environment
+publication, AI/model call, Ancillary enablement, recovered-engine write or main
+merge occurred. Private operational records are under ignored var/.

@@ -1,9 +1,11 @@
 # HarpyEngine — GIRL FRAME private Discord pilot
 
 Latest exact offline candidate: `5412ee8` passes **3,328tests/0failures/errors/skips**
-and all global checks. The reviewed native Pilot/Core packet is ready for scoped
-live-test review; bot remains OFF and its private policy/migration/restart proposal
-is unapplied. See [current evidence](reports/P1_PRELIVE_CANDIDATE_20261114.md) and
+and all global checks. The owner-authorized native Pilot/Core release is now
+ONLINE on that frozen source, with the private policy installed and backed-up,
+rehearsed migration to0020complete. Gateway/presence and18guild/0global commands
+are verified; human session outcomes remain pending.
+See [current evidence](reports/P1_PRELIVE_CANDIDATE_20261114.md) and
 [player/command guide](docs/P1_PLAYER_TEST_PLAN.md). Broader all-type and human
 P1 acceptance remain open. Older counts/statuses below describe historical packets.
 

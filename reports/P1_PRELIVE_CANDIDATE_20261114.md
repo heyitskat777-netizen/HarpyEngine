@@ -1,14 +1,24 @@
 # P1 scoped pre-live repair candidate
 
 The original native Pilot/Core packet is implemented, independently source-reviewed
-by component and passes its exact final regression. **Ready for scoped live-test
-review; bot OFF.** Exact candidate
+by component and passes its exact final regression. **Owner-authorized scoped
+release ONLINE; human testing pending.** Exact candidate
 `5412ee8c431cfee63ecbd8b5e4ff2db97b60c601` on
 `codex/r285-integration-20261114` passes
 [full CI43657613489](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43657613489):
 **3,328passed/0failures/0errors/0skips in4,472.244s** JUnit duration.
 The downloaded artifact records this exact SHA and `Scope: full`.
 Earlier red/focused/baseline runs below remain historical evidence.
+
+Subsequent live deployment: read-only Discord application/guild/permission checks
+passed. A private0600backup and isolated migration rehearsal preceded the active
+0011→0020upgrade; all31existing tables' rows were preserved and45tables now
+exist. The approved four-subsystem policy is installed. Frozen5412ee8process,
+gateway readiness/running presence and18guild/0global command registration are
+verified. Private operational records remain ignored. No player action, human
+acceptance, broader campaign approval, environment publication or AI call is
+invented. The pre-live verification/proposal rows below record the earlier gate;
+the owner subsequently authorized and completed that deployment.
 
 ## Delivered behavior
 
