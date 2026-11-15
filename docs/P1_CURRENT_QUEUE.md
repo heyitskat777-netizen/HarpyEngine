@@ -1,5 +1,12 @@
 # Current P1 queue — scoped native candidate verified
 
+Activity-first integration is the next owner-directed UI workstream. See
+[the staged contract](work_orders/P1_ACTIVITY_PRIMARY_INTERFACE.md). First deliver
+authenticated character read/preview/save/reopen against the existing engine;
+Activity repository/backend/authentication details are pending a cross-chat
+handoff. Keep native controls and durable Discord workers running until the new
+workflow is verified. No Activity API or deployment is claimed by this plan.
+
 Current live build: `fe47d7ef0b558a1106f5dc48b25c277aff5f875b`, **v0.1.4**.
 Owner-authorized restart and live readback are complete: one frozen process,
 Running v0.1.4presence,19guild groups and16character subcommands.
