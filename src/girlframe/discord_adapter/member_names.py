@@ -69,6 +69,14 @@ async def _resolve(interaction: discord.Interaction, identities: set[int]) -> di
     return cache
 
 
+async def resolve_member_names(
+    interaction: discord.Interaction, identities: set[int]
+) -> dict[int, str]:
+    """Current guild display names for an already-authorized sheet projection."""
+    names = await _resolve(interaction, identities)
+    return {identity: names[identity] for identity in identities}
+
+
 async def render_member_labels(
     interaction: discord.Interaction, text: str, *, markdown: bool = True
 ) -> str:

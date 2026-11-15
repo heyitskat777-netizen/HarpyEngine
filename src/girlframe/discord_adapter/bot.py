@@ -214,6 +214,10 @@ class ReadOnlyDiscordBot(discord.Client):
             self.start_dashboard = register_start(
                 self.tree, policy.guild_id, store, self.game, self.tag_sync
             )
+            from girlframe.discord_adapter.character_transfer import register_character_transfer
+            from girlframe.services.character_transfer import CharacterTransferService
+
+            register_character_transfer(self.tree, policy.guild_id, CharacterTransferService(store))
 
     def _callback(
         self, name: ReadOnlyCommand
@@ -237,6 +241,7 @@ class ReadOnlyDiscordBot(discord.Client):
                         "consent remain explicit. Handler and Pilot may share an account.\n\n"
                         "/character requests — owned decisions and waiting requests\n"
                         "/character review — current complete sheet and saved review\n"
+                        "/character import, export — preview creation JSON or download your sheet\n"
                         "/character activate — explicit permanent activation\n"
                         "/character state, /sheet — private/current and approved public fields\n"
                         "/play — choose your actual character and supported Play\n"

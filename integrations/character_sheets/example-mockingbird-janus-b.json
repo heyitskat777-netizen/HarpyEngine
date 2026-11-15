@@ -1,0 +1,52 @@
+{
+  "creation": {
+    "dna_basis": "",
+    "fanbase": null,
+    "frame_appearance": "Synthetic Frame appearance",
+    "frame_assets": [
+      {
+        "description": "Synthetic example description",
+        "name": "Leviathan Rapier"
+      },
+      {
+        "description": "Synthetic example description",
+        "name": "Enhanced Nerve Processors"
+      }
+    ],
+    "frame_name": "Synthetic Frame",
+    "girl_appearance": "Synthetic appearance",
+    "girl_assets": [
+      {
+        "description": "Synthetic example description",
+        "name": "Adaptive Restraints"
+      },
+      {
+        "description": "Synthetic example description",
+        "name": "Synesthesia"
+      }
+    ],
+    "girl_details": null,
+    "npc_bonds": [
+      {
+        "feelings": "Synthetic relationship",
+        "name": "Synthetic NPC A",
+        "slot": 0
+      },
+      {
+        "feelings": "Synthetic relationship",
+        "name": "Synthetic NPC B",
+        "slot": 1
+      }
+    ],
+    "pair_asset_descriptions": [],
+    "void_asset": "Adaptive Restraints"
+  },
+  "format": "harpyengine.character-draft",
+  "profile": {
+    "callsign": "SYNTHETIC_DEMO",
+    "frame_playbook": "JANUS-B",
+    "girl_playbook": "MOCKINGBIRD",
+    "notes": null
+  },
+  "schema_version": 1
+}

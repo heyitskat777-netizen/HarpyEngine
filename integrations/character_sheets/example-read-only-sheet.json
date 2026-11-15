@@ -1,0 +1,76 @@
+{
+  "audience": "owner",
+  "character_id": null,
+  "display_name": "Synthetic Pilot",
+  "engine_version": "synthetic-example",
+  "format": "harpyengine.character-sheet",
+  "members": {
+    "100000000000000002": "Synthetic partner"
+  },
+  "owner_id": "100000000000000001",
+  "revision": 0,
+  "rules_status": "RULES_SUBSET",
+  "schema_version": 1,
+  "sheet": {
+    "assets": [
+      {
+        "damaged": false,
+        "description": "Synthetic example description",
+        "family": "girl",
+        "name": "Adaptive Restraints"
+      },
+      {
+        "damaged": false,
+        "description": "Synthetic example description",
+        "family": "girl",
+        "name": "Synesthesia"
+      },
+      {
+        "damaged": false,
+        "description": "Synthetic example description",
+        "family": "frame",
+        "name": "Leviathan Rapier"
+      },
+      {
+        "damaged": false,
+        "description": "Synthetic example description",
+        "family": "frame",
+        "name": "Enhanced Nerve Processors"
+      }
+    ],
+    "bonds": [
+      {
+        "context": "Synthetic display example; grants no live agreement.",
+        "counterpart_id": "100000000000000002",
+        "depth": "Personal"
+      }
+    ],
+    "callsign": "SYNTHETIC_DEMO",
+    "frame_appearance": "Synthetic Frame appearance",
+    "frame_name": "Synthetic Frame",
+    "frame_playbook": "JANUS-B",
+    "girl_appearance": "Synthetic appearance",
+    "girl_playbook": "MOCKINGBIRD",
+    "heat": 0,
+    "identities": [
+      {
+        "marked": false,
+        "name": "Dangerous"
+      },
+      {
+        "marked": false,
+        "name": "Malfunctioning"
+      },
+      {
+        "marked": false,
+        "name": "Corrected"
+      },
+      {
+        "marked": false,
+        "name": "Shadow of a Dream"
+      }
+    ],
+    "permissions": 0,
+    "private_notes": "Synthetic sample only. No live state or consent is imported."
+  }
+}

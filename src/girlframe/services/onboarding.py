@@ -180,27 +180,7 @@ class OnboardingStore:
                     {k: v for k, v in result.items() if k not in {"notes", "private"}},
                 )
             if kind == "character.draft_saved":
-                row = (
-                    connection.execute(
-                        sa.select(t.characters).where(
-                            t.characters.c.campaign_id == self.campaign_id,
-                            t.characters.c.user_id == str(viewer.user_id),
-                        )
-                    )
-                    .mappings()
-                    .one()
-                )
-                connection.execute(
-                    t.snapshots.insert().values(
-                        campaign_id=self.campaign_id,
-                        user_id=str(viewer.user_id),
-                        revision=row["revision"],
-                        character_id=row["id"],
-                        event_id=event_id,
-                        public_json=row["public_json"],
-                        private_json=row["private_json"],
-                    )
-                )
+                self._snapshot_draft(connection, viewer.user_id, event_id)
             return result
 
     def join(self, viewer: GuildViewer, key: str) -> dict[str, Any]:
@@ -287,40 +267,7 @@ class OnboardingStore:
             self._membership(connection, viewer)
 
         def operation(connection: Connection) -> dict[str, Any]:
-            self._membership(connection, viewer)
-            from girlframe.services.m2_state import active
-
-            if active(connection, self.campaign_id, viewer.user_id):
-                raise WorkflowError(
-                    "ACTIVE_CHARACTER: creation editors cannot reset an activated character."
-                )
-            where = (
-                t.characters.c.campaign_id == self.campaign_id,
-                t.characters.c.user_id == str(viewer.user_id),
-            )
-            row = connection.execute(sa.select(t.characters).where(*where)).mappings().first()
-            revision = row["revision"] if row else 0
-            if expected_revision != revision:
-                raise WorkflowError("STALE_REVISION: reopen your draft; nothing was overwritten.")
-            identity = row["id"] if row else str(uuid4())
-            values = {
-                "revision": revision + 1,
-                "public_json": json.dumps(draft.model_dump(exclude={"notes"})),
-                "private_json": json.dumps({"notes": draft.notes}),
-            }
-            if row:
-                connection.execute(t.characters.update().where(*where).values(**values))
-            else:
-                connection.execute(
-                    t.characters.insert().values(
-                        campaign_id=self.campaign_id,
-                        user_id=str(viewer.user_id),
-                        id=identity,
-                        **values,
-                    )
-                )
-            self._enqueue_sync(connection, viewer.user_id, revision + 1, draft)
-            return {"id": identity, "revision": revision + 1, "status": "draft_rules_unverified"}
+            return self._save_draft_in_transaction(connection, viewer, expected_revision, draft)
 
         return self._write(
             viewer,
@@ -677,3 +624,64 @@ class OnboardingStore:
                 "server.resource_recorded",
                 {"key": key, "plan_id": plan, "state": "ready" if discord_id else "pending"},
             )
+
+    def _save_draft_in_transaction(
+        self, connection: Connection, viewer: GuildViewer, expected_revision: int, draft: DraftInput
+    ) -> dict[str, Any]:
+        self._membership(connection, viewer)
+        from girlframe.services.m2_state import active
+
+        if active(connection, self.campaign_id, viewer.user_id):
+            raise WorkflowError(
+                "ACTIVE_CHARACTER: creation editors cannot reset an activated character."
+            )
+        where = (
+            t.characters.c.campaign_id == self.campaign_id,
+            t.characters.c.user_id == str(viewer.user_id),
+        )
+        row = connection.execute(sa.select(t.characters).where(*where)).mappings().first()
+        revision = row["revision"] if row else 0
+        if expected_revision != revision:
+            raise WorkflowError("STALE_REVISION: reopen your draft; nothing was overwritten.")
+        identity = row["id"] if row else str(uuid4())
+        values = {
+            "revision": revision + 1,
+            "public_json": json.dumps(draft.model_dump(exclude={"notes"})),
+            "private_json": json.dumps({"notes": draft.notes}),
+        }
+        if row:
+            connection.execute(t.characters.update().where(*where).values(**values))
+        else:
+            connection.execute(
+                t.characters.insert().values(
+                    campaign_id=self.campaign_id,
+                    user_id=str(viewer.user_id),
+                    id=identity,
+                    **values,
+                )
+            )
+        self._enqueue_sync(connection, viewer.user_id, revision + 1, draft)
+        return {"id": identity, "revision": revision + 1, "status": "draft_rules_unverified"}
+
+    def _snapshot_draft(self, connection: Connection, owner: int, event_id: str | None) -> None:
+        row = (
+            connection.execute(
+                sa.select(t.characters).where(
+                    t.characters.c.campaign_id == self.campaign_id,
+                    t.characters.c.user_id == str(owner),
+                )
+            )
+            .mappings()
+            .one()
+        )
+        connection.execute(
+            t.snapshots.insert().values(
+                campaign_id=self.campaign_id,
+                user_id=str(owner),
+                revision=row["revision"],
+                character_id=row["id"],
+                event_id=event_id,
+                public_json=row["public_json"],
+                private_json=row["private_json"],
+            )
+        )

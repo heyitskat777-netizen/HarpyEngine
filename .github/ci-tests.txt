@@ -32,3 +32,9 @@ tests/test_heat_form.py
 tests/rules/test_princess_sex.py::test_actual_directed_stim_disposal_native_mark_preserves_performer_and_princess_author
 tests/rules/test_princess_sex.py::test_actual_princess_controls_native_stim_self_dose_real_resources_author_and_parent_completion
 tests/rules/test_clone_am.py::test_clone_heat_menu_uses_current_shared_actor_balance
+# Portable character sheets: strict codec, atomic owner import, private native transport.
+tests/test_character_documents.py
+tests/test_character_transfer.py
+tests/test_character_transfer_ui.py
+tests/test_creation.py::test_owner_save_restart_history_and_private_audit
+tests/test_onboarding.py::test_join_and_draft_replay_restart_and_stale_forms

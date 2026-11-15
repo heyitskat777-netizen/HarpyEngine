@@ -142,96 +142,12 @@ class CreationService:
         draft = draft.model_copy(update={"frame_setup": frame_setup(draft.frame_playbook)})
 
         def authorize(connection: Connection) -> None:
-            from girlframe.services.m2_state import active
-
-            if active(connection, self.store.campaign_id, viewer.user_id):
-                raise WorkflowError(
-                    "ACTIVE_CHARACTER: creation editors cannot reset an activated character."
-                )
-            current = self._current(connection, viewer)
-            token = current.pair_choice.token if current.pair_choice else None
-            if token != expected_pair_token or draft.pair_source_token != token:
-                raise WorkflowError("STALE_PAIR: reopen /character build; Pair selection changed.")
-            if draft.shared_tokens != current.draft.shared_tokens:
-                raise WorkflowError("STALE_SETUP: reopen /character build; shared choices changed.")
-            names = set(current.pair_choice.names) if current.pair_choice else set()
-            if not {x.name for x in draft.pair_asset_descriptions} <= names:
-                raise WorkflowError("Describe only the Girl Assets selected by your current Pair.")
-            if draft.girl_playbook == "NEWGIRL":
-                cadre = HandlerService(self.store).cadre(connection, viewer.user_id)
-                declarations = {x.user_id: x.character_revision for x in draft.prior_missions}
-                if any(uid not in cadre or cadre[uid] != rev for uid, rev in declarations.items()):
-                    raise WorkflowError("STALE_CADRE: reopen mission history; the roster changed.")
-                if draft.cadre_discussed and (not cadre or declarations != cadre):
-                    raise WorkflowError(
-                        "Discuss and declare history for every current Cadre counterpart."
-                    )
-            if draft.starting_bond_id:
-                bonds = BondService(self.store)
-                row = next(
-                    (
-                        x
-                        for x in bonds._latest(connection, str(viewer.user_id))
-                        if x["id"] == draft.starting_bond_id
-                    ),
-                    None,
-                )
-                if row is None or row["state"] != "accepted" or bonds._stale(connection, row):
-                    raise WorkflowError("STALE_BOND: choose a current accepted starting Bond.")
-                if starting_kind(row["girl_playbook"]) != starting_kind(draft.girl_playbook) or (
-                    draft.girl_playbook in ("NEWGIRL", "BONDED")
-                    and row["source_id"] != str(viewer.user_id)
-                ):
-                    raise WorkflowError(
-                        "This Bond does not meet your playbook's starting role/depth."
-                    )
-            if draft.additional_starting_bond_id:
-                bonds = BondService(self.store)
-                rows = {x["id"]: x for x in bonds._latest(connection, str(viewer.user_id))}
-                extra = rows.get(draft.additional_starting_bond_id)
-                if (
-                    extra is None
-                    or extra["state"] != "accepted"
-                    or bonds._stale(connection, extra)
-                    or starting_kind(extra["girl_playbook"]) != "Personal"
-                ):
-                    raise WorkflowError(
-                        "STALE_BOND: choose a current accepted Personal second Bond."
-                    )
-                primary = rows.get(draft.starting_bond_id or "")
-                if primary is not None and {primary["source_id"], primary["target_id"]} == {
-                    extra["source_id"],
-                    extra["target_id"],
-                }:
-                    raise WorkflowError("The second starting Bond needs a different character.")
+            self._authorize_save(connection, viewer, draft, expected_pair_token)
 
         def operation(connection: Connection) -> dict[str, Any]:
-            current = self._current(connection, viewer)
-            if (
-                current.revision != expected_revision
-                or current.character_revision != character_revision
-            ):
-                raise WorkflowError("STALE_REVISION: reopen /character build; progress preserved.")
-            if (draft.girl_playbook, draft.frame_playbook) != (
-                current.draft.girl_playbook,
-                current.draft.frame_playbook,
-            ):
-                raise WorkflowError("Creation choices must match your saved character playbooks.")
-            result = {"revision": expected_revision + 1, "status": "creation_in_progress"}
-            event = self.store._audit(
-                connection, viewer.user_id, key, "character.creation_saved", result
+            return self._save_in_transaction(
+                connection, viewer, key, expected_revision, character_revision, draft
             )
-            connection.execute(
-                t.creation_drafts.insert().values(
-                    campaign_id=self.store.campaign_id,
-                    user_id=str(viewer.user_id),
-                    revision=expected_revision + 1,
-                    character_revision=character_revision,
-                    event_id=event,
-                    body_json=draft.model_dump_json(),
-                )
-            )
-            return result
 
         return self.store._write(
             viewer,
@@ -247,3 +163,105 @@ class CreationService:
             auto_audit=False,
             authorize=authorize,
         )
+
+    def _authorize_save(
+        self,
+        connection: Connection,
+        viewer: GuildViewer,
+        draft: CreationDraft,
+        expected_pair_token: str | None,
+    ) -> None:
+        from girlframe.services.m2_state import active
+
+        if active(connection, self.store.campaign_id, viewer.user_id):
+            raise WorkflowError(
+                "ACTIVE_CHARACTER: creation editors cannot reset an activated character."
+            )
+        current = self._current(connection, viewer)
+        token = current.pair_choice.token if current.pair_choice else None
+        if token != expected_pair_token or draft.pair_source_token != token:
+            raise WorkflowError("STALE_PAIR: reopen /character build; Pair selection changed.")
+        if draft.shared_tokens != current.draft.shared_tokens:
+            raise WorkflowError("STALE_SETUP: reopen /character build; shared choices changed.")
+        names = set(current.pair_choice.names) if current.pair_choice else set()
+        if not {x.name for x in draft.pair_asset_descriptions} <= names:
+            raise WorkflowError("Describe only the Girl Assets selected by your current Pair.")
+        if draft.girl_playbook == "NEWGIRL":
+            cadre = HandlerService(self.store).cadre(connection, viewer.user_id)
+            declarations = {x.user_id: x.character_revision for x in draft.prior_missions}
+            if any(uid not in cadre or cadre[uid] != rev for uid, rev in declarations.items()):
+                raise WorkflowError("STALE_CADRE: reopen mission history; the roster changed.")
+            if draft.cadre_discussed and (not cadre or declarations != cadre):
+                raise WorkflowError(
+                    "Discuss and declare history for every current Cadre counterpart."
+                )
+        if draft.starting_bond_id:
+            bonds = BondService(self.store)
+            row = next(
+                (
+                    x
+                    for x in bonds._latest(connection, str(viewer.user_id))
+                    if x["id"] == draft.starting_bond_id
+                ),
+                None,
+            )
+            if row is None or row["state"] != "accepted" or bonds._stale(connection, row):
+                raise WorkflowError("STALE_BOND: choose a current accepted starting Bond.")
+            if starting_kind(row["girl_playbook"]) != starting_kind(draft.girl_playbook) or (
+                draft.girl_playbook in ("NEWGIRL", "BONDED")
+                and row["source_id"] != str(viewer.user_id)
+            ):
+                raise WorkflowError("This Bond does not meet your playbook's starting role/depth.")
+        if draft.additional_starting_bond_id:
+            bonds = BondService(self.store)
+            rows = {x["id"]: x for x in bonds._latest(connection, str(viewer.user_id))}
+            extra = rows.get(draft.additional_starting_bond_id)
+            if (
+                extra is None
+                or extra["state"] != "accepted"
+                or bonds._stale(connection, extra)
+                or starting_kind(extra["girl_playbook"]) != "Personal"
+            ):
+                raise WorkflowError("STALE_BOND: choose a current accepted Personal second Bond.")
+            primary = rows.get(draft.starting_bond_id or "")
+            if primary is not None and {primary["source_id"], primary["target_id"]} == {
+                extra["source_id"],
+                extra["target_id"],
+            }:
+                raise WorkflowError("The second starting Bond needs a different character.")
+
+    def _save_in_transaction(
+        self,
+        connection: Connection,
+        viewer: GuildViewer,
+        key: str,
+        expected_revision: int,
+        character_revision: int,
+        draft: CreationDraft,
+    ) -> dict[str, Any]:
+        current = self._current(connection, viewer)
+        if (
+            current.revision != expected_revision
+            or current.character_revision != character_revision
+        ):
+            raise WorkflowError("STALE_REVISION: reopen /character build; progress preserved.")
+        if (draft.girl_playbook, draft.frame_playbook) != (
+            current.draft.girl_playbook,
+            current.draft.frame_playbook,
+        ):
+            raise WorkflowError("Creation choices must match your saved character playbooks.")
+        result = {"revision": expected_revision + 1, "status": "creation_in_progress"}
+        event = self.store._audit(
+            connection, viewer.user_id, key, "character.creation_saved", result
+        )
+        connection.execute(
+            t.creation_drafts.insert().values(
+                campaign_id=self.store.campaign_id,
+                user_id=str(viewer.user_id),
+                revision=expected_revision + 1,
+                character_revision=character_revision,
+                event_id=event,
+                body_json=draft.model_dump_json(),
+            )
+        )
+        return result
