@@ -6140,3 +6140,37 @@ main unchanged. No deployment, environment publication, live migration, model
 call, synthetic fixture approval installation or human testing occurred.
 See [the current native packet](P1_PRELIVE_CANDIDATE_20261114.md) and
 [command/player plan](../docs/P1_PLAYER_TEST_PLAN.md).
+
+## Repaired native candidate — exact full regression green
+
+Exact **`5412ee8c431cfee63ecbd8b5e4ff2db97b60c601`** on
+`codex/r285-integration-20261114` passes complete
+[CI43657613489](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43657613489):
+**3,328passed/0failures/0errors/0skips in4,472.244s** JUnit duration. Downloaded
+artifact scope is full and records this exact SHA. All four memory-pagination
+cases, both authorized session-mix files/five cases and every new native workflow
+pass. This full run supersedes the earlier red run and focused retry for the
+repaired source; neither historical result is removed or relabeled.
+
+Global Ruff/format1,917Python files and mypy912source files pass. Final CI also
+passes CLI, runtime registry, planning and publishable-file checks:
+479entries/440required/6verified required plus2verified optional native ports;
+34required planning files/86planned cases/4schemas/4synthetic fixtures;
+2,016publishable files/40original manifest entries/0findings.
+
+Current-source actual synthetic backup→new0600restore→two fresh interpreters
+again preserves45tables and canonical state identically, with measured source
+DB/WAL hashes unchanged. Restored upgrade/schema checks pass. Its matching
+immutable-source private policy passes offline `start --check`; original policy
+is preserved and no fixture approval or live policy is installed. The separate
+reviewers closed the small optional-cast and source-derived Tag repairs within
+their declared contracts. Evidence-only publication preserves source/test/rules
+trees identical to5412ee8 and requires no redundant gameplay rerun.
+
+Ready for owner/facilitator review of the first scoped live test. The proposed
+policy covers original native Pilot/Core base plays/playbooks/world/discipline,
+with explicit seven-Play native Risk opt-in. Missions/economy/Strain/Off-Duty are
+not enabled by that proposal. Real campaign approval, backed-up0011→0020live
+migration/restart, broader all-type review and human P1 acceptance remain open.
+Bot OFF; RULES_SUBSET; no shared-main merge, deployment, environment publication,
+model call, Ancillary enablement or recovered-engine write occurred.

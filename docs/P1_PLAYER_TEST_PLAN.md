@@ -1,7 +1,11 @@
 # P1 player testing — scoped pre-live review handoff
 
-The current native repair packet has genuine component reviews and focused
-checks; its new exact final regression is pending. The first proposed live scope
+The current native repair packet has genuine component reviews and passes its
+exact final regression: `5412ee8c431cfee63ecbd8b5e4ff2db97b60c601`,
+[full CI43657613489](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43657613489),
+3,328passed/0failures/errors/skips plus all global/runtime/planning/privacy gates.
+Its actual45-table synthetic restore/reopen and private offline policy check pass.
+The first proposed live scope
 is original native Pilot/Core gameplay with explicitly reviewed sources. Broader
 all-type acceptance remains pending and is not inferred from this first session.
 No live policy is installed and the bot remains OFF.
@@ -9,9 +13,10 @@ No live policy is installed and the bot remains OFF.
 Previously verified offline candidate `a36acabd8a4f9abd21b78f054c7f368ab45cef35` passes its complete
 3,300-test CI run, global checks and actual synthetic restore/reopen gate.
 See [the evidence and review limits](../reports/P1_FINAL_CANDIDATE_20261114.md).
-**Live-session activation remains pending. Bot OFF.** Independent rules/clarity
-review, matching real scoped campaign policy and an authorized restart are still
-required; no test approval has been installed into a live campaign.
+**Live-session activation remains pending. Bot OFF.** Independent component
+source review is recorded for the first native cohort. A genuine matching scoped
+campaign policy and backed-up migration/authorized restart remain required;
+broader all-type review is open. No fixture approval is installed live.
 
 ## Before scheduling the session
 
@@ -101,7 +106,10 @@ accepted by a human.
 1. Each Pilot completes `/character build` and `/character review`, then confirms
    `/character activate`. Inspect `/character state` and the public `/sheet`;
    only the selected public fields should be shared.
-2. Staff binds the chosen test channel with `/campaign scene_bind`. Participating
+2. Staff uses `/mission world` and `/mission position` for the actual shared
+   map/body/Frame facts, with each owner and required reviewer confirming them.
+   Channel membership does not establish physical position. Staff binds the
+   chosen test channel with `/campaign scene_bind`. Participating
    Pilots join using `/campaign scene_join`. Use `/mission cast` for actual owned
    roles; a Core's controller does not lend the Core their separate Pilot sheet.
 3. The JANUS owner opens `/mission janus` to register the original Core. Its

@@ -1,11 +1,14 @@
 # P1 scoped pre-live repair candidate
 
 The original native Pilot/Core packet is implemented, independently source-reviewed
-by component and focused-tested. The bot remains OFF. The first exact full run
-on `0fa91ec0cd79ab9a3188bc27ed81c0b672eef779` completed **3,275 passed/53 failed**;
-its demonstrated failures are repaired and pass a focused55-node retry. A repaired
-exact full run remains pending. The earlier a36acab3,300-pass run
-does not cover this delta.
+by component and passes its exact final regression. **Ready for scoped live-test
+review; bot OFF.** Exact candidate
+`5412ee8c431cfee63ecbd8b5e4ff2db97b60c601` on
+`codex/r285-integration-20261114` passes
+[full CI43657613489](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43657613489):
+**3,328passed/0failures/0errors/0skips in4,472.244s** JUnit duration.
+The downloaded artifact records this exact SHA and `Scope: full`.
+Earlier red/focused/baseline runs below remain historical evidence.
 
 ## Delivered behavior
 
@@ -28,6 +31,24 @@ The Core-only Defeat disposition interpretation is explicitly recorded in
 wording. Original Frame/hardware and other Pilot resources stay at their genuine
 source, with actual temporary neural-link benefits ending appropriately.
 
+## Final exact verification — November15
+
+| Gate | Actual evidence |
+|---|---|
+| Complete regression | Full CI43657613489:3,328passed,0failures/errors/skips. Includes all four Deep-Brain-Spikes pagination cases, both existing session-mix files/five cases, and every new native test. |
+| Global static | Ruff and format1,917Python files; mypy912source files, all pass. |
+| CLI/registry/planning/privacy | All final CI steps pass:479registry entries/6verified required+2verified optional;34required files/86planned cases/4schemas/4synthetic fixtures;2,016publishable files/40original manifest entries/0findings. RULES_SUBSET remains. |
+| Actual current-source restore | CLI backup→new0600restore→two fresh-process reopen preserves45tables and canonical state identically, with measured source DB/WAL hashes unchanged. Restored upgrade/schema checks pass. |
+| Independent delta review | First-roster reviewer inspects root's optional-cast repair; core reviewer inspects first-roster author's Tag inventory/source proof. Three test-only Sin continuations preserve owned work, original receipt and identical retries. |
+| Private live proposal | Matching unapplied policy, preserved original policy, immutable source/registry/migrations and backed-up migration/restart scripts prepared. Immutable-source offline `start --check` passes without token/login. No live policy or database write occurred. |
+
+The first proposed policy enables plays/playbooks/world/discipline and an explicit
+seven-Play native Risk opt-in. Missions/economy/Strain/Off-Duty are excluded. It
+needs genuine owner/facilitator approval and a separate backed-up0011→0020 live
+migration/restart. Human tests are not run; broader all-type source/campaign
+scope and P1/full-M3 acceptance remain open. Evidence-only publication preserves
+the exact verified source/test/rules trees; it does not create a new runtime.
+
 ## Focused evidence
 
 | Check | Actual outcome |
@@ -43,9 +64,9 @@ source, with actual temporary neural-link benefits ending appropriately.
 
 Initial fixture/integration failures were retained and corrected; successful
 focused nodes were not repeatedly swept or called a full regression. The exact
-candidate's full suite will include every existing test, four memory pagination
-checks and both previously paused session-mix files, plus all new tests. Required
-global/static/migration/privacy/restore evidence remains part of that final gate.
+candidate's full suite above includes every existing test, four memory pagination
+checks, both previously paused session-mix files and all new tests. Required
+global/static/migration/privacy/restore evidence is recorded separately above.
 
 ## Review and first live scope
 
@@ -60,7 +81,7 @@ percentages or human acceptance.
 The first proposed live cohort uses original native Pilot/Core base sources and
 explicit native Risk IDs. Advanced powers, optional Requisitions, unsupported
 role/resource ports and broader all-type acceptance remain separately gated.
-A private policy/release proposal will be prepared without installing it. No
+A private policy/release proposal is prepared without installing it. No
 synthetic fixture approval, credentials, private PDF/archive, campaign contents,
 live migration, bot login/restart, deployment or environment publication is
 included in this source push.
@@ -79,8 +100,8 @@ The failures divide into47 optional Harpy-target lookups demanding an explicit
 cast in ordinary native scenes,3 source-derived native Tag rejection regressions,
 and3 old completion assertions now reaching genuine mandatory Sin work. Repairs
 retain explicit-cast validation, actual Tag provenance and genuine Girl-owned
-continuations. Failed nodes and directly affected new consumers will be retried
-before a new exact candidate full run. This red run remains historical evidence.
+continuations. Failed nodes and directly affected new consumers were retried
+before the repaired exact full run. This red run remains historical evidence.
 
 All53original failures plus two directly affected existing native consumers pass
 **55/258.725s,0failures/errors/skips** on the frozen repair union. The first-roster
@@ -91,8 +112,8 @@ retain actual Girl-owned effects and share one neutral owner-proposal/GM-approva
 physical-setup helper. No consequence or source guard was removed to satisfy an
 old completion assertion. This is focused evidence, not a full regression.
 
-The actual synthetic CLI backup→0600 new restore→fresh-process reopen on this
-candidate preserves45tables and canonical state identically; source DB/WAL byte
+The actual synthetic CLI backup→0600 new restore→fresh-process reopen on both
+0fa91ec and5412ee8 preserves45tables and canonical state identically; source DB/WAL byte
 hashes are unchanged. Restored upgrade/schema checks pass. A private unapplied
 policy, preserved original policy and immutable source/migration scripts are
 prepared; offline `start --check` passes without token access/login. They are not

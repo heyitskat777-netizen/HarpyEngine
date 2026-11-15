@@ -1,5 +1,14 @@
 # P1 pre-live source review and synthetic session
 
+Final verification update November15: exact
+`5412ee8c431cfee63ecbd8b5e4ff2db97b60c601` passes3,328tests/0failures/errors/skips
+in [full CI43657613489](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43657613489),
+including every new source workflow and the bounded regression repairs. Global
+checks and actual current-source restore pass. Pending-run wording in the
+chronological review notes below is superseded by
+[the current candidate](../../reports/P1_PRELIVE_CANDIDATE_20261114.md).
+Real campaign/human/live approval and broader all-type review remain separate.
+
 The owner authorized separate rules/clarity review and preparation up to live
 playtesting. The bot remains OFF. This record distinguishes the previously green
 candidate from subsequent source repairs; it does not grant live campaign approval.

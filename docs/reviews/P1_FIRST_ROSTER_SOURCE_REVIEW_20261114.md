@@ -1,5 +1,13 @@
 # P1 first-roster source review — November14,2026
 
+Final verification update November15: exact5412ee8 passes the full3,328-test
+[CI43657613489](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43657613489),
+with0failures/errors/skips and all global gates. The final source repair's native
+Tag inventory/proof was independently reviewed by the core reviewer; this
+first-roster reviewer independently inspected root's optional no-cast UI guard.
+Earlier pending/focused-only wording below records the review chronology.
+Scope/actor exceptions remain; no real campaign or human approval is granted.
+
 Reviewer: independent Codex agent `/root/p1_first_roster_review`.
 Implementation author for Sin engine/service: `/root/p1_core_rules_review`, with
 root shared source-proof integration. The reviewer did not author that provider.
