@@ -60,3 +60,36 @@ This is focused patch evidence, **not a new full regression**. The3,328-case
 5412ee8 full regression remains historical baseline evidence. Human file upload,
 review and cross-application UI integration remain untested. The running v0.1.3
 bot is preserved; new commands are packaged source, not live command registration.
+
+## Final exact source and package
+
+Source: `fe47d7ef0b558a1106f5dc48b25c277aff5f875b`, package **v0.1.4**.
+[Focused CI43710860896](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43710860896)
+passes **85tests, zero failures/errors/skips**,105.704s. Changed-source static,
+CLI, registry, planning and sanitized-repository checks pass. Full-suite mode was
+not run. The12new/affected checks and prior73-case packet were retained.
+
+Artifact: `var/releases/character-sheets-v0.1.4/HarpyEngine_Character_Sheets_v0.1.4.zip`
+(6,920,854bytes,986entries). SHA256:
+`e6ee723b54ba9179909907bb746055209fdf108cd6fc61d357b03ea06574b96a`. Sidecar checksum, successful exact-source CI metadata and per-file
+manifest hashes are included/retained. Build command:
+
+```sh
+.venv/bin/python tools/build_character_sheet_package.py \
+  --source-ref fe47d7ef0b558a1106f5dc48b25c277aff5f875b \
+  --output-dir var/releases/character-sheets-v0.1.4 \
+  --ci-evidence var/character-sheets/ci-evidence.json
+```
+
+Fresh ZIP extraction: the supplied locked installer exited0; its Python3.12
+environment parsed the synthetic example. Installing the bundled wheel into that
+disposable environment then importing from actual site-packages verified v0.1.4,
+document parsing and identical printable output. No database or bot was created.
+ZIP CRC and every manifest file hash passed after build and again for delivery.
+Browser/Python round trip and both generated Schema/example pairs validate.
+
+Sanitized source is published on `codex/r285-integration-20261114`; no main merge,
+live restart, command sync, campaign change or environment publication occurred.
+The source-pinned live v0.1.3 process remains separate. To integrate the other
+application, upload this ZIP to that task and read its root INTEGRATION_HANDOFF.md.
+Human import/confirmation and the separate UI's actual integration remain pending.

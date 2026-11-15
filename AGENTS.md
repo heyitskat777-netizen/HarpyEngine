@@ -1,3 +1,14 @@
+# Current character-sheet integration package
+
+Owner-authorized JSON file bridge is packaged as v0.1.4 from exact source
+`fe47d7ef0b558a1106f5dc48b25c277aff5f875b`;85focused CI checks and fresh ZIP
+installer/wheel smoke pass. See reports/P1_CHARACTER_SHEET_EXCHANGE.md and
+integrations/character_sheets/INTEGRATION_HANDOFF.md. The separate Campaign UI
+chat remains inaccessible. No HTTP/OAuth server, PDF/OCR or active-state migration.
+Current live runtime remains pinned v0.1.3 below; no restart or command sync was
+performed for package delivery. Keep owner confirmation/coordination/activation
+and public/private projections intact. This is not a new full regression.
+
 # Active owner direction — P1
 
 Latest owner change supersedes the earlier two-required-Bonds house rule:

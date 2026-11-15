@@ -1,7 +1,7 @@
 # HarpyEngine — GIRL FRAME private Discord pilot
 
-Character-sheet exchange development: versioned JSON import/export and printable
-sheets are packaged separately for the Campaign UI/another Discord app. See
+Character-sheet exchange v0.1.4: source `fe47d7e` passes85focused CI checks.
+Versioned JSON import/export and printable sheets are packaged separately for the Campaign UI/another Discord app. See
 [the bounded integration evidence](reports/P1_CHARACTER_SHEET_EXCHANGE.md). Current live v0.1.3
 is preserved; package work does not change campaign approvals or activate sheets.
 
