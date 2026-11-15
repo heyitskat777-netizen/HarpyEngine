@@ -179,7 +179,14 @@ class HeatForm(NativeForm):
         if self.refresh_resources is not None:
             self.resources = await self.refresh_resources()
         self.controls()
-        if self.values != chosen:
+        neutral_keys = {"gain", "pair_share", "share", self.disposal_key}
+        marking = chosen.get("identity") not in (None, (), "none", ("none",), "")
+        if any(
+            self.values.get(key) != value
+            and not (key in neutral_keys and value in (None, (), ("0",), "0", 0))
+            and not (key == "gain" and not marking)
+            for key, value in chosen.items()
+        ):
             await reply(
                 interaction,
                 "Resources or available options changed. "

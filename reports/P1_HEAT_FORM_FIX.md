@@ -52,3 +52,13 @@ again. Never silently omit an intended mark and commit a different Play. The
 three Heat-form normal cases pass after this guard (3passed,1.33s), including an
 Identity marked elsewhere while the form is open. Original service transactions,
 revision checks and idempotency remain unchanged.
+
+Focused CI43698787612 at49d0e26reported60passed/13failed: the new confirmation
+guard treated ignored gain/share defaults as changed intent in existing native
+Harpy/Princess flows. First targeted correction left12failures; the complete
+semantic correction preserves the existing rule that gain without an Identity
+has no effect, and zero share/disposal defaults have no effect. Actual selected
+Identity loss or invalidated spending still requires renewed confirmation. All13
+original failed nodes plus the3stale/budget cases then passed together:
+16passed in27.06s. No existing tests were removed or weakened; failures/artifacts
+are retained privately. A new exact-commit focused gate is required before startup.
