@@ -1,6 +1,19 @@
 # P1 player testing — first scoped live session
 
-Current live build: `d2b4c853981ea7b00ced572aedbe1f16e11f44dd`, **v0.1.3**.
+Current live build: `fe47d7ef0b558a1106f5dc48b25c277aff5f875b`, **v0.1.4**.
+Owner-authorized restart and live readback are complete: one frozen process,
+Running v0.1.4presence,19guild groups and16character subcommands.
+`/character import` and `/character export` are registered, including JSON
+templates/snapshots and printable HTML. Existing global launch is preserved.
+Fresh private backup and all45table rows were verified before startup; policy,
+schema0020,optional second Bond and existing active sheets are preserved.
+[Focused CI43710860896](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43710860896)
+passes85tests; this is not a new full regression or human acceptance.
+See [sheet-exchange/deployment evidence](../reports/P1_CHARACTER_SHEET_EXCHANGE.md). Human UI/file roundtrip remains pending.
+
+The following package-delivery and previous-release notes are historical.
+
+Previous live build: `d2b4c853981ea7b00ced572aedbe1f16e11f44dd`, **v0.1.3**.
 Native Heat forms now show the actual available budget plus selected eligible
 Identity/disposal gain, less any Paired share. They clear invalid spending choices
 and require confirmation again for real changed intent. Paired split appears only
@@ -49,6 +62,25 @@ recorded for the first native cohort. Broader all-type review is open. No fixtur
 approval is installed live. Older pre-live approval instructions below describe
 the preparation gate; they are completed for this release and still apply before
 expanding its scope.
+
+## Character-sheet exchange checks — live v0.1.4
+
+1. Run `/character export`, choose Current sheet snapshot or Printable current
+   sheet, Owner view, and leave personal notes off. The download stays private;
+   current names/traits and draft/active status should be clear.
+2. Export Approved public fields. Private notes and unshared mechanics must be
+   absent, including when you own the exported character.
+3. With an **inactive test draft**, export an Importable creation template or
+   download a compatible JSON file from the new Campaign UI. Use
+   `/character import document:<file>`, review privately and confirm. Reopen
+   `/character build` or `/character review`; supported choices/text must persist.
+   Profile changes can schedule the normal role/nickname sync.
+4. Finish real coordination/review/activation separately. Import must not create
+   consent or activate a sheet. Activated-sheet replacement is intentionally
+   blocked; do not reset a real character to test import.
+
+Report passed/failed/not-tested plus the command and safe error/reproduction
+details. Do not send private sheet files or notes into public reports.
 
 ## First-session checklist — run in order
 

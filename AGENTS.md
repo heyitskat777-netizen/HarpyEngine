@@ -1,13 +1,21 @@
-# Current character-sheet integration package
+# Current live character-sheet integration — v0.1.4
 
-Owner-authorized JSON file bridge is packaged as v0.1.4 from exact source
-`fe47d7ef0b558a1106f5dc48b25c277aff5f875b`;85focused CI checks and fresh ZIP
-installer/wheel smoke pass. See reports/P1_CHARACTER_SHEET_EXCHANGE.md and
+The owner approved the recommended v0.1.4 rollout with “proceed.” Exact frozen
+runtime `fe47d7ef0b558a1106f5dc48b25c277aff5f875b` is now live on one process,
+with Running v0.1.4presence,19guild groups and16character subcommands.
+Discord REST confirms /character import and export (JSON/HTML), and the existing
+global launch is preserved.85focused CI checks and fresh package installer/wheel
+checks pass; all946frozen source/rules/migration files match the tested source.
+Fresh private backup matched all45table rows; schema0020and policy are unchanged.
+Keep this pinned runtime up while developing; check the actual private deployment
+record at var/discord-dev/p1-deployment.json before any later restart.
+
+See reports/P1_CHARACTER_SHEET_EXCHANGE.md and
 integrations/character_sheets/INTEGRATION_HANDOFF.md. The separate Campaign UI
 chat remains inaccessible. No HTTP/OAuth server, PDF/OCR or active-state migration.
-Current live runtime remains pinned v0.1.3 below; no restart or command sync was
-performed for package delivery. Keep owner confirmation/coordination/activation
-and public/private projections intact. This is not a new full regression.
+Human file roundtrip/acceptance remains pending. Keep owner confirmation, live
+coordination, activation and public/private projections intact. This is focused
+patch evidence, not a new full regression or expanded gameplay approval.
 
 # Active owner direction — P1
 
@@ -22,9 +30,9 @@ owner_second_starting_bond_optional=true makes the second optional. Preserve the
 per-character setup-test bypass for the primary requirement as well.
 Every runtime release must bump src/girlframe/__init__.py's __version__; package
 metadata and Discord lifecycle presence derive from that single source. Docs-only
-evidence commits do not require a version bump. The current runtime release is0.1.3.
+evidence commits do not require a version bump. The current runtime release is0.1.4.
 
-Current live build: `d2b4c853981ea7b00ced572aedbe1f16e11f44dd`, **v0.1.3**.
+Previous live build (historical): `d2b4c853981ea7b00ced572aedbe1f16e11f44dd`, **v0.1.3**.
 Native Heat forms now show the actual available budget plus selected eligible
 Identity/disposal gain, less any Paired share. They clear invalid spending choices
 and require confirmation again for real changed intent. Paired split appears only

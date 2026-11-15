@@ -1,11 +1,24 @@
 # HarpyEngine — GIRL FRAME private Discord pilot
 
-Character-sheet exchange v0.1.4: source `fe47d7e` passes85focused CI checks.
+Current live build: `fe47d7ef0b558a1106f5dc48b25c277aff5f875b`, **v0.1.4**.
+Owner-authorized restart and live readback are complete: one frozen process,
+Running v0.1.4presence,19guild groups and16character subcommands.
+`/character import` and `/character export` are registered, including JSON
+templates/snapshots and printable HTML. Existing global launch is preserved.
+Fresh private backup and all45table rows were verified before startup; policy,
+schema0020,optional second Bond and existing active sheets are preserved.
+[Focused CI43710860896](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43710860896)
+passes85tests; this is not a new full regression or human acceptance.
+See [sheet-exchange/deployment evidence](reports/P1_CHARACTER_SHEET_EXCHANGE.md). Human UI/file roundtrip remains pending.
+
+The following package-delivery and previous-release notes are historical.
+
+At package delivery, character-sheet exchange source `fe47d7e` passed85focused CI checks.
 Versioned JSON import/export and printable sheets are packaged separately for the Campaign UI/another Discord app. See
 [the bounded integration evidence](reports/P1_CHARACTER_SHEET_EXCHANGE.md). Current live v0.1.3
 is preserved; package work does not change campaign approvals or activate sheets.
 
-Current live build: `d2b4c853981ea7b00ced572aedbe1f16e11f44dd`, **v0.1.3**.
+Previous live build: `d2b4c853981ea7b00ced572aedbe1f16e11f44dd`, **v0.1.3**.
 Native Heat forms now show the actual available budget plus selected eligible
 Identity/disposal gain, less any Paired share. They clear invalid spending choices
 and require confirmation again for real changed intent. Paired split appears only

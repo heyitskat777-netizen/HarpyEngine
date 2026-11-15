@@ -93,3 +93,28 @@ live restart, command sync, campaign change or environment publication occurred.
 The source-pinned live v0.1.3 process remains separate. To integrate the other
 application, upload this ZIP to that task and read its root INTEGRATION_HANDOFF.md.
 Human import/confirmation and the separate UI's actual integration remain pending.
+
+## Owner-authorized live rollout
+
+After package delivery, the owner approved the recommended v0.1.4 rollout with
+“proceed.” Runtime now uses exact frozen source
+`fe47d7ef0b558a1106f5dc48b25c277aff5f875b`. Its85-case focused CI evidence above was reused;
+no source change or new full regression was needed.
+
+Authentication/application/guild preflight and offline policy validation passed
+before stopping the old process. A fresh0600backup passed integrity/foreign-key
+checks and matched all45tables' rows after the previous
+process stopped. Schema0020and the private policy remain unchanged.
+
+Gateway readiness and Running v0.1.4presence are verified. There is one pinned
+process; all946frozen source/rules/migration files match the tested Git source.
+Discord REST readback verifies19guild groups,16character subcommands including
+import(document attachment) and export(template/sheet/html;owner/public;notes/member).
+The existing global launch command is byte-for-byte unchanged in readback.
+Backup hashes remain intact; operational authority is the private
+`var/discord-dev/p1-deployment.json`. No migration, fabricated player action,
+AI call, main merge or environment publication occurred.
+
+Human checks remain pending: export a sheet privately, then perform the
+UI→JSON→preview→confirmation→reopen flow with an inactive test draft. Active-sheet
+imports must remain blocked. See docs/P1_PLAYER_TEST_PLAN.md for live checks.
