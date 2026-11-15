@@ -59,20 +59,23 @@ class ChoiceEngine:
 
     def flirt_intense(self, c: Connection, state: GameState, desiring: int, other: int) -> bool:
         """Use the actual respondent's relationship, including its own one-sided benefit."""
-        if state.bonds.get(pair_key(desiring, other), 0) == 2:
-            return True
         first, second = state.sheets[str(desiring)], state.sheets[str(other)]
         if not first.character_id or not second.character_id:
-            return False
+            return state.bonds.get(pair_key(desiring, other), 0) == 2
+        from girlframe.engine.m3_actor_bonds import depth
         from girlframe.engine.m3_actor_state import ActorRef
         from girlframe.services.m3_ankou_bonds import intense_benefit
 
+        actor = ActorRef(kind="pilot", entity=str(desiring), incarnation=first.character_id)
+        target = ActorRef(kind="pilot", entity=str(other), incarnation=second.character_id)
+        if depth(state, actor, target) == 2:
+            return True
         return intense_benefit(
             self.game,
             c,
             state,
-            ActorRef(kind="pilot", entity=str(desiring), incarnation=first.character_id),
-            ActorRef(kind="pilot", entity=str(other), incarnation=second.character_id),
+            actor,
+            target,
         )
 
     def duplicate_labels(self) -> bool:

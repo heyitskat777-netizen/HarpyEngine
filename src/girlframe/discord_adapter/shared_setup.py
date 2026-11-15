@@ -9,6 +9,10 @@ from discord import app_commands
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.creation import clean
+from girlframe.discord_adapter.member_names import (
+    member_label,
+    render_member_labels,
+)
 from girlframe.discord_adapter.onboarding import action_gate, reply
 from girlframe.engine.shared_setup import AM_ROLES, CallsignChoice, CourtChoice, Kind
 from girlframe.services.bonds import Decision
@@ -129,7 +133,7 @@ class ChoiceView(PrivateView):
             else "Accepted callsign is saved for activation; profile/nickname stays unchanged."
         )
         return (
-            f"**Private {self.kind} setup request to player {self.target}**\n"
+            f"**Private {self.kind} setup request to {member_label(self.target)}**\n"
             + clean(value)
             + "\n"
             + detail
@@ -138,8 +142,11 @@ class ChoiceView(PrivateView):
 
     async def render(self, interaction: discord.Interaction) -> None:
         if not interaction.response.is_done() and interaction.message is not None:
-            await interaction.response.edit_message(
-                content=self.text(), view=self, allowed_mentions=discord.AllowedMentions.none()
+            await interaction.response.defer()
+            await interaction.edit_original_response(
+                content=await render_member_labels(interaction, self.text()),
+                view=self,
+                allowed_mentions=discord.AllowedMentions.none(),
             )
         else:
             await reply(interaction, self.text(), self)
@@ -190,7 +197,7 @@ def request_text(row: dict[str, Any]) -> str:
     )
     return (
         f"**Private {row['kind']} setup**\n"
-        f"From player {row['source_id']} to player {row['target_id']}\n"
+        f"From {member_label(row['source_id'])} to {member_label(row['target_id'])}\n"
         + clean(value)
         + "\nState: "
         + str(row["state"])
@@ -269,12 +276,14 @@ class RequestSelect(discord.ui.Select["RequestList"]):
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:
+        if not interaction.response.is_done():
+            await interaction.response.defer()
         parent = self.parent_view
         row = await asyncio.to_thread(
             parent.service.get, viewer_from_interaction(interaction), self.values[0]
         )
-        await interaction.response.edit_message(
-            content=request_text(row),
+        await interaction.edit_original_response(
+            content=await render_member_labels(interaction, request_text(row)),
             view=RequestView(parent.service, parent.owner, row),
             allowed_mentions=discord.AllowedMentions.none(),
         )

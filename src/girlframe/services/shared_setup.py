@@ -298,7 +298,12 @@ class SharedSetupService:
             ):
                 raise WorkflowError("Choose another active campaign participant.")
             state = HandlerService(self.store).view(viewer)
-            if state["handler_active"] and state["handler_id"] in (viewer.user_id, target):
+            roster = HandlerService(self.store)._roster(connection)
+            if (
+                state["handler_active"]
+                and state["handler_id"] in (viewer.user_id, target)
+                and state["handler_id"] not in roster
+            ):
                 return {"higher": state["handler_id"] == viewer.user_id, "basis": "Handler"}
             from girlframe.engine.m2 import higher
             from girlframe.services.m2_state import load_state

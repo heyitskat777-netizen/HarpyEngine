@@ -62,7 +62,6 @@ class HandlerService:
             raise WorkflowError("Only the explicitly appointed campaign Handler can do this.")
 
     def _roster(self, connection: Connection) -> dict[int, dict[str, Any]]:
-        handler = self.current(connection)[1].handler_id
         rows = connection.execute(
             sa.select(t.characters.c.user_id, t.characters.c.revision, t.characters.c.public_json)
             .join(
@@ -79,7 +78,6 @@ class HandlerService:
         return {
             int(user): {"revision": revision, **json.loads(public)}
             for user, revision, public in rows
-            if int(user) != handler
         }
 
     def roster(self, viewer: GuildViewer) -> dict[str, Any]:
@@ -93,7 +91,9 @@ class HandlerService:
         }
         handler = self.current(connection)[1].handler_id
         if handler is not None and handler != owner and self._member(connection, handler):
-            result[handler] = None
+            # One account may control both roles. Keep its actual Pilot profile
+            # rather than replacing that incarnation with the Handler sentinel.
+            result.setdefault(handler, None)
         return result
 
     def rulings(
@@ -280,7 +280,7 @@ class HandlerService:
                 )
             if len(set(ids)) != len(ids) or set(ids) != set(roster):
                 raise WorkflowError(
-                    "Rank every active Pilot exactly once; Handler is outside Pilot ranks."
+                    "Rank every active Pilot exactly once, including a Handler's Pilot."
                 )
             if any(roster[x.user_id]["revision"] != x.character_revision for x in order):
                 raise WorkflowError("STALE_PROFILE: reopen the Status roster.")

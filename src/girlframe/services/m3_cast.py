@@ -99,7 +99,8 @@ class CastService:
             original = GameState.model_validate_json(body)
             if uid == original.handler:
                 facilitator, facilitator_source = uid, joined["id"]
-                continue
+                if str(uid) not in original.sheets:
+                    continue
             sheet = original.sheets.get(str(uid))
             identity = (
                 (

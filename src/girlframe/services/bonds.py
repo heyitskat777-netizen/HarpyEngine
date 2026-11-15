@@ -60,11 +60,6 @@ class BondService:
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         if source == target:
             raise WorkflowError("Choose another joined player with a saved character profile.")
-        handler = HandlerService(self.store).current(connection)[1].handler_id
-        if handler in (source, target):
-            raise WorkflowError(
-                "Starting player Bonds require Pilot accounts; Handler is outside that roster."
-            )
         own, other = self._profile(connection, str(source)), self._profile(connection, str(target))
         if own is None or other is None:
             raise WorkflowError("Both players must be active campaign members with saved profiles.")
@@ -111,9 +106,6 @@ class BondService:
         ]
 
     def _stale(self, connection: Connection, row: dict[str, Any]) -> bool:
-        handler = HandlerService(self.store).current(connection)[1].handler_id
-        if handler is not None and str(handler) in (row["source_id"], row["target_id"]):
-            return True
         if row["girl_playbook"] == "NEWGIRL":
             assignment = HandlerService(self.store).mentor_for(connection, int(row["source_id"]))
             if assignment is None or assignment.assignment_id != row["mentor_assignment_id"]:

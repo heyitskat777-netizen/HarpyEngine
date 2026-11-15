@@ -9,6 +9,7 @@ from discord import app_commands
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
+from girlframe.discord_adapter.member_names import member_label
 from girlframe.discord_adapter.onboarding import private_operation, reply
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m3_missions import MissionService
@@ -26,7 +27,7 @@ def details(data: dict[str, Any]) -> str:
         + str(data["pending_count"]),
     ]
     lines += [
-        "Player " + str(uid) + ": " + mission["responses"].get(str(uid), "awaiting response")
+        member_label(uid) + ": " + mission["responses"].get(str(uid), "awaiting response")
         for uid in mission["offered_to"]
     ]
     if mission["success"] is not None:

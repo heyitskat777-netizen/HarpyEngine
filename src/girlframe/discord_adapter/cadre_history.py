@@ -4,7 +4,12 @@ from typing import Any
 
 import discord
 
-from girlframe.discord_adapter.creation import CreationView, clean
+from girlframe.discord_adapter.creation import CreationView
+from girlframe.discord_adapter.member_names import (
+    member_label,
+    render_member_labels,
+    render_member_view,
+)
 from girlframe.discord_adapter.onboarding import reply
 
 
@@ -16,9 +21,9 @@ class CounterpartSelect(discord.ui.Select["HistoryView"]):
             placeholder="Choose a Cadre counterpart",
             options=[
                 discord.SelectOption(
-                    label=str(data["label"])[:100],
+                    label=member_label(uid),
                     value=str(uid),
-                    description="Player " + str(uid),
+                    description="Character: " + str(data["label"])[:80],
                     default=uid == parent.selected,
                 )
                 for uid, data in parent.cadre.items()
@@ -88,6 +93,8 @@ class HistoryView(discord.ui.View):
         await reply(interaction, "Mission-history form unavailable. Reopen /character build.")
 
     async def render(self, interaction: discord.Interaction, notice: str = "") -> None:
+        if not interaction.response.is_done():
+            await interaction.response.defer()
         for child in list(self.children):
             if isinstance(child, discord.ui.Select):
                 self.remove_item(child)
@@ -100,7 +107,7 @@ class HistoryView(discord.ui.View):
         if self.selected in self.cadre:
             value = self.choices.get(self.selected)
             lines.append(
-                clean(str(self.cadre[self.selected]["label"]))
+                member_label(self.selected)
                 + ": "
                 + ("choose history" if value is None else str(value) + " shared missions")
             )
@@ -109,13 +116,9 @@ class HistoryView(discord.ui.View):
             "Tell each counterpart in your conversation, then confirm below. "
             "This panel sends no message and assumes no agreement. Return and Save progress."
         )
-        edit = (
-            interaction.edit_original_response
-            if interaction.response.is_done()
-            else interaction.response.edit_message
-        )
-        await edit(
-            content="\n".join(lines),
+        await render_member_view(interaction, self)
+        await interaction.edit_original_response(
+            content=await render_member_labels(interaction, "\n".join(lines)),
             embed=None,
             view=self,
             allowed_mentions=discord.AllowedMentions.none(),

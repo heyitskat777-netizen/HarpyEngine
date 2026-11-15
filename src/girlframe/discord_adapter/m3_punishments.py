@@ -10,6 +10,7 @@ from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.labels import entity_label
 from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
+from girlframe.discord_adapter.member_names import member_label
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_punishments import KINDS, SUPPORTED, Details
 from girlframe.services.m3_punishments import PunishmentService
@@ -457,7 +458,7 @@ async def discipline_queue(interaction: discord.Interaction, service: Punishment
     viewer = viewer_from_interaction(interaction)
     rows = await asyncio.to_thread(service.missions.owned_work, viewer)
     options = tuple(
-        (x["id"], x["kind"].replace("_", " ").title() + " — Player " + x["subject_id"])
+        (x["id"], x["kind"].replace("_", " ").title() + " — " + member_label(x["subject_id"]))
         for x in rows
         if x["kind"]
         in (

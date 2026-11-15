@@ -15,6 +15,11 @@ from pydantic import ValidationError
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.character_tags import DiscordCharacterTagGateway
 from girlframe.discord_adapter.labels import entity_label
+from girlframe.discord_adapter.member_names import (
+    needs_member_rendering,
+    render_member_labels,
+    render_member_view,
+)
 from girlframe.engine.drafts import DraftInput
 from girlframe.engine.playbooks import FRAME_TYPES, GIRL_TYPES, canonical_frame, canonical_girl
 from girlframe.services.character_tags import CharacterTagSynchronizer
@@ -56,7 +61,12 @@ async def action_gate(interaction: discord.Interaction, action: str) -> bool:
 async def reply(
     interaction: discord.Interaction, text: str, view: discord.ui.View | None = None
 ) -> None:
-    if interaction.response.is_done():
+    deferred_here = needs_member_rendering(text, view) and not interaction.response.is_done()
+    if deferred_here:
+        await interaction.response.defer(ephemeral=True)
+    await render_member_view(interaction, view)
+    text = await render_member_labels(interaction, text)
+    if deferred_here or interaction.response.is_done():
         await interaction.edit_original_response(
             content=text, view=view, allowed_mentions=discord.AllowedMentions.none()
         )

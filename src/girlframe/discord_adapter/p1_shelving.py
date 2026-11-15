@@ -8,6 +8,7 @@ from discord import app_commands
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
+from girlframe.discord_adapter.member_names import member_label
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.services.m2_game import GameService
 from girlframe.services.onboarding import WorkflowError
@@ -24,7 +25,7 @@ NOTICE = (
 def request_label(row: dict[str, Any]) -> str:
     """Stable request reference plus canonical actor context, without private sheet data."""
     origin = "player request" if row["player_requested"] else "GM proposal"
-    return f"Player {row['owner']} | {row['actor_context']} | {origin} | {row['id']}"
+    return f"{member_label(row['owner'])} | {row['actor_context']} | {origin} | {row['id']}"
 
 
 async def open_request(interaction: discord.Interaction, game: GameService, identity: str) -> None:

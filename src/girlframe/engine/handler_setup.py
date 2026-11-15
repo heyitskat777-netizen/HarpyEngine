@@ -35,12 +35,6 @@ class HandlerSetup(BaseModel):
             raise ValueError("A Pilot can hold only one position")
         if len({x.newgirl.user_id for x in self.mentors}) != len(self.mentors):
             raise ValueError("A starting Newgirl can have only one current nomination")
-        if any(
-            x.newgirl.user_id == x.mentor.user_id
-            or self.handler_id in (x.newgirl.user_id, x.mentor.user_id)
-            for x in self.mentors
-        ):
+        if any(x.newgirl.user_id == x.mentor.user_id for x in self.mentors):
             raise ValueError("Mentor roles require two distinct Pilots")
-        if self.handler_id in {x.user_id for x in self.status_order}:
-            raise ValueError("Handler is outside Pilot ranks")
         return self

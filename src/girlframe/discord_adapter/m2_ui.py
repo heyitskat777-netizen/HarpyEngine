@@ -2149,7 +2149,9 @@ class StatePages(discord.ui.View):
         lines += [
             "Tag: " + x["label"] + (" [marked]" if x["marked"] else "") for x in sheet["tags"]
         ]
-        lines += ["Helpless against: " + str(x) for x in sheet["helpless_against"]]
+        from girlframe.discord_adapter.member_names import member_label, render_member_labels
+
+        lines += ["Helpless against: " + member_label(x) for x in sheet["helpless_against"]]
         lines += [
             "Official allegation: " + x["allegation"] for x in sheet.get("official_allegations", ())
         ]
@@ -2158,10 +2160,29 @@ class StatePages(discord.ui.View):
         obligations = await threaded(
             lambda: self.game.own_obligations(viewer_from_interaction(interaction))
         )
-        lines += [
-            "Pending obligation: " + x["kind"].replace("_", " ") + " — " + str(x["details"])
-            for x in obligations
-        ]
+        for obligation in obligations:
+            details = dict(obligation["details"])
+            for key in (
+                "giver",
+                "owner",
+                "subject",
+                "target",
+                "recipient",
+                "controller",
+                "user_id",
+                "owner_id",
+                "subject_id",
+                "target_id",
+            ):
+                value = details.get(key)
+                if isinstance(value, int) or isinstance(value, str) and value.isdecimal():
+                    details[key] = member_label(value)
+            lines.append(
+                "Pending obligation: " + obligation["kind"].replace("_", " ") + " — " + str(details)
+            )
+        if not interaction.response.is_done():
+            await interaction.response.defer(ephemeral=True)
+        lines = [await render_member_labels(interaction, line, markdown=False) for line in lines]
         pages = []
         current = ""
         for line in lines:

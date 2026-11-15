@@ -49,7 +49,16 @@ class PrivateInteractionResponder:
         await self.interaction.response.defer(ephemeral=True, thinking=True)
 
     async def send(self, content: str) -> None:
-        if self.interaction.response.is_done():
+        from girlframe.discord_adapter.member_names import (
+            needs_member_rendering,
+            render_member_labels,
+        )
+
+        deferred_here = needs_member_rendering(content) and not self.interaction.response.is_done()
+        if deferred_here:
+            await self.defer()
+        content = await render_member_labels(self.interaction, content)
+        if deferred_here or self.interaction.response.is_done():
             await self.interaction.edit_original_response(
                 content=content, allowed_mentions=discord.AllowedMentions.none()
             )

@@ -10,6 +10,7 @@ from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.m3_punishments import Picker
+from girlframe.discord_adapter.member_names import member_label
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.creation_catalog import CATALOG
 from girlframe.engine.fanbase import DEMOGRAPHICS, QUALITIES, Fanbase
@@ -318,21 +319,20 @@ class PackageReview(discord.ui.View):
             lines.append("CONSUME hunger: " + package["consume_hunger"])
         if package["obsolescence_marked"] is not None:
             lines.append("Obsolescence boxes: " + str(package["obsolescence_marked"]))
-        people = dict(data["people"])
         if package["psych_strings"]:
             lines.append(
-                "Psych Strings: "
-                + ", ".join(
-                    clean(people.get(int(uid), "Character " + str(uid)))
-                    for uid in package["psych_strings"]
-                )
+                "Psych Strings: " + ", ".join(member_label(uid) for uid in package["psych_strings"])
             )
         if selected.court_role:
             lines.append(
                 "External Court role: "
                 + selected.court_role
                 + " → "
-                + clean(people.get(selected.court_target, "Character"))
+                + (
+                    member_label(selected.court_target)
+                    if selected.court_target is not None
+                    else "Character"
+                )
             )
             lines.append("Recipient accepted: " + str(data["court_accepted"]))
         if selected.fanbase:
@@ -568,7 +568,7 @@ async def replacement_queue(interaction: discord.Interaction, service: Replaceme
         service.missions.owned_work, viewer_from_interaction(interaction)
     )
     options = tuple(
-        (x["id"], x["kind"].replace("_", " ").title() + " — Player " + x["subject_id"])
+        (x["id"], x["kind"].replace("_", " ").title() + " — " + member_label(x["subject_id"]))
         for x in rows
         if x["kind"] in (*ROOTS, PACKAGE, COURT)
     )

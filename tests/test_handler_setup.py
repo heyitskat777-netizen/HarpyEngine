@@ -364,7 +364,7 @@ def test_migration_preserves_existing_0005_proposals(tmp_path, monkeypatch):
         assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
 
 
-def test_handler_account_is_outside_starting_pilot_bond_roster(ledger):
+def test_handler_account_retains_its_pilot_roster_and_owned_starting_bonds(ledger):
     seed(ledger)
     seed(ledger, OTHER)
     seed(ledger, ADMIN)
@@ -375,11 +375,13 @@ def test_handler_account_is_outside_starting_pilot_bond_roster(ledger):
     )
     service = HandlerService(ledger)
     service.appoint(ADMIN, "appoint", 0, ADMIN.user_id)
-    assert ADMIN.user_id not in service.roster(ADMIN)["pilots"]
-    assert bonds.get(PLAYER, proposal["id"])["stale"]
+    assert ADMIN.user_id in service.roster(ADMIN)["pilots"]
+    assert not bonds.get(PLAYER, proposal["id"])["stale"]
+    assert bonds.get(ADMIN, proposal["id"])["state"] == "pending"
+    assert bonds.prepare(PLAYER, ADMIN.user_id)["target_revision"] == 1
+    assert bonds.prepare(ADMIN, OTHER.user_id)["source_revision"] == 1
     with pytest.raises(WorkflowError):
-        bonds.prepare(PLAYER, ADMIN.user_id)
-    with pytest.raises(WorkflowError):
-        bonds.prepare(ADMIN, OTHER.user_id)
-    with pytest.raises(WorkflowError, match="STALE_PROFILE"):
-        bonds.decide(ADMIN, "accept-as-handler", proposal["id"], 1, "accept")
+        bonds.prepare(ADMIN, ADMIN.user_id)
+    assert bonds.decide(ADMIN, "accept-as-pilot", proposal["id"], 1, "accept")["state"] == (
+        "accepted"
+    )

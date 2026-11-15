@@ -27,16 +27,16 @@ class CoordinationService:
     def _context(
         self, connection: Connection, author: int, owner: int, role: Role
     ) -> dict[str, Any]:
-        if role not in ("princess_peer", "princess_handler", "vatgrown_handler") or author == owner:
-            raise WorkflowError("Choose a supported role and another active character owner.")
+        if role not in ("princess_peer", "princess_handler", "vatgrown_handler") or (
+            role == "princess_peer" and author == owner
+        ):
+            raise WorkflowError("Choose a supported role; a peer must be another character owner.")
         target = self.bonds._profile(connection, str(owner))
         if target is None:
             raise WorkflowError(
                 "The character owner must be an active joined Pilot with a profile."
             )
         handler = HandlerService(self.store)
-        if handler.current(connection)[1].handler_id == owner:
-            raise WorkflowError("The Handler account is outside Pilot creation.")
         expected_girl = "VATGROWN" if role == "vatgrown_handler" else "PRINCESS"
         if json.loads(target["public_json"])["girl_playbook"] != expected_girl:
             raise WorkflowError("This choice belongs to a different Girl playbook.")
@@ -234,6 +234,7 @@ class CoordinationService:
             if row["revision"] != revision:
                 raise WorkflowError("STALE_REVISION: refresh this playbook request.")
             recipient = row["owner_id"] == str(viewer.user_id)
+            author = row["author_id"] == str(viewer.user_id)
             state = row["state"]
             if decision == "accept" and recipient and state == "pending":
                 if self._stale(connection, row):
@@ -242,7 +243,7 @@ class CoordinationService:
             elif decision == "decline" and recipient and state == "pending":
                 next_state = "declined"
             elif decision == "withdraw" and (
-                state == "accepted" or (state == "pending" and not recipient)
+                state == "accepted" or (state == "pending" and author)
             ):
                 next_state = "withdrawn"
             else:

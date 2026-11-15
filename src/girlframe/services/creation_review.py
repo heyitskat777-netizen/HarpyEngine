@@ -126,10 +126,6 @@ class CreationReviewService:
             issues.append(
                 ReviewIssue(code="handler", message="Appoint an active campaign Handler.")
             )
-        if setup.handler_id == viewer.user_id:
-            issues.append(
-                ReviewIssue(code="pilot", message="The Handler account is outside Pilot creation.")
-            )
         rank_ids = [x.user_id for x in setup.status_order]
         rank_fresh = bool(
             active_handler and len(rank_ids) >= 2 and set(rank_ids) == set(roster)
@@ -210,11 +206,24 @@ class CreationReviewService:
                     message="Short-game starting Requisition selection is not implemented.",
                 )
             )
+        from girlframe.engine.m2_registry import registry_digest
+
+        approval = self.store.policy.m2_approval
+        release_enabled = (
+            approval is not None
+            and approval.registry_sha256 == registry_digest()
+            and self.store.policy.owner_intense_tag_bonus is not None
+        )
         issues.append(
             ReviewIssue(
                 code="independent_review",
                 category="review",
-                message="Independent rules review and playable activation remain pending.",
+                message=(
+                    "Scoped gameplay release is enabled. Complete and save this review, "
+                    "then use /character activate. Broader rules certification remains separate."
+                    if release_enabled
+                    else "Independent rules review and playable activation remain pending."
+                ),
             )
         )
         name = next(

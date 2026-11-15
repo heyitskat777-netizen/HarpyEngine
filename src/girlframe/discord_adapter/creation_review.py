@@ -9,6 +9,11 @@ from discord import app_commands
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.creation import clean
+from girlframe.discord_adapter.member_names import (
+    member_label,
+    render_member_labels,
+    render_member_view,
+)
 from girlframe.discord_adapter.onboarding import action_gate, reply
 from girlframe.engine.bonds import starting_kind
 from girlframe.engine.creation_details import BODY_PARTS, MAXIMS
@@ -73,7 +78,7 @@ def pages(review: CurrentReview, section: str) -> list[str]:
             )
     elif section == "Relationships":
         lines = [
-            f"{x.depth} Bond with player {x.counterpart} "
+            f"{x.depth} Bond with {member_label(x.counterpart)} "
             f"({'outgoing' if x.outgoing else 'incoming'}): {x.context or 'no shared context'}"
             for x in sheet.bonds
         ]
@@ -90,11 +95,11 @@ def pages(review: CurrentReview, section: str) -> list[str]:
             for x in sheet.shared
         )
         lines.extend(
-            f"Received Court role: {x.value} from player {x.source_id}"
+            f"Received Court role: {x.value} from {member_label(x.source_id)}"
             for x in sheet.received_court
         )
         lines.extend(
-            f"Player {x.user_id}: {x.missions} shared missions" for x in draft.prior_missions
+            f"{member_label(x.user_id)}: {x.missions} shared missions" for x in draft.prior_missions
         )
         if draft.girl_playbook == "NEWGIRL":
             lines.append("Cadre discussion confirmed: " + str(draft.cadre_discussed))
@@ -116,7 +121,7 @@ def pages(review: CurrentReview, section: str) -> list[str]:
                 for x in details.investors
             )
         lines.extend(
-            x.role.replace("_", " ") + " (player " + str(x.author) + "): " + x.label
+            x.role.replace("_", " ") + " (" + member_label(x.author) + "): " + x.label
             for x in sheet.coordination
         )
         if draft.girl_playbook == "CASUALTY":
@@ -172,7 +177,9 @@ def pages(review: CurrentReview, section: str) -> list[str]:
                 (x for x in sheet.shared if x.kind == "court" and x.source_id == sheet.owner), None
             )
             if court:
-                lines.extend(f"{role}: player {uid}" for role, uid in court.allocation.items())
+                lines.extend(
+                    f"{role}: {member_label(uid)}" for role, uid in court.allocation.items()
+                )
     text = "\n\n".join(clean(x) for x in lines)
     return [text[start : start + 3600] for start in range(0, len(text), 3600)] or [
         "No choices saved."
@@ -215,7 +222,7 @@ class StartingBondSelect(discord.ui.Select["ReviewView"]):
             ]
             + [
                 discord.SelectOption(
-                    label=f"{x.depth} — player {x.counterpart}",
+                    label=f"{x.depth} — {member_label(x.counterpart)}",
                     value=x.id,
                     default=x.id == current.sheet.creation.starting_bond_id,
                 )
@@ -322,7 +329,12 @@ class ReviewView(discord.ui.View):
         self.save.custom_id = (
             f"review:{self.nonce}:{self.current.saved_revision}:{self.current.fingerprint[:32]}"
         )
-        content = pages(self.current, self.section)
+        rendered = await render_member_labels(
+            interaction, "".join(pages(self.current, self.section))
+        )
+        content = [rendered[start : start + 3600] for start in range(0, len(rendered), 3600)] or [
+            ""
+        ]
         self.page_count = len(content)
         self.page_index = min(max(0, self.page_index), self.page_count - 1)
         self.previous.disabled = self.page_index == 0
@@ -354,6 +366,7 @@ class ReviewView(discord.ui.View):
             text=f"{self.section} · Page {self.page_index + 1}/{self.page_count}"
             " · Private · Gameplay inactive"
         )
+        await render_member_view(interaction, self)
         await interaction.edit_original_response(
             content=None, embed=embed, view=self, allowed_mentions=discord.AllowedMentions.none()
         )
@@ -416,7 +429,7 @@ class ReviewView(discord.ui.View):
         except WorkflowError as error:
             await self.present(interaction, str(error))
 
-    @discord.ui.button(label="Activation awaiting rules review", row=2, disabled=True)
+    @discord.ui.button(label="Activation uses /character activate", row=2, disabled=True)
     async def activate(
         self, interaction: discord.Interaction, button: discord.ui.Button[Any]
     ) -> None:

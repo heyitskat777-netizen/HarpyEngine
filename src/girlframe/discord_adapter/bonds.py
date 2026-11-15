@@ -8,6 +8,10 @@ from discord import app_commands
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.creation import clean
+from girlframe.discord_adapter.member_names import (
+    member_label,
+    render_member_labels,
+)
 from girlframe.discord_adapter.onboarding import action_gate, reply
 from girlframe.engine.bonds import PROMPTS, BondProposal, starting_kind, starting_role
 from girlframe.services.bonds import BondService, Decision
@@ -42,7 +46,7 @@ def proposal_text(row: dict[str, Any]) -> str:
     girl = row["girl_playbook"]
     return (
         f"**Starting Bond setup — {starting_kind(girl)} / {starting_role(girl)}**\n"
-        f"From player {row['source_id']} to player {row['target_id']}\n"
+        f"From {member_label(row['source_id'])} to {member_label(row['target_id'])}\n"
         f"Prompt: {clean(PROMPTS[girl][row['prompt']])}\n"
         f"Shared context: {clean(row['context']) or '(none)'}\n"
         + ("AM counterpart: this Girl is Jailbroken.\n" if girl == "AM" else "")
@@ -213,13 +217,17 @@ class DecisionView(OwnerView):
         from girlframe.discord_adapter.pair_assets import PairView
         from girlframe.services.pair_assets import PairService
 
+        if not interaction.response.is_done():
+            await interaction.response.defer()
         service = PairService(self.service.store)
         prepared = await asyncio.to_thread(
             service.prepare, viewer_from_interaction(interaction), self.row["id"]
         )
         view = PairView(service, interaction.user.id, prepared)
-        await interaction.response.edit_message(
-            content=view.text(), view=view, allowed_mentions=discord.AllowedMentions.none()
+        await interaction.edit_original_response(
+            content=await render_member_labels(interaction, view.text()),
+            view=view,
+            allowed_mentions=discord.AllowedMentions.none(),
         )
 
     @discord.ui.button(label="Accept setup", style=discord.ButtonStyle.primary)
@@ -253,22 +261,30 @@ class BondSelect(discord.ui.Select["BondListView"]):
                     + row["state"]
                     + (" / stale" if row["stale"] else ""),
                     value=row["id"],
-                    description="From " + row["source_id"] + " to " + row["target_id"],
+                    description="From "
+                    + member_label(row["source_id"])
+                    + " to "
+                    + member_label(row["target_id"]),
                 )
                 for row in rows
             ],
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:
+        if not interaction.response.is_done():
+            await interaction.response.defer()
         row = await asyncio.to_thread(
             self.parent_view.service.get, viewer_from_interaction(interaction), self.values[0]
         )
         view = DecisionView(self.parent_view.service, self.parent_view.owner, row)
-        await interaction.response.edit_message(
-            content=proposal_text(row)
-            + "\nSaved state: "
-            + row["state"]
-            + (" — STALE: profiles changed or membership inactive." if row["stale"] else ""),
+        await interaction.edit_original_response(
+            content=await render_member_labels(
+                interaction,
+                proposal_text(row)
+                + "\nSaved state: "
+                + row["state"]
+                + (" — STALE: profiles changed or membership inactive." if row["stale"] else ""),
+            ),
             view=view,
             allowed_mentions=discord.AllowedMentions.none(),
         )

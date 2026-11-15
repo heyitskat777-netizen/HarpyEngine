@@ -8,6 +8,11 @@ import discord
 from discord import app_commands
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.member_names import (
+    member_label,
+    render_member_labels,
+    render_member_view,
+)
 from girlframe.discord_adapter.onboarding import action_gate, reply
 from girlframe.engine.creation_review import CreationRulings
 from girlframe.engine.handler_setup import PilotRef
@@ -134,7 +139,9 @@ class PilotSelect(discord.ui.Select["RankView"]):
             placeholder="Choose the next Pilot, highest to lowest",
             options=[
                 discord.SelectOption(
-                    label=data["callsign"][:32], value=str(user), description="Player " + str(user)
+                    label=member_label(user),
+                    value=str(user),
+                    description="Pilot: " + data["callsign"][:80],
                 )
                 for user, data in parent.prepared["pilots"].items()
                 if user not in parent.order
@@ -168,9 +175,11 @@ class RankView(SetupView):
         self.confirm.disabled = not self.reviewed
 
     async def render(self, interaction: discord.Interaction, prefix: str = "") -> None:
+        if not interaction.response.is_done():
+            await interaction.response.defer()
         self.refresh()
         lines = [
-            f"{i + 1}. Player {user}"
+            f"{i + 1}. {member_label(user)}"
             + (
                 " — Ace"
                 if i == 0
@@ -186,11 +195,16 @@ class RankView(SetupView):
             + ("\n".join(lines) or "Choose every Pilot in order.")
         )
         text += (
-            "\nPrincess must lead. Handler is outside this order. "
+            "\nPrincess must lead. A Handler with a Pilot is ranked as that Pilot. "
             "Review the complete order, then confirm. No mission effects run."
         )
-        await interaction.response.edit_message(
-            content=text, view=self, allowed_mentions=discord.AllowedMentions.none()
+        await render_member_view(interaction, self)
+        rendered = await render_member_labels(interaction, text)
+        await interaction.edit_original_response(
+            content=rendered if len(rendered) <= 2000 else None,
+            embed=discord.Embed(description=rendered) if len(rendered) > 2000 else None,
+            view=self,
+            allowed_mentions=discord.AllowedMentions.none(),
         )
 
     @discord.ui.button(label="Undo last", row=1)
@@ -266,9 +280,10 @@ def register_handler_setup(
                 service.appointment_preview, viewer_from_interaction(interaction)
             )
             target = member.id if member else None
+            previous = member_label(prepared["handler_id"]) if prepared["handler_id"] else "none"
             text = (
-                f"Appoint Handler: {target if target else 'none (revoke)'}. "
-                f"Previous: {prepared['handler_id']}. "
+                f"Appoint Handler: {member_label(target) if target else 'none (revoke)'}. "
+                f"Previous: {previous}. "
             )
             text += (
                 "Confirming clears Mentor nominations, Status and Handler creation rulings; "
@@ -304,7 +319,10 @@ def register_handler_setup(
             second = PilotRef(
                 user_id=member.id, character_revision=prepared["pilots"][member.id]["revision"]
             )
-            text = f"Nominate player {member.id} as Mentor for Newgirl {newgirl.id}. "
+            text = (
+                f"Nominate {member_label(member.id)} as Mentor "
+                f"for Newgirl {member_label(newgirl.id)}. "
+            )
             text += (
                 "Newgirl then uses /character bond with this Mentor; both players review setup. "
                 "Prior nomination consent becomes stale. Callsign choice remains pending."
@@ -352,21 +370,23 @@ def register_handler_setup(
         await interaction.response.defer(ephemeral=True, thinking=True)
         try:
             result = await asyncio.to_thread(service.view, viewer_from_interaction(interaction))
+            handler_name = member_label(result["handler_id"]) if result["handler_id"] else "none"
             lines = [
-                f"Handler: {result['handler_id']}; active: {result['handler_active']}. "
+                f"Handler: {handler_name}; active: {result['handler_active']}. "
                 f"Setup revision {result['revision']}."
             ]
             order = result["status_order"]
             for i, pilot in enumerate(order):
                 role = "Ace" if i == 0 else "Dog" if i == len(order) - 1 else "Wings"
-                lines.append(f"{i + 1}. Player {pilot['user_id']} — {role}")
+                lines.append(f"{i + 1}. {member_label(pilot['user_id'])} — {role}")
             lines.append(
                 "Status needs review." if result["status_stale"] else "Status roster current."
             )
             for assignment in result["mentors"]:
                 lines.append(
-                    f"Newgirl {assignment['newgirl']['user_id']}: "
-                    f"Mentor {assignment['mentor']['user_id']}; stale: {assignment['stale']}."
+                    f"Newgirl {member_label(assignment['newgirl']['user_id'])}: "
+                    f"Mentor {member_label(assignment['mentor']['user_id'])}; "
+                    f"stale: {assignment['stale']}."
                 )
             lines.append("Draft setup only; playable activation and remaining rules are pending.")
             lines.append(

@@ -1,5 +1,13 @@
 # Active owner direction — P1
 
+Latest live-test correction: the owner explicitly requires current Discord server
+nicknames for displayed member identities and permits Handler and Pilot on one
+account. Preserve distinct fictional roles/resources and stable internal IDs;
+never use nicknames as authorization or storage keys. The owner also explicitly
+authorized deploying this fix and restarting the bot. Check the current private
+deployment record for the actual running source; older frozen-build references
+below are historical after that restart.
+
 Latest owner direction: **enable the newest tested bot and begin the first live
 session**. This supersedes the earlier bot-off hold below for the scoped release.
 The bot is running frozen runtime `5412ee8c431cfee63ecbd8b5e4ff2db97b60c601`,

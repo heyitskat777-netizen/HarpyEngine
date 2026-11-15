@@ -720,14 +720,53 @@ class GameService:
                 public_fields=public_fields,
             )
             state.sheets[str(viewer.user_id)] = sheet
+            activation_event = str(uuid4())
             for bond in review.bonds:
                 pair = pair_key(viewer.user_id, bond.counterpart)
-                if pair not in state.bonds:
+                if state.handler in (viewer.user_id, bond.counterpart):
+                    # Numeric account pairs cannot distinguish this account's
+                    # actual Pilot from its separate Handler persona. Bind the
+                    # accepted starting agreement to its real Pilot profiles,
+                    # including the peer's profile before their own activation.
+                    from girlframe.engine.m3_actor_bond_state import BondEdge
+                    from girlframe.engine.m3_actor_state import ActorRef
+
+                    if pair in state.bonds:
+                        raise WorkflowError(
+                            "Recover the actual separate-role source of this existing Bond."
+                        )
+                    other = c.execute(
+                        sa.select(t.characters.c.id, t.characters.c.revision).where(
+                            t.characters.c.campaign_id == self.store.campaign_id,
+                            t.characters.c.user_id == str(bond.counterpart),
+                        )
+                    ).one()
+                    other_character = profile_character(
+                        state, bond.counterpart, other.id, other.revision
+                    )
+                    first = ActorRef(
+                        kind="pilot", entity=str(viewer.user_id), incarnation=character_id
+                    )
+                    second = ActorRef(
+                        kind="pilot", entity=str(bond.counterpart), incarnation=other_character
+                    )
+                    edges = [x for x in state.actor_bonds if {x.first, x.second} == {first, second}]
+                    if len(edges) > 1:
+                        raise WorkflowError("Recover this starting Bond's one actual authority.")
+                    if not edges:
+                        state.actor_bonds.append(
+                            BondEdge(
+                                first=first,
+                                second=second,
+                                depth=2 if bond.depth == "Intense" else 1,
+                                source_event=activation_event,
+                            )
+                        )
+                elif pair not in state.bonds:
                     state.bonds[pair] = 2 if bond.depth == "Intense" else 1
             from girlframe.engine.m3_actor_bonds import current_ref as activated_actor
             from girlframe.services.m3_vatgrown_death import stage_activation
 
-            activation_event = str(uuid4())
             stage_activation(
                 self, c, state, activated_actor(state, viewer.user_id), activation_event
             )
@@ -842,7 +881,7 @@ class GameService:
 
             ref = (
                 ActorRef(kind="handler", entity=str(viewer.user_id))
-                if viewer.user_id == state.handler
+                if viewer.user_id == state.handler and str(viewer.user_id) not in state.sheets
                 else ActorRef(
                     kind="pilot",
                     entity=str(viewer.user_id),
@@ -860,7 +899,7 @@ class GameService:
                     "Wait for this scene's pending Play before changing participants."
                 )
             table = t.m2["m2_scenes"]
-            if viewer.user_id != state.handler:
+            if str(viewer.user_id) in state.sheets:
                 rows = c.execute(
                     sa.select(table).where(
                         table.c.campaign_id == self.store.campaign_id, table.c.open.is_(True)

@@ -530,9 +530,9 @@ def higher(state: GameState, first: int, second: int) -> bool:
         override = legacy_status(state, first, second)
         if override is not None:
             return override
-    if first == state.handler:
+    if first == state.handler and first not in state.order:
         return True
-    if second == state.handler:
+    if second == state.handler and second not in state.order:
         return False
     a, b = state.sheets.get(str(first)), state.sheets.get(str(second))
     from girlframe.engine.m3_actor_state import ActorRef

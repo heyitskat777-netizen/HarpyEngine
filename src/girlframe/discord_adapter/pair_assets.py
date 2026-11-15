@@ -8,6 +8,7 @@ from discord import app_commands
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.creation import clean
+from girlframe.discord_adapter.member_names import member_label, render_member_labels
 from girlframe.discord_adapter.onboarding import action_gate, reply
 from girlframe.engine.creation_catalog import CATALOG
 from girlframe.engine.pair_assets import PairNames
@@ -36,10 +37,12 @@ class PairSelect(discord.ui.Select["PairView"]):
                 interaction, "Choose exactly two distinct Bonded Girl Assets.", self.parent_view
             )
             return
+        if not interaction.response.is_done():
+            await interaction.response.defer()
         for option in self.options:
             option.default = option.value in self.parent_view.names
-        await interaction.response.edit_message(
-            content=self.parent_view.text(),
+        await interaction.edit_original_response(
+            content=await render_member_labels(interaction, self.parent_view.text()),
             view=self.parent_view,
             allowed_mentions=discord.AllowedMentions.none(),
         )
@@ -55,7 +58,7 @@ class PairView(discord.ui.View):
     def text(self) -> str:
         names = ", ".join(clean(x) for x in self.names) or "choose two below"
         return (
-            f"**Pair-authored Girl Assets for player {self.prepared['owner_id']}**\n"
+            f"**Pair-authored Girl Assets for {member_label(self.prepared['owner_id'])}**\n"
             + names
             + "\nReview your selection, then Confirm. The Bonded owner supplies descriptions. "
             "You cannot view or edit their private character details here."

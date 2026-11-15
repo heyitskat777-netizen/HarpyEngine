@@ -9,6 +9,7 @@ from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.m3_punishments import Picker
+from girlframe.discord_adapter.member_names import member_label
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.services.m3_reactions import ReactionService
 
@@ -118,7 +119,7 @@ async def reaction_queue(interaction: discord.Interaction, service: ReactionServ
     viewer = viewer_from_interaction(interaction)
     rows = await asyncio.to_thread(service.missions.owned_work, viewer)
     options = tuple(
-        (row["id"], row["kind"].replace("_", " ").title() + " — Player " + row["subject_id"])
+        (row["id"], row["kind"].replace("_", " ").title() + " — " + member_label(row["subject_id"]))
         for row in rows
         if row["kind"] in KINDS
     )

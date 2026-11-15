@@ -9,6 +9,7 @@ from discord import app_commands
 from pydantic import ValidationError
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.member_names import member_label
 from girlframe.discord_adapter.onboarding import action_gate, reply
 from girlframe.engine.creation import AssetChoice, CreationDraft, official_frame
 from girlframe.engine.creation_catalog import CATALOG
@@ -372,7 +373,9 @@ class CreationView(discord.ui.View):
             )
         court = next((x for x in self.progress.shared_choices if x.kind == "court"), None)
         if court:
-            lines.extend(role + ": player " + str(user) for role, user in court.allocation.items())
+            lines.extend(
+                role + ": " + member_label(user) for role, user in court.allocation.items()
+            )
         lines.extend(
             "Pending: " + x
             for x in baseline.pending
