@@ -224,6 +224,54 @@ class HandlerService:
             viewer, key, expected, "campaign.handler_appointed", {"member": member}, admin, change
         )
 
+    def authorize_bond_test(self, connection: Connection, viewer: GuildViewer) -> None:
+        if viewer.is_administrator and self.store.policy.allow_guild_administrators:
+            self.store.administrator(viewer)
+        else:
+            self.authorize(connection, viewer)
+
+    def bond_test_preview(self, viewer: GuildViewer, target: int) -> dict[str, Any]:
+        with self.store.engine.connect() as connection:
+            self.authorize_bond_test(connection, viewer)
+            revision, _ = self.current(connection)
+            row = self._roster(connection).get(target)
+            if row is None:
+                raise WorkflowError("Choose an active Pilot with a saved character profile.")
+            return {
+                "revision": revision,
+                "pilot": PilotRef(user_id=target, character_revision=row["revision"]),
+            }
+
+    def bond_test(
+        self, viewer: GuildViewer, key: str, expected: int, pilot: PilotRef, enabled: bool
+    ) -> dict[str, Any]:
+        pilot = PilotRef.model_validate_json(pilot.model_dump_json())
+
+        def change(connection: Connection, previous: HandlerSetup) -> HandlerSetup:
+            from girlframe.services.m2_state import load_state
+
+            row = self._roster(connection).get(pilot.user_id)
+            if row is None or row["revision"] != pilot.character_revision:
+                raise WorkflowError("STALE_PROFILE: reopen the setup test bypass.")
+            if str(pilot.user_id) in load_state(connection, self.store.campaign_id).sheets:
+                raise WorkflowError("Already activated; this bypass only changes draft setup.")
+            remaining = tuple(
+                x for x in previous.starting_bond_test_bypasses if x.user_id != pilot.user_id
+            )
+            return previous.model_copy(
+                update={"starting_bond_test_bypasses": remaining + ((pilot,) if enabled else ())}
+            )
+
+        return self._save(
+            viewer,
+            key,
+            expected,
+            "campaign.starting_bond_test_bypass",
+            {"pilot": pilot.model_dump(mode="json"), "enabled": enabled},
+            lambda c: self.authorize_bond_test(c, viewer),
+            change,
+        )
+
     def mentor(
         self, viewer: GuildViewer, key: str, expected: int, newgirl: PilotRef, mentor: PilotRef
     ) -> dict[str, Any]:

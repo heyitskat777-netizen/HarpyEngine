@@ -28,9 +28,14 @@ class HandlerSetup(BaseModel):
     status_order: tuple[PilotRef, ...] = ()
     creation_rulings: CreationRulings | None = None
     creation_rulings_explicit: bool = False
+    starting_bond_test_bypasses: tuple[PilotRef, ...] = ()
 
     @model_validator(mode="after")
     def distinct_roles(self) -> Self:
+        if len({x.user_id for x in self.starting_bond_test_bypasses}) != len(
+            self.starting_bond_test_bypasses
+        ):
+            raise ValueError("Only one starting-Bond test bypass per Pilot")
         if len({x.user_id for x in self.status_order}) != len(self.status_order):
             raise ValueError("A Pilot can hold only one position")
         if len({x.newgirl.user_id for x in self.mentors}) != len(self.mentors):

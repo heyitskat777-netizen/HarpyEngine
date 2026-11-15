@@ -16,6 +16,24 @@ separate: a ruling never makes an unimplemented rule executable or verified.
 
 ## Current decisions
 
+Owner-requested starting-Bond house rule: use
+`owner_starting_bond_count: 2` in the trusted campaign policy (default1preserves
+other campaigns and old records). Require the playbook's original primary Bond
+and one additional accepted **Personal** Bond with a different character. Mentor
+and Pair requirements remain; Newgirl/Bonded receive the additional Personal
+proposal from another ordinary Girl rather than proposing another Mentor/Pair.
+Both players explicitly agree through existing private proposals. Select the
+primary and second Bond in character review, then save a fresh review. This is
+an explicit campaign house rule, not a printed-rule clarification.
+
+For setup testing only, `/campaign bond_test member:<player> enabled:true` opens
+an explicit Handler/admin confirmation. The saved exemption is bound to that
+character profile revision, marked on the private review and canonical activation
+review, and creates no Bonds or player consent. `enabled:false` removes it before
+activation. Reopen/save review after either change. All other setup, current
+Status, source approval and player-owned activation gates remain. No already-active
+character is rebuilt, and an exemption cannot edit active gameplay resources.
+
 | Ruling / policy | Decision | Source or reason clarification was needed |
 |---|---|---|
 | JANUS-B label | Official JANUS rules with JANUS-B as the server label | Owner explicitly chose a cosmetic alias, not custom mechanics |

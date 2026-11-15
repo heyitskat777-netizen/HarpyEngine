@@ -4,6 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from girlframe.engine.bonds import starting_kind
 from girlframe.engine.creation import CreationDraft
 from girlframe.engine.creation_details import (
     AcceptedCoordination,
@@ -65,6 +66,8 @@ class ReviewSheet(BaseModel):
     setup_revision: int
     creation: CreationDraft
     bonds: tuple[SheetBond, ...] = ()
+    required_starting_bonds: Literal[1, 2] = 1
+    starting_bond_test_bypass: bool = False
     shared: tuple[AcceptedSetup, ...] = ()
     received_court: tuple[AcceptedSetup, ...] = ()
     coordination: tuple[AcceptedCoordination, ...] = ()
@@ -76,6 +79,24 @@ class ReviewSheet(BaseModel):
     issues: tuple[ReviewIssue, ...] = ()
     # Dependency material stays in private review storage. It is never an event payload.
     dependency_tokens: tuple[str, ...] = Field(default=())
+
+    @property
+    def primary_starting_bond(self) -> SheetBond | None:
+        draft = self.creation
+        return next(
+            (
+                x
+                for x in self.bonds
+                if (
+                    x.id == draft.starting_bond_id
+                    if draft.starting_bond_id
+                    else x.outgoing and x.id != draft.additional_starting_bond_id
+                )
+                and x.depth == starting_kind(draft.girl_playbook)
+                and (draft.girl_playbook not in ("NEWGIRL", "BONDED") or x.outgoing)
+            ),
+            None,
+        )
 
     @property
     def ready_for_rules_review(self) -> bool:

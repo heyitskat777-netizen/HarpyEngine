@@ -266,6 +266,38 @@ def register_handler_setup(
     assert isinstance(campaign, app_commands.Group)
 
     @campaign.command(
+        name="bond_test", description="Review a per-character starting-Bond setup test bypass"
+    )
+    async def bond_test(
+        interaction: discord.Interaction, member: discord.Member, enabled: bool = True
+    ) -> None:
+        if not await action_gate(interaction, "metadata"):
+            return
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        viewer = viewer_from_interaction(interaction)
+        try:
+            prepared = await asyncio.to_thread(service.bond_test_preview, viewer, member.id)
+            await reply(
+                interaction,
+                f"{'Enable' if enabled else 'Remove'} starting-Bond TEST bypass for "
+                + member_label(member.id)
+                + "? It waives only the starting-Bond requirement for this draft profile. "
+                "No Bond or player consent is created. Other setup and release checks remain. "
+                "Reopen and save the character review after confirmation.",
+                ConfirmSetup(
+                    service,
+                    interaction.user.id,
+                    lambda actor, key: service.bond_test(
+                        actor, key, prepared["revision"], prepared["pilot"], enabled
+                    ),
+                    admin=viewer.is_administrator
+                    and service.store.policy.allow_guild_administrators,
+                ),
+            )
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @campaign.command(
         name="handler",
         description="Administrator: review Handler appointment; omit member to revoke",
     )

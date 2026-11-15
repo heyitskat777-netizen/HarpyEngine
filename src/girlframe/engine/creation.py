@@ -48,6 +48,7 @@ class CreationDraft(BaseModel):
     prior_missions: tuple[PriorMission, ...] = Field(default=(), max_length=25)
     cadre_discussed: bool = False
     starting_bond_id: str | None = Field(default=None, min_length=36, max_length=36)
+    additional_starting_bond_id: str | None = Field(default=None, min_length=36, max_length=36)
     girl_details: GirlDetails | None = None
 
     @field_validator("girl_playbook")

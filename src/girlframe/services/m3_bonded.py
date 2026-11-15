@@ -518,7 +518,7 @@ def pair_lineage(
             raise WorkflowError("Recover the immutable actual Pair transition source")
         actual, source = setup.pair, setup.source_event
     else:
-        outgoing = next((x for x in sheet.review.bonds if x.outgoing), None)
+        outgoing = sheet.review.primary_starting_bond
         if outgoing is None or outgoing.counterpart != sheet.pair:
             raise WorkflowError("Recover the actual reviewed outgoing Pair Bond")
         bond = (

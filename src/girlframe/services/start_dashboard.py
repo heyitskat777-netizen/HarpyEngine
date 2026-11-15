@@ -52,6 +52,7 @@ def _route(issue: ReviewIssue) -> Route:
         "starting_resources": "creation_rules",
         "starting_requisition": "creation_rules",
         "starting_bond": "bond",
+        "additional_starting_bond": "bond",
         "princess_peer": "requests",
         "princess_handler": "requests",
         "handler_investor": "requests",
@@ -199,6 +200,14 @@ class StartDashboardService:
                         }
                         for x in issues
                     ]
+                    primary = current.sheet.primary_starting_bond
+                    for issue in projected:
+                        if issue["code"] == "additional_starting_bond" and any(
+                            x.depth == "Personal"
+                            and (primary is None or x.counterpart != primary.counterpart)
+                            for x in current.sheet.bonds
+                        ):
+                            issue["route"] = "review"
                     character.update(
                         exists=True,
                         callsign=current.sheet.callsign,
@@ -240,7 +249,10 @@ class StartDashboardService:
                 "stale": sum(x.stale for x in pending),
             }
             for issue in character["issues"]:
-                if issue["code"] == "starting_bond":
+                if (
+                    issue["code"] in ("starting_bond", "additional_starting_bond")
+                    and issue["route"] != "review"
+                ):
                     relevant = [x for x in pending if x.source == "bond"]
                     if relevant:
                         issue["route"] = "requests"
@@ -326,7 +338,13 @@ class StartDashboardService:
                 "coordination",
                 "Bonds and shared starting choices",
                 "complete"
-                if activated or character["exists"] and not routes & coordination_routes
+                if activated
+                or character["exists"]
+                and not routes & coordination_routes
+                and not any(
+                    x["code"] in ("starting_bond", "additional_starting_bond")
+                    for x in character["issues"]
+                )
                 else "waiting"
                 if character["requests"]["waiting"] and not character["requests"]["actionable"]
                 else "next"

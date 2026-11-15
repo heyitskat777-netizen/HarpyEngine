@@ -185,6 +185,25 @@ class CreationService:
                     raise WorkflowError(
                         "This Bond does not meet your playbook's starting role/depth."
                     )
+            if draft.additional_starting_bond_id:
+                bonds = BondService(self.store)
+                rows = {x["id"]: x for x in bonds._latest(connection, str(viewer.user_id))}
+                extra = rows.get(draft.additional_starting_bond_id)
+                if (
+                    extra is None
+                    or extra["state"] != "accepted"
+                    or bonds._stale(connection, extra)
+                    or starting_kind(extra["girl_playbook"]) != "Personal"
+                ):
+                    raise WorkflowError(
+                        "STALE_BOND: choose a current accepted Personal second Bond."
+                    )
+                primary = rows.get(draft.starting_bond_id or "")
+                if primary is not None and {primary["source_id"], primary["target_id"]} == {
+                    extra["source_id"],
+                    extra["target_id"],
+                }:
+                    raise WorkflowError("The second starting Bond needs a different character.")
 
         def operation(connection: Connection) -> dict[str, Any]:
             current = self._current(connection, viewer)

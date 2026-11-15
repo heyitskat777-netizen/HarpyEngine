@@ -158,6 +158,7 @@ class CreationReviewService:
                 x["id"] == progress.draft.starting_bond_id
                 if progress.draft.starting_bond_id
                 else x["source_id"] == str(viewer.user_id)
+                and x["id"] != progress.draft.additional_starting_bond_id
             )
             and starting_kind(x["girl_playbook"]) == starting_kind(progress.draft.girl_playbook)
             and (
@@ -165,13 +166,44 @@ class CreationReviewService:
                 or x["source_id"] == str(viewer.user_id)
             )
         ]
-        if len(chosen) != 1:
+        required_bonds = self.store.policy.owner_starting_bond_count
+        test_bypass = any(
+            x.user_id == viewer.user_id and x.character_revision == progress.character_revision
+            for x in setup.starting_bond_test_bypasses
+        )
+        if len(chosen) != 1 and not test_bypass:
             issues.append(
                 ReviewIssue(
                     code="starting_bond",
                     message="Choose an accepted starting Bond with your required role and depth.",
                 )
             )
+        if required_bonds == 2 and not test_bypass:
+            extra = next(
+                (x for x in current_bonds if x["id"] == progress.draft.additional_starting_bond_id),
+                None,
+            )
+
+            def counterpart(row: dict[str, Any]) -> str:
+                return str(
+                    row["target_id"]
+                    if row["source_id"] == str(viewer.user_id)
+                    else row["source_id"]
+                )
+
+            if (
+                extra is None
+                or starting_kind(extra["girl_playbook"]) != "Personal"
+                or len(chosen) != 1
+                or counterpart(extra) == counterpart(chosen[0])
+            ):
+                issues.append(
+                    ReviewIssue(
+                        code="additional_starting_bond",
+                        message="House rule: select a second accepted Personal Bond "
+                        "with a different character.",
+                    )
+                )
         if progress.draft.girl_playbook == "NEWGIRL":
             cadre = handler.cadre(connection, viewer.user_id)
             declared = {x.user_id: x.character_revision for x in progress.draft.prior_missions}
@@ -237,6 +269,8 @@ class CreationReviewService:
             creation_revision=progress.revision,
             setup_revision=setup_revision,
             creation=progress.draft,
+            required_starting_bonds=required_bonds,
+            starting_bond_test_bypass=test_bypass,
             bonds=tuple(
                 SheetBond(
                     id=x["id"],
@@ -366,8 +400,11 @@ class CreationReviewService:
         character_revision: int,
         draft: CreationDraft,
         identity: str | None,
+        *,
+        additional: bool = False,
     ) -> dict[str, Any]:
-        chosen = draft.model_copy(update={"starting_bond_id": identity})
+        field = "additional_starting_bond_id" if additional else "starting_bond_id"
+        chosen = draft.model_copy(update={field: identity})
         return CreationService(self.store).save(
             viewer,
             key,

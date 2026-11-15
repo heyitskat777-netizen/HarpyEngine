@@ -40,9 +40,7 @@ def _creation_mentor(
             raise WorkflowError("Recover the immutable source-owned Mentor assignment")
         mentor, source = setup.mentor, setup.source_event
     else:
-        outgoing = (
-            next((x for x in sheet.review.bonds if x.outgoing), None) if sheet.review else None
-        )
+        outgoing = sheet.review.primary_starting_bond if sheet.review else None
         if outgoing is None or outgoing.counterpart != sheet.mentor:
             raise WorkflowError("Recover the original reviewed Mentor Bond and assignment")
         bond = (

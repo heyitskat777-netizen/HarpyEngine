@@ -178,15 +178,25 @@ class BondService:
             if proposal.prompt >= len(PROMPTS[girl]):
                 raise WorkflowError("Choose a starting prompt from your current Girl playbook.")
             source, target = str(viewer.user_id), str(proposal.target_id)
+            outgoing_count = 0
             for row in self._latest(connection, str(viewer.user_id)):
                 if row["state"] in ("pending", "accepted") and not self._stale(connection, row):
-                    if row["source_id"] == source or {row["source_id"], row["target_id"]} == {
+                    outgoing_count += row["source_id"] == source
+                    if {row["source_id"], row["target_id"]} == {
                         source,
                         target,
                     }:
                         raise WorkflowError(
                             "An active starting proposal exists; review or withdraw it first."
                         )
+            outgoing_limit = (
+                1 if girl in ("NEWGIRL", "BONDED") else self.store.policy.owner_starting_bond_count
+            )
+            if outgoing_count >= outgoing_limit:
+                raise WorkflowError(
+                    "An active starting proposal exists for each available slot; "
+                    "review or withdraw one first."
+                )
             result = {"id": str(uuid4()), "revision": 1, "state": "pending"}
             event = self.store._audit(
                 connection, viewer.user_id, key, "character.bond_proposed", result

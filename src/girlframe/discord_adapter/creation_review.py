@@ -42,6 +42,15 @@ def pages(review: CurrentReview, section: str) -> list[str]:
             *("• " + issue.message for issue in sheet.issues),
             "Save review snapshot records saved choices only. It does not activate gameplay.",
         ]
+        lines.append(
+            f"Starting Bonds required: {sheet.required_starting_bonds}"
+            + (" (campaign house rule)." if sheet.required_starting_bonds == 2 else ".")
+        )
+        if sheet.starting_bond_test_bypass:
+            lines.append(
+                "TEST SETUP: starting-Bond requirement bypassed by Handler/admin approval. "
+                "No missing Bonds or consent have been invented."
+            )
     elif section == "Assets":
         girl_assets = (
             draft.pair_asset_descriptions if draft.girl_playbook == "BONDED" else draft.girl_assets
@@ -204,33 +213,52 @@ class SectionSelect(discord.ui.Select["ReviewView"]):
 
 
 class StartingBondSelect(discord.ui.Select["ReviewView"]):
-    def __init__(self, parent: "ReviewView", current: CurrentReview):
+    def __init__(self, parent: "ReviewView", current: CurrentReview, *, additional: bool = False):
         self.parent_view, self.snapshot = parent, current
+        self.additional = additional
         girl = current.sheet.creation.girl_playbook
+        primary = current.sheet.primary_starting_bond
         options = [
             x
             for x in current.sheet.bonds
-            if x.depth == starting_kind(girl) and (girl not in ("NEWGIRL", "BONDED") or x.outgoing)
+            if (
+                x.depth == "Personal" and (primary is None or x.counterpart != primary.counterpart)
+                if additional
+                else x.depth == starting_kind(girl)
+                and (girl not in ("NEWGIRL", "BONDED") or x.outgoing)
+            )
         ]
+        selected = (
+            current.sheet.creation.additional_starting_bond_id
+            if additional
+            else current.sheet.creation.starting_bond_id
+        )
         super().__init__(
-            placeholder="Choose your starting Bond for review",
-            row=3,
+            placeholder="Choose your second starting Bond"
+            if additional
+            else "Choose your starting Bond for review",
+            row=0 if additional else 3,
             options=[
                 discord.SelectOption(
-                    label="Clear explicit choice; use own proposal if eligible", value="clear"
+                    label="Clear second Bond"
+                    if additional
+                    else "Clear explicit choice; use own proposal if eligible",
+                    value="clear",
                 )
             ]
             + [
                 discord.SelectOption(
                     label=f"{x.depth} — {member_label(x.counterpart)}",
                     value=x.id,
-                    default=x.id == current.sheet.creation.starting_bond_id,
+                    default=x.id == selected,
                 )
                 for x in options[:24]
             ],
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.parent_view.interaction_check(interaction):
+            return
         identity = self.values[0]
         if not any(x.value == identity for x in self.options):
             await reply(interaction, "Choose a Bond from this review.")
@@ -244,15 +272,25 @@ class StartingBondSelect(discord.ui.Select["ReviewView"]):
             )
             + " This changes your draft only.",
             embed=None,
-            view=ConfirmBond(self.parent_view, self.snapshot, identity),
+            view=ConfirmBond(self.parent_view, self.snapshot, identity, additional=self.additional),
             allowed_mentions=discord.AllowedMentions.none(),
         )
 
 
 class ConfirmBond(discord.ui.View):
-    def __init__(self, parent: "ReviewView", current: CurrentReview, identity: str):
+    def __init__(
+        self,
+        parent: "ReviewView",
+        current: CurrentReview,
+        identity: str,
+        *,
+        additional: bool = False,
+    ):
         super().__init__(timeout=600)
         self.parent, self.current, self.identity = parent, current, identity
+        self.additional = additional
+        if additional:
+            self.confirm.label = "Confirm second Bond"
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return await self.parent.interaction_check(interaction)
@@ -281,6 +319,7 @@ class ConfirmBond(discord.ui.View):
                 sheet.character_revision,
                 sheet.creation,
                 None if self.identity == "clear" else self.identity,
+                additional=self.additional,
             )
             await self.parent.present(
                 interaction, "Starting Bond selected. Draft remains inactive."
@@ -329,6 +368,11 @@ class ReviewView(discord.ui.View):
         self.current = await asyncio.to_thread(
             self.service.get, viewer_from_interaction(interaction)
         )
+        if self.current.sheet.required_starting_bonds == 2:
+            if self.second_bond not in self.children:
+                self.add_item(self.second_bond)
+        elif self.second_bond in self.children:
+            self.remove_item(self.second_bond)
         self.save.custom_id = (
             f"review:{self.nonce}:{self.current.saved_revision}:{self.current.fingerprint[:32]}"
         )
@@ -439,6 +483,23 @@ class ReviewView(discord.ui.View):
             )
         except WorkflowError as error:
             await self.present(interaction, str(error))
+
+    @discord.ui.button(label="Choose second Bond", row=2)
+    async def second_bond(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Any]
+    ) -> None:
+        if not await self.interaction_check(interaction):
+            return
+        await interaction.response.defer(ephemeral=True)
+        current = await asyncio.to_thread(self.service.get, viewer_from_interaction(interaction))
+        view = discord.ui.View(timeout=600)
+        view.add_item(StartingBondSelect(self, current, additional=True))
+        await reply(
+            interaction,
+            "Choose a second accepted Personal Bond with a different character. "
+            "You will confirm it before saving. Reopen /character review to go back.",
+            view,
+        )
 
     @discord.ui.button(label="Activation uses /character activate", row=2, disabled=True)
     async def activate(

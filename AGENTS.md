@@ -1,5 +1,16 @@
 # Active owner direction — P1
 
+Latest owner change: require two starting Bonds as a campaign house rule, with
+an explicit per-character setup-test bypass. Preserve the printed primary
+role/depth, require an accepted Personal second Bond to a distinct character,
+and never invent consent. Only the Handler/configured administrator may confirm
+the revision-bound test exemption. It waives Bonds only, not other setup or
+release gates. Existing active characters are not rebuilt. Record the ruling in
+docs/CAMPAIGN_RULINGS.md; policy owner_starting_bond_count selects1or2.
+Every runtime release must bump src/girlframe/__init__.py's __version__; package
+metadata and Discord lifecycle presence derive from that single source. Docs-only
+evidence commits do not require a version bump. The next release is0.1.1.
+
 Current live build: `70f9c7a36d16b0c84f35fadeaebf430fe84b9484` implements
 private `/start` campaign/character progress, guided confirmed saves, requests and
 sheet/Play entry points. [Focused CI43686466268](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43686466268)

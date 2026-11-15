@@ -685,7 +685,7 @@ class GameService:
                 )
                 for i, name in enumerate(review.creation.intrinsic_frame_assets)
             )
-            outgoing = next((x for x in review.bonds if x.outgoing), None)
+            outgoing = review.primary_starting_bond
             character_id = c.scalar(
                 sa.select(t.characters.c.id).where(
                     t.characters.c.campaign_id == self.store.campaign_id,

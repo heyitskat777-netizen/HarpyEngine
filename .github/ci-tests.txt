@@ -23,3 +23,7 @@ tests/rules/test_deep_brain_spikes_pagination.py
 tests/test_start_dashboard_state.py
 tests/test_start_dashboard_ui.py
 tests/test_wizard_creation_hooks.py
+# House-rule setup and actual versioned presence; preserve normal one-Bond behavior.
+tests/test_starting_bond_house_rule.py
+tests/test_presence.py
+tests/test_bonds.py::test_two_party_decisions_replay_history_and_privacy
