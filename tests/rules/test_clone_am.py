@@ -18,7 +18,7 @@ from test_world import initial
 from girlframe.delivery.m2_worker import GameWorker
 from girlframe.discord_adapter.m2_forms import NativeForm
 from girlframe.discord_adapter.m2_ui import open_play
-from girlframe.discord_adapter.m3_clone_am import open_purchase
+from girlframe.discord_adapter.m3_clone_am import open_clone, open_purchase
 from girlframe.engine import m3_clone_am as rules
 from girlframe.engine.m2 import PlayInput
 from girlframe.engine.m3_actor_bonds import current_ref, depth, is_helpless
@@ -470,3 +470,40 @@ def test_copy_flirt_escape_actual_asset_and_actual_child_play_preserve_source_an
         game.inspect(OTHER, child)["state"] == game.inspect(PLAYER, second)["state"] == "complete"
     )
     assert game.dice.calls == 3
+
+
+def test_clone_heat_menu_uses_current_shared_actor_balance(ledger, tmp_path, monkeypatch):
+    from girlframe.discord_adapter.heat_form import HeatForm
+
+    game, source, ref, _, _ = prepared(ledger, tmp_path, monkeypatch)
+    cast_copy(game, ref)
+
+    async def run():
+        opened = current(2, 929501)
+        opened.channel_id = 900
+        await opened.response.defer(ephemeral=True)
+        await open_clone(opened, source)
+        outer = opened.edit_original_response.call_args.kwargs["view"]
+        with ledger.transaction() as c:
+            canon = state(game)
+            canon.sheets["2"].heat = 2
+            game.event(c, 1, str(uuid4()), "synthetic.shared_heat_changed", canon)
+        selected = current(2, 929502)
+        await selected.response.defer(ephemeral=True)
+        await outer.submit_action(selected, {"mode": ("flirt",)})
+        form = selected.edit_original_response.call_args.kwargs["view"]
+        assert isinstance(form, HeatForm)
+        assert dict(next(x for x in form.fields if x.key == "heat").options) == {
+            "0": "0",
+            "1": "1",
+            "2": "2",
+        }
+        with ledger.transaction() as c:
+            canon = state(game)
+            canon.sheets["2"].heat = 1
+            game.event(c, 1, str(uuid4()), "synthetic.shared_heat_spent", canon)
+        await form.present(current(2, 929503))
+        assert dict(next(x for x in form.fields if x.key == "heat").options) == {"0": "0", "1": "1"}
+        assert game.dice.calls == 0
+
+    asyncio.run(run())

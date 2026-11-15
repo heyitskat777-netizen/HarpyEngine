@@ -35,3 +35,13 @@ four separately owned consumers; root owns the helper/integration/checks.
 CI includes these five cases beside the prior focused packet. No full regression
 or human acceptance is claimed. Runtime version is bumped to0.1.3; exact CI and
 deployment evidence will be added after the release gate.
+
+Bounded component review found one concrete freshness issue: Clone AM's fresh
+actor preview was overwritten with older outer-menu Heat. The final consumer
+uses that actual actor's shared clone-sheet balance and refreshes the same source
+on render/confirmation. Its real native-menu test passes after opening the menu,
+changing shared Heat and refreshing again (1passed,2.25s). A missing acknowledgement
+in the test's direct callback invocation caused its first transport assertion to
+fail; the test was corrected, with original failure retained privately. No other
+concrete blocker was identified in the bounded review. CI includes this case;
+the earlier5normal passes remain scoped evidence, not full regression.

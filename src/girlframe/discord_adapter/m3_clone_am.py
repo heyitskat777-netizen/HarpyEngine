@@ -184,13 +184,24 @@ async def open_clone(interaction: discord.Interaction, service: CloneService) ->
             submit,
         )
         if mode != "follow":
+
+            async def refresh() -> dict[str, Any]:
+                return dict(
+                    (
+                        await asyncio.to_thread(
+                            actor_service.preview, viewer_from_interaction(current), channel, ref
+                        )
+                    )["actor"]
+                )
+
             form = HeatForm(
                 current.user.id,
                 form.title,
                 form.instructions,
                 fields,
                 submit,
-                resources=dict(data["actor"], heat=own["heat"]),
+                resources=data["actor"],
+                refresh=refresh,
             )
         await form.present(current)
         return None
