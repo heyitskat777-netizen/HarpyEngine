@@ -7,6 +7,7 @@ import discord
 from discord import app_commands
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.heat_form import HeatForm
 from girlframe.discord_adapter.labels import entity_label
 from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm, threaded
@@ -1728,8 +1729,8 @@ async def open_play(
             dampener_modifier=dampener_modifier(values),
             kicked_puppy_basis=damaged_basis(values),
             identity=identity,
-            gain=int(one(values, "gain")),
-            pair_share=int(one(values, "pair_share")),
+            gain=int(one(values, "gain") or "0"),
+            pair_share=int(one(values, "pair_share") or "0"),
             disposable_heat=cast(Literal[0, 3, 4], int(one(values, "disposable_heat") or "0")),
             target=(parent["body"].get("target") if play == "flirt" else None)
             if parent and parent["kind"] == "bonded_rejection_child"
@@ -1748,7 +1749,7 @@ async def open_play(
             and one(values, "target") not in npc_flirt_targets
             else None,
             piloting=one(values, "piloting") == "yes",
-            witnessed=one(values, "witnessed") == "yes",
+            witnessed=play == "disobey_orders" and one(values, "witnessed") == "yes",
             parent=parent["parent"] if parent else None,
             order_id=parent["body"].get("order_id") if parent else None,
             source_work=code_source
@@ -1797,7 +1798,7 @@ async def open_play(
             + "`."
         )
 
-    form = NativeForm(
+    form = HeatForm(
         viewer.user_id,
         "Prepare a Play",
         (
@@ -1837,6 +1838,9 @@ async def open_play(
         ),
         [x for x in fields if not (x.key in ("target", "identity") and not x.options)],
         submit,
+        resources=sheet,
+        refresh=lambda: threaded(lambda: game.sheet(viewer)),
+        no_heat_plays=("keep_your_head",) if nightmare else (),
     )
     if parent and parent["kind"] == "bonded_rejection_child":
         form.values["context"] = parent["body"]["context"]
@@ -1848,6 +1852,7 @@ async def open_play(
     if parent and parent["kind"] == "order_disobey" and parent.get("bonded_rejection_order"):
         form.values["context"] = parent["body"]["context"]
     form.confirm.label = "Confirm & Roll"
+    form.controls()
     await reply(interaction, form.text(), form)
 
 

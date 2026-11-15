@@ -6,6 +6,7 @@ from typing import Any, Literal, cast
 import discord
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.heat_form import HeatForm
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine import m3_princess_sex as rules
@@ -198,7 +199,7 @@ async def open_princess(
             )
 
         heat = sheet["heat"]
-        await NativeForm(
+        await HeatForm(
             viewer.user_id,
             "Prepare Princess Sex Play",
             DISCLOSURE,
@@ -221,6 +222,8 @@ async def open_princess(
                 ),
             ],
             begin,
+            resources=sheet,
+            refresh=lambda: asyncio.to_thread(service.game.sheet, viewer),
         ).present(interaction)
         return
     choices = await asyncio.to_thread(service.game.choices, viewer)
@@ -503,7 +506,7 @@ async def open_choice(
         )
         return "Actual owned source decision saved."
 
-    await NativeForm(
+    form = NativeForm(
         viewer.user_id,
         "Controlled native Stim self-Dose"
         if kind == "princess_sex_child" and child["play"] == "dose_up"
@@ -527,4 +530,18 @@ async def open_choice(
         ),
         fields,
         submit,
-    ).present(interaction)
+    )
+    if kind == "princess_sex_child":
+        form = HeatForm(
+            viewer.user_id,
+            form.title,
+            form.instructions,
+            fields,
+            submit,
+            resources=child,
+            fixed_no_heat=bool(nightmare),
+            paired_allowed=child["paired_heat"],
+            disposal_allowed=child["disposable"],
+            values={"play": (child["play"],)},
+        )
+    await form.present(interaction)

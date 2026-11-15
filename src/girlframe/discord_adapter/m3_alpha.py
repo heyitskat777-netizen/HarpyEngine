@@ -6,6 +6,7 @@ from typing import Any, Literal, cast
 import discord
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.heat_form import HeatForm
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m2 import ChoiceAnswer, PlayInput
@@ -325,4 +326,18 @@ async def open_alpha_choice(
         # show that actual zero commitment in review without forcing another pick.
         values={"gain": ("0",)} if data["kind"] == "alpha_counter_play" else None,
     )
+    if data["kind"] == "alpha_counter_play":
+        form = HeatForm(
+            viewer.user_id,
+            form.title,
+            form.instructions,
+            fields,
+            submit,
+            resources=sheet,
+            no_heat_plays=("keep_your_head",) if nightmare else (),
+            identity_plays=marked_recipes,
+            disposal_allowed=disposable_counter,
+            disposal_plays=("dose_up",),
+            values=None if own_recipe else {"play": ("keep_your_head",)},
+        )
     await reply(interaction, form.text(), form)

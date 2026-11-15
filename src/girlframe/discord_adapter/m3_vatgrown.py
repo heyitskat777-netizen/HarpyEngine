@@ -6,6 +6,7 @@ from typing import Any
 import discord
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.heat_form import HeatForm
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m2 import ChoiceAnswer, PlayInput
@@ -207,7 +208,7 @@ async def open_vatgrown(
                     play="unassuming_doll",
                     target_actor=ActorRef.model_validate(target["ref"]),
                     identity=answer["identity"][0] if answer.get("identity") else None,
-                    gain=int(answer["gain"][0]),
+                    gain=int(answer.get("gain", ("0",))[0]),
                     heat=int(answer["heat"][0]),
                     context=answer["account"],
                     trigger_confirmed=True,
@@ -238,13 +239,15 @@ async def open_vatgrown(
             ),
             Field("account", "Your actual fading-into-background trigger", paragraph=True),
         ]
-        form = NativeForm(
+        form: NativeForm = HeatForm(
             current.user.id,
             "Unassuming Doll",
             "Use the original outside-Frame body and actual scene. "
             "All existing Heat/Identity spending rules apply.",
             fields,
             prepare,
+            resources=sheet,
+            refresh=lambda: asyncio.to_thread(service.game.sheet, viewer_from_interaction(current)),
         )
         await reply(current, form.text(), form)
         return None

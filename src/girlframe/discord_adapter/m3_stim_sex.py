@@ -6,6 +6,7 @@ from typing import Any, Literal, cast
 import discord
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.heat_form import HeatForm
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m2 import ChoiceAnswer, PlayInput
@@ -147,13 +148,15 @@ async def open_stim(
                         context=values["account"],
                         trigger_confirmed=True,
                         identity=values["identity"][0] if values.get("identity") else None,
-                        gain=int(values["gain"][0]),
-                        disposable_heat=cast(Literal[0, 3, 4], int(values["disposable"][0])),
+                        gain=int(values.get("gain", ("0",))[0]),
+                        disposable_heat=cast(
+                            Literal[0, 3, 4], int(values.get("disposable", ("0",))[0])
+                        ),
                     ),
                 )
                 return "Actual Stim Sex Play prepared: " + str(result["action_id"])
 
-            form = NativeForm(
+            form = HeatForm(
                 viewer.user_id,
                 "Prepare actual Stim Sex",
                 "Use the actual accepted voluntary source. Original Heat and Identity rules apply; "
@@ -186,6 +189,9 @@ async def open_stim(
                     Field("account", "Your actual source trigger", paragraph=True),
                 ],
                 play,
+                resources=sheet,
+                disposal_key="disposable",
+                refresh=lambda: asyncio.to_thread(service.game.sheet, viewer),
             )
             await reply(interaction, form.text(), form)
             return

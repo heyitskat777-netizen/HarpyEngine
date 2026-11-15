@@ -6,6 +6,7 @@ from typing import Any
 import discord
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.heat_form import HeatForm
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.m2_ui import YES, entities, menu, text
 from girlframe.discord_adapter.onboarding import reply
@@ -168,20 +169,30 @@ async def open_clone(interaction: discord.Interaction, service: CloneService) ->
                         context=answer["context"],
                         heat=int(answer["heat"][0]),
                         identity=selected[0] if selected else None,
-                        gain=int(answer["gain"][0]) if selected else 0,
+                        gain=int(answer.get("gain", ("0",))[0]) if selected else 0,
                         target_actor=ActorRef.model_validate(target["ref"]),
                         trigger_confirmed=True,
                     ),
                 )
             return "Actual copy Play requested: " + str(result["action_id"])
 
-        await NativeForm(
+        form = NativeForm(
             current.user.id,
             "Clone AM: actual source",
             "The real scene lock and original-person responses apply.",
             fields,
             submit,
-        ).present(current)
+        )
+        if mode != "follow":
+            form = HeatForm(
+                current.user.id,
+                form.title,
+                form.instructions,
+                fields,
+                submit,
+                resources=dict(data["actor"], heat=own["heat"]),
+            )
+        await form.present(current)
         return None
 
     options = [("keep", "Keep Your Head / owed rejection"), ("flirt", "Flirt")]

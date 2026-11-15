@@ -6,6 +6,7 @@ from typing import Any
 import discord
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.heat_form import HeatForm
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine import m3_prince as rules
@@ -201,8 +202,8 @@ async def _begin(
                 play=rules.PLAY,
                 source_work=record["id"],
                 identity=identity[0] if identity else None,
-                gain=int(values["gain"][0]),
-                pair_share=int(values["share"][0]),
+                gain=int(values.get("gain", ("0",))[0]),
+                pair_share=int(values.get("share", ("0",))[0]),
                 heat=int(values["heat"][0]),
                 piloting=values["piloting"][0] == "yes",
                 context=record["part"],
@@ -226,13 +227,15 @@ async def _begin(
             + ". Complete its real choices."
         )
 
-    await NativeForm(
+    await HeatForm(
         interaction.user.id,
         "Play the actual part",
         record["part"] + "\nMark demographics only while following demands. "
         "A contrary act requires actual Keep/Disobey first.",
         fields,
         submit,
+        resources=sheet,
+        refresh=lambda: asyncio.to_thread(service.game.sheet, viewer_from_interaction(interaction)),
     ).present(interaction)
 
 
@@ -242,8 +245,10 @@ async def _record(
     value, kind = data["record"], data["kind"]
     viewer = viewer_from_interaction(interaction)
     fields: list[Field] = []
+    heat_sheet: dict[str, Any] | None = None
     if kind == "DemandAttempt" and value["action"] is None:
         sheet = await asyncio.to_thread(service.game.sheet, viewer)
+        heat_sheet = sheet
         identities = [
             x
             for x in sheet["identities"] + sheet.get("additional_identities", [])
@@ -283,8 +288,8 @@ async def _record(
                     play=values["play"][0],
                     source_work=value["id"],
                     identity=identity[0] if identity else None,
-                    gain=int(values["gain"][0]),
-                    pair_share=int(values["share"][0]),
+                    gain=int(values.get("gain", ("0",))[0]),
+                    pair_share=int(values.get("share", ("0",))[0]),
                     heat=int(values["heat"][0]),
                     piloting=values["piloting"][0] == "yes",
                     context=value["account"],
@@ -590,13 +595,26 @@ async def _record(
         )
         await reply(interaction, "Saved Prince record: " + account)
         return
-    await NativeForm(
-        interaction.user.id,
-        "Prince: " + kind,
-        "Actual original source and independently owned choices.",
-        fields,
-        submit,
-    ).present(interaction)
+    form: NativeForm
+    if heat_sheet is not None:
+        form = HeatForm(
+            interaction.user.id,
+            "Prince: " + kind,
+            "Actual original source and independently owned choices.",
+            fields,
+            submit,
+            resources=heat_sheet,
+            refresh=lambda: asyncio.to_thread(service.game.sheet, viewer),
+        )
+    else:
+        form = NativeForm(
+            interaction.user.id,
+            "Prince: " + kind,
+            "Actual original source and independently owned choices.",
+            fields,
+            submit,
+        )
+    await form.present(interaction)
 
 
 async def open_prince(

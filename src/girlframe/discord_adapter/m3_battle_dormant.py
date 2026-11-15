@@ -6,6 +6,7 @@ from typing import Any
 import discord
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.heat_form import HeatForm
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m2 import PlayInput
@@ -265,4 +266,17 @@ async def open_dormant(
         fields,
         submit,
     )
+    if any(x.key == "heat" for x in fields):
+        sheet = await asyncio.to_thread(service.game.sheet, viewer_from_interaction(interaction))
+        form = HeatForm(
+            interaction.user.id,
+            title,
+            form.instructions,
+            fields,
+            submit,
+            resources=sheet,
+            refresh=lambda: asyncio.to_thread(
+                service.game.sheet, viewer_from_interaction(interaction)
+            ),
+        )
     await reply(interaction, form.text(), form)

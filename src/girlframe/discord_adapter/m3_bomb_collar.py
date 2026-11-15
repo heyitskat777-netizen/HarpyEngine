@@ -6,6 +6,7 @@ from typing import Any
 import discord
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.heat_form import HeatForm
 from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
@@ -31,6 +32,10 @@ async def open_collar(
             )
             return
         sheet = data["sheet"]
+        from girlframe.discord_adapter.m3_nightmare import keep_info
+        from girlframe.services.m3_nightmare import NightmareService
+
+        nightmare = await keep_info(interaction, NightmareService(service.game))
 
         async def respond(current: discord.Interaction, values: dict[str, Any]) -> str:
             result = await asyncio.to_thread(
@@ -43,7 +48,7 @@ async def open_collar(
                     play=values["play"][0],
                     heat=int(values["heat"][0]),
                     identity=(values.get("identity") or (None,))[0],
-                    gain=int(values["gain"][0]),
+                    gain=int(values.get("gain", ("0",))[0]),
                     piloting=values["piloting"] == ("yes",),
                     context=values["context"],
                     trigger_confirmed=True,
@@ -54,7 +59,7 @@ async def open_collar(
                 result["action_id"]
             )
 
-        await NativeForm(
+        await HeatForm(
             interaction.user.id,
             "Survive the actual triggered collar",
             "Your original Girl must Dive Deep or actually survive another way. "
@@ -92,6 +97,8 @@ async def open_collar(
                 Field("context", "What you actually do to survive", paragraph=True),
             ],
             respond,
+            resources=sheet,
+            no_heat_plays=("keep_your_head",) if nightmare else (),
         ).present(interaction)
         return
     if data["acquisition"] is None:

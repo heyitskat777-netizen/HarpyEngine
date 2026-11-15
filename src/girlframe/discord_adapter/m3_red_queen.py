@@ -6,6 +6,7 @@ from typing import Any, cast
 import discord
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.heat_form import HeatForm
 from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.m3_memory_pages import MemoryHistory
@@ -25,8 +26,14 @@ async def _form(
     instructions: str,
     fields: list[Field],
     callback: Any,
+    *,
+    resources: dict[str, Any] | None = None,
 ) -> None:
-    form = NativeForm(interaction.user.id, title, instructions, fields, callback)
+    form = (
+        HeatForm(interaction.user.id, title, instructions, fields, callback, resources=resources)
+        if resources is not None
+        else NativeForm(interaction.user.id, title, instructions, fields, callback)
+    )
     await reply(interaction, form.text(), form)
 
 
@@ -248,7 +255,7 @@ async def _play(
                 trigger_confirmed=True,
                 heat=int(_one(values, "heat")),
                 identity=None if _one(values, "identity") == "none" else _one(values, "identity"),
-                gain=int(_one(values, "gain")),
+                gain=int(_one(values, "gain", "0")),
                 target_actor=target,
                 source_work=_one(values, "source") or None,
             ),
@@ -261,6 +268,10 @@ async def _play(
         "Perform the actual trigger; record truthful observation or brain access.",
         fields,
         submit,
+        resources={
+            "heat": menu["heat"],
+            "identities": [{"id": x[0], "name": x[1], "marked": False} for x in menu["identities"]],
+        },
     )
 
 

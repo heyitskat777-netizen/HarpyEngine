@@ -5,6 +5,7 @@ from typing import Any
 import discord
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.heat_form import HeatForm
 from girlframe.discord_adapter.m2_forms import Field, NativeForm, threaded
 from girlframe.discord_adapter.m2_ui import YES, entities, menu, one, text
 from girlframe.discord_adapter.onboarding import reply
@@ -150,13 +151,24 @@ async def open_flirt(
             + ". Resume your own private responses with /choice resume."
         )
 
-    await NativeForm(
+    async def refresh() -> dict[str, Any]:
+        return dict(
+            (
+                await threaded(
+                    lambda: service.preview(viewer_from_interaction(interaction), channel, ref)
+                )
+            )["actor"]
+        )
+
+    await HeatForm(
         interaction.user.id,
         "Your actual Harpy — Flirt",
         "Use her actual Heat and Identities. Both people answer their own questions; "
         "follow-through is confirmed separately.",
         fields,
         submit,
+        resources=actor,
+        refresh=refresh,
     ).present(interaction)
 
 

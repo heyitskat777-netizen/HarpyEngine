@@ -6,6 +6,7 @@ from typing import Any, cast
 import discord
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.heat_form import HeatForm
 from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.m3_memory_pages import MemoryForm, MemoryHistory
@@ -196,12 +197,14 @@ async def _play(
         )
         return "Your actual Changeling Play is confirmed."
 
-    form = NativeForm(
+    form = HeatForm(
         interaction.user.id,
         "CHANGELING",
         "Confirm your actual source, Heat and Identity costs.",
         fields,
         submit,
+        resources=sheet,
+        refresh=lambda: asyncio.to_thread(service.game.sheet, viewer_from_interaction(interaction)),
     )
     await reply(interaction, form.text(), form)
 

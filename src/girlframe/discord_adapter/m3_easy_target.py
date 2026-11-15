@@ -6,6 +6,7 @@ from typing import Any
 import discord
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.heat_form import HeatForm
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.m3_memory_pages import MemoryForm, MemoryHistory
 from girlframe.discord_adapter.onboarding import reply
@@ -478,7 +479,7 @@ async def open_easy_target(
             )
             return "Actual Easy Target prepared: " + str(result["action_id"])
 
-        form = NativeForm(
+        form = HeatForm(
             current.user.id,
             "Easy Target",
             "Describe your actual mistake in the real scene.",
@@ -487,6 +488,9 @@ async def open_easy_target(
                 Field("context", "Actual mistake or stupid statement", paragraph=True),
             ],
             begin,
+            resources=sheet,
+            minimum_spend=1,
+            refresh=lambda: asyncio.to_thread(service.game.sheet, viewer_from_interaction(current)),
         )
         await reply(current, form.text(), form)
 

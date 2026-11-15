@@ -1024,6 +1024,7 @@ def child_projection(
         identities=[x.model_dump(mode="json") for x in sheet.identities if not x.marked],
         additional_identities=[x.model_dump(mode="json") for x in extra if not x.marked],
         disposable=has_rule(sheet, "girl.stim-blissed.disposable-psyche", "STIM-BLISSED"),
+        paired_heat=has_rule(sheet, "girl.bonded.bonded-pair", "BONDED"),
         assets=[x.model_dump(mode="json") for x in actual.assets],
         piloting=actual.piloting,
         nightmare=bool(entitlement(game, c, state, value.actor)),

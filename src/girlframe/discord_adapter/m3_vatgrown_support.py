@@ -6,7 +6,8 @@ from typing import Any
 import discord
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
-from girlframe.discord_adapter.m2_forms import Field, NativeForm
+from girlframe.discord_adapter.heat_form import HeatForm
+from girlframe.discord_adapter.m2_forms import Field
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m2 import PlayInput
 from girlframe.services.m2_game import GameService
@@ -88,8 +89,8 @@ async def open_investment_performance(
                 play="keep_your_head",
                 source_work=investment_id,
                 identity=identity[0] if identity else None,
-                gain=int(values["gain"][0]),
-                pair_share=int(values["pair_share"][0]),
+                gain=int(values.get("gain", ("0",))[0]),
+                pair_share=int(values.get("pair_share", ("0",))[0]),
                 heat=int(values["heat"][0]),
                 dampener_modifier=dampener_modifier(values),
                 piloting=values["piloting"][0] == "yes",
@@ -104,7 +105,7 @@ async def open_investment_performance(
             "the Investor judges fulfilment afterward."
         )
 
-    form = NativeForm(
+    form = HeatForm(
         interaction.user.id,
         "Prime Investment: actual performance",
         "Investor's desire: "
@@ -113,6 +114,9 @@ async def open_investment_performance(
         "This starts a real Play; it does not declare the desire fulfilled.",
         fields,
         submit,
+        resources=sheet,
+        fixed_no_heat=bool(nightmare),
+        refresh=lambda: asyncio.to_thread(game.sheet, viewer),
     )
     await reply(interaction, form.text(), form)
 
@@ -151,7 +155,8 @@ async def open_vatgrown_departure(
         )
         return "Departure awaits your real Disobey result. Play: " + str(result["action_id"])
 
-    form = NativeForm(
+    sheet = await asyncio.to_thread(game.sheet, viewer_from_interaction(interaction))
+    form = HeatForm(
         interaction.user.id,
         "Attempt to leave",
         "Resolve Disobey before leaving their side.",
@@ -160,5 +165,7 @@ async def open_vatgrown_departure(
             Field("heat", "Heat committed", tuple((str(i), str(i)) for i in range(5))),
         ],
         submit,
+        resources=sheet,
+        refresh=lambda: asyncio.to_thread(game.sheet, viewer_from_interaction(interaction)),
     )
     await reply(interaction, form.text(), form)

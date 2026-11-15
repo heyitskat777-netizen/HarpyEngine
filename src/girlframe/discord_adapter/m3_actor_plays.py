@@ -5,6 +5,7 @@ from typing import Any
 import discord
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.heat_form import HeatForm
 from girlframe.discord_adapter.m2_forms import Field, NativeForm, threaded
 from girlframe.discord_adapter.m2_ui import entities, menu, one, text
 from girlframe.discord_adapter.m3_punishments import Picker
@@ -247,7 +248,10 @@ async def open_actor_play(
                 "Resume your responses with /choice resume."
             )
 
-        form = NativeForm(
+        async def refresh() -> dict[str, Any]:
+            return dict((await threaded(lambda: service.preview(viewer, channel, ref)))["actor"])
+
+        form = HeatForm(
             viewer.user_id,
             "Your Harpy" if harpy_mode else "Your actual Handler role",
             "Your rules adjudicator is "
@@ -268,6 +272,8 @@ async def open_actor_play(
             + "Confirm before anything is spent.",
             fields,
             submit,
+            resources=actor,
+            refresh=refresh,
         )
         await reply(current, form.text(), form)
 

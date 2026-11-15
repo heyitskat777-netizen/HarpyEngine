@@ -7,6 +7,7 @@ from typing import Any
 import discord
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.heat_form import HeatForm
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine import m3_bonded as rules
@@ -245,7 +246,7 @@ async def _play(
             source_work=source,
             heat=int(values["heat"][0]),
             identity=values.get("identity", (None,))[0] if values.get("identity") else None,
-            gain=int(values.get("gain", ("1",))[0]) if values.get("identity") else 0,
+            gain=int(values.get("gain", ("0",))[0]) if values.get("identity") else 0,
             pair_share=int(values.get("share", ("0",))[0]),
             target=(
                 int(target.entity)
@@ -268,12 +269,14 @@ async def _play(
             result["action_id"]
         )
 
-    form = NativeForm(
+    form = HeatForm(
         interaction.user.id,
         title,
         "Use real resources and your actual trigger. Preparing does not perform the Play.",
         fields,
         start,
+        resources=sheet,
+        refresh=lambda: asyncio.to_thread(game.sheet, viewer_from_interaction(interaction)),
     )
     await reply(interaction, form.text(), form)
 

@@ -5,7 +5,8 @@ from typing import Any
 import discord
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
-from girlframe.discord_adapter.m2_forms import Field, NativeForm, threaded
+from girlframe.discord_adapter.heat_form import HeatForm
+from girlframe.discord_adapter.m2_forms import Field, threaded
 from girlframe.discord_adapter.m2_ui import YES, entities, menu, one, text
 from girlframe.engine.m2 import PlayInput
 from girlframe.engine.m3_actor_state import ActorRef
@@ -136,13 +137,24 @@ async def open_beneath(
         )
         return f"Beneath saved: {result['action_id']}. Resume your own private choice."
 
-    await NativeForm(
+    async def refresh() -> dict[str, Any]:
+        return dict(
+            (
+                await threaded(
+                    lambda: service.preview(viewer_from_interaction(interaction), channel, ref)
+                )
+            )["actor"]
+        )
+
+    await HeatForm(
         interaction.user.id,
         "Your actual Harpy — Put Someone Beneath You",
         "Use her actual resources; Harpies have no Foundation Status. "
         "Original affected people choose their own private details.",
         fields,
         submit,
+        resources=actor,
+        refresh=refresh,
     ).present(interaction)
 
 
