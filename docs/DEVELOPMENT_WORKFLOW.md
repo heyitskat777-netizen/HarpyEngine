@@ -3,6 +3,17 @@
 > Their prior pause is lifted only for that run; hourly/new simulation automation,
 > bot startup/deployment and model calls remain separately unauthorized.
 
+# Current P2 preparation
+
+The owner separately authorized synthetic P2 development before P1 human
+acceptance. The approved Activity-first Director design is in
+[AI_DIRECTOR_ARCHITECTURE.md](AI_DIRECTOR_ARCHITECTURE.md), with one next bounded
+[observation work order](work_orders/P2_DIRECTOR_OBSERVATION.md). Earlier AI holds
+below are historical for that authorized synthetic scope. Real transcript capture,
+model calls, live mode and deployment remain separate. This design checkpoint
+needs documentation/link/repository validation; it adds no runtime or migrations.
+Keep the lean staffing, focused evidence and final-candidate gates below.
+
 # Active P1 workflow — November8 owner update
 
 Use `work_orders/P1_PLAYABLE_RELEASE.md` and `P1_CURRENT_QUEUE.md`. Close existing W0 integration first; then durable human-DM escalation and dependency-ready ordinary workflows for every Girl/Frame. AI follows accepted P1 under separate authorization; the original full-rule backlog remains. Bot OFF.

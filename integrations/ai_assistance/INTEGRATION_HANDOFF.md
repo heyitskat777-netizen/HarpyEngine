@@ -1,5 +1,15 @@
 # Activity integration — synthetic assistance v1
 
+The owner's approved [Activity-first Director design](../../docs/AI_DIRECTOR_ARCHITECTURE.md)
+and [next synthetic observation work order](../../docs/work_orders/P2_DIRECTOR_OBSERVATION.md)
+extend the future product plan. They preserve this delivered summary v1 API.
+Scene submissions, subscriptions/consent, batching, Director decisions, NPC/world
+contributions and general Activity delivery remain planned, unregistered APIs.
+Enabled NPC initiative/world proposals do not activate live mode. The observation
+source is the authorized persisted Activity scene stream, not passive Discord
+chat. Read the canonical design for UI and backend responsibilities before adding
+those consumers; do not broaden `ReviewDraft` into a mechanical apply endpoint.
+
 HarpyEngine supplies a transport-neutral backend workflow and strict Python data
 contracts. This handoff defines the v1 Activity adapter contract. It does not
 establish HTTP routes, OAuth/session verification, a browser connection or a

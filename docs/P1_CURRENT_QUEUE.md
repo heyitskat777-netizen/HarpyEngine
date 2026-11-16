@@ -6,6 +6,14 @@ contracts are described in [the P2 work order](work_orders/P2_SYNTHETIC_ASSISTAN
 This does not certify P1 or enable new gameplay, deployment or real provider calls.
 The P1 work/evidence below remains scoped and historical where marked.
 
+Current P2 source: `28937b4`, public-reference synthetic summaries and private
+request/review/reopen. [Focused CI43791181002](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43791181002)
+passed 101 tests; this is not a new full regression. The approved
+[Activity-first Director design](AI_DIRECTOR_ARCHITECTURE.md) is now incorporated
+as documentation. [P2-D1](work_orders/P2_DIRECTOR_OBSERVATION.md) is the next
+synthetic engine assignment: authorized scene inputs and committed-Play trigger
+to a durable eligible batch. No Director runtime or live observer is claimed.
+
 Activity-first integration is the next owner-directed UI workstream. See
 [the staged contract](work_orders/P1_ACTIVITY_PRIMARY_INTERFACE.md). First deliver
 authenticated character read/preview/save/reopen against the existing engine;

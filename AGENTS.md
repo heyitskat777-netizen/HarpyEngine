@@ -1,5 +1,16 @@
 # Active owner direction — bounded P2 backend development
 
+The owner supplied the approved selective-observer Director design and directed
+Activity-first adaptation. Its canonical specification is
+docs/AI_DIRECTOR_ARCHITECTURE.md; the next bounded synthetic implementation order
+is docs/work_orders/P2_DIRECTOR_OBSERVATION.md. Preserve Option C, balanced
+initiative, 120-second quiet window and enabled NPC/world-proposal capabilities.
+Enabled capabilities are not permission to activate live mode or capture real
+conversations. Observe explicit authorized Activity scene submissions in future
+integration, not passive Discord Gateway transcripts. This checkpoint changes
+documentation only; scene batching, Director decisions and Activity delivery are
+not implemented. The existing summary v1 contract remains record-review-only.
+
 The owner now authorizes P2 synthetic assistance development and sanitized pushes
 before P1 human acceptance. Follow docs/work_orders/P2_SYNTHETIC_ASSISTANCE.md and
 integrations/ai_assistance/INTEGRATION_HANDOFF.md. This supersedes earlier P2/AI

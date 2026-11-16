@@ -4,6 +4,15 @@ Owner direction: make the Discord Activity the primary interface and isolate the
 bot's Discord-specific responsibilities. Preserve the existing architecture,
 campaign authority and live release while integrating in bounded stages.
 
+The subsequent approved [Director architecture](../AI_DIRECTOR_ARCHITECTURE.md)
+adds a future Activity scene timeline, explicit IC/OOC submissions, observation
+notice/consent, Ask Director / Ready / Continue, owned pending choices and private
+facilitator controls. These reuse the same verified backend and engine store.
+Director inputs come from authorized persisted Activity scene messages and
+committed engine events; browser presence and raw Discord chat are not observed.
+This supplements the staged character workflow below; it implements no new UI,
+session flow or HTTP route. The Activity task still owns its actual adapter.
+
 The owner supplied an Activity thread link. This session has no tool
 that reads another Codex thread. Its repository, framework, authentication,
 backend and hosting remain unverified; the thread link is not source access.

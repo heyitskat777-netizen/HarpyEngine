@@ -52,6 +52,15 @@ It delivers public-reference context, synthetic proposals and private durable
 review; it does not certify P1, supply fictional knowledge or enable real calls.
 The broader milestone acceptance and privacy gates below remain open.
 
+The owner's approved [Director architecture](AI_DIRECTOR_ARCHITECTURE.md) selects
+Option C: authorized Activity scene inputs and committed Plays, batched review,
+120-second quiet window and balanced initiative. NPC dialogue/world proposals
+are enabled capabilities for future validated integration, not live activation.
+The completed synthetic summary slice at `28937b4` is preserved. Next is
+[P2-D1, AI-free synthetic observation and batching](work_orders/P2_DIRECTOR_OBSERVATION.md).
+Historical M4/M5/M6/M7 labels from the supplied design do not renumber current
+P1/P2/P3 or certify any earlier gate. No Discord transcript observer is enabled.
+
 1. Persist chronological scene and source knowledge with explicit audience filters
    for Director/GM, in-game Handler, NPC controllers and players; Handler knowledge
    remains smaller than GM knowledge. Prove private-context separation first.

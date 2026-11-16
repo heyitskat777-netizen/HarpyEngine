@@ -1,5 +1,12 @@
 # P2 bounded deliverable — synthetic assistance and private review
 
+Delivered at `28937b4`; focused CI43791181002 passed 101 tests including selected
+existing dependencies. This completed work order remains the summary v1 scope.
+The owner subsequently supplied the approved
+[Director architecture](../AI_DIRECTOR_ARCHITECTURE.md). Its next
+[P2-D1 work order](P2_DIRECTOR_OBSERVATION.md) adds synthetic scene observation
+and batching later; it does not expand this summary's approval/application powers.
+
 The current owner instruction authorizes this P2 backend increment and sanitized
 source pushes before P1 human acceptance. It supersedes earlier roadmap timing
 for this increment only. P1 remains RULES_SUBSET, with human acceptance and broader
