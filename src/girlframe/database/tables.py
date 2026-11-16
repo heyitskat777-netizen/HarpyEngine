@@ -10,6 +10,7 @@ from girlframe.database.p1_canonical_barrier import install as install_canonical
 from girlframe.database.p1_effect_schema import define as define_effects
 from girlframe.database.p1_schema import define as define_p1
 from girlframe.database.p1_source_schema import define as define_source_pauses
+from girlframe.database.p2_schema import define as define_assistance
 
 metadata = Base.metadata
 m2 = define(metadata)
@@ -19,6 +20,7 @@ actor_availability = define_availability(metadata)
 external_effects = define_effects(metadata)
 p1_notices = define_p1(metadata)
 p1_source_pauses = define_source_pauses(metadata)
+ai_proposals = define_assistance(metadata)
 coordination_revisions = sa.Table(
     "creation_coordination_revisions",
     metadata,

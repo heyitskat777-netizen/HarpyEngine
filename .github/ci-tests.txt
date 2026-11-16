@@ -38,3 +38,7 @@ tests/test_character_transfer.py
 tests/test_character_transfer_ui.py
 tests/test_creation.py::test_owner_save_restart_history_and_private_audit
 tests/test_onboarding.py::test_join_and_draft_replay_restart_and_stale_forms
+# Bounded P2 backend: private public-reference summaries, durable review and migration.
+tests/test_ai_context.py
+tests/test_ai_assistance.py
+tests/test_database.py

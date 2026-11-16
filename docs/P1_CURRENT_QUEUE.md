@@ -1,5 +1,11 @@
 # Current P1 queue — scoped native candidate verified
 
+P2 backend development is now separately owner-authorized before P1 human
+acceptance. The bounded synthetic assistance workflow and neutral Activity v1
+contracts are described in [the P2 work order](work_orders/P2_SYNTHETIC_ASSISTANCE.md).
+This does not certify P1 or enable new gameplay, deployment or real provider calls.
+The P1 work/evidence below remains scoped and historical where marked.
+
 Activity-first integration is the next owner-directed UI workstream. See
 [the staged contract](work_orders/P1_ACTIVITY_PRIMARY_INTERFACE.md). First deliver
 authenticated character read/preview/save/reopen against the existing engine;

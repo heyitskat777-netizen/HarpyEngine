@@ -1,5 +1,18 @@
 # HarpyEngine — GIRL FRAME private Discord pilot
 
+## P2 backend development — synthetic assistance
+
+The owner-authorized P2 increment implements private, audience-filtered OOC public
+reference summaries: request → deterministic draft → approve/reject → saved outcome
+refresh. Engine-owned authorization, revisions and stable command keys protect the
+workflow. Approval applies no mechanics or canon. See the
+[Activity v1 handoff](integrations/ai_assistance/INTEGRATION_HANDOFF.md) and
+[bounded work order](docs/work_orders/P2_SYNTHETIC_ASSISTANCE.md).
+The [P2 checkpoint report](reports/P2_SYNTHETIC_ASSISTANCE.md) records focused evidence.
+No HTTP/OAuth backend, paid provider, deployment or live migration is delivered.
+The frozen v0.1.4 runtime remains the last verified live release; current process
+status was not checked. P1 human acceptance and broader coverage remain pending.
+
 Current live build: `fe47d7ef0b558a1106f5dc48b25c277aff5f875b`, **v0.1.4**.
 Owner-authorized restart and live readback are complete: one frozen process,
 Running v0.1.4presence,19guild groups and16character subcommands.

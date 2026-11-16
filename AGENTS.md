@@ -1,3 +1,15 @@
+# Active owner direction — bounded P2 backend development
+
+The owner now authorizes P2 synthetic assistance development and sanitized pushes
+before P1 human acceptance. Follow docs/work_orders/P2_SYNTHETIC_ASSISTANCE.md and
+integrations/ai_assistance/INTEGRATION_HANDOFF.md. This supersedes earlier P2/AI
+development holds only for that bounded source work. The engine remains the sole
+authority; approval of an OOC summary applies no mechanics or canon. No paid calls,
+live migration, bot restart, deployment or environment publication is authorized.
+Keep the frozen v0.1.4 release intact; its current process status is unverified.
+P1 human acceptance and broader coverage remain open. Activity backend/auth details
+are still pending; neutral v1 contracts are not connected HTTP routes.
+
 # Current live character-sheet integration — v0.1.4
 
 The owner approved the recommended v0.1.4 rollout with “proceed.” Exact frozen

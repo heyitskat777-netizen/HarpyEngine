@@ -46,6 +46,12 @@ read/write is part of this work.
 
 ## P2 — audience-safe AI assistance, after P1 acceptance
 
+Current owner exception: begin the bounded synthetic backend increment before P1
+human acceptance, as defined in [the P2 work order](work_orders/P2_SYNTHETIC_ASSISTANCE.md).
+It delivers public-reference context, synthetic proposals and private durable
+review; it does not certify P1, supply fictional knowledge or enable real calls.
+The broader milestone acceptance and privacy gates below remain open.
+
 1. Persist chronological scene and source knowledge with explicit audience filters
    for Director/GM, in-game Handler, NPC controllers and players; Handler knowledge
    remains smaller than GM knowledge. Prove private-context separation first.

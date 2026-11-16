@@ -47,9 +47,9 @@ def test_alembic_migrations_upgrade_check_and_downgrade(
             "alembic_version"
         }
         expected_tables = set(inspect(engine).get_table_names())
-        # Revision0020 intentionally preserves the canonical draining barrier.
+        # Revision0021 intentionally retains private assistance review history.
         # A rejected downgrade must leave the complete migrated schema intact.
-        with pytest.raises(RuntimeError, match="Do not remove the draining barrier"):
+        with pytest.raises(RuntimeError, match="Assistance history must be retained"):
             command.downgrade(config, "base")
         assert set(inspect(engine).get_table_names()) == expected_tables
     finally:
