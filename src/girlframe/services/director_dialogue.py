@@ -131,6 +131,8 @@ class DirectorDialogueService:
 
         def operation(c: Connection) -> dict[str, Any]:
             draft = self._owned(c, viewer, scene_id, identity)
+            if draft.get("status") != "draft":
+                raise WorkflowError("DIALOGUE_UNAVAILABLE: review an actual draft only.")
             actor = ActorRef.model_validate_json(json.dumps(draft["actor"]))
             current = self.context._build(c, viewer, scene_id, actor=actor)
             if decision == "approve":

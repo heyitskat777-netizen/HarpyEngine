@@ -33,7 +33,11 @@ class DirectorShadowService:
             )
             if body is None:
                 raise WorkflowError("SHADOW_UNAVAILABLE: no accessible outcome.")
-            return dict(json.loads(body))
+            result = dict(json.loads(body))
+            base_id = run_id[:-7] if run_id.endswith(":review") else run_id
+            if result.get("run_id") != base_id:
+                raise WorkflowError("SHADOW_UNAVAILABLE: no accessible shadow outcome.")
+            return result
 
     def _authorize(self, c: Connection, viewer: GuildViewer, scene_id: str) -> None:
         self.observations._scope()
@@ -54,7 +58,10 @@ class DirectorShadowService:
                 )
             )
             if saved:
-                return dict(json.loads(saved))
+                cached_result = dict(json.loads(saved))
+                if cached_result.get("run_id") != run_id:
+                    raise WorkflowError("SHADOW_UNAVAILABLE: no accessible shadow outcome.")
+                return cached_result
         context = self.context.build(viewer, scene_id)
         with self.store.engine.connect() as c:
             saved = c.scalar(
@@ -65,7 +72,10 @@ class DirectorShadowService:
                 )
             )
             if saved:
-                return dict(json.loads(saved))
+                cached_result = dict(json.loads(saved))
+                if cached_result.get("run_id") != run_id:
+                    raise WorkflowError("SHADOW_UNAVAILABLE: no accessible shadow outcome.")
+                return cached_result
             run = (
                 c.execute(
                     sa.select(t.director["runs"]).where(

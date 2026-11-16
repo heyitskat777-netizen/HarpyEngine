@@ -64,6 +64,12 @@ def test_actual_npc_context_requires_cast_controller_and_explicit_knowledge(
     assert "SYNTHETIC_OBSERVED_REPORT" in dialogue.get(PLAYER, scene, draft["id"])["text"]
     with pytest.raises(WorkflowError):
         dialogue.get(OTHER, scene, draft["id"])
+    from girlframe.services.director_shadow import DirectorShadowService
+
+    with pytest.raises(WorkflowError, match="SHADOW_UNAVAILABLE"):
+        DirectorShadowService(context).get(ADMIN, scene, draft["id"])
+    with pytest.raises(WorkflowError, match="SHADOW_UNAVAILABLE"):
+        DirectorShadowService(context).evaluate(ADMIN, scene, draft["id"])
     reviewed = dialogue.review(PLAYER, "npc-review", scene, draft["id"], decision="approve")
     assert dialogue.review(PLAYER, "npc-review", scene, draft["id"], decision="approve") == reviewed
     assert reviewed["publication"] == reviewed["application"] == "blocked"

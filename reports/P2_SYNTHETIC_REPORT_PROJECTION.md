@@ -22,3 +22,10 @@ The engine trial command and exact later UI operations are consolidated in
 uses the trial runner, changed-file Ruff/format/mypy and repository/planning checks.
 Remote CI is separate. This is a narrow synthetic engine trial, not certification
 of the full Director design or autonomous live-trial readiness.
+
+Follow-up integrity review found shared-table record-type confusion: GM shadow
+lookup could otherwise return a private dialogue record by ID. Shadow lookup and
+replay now require their own run identity; GM access is not dialogue ownership.
+The actual-NPC test verifies denial. Dialogue review also requires a draft record.
+Final focused trial after the fix: 30 passed, zero failures/errors/skips; source
+mypy and changed-file Ruff checks pass. Synthetic-only publication remains bounded.
