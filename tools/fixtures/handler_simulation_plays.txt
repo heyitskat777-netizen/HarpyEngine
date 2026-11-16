@@ -1,0 +1,100 @@
+The simulator canopy is open. I can hear the hangar fans through the headset.
+I am at the second station. Your voice is clear on the local channel.
+I have a grey relay tower on the display, but I have not started the exercise.
+The scene card says training. I am treating everything outside that card as unknown.
+The harness is comfortable after the adjustment. I made that adjustment myself.
+Let me know if you want the technician back. I will not change your settings.
+Handler, what is the simulated mission objective?
+Observe and report. I will separate what the screen shows from what I infer.
+I have a clean log page and the exercise clock is still only a display.
+My first line says waiting for the Pilot to choose how to proceed.
+I would start by looking at the relay from the marked approach point.
+I can describe the proposed angle, but that is not a resolved approach.
+The camera overlay has a symbol I do not recognise.
+Put the symbol in the log without assigning a threat to it.
+Handler, what is the scope around the sealed relay entrance?
+I will not treat a shut door as permission to break it.
+There is room on the log for an unanswered access question.
+Most of my best logs have room for those.
+Mine have diagrams of things that might be vents.
+GM, I declare Keep Your Head to endure the simulator siren while keeping my hands steady.
+The tower image has a dark patch near the base.
+I can see the patch on my display too. Its cause is not established.
+It could be shadow, damage, or somebody's idea of a texture.
+Write dark patch visible on display. Leave the explanations in the question column.
+I am doing that. The question column is becoming popular.
+The relay must belong to somebody, though the training card does not say who.
+Handler, who secretly owns the relay in this exercise?
+Then the owner stays unknown. I will not turn the missing name into a faction.
+That also keeps my question column honest.
+GM, what mission status is established after that Keep roll?
+My hand is near the camera control, but I have not declared an approach.
+The distinction is dull until it prevents an accidental commitment.
+Dull is welcome in a cockpit with this many switches.
+Handler, what is the accepted mission status in the real campaign?
+So this conversation has not accepted a real mission for either of us.
+Correct. I will keep the log heading as simulated planning.
+I am noting a possible route along the exterior, subject to actual adjudication.
+I can check whether your sketch matches the displayed outline.
+The south edge on the sketch is longer than the image suggests.
+I will mark the distance as uncertain rather than correcting it by guesswork.
+Handler, do the scope limits permit forcing the sealed door?
+Then an exterior observation stays the proposed plan.
+If you want a risky manoeuvre, we should send that to the GM and engine.
+I want to understand the options before choosing one.
+We can keep talking without turning the options into completed actions.
+The relay light on the monitor is amber in this still image.
+I am writing displayed amber light, not active warning system.
+Good. The exercise designers may have a reason, but we have not been given it.
+I wonder whether there is a concealed transmitter inside.
+GM, I declare Keep Your Head to maintain my focus through the simulated communications dropout.
+Unknown, then. I will not search for a transmitter that exists only in my question.
+That is a particularly useful sentence to keep on the checklist.
+Put it underneath do not diagnose the headset.
+That checklist is following us from the barracks into the simulator.
+At least the headset is dry this time.
+I am comparing the proposed observation angle with the exercise card.
+The card does not promise that angle will reveal the entrance mechanism.
+Then my plan should not promise it either.
+I can record the proposed observation without writing a successful result.
+Please do. Any result should wait for actual resolution.
+Handler, repeat the objective we are trying to satisfy.
+Observe the beacon, record external conditions, report what is established.
+I have those three items at the top of the page.
+I am considering a stressful approach, but I have not selected expenditure.
+Keep that choice yours. I will not select resources from this station.
+Thank you. I want the interface to show the eligible choices first.
+The GM route can identify the right workflow without pressing its buttons for you.
+I can hear my own breathing in this headset. The simulator is doing its job.
+Tell me if you want a break. There is no need to turn that into fiction first.
+GM, I declare Keep Your Head to make it through the shaking cockpit during the exercise.
+I have completed those actual Play choices; I am not claiming the approach automatically succeeded.
+I will wait. Nothing on my log says the approach succeeded.
+Good. Leave the outcome blank.
+The blank is visible and carefully maintained.
+I am also leaving reward and damage fields blank.
+We have no committed source for either.
+There is a maintenance walkway on the image, or something shaped like one.
+Record the shape. Do not turn it into a safe route until it is established.
+Handler, confirm the observation scope before we discuss that walkway.
+I can describe the exterior and ask about access without inventing permission.
+And I can help keep proposed actions separate from results in the log.
+That is enough for this rehearsal. I am not declaring a successful mission.
+The log ends at planning and unresolved questions.
+I would like to leave the canopy open for the debrief.
+I can remain at the second station while you decide when to get out.
+Leave the tower image on screen. I want to point to the unknown marks.
+It is unchanged. We have not made the scenario advance by talking.
+My last note says clarify facts before committing actions.
+That is a useful place to stop the exercise discussion.
+Handler, what status should close this simulation log?
+I will force the sealed door on the relay and call that an exterior inspection.
+I hear the scope warning. I can reconsider the proposal without pretending it already happened.
+Would you like me to keep the unresolved door question in the log?
+Yes. The choice and any actual resolution remain ahead of us.
+The Handler label on the display is just a label; I am checking the headset with you.
+Your voice is still clear. No new transmission appeared on my screen.
+I am not going to force the door. I am writing down a question about access.
+The question is recorded without a result or an invented access code.
+I have no further action to declare in this rehearsal.
+Then I will close my notes. The receipts are real in this fixture; no real campaign was changed.

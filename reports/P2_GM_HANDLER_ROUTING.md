@@ -143,3 +143,85 @@ model integration, deployment, real observation or publication is included.
 
 Runtime-and-dialogue snapshot SHA-256 (sorted filename, NUL, bytes, NUL for the
 2 changed engine modules and 2 dialogue fixtures): `c9d032c326448abf70fcf1acddc0134082d2558d342eecd8da5822f249ba66a6`.
+
+
+## Follow-up: native Plays plus visible GM and Handler intervention
+
+The owner requested Plays in the long scenes and visible GM intervention alongside
+Handler intervention. The new `--plays` mode retains two 100-player-input scenes,
+with three actual ordinary native Keep Your Head workflows per scene. These are
+not fabricated rolls or merely referrals: existing GameService/GameWorker execute
+locks, receipts, choices, completion and fake delivery using disposable fixtures.
+
+| Scene | Visible GM interventions | Optional generated Handler replies | Required Handler owner rulings | Native rolls |
+|---|---:|---:|---:|---:|
+| Barracks / hallway | 7 | 8 | 3 | 3 |
+| Relay simulation | 8 | 9 | 3 | 3 |
+
+Each scene consumes one roll per actual Play: **[2,3] → 5/low, [4,5] → 9/mid,
+[6,6] → 12/high**. Faces are a test-only injected schedule, never chosen by the
+GM or Handler providers. All fixture Heat choices are 0. Canonical state changes
+in the disposable campaigns, including the Pilot's chosen high-tier Tag; the old
+zero-roll/unchanged-state statements apply only to earlier no-Play trials.
+
+Visible labels distinguish GM intervention (blue), optional Handler speech (teal),
+actual engine workflow (grey), and explicitly scripted owner choices (gold).
+Required Handler rulings are gold test-controller inputs responding to real engine
+`handler_keep` choices. They are not counted as optional AI dialogue or inferred
+from a dice tier. Private required-Handler explanations are withheld.
+
+The first episode in each scene starts at player input 20 / chat 22:
+
+- **23: GM** selects a typed Keep Your Head request.
+- **24–25: engine** creates the confirmed action, acquires the lock and records
+  exactly one original 2d6 receipt. No RNG occurs before lock acknowledgement.
+- **26–28: choices** each participant explicitly passes Tags and the original
+  Pilot supplies the actual printed traits/Tag options for the rolled tier.
+- **29: engine** requires the original Handler's enough/not-enough ruling; GM
+  readback is actually attempted and rejected as PLAY_PENDING until it is supplied.
+- **30: Handler controller** explicitly submits the required test ruling; private
+  explanation stays hidden. The actual engine completes the Play and releases the lock.
+- **31: GM** reads back only proved receipt/total/tier, without inventing mission
+  success, access or cancellation of another Play.
+
+The next Play request/completion pairs are **66/74** and **96/104**; required
+Handler rulings are at **73** and **103**. Optional Handler replies in barracks
+occur at **8,17,39,48,56,86,114,126**. The simulation adds a scoped warning at
+**129**, immediately after **GM adjudication at 128** for input 91's forced-door
+proposal. Each transcript has a complete linked intervention index and receipt
+summary. Final visible scene lengths are **136** and **138**, including workflow
+and choice entries in addition to the 100 player lines.
+
+GM routine reviews still receive broad context, but their saved `gm_decision`
+distinguishes WAIT from visible RESPOND. Ambient review does not produce a visible
+clarification after each message. New owner-private `review_play/get_play_review`
+reuse the observer's full native source proof, rechecking it atomically with the
+saved readback. Only current own original Pilot results are accessible. Completed
+source revisions already read back are excluded from routine pending work.
+Native choices and unsupported Play families never become automatic AI commands.
+
+Actual commands and results:
+
+- `.venv/bin/python tools/run_handler_scene_trials.py --plays`: both scenes
+  completed, **6 native rolls/6 completed Keeps**, 200 GM reviews, 17 optional
+  Handler replies, 6 required Handler fixture answers and 0 pending inputs.
+- Every begin, choice, roll receipt and GM-review replay preserved the existing
+  result without extra dice. Readback applied no additional mechanical changes.
+  GM-only, PC-only and private required-Handler canaries stayed out of Handler
+  generation and visible GM output. External tokens/cost: **0**.
+- `.venv/bin/python tools/run_director_trial.py`: **39 passed in 20.81s**. New
+  checks cover GM silence/request gating, premature readback, actual mid-tier
+  completion, foreign-owner rejection, private-text exclusion, replay and pending
+  input deduplication; existing source-proof checks remain passing.
+- Ruff lint/format passed on all **6** changed Python files; mypy passed on all
+  **3** changed source modules. Repository/manifest check: **0 findings**.
+
+Artifacts: `var/gm-handler-play-scenes/index.html`, `transcripts.txt`, per-scene
+JSON, `summary.json` and `source-snapshot.json`. Engine policies are deterministic;
+fixture owners choose all voluntary inputs. This is six instances of native Keep,
+not coverage of every Play. No live campaign, model integration, bot deployment,
+real capture, automatic general Play consumer or autonomous publication is claimed.
+
+Source snapshot SHA-256 (sorted filename, NUL, bytes, NUL for the 3 changed source
+modules, routing test, 2 trial tools and 2 new dialogue fixtures):
+`a4793cbb5a050068884b43bc4931c0f7016e26c05f1fe20cd8b26f2c7835b331`.

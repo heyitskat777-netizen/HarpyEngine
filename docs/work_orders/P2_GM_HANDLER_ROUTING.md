@@ -39,3 +39,14 @@ unchanged mechanics. GM raw history uses the latest 100 entries with an explicit
 omitted-entry count, while canonical state and known references remain separate.
 Keep generated HTML/JSON under ignored var/. Real unsolicited publication and
 general narrative intelligence remain unsupported.
+
+Next owner-requested demonstration: incorporate actual native Keep Your Head
+Plays into both long scenes, exercising low/mid/high tiers. Show engine-selected
+GM intervention versus private routine review, actual receipt/choice/lock stages,
+required original Handler adjudication and optional scoped Handler dialogue.
+Keep all player and required Handler choices explicitly scripted fixture inputs;
+AI prose cannot supply those choices or declare success from a tier. Reuse native
+Play services and completed-source proof; add only a private, replay-safe GM
+readback of whitelisted receipt/total/tier. No general automatic Play consumer,
+new rules, paid calls or live publication. Record actual changed synthetic state
+and RNG counts instead of retaining the previous zero-roll/unchanged-state claim.

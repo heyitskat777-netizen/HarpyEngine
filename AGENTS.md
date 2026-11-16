@@ -11,6 +11,9 @@
 > New long-scene runs use process_message: engine-persisted RESPOND/WAIT gates
 > Handler generation. No preset reply quota or scripted Handler dialogue. A narrow
 > synthetic scope-warning trigger is implemented; real publication is still off.
+> The --plays trial now exercises native Keep low/mid/high workflows and visible
+> GM interventions. Required Pilot/Handler rulings remain explicit fixture-owner
+> choices. Private GM readback is receipt-proved and cannot resolve a Play itself.
 
 # Active owner direction — bounded P2 backend development
 

@@ -432,3 +432,47 @@ def test_engine_decides_handler_need_and_persists_silence_and_grounded_warning(r
             handler_decision_id=decision["id"],
         )
     assert len(handler.requests) == 2
+
+
+def test_gm_intervention_gate_and_proved_play_readback(observed):
+    from test_m2_game import answer, pass_tags, start, tick
+
+    observer, scene, _, game, worker, gateway, dice = observed
+    service = DirectorConversationService(DirectorContextService(observer))
+    for number, (text, action) in enumerate(
+        [
+            ("The kettle is still on the table.", "WAIT"),
+            ("I have not declared Keep Your Head.", "WAIT"),
+            ("GM, I declare Keep Your Head to steady my voice under the siren.", "RESPOND"),
+            ("I will force the sealed door.", "RESPOND"),
+        ]
+    ):
+        _, source = send(observer, scene, f"gm-gate:{number}", text=text)
+        bundle = service.process_message(PLAYER, f"gm-process:{number}", scene, source.source_id, 1)
+        assert bundle["gm"]["reply"]["gm_decision"]["action"] == action
+    native = start(game)
+    with pytest.raises(WorkflowError, match="PLAY_PENDING"):
+        service.review_play(PLAYER, "early-review", scene, native)
+    tick(worker, gateway)
+    pass_tags(game)
+    answer(game, PLAYER, "actor_keep", options=("tough", "in_control"), denied=("desperate",))
+    with pytest.raises(WorkflowError, match="PLAY_PENDING"):
+        service.review_play(PLAYER, "still-pending", scene, native)
+    answer(game, ADMIN, "handler_keep", flag=True, text="SYNTHETIC_PRIVATE_KEEP_OUTCOME")
+    tick(worker, gateway, 5)
+    before = state(game).model_dump_json()
+    review = service.review_play(PLAYER, "completed-review", scene, native)
+    assert review["proof"]["faces"] == [4, 5]
+    assert review["proof"]["total"] == 9 and review["proof"]["tier"] == "mid"
+    assert review["reply"]["gm_decision"]["reason"] == "completed_play"
+    assert "SYNTHETIC_PRIVATE_KEEP_OUTCOME" not in json.dumps(review)
+    assert service.review_play(PLAYER, "completed-review", scene, native) == review
+    assert service.get_play_review(PLAYER, scene, review["id"]) == review
+    with pytest.raises(WorkflowError, match="PLAY_REVIEW_UNAVAILABLE"):
+        service.get_play_review(OTHER, scene, review["id"])
+    with pytest.raises(WorkflowError, match="PLAY_REVIEW_UNAVAILABLE"):
+        service.review_play(OTHER, "foreign-review", scene, native)
+    with observer.store.engine.connect() as c:
+        pending = list(c.execute(observer._pending(scene, 0)).mappings())
+        assert all(row["source_id"] != review["source_id"] for row in pending)
+    assert state(game).model_dump_json() == before and dice.calls == 1

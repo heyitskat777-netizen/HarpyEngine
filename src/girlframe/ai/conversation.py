@@ -45,6 +45,13 @@ class GMRequest(Contract):
         return self
 
 
+class GMDecision(Contract):
+    action: Literal["RESPOND", "WAIT"]
+    reason: Literal[
+        "no_gm_need", "explicit_gm_request", "play_request", "scope_adjudication", "completed_play"
+    ]
+
+
 class ConversationReply(Contract):
     schema_version: Literal[1] = 1
     route: Route
@@ -52,8 +59,15 @@ class ConversationReply(Contract):
     text: str = Field(min_length=1, max_length=6000)
     source_refs: tuple[str, ...] = Field(default=(), max_length=3)
     play_id: str | None = None
+    gm_decision: GMDecision | None = None
     application: Literal["blocked"] = "blocked"
     provider: Literal["synthetic-conversation-v1"] = "synthetic-conversation-v1"
+
+    @model_validator(mode="after")
+    def separate_gm_decision(self) -> "ConversationReply":
+        if self.route == "handler" and self.gm_decision is not None:
+            raise ValueError("GM intervention decisions are not Handler output")
+        return self
 
 
 class GMProvider(Protocol):
@@ -100,6 +114,28 @@ class SyntheticHandlerPolicy:
                 source_refs=tuple(x.id for x in scope[-3:]),
             )
         return HandlerDecision(action="WAIT", reason="no_handler_need")
+
+
+class SyntheticGMPolicy:
+    """Select visible intervention; routine private GM review remains separate."""
+
+    def decide(self, request: GMRequest) -> GMDecision:
+        text = request.question.strip().casefold()
+        if re.match(
+            r"(?:i|we)\s+(?:will|intend to|am going to|are going to)\s+"
+            r"(?:force|breach|break open)\b",
+            text,
+        ):
+            return GMDecision(action="RESPOND", reason="scope_adjudication")
+        if (
+            ("keep your head" in text or "keep_your_head" in text)
+            and re.search(r"\b(?:declare|roll|resolve|request)\b", text)
+            and not re.search(r"\b(?:not|never|no)\b", text)
+        ):
+            return GMDecision(action="RESPOND", reason="play_request")
+        if re.match(r"gm\s*[:,]", text):
+            return GMDecision(action="RESPOND", reason="explicit_gm_request")
+        return GMDecision(action="WAIT", reason="no_gm_need")
 
 
 def question_topic(question: str) -> str:
@@ -198,4 +234,24 @@ class SyntheticGM:
     def respond(self, request: GMRequest) -> ConversationReply:
         # Reads the broader GM context, but this conservative synthetic adapter only
         # publishes recipient-permitted references or neutral engine referrals.
-        return _answer("gm", request.question, request.recipient_references)
+        decision = SyntheticGMPolicy().decide(request)
+        if decision.reason == "play_request":
+            reply = ConversationReply(
+                route="gm",
+                disposition="requires_engine_workflow",
+                play_id="keep_your_head",
+                text="Keep Your Head is the requested Play. Describe what you are trying to "
+                "make it through, confirm the trigger and choose your own Heat/Identity inputs "
+                "in the engine. Its actual roll and printed choices must finish before an outcome.",
+            )
+        elif decision.reason == "scope_adjudication":
+            reply = ConversationReply(
+                route="gm",
+                disposition="clarification",
+                text="That is a proposed action, not a resolved outcome. Clarify what you "
+                "intend before adjudication; this conversation grants no access, permission "
+                "or automatic success. Any applicable Play must use its actual engine workflow.",
+            )
+        else:
+            reply = _answer("gm", request.question, request.recipient_references)
+        return reply.model_copy(update={"gm_decision": decision})

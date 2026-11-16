@@ -12,6 +12,9 @@ For two longer scenes with engine-selected Handler interventions, run
 `.venv/bin/python tools/run_handler_scene_trials.py` and open
 `var/handler-long-scenes/index.html`. Each supplies 100 scripted Pilot messages;
 Handler replies have no preset count and are highlighted with their trigger.
+Add `--plays` to include actual native Keep Your Head workflows and visible GM
+interventions: `var/gm-handler-play-scenes/index.html` marks requests, receipts,
+owner choices, required Handler rulings and GM completion readbacks separately.
 No paid calls or live autonomy are enabled.
 
 ## P2 backend development — synthetic assistance

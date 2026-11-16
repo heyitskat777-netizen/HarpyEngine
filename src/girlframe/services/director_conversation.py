@@ -9,6 +9,7 @@ from sqlalchemy import Connection
 
 from girlframe.ai.conversation import (
     ConversationReply,
+    GMDecision,
     GMProvider,
     GMRequest,
     HandlerProvider,
@@ -427,3 +428,108 @@ class DirectorConversationService:
                 handler_decision_id=decision["id"],
             )
         return {"gm": gm, "handler_decision": decision, "handler": handler}
+
+    def review_play(
+        self, viewer: GuildViewer, key: str, scene_id: str, action_id: str
+    ) -> dict[str, Any]:
+        """GM readback after proved native Keep completion; never resolves a Play."""
+
+        def authorize(c: Connection) -> None:
+            _, _, action, _, _, actor = self.observations._prove_committed_play(
+                c, scene_id, action_id
+            )
+            _, _, sender = self.observations._authorize_input(c, viewer, scene_id, "pilot")
+            if str(action["actor_id"]) != str(viewer.user_id) or sender != actor:
+                raise WorkflowError("PLAY_REVIEW_UNAVAILABLE: use your own actual completed Play.")
+
+        with self.store.engine.connect() as c:
+            authorize(c)
+        source = self.observations.observe_committed_play(scene_id, action_id)
+        source_id = source.source_id
+        if source_id is None:
+            raise WorkflowError("UNPROVEN_PLAY: completion has no actual source reference.")
+
+        def operation(c: Connection) -> dict[str, str]:
+            _, state, action, receipt, event, _ = self.observations._prove_committed_play(
+                c, scene_id, action_id
+            )
+            result = action["data"]["result"]
+            # Total/tier/receipt are the ordinary participant-safe projection.
+            # Private Handler outcome text, PC choices and raw state stay out.
+            public = {
+                "action_id": action_id,
+                "receipt_id": receipt["id"],
+                "event_id": event["id"],
+                "faces": json.loads(receipt["body_json"])["faces"],
+                "total": result["total"],
+                "tier": result["tier"],
+            }
+            reply = ConversationReply(
+                route="gm",
+                disposition="answer",
+                play_id="keep_your_head",
+                gm_decision=GMDecision(action="RESPOND", reason="completed_play"),
+                source_refs=(source_id,),
+                text=f"The engine completed Keep Your Head: total {public['total']}, "
+                f"{public['tier']} tier, receipt {public['receipt_id']}. "
+                "The original Pilot's printed choices and original Handler's required ruling "
+                "are committed. A tier alone does not establish mission success, access, "
+                "or cancellation of another Play; no further outcome is invented here.",
+            )
+            identity = "play-review:" + str(uuid4())
+            record = {
+                "id": identity,
+                "record_type": "gm_play_review",
+                "route": "gm",
+                "scene_id": scene_id,
+                "owner_id": str(viewer.user_id),
+                "source_id": source.source_id,
+                "source_revision": source.source_revision,
+                "proof": public,
+                "reply": reply.model_dump(mode="json"),
+                "publication": "private_reply_only",
+                "external_tokens": 0,
+                "external_cost": 0,
+            }
+            c.execute(
+                t.director_context["shadow"]
+                .insert()
+                .values(
+                    campaign_id=self.store.campaign_id,
+                    scene_id=scene_id,
+                    id=identity,
+                    body_json=json.dumps(record, sort_keys=True),
+                )
+            )
+            self.observations._save(
+                c, scene_id, state.model_copy(update={"generation": state.generation + 1})
+            )
+            return {"id": identity}
+
+        result = self.store._write(
+            viewer,
+            key,
+            "director.play_review",
+            {"scene_id": scene_id, "action_id": action_id},
+            operation,
+            authorize=authorize,
+        )
+        return self.get_play_review(viewer, scene_id, result["id"])
+
+    def get_play_review(self, viewer: GuildViewer, scene_id: str, identity: str) -> dict[str, Any]:
+        with self.store.engine.connect() as c:
+            self.observations._scope()
+            self.observations._scene(c, scene_id, viewer)
+            _, _, actor = self.observations._authorize_input(c, viewer, scene_id, "pilot")
+            saved = self._saved(c, identity)
+            if (
+                not saved
+                or saved.get("record_type") != "gm_play_review"
+                or saved.get("owner_id") != str(viewer.user_id)
+                or saved.get("scene_id") != scene_id
+            ):
+                raise WorkflowError("PLAY_REVIEW_UNAVAILABLE: no accessible GM Play review.")
+            source = self.observations._latest_source(c, saved["source_id"])
+            if source is None or source.kind != "completed_play" or source.actor != actor:
+                raise WorkflowError("PLAY_REVIEW_UNAVAILABLE: retain the actual original actor.")
+            return saved

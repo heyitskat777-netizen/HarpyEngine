@@ -385,117 +385,138 @@ class DirectorObservationService:
         )
         return InputResult.model_validate(result)
 
+    def _prove_committed_play(
+        self, c: Connection, scene_id: str, action_id: str
+    ) -> tuple[
+        dict[str, Any],
+        SceneObservationState,
+        dict[str, Any],
+        dict[str, Any],
+        dict[str, Any],
+        ActorRef,
+    ]:
+        """Shared native source proof; callers retain their current transaction."""
+        self._scope()
+        scene = self._scene(c, scene_id)
+        state = self._state(c, scene_id)
+        if state.policy.mode != "shadow" or not self._consented(c, scene, state):
+            raise WorkflowError("OBSERVATION_DISABLED: current participant consent is required.")
+        self.game.unpaused(c)
+        action = self.game.action(c, action_id)
+        data = action["data"]
+        if {str(x) for x in data.get("participants", ())} != {
+            str(x) for x in scene["participants"]
+        }:
+            raise WorkflowError("SOURCE_SCOPE_CHANGED: retain the original Play audience.")
+        if (
+            action["scene_id"] != scene_id
+            or action["parent_id"] is not None
+            or data.get("play") != "keep_your_head"
+            or any(
+                data.get(key)
+                for key in (
+                    "m3",
+                    "actor_basic",
+                    "gorgon_play",
+                    "void_keep",
+                    "handler_play_m3",
+                    "kicked_puppy",
+                    "nightmare_core",
+                    "dampener",
+                    "princess_child",
+                    "ankou_feedback_child",
+                    "bonded_child",
+                    "red_queen_child",
+                    "changeling_child",
+                )
+            )
+            or data.get("private_audience")
+        ):
+            raise WorkflowError(
+                "UNSUPPORTED_PLAY_SOURCE: only ordinary native Keep Your Head is supported."
+            )
+        if action["state"] != "complete" or self.game.pending(c, action_id):
+            raise WorkflowError("PLAY_PENDING: preserve the actual outstanding player choices.")
+        actions = t.m2["m2_actions"]
+        if c.execute(
+            sa.select(actions.c.id).where(
+                actions.c.campaign_id == self.store.campaign_id,
+                actions.c.parent_id == action_id,
+            )
+        ).first():
+            raise WorkflowError(
+                "UNSUPPORTED_PLAY_SOURCE: child workflows need their source adapter."
+            )
+        work = t.m3["m3_required_work"]
+        latest = {
+            row["id"]: row
+            for row in c.execute(
+                sa.select(work)
+                .where(
+                    work.c.campaign_id == self.store.campaign_id,
+                    work.c.scene_id == scene_id,
+                )
+                .order_by(work.c.revision)
+            ).mappings()
+        }
+        canon = load_state(c, self.store.campaign_id)
+        self.game.action_characters(c, action, canon)
+        if any(row["state"] != "resolved" for row in latest.values()) or any(
+            x.action == action_id and x.state == "pending" for x in canon.obligations
+        ):
+            raise WorkflowError("PLAY_PENDING: complete the actual required source work.")
+        receipt = (
+            c.execute(
+                sa.select(t.m2["m2_receipts"]).where(
+                    t.m2["m2_receipts"].c.campaign_id == self.store.campaign_id,
+                    t.m2["m2_receipts"].c.action_id == action_id,
+                )
+            )
+            .mappings()
+            .first()
+        )
+        event = (
+            c.execute(
+                sa.select(t.events).where(
+                    t.events.c.campaign_id == self.store.campaign_id,
+                    t.events.c.id == data.get("response_event"),
+                    t.events.c.kind == "m2.choice_resolved",
+                )
+            )
+            .mappings()
+            .first()
+        )
+        history = c.scalar(
+            sa.select(t.m2["m2_state_history"].c.event_id).where(
+                t.m2["m2_state_history"].c.campaign_id == self.store.campaign_id,
+                t.m2["m2_state_history"].c.event_id == data.get("response_event"),
+            )
+        )
+        if (
+            not receipt
+            or not event
+            or not history
+            or json.loads(event["payload_json"]).get("action_id") != action_id
+            or json.loads(receipt["body_json"]) != data.get("receipt")
+        ):
+            raise WorkflowError(
+                "UNPROVEN_PLAY: the original committed outcome and receipt are required."
+            )
+        actor = ActorRef(
+            kind="pilot",
+            entity=str(action["actor_id"]),
+            incarnation=self.game.character_binding(
+                c, canon, int(action["actor_id"]), require_current_profile=False
+            ),
+        )
+        return scene, state, action, dict(receipt), dict(event), actor
+
     def observe_committed_play(self, scene_id: str, action_id: str) -> InputResult:
         """Trusted source adapter for native Keep Your Head only; no browser success flags."""
-        self._scope()
         with self.store.transaction() as c:
-            scene = self._scene(c, scene_id)
-            state = self._state(c, scene_id)
-            if state.policy.mode != "shadow" or not self._consented(c, scene, state):
-                raise WorkflowError(
-                    "OBSERVATION_DISABLED: current participant consent is required."
-                )
-            self.game.unpaused(c)
-            action = self.game.action(c, action_id)
-            data = action["data"]
-            if {str(x) for x in data.get("participants", ())} != {
-                str(x) for x in scene["participants"]
-            }:
-                raise WorkflowError("SOURCE_SCOPE_CHANGED: retain the original Play audience.")
-            if (
-                action["scene_id"] != scene_id
-                or action["parent_id"] is not None
-                or data.get("play") != "keep_your_head"
-                or any(
-                    data.get(key)
-                    for key in (
-                        "m3",
-                        "actor_basic",
-                        "gorgon_play",
-                        "void_keep",
-                        "handler_play_m3",
-                        "kicked_puppy",
-                        "nightmare_core",
-                        "dampener",
-                        "princess_child",
-                        "ankou_feedback_child",
-                        "bonded_child",
-                        "red_queen_child",
-                        "changeling_child",
-                    )
-                )
-                or data.get("private_audience")
-            ):
-                raise WorkflowError(
-                    "UNSUPPORTED_PLAY_SOURCE: only ordinary native Keep Your Head is supported."
-                )
-            if action["state"] != "complete" or self.game.pending(c, action_id):
-                raise WorkflowError("PLAY_PENDING: preserve the actual outstanding player choices.")
-            actions = t.m2["m2_actions"]
-            if c.execute(
-                sa.select(actions.c.id).where(
-                    actions.c.campaign_id == self.store.campaign_id,
-                    actions.c.parent_id == action_id,
-                )
-            ).first():
-                raise WorkflowError(
-                    "UNSUPPORTED_PLAY_SOURCE: child workflows need their source adapter."
-                )
-            work = t.m3["m3_required_work"]
-            latest = {
-                row["id"]: row
-                for row in c.execute(
-                    sa.select(work)
-                    .where(
-                        work.c.campaign_id == self.store.campaign_id,
-                        work.c.scene_id == scene_id,
-                    )
-                    .order_by(work.c.revision)
-                ).mappings()
-            }
-            canon = load_state(c, self.store.campaign_id)
-            self.game.action_characters(c, action, canon)
-            if any(row["state"] != "resolved" for row in latest.values()) or any(
-                x.action == action_id and x.state == "pending" for x in canon.obligations
-            ):
-                raise WorkflowError("PLAY_PENDING: complete the actual required source work.")
-            receipt = (
-                c.execute(
-                    sa.select(t.m2["m2_receipts"]).where(
-                        t.m2["m2_receipts"].c.campaign_id == self.store.campaign_id,
-                        t.m2["m2_receipts"].c.action_id == action_id,
-                    )
-                )
-                .mappings()
-                .first()
+            scene, state, action, receipt, event, actor = self._prove_committed_play(
+                c, scene_id, action_id
             )
-            event = (
-                c.execute(
-                    sa.select(t.events).where(
-                        t.events.c.campaign_id == self.store.campaign_id,
-                        t.events.c.id == data.get("response_event"),
-                        t.events.c.kind == "m2.choice_resolved",
-                    )
-                )
-                .mappings()
-                .first()
-            )
-            history = c.scalar(
-                sa.select(t.m2["m2_state_history"].c.event_id).where(
-                    t.m2["m2_state_history"].c.campaign_id == self.store.campaign_id,
-                    t.m2["m2_state_history"].c.event_id == data.get("response_event"),
-                )
-            )
-            if (
-                not receipt
-                or not event
-                or not history
-                or json.loads(event["payload_json"]).get("action_id") != action_id
-                or json.loads(receipt["body_json"]) != data.get("receipt")
-            ):
-                raise WorkflowError(
-                    "UNPROVEN_PLAY: the original committed outcome and receipt are required."
-                )
             source_id = "play:" + action_id
             old = self._latest_source(c, source_id)
             if old:
@@ -506,13 +527,6 @@ class DirectorObservationService:
                     sequence=old.sequence,
                     generation=old.generation,
                 )
-            actor = ActorRef(
-                kind="pilot",
-                entity=str(action["actor_id"]),
-                incarnation=self.game.character_binding(
-                    c, canon, int(action["actor_id"]), require_current_profile=False
-                ),
-            )
             # Only references enter the batch; private Handler answers/results do not.
             observation = Observation(
                 sequence=state.sequence + 1,
@@ -563,8 +577,9 @@ class DirectorObservationService:
                     sa.select(outcomes.c.id).where(
                         outcomes.c.campaign_id == table.c.campaign_id,
                         outcomes.c.scene_id == table.c.scene_id,
-                        sa.func.json_extract(outcomes.c.body_json, "$.record_type")
-                        == "conversation_exchange",
+                        sa.func.json_extract(outcomes.c.body_json, "$.record_type").in_(
+                            ("conversation_exchange", "gm_play_review")
+                        ),
                         sa.func.json_extract(outcomes.c.body_json, "$.route") == "gm",
                         sa.func.json_extract(outcomes.c.body_json, "$.source_id")
                         == table.c.source_id,

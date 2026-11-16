@@ -220,6 +220,46 @@ messages are appended only after a saved RESPOND decision. The output is
 numbers, reasons and citations; `.json` files include all silence decisions and
 separate GM diagnostics. `transcripts.txt` provides a plain-text transcript.
 
+## Actual Play workflows and visible GM interventions
+
+Run `.venv/bin/python tools/run_handler_scene_trials.py --plays` to exercise three
+actual native Keep Your Head workflows inside each 100-input scene. Results are
+under `var/gm-handler-play-scenes/`. The GM and optional Handler generators remain
+deterministic, with no response quota or real model calls. The test driver supplies
+explicit actor/controller choices and deterministic test dice through the existing
+native services; no Director prose is treated as permission to execute a Play.
+
+`ConversationReply.gm_decision` marks `RESPOND` versus `WAIT` for private GM reviews.
+Supported visible reasons are explicit GM request, named Keep request, proposed
+forced-entry adjudication and proved completion. Ambient private reviews remain
+saved diagnostics. Handler replies cannot carry a GM decision. The transcript
+shows only marked GM interventions, not an unrelated clarification after every line.
+
+`DirectorConversationService.review_play(viewer, key, scene_id, action_id)` creates
+an owner-private GM readback only after native ordinary Keep is actually complete.
+It reuses the same source proof as observation: original participants/actor,
+no unsupported child/playbook source, no pending choices/required work, original
+receipt, response event and canonical history. Final proof and saved readback commit
+in one transaction. `get_play_review(viewer, scene_id, id)` reopens the original
+actor's saved result. Other owners and administrators receive no ownership bypass.
+The native receipt/total/tier are whitelisted; private Handler outcome text, raw
+state and actor choices are not copied. Retries roll no dice and apply no effects.
+Only the exact handled completion revision is excluded from routine pending work.
+
+Each demonstration follows real scene lock → one 2d6 receipt → each participant's
+Tag response → Pilot's printed trait/Tag choices → original Handler's mandatory
+enough/not-enough ruling → committed result and lock release → GM readback.
+The engine blocks readback while that required Handler answer remains outstanding.
+Gold transcript entries are scripted test-owner choices, including those required
+Handler rulings; teal Handler dialogue is separately generated after its need gate.
+Blue entries are GM interventions, and grey entries are actual workflow stages.
+
+These runs deliberately change disposable mechanical state and create real test
+Tags on high-tier results. Each consumes exactly three test rolls, all Heat choices
+are 0, and no live campaign changes. A low/mid/high tier alone does not establish
+mission success, access or cancellation of another Play. Other Play completion
+families, general automatic Play consumption and live publication remain unsupported.
+
 ## Local trial console before UI work
 
 A disposable, engine-only trial is now runnable:
