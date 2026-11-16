@@ -48,3 +48,6 @@ tests/test_director_observation.py
 tests/test_director_shadow.py
 # Actual NPC role/cast/source isolation and private controller-reviewed extractive dialogue.
 tests/rules/test_director_npc_context.py
+
+# Discrete GM and Handler direct requests, source privacy and independently retryable replies.
+tests/test_director_conversation.py

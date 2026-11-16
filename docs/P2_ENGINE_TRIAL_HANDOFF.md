@@ -139,6 +139,60 @@ Handler/public speech, other venue sources, unsought contribution pacing, genera
 NPC prose, mechanical/world effects and a durable network delivery worker remain
 unsupported. Engine-first development continues without making UI details a blocker.
 
+## Discrete GM and Handler conversation
+
+`DirectorConversationService(context, gm=None, handler=None)` adds direct synthetic
+requests, independently of the older extractive dialogue/review API:
+
+- `.dispatch(viewer, key, scene_id, source_id, expected_source_revision,
+  addressed_to='gm'|'handler')` always sends the accepted own source message to the
+  GM first. A Handler target then gets a separate request containing the original
+  question and actual appointed Handler's knowledge. Returns separate `gm` and
+  optional `handler` saved exchanges; the GM result survives a Handler failure.
+- `.respond(..., route, expected_source_revision)` is the per-role service seam.
+  Separate stable subkeys make retries return saved outcomes without new provider
+  calls. `.get(viewer, scene_id, exchange_id)` reopens only the original owner's
+  result under current membership, role and consent. No administrator override.
+- GM input includes full canonical campaign state, campaign mission/off-duty/work
+  records, scene actions/receipts/choices, all current scene reference knowledge
+  and latest source history. This server-only input is never saved in the reply,
+  returned to the player or forwarded to the Handler. Credentials are outside it.
+- Handler input includes its role-bound source references and the original
+  question, with other actors' knowledge and hidden dependency IDs removed. Actual
+  appointment, controller, living role, scene/cast membership and consent are
+  checked. No forged Handler principal is used to build its context.
+- Replies carry `route`, `disposition`, `text`, `source_refs`, optional `play_id`,
+  and `application='blocked'`. Objective/scope/status answers cite known sources;
+  unknowns ask for clarification. Mechanics requests produce a typed Play-workflow
+  referral, including `keep_your_head` when recognised. They do not execute a Play.
+  The synthetic GM reveals only recipient-known references despite broader input.
+
+`record(..., topic='general'|'objective'|'scope'|'status')` supports the bounded
+synthetic lookup. Old references default to general; old general command hashes
+remain compatible. No new database migration is needed. Providers are separate
+protocols with strict request schemas; this synthetic-only service accepts only
+the exact permitted deterministic response. It is not a real-model integration.
+
+Direct requests bypass the 120-second routine review wait. A saved GM exchange
+excludes only its exact source revision from routine pending work and invalidates
+an in-flight old batch; other pending messages remain. Edits become eligible again.
+GM history still contains directly handled inputs. Source or safety changes during
+generation reject the new reply; privacy/campaign state never comes from a browser.
+
+The later UI should submit an explicit GM/Handler target, retain separate role
+labels, and render the returned reply IDs/citations with escaped text. GM routing
+metadata need not be presented as a second in-fiction speaker. Show Play referrals
+as links to actual engine choices, never as a completed roll or spent resource.
+No UI implementation is needed to run this engine trial.
+
+The trial runner now writes `var/gm-handler-conversation.json` and `.html`: 50
+scripted Pilot messages, 50 engine GM replies and 40 engine Handler replies across
+five narrative settings. Background facts are fixture setup, not scripted Handler
+lines. Settings imply no actual travel; these are five chapters of one synthetic
+conversation, not five 100-message scenes. External tokens/cost and dice rolls: 0.
+See [actual evidence](../reports/P2_GM_HANDLER_ROUTING.md). Freeform personas,
+automatic mission commitments, orders, live publication and paid calls remain open.
+
 ## Local trial console before UI work
 
 A disposable, engine-only trial is now runnable:

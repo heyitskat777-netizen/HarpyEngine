@@ -14,6 +14,7 @@ def main() -> int:
             "pytest",
             "-q",
             "tests/test_director_shadow.py",
+            "tests/test_director_conversation.py",
             "tests/rules/test_director_npc_context.py",
             "tests/test_director_observation.py",
             "tests/test_database.py",

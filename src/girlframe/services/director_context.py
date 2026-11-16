@@ -54,6 +54,7 @@ class DirectorContextService:
         *,
         known_by: tuple[ActorRef, ...] = (),
         dependencies: tuple[str, ...] = (),
+        topic: Literal["general", "objective", "scope", "status"] = "general",
     ) -> dict[str, str | int]:
         self.observations._scope()
 
@@ -129,6 +130,7 @@ class DirectorContextService:
                 order=len(prior) + 1,
                 dependencies=dependencies,
                 known_by=tuple(sorted(set(tokens))),
+                topic=topic,
                 classification="reported_claim" if source.kind == "message" else "committed_play",
                 text=("Reported claim: " + (source.text or ""))
                 if source.kind == "message"
@@ -156,6 +158,7 @@ class DirectorContextService:
                 "source_id": source_id,
                 "known_by": [x.model_dump(mode="json") for x in known_by],
                 "dependencies": dependencies,
+                **({"topic": topic} if topic != "general" else {}),
             },
             operation,
             authorize=authorize,
@@ -227,6 +230,70 @@ class DirectorContextService:
                 {
                     "guard": self.observations._guard(c, scene, state),
                     "references": [x.model_dump(mode="json") for x in references],
+                }
+            ),
+        )
+
+    def _handler_for_request(
+        self, c: Connection, requester: GuildViewer, scene_id: str
+    ) -> DirectorContext:
+        """Server-mediated Handler view; requester is never impersonated as the Handler."""
+        from girlframe.engine.m3_actors import resolve
+        from girlframe.engine.m3_cast import validate_role
+        from girlframe.engine.m3_handler_consequences import active_handler
+        from girlframe.services.handler_setup import HandlerService
+        from girlframe.services.m2_state import load_state
+        from girlframe.services.m3_actors import profiles
+
+        self.observations._scope()
+        scene = self.observations._scene(c, scene_id, requester)
+        state = self.observations._state(c, scene_id)
+        if state.policy.mode != "shadow" or not self.observations._consented(c, scene, state):
+            raise WorkflowError("OBSERVATION_DISABLED: current scene consent is required.")
+        canon = load_state(c, self.store.campaign_id)
+        appointment_revision, appointment = HandlerService(self.store).current(c)
+        actor = active_handler(canon)
+        if (
+            actor is None
+            or appointment.handler_id != canon.handler
+            or canon.handler not in scene["participants"]
+        ):
+            raise WorkflowError(
+                "HANDLER_UNAVAILABLE: require the actual current appointed scene Handler."
+            )
+        try:
+            actual = resolve(
+                canon, actor, profiles(c, self.store.campaign_id), require_current_profile=False
+            )
+            if not actual.alive or actual.controller != appointment.handler_id:
+                raise ValueError("Unavailable Handler")
+            cast = next((x for x in canon.scene_casts if x.id == scene_id and x.open), None)
+            if cast is not None:
+                validate_role(cast, actual)
+        except ValueError:
+            raise WorkflowError("HANDLER_UNAVAILABLE: recover the actual Handler role.") from None
+        refs = tuple(x for x in self._current(c, scene_id) if actor.token in x.known_by)
+        visible = {x.id for x in refs}
+        refs = tuple(
+            x.model_copy(
+                update={
+                    "known_by": (actor.token,),
+                    "dependencies": tuple(d for d in x.dependencies if d in visible),
+                }
+            )
+            for x in refs
+        )
+        return DirectorContext(
+            campaign_id=self.store.campaign_id,
+            scene_id=scene_id,
+            audience="actor",
+            actor=actor,
+            references=refs,
+            revision=_digest(
+                {
+                    "guard": self.observations._guard(c, scene, state),
+                    "appointment_revision": appointment_revision,
+                    "references": [x.model_dump(mode="json") for x in refs],
                 }
             ),
         )

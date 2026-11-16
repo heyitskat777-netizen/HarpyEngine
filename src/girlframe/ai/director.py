@@ -15,6 +15,7 @@ class KnowledgeReference(Contract):
     order: int
     dependencies: tuple[str, ...] = ()
     known_by: tuple[str, ...] = ()
+    topic: Literal["general", "objective", "scope", "status"] = "general"
     classification: Literal["reported_claim", "committed_play"]
     text: str = Field(max_length=1200)
 

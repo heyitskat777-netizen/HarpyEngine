@@ -539,10 +539,12 @@ class DirectorObservationService:
             )
             return result
 
-    def _pending(self, scene_id: str, frontier: int) -> sa.Select[Any]:
+    def _pending(
+        self, scene_id: str, frontier: int, *, include_handled: bool = False
+    ) -> sa.Select[Any]:
         table = t.director["inputs"]
         newer = table.alias("newer")
-        return sa.select(table).where(
+        query = sa.select(table).where(
             table.c.campaign_id == self.store.campaign_id,
             table.c.scene_id == scene_id,
             table.c.sequence > frontier,
@@ -554,6 +556,24 @@ class DirectorObservationService:
                 )
             ),
         )
+        if not include_handled:
+            outcomes = t.director_context["shadow"]
+            query = query.where(
+                ~sa.exists(
+                    sa.select(outcomes.c.id).where(
+                        outcomes.c.campaign_id == table.c.campaign_id,
+                        outcomes.c.scene_id == table.c.scene_id,
+                        sa.func.json_extract(outcomes.c.body_json, "$.record_type")
+                        == "conversation_exchange",
+                        sa.func.json_extract(outcomes.c.body_json, "$.route") == "gm",
+                        sa.func.json_extract(outcomes.c.body_json, "$.source_id")
+                        == table.c.source_id,
+                        sa.func.json_extract(outcomes.c.body_json, "$.source_revision")
+                        == table.c.source_revision,
+                    )
+                )
+            )
+        return query
 
     def _stats(
         self, c: Connection, scene_id: str, state: SceneObservationState

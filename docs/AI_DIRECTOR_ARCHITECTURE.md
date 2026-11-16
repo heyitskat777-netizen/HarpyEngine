@@ -23,9 +23,18 @@ own actor/source requirements. The AI Handler remains a distinct fictional role.
 
 **Option C is selected: selective observation with batched decisions.** Explicit
 requests and relevant committed engine events complement conversation batching.
-There is no per-message inference, unchanged-scene polling or runtime agent swarm.
+Ambient conversation has no routine per-message inference, unchanged-scene polling
+or runtime agent swarm.
 GM, NPC and Handler responsibilities use separate authorized contexts and, when
 needed, separate calls. Development staffing follows the existing workflow.
+
+Latest owner clarification: the GM handles adjudication and Play/response routing
+with broad campaign knowledge; the Handler supplies only information within its
+fictional knowledge. The implemented synthetic direct-request adapter calls the
+GM first for each explicit request, then independently calls the Handler when
+addressed. This direct path bypasses the routine quiet window. Handler input is
+built from its actual appointed role, never from GM output or the GM envelope.
+See [the current engine contract](P2_ENGINE_TRIAL_HANDOFF.md#discrete-gm-and-handler-conversation).
 
 **The scheduler decides when the AI looks; the AI decides whether intervention is
 useful; application services and the engine decide what may legally occur.**

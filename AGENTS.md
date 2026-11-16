@@ -3,6 +3,11 @@
 > Tentative model preference: GPT-6.1 Terra. No spending or external calls.
 > Source-context and shadow services are implemented; see
 > [engine trial handoff](docs/P2_ENGINE_TRIAL_HANDOFF.md). Autonomous live readiness is not certified.
+> Latest owner clarification: discrete GM and Handler routes. Direct requests go
+> first to the GM with full canonical campaign context; an addressed Handler gets
+> only its real role-known context through a separate request. This synthetic path
+> and 50-message demonstration are implemented; see reports/P2_GM_HANDLER_ROUTING.md.
+> Preserve the distinction between broad GM reading and recipient-safe replies.
 
 # Active owner direction — bounded P2 backend development
 
