@@ -1,0 +1,673 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "cold_tough_low",
+      "play": "keep_your_head",
+      "environment": "barracks service corridor",
+      "goal": "endure the freezing service corridor until shelter",
+      "faces": [
+        2,
+        3
+      ],
+      "desired": "success",
+      "acceptable": [
+        "success"
+      ],
+      "hypothesis": "Context and actual traits should govern this goal."
+    },
+    {
+      "id": "cold_not_tough_low",
+      "play": "keep_your_head",
+      "environment": "snowfield",
+      "goal": "endure the freezing wind until the shelter",
+      "faces": [
+        2,
+        3
+      ],
+      "desired": "failure",
+      "acceptable": [
+        "failure"
+      ],
+      "hypothesis": "Context and actual traits should govern this goal.",
+      "positive": [
+        "in_control"
+      ]
+    },
+    {
+      "id": "precision_control_mid",
+      "play": "keep_your_head",
+      "environment": "hangar calibration bench",
+      "goal": "hold the calibration needle precisely on its mark",
+      "faces": [
+        4,
+        5
+      ],
+      "desired": "success",
+      "acceptable": [
+        "success"
+      ],
+      "hypothesis": "Context and actual traits should govern this goal."
+    },
+    {
+      "id": "precision_not_control_mid",
+      "play": "keep_your_head",
+      "environment": "hangar calibration bench",
+      "goal": "hold the calibration needle precisely on its mark",
+      "faces": [
+        4,
+        5
+      ],
+      "desired": "failure",
+      "acceptable": [
+        "failure"
+      ],
+      "hypothesis": "Context and actual traits should govern this goal.",
+      "positive": [
+        "tough",
+        "vicious"
+      ],
+      "negative": [
+        "in_control"
+      ]
+    },
+    {
+      "id": "precision_high",
+      "play": "keep_your_head",
+      "environment": "shaking cockpit",
+      "goal": "hold the calibration needle precisely on its mark",
+      "faces": [
+        6,
+        6
+      ],
+      "desired": "failure",
+      "acceptable": [
+        "failure"
+      ],
+      "hypothesis": "Context and actual traits should govern this goal."
+    },
+    {
+      "id": "cold_high",
+      "play": "keep_your_head",
+      "environment": "snowfield exercise",
+      "goal": "endure the freezing corridor until the shelter",
+      "faces": [
+        6,
+        6
+      ],
+      "desired": "success",
+      "acceptable": [
+        "success"
+      ],
+      "hypothesis": "Context and actual traits should govern this goal."
+    },
+    {
+      "id": "precision_unestablished",
+      "play": "keep_your_head",
+      "environment": "medical bay",
+      "goal": "hold the calibration needle precisely on its mark",
+      "faces": [
+        4,
+        5
+      ],
+      "desired": "needs_clarification",
+      "acceptable": [
+        "needs_clarification"
+      ],
+      "hypothesis": "Context and actual traits should govern this goal.",
+      "positive": [
+        "tough",
+        "vicious"
+      ],
+      "negative": [
+        "desperate"
+      ]
+    },
+    {
+      "id": "endurance_unestablished",
+      "play": "keep_your_head",
+      "environment": "cold hangar",
+      "goal": "endure the freezing wind until shelter",
+      "faces": [
+        4,
+        5
+      ],
+      "desired": "needs_clarification",
+      "acceptable": [
+        "needs_clarification"
+      ],
+      "hypothesis": "Context and actual traits should govern this goal.",
+      "positive": [
+        "in_control",
+        "vicious"
+      ],
+      "negative": [
+        "desperate"
+      ]
+    },
+    {
+      "id": "unclear_attempt",
+      "play": "keep_your_head",
+      "environment": "hallway",
+      "goal": "get through this situation",
+      "faces": [
+        4,
+        5
+      ],
+      "desired": "needs_clarification",
+      "acceptable": [
+        "needs_clarification"
+      ],
+      "hypothesis": "Context and actual traits should govern this goal."
+    },
+    {
+      "id": "nonphysical_endure",
+      "play": "keep_your_head",
+      "environment": "briefing room",
+      "goal": "endure another boring briefing without a stated physical threat",
+      "faces": [
+        2,
+        3
+      ],
+      "desired": "needs_clarification",
+      "acceptable": [
+        "needs_clarification"
+      ],
+      "hypothesis": "The word endure alone does not establish that physical toughness resolves the task."
+    },
+    {
+      "id": "negated_precision",
+      "play": "keep_your_head",
+      "environment": "freezing corridor",
+      "goal": "endure the cold; there is no precision work in this task",
+      "faces": [
+        2,
+        3
+      ],
+      "desired": "success",
+      "acceptable": [
+        "success",
+        "needs_clarification"
+      ],
+      "hypothesis": "A negated precision reference must not impose an active control requirement."
+    },
+    {
+      "id": "joint_demands",
+      "play": "keep_your_head",
+      "environment": "freezing calibration chamber",
+      "goal": "endure the freezing cold and hold the calibration needle precisely on its mark",
+      "faces": [
+        4,
+        5
+      ],
+      "desired": "failure",
+      "acceptable": [
+        "failure",
+        "needs_clarification"
+      ],
+      "hypothesis": "Meeting one of two stated demands is insufficient; do not discard the cold requirement.",
+      "positive": [
+        "in_control",
+        "vicious"
+      ],
+      "negative": [
+        "tough"
+      ]
+    },
+    {
+      "id": "calm_synonym",
+      "play": "keep_your_head",
+      "environment": "alarm corridor",
+      "goal": "stay calm while the alarm sounds and report my words clearly",
+      "faces": [
+        4,
+        5
+      ],
+      "desired": "success",
+      "acceptable": [
+        "success",
+        "needs_clarification"
+      ],
+      "hypothesis": "Assess an ordinary composure goal without requiring the exact keyword focus."
+    },
+    {
+      "id": "walking_synonym",
+      "play": "keep_your_head",
+      "environment": "long evacuation route",
+      "goal": "keep walking despite aching muscles until I reach the shelter",
+      "faces": [
+        2,
+        3
+      ],
+      "desired": "success",
+      "acceptable": [
+        "success",
+        "needs_clarification"
+      ],
+      "hypothesis": "Recognise a plausible endurance goal or ask; keyword absence should not force a guessed verdict."
+    },
+    {
+      "id": "quoted_focus_label",
+      "play": "keep_your_head",
+      "environment": "freezing access corridor",
+      "goal": "endure the freezing wind while the wall display reads 'focus'",
+      "faces": [
+        2,
+        3
+      ],
+      "desired": "success",
+      "acceptable": [
+        "success",
+        "needs_clarification"
+      ],
+      "hypothesis": "A quoted display label is context, not an extra task demand."
+    },
+    {
+      "id": "metaphorical_cold",
+      "play": "keep_your_head",
+      "environment": "debrief room",
+      "goal": "endure a cold stare without visibly panicking",
+      "faces": [
+        4,
+        5
+      ],
+      "desired": "needs_clarification",
+      "acceptable": [
+        "needs_clarification"
+      ],
+      "hypothesis": "A metaphorical cold stare does not establish a physical endurance test.",
+      "positive": [
+        "tough",
+        "vicious"
+      ],
+      "negative": [
+        "in_control"
+      ]
+    },
+    {
+      "id": "blocked_panel",
+      "play": "keep_your_head",
+      "environment": "sealed control room",
+      "goal": "hold the calibration needle precisely on its mark",
+      "faces": [
+        4,
+        5
+      ],
+      "desired": "needs_clarification",
+      "acceptable": [
+        "needs_clarification"
+      ],
+      "hypothesis": "The same goal and traits must be reconsidered when GM-known access prerequisites are absent.",
+      "gm_condition": "The calibration panel is physically unreachable behind a sealed interlock. The Pilot has no access to its controls."
+    },
+    {
+      "id": "airlock_prerequisite",
+      "play": "keep_your_head",
+      "environment": "airlock simulation",
+      "goal": "endure the freezing airlock until rescue",
+      "faces": [
+        2,
+        3
+      ],
+      "desired": "needs_clarification",
+      "acceptable": [
+        "needs_clarification"
+      ],
+      "hypothesis": "Toughness alone cannot establish an unverified life-support prerequisite.",
+      "gm_condition": "The simulated airlock is evacuated. Suitable life support has not been established for this Pilot."
+    },
+    {
+      "id": "withdrawn_goal",
+      "play": "keep_your_head",
+      "environment": "briefing room",
+      "goal": "maintain focus; I am not actually attempting that task",
+      "faces": [
+        4,
+        5
+      ],
+      "desired": "needs_clarification",
+      "acceptable": [
+        "needs_clarification"
+      ],
+      "hypothesis": "A withdrawn or contradictory goal requires clarification before a success ruling."
+    },
+    {
+      "id": "endurance_without_control",
+      "play": "keep_your_head",
+      "environment": "freezing access corridor",
+      "goal": "endure the freezing corridor until shelter",
+      "faces": [
+        4,
+        5
+      ],
+      "desired": "success",
+      "acceptable": [
+        "success"
+      ],
+      "hypothesis": "Context and actual traits should govern this goal.",
+      "positive": [
+        "tough",
+        "vicious"
+      ],
+      "negative": [
+        "in_control"
+      ]
+    },
+    {
+      "id": "incidental_cold_label",
+      "play": "keep_your_head",
+      "environment": "climate-controlled cockpit",
+      "goal": "hold the calibration needle steady while a display has the label 'cold'",
+      "faces": [
+        4,
+        5
+      ],
+      "desired": "success",
+      "acceptable": [
+        "success"
+      ],
+      "hypothesis": "A display label need not add physical exposure; distinguish an actual requirement from an incidental word."
+    },
+    {
+      "id": "permission_not_access",
+      "play": "keep_your_head",
+      "environment": "sealed relay entrance",
+      "goal": "maintain focus so the sealed security door opens without an access action",
+      "faces": [
+        4,
+        5
+      ],
+      "desired": "needs_clarification",
+      "acceptable": [
+        "needs_clarification"
+      ],
+      "hypothesis": "Keeping composure does not itself open a sealed door or replace its required workflow.",
+      "gm_condition": "The relay entrance is sealed. Neither access nor an authorised door-opening action has been established."
+    },
+    {
+      "id": "unsupported_social_goal",
+      "play": "keep_your_head",
+      "environment": "interrogation simulation",
+      "goal": "face down the interrogator without giving up my crew",
+      "faces": [
+        4,
+        5
+      ],
+      "desired": "needs_clarification",
+      "acceptable": [
+        "needs_clarification"
+      ],
+      "hypothesis": "A social task without a supported interpretation should receive review, not an invented outcome.",
+      "positive": [
+        "desperate",
+        "vicious"
+      ],
+      "negative": [
+        "sexy"
+      ]
+    },
+    {
+      "id": "keywords_without_attempt",
+      "play": "keep_your_head",
+      "environment": "training classroom",
+      "goal": "say the words 'focus, calibration and freezing' without attempting a risky task",
+      "faces": [
+        4,
+        5
+      ],
+      "desired": "needs_clarification",
+      "acceptable": [
+        "needs_clarification"
+      ],
+      "hypothesis": "Keyword presence must not substitute for establishing a task and appropriate Play trigger."
+    },
+    {
+      "id": "sensors_hangar_low",
+      "play": "check_sensors",
+      "environment": "quiet hangar",
+      "goal": "take stock of the hangar approach",
+      "faces": [
+        2,
+        3
+      ],
+      "desired": "requires_play_adapter",
+      "acceptable": [
+        "requires_play_adapter"
+      ],
+      "hypothesis": "Apply the actual printed workflow and preserve owned choices; a missing GM adapter is not a binary ruling."
+    },
+    {
+      "id": "sensors_city_mid",
+      "play": "check_sensors",
+      "environment": "urban rooftop",
+      "goal": "take stock of the surrounding district",
+      "faces": [
+        4,
+        5
+      ],
+      "desired": "requires_play_adapter",
+      "acceptable": [
+        "requires_play_adapter"
+      ],
+      "hypothesis": "Apply the actual printed workflow and preserve owned choices; a missing GM adapter is not a binary ruling."
+    },
+    {
+      "id": "sensors_storm_high",
+      "play": "check_sensors",
+      "environment": "storm observation post",
+      "goal": "take stock of the storm corridor",
+      "faces": [
+        6,
+        6
+      ],
+      "desired": "requires_play_adapter",
+      "acceptable": [
+        "requires_play_adapter"
+      ],
+      "hypothesis": "Apply the actual printed workflow and preserve owned choices; a missing GM adapter is not a binary ruling."
+    },
+    {
+      "id": "sensors_offlist_high",
+      "play": "check_sensors",
+      "environment": "relay mission briefing",
+      "goal": "ask a mixed set of listed and off-list questions",
+      "faces": [
+        6,
+        6
+      ],
+      "desired": "requires_play_adapter",
+      "acceptable": [
+        "requires_play_adapter"
+      ],
+      "hypothesis": "Apply the actual printed workflow and preserve owned choices; a missing GM adapter is not a binary ruling.",
+      "off_list": true
+    },
+    {
+      "id": "engage_street_low",
+      "play": "engage",
+      "environment": "urban street exercise",
+      "goal": "hold my own at the marked street corner",
+      "faces": [
+        2,
+        3
+      ],
+      "desired": "requires_play_adapter",
+      "acceptable": [
+        "requires_play_adapter"
+      ],
+      "hypothesis": "Apply the actual printed workflow and preserve owned choices; a missing GM adapter is not a binary ruling."
+    },
+    {
+      "id": "engage_rooftop_mid",
+      "play": "engage",
+      "environment": "rooftop exercise",
+      "goal": "hold my own across the rooftop route",
+      "faces": [
+        4,
+        5
+      ],
+      "desired": "requires_play_adapter",
+      "acceptable": [
+        "requires_play_adapter"
+      ],
+      "hypothesis": "Apply the actual printed workflow and preserve owned choices; a missing GM adapter is not a binary ruling."
+    },
+    {
+      "id": "engage_hangar_high",
+      "play": "engage",
+      "environment": "hangar combat simulator",
+      "goal": "hold my own around the hangar obstacles",
+      "faces": [
+        6,
+        6
+      ],
+      "desired": "requires_play_adapter",
+      "acceptable": [
+        "requires_play_adapter"
+      ],
+      "hypothesis": "Apply the actual printed workflow and preserve owned choices; a missing GM adapter is not a binary ruling."
+    },
+    {
+      "id": "engage_evacuation_mid",
+      "play": "engage",
+      "environment": "evacuation training lane",
+      "goal": "cover and protect the retreating formation",
+      "faces": [
+        4,
+        5
+      ],
+      "desired": "requires_play_adapter",
+      "acceptable": [
+        "requires_play_adapter"
+      ],
+      "hypothesis": "Apply the actual printed workflow and preserve owned choices; a missing GM adapter is not a binary ruling.",
+      "maneuvers": [
+        "cover",
+        "protect"
+      ]
+    },
+    {
+      "id": "disobey_checkpoint_low",
+      "play": "disobey_orders",
+      "environment": "checkpoint",
+      "goal": "refuse the actual superior order to hold position",
+      "faces": [
+        2,
+        3
+      ],
+      "desired": "source_guard",
+      "acceptable": [
+        "source_guard"
+      ],
+      "hypothesis": "Apply the actual printed workflow and preserve owned choices; a missing GM adapter is not a binary ruling."
+    },
+    {
+      "id": "disobey_barracks_mid",
+      "play": "disobey_orders",
+      "environment": "barracks duty desk",
+      "goal": "refuse the actual superior order to report for duty",
+      "faces": [
+        4,
+        5
+      ],
+      "desired": "source_guard",
+      "acceptable": [
+        "source_guard"
+      ],
+      "hypothesis": "Apply the actual printed workflow and preserve owned choices; a missing GM adapter is not a binary ruling.",
+      "punishment": true
+    },
+    {
+      "id": "disobey_bridge_high",
+      "play": "disobey_orders",
+      "environment": "bridge exercise",
+      "goal": "refuse the actual superior order to remain on the bridge",
+      "faces": [
+        6,
+        6
+      ],
+      "desired": "source_guard",
+      "acceptable": [
+        "source_guard"
+      ],
+      "hypothesis": "Apply the actual printed workflow and preserve owned choices; a missing GM adapter is not a binary ruling."
+    },
+    {
+      "id": "disobey_without_order",
+      "play": "disobey_orders",
+      "environment": "hallway",
+      "goal": "refuse an order that has not actually been recorded",
+      "faces": [
+        4,
+        5
+      ],
+      "desired": "native_guard",
+      "acceptable": [
+        "native_guard"
+      ],
+      "hypothesis": "Apply the actual printed workflow and preserve owned choices; a missing GM adapter is not a binary ruling.",
+      "missing_order": true
+    },
+    {
+      "id": "flirt_recreation_low",
+      "play": "flirt",
+      "environment": "recreation lounge",
+      "goal": "flirt through light banter and ask my fellow Pilot their name",
+      "faces": [
+        2,
+        3
+      ],
+      "desired": "requires_play_adapter",
+      "acceptable": [
+        "requires_play_adapter"
+      ],
+      "hypothesis": "Apply the actual printed workflow and preserve owned choices; a missing GM adapter is not a binary ruling."
+    },
+    {
+      "id": "flirt_hallway_mid",
+      "play": "flirt",
+      "environment": "hallway encounter",
+      "goal": "flirt through conversation with my fellow Pilot",
+      "faces": [
+        4,
+        5
+      ],
+      "desired": "requires_play_adapter",
+      "acceptable": [
+        "requires_play_adapter"
+      ],
+      "hypothesis": "Apply the actual printed workflow and preserve owned choices; a missing GM adapter is not a binary ruling."
+    },
+    {
+      "id": "flirt_canteen_high",
+      "play": "flirt",
+      "environment": "canteen",
+      "goal": "flirt through playful conversation and use the printed owe branch",
+      "faces": [
+        6,
+        6
+      ],
+      "desired": "requires_play_adapter",
+      "acceptable": [
+        "requires_play_adapter"
+      ],
+      "hypothesis": "Apply the actual printed workflow and preserve owned choices; a missing GM adapter is not a binary ruling."
+    },
+    {
+      "id": "flirt_without_target",
+      "play": "flirt",
+      "environment": "barracks common room",
+      "goal": "flirt without identifying an actual target",
+      "faces": [
+        4,
+        5
+      ],
+      "desired": "native_guard",
+      "acceptable": [
+        "native_guard"
+      ],
+      "hypothesis": "Apply the actual printed workflow and preserve owned choices; a missing GM adapter is not a binary ruling.",
+      "missing_target": true
+    }
+  ]
+}

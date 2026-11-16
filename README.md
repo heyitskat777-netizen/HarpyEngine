@@ -20,6 +20,12 @@ low-tier endurance attempt succeed or a high-tier precision attempt fail. Unknow
 contexts and other Play adapters require explicit review. See the current trial handoff.
 No paid calls or live autonomy are enabled.
 
+The [40-case ruling audit](reports/P2_DIRECTOR_RULING_AUDIT.md) exercises all five
+native basic Plays and reviews actual GM weaknesses and adapter gaps. Run
+`.venv/bin/python tools/audit_director_rulings.py`; results are in
+`var/director-ruling-audit/index.html`. A completed experiment does not imply
+that every narrative ruling was correct.
+
 ## P2 backend development — synthetic assistance
 
 The approved [Director architecture](docs/AI_DIRECTOR_ARCHITECTURE.md) now specifies

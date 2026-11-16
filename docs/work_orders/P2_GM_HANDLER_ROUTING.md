@@ -63,3 +63,19 @@ No preselected verdict or tier-to-success mapping. Existing Handler-owner confir
 remains the native commit gate, separately labelled from scoped Handler dialogue.
 Re-run the two 100-input Play scenes using the actual declaration as Play context;
 test identical rolls/traits with changed goals and changed traits with the same goal.
+
+Owner now approves the intended boundary: verified engine context/choices → AI GM
+reasoned proposal → engine validation/recording under configured authority; Handler
+knowledge remains scoped. Paid calls remain unauthorised. Current evaluator is a
+deterministic stand-in, not an external AI confirmation service.
+
+Current task is a broader experiment/review: 40 curated cases across the five
+native basic Plays and varied fictional environments. Freeze the engine/evaluator
+during the run; expected review criteria stay outside provider input. Exercise
+real rolls/choices/source guards and native outcomes. Record false/confident
+judgments, safe clarification, missing adapters and legitimate child-lineage
+rejection separately. No invented completion for unsupported AI rulings. Native
+fixture controllers may explicitly finish a workflow without endorsing a bad
+proposal. Review actual outputs and produce prioritised changes; do not expand
+keyword rules simply to make the experiment green. Reuse source fixtures and
+store generated detailed artifacts under ignored var/.

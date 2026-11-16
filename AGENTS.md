@@ -18,6 +18,10 @@
 > against the declared goal. A source-bound private adjudication proposal now does
 > this for bounded synthetic Keep contexts, before native Handler-owner confirmation.
 > No tier-to-success mapping. Unknown contexts/other Play adapters explicitly require review.
+> The owner approves an eventual real AI-GM proposal / engine-validation boundary,
+> not AI confirmation of an engine's keyword verdict. Paid calls remain prohibited.
+> A 40-case audit on frozen f1e149c found 10 poorly grounded local-GM judgments
+> and missing adapters; see reports/P2_DIRECTOR_RULING_AUDIT.md before extending it.
 
 # Active owner direction — bounded P2 backend development
 

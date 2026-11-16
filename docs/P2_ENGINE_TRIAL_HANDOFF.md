@@ -307,6 +307,28 @@ Separate focused native tests keep the total at 9 and vary traits, then keep the
 traits and vary the goal. This distinguishes contextual judgment from tier-based
 success. No real model calls, paid inference, deployment or live campaign changes.
 
+## Broader experiment and accepted AI-GM direction
+
+The owner approves engine-verified context and actual choices → contextual AI-GM
+proposal → engine validation/recording under configured authority, with a separate
+scoped Handler view. This is not an AI confirming a deterministic engine judgment.
+The current provider remains a local stand-in; no paid calls are authorised.
+
+Run `.venv/bin/python tools/audit_director_rulings.py` for the new 40-case,
+five-native-Play experiment. The [review](../reports/P2_DIRECTOR_RULING_AUDIT.md)
+records the actual findings and prioritised next work. The local evaluator was
+left unchanged: it produced 10 poorly grounded Keep judgments, two safe coverage
+gaps and multiple unsupported Play/lineage responses. Native guards, actual rolls
+and scoped Handler projections were exercised separately. This evidence does not
+validate a real AI GM or imply a complete autonomous-live candidate.
+
+Prepare explicit goals/stakes/prerequisites and evidence-bound outcome proposals,
+then add each Play's specific adapter and completion lineage. Preserve deterministic
+authority/privacy/choice/cost/replay checks; the current exact-template equality
+guard must be replaced with actual validation before a real provider can be used.
+Do not forward full GM context to the Handler or treat narration as an authorised
+arbitrary mechanical/world command. UI integration remains intentionally deferred.
+
 ## Local trial console before UI work
 
 A disposable, engine-only trial is now runnable:
