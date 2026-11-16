@@ -10,9 +10,11 @@ Current P2 source: `28937b4`, public-reference synthetic summaries and private
 request/review/reopen. [Focused CI43791181002](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43791181002)
 passed 101 tests; this is not a new full regression. The approved
 [Activity-first Director design](AI_DIRECTOR_ARCHITECTURE.md) is now incorporated
-as documentation. [P2-D1](work_orders/P2_DIRECTOR_OBSERVATION.md) is the next
-synthetic engine assignment: authorized scene inputs and committed-Play trigger
-to a durable eligible batch. No Director runtime or live observer is claimed.
+as documentation. [P2-D1](work_orders/P2_DIRECTOR_OBSERVATION.md) now implements
+synthetic inputs, self-consent and native Keep source → durable eligible batch →
+recoverable acknowledgement. [Focused D1 evidence](../reports/P2_DIRECTOR_OBSERVATION.md)
+does not establish a live observer or model decision. Next is bounded fictional
+knowledge/chronology and synthetic shadow context, preserving P1 human gates.
 
 Activity-first integration is the next owner-directed UI workstream. See
 [the staged contract](work_orders/P1_ACTIVITY_PRIMARY_INTERFACE.md). First deliver

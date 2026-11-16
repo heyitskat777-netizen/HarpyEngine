@@ -42,3 +42,5 @@ tests/test_onboarding.py::test_join_and_draft_replay_restart_and_stale_forms
 tests/test_ai_context.py
 tests/test_ai_assistance.py
 tests/test_database.py
+# Synthetic Activity observation, leased batches, real native Play source and populated upgrade.
+tests/test_director_observation.py

@@ -3,12 +3,67 @@
 The owner's approved [Activity-first Director design](../../docs/AI_DIRECTOR_ARCHITECTURE.md)
 and [next synthetic observation work order](../../docs/work_orders/P2_DIRECTOR_OBSERVATION.md)
 extend the future product plan. They preserve this delivered summary v1 API.
-Scene submissions, subscriptions/consent, batching, Director decisions, NPC/world
-contributions and general Activity delivery remain planned, unregistered APIs.
+Synthetic-only scene submissions, self-consent and durable batching are now
+implemented as the internal D1 service below. Real Activity scene APIs, Director
+decisions, NPC/world contributions and general delivery remain unregistered.
 Enabled NPC initiative/world proposals do not activate live mode. The observation
 source is the authorized persisted Activity scene stream, not passive Discord
 chat. Read the canonical design for UI and backend responsibilities before adding
 those consumers; do not broaden `ReviewDraft` into a mechanical apply endpoint.
+
+## D1 synthetic observation service — implemented, no HTTP transport
+
+`girlframe.services.director_observation.DirectorObservationService` and strict
+v1 models in `girlframe.ai.observation` implement the AI-free foundation. The
+default constructor is Off; `synthetic=True` is only trusted local harness setup
+against synthetic campaign fixtures, never a request field or a way to enable
+actual player transcript collection. This is not a complete Activity chat store.
+
+| Method | Exact call shape / boundary |
+|---|---|
+| Configure synthetic scene | `configure_scene(viewer, key, scene_id, expected_policy_revision, ObservationPolicy(...))`; configured administrator who is already a scene participant; clears prior consent and never consents for anyone |
+| Own consent | `set_consent(viewer, key, scene_id, expected_policy_revision, consent=bool)`; current participant decides for that account only, including withdrawal while paused |
+| Append/edit synthetic IC input | `append_scene_input(viewer, scene_id, AppendSceneInput(...)) -> InputResult`; stable key, expected scene revision, explicit `speaker: pilot|handler`, bounded text, IC/OOC classification; optional own source ID and expected source revision for an IC edit |
+| Supported Play source | `observe_committed_play(scene_id, action_id) -> InputResult`; trusted internal caller; actual ordinary native Keep Your Head final event/canonical history/receipt, original actor and audience; pending/unsupported sources reject |
+| Claim internal batch | `claim_review(scene_id) -> ReviewBatch | None`; trusted worker only; current policy/consent, source eligibility and one leased claim per scene |
+| Complete internal synthetic review | `acknowledge_review(run_id, lease_token, success=bool) -> ReviewCompletion`; token-bound short transaction; success acknowledges only its frozen frontier, failure consumes none; changed completion conflicts |
+| Safe status | `status(viewer, scene_id) -> ObservationStatus`; current participant and campaign binding; mode, own/current consent eligibility, counts, revisions and next eligible time; no message text, private results or lease tokens |
+
+`AppendSceneInput` accepts only `schema_version`, `command_key`,
+`expected_scene_revision`, `speaker`, `text` (1–1,000 characters),
+`classification: ic|ooc`, optional `source_id` and `expected_source_revision`.
+Identity, source author, audiences, canonical actor incarnation, clocks, ordering
+and policy authority are server-owned. IC input obeys the actual scene chat lock.
+OOC is ignored without retaining text or moving the quiet deadline. AI/bot/system
+outputs have no input path through this human submission API.
+
+`InputResult` is metadata only: scene/source IDs, source revision, sequence,
+generation and `accepted|ignored_ooc`. Exact replay rechecks current authorization
+and returns the saved result; expected revisions are first-execution conditions.
+Consent is bound to the notice's policy revision as part of its semantic intent.
+Each new intention needs its own key. Reopen status after an uncertain retry.
+
+Each internal `ReviewBatch` contains campaign/scene/run IDs, lease token/expiry,
+generation, scene/policy/consent/canonical revisions, bind event, a guard digest,
+reason (`quiet|size|age|completed_play`), at most 20 current source revisions and
+three recent-tail references. These are observed references, not fictional
+knowledge grants. Worker tokens and batch bodies never belong in ordinary player
+status or browser requests. Original audiences are retained; changed-audience
+unread input fails with `SOURCE_SCOPE_CHANGED` and is preserved for privacy review.
+
+The 120-second quiet/minimum routine interval, 20-message threshold and 10-minute
+age are default policy settings. Size/age batches permit review only; every batch
+and completion has `publication: blocked`. Leases last 120 seconds. Relevant input,
+scene/source state, safety history, membership, policy or consent changes invalidate
+claims. A failed or expired claim leaves unread input recoverable. Real inference,
+five-way decisions and actual AI `WAIT` are not implemented by acknowledgement.
+
+Three tables are added to the existing store by migration `0022`; applying that
+migration to a real campaign remains a separate operational step. No worker or
+source listener is started. The trusted engine-event consumer must explicitly
+call the supported source adapter. Broader Play/child families, real retention/
+redaction, fictional chronology/knowledge and Activity authentication/delivery
+remain future work. Existing summary v1 contracts below remain unchanged.
 
 HarpyEngine supplies a transport-neutral backend workflow and strict Python data
 contracts. This handoff defines the v1 Activity adapter contract. It does not

@@ -6,10 +6,12 @@ docs/AI_DIRECTOR_ARCHITECTURE.md; the next bounded synthetic implementation orde
 is docs/work_orders/P2_DIRECTOR_OBSERVATION.md. Preserve Option C, balanced
 initiative, 120-second quiet window and enabled NPC/world-proposal capabilities.
 Enabled capabilities are not permission to activate live mode or capture real
-conversations. Observe explicit authorized Activity scene submissions in future
-integration, not passive Discord Gateway transcripts. This checkpoint changes
-documentation only; scene batching, Director decisions and Activity delivery are
-not implemented. The existing summary v1 contract remains record-review-only.
+conversations. P2-D1 now implements synthetic-only scene inputs/edits, self-consent,
+durable batching/claims/recovery and native Keep Your Head source verification.
+See reports/P2_DIRECTOR_OBSERVATION.md for actual focused evidence. Default is Off;
+`synthetic=True` is trusted local fixture setup, never a browser permission flag.
+Real Activity capture, model decisions, installed workers and publication remain
+unsupported. The existing summary v1 contract remains record-review-only.
 
 The owner now authorizes P2 synthetic assistance development and sanitized pushes
 before P1 human acceptance. Follow docs/work_orders/P2_SYNTHETIC_ASSISTANCE.md and

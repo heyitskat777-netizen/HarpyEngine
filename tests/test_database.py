@@ -47,9 +47,9 @@ def test_alembic_migrations_upgrade_check_and_downgrade(
             "alembic_version"
         }
         expected_tables = set(inspect(engine).get_table_names())
-        # Revision0021 intentionally retains private assistance review history.
+        # Revision0022 intentionally retains private synthetic observation history.
         # A rejected downgrade must leave the complete migrated schema intact.
-        with pytest.raises(RuntimeError, match="Assistance history must be retained"):
+        with pytest.raises(RuntimeError, match="Observation history must be retained"):
             command.downgrade(config, "base")
         assert set(inspect(engine).get_table_names()) == expected_tables
     finally:

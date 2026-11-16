@@ -1,9 +1,40 @@
 # P2-D1 — synthetic Activity scene observation and durable batching
 
-Status: next bounded implementation work order; not implemented by the design
-integration checkpoint. Parent: [approved Director architecture](../AI_DIRECTOR_ARCHITECTURE.md).
+Status: implemented synthetic D1 slice; focused evidence is recorded in
+[the D1 report](../../reports/P2_DIRECTOR_OBSERVATION.md).
+Parent: [approved Director architecture](../AI_DIRECTOR_ARCHITECTURE.md).
 This is P2 synthetic engine-side preparation under existing owner authorization.
 It enables no real transcript collection, provider call, live mode or deployment.
+
+## Frozen implementation decisions
+
+- Native `keep_your_head` with its actual `m2.choice_resolved` event, canonical
+  history entry and matching receipt is the first supported Play source. All child
+  families and private/delegated/specialized variants are blocked. Any unresolved
+  scene-required work blocks this conservative first adapter.
+- Default service is Off. A trusted local synthetic harness explicitly constructs
+  `DirectorObservationService(store, synthetic=True)`, configures off/shadow policy
+  and records each participant's own revision-bound consent. This flag is never
+  accepted from a browser or used to enable actual transcript collection.
+- Input is participant-visible IC text, at most 1,000 characters, with an explicit
+  Pilot/Handler speaker validated against actual identity/controller/casting. OOC
+  submissions are ignored without storing their text or resetting timers. There
+  is no AI/system-origin ingest endpoint. IC submission respects scene chat locks.
+- Same-key retries return metadata only and recheck current authorization. Own
+  IC edits append source revisions; audience changes require privacy review.
+- Three tables in additive migration `0022`: immutable source revisions, mutable
+  scene policy/consent/frontier and durable token-bound run claims. Frozen claims
+  contain up to 20 current source revisions and three recent-tail references.
+- Claim leases last 120 seconds. Server metadata retains scene/policy/consent/
+  canonical revisions, original bind event and a guard over input, membership,
+  safety history, policy, scene actions/choices/locks and required work. A failed
+  synthetic acknowledgement consumes nothing; replay is stable. No model runs.
+- Unread history with a different audience is blocked, not silently discarded or
+  widened. Real retention/redaction and dynamic audience reconciliation remain
+  outside D1. Workers invoke the source adapter explicitly; no worker is started.
+
+The sections below retain the agreed workflow and acceptance scope. Planned
+operations are now implemented with signatures in the Activity handoff and code.
 
 ## Fixed normal workflow and effects
 

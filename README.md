@@ -4,9 +4,11 @@
 
 The approved [Director architecture](docs/AI_DIRECTOR_ARCHITECTURE.md) now specifies
 Activity scene observation, selective batched decisions and future role-specific
-initiative. The next [AI-free observation work order](docs/work_orders/P2_DIRECTOR_OBSERVATION.md)
-is planned; no Director scheduler, real conversation capture or live autonomy is
-implemented by that design integration.
+initiative. The [AI-free observation slice](docs/work_orders/P2_DIRECTOR_OBSERVATION.md)
+now implements synthetic inputs, self-consent, durable batches and native Keep
+Your Head triggers. See [D1 evidence](reports/P2_DIRECTOR_OBSERVATION.md).
+Default is Off; real conversation capture, installed Director workers, model
+decisions and live autonomy remain unsupported.
 
 The owner-authorized P2 increment implements private, audience-filtered OOC public
 reference summaries: request → deterministic draft → approve/reject → saved outcome

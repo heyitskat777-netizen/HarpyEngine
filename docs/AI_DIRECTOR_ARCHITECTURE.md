@@ -6,6 +6,11 @@ Reconciled against source `28937b43fea63ac4df36260a330b55ebc6f39fb8` and the own
 This document adapts its Discord conversation transport to the Discord Activity.
 The retained original planning package and its hashes remain unchanged.
 
+Subsequent implementation: [P2-D1](work_orders/P2_DIRECTOR_OBSERVATION.md) now
+provides synthetic-only observation, durable eligible batches and one proved native
+Keep Your Head trigger. See [actual evidence](../reports/P2_DIRECTOR_OBSERVATION.md).
+This does not implement real observation, model decisions or live autonomy.
+
 The owner's newer transport direction supersedes channel/thread observation in
 the supplied handoff. Its settled pacing, capability and authority decisions are
 preserved; references below distinguish planned seams from implemented methods.
@@ -62,9 +67,10 @@ publication, a provider, live migrations, deployment or a bot restart.
 | Existing component | What exists / reuse | What remains missing |
 |---|---|---|
 | `ai/{contracts,context,synthetic,activity}.py`, `services/ai_assistance.py` | Strict v1 public-reference summaries, deterministic provider, owner-private request/draft/approve/reject/reopen, revisions and command replay | No scene observation, five-way Director decision, freeform narration, mechanical application or network provider |
+| `ai/observation.py`, `services/director_observation.py`, migration `0022` | Subsequent D1: synthetic IC inputs/edits, explicit self-consent, fake-clock eligibility, frozen leased batches, acknowledgement/restart and supported native Keep source | No real capture, installed observer, fictional knowledge grants, model evaluation or publication; other Play/child families blocked |
 | `services/m2_game.py`, `database/m2_schema.py` | Bound scenes/participants, actions, receipts, choices, locks, canonical transactions, scoped inspection and delivery work | Channel-bound scene APIs need an Activity adapter; no generic Director completion hook is established |
 | `services/m3_work.py`, `m3_scene_contexts` | Immutable original scene identity/binding, source-aware required work | No fictional chronology/knowledge journal for Director prompts |
-| `services/onboarding.py`, campaign `events` / command inbox | One store, trusted membership/binding, atomic writes, audit and idempotency | Minimal Director observation/frontier/lease records need a future migration |
+| `services/onboarding.py`, campaign `events` / command inbox | One store, trusted membership/binding, atomic writes, audit and idempotency; D1 now adds observation/frontier/lease records in `0022` | Real retention/consent policy and wider Director consumers remain separate |
 | `delivery/outbox.py`, `delivery/m2_worker.py` and specialized workers | Roll/action delivery, claim tokens, retry/recovery and native chat locks | Existing outboxes are receipt/action-shaped; no general Activity scene publication stream or Director delivery adapter |
 | `scenes/`, `gm/`, `handler/` package roots | Reserved namespace docstrings | Their existence proves no Director implementation; working scene mechanics already live in services |
 | Activity integration | Character-sheet file exchange and neutral assistance v1 contract | Activity repository, backend, verified session flow and direct connection remain unverified here |
@@ -324,16 +330,16 @@ from a provider's offline Batch API. Budget failures preserve manual operation.
 
 ## 10. Concrete integration seams
 
-The following is an interface inventory, not an implemented or connected API.
-The next work order freezes only its D1 subset; later seams require their named
-consumers before code or schema is added.
+The following is an interface inventory, not a connected HTTP API. D1 now
+implements its named synthetic subset in `DirectorObservationService`; later
+seams still require their named consumers before code or schema is added.
 
 | Seam | Existing anchor / planned operation | Authority and transaction boundary |
 |---|---|---|
 | Scene and identity | Existing `GameService.bind_scene`, `join_scene`, `scene_info`, `HandlerService.authorize`; future Activity session adapter | Resolve verified user/role/actor and stable scene binding; build a fresh permitted projection rather than forwarding raw internal scene data |
-| Activity observation | Planned `append_scene_input` | Explicit submission, expected scene revision, stable command key, server-owned source identity and consent/visibility snapshot |
-| Play trigger | Existing actions/receipts/choices/source-required-work; planned `observe_committed_play` | Verify a supported final outcome and actual receipt/children, deduplicate by original source identity; no browser completion flag |
-| Batch/recovery | Planned `claim_review`, `acknowledge_review`, `status` | Short claim/ack transactions, frozen frontier, injected clock, token-bound leases and scoped status; reuse existing store patterns |
+| Activity observation | D1 `append_scene_input` | Synthetic explicit submission, expected scene revision, stable command key, server-owned source identity, actor and consent/visibility snapshot; obey scene chat locks |
+| Play trigger | Existing actions/receipts/choices/source-required-work; D1 `observe_committed_play` | Native Keep source only; verify actual final outcome/receipt/history, block children and unresolved scene work, deduplicate original identity; no browser completion flag |
+| Batch/recovery | D1 `claim_review`, `acknowledge_review`, `status` | Short claim/ack transactions, frozen frontier, injected clock, token-bound leases and scoped status; no model evaluation or publication |
 | Context and inference | Existing public-reference builder for summary only; planned `build_role_context` and `evaluate_run` | Source-aware role projection, server-owned run envelope; network inference outside a writer transaction |
 | Decision validation | Planned `validate_director_proposal` | Strict five-way contract plus current authority, rule/source/knowledge/chronology/choice/safety checks; at most one repair |
 | Authorized commitment | Existing typed Play/choice/source services; future narrow `commit_director_proposal` router | Call the exact implemented operation with real actor, expected revisions and stable key; unsupported effect has no handler; never expose arbitrary `GameService.event` writes |
@@ -348,8 +354,9 @@ P1/P2/P3 roadmap. Broader release, independent review and human gates persist.
 
 1. **This checkpoint:** canonical design, Activity mapping, concrete seam inventory
    and [one bounded next work order](work_orders/P2_DIRECTOR_OBSERVATION.md).
-2. **P2-D1:** AI-free synthetic Activity observation → durable eligible review
-   batch, with one proved completed-Play trigger and restart/idempotency evidence.
+2. **P2-D1, implemented synthetic scope:** AI-free Activity-shaped observation →
+   durable eligible review batch, with native Keep Your Head source proof and
+   restart/idempotency evidence. No worker is started or Activity route registered.
 3. Later: source-aware fictional chronology/knowledge and shadow decisions using
    fake providers; `WAIT`, repair/failure and pacing review. No autonomous output.
 4. Later: reviewed narrow GM/NPC capabilities, typed Play consumers, Activity
