@@ -36,6 +36,12 @@ addressed. This direct path bypasses the routine quiet window. Handler input is
 built from its actual appointed role, never from GM output or the GM envelope.
 See [the current engine contract](P2_ENGINE_TRIAL_HANDOFF.md#discrete-gm-and-handler-conversation).
 
+Subsequent owner correction for long-scene tests: Handler output is gated by an
+engine RESPOND/WAIT decision, not a preselected turn or response quota. The
+synthetic `process_message` seam now implements that separate decision before
+generation, including one role-known scope-conflict warning. Broader initiative
+and live publication remain unimplemented.
+
 **The scheduler decides when the AI looks; the AI decides whether intervention is
 useful; application services and the engine decide what may legally occur.**
 Observation is not intervention, and a decision is not permission to change canon.

@@ -35,6 +35,7 @@ class GMRequest(Contract):
     canonical_state: dict[str, JsonValue]
     engine_records: dict[str, list[dict[str, JsonValue]]]
     scene_inputs: tuple[Observation, ...] = Field(max_length=100)
+    scene_inputs_omitted: int = Field(default=0, ge=0)
     recipient_references: tuple[KnowledgeReference, ...]
 
     @model_validator(mode="after")
@@ -61,6 +62,44 @@ class GMProvider(Protocol):
 
 class HandlerProvider(Protocol):
     def respond(self, request: HandlerRequest) -> ConversationReply: ...
+
+
+class HandlerDecision(Contract):
+    action: Literal["RESPOND", "WAIT"]
+    reason: Literal["direct_question", "scope_boundary", "gm_request", "no_handler_need"]
+    source_refs: tuple[str, ...] = Field(default=(), max_length=3)
+
+
+class SyntheticHandlerPolicy:
+    """Bounded local need detection; it does not infer emotions or choose PC actions."""
+
+    def decide(self, request: HandlerRequest) -> HandlerDecision:
+        text = request.question.strip().casefold()
+        if re.match(r"gm\s*[:,]", text):
+            return HandlerDecision(action="WAIT", reason="gm_request")
+        if re.match(r"handler\s*[:,]", text) and (
+            "?" in text or re.search(r"\b(?:confirm|repeat|remind|resolve|state|explain)\b", text)
+        ):
+            return HandlerDecision(action="RESPOND", reason="direct_question")
+        # One explicitly supported unsolicited correction: a stated forced-entry
+        # plan contradicting the actual Handler-known briefing. Suggestions,
+        # quotations and mere mentions of the Handler are not triggers.
+        scope = tuple(
+            ref
+            for ref in request.context.references
+            if ref.topic == "scope" and "forced entry is not authorised" in ref.text.casefold()
+        )
+        if scope and re.match(
+            r"(?:i|we)\s+(?:will|intend to|am going to|are going to)\s+"
+            r"(?:force|breach|break open)\b",
+            text,
+        ):
+            return HandlerDecision(
+                action="RESPOND",
+                reason="scope_boundary",
+                source_refs=tuple(x.id for x in scope[-3:]),
+            )
+        return HandlerDecision(action="WAIT", reason="no_handler_need")
 
 
 def question_topic(question: str) -> str:
@@ -138,6 +177,20 @@ def _answer(
 
 class SyntheticHandler:
     def respond(self, request: HandlerRequest) -> ConversationReply:
+        decision = SyntheticHandlerPolicy().decide(request)
+        if decision.reason == "scope_boundary":
+            references = tuple(
+                x for x in request.context.references if x.id in decision.source_refs
+            )
+            return ConversationReply(
+                route="handler",
+                disposition="answer",
+                text="That proposed action conflicts with the scope known to me: "
+                + " ".join(x.text for x in references)
+                + " Clarify the plan with the GM before treating it as authorised; "
+                "this warning does not decide your action or resolve its outcome.",
+                source_refs=decision.source_refs,
+            )
         return _answer("handler", request.question, request.context.references)
 
 

@@ -8,6 +8,9 @@
 > only its real role-known context through a separate request. This synthetic path
 > and 50-message demonstration are implemented; see reports/P2_GM_HANDLER_ROUTING.md.
 > Preserve the distinction between broad GM reading and recipient-safe replies.
+> New long-scene runs use process_message: engine-persisted RESPOND/WAIT gates
+> Handler generation. No preset reply quota or scripted Handler dialogue. A narrow
+> synthetic scope-warning trigger is implemented; real publication is still off.
 
 # Active owner direction — bounded P2 backend development
 

@@ -155,7 +155,9 @@ requests, independently of the older extractive dialogue/review API:
   result under current membership, role and consent. No administrator override.
 - GM input includes full canonical campaign state, campaign mission/off-duty/work
   records, scene actions/receipts/choices, all current scene reference knowledge
-  and latest source history. This server-only input is never saved in the reply,
+  and the latest 100 source-history entries, with an explicit omitted-entry count.
+  Canonical state and current knowledge remain available outside that raw-history
+  window; no summarised memory of omitted dialogue is claimed. This server-only input is never saved in the reply,
   returned to the player or forwarded to the Handler. Credentials are outside it.
 - Handler input includes its role-bound source references and the original
   question, with other actors' knowledge and hidden dependency IDs removed. Actual
@@ -192,6 +194,31 @@ lines. Settings imply no actual travel; these are five chapters of one synthetic
 conversation, not five 100-message scenes. External tokens/cost and dice rolls: 0.
 See [actual evidence](../reports/P2_GM_HANDLER_ROUTING.md). Freeform personas,
 automatic mission commitments, orders, live publication and paid calls remain open.
+
+## Engine-selected Handler interventions in long scenes
+
+Use `process_message(viewer, key, scene_id, source_id, expected_source_revision)`
+for unlabelled conversation. It processes the GM route, then persists a separate
+role-scoped `HandlerDecision` before generating any Handler reply. `WAIT` produces
+no Handler generation call; `RESPOND` binds the reply to the saved decision and
+current context. Source/scope changes make an unused decision stale. Retries reuse
+saved silent decisions and replies. Existing explicit `dispatch`/`respond` APIs
+remain low-level direct-request seams; they are not this observation policy.
+
+The local deterministic policy supports direct Handler questions and one narrow
+unsolicited correction: a stated forced-entry plan contradicting the Handler's
+known explicit scope. Mere mentions, ordinary Pilot conversation, negated plans
+and explicit GM requests yield WAIT. The warning quotes its known source and
+chooses no player action or outcome. This is synthetic need detection, not general
+roleplay reasoning, live observation or autonomous publication.
+
+Run `.venv/bin/python tools/run_handler_scene_trials.py` for two independent
+disposable scenes, each with 100 scripted Pilot inputs. Fixtures contain no Handler
+lines, route selectors, expected-reply labels or reply quota. Actual Handler
+messages are appended only after a saved RESPOND decision. The output is
+`var/handler-long-scenes/index.html`, with highlighted interventions, trigger/input
+numbers, reasons and citations; `.json` files include all silence decisions and
+separate GM diagnostics. `transcripts.txt` provides a plain-text transcript.
 
 ## Local trial console before UI work
 

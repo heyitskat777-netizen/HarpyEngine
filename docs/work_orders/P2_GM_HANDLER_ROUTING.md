@@ -26,3 +26,16 @@ or neutral mechanics referrals. No real model intelligence is claimed. Framework
 UI and paid providers remain deferred. Completion requires a substantive engine-
 generated Handler answer, correct unknown response, discrete GM referral, private
 canary separation, saved replay and stale/paused/unauthorized rejection.
+
+Owner-requested follow-up and correction: run two scenes of 100 scripted Pilot
+inputs each; no scripted Handler lines, address flags, expected response markers
+or reply quota. The engine independently saves RESPOND/WAIT before invoking the
+Handler generator. Bounded synthetic need detection supports direct questions and
+a proposed forced-entry action contradicting actual known scope. Ordinary talk,
+third-person mentions, negated action and explicit GM requests do not trigger it.
+Record numbered interventions, actual reply/citations, silence decisions and
+separate GM diagnostics. Prove privacy, retries, stale-decision rejection and
+unchanged mechanics. GM raw history uses the latest 100 entries with an explicit
+omitted-entry count, while canonical state and known references remain separate.
+Keep generated HTML/JSON under ignored var/. Real unsolicited publication and
+general narrative intelligence remain unsupported.

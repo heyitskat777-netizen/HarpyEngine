@@ -379,3 +379,56 @@ def test_direct_gm_reply_deduplicates_observer_without_losing_other_input(routed
     assert observer.status(PLAYER, scene).pending_messages == 5
     service.respond(PLAYER, "edited-question", scene, source.source_id, "gm", 2)
     assert observer.status(PLAYER, scene).pending_messages == 4
+
+
+def test_engine_decides_handler_need_and_persists_silence_and_grounded_warning(routed):
+    observer, context, scene, game, dice = routed
+    gm, handler = GMProbe(), HandlerProbe()
+    service = DirectorConversationService(context, gm=gm, handler=handler)
+    before = state(game).model_dump_json()
+    cases = [
+        ("The objective is on the table. I am talking to the other Pilot.", "no_handler_need"),
+        ("The Handler was mentioned on the noticeboard.", "no_handler_need"),
+        ("Handler, what is the objective?", "direct_question"),
+        ("I will force the sealed door and go inside.", "scope_boundary"),
+        ("I am not going to force the door.", "no_handler_need"),
+        ("GM, resolve Keep Your Head.", "gm_request"),
+    ]
+    for index, (text, reason) in enumerate(cases):
+        _, source = send(observer, scene, f"need-input:{index}", text=text)
+        bundle = service.process_message(PLAYER, f"need:{index}", scene, source.source_id, 1)
+        assert bundle["handler_decision"]["decision"]["reason"] == reason
+        assert (bundle["handler"] is not None) == (reason in ("direct_question", "scope_boundary"))
+        assert (
+            service.process_message(PLAYER, f"need:{index}", scene, source.source_id, 1) == bundle
+        )
+        if reason == "scope_boundary":
+            assert "conflicts with the scope" in bundle["handler"]["reply"]["text"]
+            assert bundle["handler"]["reply"]["source_refs"]
+        if reason == "no_handler_need":
+            with pytest.raises(WorkflowError, match="STALE_HANDLER_DECISION"):
+                service.respond(
+                    PLAYER,
+                    f"forced:{index}",
+                    scene,
+                    source.source_id,
+                    "handler",
+                    1,
+                    handler_decision_id=bundle["handler_decision"]["id"],
+                )
+    assert len(gm.requests) == 6 and len(handler.requests) == 2
+    assert state(game).model_dump_json() == before and dice.calls == 0
+    _, source = send(observer, scene, "decision-before-change", text="Handler, what is the scope?")
+    decision = service.decide_handler(PLAYER, "old-decision", scene, source.source_id, 1)
+    send(observer, scene, "subsequent-input", text="Another source has arrived.")
+    with pytest.raises(WorkflowError, match="STALE_HANDLER_DECISION"):
+        service.respond(
+            PLAYER,
+            "stale-decision-reply",
+            scene,
+            source.source_id,
+            "handler",
+            1,
+            handler_decision_id=decision["id"],
+        )
+    assert len(handler.requests) == 2
