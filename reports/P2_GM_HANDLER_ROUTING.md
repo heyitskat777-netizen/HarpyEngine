@@ -225,3 +225,76 @@ real capture, automatic general Play consumer or autonomous publication is claim
 Source snapshot SHA-256 (sorted filename, NUL, bytes, NUL for the 3 changed source
 modules, routing test, 2 trial tools and 2 new dialogue fixtures):
 `a4793cbb5a050068884b43bc4931c0f7016e26c05f1fe20cd8b26f2c7835b331`.
+
+## Follow-up: contextual GM judgment before owner confirmation
+
+The owner clarified that Keep's actual positive/negative traits must be judged
+against the narrated goal. The previous demonstration did not do that: its
+owner outcome flags were scripted by tier, and the GM only reported a receipt.
+That earlier limited evidence is not evidence of narrative adjudication.
+
+New `DirectorAdjudicationService` binds a private GM proposal to the original
+accepted declaration/native context, actor/incarnation/participants, receipt,
+committed actor traits, action revision and pending original Handler choice.
+It supplies verdict, enough value, goal, reasoning, narration and citations.
+Generation runs outside the writer lock and proof is rechecked before saving.
+Foreign actors, substituted context, invalid output and changed native choices
+reject. No raw GM envelope is saved or forwarded to the Handler dialogue provider.
+
+The bounded synthetic GM assesses concrete endurance/control situations; these
+are discretionary interpretations, not printed universal trait-success rules.
+Unknown goals or unestablished relevant traits request clarification. Other Play
+families explicitly require their own outcome adapter; Keep's binary test is not
+applied to them. Broad natural-language judgment remains unfinished.
+
+Native focused tests keep the actual roll at **9/mid**:
+
+| Goal | Actual ARE | Actual ARE NOT | GM verdict |
+|---|---|---|---|
+| Hold the calibration needle precisely | tough, in control | desperate | success |
+| Same precision goal | tough, vicious | in control | failure |
+| Endure the freezing corridor | tough, vicious | in control | success |
+
+This changes the result with the choices, then with the goal while keeping the
+choices fixed. The GM is not given a verdict. The original Handler test controller
+confirms the computed enough value and GM reasoning/narration through the native
+choice. The fixed `tier != low` fixture ruling is removed. Completed GM readback
+recognises a confirmed proposal only when native response/actual enough, original
+source revision/context and saved proposal agree. It does not copy arbitrary
+private Handler text. Proposal generation/replay commits no mechanical effects.
+
+Both updated 100-input scenes completed with the following observed results:
+
+| Scene | Visible GM posts | Optional Handler replies | Native owner confirmations | GM goal verdicts |
+|---|---:|---:|---:|---|
+| Barracks / hallway | 10 | 8 | 3 | success, success, failure |
+| Relay simulation | 11 | 9 | 3 | success, success, failure |
+
+Each demonstrates **5/low + tough → endurance success**, **9/mid + in control →
+focus success**, **12/high + not in control → precision failure**. Contextual GM
+proposals are at chat **29,73,104**; native owner confirmations at **31,75,106**;
+confirmed GM readbacks at **32,76,107**. Final visible lengths are 139 and 141.
+Updated HTML/text/JSON and source snapshot remain under `var/gm-handler-play-scenes/`.
+
+Actual validation:
+
+- `.venv/bin/python tools/run_director_trial.py`: **42 passed in 22.57s**.
+  New checks cover the three mid-tier cases, unclear goal/other Play adapter,
+  unbound context, foreign ownership, invalid provider leakage, native choice
+  changes during generation, proposal replay and matching confirmed narration.
+- `.venv/bin/python tools/run_handler_scene_trials.py --plays`: both scenes
+  completed, **6 native rolls**, **4 computed goal successes / 2 failures**,
+  6 explicit owner confirmations, 200 private GM reviews, 17 optional Handler
+  replies, 0 pending inputs, 0 external tokens/cost and Heat choices of 0.
+  Native high-tier Tags remain real disposable state. Captured proposals pass
+  strict JSON validation; visible GM/Handler private-canary checks pass.
+- Ruff lint/format passed over all **7** changed Python files; mypy passed on all
+  **3** changed source modules. Registry, original planning, repository/manifest
+  and diff checks passed; publishable findings: 0. Remote focused CI includes
+  the three new native adjudication tests.
+
+This is bounded synthetic Keep judgment, not completed adjudication of every Play
+or a live model test. No migration, paid inference, deployment, live campaign
+change or autonomous publication is included. Source snapshot SHA-256 (sorted
+filename, NUL, bytes, NUL across 3 source modules, test, 3 tools, 2 dialogue
+fixtures and CI selection) is recorded in the ignored source snapshot.

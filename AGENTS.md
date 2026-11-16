@@ -14,6 +14,10 @@
 > The --plays trial now exercises native Keep low/mid/high workflows and visible
 > GM interventions. Required Pilot/Handler rulings remain explicit fixture-owner
 > choices. Private GM readback is receipt-proved and cannot resolve a Play itself.
+> New owner correction: GM judgment must assess the actual are/are-not traits
+> against the declared goal. A source-bound private adjudication proposal now does
+> this for bounded synthetic Keep contexts, before native Handler-owner confirmation.
+> No tier-to-success mapping. Unknown contexts/other Play adapters explicitly require review.
 
 # Active owner direction — bounded P2 backend development
 

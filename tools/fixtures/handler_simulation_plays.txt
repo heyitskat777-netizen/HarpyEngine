@@ -17,7 +17,7 @@ I will not treat a shut door as permission to break it.
 There is room on the log for an unanswered access question.
 Most of my best logs have room for those.
 Mine have diagrams of things that might be vents.
-GM, I declare Keep Your Head to endure the simulator siren while keeping my hands steady.
+GM, I declare Keep Your Head to endure the freezing simulated access corridor until the shelter.
 The tower image has a dark patch near the base.
 I can see the patch on my display too. Its cause is not established.
 It could be shadow, damage, or somebody's idea of a texture.
@@ -47,7 +47,7 @@ The relay light on the monitor is amber in this still image.
 I am writing displayed amber light, not active warning system.
 Good. The exercise designers may have a reason, but we have not been given it.
 I wonder whether there is a concealed transmitter inside.
-GM, I declare Keep Your Head to maintain my focus through the simulated communications dropout.
+GM, I declare Keep Your Head to maintain my focus on the coordinates through the communications dropout.
 Unknown, then. I will not search for a transmitter that exists only in my question.
 That is a particularly useful sentence to keep on the checklist.
 Put it underneath do not diagnose the headset.
@@ -67,7 +67,7 @@ Thank you. I want the interface to show the eligible choices first.
 The GM route can identify the right workflow without pressing its buttons for you.
 I can hear my own breathing in this headset. The simulator is doing its job.
 Tell me if you want a break. There is no need to turn that into fiction first.
-GM, I declare Keep Your Head to make it through the shaking cockpit during the exercise.
+GM, I declare Keep Your Head to hold the calibration needle precisely on its mark in the shaking cockpit.
 I have completed those actual Play choices; I am not claiming the approach automatically succeeded.
 I will wait. Nothing on my log says the approach succeeded.
 Good. Leave the outcome blank.

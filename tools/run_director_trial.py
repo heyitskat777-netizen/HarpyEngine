@@ -15,6 +15,7 @@ def main() -> int:
             "-q",
             "tests/test_director_shadow.py",
             "tests/test_director_conversation.py",
+            "tests/test_director_adjudication.py",
             "tests/rules/test_director_npc_context.py",
             "tests/test_director_observation.py",
             "tests/test_database.py",

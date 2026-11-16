@@ -260,6 +260,53 @@ are 0, and no live campaign changes. A low/mid/high tier alone does not establis
 mission success, access or cancellation of another Play. Other Play completion
 families, general automatic Play consumption and live publication remain unsupported.
 
+## Contextual GM rulings before confirmation
+
+`DirectorAdjudicationService(conversation, provider=None).adjudicate(viewer, key,
+scene_id, source_id, source_revision, action_id)` now produces a private GM proposal
+after actual Keep actor choices, before its pending original Handler confirmation.
+It binds the accepted original Pilot's message to the actual native Play context,
+receipt, action revision, positive/negative traits and pending choice ID. Foreign
+actors, substituted context, unresolved actor choices, unsafe/stale contexts and
+unsupported child/playbook sources reject. Provider generation runs outside the
+writer lock; request/context proof is rechecked before saving. `.get(viewer,
+scene_id, id)` reopens only that owner's saved proposal. No raw GM context is saved
+or sent to the separate Handler dialogue provider.
+
+The common response contains `verdict`, `enough`, the attempted goal, reasoning,
+proposed narration, citations and `application='proposal_only'`. A resolved GM
+verdict must have a matching enough value. Unknown goals or unestablished relevant
+traits return `needs_clarification`; another Play returns `requires_play_adapter`.
+Keep's binary enough judgment is never imposed on a different printed Play.
+
+The local policy is an explicitly bounded simulation of discretionary GM judgment:
+deliberate control matters for stated focus/precision/composure tasks, and toughness
+matters for stated cold/endurance tasks. These interpretations are not printed
+automatic trait-success rules. A positive relevant trait can be enough; its actual
+negation can prevent the goal; a trait neither selected nor negated is unknown.
+The provider does not infer a new trait, injury, punishment, expenditure or PC action.
+Broad natural-language reasoning and other Play-specific outcome adapters remain open.
+
+The `--plays` driver now copies the actual declaration into native `PlayInput.context`
+and asks the GM to assess its goal after the actual choices. The fixed fixture flag
+`tier != low` has been removed. The Handler test controller confirms the computed
+GM ruling through its own actual `handler_keep` choice; no generator impersonates
+that controller or bypasses the native commit gate. A successful proposal alone is
+not a committed outcome. General automatic/live proposal consumption is not installed.
+
+Completed GM readback recognises a confirmed proposal only when the original
+source revision/context, original pending choice response, actual enough value and
+submitted GM reasoning/narration agree. It copies that previously safe proposal,
+not arbitrary private Handler outcome text. A different owner ruling retains the
+ordinary receipt-only readback. Old saved proposals remain history, not authority
+to apply an outdated ruling; a later UI must obtain a fresh proposal for changed context.
+
+The two updated 100-input scenes each demonstrate **5/low → goal success**,
+**9/mid → goal success**, and **12/high → goal failure** from actual traits/context.
+Separate focused native tests keep the total at 9 and vary traits, then keep the
+traits and vary the goal. This distinguishes contextual judgment from tier-based
+success. No real model calls, paid inference, deployment or live campaign changes.
+
 ## Local trial console before UI work
 
 A disposable, engine-only trial is now runnable:

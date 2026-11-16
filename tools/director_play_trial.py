@@ -4,12 +4,26 @@ import json
 
 
 def resolve_keep_trial(
-    service, game, worker, gateway, dice, viewer, scene, number, episode, append
+    service,
+    game,
+    worker,
+    gateway,
+    dice,
+    viewer,
+    scene,
+    number,
+    episode,
+    append,
+    *,
+    source_id,
+    source_revision,
+    narration,
 ):
     from test_ledger import ADMIN, OTHER, PLAYER
     from test_m2_game import state, tick
 
     from girlframe.engine.m2 import ChoiceAnswer, PlayInput
+    from girlframe.services.director_adjudication import DirectorAdjudicationService
     from girlframe.services.onboarding import WorkflowError
 
     # Test RNG schedule only. Neither GM nor Handler providers choose dice faces.
@@ -17,7 +31,7 @@ def resolve_keep_trial(
     old_calls = dice.calls
     prepared = PlayInput(
         play="keep_your_head",
-        context=f"Synthetic endurance declaration at player input {number}.",
+        context=narration,
         trigger_confirmed=True,
         heat=0,
     )
@@ -101,27 +115,55 @@ def resolve_keep_trial(
     else:
         raise AssertionError("A GM result was allowed before the actual Handler answered")
     handler_choice = next(x for x in game.choices(ADMIN) if x["kind"] == "handler_keep")
+    adjudicator = DirectorAdjudicationService(service)
+    before_judgment = state(game).model_dump_json()
+    ruling = adjudicator.adjudicate(
+        viewer, f"adjudication:{number}", scene, source_id, source_revision, action
+    )
+    assert (
+        adjudicator.adjudicate(
+            viewer, f"adjudication:{number}", scene, source_id, source_revision, action
+        )
+        == ruling
+    )
+    assert state(game).model_dump_json() == before_judgment
+    proposal = ruling["proposal"]
+    append(
+        "GM",
+        "engine",
+        "fictional_adjudication",
+        f"Proposed GM ruling: {proposal['verdict']}. {proposal['reasoning']} "
+        f"{proposal['narration']} Native owner confirmation is still pending.",
+        action_id=action,
+        source_refs=proposal["source_refs"],
+        disposition=proposal["verdict"],
+        adjudication_id=ruling["id"],
+    )
+    assert proposal["enough"] is not None
     append(
         "Engine",
         "engine_workflow",
         "handler_choice_required",
         "Keep Your Head now requires its original Handler's enough/not-enough ruling. "
-        "The engine blocks completion and GM result narration until that owner answers.",
+        "The engine blocks completion and final GM readback until that owner answers.",
         action_id=action,
         choice_id=handler_choice["id"],
     )
-    # A separately labelled test-owner input, not generated optional Handler speech.
+    # The fixture controller confirms the GM-computed verdict, never a tier-based flag.
     submit(
         ADMIN,
         "handler_keep",
-        ChoiceAnswer(flag=tier != "low", text="SYNTHETIC_PRIVATE_REQUIRED_HANDLER_OUTCOME"),
+        ChoiceAnswer(
+            flag=proposal["enough"], text=proposal["reasoning"] + "\n" + proposal["narration"]
+        ),
     )
     append(
         "Handler",
         "scripted_choice",
         "required_handler_ruling",
-        "The test Handler controller submits the required ruling through handler_keep. "
-        "Its private explanation is withheld from this transcript.",
+        f"The test Handler controller explicitly confirms the GM's {proposal['verdict']} "
+        "ruling through the original handler_keep choice. This is owner confirmation, "
+        "not a separately scripted success/failure decision.",
         action_id=action,
     )
     tick(worker, gateway, 5)
@@ -138,6 +180,8 @@ def resolve_keep_trial(
     )
     assert state(game).model_dump_json() == before_review and dice.calls == old_calls + 1
     assert "SYNTHETIC_PRIVATE_REQUIRED_HANDLER_OUTCOME" not in json.dumps(review)
+    assert review["adjudication_id"] == ruling["id"]
+    assert review["verdict"] == proposal["verdict"]
     append(
         "GM",
         "engine",
@@ -158,5 +202,7 @@ def resolve_keep_trial(
         "rng_calls": 1,
         "heat_chosen": 0,
         "choices_origin": "explicit_test_owners",
+        "adjudication": proposal,
+        "adjudication_id": ruling["id"],
         "lock_released": True,
     }

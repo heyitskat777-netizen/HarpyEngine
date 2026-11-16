@@ -205,6 +205,9 @@ def run_scene(scenario, output, *, plays=False):
                             number,
                             len(play_records),
                             append,
+                            source_id=source.source_id,
+                            source_revision=source.source_revision,
+                            narration=text,
                         )
                     )
                 clock.now += 1
@@ -252,6 +255,9 @@ def run_scene(scenario, output, *, plays=False):
                 "dice_calls": dice.calls,
                 "mechanical_state_unchanged": not plays,
                 "native_plays_completed": len(play_records),
+                "gm_ruling_verdicts": dict(
+                    Counter(x["adjudication"]["verdict"] for x in play_records)
+                ),
                 "gm_interventions": sum(
                     x["origin"] == "engine" and x["speaker"] == "GM" for x in chat
                 ),
@@ -344,20 +350,27 @@ def render(results, output, commit):
         if result.get("plays"):
             html.append(
                 "<h3>Actual native Keep Your Head receipts</h3><table><tr>"
-                "<th>Dice</th><th>Total / tier</th><th>Receipt</th></tr>"
+                "<th>Dice</th><th>Total / tier</th><th>GM ruling on stated goal</th>"
+                "<th>Receipt</th></tr>"
             )
             for play in result["plays"]:
                 proof = play["proof"]
+                verdict = play.get("adjudication", {}).get("verdict", "not assessed")
                 html.append(
                     f"<tr><td>{escape(str(proof['faces']))}</td>"
                     f"<td>{proof['total']} / {escape(proof['tier'])}</td>"
+                    f"<td>{escape(verdict)}</td>"
                     f"<td>{escape(proof['receipt_id'])}</td></tr>"
                 )
             html.append(
                 "</table><p>All three actual Plays use Heat=0. Each consumes one "
                 "deterministic test roll and changes only the disposable campaign. "
-                "The high-tier Pilot chooses a real test Tag. Private Handler outcome "
-                "text is withheld. A tier does not itself establish mission success.</p>"
+                "The high-tier Pilot chooses a real test Tag. The GM assesses the actual "
+                "traits against the declared goal before the Handler controller confirms. "
+                "Neither verdict nor confirmation is chosen from the tier alone. "
+                "This bounded local judgment covers supported precision/endurance situations; "
+                "unclear situations ask for clarification and other Plays need "
+                "their own adapters.</p>"
             )
         text.extend([summary["title"], json.dumps(summary), ""])
         for entry in result["chat"]:

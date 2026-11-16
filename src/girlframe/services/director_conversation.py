@@ -464,6 +464,49 @@ class DirectorConversationService:
                 "total": result["total"],
                 "tier": result["tier"],
             }
+            accepted = None
+            outcomes = t.director_context["shadow"]
+            for body in c.scalars(
+                sa.select(outcomes.c.body_json).where(
+                    outcomes.c.campaign_id == self.store.campaign_id,
+                    outcomes.c.scene_id == scene_id,
+                    sa.func.json_extract(outcomes.c.body_json, "$.record_type")
+                    == "gm_adjudication",
+                    sa.func.json_extract(outcomes.c.body_json, "$.action_id") == action_id,
+                    sa.func.json_extract(outcomes.c.body_json, "$.owner_id") == str(viewer.user_id),
+                )
+            ):
+                candidate = json.loads(body)
+                proposal = candidate["proposal"]
+                response = c.scalar(
+                    sa.select(t.m2["m2_responses"].c.answer_json).where(
+                        t.m2["m2_responses"].c.campaign_id == self.store.campaign_id,
+                        t.m2["m2_responses"].c.choice_id == candidate["pending_choice_id"],
+                    )
+                )
+                original = self.observations._latest_source(c, candidate["source_id"])
+                if (
+                    response
+                    and original
+                    and original.source_revision == candidate["source_revision"]
+                    and proposal["enough"] is not None
+                    and result.get("enough") == proposal["enough"]
+                    and json.loads(response).get("text")
+                    == proposal["reasoning"] + "\n" + proposal["narration"]
+                    and action["data"]["prepared"]["context"] == original.text
+                ):
+                    accepted = candidate
+                    break
+            confirmed_text = (
+                (
+                    " Confirmed GM ruling: "
+                    + accepted["proposal"]["reasoning"]
+                    + " "
+                    + accepted["proposal"]["narration"]
+                )
+                if accepted
+                else ""
+            )
             reply = ConversationReply(
                 route="gm",
                 disposition="answer",
@@ -474,7 +517,8 @@ class DirectorConversationService:
                 f"{public['tier']} tier, receipt {public['receipt_id']}. "
                 "The original Pilot's printed choices and original Handler's required ruling "
                 "are committed. A tier alone does not establish mission success, access, "
-                "or cancellation of another Play; no further outcome is invented here.",
+                "or cancellation of another Play; no further outcome is invented here."
+                + confirmed_text,
             )
             identity = "play-review:" + str(uuid4())
             record = {
@@ -486,6 +530,11 @@ class DirectorConversationService:
                 "source_id": source.source_id,
                 "source_revision": source.source_revision,
                 "proof": public,
+                **(
+                    {"adjudication_id": accepted["id"], "verdict": accepted["proposal"]["verdict"]}
+                    if accepted
+                    else {}
+                ),
                 "reply": reply.model_dump(mode="json"),
                 "publication": "private_reply_only",
                 "external_tokens": 0,

@@ -50,3 +50,16 @@ Play services and completed-source proof; add only a private, replay-safe GM
 readback of whitelisted receipt/total/tier. No general automatic Play consumer,
 new rules, paid calls or live publication. Record actual changed synthetic state
 and RNG counts instead of retaining the previous zero-roll/unchanged-state claim.
+
+Latest owner correction: a receipt/tier readback is insufficient. Every Play needs
+an appropriate GM response governed by its own printed outcome; Keep must assess
+the actual selected positive/negative traits against the narrated attempted goal.
+Implement a common private adjudication proposal with verdict, reasoning and source
+proof. Synthetic Keep supports bounded endurance/composure/precision situations;
+unknown goals/traits and other Play adapters produce explicit clarification/review,
+never guessed success. Bind the proposal to the actual original source, native
+action/receipt, resolved actor choices and current pending original Handler choice.
+No preselected verdict or tier-to-success mapping. Existing Handler-owner confirmation
+remains the native commit gate, separately labelled from scoped Handler dialogue.
+Re-run the two 100-input Play scenes using the actual declaration as Play context;
+test identical rolls/traits with changed goals and changed traits with the same goal.

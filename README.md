@@ -15,6 +15,9 @@ Handler replies have no preset count and are highlighted with their trigger.
 Add `--plays` to include actual native Keep Your Head workflows and visible GM
 interventions: `var/gm-handler-play-scenes/index.html` marks requests, receipts,
 owner choices, required Handler rulings and GM completion readbacks separately.
+It now also shows context-based GM rulings: actual selected traits can make a
+low-tier endurance attempt succeed or a high-tier precision attempt fail. Unknown
+contexts and other Play adapters require explicit review. See the current trial handoff.
 No paid calls or live autonomy are enabled.
 
 ## P2 backend development — synthetic assistance

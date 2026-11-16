@@ -48,6 +48,14 @@ still require their owner choices. A new receipt-proved GM completion readback
 exposes only total/tier/dice/provenance, never private Handler outcome text. The
 `--plays` long-scene trial demonstrates those paths without activating live mode.
 
+Latest owner clarification: every Play needs an appropriate contextual GM response,
+not merely a receipt/tier readback. Keep's actual positive/negative traits must be
+judged against the attempted goal. The new adjudication proposal does that before
+native confirmation, with reasoned success/failure or clarification. This bounded
+synthetic adapter covers concrete endurance/control situations; other Play families
+return an explicit need for their own printed-outcome adapter. The original
+Handler-owner commit gate and role-scoped optional dialogue remain separate.
+
 **The scheduler decides when the AI looks; the AI decides whether intervention is
 useful; application services and the engine decide what may legally occur.**
 Observation is not intervention, and a decision is not permission to change canon.
