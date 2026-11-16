@@ -8,6 +8,11 @@ is measured or emulated model intelligence.
 
 ## Current candidate: structured GM adapter v2
 
+The subsequent [all-Play coverage review](../reports/P2_ALL_PLAY_COVERAGE.md)
+extends declaration/review coverage to 63 native entry points and all registered
+source-rule IDs. The five ordinary outcome consumers below remain deliberately
+bounded; other families use their existing native workflows and source review.
+
 Use `GMAdapterService(context, provider=None)` for new contextual ruling work.
 The old `DirectorAdjudicationService` and long-scene `--plays` path retain their
 historical v1 keyword experiment; do not treat those as the new provider boundary.
@@ -112,6 +117,39 @@ JUnit output is `var/p2-engine-trial.xml`. This is a synthetic shadow trial, not
 human acceptance or an autonomous-live readiness claim.
 
 ## Backend contracts for the later UI implementation
+
+`DirectorPlayReviewService(context)` now supplies the broader review layer:
+
+- A GM conversation reply for a declared Play includes `play_review_id`. The
+  source-bound review and reply save in the same command transaction. Retry
+  reopens the same records. Ambiguous and unknown names produce clarification
+  and review work, without choosing a Play or spending resources. Typed IDs and
+  qualified playbook names avoid same-title collisions.
+- `.queue(gm_viewer, scene)` / `.gm(gm_viewer, scene, review_id)` expose private
+  declarations, candidates, GM references/canonical state, actual pending native
+  work, current fingerprint and private routing decisions. GM-only access uses
+  the actual configured administrator. Stale source records remain marked stale.
+- `.review(gm_viewer, key, scene, review_id, expected_fingerprint, play_id,
+  decision, private_note)` appends `native_workflow`, `needs_clarification`,
+  `manual_review` or `blocked`. Fresh source/context and candidate checks apply.
+  The original author uses `.view(viewer, scene, review_id)` for safe status,
+  never private notes. Review applies no outcome or effect. Disabled modules and
+  missing consumers cannot be approved into native mechanics.
+- `.gm_work(gm_viewer, scene)` exposes actual pending sources even when a human
+  opened the native Play without Director chat. `.owner_work(viewer, scene)`
+  preserves scoped original choice authors, scene work and Handler grants.
+- `.handler_work(actual_handler_viewer, scene)` supplies only the actual
+  appointed Handler's fictional context plus that human's native controller work.
+  This is distinct from the private GM queue. The `campaign_owner_inbox` field
+  lists only caller-authorized native tasks across contexts so mission/Off-Duty
+  work is not silently dropped by a scene filter. Its metadata is **OOC human
+  coordination**, not fictional knowledge; never pass it into `HandlerRequest`.
+
+The later Activity needs separate GM triage, requester status and original-owner
+work views. Use task IDs/revisions to reopen existing native consumers; a routing
+decision never substitutes for their original confirmations or legal effects.
+The existing original-owner inbox remains the authority for special source work.
+No new HTTP route, browser authority flag, deployment or real inference is added.
 
 Preserve the delivered summary v1 contract. New engine services are:
 

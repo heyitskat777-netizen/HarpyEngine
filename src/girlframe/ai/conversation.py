@@ -9,6 +9,7 @@ from girlframe.ai.contracts import Contract
 from girlframe.ai.director import DirectorContext, KnowledgeReference
 from girlframe.ai.observation import Observation
 from girlframe.ai.play_names import LABELS, requested_play
+from girlframe.ai.play_review import PlayReferral
 
 Route = Literal["gm", "handler"]
 
@@ -38,6 +39,8 @@ class GMRequest(Contract):
     scene_inputs: tuple[Observation, ...] = Field(max_length=100)
     scene_inputs_omitted: int = Field(default=0, ge=0)
     recipient_references: tuple[KnowledgeReference, ...]
+    play_candidates: tuple[PlayReferral, ...] = ()
+    play_declaration: bool = False
 
     @model_validator(mode="after")
     def gm_boundary(self) -> "GMRequest":
@@ -128,7 +131,7 @@ class SyntheticGMPolicy:
             text,
         ):
             return GMDecision(action="RESPOND", reason="scope_adjudication")
-        if requested_play(text) is not None:
+        if request.play_declaration or request.play_candidates or requested_play(text) is not None:
             return GMDecision(action="RESPOND", reason="play_request")
         if re.match(r"gm\s*[:,]", text):
             return GMDecision(action="RESPOND", reason="explicit_gm_request")
@@ -233,16 +236,38 @@ class SyntheticGM:
         # publishes recipient-permitted references or neutral engine referrals.
         decision = SyntheticGMPolicy().decide(request)
         if decision.reason == "play_request":
-            play = requested_play(request.question)
-            assert play is not None
-            reply = ConversationReply(
-                route="gm",
-                disposition="requires_engine_workflow",
-                play_id=play,
-                text=LABELS[play] + " is the requested Play. Describe what you are trying to "
-                "make it through, confirm the trigger and choose your own Heat/Identity inputs "
-                "in the engine. Its actual roll and printed choices must finish before an outcome.",
-            )
+            if len(request.play_candidates) > 1 or (
+                not request.play_candidates and requested_play(request.question) is None
+            ):
+                reply = ConversationReply(
+                    route="gm",
+                    disposition="clarification",
+                    text="That declaration needs a source workflow clarified. "
+                    "Choose the qualified Play or rule ID for GM review; no roll or choice "
+                    "has been supplied by this referral.",
+                )
+            else:
+                candidate = request.play_candidates[0] if request.play_candidates else None
+                play = candidate.play_id if candidate else requested_play(request.question)
+                assert play is not None
+                reply = ConversationReply(
+                    route="gm",
+                    disposition="requires_engine_workflow",
+                    play_id=play,
+                    text=(candidate.title if candidate else LABELS[play])
+                    + " requires its actual source workflow and GM review. "
+                    "Original players and controllers retain their choices; required Handler "
+                    "work remains with its actual owner. This referral resolves no outcome.",
+                )
+                if candidate and not candidate.module_enabled:
+                    reply = reply.model_copy(
+                        update={
+                            "disposition": "clarification",
+                            "text": candidate.title + " belongs to a disabled module. "
+                            "GM review can record the blocker; "
+                            "it cannot enable or resolve that rule.",
+                        }
+                    )
         elif decision.reason == "scope_adjudication":
             reply = ConversationReply(
                 route="gm",

@@ -1891,7 +1891,6 @@ def test_actual_princess_two_lessons_native_selected_keep_then_winning_self_flir
             gain=("0",),
             pair_share=("0",),
             piloting=("no",),
-            witnessed=("no",),
             learned_keep_rider=(lesson.id,),
             context="My actual selected one-use lesson with my own original resources",
             trigger=("yes",),
@@ -2117,7 +2116,6 @@ def test_actual_alpha_hound_lesson_native_status_mark_then_real_rank_clear(
             gain=("0",),
             pair_share=("0",),
             piloting=("no",),
-            witnessed=("no",),
             context="My actual original Girl performs this real source with her own resources",
         )
         if play == "put_someone_beneath_you":
@@ -2355,7 +2353,6 @@ def test_actual_learned_risk_paid_last_frame_void_holds_real_keep_resistance_and
             gain=("0",),
             pair_share=("0",),
             piloting=("no",),
-            witnessed=("no",),
             context="I actually keep control inside my almost entirely Void Frame",
         )
         sent = interaction()
@@ -2788,7 +2785,6 @@ def test_actual_learned_call_native_classification_guest_and_gorgon_keep_origina
             gain=("0",),
             pair_share=("0",),
             piloting=("no",),
-            witnessed=("no",),
             context="I explicitly offer this lesson for my actual Dive",
         )
         sent = interaction()
@@ -3252,7 +3248,6 @@ def test_actual_stim_psyche_lessons_native_mark_removal_and_distinct_off_duty_ta
             pair_share=("0",),
             heat=(str(heat),),
             piloting=("no",),
-            witnessed=("no",),
             trigger=("yes",),
             context="I actually mark and discard this original Identity while defending myself",
         )
@@ -3873,7 +3868,6 @@ def test_actual_learned_alpha_sex_native_consent_mid_broken_bond_and_private_onc
             gain=("0",),
             pair_share=("0",),
             piloting=("no",),
-            witnessed=("no",),
             trigger=("yes",),
             context="Our actual accepted original physical source",
             disposable_heat=("0",),

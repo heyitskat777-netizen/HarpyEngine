@@ -2,6 +2,13 @@
 
 ## Engine-first synthetic Director trial
 
+The [all-Play coverage review](reports/P2_ALL_PLAY_COVERAGE.md) extends Director
+referrals beyond those five outcome adapters: all 63 native entry points and the
+remaining source inventory can request private GM review. Actual Handler/controller
+work comes from native pending choices, grants and the existing private inbox.
+Run `.venv/bin/python tools/verify_director_plays.py --native` for the explicit
+native verification packet. A review route does not implement an unsupported rule.
+
 The [structured GM adapter candidate](reports/P2_GM_ADAPTER_PLAYTEST.md) supports
 offline playtesting of all five ordinary native Plays. It separates GM proposals
 from engine validation and original-owner confirmation, with private reasoning

@@ -24,6 +24,7 @@ from girlframe.ai.observation import Observation
 from girlframe.database import tables as t
 from girlframe.services.director_context import DirectorContextService
 from girlframe.services.director_observation import _digest
+from girlframe.services.director_play_catalog import PlayCatalog
 from girlframe.services.m2_state import load_state
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
@@ -42,6 +43,7 @@ class DirectorConversationService:
         self.store = context.store
         self.gm = gm if gm is not None else SyntheticGM()
         self.handler = handler if handler is not None else SyntheticHandler()
+        self.play_catalog = PlayCatalog()
 
     def _authorize_source(
         self, c: Connection, viewer: GuildViewer, scene_id: str, source_id: str
@@ -163,6 +165,8 @@ class DirectorConversationService:
                 scene_inputs=history,
                 scene_inputs_omitted=max(0, (history_count or 0) - len(history)),
                 recipient_references=recipient.references,
+                play_candidates=self.play_catalog.recognize(question),
+                play_declaration=self.play_catalog.declared(question),
             )
         return request, _digest(request.model_dump(mode="json"))
 
@@ -290,6 +294,20 @@ class DirectorConversationService:
                 "external_cost": 0,
                 "publication": "private_reply_only",
             }
+            if route == "gm":
+                state = self.observations._state(c, scene_id)
+                self.observations._save(
+                    c, scene_id, state.model_copy(update={"generation": state.generation + 1})
+                )
+                if reply.gm_decision and reply.gm_decision.reason == "play_request":
+                    from girlframe.services.director_play_review import DirectorPlayReviewService
+
+                    review = DirectorPlayReviewService(self.context, self.play_catalog)
+                    review_id = review._capture(
+                        c, viewer, scene_id, source_id, expected_source_revision
+                    )
+                    # The exchange returns only a stable review ID, never its private notes.
+                    result["play_review_id"] = review_id
             c.execute(
                 t.director_context["shadow"]
                 .insert()
@@ -300,11 +318,6 @@ class DirectorConversationService:
                     body_json=json.dumps(result, sort_keys=True),
                 )
             )
-            if route == "gm":
-                state = self.observations._state(c, scene_id)
-                self.observations._save(
-                    c, scene_id, state.model_copy(update={"generation": state.generation + 1})
-                )
             return {"id": identity, "route": route, "application": "blocked"}
 
         result = self.store._write(

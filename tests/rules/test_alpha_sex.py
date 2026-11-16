@@ -491,7 +491,6 @@ def test_actual_native_stim_self_dose_counter_keeps_sleep_parent_receipt_and_own
             gain=("0",),
             pair_share=("0",),
             piloting=("no",),
-            witnessed=("no",),
             context="I actually self-inject my own combat cocktail while she sleeps",
             trigger=("yes",),
             disposable_heat=("0",),

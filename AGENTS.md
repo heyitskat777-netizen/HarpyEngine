@@ -1,5 +1,13 @@
 > Current continuation: engine-first development toward a synthetic trial is
 > authorized; Activity changes are deferred to a consolidated later handoff.
+> Latest owner scope: verify all Plays and add required GM/Handler review. See
+> reports/P2_ALL_PLAY_COVERAGE.md and docs/work_orders/P2_ALL_PLAY_REVIEW.md.
+> All 63 native identifiers have source-backed referrals; all inventory entries
+> have manual/source review. DirectorPlayReviewService persists GM triage and
+> derives actual owner/Handler work without applying outcomes. Five ordinary
+> Plays retain structured GMAdapterService consumers. Other native families keep
+> their own typed services, choices and release gates. Review is not implementation
+> or rule certification; fictional Handler context excludes private GM triage.
 > Latest implementation: provider-neutral v2 GM proposals, source-bound facilitator
 > frames and five ordinary native Play adapters. Use services/gm_adapter.py and
 > tools/playtest_gm_adapter.py; see reports/P2_GM_ADAPTER_PLAYTEST.md. The original

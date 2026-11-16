@@ -1,5 +1,9 @@
 # Structured GM adapter: offline playtest candidate
 
+Subsequent work: [all-Play referral and review coverage](P2_ALL_PLAY_COVERAGE.md)
+extends review routing and native verification. The five structured outcome
+consumers and historical evidence below retain their original scope.
+
 The adapter is ready for attempted **offline playtesting of five ordinary native
 Plays**, with fixture or manually supplied GM judgments. This is the result of
 implementation, a 40-case rerun, follow-up review/fixes and targeted adverse-input
