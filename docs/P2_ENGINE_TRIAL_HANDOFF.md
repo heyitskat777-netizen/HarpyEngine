@@ -113,3 +113,28 @@ This extends the synthetic engine trial to actual NPC/Handler contexts and priva
 extractive dialogue. It does not provide autonomous/live publication or a model
 persona. Earlier statements about NPC adapters above refer to broader NPC-only
 participation, physical travel, automatic knowledge and action consumers.
+
+## Source-proved synthetic report projection
+
+`DirectorContributionService(dialogue)` now provides a narrow engine-only trial
+path after a controller approves an extractive NPC report:
+
+- `commit_synthetic_report(viewer, key, scene_id, draft_id, venue_id)` verifies
+  current role/context/review, scene lock/safety, actual NPC position/reachability
+  and protected-room policy. `venue_id` must resolve to an existing source-GM
+  Matrix scene/location context through its original proof helper; unknown venues
+  are blocked. No new Frame capability, travel or invented location is granted.
+  The report template is recomputed from actual known references. A stable stored
+  contribution and audit/command outcome commit atomically; retries reuse its ID.
+- `projections(viewer, scene_id)` rechecks current scene membership/consent, safety,
+  chat locks, actor controller/casting/position, source knowledge and privacy.
+  It returns stable scene contribution IDs, generic speaker attribution and report
+  text, omitting hidden NPC identity/controller/venue/assignment metadata. Missing
+  current proof suppresses optional output; existing required receipts are separate.
+
+This is an explicitly requested, synthetic-only projection, not autonomous live
+publication. The later UI can poll/refresh this projection and render by stable ID;
+no network transport, actual player-data collection or real inference is installed.
+Handler/public speech, other venue sources, unsought contribution pacing, general
+NPC prose, mechanical/world effects and a durable network delivery worker remain
+unsupported. Engine-first development continues without making UI details a blocker.

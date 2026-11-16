@@ -29,3 +29,11 @@ knowledge to actual living cast NPCs; return no private NPC details automaticall
 No NPC-only audience expansion, autonomous dialogue or world mutation. Demonstrate
 actual NPC cast/known source/withdrawal and wrong-controller/uncast rejection using
 existing world/cast fixtures before adding a speaking/publishing consumer.
+
+Next bounded synthetic publication seam: approved extractive NPC report → original
+source-GM scene/location proof → actual NPC cell/controller/cast and protected-room
+check → atomic stable contribution record → authorized projection refresh.
+Only reuse existing source-proved Matrix scene/location contexts; missing venue,
+unknown position/custody, locks, pause or changed knowledge fail closed. No travel,
+new world facts, player action or network delivery. Synthetic fixture only. This
+is a deliberately narrow adapter, not a general Director speech permission.
