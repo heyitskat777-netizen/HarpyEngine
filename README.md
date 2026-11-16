@@ -1,5 +1,12 @@
 # HarpyEngine — GIRL FRAME private Discord pilot
 
+## Engine-first synthetic Director trial
+
+Source-aware context, five-way shadow evaluation and private review are implemented.
+Run `.venv/bin/python tools/run_director_trial.py` for the bounded synthetic flow.
+See [trial scope and later UI requirements](docs/P2_ENGINE_TRIAL_HANDOFF.md).
+No paid calls or live autonomy are enabled.
+
 ## P2 backend development — synthetic assistance
 
 The approved [Director architecture](docs/AI_DIRECTOR_ARCHITECTURE.md) now specifies

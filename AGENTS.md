@@ -1,3 +1,9 @@
+> Current continuation: engine-first development toward a synthetic trial is
+> authorized; Activity changes are deferred to a consolidated later handoff.
+> Tentative model preference: GPT-6.1 Terra. No spending or external calls.
+> Source-context and shadow services are implemented; see
+> [engine trial handoff](docs/P2_ENGINE_TRIAL_HANDOFF.md). Autonomous live readiness is not certified.
+
 # Active owner direction — bounded P2 backend development
 
 The owner supplied the approved selective-observer Director design and directed

@@ -759,62 +759,67 @@ class DirectorObservationService:
         if type(success) is not bool:
             raise WorkflowError("INVALID_COMPLETION: supply an explicit synthetic review outcome.")
         with self.store.transaction() as c:
-            table = t.director["runs"]
-            row = (
-                c.execute(
-                    sa.select(table).where(
-                        table.c.campaign_id == self.store.campaign_id,
-                        table.c.run_id == run_id,
-                        table.c.lease_token == lease_token,
-                    )
-                )
-                .mappings()
-                .first()
-            )
-            if row is None:
-                raise WorkflowError("STALE_CLAIM: use the actual worker claim.")
-            batch = ReviewBatch.model_validate_json(row["body_json"])
-            scene = self._scene(c, batch.scene_id)
-            state = self._state(c, batch.scene_id)
-            if row["status"] in ("reviewed", "failed"):
-                if success != (row["status"] == "reviewed"):
-                    raise WorkflowError("IDEMPOTENCY_CONFLICT: review completion changed.")
-                return ReviewCompletion(
-                    run_id=run_id, status=row["status"], frontier=batch.frontier
-                )
-            self.game.unpaused(c)
-            if (
-                row["status"] != "running"
-                or row["lease_until"] <= self.store.clock()
-                or state.policy.mode != "shadow"
-                or not self._consented(c, scene, state)
-                or batch.guard_digest != self._guard(c, scene, state)
-            ):
-                raise WorkflowError("STALE_CLAIM: source, authority or worker claim changed.")
-            if success:
-                self._save(
-                    c,
-                    batch.scene_id,
-                    state.model_copy(
-                        update={
-                            "reviewed_sequence": batch.frontier,
-                            "last_review_at": float(self.store.clock()),
-                        }
-                    ),
-                )
-            result = ReviewCompletion(
-                run_id=run_id, status="reviewed" if success else "failed", frontier=batch.frontier
-            )
+            return self.complete_in_transaction(c, run_id, lease_token, success=success)
+
+    def complete_in_transaction(
+        self, c: Connection, run_id: str, lease_token: str, *, success: bool
+    ) -> ReviewCompletion:
+        """Internal atomic seam for the shadow outcome consumer."""
+        self._scope()
+        table = t.director["runs"]
+        row = (
             c.execute(
-                table.update()
-                .where(
+                sa.select(table).where(
                     table.c.campaign_id == self.store.campaign_id,
                     table.c.run_id == run_id,
                     table.c.lease_token == lease_token,
                 )
-                .values(status=result.status)
             )
-            return result
+            .mappings()
+            .first()
+        )
+        if row is None:
+            raise WorkflowError("STALE_CLAIM: use the actual worker claim.")
+        batch = ReviewBatch.model_validate_json(row["body_json"])
+        scene = self._scene(c, batch.scene_id)
+        state = self._state(c, batch.scene_id)
+        if row["status"] in ("reviewed", "failed"):
+            if success != (row["status"] == "reviewed"):
+                raise WorkflowError("IDEMPOTENCY_CONFLICT: review completion changed.")
+            return ReviewCompletion(run_id=run_id, status=row["status"], frontier=batch.frontier)
+        self.game.unpaused(c)
+        if (
+            row["status"] != "running"
+            or row["lease_until"] <= self.store.clock()
+            or state.policy.mode != "shadow"
+            or not self._consented(c, scene, state)
+            or batch.guard_digest != self._guard(c, scene, state)
+        ):
+            raise WorkflowError("STALE_CLAIM: source, authority or worker claim changed.")
+        if success:
+            self._save(
+                c,
+                batch.scene_id,
+                state.model_copy(
+                    update={
+                        "reviewed_sequence": batch.frontier,
+                        "last_review_at": float(self.store.clock()),
+                    }
+                ),
+            )
+        result = ReviewCompletion(
+            run_id=run_id, status="reviewed" if success else "failed", frontier=batch.frontier
+        )
+        c.execute(
+            table.update()
+            .where(
+                table.c.campaign_id == self.store.campaign_id,
+                table.c.run_id == run_id,
+                table.c.lease_token == lease_token,
+            )
+            .values(status=result.status)
+        )
+        return result
 
     def status(self, viewer: GuildViewer, scene_id: str) -> ObservationStatus:
         with self.store.transaction() as c:

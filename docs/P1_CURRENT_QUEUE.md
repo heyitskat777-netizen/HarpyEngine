@@ -1,3 +1,9 @@
+> Current continuation: engine-first development toward a synthetic trial is
+> authorized; Activity changes are deferred to a consolidated later handoff.
+> Tentative model preference: GPT-6.1 Terra. No spending or external calls.
+> Source-context and shadow services are implemented; see
+> [engine trial handoff](P2_ENGINE_TRIAL_HANDOFF.md). Autonomous live readiness is not certified.
+
 # Current P1 queue — scoped native candidate verified
 
 P2 backend development is now separately owner-authorized before P1 human
