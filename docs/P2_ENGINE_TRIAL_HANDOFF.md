@@ -138,3 +138,27 @@ no network transport, actual player-data collection or real inference is install
 Handler/public speech, other venue sources, unsought contribution pacing, general
 NPC prose, mechanical/world effects and a durable network delivery worker remain
 unsupported. Engine-first development continues without making UI details a blocker.
+
+## Local trial console before UI work
+
+A disposable, engine-only trial is now runnable:
+
+```bash
+.venv/bin/python tools/director_trial_console.py
+.venv/bin/python tools/director_trial_console.py --interactive
+```
+
+Default runs a bounded demonstration; interactive mode accepts synthetic scene
+text and `/wait`, `/npc`, `/approve`, `/publish`, `/status`, `/quit`. Here `/publish`
+means the synthetic projection in the disposable campaign, with no Discord or
+network delivery. The console uses the existing synthetic world, actor, venue and
+release-test fixtures; it creates no real campaign approval. Temporary state is
+removed on exit and the original environment is restored. External tokens/cost:0.
+This development console requires pinned dev dependencies; it is not a bot startup,
+production installer, new campaign database authority or general AI model emulator.
+
+The successful demonstrated flow is source submission → explicit NPC reference
+knowledge → quiet batch/WAIT → actual-role extractive draft → controller approval
+→ source-proved contribution → de-identified participant refresh → idle queue.
+This makes a bounded synthetic shadow/report trial usable before the Activity.
+It does not certify the complete Director or authorize autonomous real gameplay.

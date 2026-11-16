@@ -29,3 +29,10 @@ replay now require their own run identity; GM access is not dialogue ownership.
 The actual-NPC test verifies denial. Dialogue review also requires a draft record.
 Final focused trial after the fix: 30 passed, zero failures/errors/skips; source
 mypy and changed-file Ruff checks pass. Synthetic-only publication remains bounded.
+
+The standalone development console `tools/director_trial_console.py` completed its
+bounded default demo with exit0. It exercised real engine services against a
+fresh disposable synthetic fixture, ended idle with no pending input and removed
+its temporary campaign. No network, model or external tokens/cost. `--interactive`
+uses the same engine paths for explicitly entered synthetic test text. This is a
+usable local synthetic trial; no claim of complete autonomous-live readiness.
