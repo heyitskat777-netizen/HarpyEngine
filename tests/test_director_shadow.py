@@ -237,3 +237,26 @@ def test_provider_outage_preserves_unread_input_and_sanitizes_errors(observed):
     assert outcome["failure"] == "PROVIDER_UNAVAILABLE"
     assert observer.status(PLAYER, scene).pending_messages == 1
     assert "SYNTHETIC_PRIVATE_PROVIDER_ERROR" not in str(service.get(ADMIN, scene, batch.run_id))
+
+
+def test_handler_dialogue_uses_only_explicit_knowledge_and_never_portrays_pilot(observed):
+    from girlframe.services.director_dialogue import DirectorDialogueService
+
+    observer, context, scene, source, fact, pilot, handler, batch = prepared(observed)
+    context.record(ADMIN, "handler-disclosure", scene, source.source_id, 1, known_by=(handler,))
+    own = context.build(ADMIN, scene, actor=handler)
+    dialogue = DirectorDialogueService(context)
+    with pytest.raises(WorkflowError, match="PLAYER_AGENCY"):
+        dialogue.draft(PLAYER, "forge-pilot", scene, pilot, own.revision, (own.references[0].id,))
+    with pytest.raises(WorkflowError, match="UNKNOWN_KNOWLEDGE"):
+        dialogue.draft(ADMIN, "unknown", scene, handler, own.revision, ("unknown",))
+    draft = dialogue.draft(
+        ADMIN, "handler-draft", scene, handler, own.revision, tuple(x.id for x in own.references)
+    )
+    assert "SYNTHETIC_GM_REFERENCE" in dialogue.get(ADMIN, scene, draft["id"])["text"]
+    assert (
+        dialogue.review(ADMIN, "reject-handler-draft", scene, draft["id"], decision="reject")[
+            "publication"
+        ]
+        == "blocked"
+    )

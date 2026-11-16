@@ -90,8 +90,8 @@ class DirectorContextService:
                 raise WorkflowError("SOURCE_SCOPE_CHANGED: privacy reconciliation is required.")
             tokens = []
             for actor in known_by:
-                if actor.kind not in ("pilot", "handler"):
-                    raise WorkflowError("UNSUPPORTED_ACTOR: NPC presence needs its actual adapter.")
+                if actor.kind not in ("pilot", "handler", "npc"):
+                    raise WorkflowError("UNSUPPORTED_ACTOR: use a supported actual scene actor.")
                 from girlframe.engine.m3_actors import resolve
                 from girlframe.services.m2_state import load_state
                 from girlframe.services.m3_actors import profiles
@@ -107,6 +107,8 @@ class DirectorContextService:
                     if actual.controller not in scene["participants"] or not actual.alive:
                         raise ValueError("Unavailable actor")
                     cast = next((x for x in canon.scene_casts if x.id == scene_id and x.open), None)
+                    if actor.kind == "npc" and cast is None:
+                        raise ValueError("NPC presence requires explicit casting")
                     if cast is not None:
                         from girlframe.engine.m3_cast import validate_role
 
@@ -179,7 +181,28 @@ class DirectorContextService:
             self.store.administrator(viewer)
             audience = "gm"
         else:
-            _, _, actual = self.observations._authorize_input(c, viewer, scene_id, actor.kind)
+            if actor.kind == "npc":
+                from girlframe.engine.m3_cast import validate_role
+                from girlframe.services.m2_state import load_state
+                from girlframe.services.m3_actors import ActorService
+                from girlframe.services.m3_missions import MissionService
+
+                canon = load_state(c, self.store.campaign_id)
+                actual_view = ActorService(MissionService(self.store))._actor(
+                    c, viewer, canon, actor
+                )
+                cast = next((x for x in canon.scene_casts if x.id == scene_id and x.open), None)
+                if cast is None:
+                    raise WorkflowError(
+                        "ACTOR_UNAVAILABLE: NPC presence requires explicit casting."
+                    )
+                try:
+                    validate_role(cast, actual_view)
+                except ValueError:
+                    raise WorkflowError("ACTOR_UNAVAILABLE: recover actual NPC casting.") from None
+                actual = actual_view.ref
+            else:
+                _, _, actual = self.observations._authorize_input(c, viewer, scene_id, actor.kind)
             if actual != actor:
                 raise WorkflowError("ACTOR_UNAVAILABLE: use your own actual role.")
             references = tuple(x for x in references if actor.token in x.known_by)

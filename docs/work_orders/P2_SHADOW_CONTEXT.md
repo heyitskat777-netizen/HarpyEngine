@@ -22,3 +22,10 @@ chronology/source/revocation, repair/failure and stale provider completion check
 Runtime/live integration still needs the actual Activity backend/session handoff,
 real-data consent/retention, provider/model/budget, authorized operational setup and
 human review. No paid calls, real capture, restart or deployment in this unit.
+
+Next bounded integration: actual cast NPC context. Reuse existing ActorService
+controller/profile proof and CastRole validation. Grant only explicit source
+knowledge to actual living cast NPCs; return no private NPC details automatically.
+No NPC-only audience expansion, autonomous dialogue or world mutation. Demonstrate
+actual NPC cast/known source/withdrawal and wrong-controller/uncast rejection using
+existing world/cast fixtures before adding a speaking/publishing consumer.

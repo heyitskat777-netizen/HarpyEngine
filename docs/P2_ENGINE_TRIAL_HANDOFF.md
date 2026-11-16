@@ -87,3 +87,29 @@ Cross-scene chronology and broader Play sources are also unsupported. A real mod
 trial additionally needs verified provider/model configuration and explicit usage
 limits; the current no-spending direction remains in force. UI integration is
 intentionally deferred and is not used as a blocker for further engine development.
+
+## Subsequent actual-role dialogue integration
+
+NPC contexts now reuse ActorService controller proof and require an actual living
+explicit cast role. This supports an NPC controlled by a current scene participant;
+NPC-only controller audience reconciliation remains unsupported. NPC names,
+private detail and goals are not copied from raw world state into generation.
+
+`DirectorDialogueService(context)` supports:
+
+- `draft(viewer, key, scene_id, actor, expected_context, source_refs)`: actual
+  controller chooses an NPC/Handler and known reference IDs; Pilot speech is
+  prohibited. The synthetic text quotes those references as reports, supplying
+  no invented feelings, choices or mechanical outcome. All selected sources must
+  belong to that actor's authorized context. Result is a metadata-only draft ID.
+- `get(viewer, scene_id, id)`: current original controller/scene/role authorization;
+  returns its own saved draft/review. No administrator ownership override.
+- `review(viewer, key, scene_id, id, decision='approve'|'reject')`: immutable
+  controller approval/rejection, with fresh context and safety checks for approval.
+  Every result still blocks application and publication. Orders, disclosures with
+  actual effects and freeform generated speech need their exact future consumers.
+
+This extends the synthetic engine trial to actual NPC/Handler contexts and private
+extractive dialogue. It does not provide autonomous/live publication or a model
+persona. Earlier statements about NPC adapters above refer to broader NPC-only
+participation, physical travel, automatic knowledge and action consumers.

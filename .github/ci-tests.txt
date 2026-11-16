@@ -46,3 +46,5 @@ tests/test_database.py
 tests/test_director_observation.py
 # Source-aware knowledge, chronological references and durable synthetic shadow review.
 tests/test_director_shadow.py
+# Actual NPC role/cast/source isolation and private controller-reviewed extractive dialogue.
+tests/rules/test_director_npc_context.py
