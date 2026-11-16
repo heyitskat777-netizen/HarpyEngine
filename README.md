@@ -2,6 +2,23 @@
 
 ## Engine-first synthetic Director trial
 
+The [structured GM adapter candidate](reports/P2_GM_ADAPTER_PLAYTEST.md) supports
+offline playtesting of all five ordinary native Plays. It separates GM proposals
+from engine validation and original-owner confirmation, with private reasoning
+kept out of participant/Handler views. Start with:
+
+```bash
+.venv/bin/python tools/playtest_gm_adapter.py
+.venv/bin/python tools/playtest_gm_adapter.py --case precision_control_mid --interactive
+```
+
+The first command rehearses five fixture-controlled workflows. The second exports
+a private synthetic request and accepts a manually edited GM proposal. These use
+disposable databases and no external model. Reproduce the annotated 40-case pack
+with `.venv/bin/python tools/audit_director_rulings.py --protocol`.
+The earlier keyword-based adjudication below remains a historical v1 experiment;
+it is not the provider boundary to use for new contextual rulings.
+
 Source-aware context, five-way shadow evaluation and private review are implemented.
 Run `.venv/bin/python tools/run_director_trial.py` for the bounded synthetic flow.
 This includes separate GM/Handler routes and a 50-message Pilot-only script whose

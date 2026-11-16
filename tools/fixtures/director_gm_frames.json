@@ -1,0 +1,377 @@
+{
+  "schema_version": 2,
+  "description": "Explicit facilitator/fixture interpretations; not inferred language comprehension, printed trait rules, or expected verdicts.",
+  "frames": {
+    "cold_tough_low": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in barracks service corridor.",
+      "intent": "established",
+      "demands": [
+        {
+          "id": "demand-1",
+          "question": "Endure the stated physical strain until the stated destination."
+        }
+      ],
+      "fixture_trait_interpretation": {
+        "demand-1": "tough"
+      }
+    },
+    "cold_not_tough_low": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in snowfield.",
+      "intent": "established",
+      "demands": [
+        {
+          "id": "demand-1",
+          "question": "Endure the stated physical strain until the stated destination."
+        }
+      ],
+      "fixture_trait_interpretation": {
+        "demand-1": "tough"
+      }
+    },
+    "precision_control_mid": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in hangar calibration bench.",
+      "intent": "established",
+      "demands": [
+        {
+          "id": "demand-1",
+          "question": "Maintain deliberate precision or composure under the stated pressure."
+        }
+      ],
+      "fixture_trait_interpretation": {
+        "demand-1": "in_control"
+      }
+    },
+    "precision_not_control_mid": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in hangar calibration bench.",
+      "intent": "established",
+      "demands": [
+        {
+          "id": "demand-1",
+          "question": "Maintain deliberate precision or composure under the stated pressure."
+        }
+      ],
+      "fixture_trait_interpretation": {
+        "demand-1": "in_control"
+      }
+    },
+    "precision_high": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in shaking cockpit.",
+      "intent": "established",
+      "demands": [
+        {
+          "id": "demand-1",
+          "question": "Maintain deliberate precision or composure under the stated pressure."
+        }
+      ],
+      "fixture_trait_interpretation": {
+        "demand-1": "in_control"
+      }
+    },
+    "cold_high": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in snowfield exercise.",
+      "intent": "established",
+      "demands": [
+        {
+          "id": "demand-1",
+          "question": "Endure the stated physical strain until the stated destination."
+        }
+      ],
+      "fixture_trait_interpretation": {
+        "demand-1": "tough"
+      }
+    },
+    "precision_unestablished": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in medical bay.",
+      "intent": "established",
+      "demands": [
+        {
+          "id": "demand-1",
+          "question": "Maintain deliberate precision or composure under the stated pressure."
+        }
+      ],
+      "fixture_trait_interpretation": {
+        "demand-1": "in_control"
+      }
+    },
+    "endurance_unestablished": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in cold hangar.",
+      "intent": "established",
+      "demands": [
+        {
+          "id": "demand-1",
+          "question": "Endure the stated physical strain until the stated destination."
+        }
+      ],
+      "fixture_trait_interpretation": {
+        "demand-1": "tough"
+      }
+    },
+    "unclear_attempt": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in hallway.",
+      "intent": "needs_clarification",
+      "demands": [],
+      "fixture_trait_interpretation": {}
+    },
+    "nonphysical_endure": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in briefing room.",
+      "intent": "needs_clarification",
+      "demands": [],
+      "fixture_trait_interpretation": {}
+    },
+    "negated_precision": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in freezing corridor.",
+      "intent": "established",
+      "demands": [
+        {
+          "id": "demand-1",
+          "question": "Endure the stated physical strain until the stated destination."
+        }
+      ],
+      "fixture_trait_interpretation": {
+        "demand-1": "tough"
+      }
+    },
+    "joint_demands": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in freezing calibration chamber.",
+      "intent": "established",
+      "demands": [
+        {
+          "id": "demand-1",
+          "question": "Endure the stated physical strain until the stated destination."
+        },
+        {
+          "id": "demand-2",
+          "question": "Maintain deliberate precision or composure under the stated pressure."
+        }
+      ],
+      "fixture_trait_interpretation": {
+        "demand-1": "tough",
+        "demand-2": "in_control"
+      }
+    },
+    "calm_synonym": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in alarm corridor.",
+      "intent": "established",
+      "demands": [
+        {
+          "id": "demand-1",
+          "question": "Maintain deliberate precision or composure under the stated pressure."
+        }
+      ],
+      "fixture_trait_interpretation": {
+        "demand-1": "in_control"
+      }
+    },
+    "walking_synonym": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in long evacuation route.",
+      "intent": "established",
+      "demands": [
+        {
+          "id": "demand-1",
+          "question": "Endure the stated physical strain until the stated destination."
+        }
+      ],
+      "fixture_trait_interpretation": {
+        "demand-1": "tough"
+      }
+    },
+    "quoted_focus_label": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in freezing access corridor.",
+      "intent": "established",
+      "demands": [
+        {
+          "id": "demand-1",
+          "question": "Endure the stated physical strain until the stated destination."
+        }
+      ],
+      "fixture_trait_interpretation": {
+        "demand-1": "tough"
+      }
+    },
+    "metaphorical_cold": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in debrief room.",
+      "intent": "needs_clarification",
+      "demands": [],
+      "fixture_trait_interpretation": {}
+    },
+    "blocked_panel": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in sealed control room.",
+      "intent": "established",
+      "demands": [
+        {
+          "id": "demand-1",
+          "question": "Maintain deliberate precision or composure under the stated pressure."
+        }
+      ],
+      "fixture_trait_interpretation": {
+        "demand-1": "in_control"
+      }
+    },
+    "airlock_prerequisite": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in airlock simulation.",
+      "intent": "established",
+      "demands": [
+        {
+          "id": "demand-1",
+          "question": "Endure the stated physical strain until the stated destination."
+        }
+      ],
+      "fixture_trait_interpretation": {
+        "demand-1": "tough"
+      }
+    },
+    "withdrawn_goal": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in briefing room.",
+      "intent": "needs_clarification",
+      "demands": [],
+      "fixture_trait_interpretation": {}
+    },
+    "endurance_without_control": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in freezing access corridor.",
+      "intent": "established",
+      "demands": [
+        {
+          "id": "demand-1",
+          "question": "Endure the stated physical strain until the stated destination."
+        }
+      ],
+      "fixture_trait_interpretation": {
+        "demand-1": "tough"
+      }
+    },
+    "incidental_cold_label": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in climate-controlled cockpit.",
+      "intent": "established",
+      "demands": [
+        {
+          "id": "demand-1",
+          "question": "Maintain deliberate precision or composure under the stated pressure."
+        }
+      ],
+      "fixture_trait_interpretation": {
+        "demand-1": "in_control"
+      }
+    },
+    "permission_not_access": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in sealed relay entrance.",
+      "intent": "established",
+      "demands": [
+        {
+          "id": "demand-1",
+          "question": "Maintain deliberate precision or composure under the stated pressure."
+        }
+      ],
+      "fixture_trait_interpretation": {
+        "demand-1": "in_control"
+      }
+    },
+    "unsupported_social_goal": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in interrogation simulation.",
+      "intent": "needs_clarification",
+      "demands": [],
+      "fixture_trait_interpretation": {}
+    },
+    "keywords_without_attempt": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in training classroom.",
+      "intent": "needs_clarification",
+      "demands": [],
+      "fixture_trait_interpretation": {}
+    },
+    "sensors_hangar_low": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in quiet hangar.",
+      "intent": "established",
+      "demands": [],
+      "fixture_trait_interpretation": {}
+    },
+    "sensors_city_mid": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in urban rooftop.",
+      "intent": "established",
+      "demands": [],
+      "fixture_trait_interpretation": {}
+    },
+    "sensors_storm_high": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in storm observation post.",
+      "intent": "established",
+      "demands": [],
+      "fixture_trait_interpretation": {}
+    },
+    "sensors_offlist_high": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in relay mission briefing.",
+      "intent": "established",
+      "demands": [],
+      "fixture_trait_interpretation": {}
+    },
+    "engage_street_low": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in urban street exercise.",
+      "intent": "established",
+      "demands": [],
+      "fixture_trait_interpretation": {}
+    },
+    "engage_rooftop_mid": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in rooftop exercise.",
+      "intent": "established",
+      "demands": [],
+      "fixture_trait_interpretation": {}
+    },
+    "engage_hangar_high": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in hangar combat simulator.",
+      "intent": "established",
+      "demands": [],
+      "fixture_trait_interpretation": {}
+    },
+    "engage_evacuation_mid": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in evacuation training lane.",
+      "intent": "established",
+      "demands": [],
+      "fixture_trait_interpretation": {}
+    },
+    "disobey_checkpoint_low": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in checkpoint.",
+      "intent": "established",
+      "demands": [],
+      "fixture_trait_interpretation": {}
+    },
+    "disobey_barracks_mid": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in barracks duty desk.",
+      "intent": "established",
+      "demands": [],
+      "fixture_trait_interpretation": {}
+    },
+    "disobey_bridge_high": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in bridge exercise.",
+      "intent": "established",
+      "demands": [],
+      "fixture_trait_interpretation": {}
+    },
+    "disobey_without_order": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in hallway.",
+      "intent": "established",
+      "demands": [],
+      "fixture_trait_interpretation": {}
+    },
+    "flirt_recreation_low": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in recreation lounge.",
+      "intent": "established",
+      "demands": [],
+      "fixture_trait_interpretation": {}
+    },
+    "flirt_hallway_mid": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in hallway encounter.",
+      "intent": "established",
+      "demands": [],
+      "fixture_trait_interpretation": {}
+    },
+    "flirt_canteen_high": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in canteen.",
+      "intent": "established",
+      "demands": [],
+      "fixture_trait_interpretation": {}
+    },
+    "flirt_without_target": {
+      "stakes": "Facilitator interpretation for the stated synthetic goal in barracks common room.",
+      "intent": "established",
+      "demands": [],
+      "fixture_trait_interpretation": {}
+    }
+  }
+}

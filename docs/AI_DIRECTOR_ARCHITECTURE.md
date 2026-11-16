@@ -368,6 +368,7 @@ seams still require their named consumers before code or schema is added.
 | Scene and identity | Existing `GameService.bind_scene`, `join_scene`, `scene_info`, `HandlerService.authorize`; future Activity session adapter | Resolve verified user/role/actor and stable scene binding; build a fresh permitted projection rather than forwarding raw internal scene data |
 | Activity observation | D1 `append_scene_input` | Synthetic explicit submission, expected scene revision, stable command key, server-owned source identity, actor and consent/visibility snapshot; obey scene chat locks |
 | Play trigger | Existing actions/receipts/choices/source-required-work; D1 `observe_committed_play` | Native Keep source only; verify actual final outcome/receipt/history, block children and unresolved scene work, deduplicate original identity; no browser completion flag |
+| Structured GM adapter v2 | `GMAdapterService.evidence/frame/evaluate/private/view/confirm_keep`; `ai.gm_protocol` | Offline five ordinary native Plays, actual Disobey parent, facilitator-authored demands/prerequisites, provider-supplied judgment, validated evidence/coverage, original Keep controller confirmation with freshness checked inside its transaction; GM reasoning never becomes participant/Handler speech |
 | Batch/recovery | D1 `claim_review`, `acknowledge_review`, `status` | Short claim/ack transactions, frozen frontier, injected clock, token-bound leases and scoped status; no model evaluation or publication |
 | Context and inference | Existing public-reference builder for summary only; planned `build_role_context` and `evaluate_run` | Source-aware role projection, server-owned run envelope; network inference outside a writer transaction |
 | Decision validation | Planned `validate_director_proposal` | Strict five-way contract plus current authority, rule/source/knowledge/chronology/choice/safety checks; at most one repair |
@@ -375,6 +376,12 @@ seams still require their named consumers before code or schema is added.
 | Output/reopen | Existing roll/action outbox patterns; planned contribution projection and `refresh_scene` adapter | Atomically record permitted contributions and required publication work; fresh audience checks, stable IDs, optional output suppression and separate mirror delivery |
 
 ## 11. Integration sequence, ownership and acceptance
+
+The current bounded adapter candidate and runnable manual-provider console are
+documented in [the engine trial handoff](P2_ENGINE_TRIAL_HANDOFF.md) and
+[playtest report](../reports/P2_GM_ADAPTER_PLAYTEST.md). Annotated fixture judgments
+demonstrate the v2 contract; real language/model quality remains untested. The
+older v1 keyword adjudicator remains an explicitly historical experiment.
 
 Historical M4 scene coordination, M5 GM, M6 Handler and M7 private pilot labels in
 the supplied handoff are retained as history, not new milestones or acceptance.

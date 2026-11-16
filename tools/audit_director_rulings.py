@@ -1,5 +1,6 @@
 """Curated native-Play experiment. Records judgment failures; never makes them green."""
 
+import argparse
 import hashlib
 import json
 import subprocess
@@ -22,6 +23,10 @@ TITLES = {
 
 
 def classify(case, verdict):
+    if verdict in ("native_outcome", "pending_choices"):
+        return (
+            "native_adapter_complete" if verdict == "native_outcome" else "native_adapter_pending"
+        )
     if verdict == "requires_play_adapter":
         return "adapter_missing"
     if verdict == "source_guard":
@@ -37,7 +42,7 @@ def classify(case, verdict):
     return "unexpected_review" if verdict == "needs_clarification" else "unexpected_error"
 
 
-def run_case(case):
+def run_case(case, *, protocol=False, provider=None, frame_definition=None, confirm_proposal=None):
     import pytest
     from test_director_conversation import GMProbe, HandlerProbe
     from test_director_observation import observed, send
@@ -178,6 +183,13 @@ def run_case(case):
                 count = {"low": 1, "mid": 2, "high": 3}[level]
                 trace = Trace()
                 adjudicator = DirectorAdjudicationService(conversation, trace)
+                if protocol:
+                    from gm_protocol_fixture import ProtocolAudit
+
+                    trace = ProtocolAudit(
+                        context, case["id"], provider=provider, definition=frame_definition
+                    )
+                    adjudicator = trace
 
                 def probe():
                     before = state(game).model_dump_json()
@@ -200,6 +212,7 @@ def run_case(case):
                     assert state(game).model_dump_json() == before and dice.calls == 1
 
                 play = case["play"]
+                leave_pending = False
                 if play == "keep_your_head":
                     choices = {
                         "options": tuple(
@@ -229,7 +242,27 @@ def run_case(case):
                         row["completion_authority"] = (
                             "manual_fixture_completion_without_endorsement"
                         )
-                    answer(game, ADMIN, "handler_keep", flag=owner_flag, text=owner_text)
+                    if protocol and confirm_proposal is not None:
+                        accept = proposal and proposal["enough"] is not None
+                        accept = bool(accept and confirm_proposal(proposal))
+                        row["completion_authority"] = (
+                            "manual_offline_original_controller_confirmation"
+                            if accept
+                            else "left_pending_without_controller_confirmation"
+                        )
+                        if accept:
+                            trace.confirm(ADMIN, scene, row["proposal_id"])
+                        else:
+                            leave_pending = True
+                    elif (
+                        protocol
+                        and proposal
+                        and proposal["enough"] is not None
+                        and status == "expected_ruling"
+                    ):
+                        trace.confirm(ADMIN, scene, row["proposal_id"])
+                    else:
+                        answer(game, ADMIN, "handler_keep", flag=owner_flag, text=owner_text)
                 elif play == "check_sensors":
                     if case.get("off_list"):
                         answer(
@@ -301,12 +334,13 @@ def run_case(case):
                     row["completion_authority"] = "scripted_target_owned_response_not_gm_generated"
                 tick(worker, gateway, 5)
                 complete = game.inspect(PLAYER, native)
-                assert complete["state"] == "complete" and dice.calls == 1
+                assert (complete["state"] == "complete") == (not leave_pending)
+                assert dice.calls == 1
                 replay = game.roll(PLAYER, "m2.confirmed_roll:" + native, native)
                 assert game.roll(PLAYER, "m2.confirmed_roll:" + native, native) == replay
                 assert dice.calls == 1
-                row["native_complete"] = True
-                result = complete["result"]
+                row["native_complete"] = complete["state"] == "complete"
+                result = complete["result"] or {}
                 row["native"] = {
                     key: result[key]
                     for key in (
@@ -341,12 +375,15 @@ def run_case(case):
                         "SYNTHETIC_AUDIT_TARGET_PRIVATE" in trace.last.model_dump_json()
                     )
                 try:
-                    review = conversation.review_play(PLAYER, "completed-review", scene, native)
-                    row["completed_review"] = {
-                        "supported": True,
-                        "confirmed_gm_verdict": review.get("verdict"),
-                        "text": review["reply"]["text"],
-                    }
+                    if protocol:
+                        row["completed_review"] = trace.readback(PLAYER, scene, source, native)
+                    else:
+                        review = conversation.review_play(PLAYER, "completed-review", scene, native)
+                        row["completed_review"] = {
+                            "supported": True,
+                            "confirmed_gm_verdict": review.get("verdict"),
+                            "text": review["reply"]["text"],
+                        }
                 except WorkflowError as error:
                     row["completed_review"] = {"supported": False, "reason": str(error)}
             with store.engine.connect() as c:
@@ -378,8 +415,10 @@ def render(rows, output, summary):
         "background:#f7f5f0;color:#242424}td,th{padding:9px;border:1px solid #bbb;text-align:left}"
         "table{border-collapse:collapse;width:100%}article{margin:28px 0;border-top:1px solid #aaa}"
         ".bad{background:#f7dfd1}pre{white-space:pre-wrap;overflow-wrap:anywhere}a{color:#285974}</style>"
-        "<h1>40 native Play attempts: GM ruling audit</h1>"
-        "<p>Actual native engine rolls and choices; deterministic local GM stand-in. "
+        f"<h1>{len(rows)} native Play attempts: GM ruling audit</h1>"
+        "<p>Actual native engine rolls and choices. GM setup: "
+        + escape(summary.get("judgment_setup", "Legacy local stand-in"))
+        + ". "
         "Expected review criteria are independent inputs to the audit, never provider inputs. "
         "These checks assess the prototype, not a real AI model. No paid calls or live changes.</p>"
         "<h2>Reviewed findings</h2>"
@@ -395,10 +434,18 @@ def render(rows, output, summary):
         "cases need a parent/child source adapter.</li>"
         "<li><b>Keep engine checks:</b> invalid requests consumed no dice, replays did "
         "not reroll, and Handler views excluded private GM/target data.</li></ul>"
-        "<p>Recommended next work: a structured AI-GM request and proposal validator, "
-        "explicit goals/prerequisites/stakes, Play-specific outcomes and lineage-aware "
-        "completion hooks. Do not extend the keyword stand-in into the final GM.</p>"
-        "<p>Review expectations are authored synthetic judgments, not an independent rules "
+        + (
+            "<p><b>Protocol v2:</b> facilitator-authored demands and trait relevance feed a "
+            "fixture provider. Outcomes demonstrate structured binding, validation and native "
+            "adapter coverage. They do not establish autonomous language understanding or "
+            "independent narrative judgment. All five native adapters and original "
+            "Disobey parent lineage are exercised; other Plays retain native outcomes.</p>"
+            if summary.get("protocol") == 2
+            else "<p>Recommended next work: structured AI-GM requests, explicit "
+            "goals/prerequisites/stakes, Play-specific outcomes and lineage-aware hooks. "
+            "Do not extend the keyword stand-in into the final GM.</p>"
+        )
+        + "<p>Review expectations are authored synthetic judgments, not an independent rules "
         "certification. Environments here are narrative framing and GM test facts; no "
         "physical-location or environmental-damage automation is certified.</p>"
         f"<p>Immediate action completion leaves {followups} cases with separate required "
@@ -433,8 +480,17 @@ def render(rows, output, summary):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--protocol",
+        action="store_true",
+        help="Exercise structured v2 frames and provider validation",
+    )
+    args = parser.parse_args()
     cases = json.loads((ROOT / "tools/fixtures/director_ruling_audit.json").read_text())["cases"]
-    output = ROOT / "var/director-ruling-audit"
+    output = (
+        ROOT / "var" / ("director-protocol-audit" if args.protocol else "director-ruling-audit")
+    )
     output.mkdir(parents=True, exist_ok=True)
     paths = [
         "src/girlframe/ai/adjudication.py",
@@ -444,10 +500,23 @@ def main():
         "src/girlframe/services/m2_choices.py",
         "tools/fixtures/director_ruling_audit.json",
     ]
+    if args.protocol:
+        paths.extend(
+            [
+                "src/girlframe/ai/gm_protocol.py",
+                "src/girlframe/ai/play_names.py",
+                "src/girlframe/ai/conversation.py",
+                "src/girlframe/services/director_native.py",
+                "src/girlframe/services/gm_adapter.py",
+                "tools/gm_protocol_fixture.py",
+                "tools/fixtures/director_gm_frames.json",
+                "tools/audit_director_rulings.py",
+            ]
+        )
     rows = []
     for case in cases:
         try:
-            row = run_case(case)
+            row = run_case(case, protocol=args.protocol)
         except Exception as error:
             row = {
                 "case": case,
@@ -461,6 +530,11 @@ def main():
         (output / "results.json").write_text(json.dumps(rows, indent=2) + "\n")
         print(case["id"], row["status"], flush=True)
     summary = {
+        "protocol": 2 if args.protocol else 1,
+        "judgment_setup": "Explicit facilitator frames and fixture provider; "
+        "no autonomous language comprehension"
+        if args.protocol
+        else "Legacy keyword stand-in",
         "source_commit": subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
         ).strip(),

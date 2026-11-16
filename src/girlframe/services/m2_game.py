@@ -1,6 +1,7 @@
 """Transactional M2 canonical state, activation, scenes and durable Play actions."""
 
 import json
+from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any, Literal, cast
 from uuid import UUID, uuid4
@@ -5022,7 +5023,14 @@ class GameService:
             return self.pending_choices(c, viewer)
 
     def respond(
-        self, viewer: GuildViewer, key: str, choice_id: str, revision: int, answer: ChoiceAnswer
+        self,
+        viewer: GuildViewer,
+        key: str,
+        choice_id: str,
+        revision: int,
+        answer: ChoiceAnswer,
+        *,
+        source_authorize: Callable[[Connection], None] | None = None,
     ) -> dict[str, Any]:
         from girlframe.services.m2_choices import ChoiceEngine
 
@@ -5053,6 +5061,10 @@ class GameService:
             harpy_defeat = bool(
                 original and self.action(c, original.action_id)["data"].get("harpy_defeat")
             )
+        if source_authorize is not None and (
+            leviathan or virus_order or virus_purge or harpy_defeat
+        ):
+            raise WorkflowError("UNSUPPORTED_SOURCE_GUARD: use this workflow's original adapter.")
         if leviathan:
             from girlframe.services.m3_leviathan_obsession import ObsessionService
 
@@ -5356,6 +5368,8 @@ class GameService:
 
         def authorize(c: Connection) -> None:
             owned(c)
+            if source_authorize is not None:
+                source_authorize(c)
 
         def operation(c: Connection) -> dict[str, Any]:
             self.unpaused(c)

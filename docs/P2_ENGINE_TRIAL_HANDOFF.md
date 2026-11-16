@@ -2,8 +2,76 @@
 
 Owner direction: finish engine work independently; UI changes are delivered later.
 Model preference is tentatively GPT-6.1 Terra. No provider identity or compatibility
-is asserted and no external inference/spending is authorized. All decisions here
-are deterministic local fixtures, not measured or emulated model intelligence.
+is asserted and no external inference/spending is authorized. Default providers
+are local fixtures; manual proposals are explicit facilitator judgments. Neither
+is measured or emulated model intelligence.
+
+## Current candidate: structured GM adapter v2
+
+Use `GMAdapterService(context, provider=None)` for new contextual ruling work.
+The old `DirectorAdjudicationService` and long-scene `--plays` path retain their
+historical v1 keyword experiment; do not treat those as the new provider boundary.
+The [candidate report](../reports/P2_GM_ADAPTER_PLAYTEST.md) records repeated
+implementation, 40-case review and the resulting offline playtest scope.
+
+```bash
+.venv/bin/python tools/playtest_gm_adapter.py
+.venv/bin/python tools/playtest_gm_adapter.py --list
+.venv/bin/python tools/playtest_gm_adapter.py --case precision_control_mid --interactive
+.venv/bin/python tools/audit_director_rulings.py --protocol
+```
+
+The console uses the pinned dev/test fixtures and disposable synthetic campaigns.
+Interactive mode exports `request.json` and `proposal.json` under
+`var/gm-adapter-playtest/<case>/`; edit the latter in another editor and press
+Enter. The default proposal asks for clarification. An accepted enough/not_enough
+proposal still needs explicit original-controller confirmation in the console;
+declining or asking for clarification leaves the native choice pending.
+The console's temporary database is removed on exit. Pilot, target, Tags and
+non-Keep owner answers are labelled fixture scripts, not invented AI decisions.
+`--goal` requires `--interactive --frame FILE` with explicit stakes, demands and
+intent. This tests the contract, not a persistent campaign or natural-language GM.
+
+The backend service contract is:
+
+- `.evidence(viewer, scene, source_id, source_revision, action_id) -> GMPacket`:
+  configured administrator only; original accepted Pilot declaration, actual native
+  receipt, traits, stage/choices, Disobey parent proof, private canonical context,
+  source references and latest 100 scene inputs with an explicit omitted count.
+- `.frame(viewer, key, scene, source_id, source_revision, action_id, task)`:
+  configured facilitator records explicit goal stakes, distinct demands, intent
+  and evidence-bound prerequisite interpretations. Scene conditions left unknown
+  cannot produce a resolved Keep verdict. This does not make traits automatic
+  rules or convert narration into mechanics. Changed context requires reframing.
+- `.evaluate(viewer, key, scene, frame_id)` calls `GMProvider.propose(packet)`
+  outside the writer lock, validates its strict `GMProposal` against actual
+  evidence/trait polarity and demand coverage, then rechecks context in the save
+  transaction. Valid wording need not match any synthetic oracle. No dice or
+  world/resource effects are supplied by the provider. Default provider requests
+  Keep review; other Plays retain native pending/complete results.
+- `.private(viewer, scene, proposal_id)` is GM-only. `.view(viewer, scene, id)`
+  returns fixed safe wording and the existing native participant projection,
+  confirmation/currentness, own pending choice/work kinds, immediate completion
+  and known action/scene follow-up completion. Private reasoning, task annotations,
+  raw GM context and other owners' work details are excluded.
+- `.confirm_keep(viewer, key, scene, proposal_id)` uses the original native
+  `handler_keep` choice owner. It revalidates source, consent, context and proposal
+  inside the native response transaction. Same-key exact retries return the saved
+  response without rerolling. An administrator cannot impersonate that owner.
+
+For the later Activity: add a private facilitator framing/proposal panel, a
+separate original-controller confirm control enabled only by `can_confirm`, and
+participant refresh using `.view`. Show pending choices and follow-ups separately;
+refresh/reframe stale proposals. The server must derive `GuildViewer`, campaign
+and role from authenticated sessions; never pass a client-supplied authority flag.
+Keep the fictional Handler's scoped conversation route separate from the private
+GM review even when one human controls both. These are Python services, not HTTP
+routes. Existing consent, knowledge and delivery requirements below still apply.
+
+Ready for attempted **offline five-Play adapter playtesting**. Real provider
+transport, bounded usage/data handling, human narrative/fairness evaluation,
+broader Playbook/child consumers, general generated narration, autonomous
+publication and Activity delivery remain separate unfinished work.
 
 ## Implemented engine flow
 

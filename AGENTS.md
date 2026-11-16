@@ -1,5 +1,13 @@
 > Current continuation: engine-first development toward a synthetic trial is
 > authorized; Activity changes are deferred to a consolidated later handoff.
+> Latest implementation: provider-neutral v2 GM proposals, source-bound facilitator
+> frames and five ordinary native Play adapters. Use services/gm_adapter.py and
+> tools/playtest_gm_adapter.py; see reports/P2_GM_ADAPTER_PLAYTEST.md. The original
+> 40 cases now exercise annotated fixture interpretations, not autonomous language
+> understanding. Legacy v1 keyword adjudication remains experimental. Preserve
+> original Handler confirmation, atomic freshness checks, private GM reasoning,
+> participant projections and unresolved scene work. No paid/live provider or
+> Activity integration is installed or authorized by offline playtest readiness.
 > Tentative model preference: GPT-6.1 Terra. No spending or external calls.
 > Source-context and shadow services are implemented; see
 > [engine trial handoff](docs/P2_ENGINE_TRIAL_HANDOFF.md). Autonomous live readiness is not certified.

@@ -8,6 +8,7 @@ from pydantic import Field, JsonValue, model_validator
 from girlframe.ai.contracts import Contract
 from girlframe.ai.director import DirectorContext, KnowledgeReference
 from girlframe.ai.observation import Observation
+from girlframe.ai.play_names import LABELS, requested_play
 
 Route = Literal["gm", "handler"]
 
@@ -127,11 +128,7 @@ class SyntheticGMPolicy:
             text,
         ):
             return GMDecision(action="RESPOND", reason="scope_adjudication")
-        if (
-            ("keep your head" in text or "keep_your_head" in text)
-            and re.search(r"\b(?:declare|roll|resolve|request)\b", text)
-            and not re.search(r"\b(?:not|never|no)\b", text)
-        ):
+        if requested_play(text) is not None:
             return GMDecision(action="RESPOND", reason="play_request")
         if re.match(r"gm\s*[:,]", text):
             return GMDecision(action="RESPOND", reason="explicit_gm_request")
@@ -236,11 +233,13 @@ class SyntheticGM:
         # publishes recipient-permitted references or neutral engine referrals.
         decision = SyntheticGMPolicy().decide(request)
         if decision.reason == "play_request":
+            play = requested_play(request.question)
+            assert play is not None
             reply = ConversationReply(
                 route="gm",
                 disposition="requires_engine_workflow",
-                play_id="keep_your_head",
-                text="Keep Your Head is the requested Play. Describe what you are trying to "
+                play_id=play,
+                text=LABELS[play] + " is the requested Play. Describe what you are trying to "
                 "make it through, confirm the trigger and choose your own Heat/Identity inputs "
                 "in the engine. Its actual roll and printed choices must finish before an outcome.",
             )
