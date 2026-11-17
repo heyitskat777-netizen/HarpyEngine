@@ -17,6 +17,8 @@ def main() -> int:
             "tests/test_director_conversation.py",
             "tests/test_director_adjudication.py",
             "tests/test_gm_adapter.py",
+            "tests/test_gm_outcomes.py",
+            "tests/rules/test_gm_outcome_consumers.py",
             "tests/test_director_play_review.py",
             "tests/rules/test_director_npc_context.py",
             "tests/test_director_observation.py",

@@ -36,6 +36,7 @@ KINDS = (
     "wyvern_unmark",
     "wyvern_danger",
     "wyvern_answers_done",
+    "wyvern_gm_outcome",
     "wyvern_rouse_cost",
     "wyvern_wraith",
     "wyvern_wraith_rules",
@@ -485,7 +486,12 @@ def _advance_exploration(
     elif source.total >= 11 and source.danger is None:
         _request(game, c, action, source.handler_controller, "wyvern_danger")
     elif source.answers_closed_event is None:
-        _request(game, c, action, int(source.actor.entity), "wyvern_answers_done")
+        if game.store.policy.owner_table_outcomes == "gm_discretion":
+            from girlframe.services.gm_table_outcomes import gm_owner
+
+            _request(game, c, action, gm_owner(state, action), "wyvern_gm_outcome")
+        else:
+            _request(game, c, action, int(source.actor.entity), "wyvern_answers_done")
     elif source.danger:
         danger = next(x for x in rules.records(state, rules.Danger) if x.id == source.danger)
         action["data"]["wyvern"]["phase"] = "returning"
@@ -696,6 +702,8 @@ def apply(
         rules.put(state, source.model_copy(update={"danger": identity}))
         _advance_exploration(game, c, state, action)
     elif kind == "wyvern_answers_done":
+        if game.store.policy.owner_table_outcomes == "gm_discretion":
+            raise WorkflowError("TABLE_GM_REQUIRED: the GM now determines this shared outcome.")
         if (
             int(row["actor_id"]) != int(source.actor.entity)
             or answer.options != ("done",)
@@ -715,6 +723,12 @@ def apply(
                 rules.put(state, question.model_copy(update={"closed_event": event}))
         rules.put(state, source.model_copy(update={"answers_closed_event": event}))
         _advance_exploration(game, c, state, action)
+    elif kind == "wyvern_gm_outcome":
+        from girlframe.services.gm_table_outcomes import apply_wyvern
+
+        apply_wyvern(
+            game, c, state, action, int(row["actor_id"]), answer.fields, answer.text, event
+        )
     elif kind == "wyvern_shield_bond":
         if (
             source.target is None

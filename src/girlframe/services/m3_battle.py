@@ -771,8 +771,20 @@ def results(
                 dict(target=meta["actor"], actor=meta["actor"]),
             )
         else:
-            for human in meta["table"]:
-                game.request(c, action, human, "battle_assault_table", dict(target=meta["target"]))
+            if game.store.policy.owner_table_outcomes == "gm_discretion":
+                from girlframe.services.gm_table_outcomes import gm_owner
+
+                game.request(
+                    c,
+                    action,
+                    gm_owner(state or load_state(c, game.store.campaign_id), action),
+                    "battle_gm_table",
+                )
+            else:
+                for human in meta["table"]:
+                    game.request(
+                        c, action, human, "battle_assault_table", dict(target=meta["target"])
+                    )
     elif level == "mid":
         meta["fixed_due"] = "death"
     else:
@@ -784,6 +796,35 @@ def results(
             dict(actor=meta["target"], attacker=meta["actor"], maximum=2 if level == "low" else 1),
         )
     meta["state"] = "choices"
+
+
+def assault_table_outcome(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    vast: bool,
+    event: str,
+) -> None:
+    """One shared consequence path; its callers prove table or GM authority separately."""
+    meta = action["data"]["battle"]
+    actor, target = _refs(action)
+    if not vast:
+        _damage(
+            game,
+            c,
+            state,
+            action,
+            target,
+            meta["target_asset"],
+            event,
+            opponent=actor,
+            chooser=meta["actor_controller"],
+            occurrence="assault",
+        )
+    meta["assault_applied"] = True
+    if action["data"]["result"]["tier"] == "high":
+        game.request(c, action, meta["handler"], "battle_handler", dict(actor=meta["actor"]))
 
 
 def damage_projection(
@@ -973,25 +1014,25 @@ def apply(
         if answer.flag is None or not answer.text.strip():
             raise WorkflowError("State your actual agreement or disagreement with vast advantage.")
         meta["votes"][request["actor_id"]] = dict(vast=answer.flag, account=answer.text)
+        if game.store.policy.owner_table_outcomes == "gm_discretion":
+            from girlframe.services.gm_table_outcomes import gm_owner
+
+            game.request(c, action, gm_owner(state, action), "battle_gm_table")
+            return
         if len(meta["votes"]) == len(meta["table"]):
-            if not all(x["vast"] for x in meta["votes"].values()):
-                _damage(
-                    game,
-                    c,
-                    state,
-                    action,
-                    target,
-                    meta["target_asset"],
-                    event,
-                    opponent=actor,
-                    chooser=meta["actor_controller"],
-                    occurrence="assault",
-                )
-            meta["assault_applied"] = True
-            if level == "high":
-                game.request(
-                    c, action, meta["handler"], "battle_handler", dict(actor=meta["actor"])
-                )
+            assault_table_outcome(
+                game, c, state, action, all(x["vast"] for x in meta["votes"].values()), event
+            )
+        return
+    if kind == "battle_gm_table":
+        from girlframe.services.gm_table_outcomes import apply_assault
+
+        _strict(answer, {"flag", "text"})
+        if answer.flag is None or not answer.text.strip():
+            raise WorkflowError("State the GM's actual table outcome and account.")
+        apply_assault(
+            game, c, state, action, int(request["actor_id"]), answer.flag, answer.text, event
+        )
         return
     if kind in ("battle_low_damage", "battle_actor_damage", "battle_target_damage"):
         _strict(answer, {"fields"})

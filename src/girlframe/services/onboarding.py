@@ -8,6 +8,7 @@ import json
 import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
@@ -26,7 +27,21 @@ class WorkflowError(RuntimeError):
     """Safe, intentionally authored user feedback only."""
 
 
+_source_guards: ContextVar[tuple[tuple[int, Callable[[Connection], None]], ...]] = ContextVar(
+    "native_source_guards", default=()
+)
+
+
 class OnboardingStore:
+    @contextmanager
+    def source_guard(self, guard: Callable[[Connection], None]) -> Iterator[None]:
+        """Trusted server-only guard inside native writes; never a wire authority flag."""
+        token = _source_guards.set((*_source_guards.get(), (id(self), guard)))
+        try:
+            yield
+        finally:
+            _source_guards.reset(token)
+
     def __init__(self, engine: Engine, policy: BotPolicy, clock: Callable[[], float] = time.time):
         self.engine = engine
         self.policy = policy
@@ -146,6 +161,9 @@ class OnboardingStore:
             self._bind(connection)
             if authorize is not None:
                 authorize(connection)
+            for store_id, guard in _source_guards.get():
+                if store_id == id(self):
+                    guard(connection)
             existing = (
                 connection.execute(
                     sa.select(t.commands).where(

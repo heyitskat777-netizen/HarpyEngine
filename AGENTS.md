@@ -1,3 +1,10 @@
+> Latest owner clarification: **table outcomes are GM-discretion**. This supersedes
+> the earlier review's unanimous-Assault/actor-only exploration recommendation.
+> Preserve player contributions and independently owned personal choices. Trusted
+> `owner_table_outcomes="gm_discretion"` selects the new native GM controls; no live
+> policy/deployment change is installed. See reports/P2_GM_OUTCOME_ADAPTERS.md and
+> services/gm_outcomes.py for the synthetic typed consumers and actual test scope.
+>
 > Current continuation: engine-first development toward a synthetic trial is
 > authorized; Activity changes are deferred to a consolidated later handoff.
 > Latest review: reports/P2_GM_OUTCOME_ADAPTER_REVIEW.md distinguishes one current

@@ -7,7 +7,9 @@ from pydantic import Field, JsonValue
 from girlframe.ai.contracts import Contract
 
 Play = Literal["keep_your_head", "check_sensors", "engage", "disobey_orders", "flirt"]
-Trait = Literal["desperate", "sexy", "tough", "vicious", "in_control", "experienced", "big_enough"]
+Trait = Literal[
+    "desperate", "sexy", "beautiful", "tough", "vicious", "in_control", "experienced", "big_enough"
+]
 
 
 class Demand(Contract):

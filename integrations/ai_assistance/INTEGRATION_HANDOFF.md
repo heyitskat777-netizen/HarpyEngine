@@ -322,3 +322,42 @@ The last verified live release remains v0.1.4 at
 `fe47d7ef0b558a1106f5dc48b25c277aff5f875b`; its current process status was not
 reverified by this development task. Preserve the frozen release and check its
 private deployment record before any separately authorized operational change.
+
+## Synthetic typed GM consumers (v3 proposal contract)
+
+See [implementation and evidence](../../reports/P2_GM_OUTCOME_ADAPTERS.md). This
+adds backend service calls, not HTTP routes or Activity components. Existing v1/v2
+contracts remain available. The later Activity handoff should implement this flow:
+
+1. From actual native work, select an existing choice, proposed battle context,
+   pending Handler grant, open shared table stage or completed action. Server-side
+   `GMOutcomeService.open(viewer, key, scene, source_kind, source_id, frame)` proves
+   source and owner. Keep requires an explicit `TaskFrame` with goal demands and
+   actual prerequisite references; it cannot silently infer a success threshold.
+2. `packet` and `private` are administrative GM-only. Use the typed
+   `OutcomePacket`/`OutcomeProposal` union in `ai/gm_outcomes.py`; `propose` accepts
+   a manual proposal or injected provider. Do not put a full packet in a Handler
+   prompt, shared Activity state or client log. There is no installed model.
+3. Route `owner_review` to its actual original human owner. Present intended
+   disclosures/effects as OOC review, with explicit confirmation. Do not treat
+   platform administrator status as permission to confirm another owner's choice.
+4. Call `confirm` with a durable command key. The server rechecks freshness inside
+   the original native transaction and retains native follow-ups. On stale work,
+   reopen the actual source; never resubmit an old proposal with a new revision.
+5. Completed `narration` can be read through `contribution`, which combines intended
+   approved text with that viewer's native projection. It is synthetic output;
+   nothing here publishes to Discord or changes a committed outcome.
+
+Owner-approved shared table outcomes use trusted
+`owner_table_outcomes="gm_discretion"`. Show the real GM-owned
+`battle_gm_table`/`wyvern_gm_outcome` controls, retain participant contributions,
+and show the GM's final answer distinctly. A source of kind `table` can settle an
+existing open shared stage after policy transition. Never auto-fill personal
+choices or private answers. Existing policies default to `None` for frozen
+compatibility; this is not a browser-controlled permission flag.
+
+UI needs an actual-source work list, private GM proposal review, original-owner
+confirmation, visible pending follow-ups, stale/reopen handling and per-viewer
+outcome projection. Current Discord legacy forms are not the interface for these
+new policy-selected table controls. Engine-first implementation intentionally
+leaves that consolidated Activity work for later.

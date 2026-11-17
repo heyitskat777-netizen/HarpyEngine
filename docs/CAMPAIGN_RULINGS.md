@@ -4592,3 +4592,25 @@ outcome unusable. This explicit body-only interpretation has independent source
 rationale recorded in the first-roster review and applies only through genuine
 Defeat disposition code. Adjusting it requires corresponding source/physical
 proof changes and renewed verification, not merely editing the registry text.
+
+
+## GM discretion for shared table outcomes — 2026-11-16
+
+`gm-discretion-shared-table-outcomes` records the owner's explicit instruction:
+“Table outcomes should be GM-discretion.” This supersedes the earlier adapter
+review's recommendation to preserve unanimous Assault votes and actor-only
+exploration answer closure. It is a campaign ruling, not a claim that printed
+rules changed or that independent rules review is complete.
+
+The source GM determines shared outcomes: Assault's vast-advantage judgment and
+Wyvern exploration's final question answers/closure. Preserve participant
+contributions, record the actual GM and event, and supersede only the pending
+shared-outcome controls. Do not submit responses for absent players. Personal
+choices, consent, target-owned findings/private answers, required child Plays,
+return danger, damage costs and native follow-ups retain their original owners.
+
+Trusted policy `owner_table_outcomes="gm_discretion"` selects the new native
+controls. `None` preserves frozen behavior for existing configurations. The
+synthetic candidate tests this explicit selection; no private policy, pinned
+runtime or live environment was changed. A later runtime rollout must explicitly
+select the ruling and renew any changed-registry approval.

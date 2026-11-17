@@ -35,6 +35,7 @@ class BotPolicy(BaseModel):
     m2_approval: ReleaseApproval | None = None
     m3_approval: M3Approval | None = None
     owner_m3_rulings: M3Rulings | None = None
+    owner_table_outcomes: Literal["gm_discretion"] | None = None
 
     @field_validator("owner_creation_rulings")
     @classmethod

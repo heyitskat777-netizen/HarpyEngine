@@ -18,6 +18,19 @@
   ],
   "campaign_rulings": [
     {
+      "id": "gm-discretion-shared-table-outcomes",
+      "summary": "The source GM determines shared table outcomes; preserve contributions and independently owned personal choices.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Owner clarification in this development conversation, 2026-11-16: Table outcomes should be GM-discretion.",
+      "authority": "explicit_owner",
+      "policy_key": "owner_table_outcomes",
+      "clarity_review": true,
+      "revision": 1,
+      "rationale": "The owner explicitly assigns shared table adjudication to the GM. This supersedes the earlier recommendation to require unanimous Assault votes or actor-only exploration closure.",
+      "implementation_note": "Trusted policy owner_table_outcomes=gm_discretion selects native GM-owned Assault judgments and exploration answer closure. Existing deployments and policy=None retain their frozen behavior; no live policy change is installed.",
+      "change_impact": "Retain table contributions; supersede only pending shared-outcome controls. No proxy player replies, consent, private answers or arbitrary effects."
+    },
+    {
       "id": "void-observation-reprogramming-fallback",
       "summary": "If starting Identities lack Malfunctioning, the player selects an ordinary starting slot to replace with a current Identity; preserve protected and extra Identities.",
       "provenance": "owner_approved_campaign_ruling",

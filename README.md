@@ -2,10 +2,12 @@
 
 ## Engine-first synthetic Director trial
 
-The [GM outcome-adapter review](reports/P2_GM_OUTCOME_ADAPTER_REVIEW.md) identifies
-which Plays need contextual rulings, grounded answers or world proposals, and
-which retain native/role-owned outcomes. Only ordinary Keep currently performs
-contextual adjudication; the other four structured adapters provide native readback.
+The [typed GM outcome adapters](reports/P2_GM_OUTCOME_ADAPTERS.md) connect contextual
+Keep rulings, Sensor answers, battle judgments and bounded world proposals to
+actual native consumers. Shared table outcomes use GM discretion under the
+owner-approved policy; personal choices retain their owners. Proposals require
+explicit confirmation. This is a synthetic backend candidate with no paid model,
+Activity endpoint or live rollout.
 
 The [all-Play coverage review](reports/P2_ALL_PLAY_COVERAGE.md) extends Director
 referrals beyond those five outcome adapters: all 63 native entry points and the
