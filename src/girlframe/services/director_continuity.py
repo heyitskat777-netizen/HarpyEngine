@@ -52,7 +52,13 @@ def validate_origin(
         )
     ):
         raise WorkflowError("STALE_CONTINUITY: reconcile the original knowledge and consent.")
-    if original.classification == "approved_outcome":
+    if original.source_id.startswith("knowledge-acquired:"):
+        from girlframe.services.director_knowledge import DirectorKnowledgeService
+
+        DirectorKnowledgeService(context).validate_reference(
+            c, scene_id or "", original, allow_closed=True
+        )
+    elif original.classification == "approved_outcome":
         record = context._approved_outcome(c, scene_id or "", original.source_id, allow_closed=True)
         if original.source_revision != 1 or original.text != record["text"]:
             raise WorkflowError("STALE_CONTINUITY: the original outcome changed.")

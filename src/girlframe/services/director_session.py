@@ -6,6 +6,7 @@ from typing import Any
 import sqlalchemy as sa
 from sqlalchemy import Connection
 
+from girlframe.ai.knowledge import KnowledgeProvider
 from girlframe.ai.observation import AppendSceneInput
 from girlframe.database import tables as t
 from girlframe.engine.m3_battle_state import Context
@@ -27,18 +28,35 @@ class DirectorSessionService:
         *,
         conversation: DirectorConversationService | None = None,
         outcomes: GMOutcomeService | None = None,
+        knowledge_provider: KnowledgeProvider | None = None,
+        knowledge_gm: GuildViewer | None = None,
     ):
         self.context, self.observer, self.store = context, context.observations, context.store
         self.game = self.observer.game
         self.conversation = conversation or DirectorConversationService(context)
         self.outcomes = outcomes or GMOutcomeService(context)
         self.reviews = DirectorPlayReviewService(context)
+        from girlframe.services.director_knowledge import DirectorKnowledgeService
+
+        self.knowledge = DirectorKnowledgeService(context)
+        if (knowledge_provider is None) != (knowledge_gm is None):
+            raise ValueError("Configure the trusted GM principal and knowledge provider together")
+        self.knowledge_provider, self.knowledge_gm = knowledge_provider, knowledge_gm
 
     def submit(self, viewer: GuildViewer, scene: str, command: AppendSceneInput) -> dict[str, Any]:
         """Retry the same command to resume after a saved input or GM-only success."""
         source = self.observer.append_scene_input(viewer, scene, command)
         if source.source_id is None:
             return {"input": source.model_dump(mode="json"), "conversation": None}
+        if self.knowledge_provider is not None:
+            assert self.knowledge_gm is not None
+            self.knowledge.acquire(
+                self.knowledge_gm,
+                command.command_key + ":knowledge",
+                scene,
+                source.source_id,
+                self.knowledge_provider,
+            )
         conversation = self.conversation.process_message(
             viewer, command.command_key + ":route", scene, source.source_id, source.source_revision
         )
@@ -152,6 +170,7 @@ class DirectorSessionService:
             return {
                 "scene_id": scene,
                 "scope": "gm" if gm else "own",
+                "knowledge_sources": self.knowledge.pending(viewer, scene) if gm else [],
                 "native": work,
                 "outcome_sources": sources,
                 "decision_routes": [self._decision_route(c, row) for row in work["choices"]],

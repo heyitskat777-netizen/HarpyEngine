@@ -83,6 +83,10 @@ class DirectorConversationService:
         question = source.text or ""
         if route == "handler":
             role = self.context._handler_for_request(c, viewer, scene_id)
+            if source.fictional_channel == "private":
+                # Scene membership is OOC access, not in-fiction hearing. Never
+                # expose the private narration as the Handler's current question.
+                question = "Scene update."
             keys = {
                 ref.id: self._update_key(c, scene_id, role, ref.id)
                 for ref in role.references

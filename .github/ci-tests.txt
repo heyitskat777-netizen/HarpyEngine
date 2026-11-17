@@ -88,3 +88,4 @@ tests/rules/test_physical_ui.py::test_inbox_uses_original_participants_and_one_r
 tests/test_director_continuity.py
 tests/rules/test_p2_connected_campaign.py
 tests/rules/test_p2_mission_cycle.py
+tests/test_director_knowledge.py

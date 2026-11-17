@@ -50,6 +50,13 @@ class DirectorContextService:
 
                 validate_origin(self, c, reference)
                 continue
+            if reference.source_id.startswith("knowledge-acquired:"):
+                from girlframe.services.director_knowledge import DirectorKnowledgeService
+
+                DirectorKnowledgeService(self).validate_reference(
+                    c, scene_id, reference, allow_closed=allow_closed
+                )
+                continue
             if reference.classification == "approved_outcome":
                 record = self._approved_outcome(
                     c, scene_id, reference.source_id, allow_closed=allow_closed
@@ -292,6 +299,14 @@ class DirectorContextService:
             ):
                 raise WorkflowError("SOURCE_SCOPE_CHANGED: privacy reconciliation is required.")
             source_revision = source.source_revision if source else 1
+            if (
+                source is not None
+                and source.fictional_channel == "private"
+                and any(actor != source.actor for actor in known_by)
+            ):
+                raise WorkflowError(
+                    "UNPROVEN_DISCLOSURE: private narration is known only to its actor."
+                )
             tokens = []
             for actor in known_by:
                 if actor.kind not in ("pilot", "handler", "npc"):

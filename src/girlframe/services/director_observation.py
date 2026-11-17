@@ -364,6 +364,8 @@ class DirectorObservationService:
                 raise WorkflowError(
                     "SOURCE_SCOPE_CHANGED: sharing with new participants needs review."
                 )
+            if old and old.fictional_channel != command.fictional_channel:
+                raise WorkflowError("SOURCE_CHANNEL_CHANGED: report through a new message.")
             observation = Observation(
                 sequence=state.sequence + 1,
                 generation=state.generation + 1,
@@ -375,6 +377,7 @@ class DirectorObservationService:
                 audience_ids=audience,
                 accepted_at=float(self.store.clock()),
                 text=command.text,
+                fictional_channel=command.fictional_channel,
             )
             return self._append(c, scene_id, state, observation).model_dump(mode="json")
 
