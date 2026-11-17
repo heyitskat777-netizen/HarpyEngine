@@ -28,10 +28,19 @@ unchanged and remains `RULES_SUBSET`.
    native APIs. Low Memory Extraction exposes no AM installation or linked
    Identity removal. Restoration uses `restoration_options`, a real later event
    and source ID, and the affected controller's optional AM selection.
+   `Extraction.am` is nullable; low and NPC memory records must not require an
+   AM ID. Existing historical records with an AM retain their saved effects.
 5. Render current owner-specific choices and blockers after every command and
    sign-in. Required Feedback, Void resistance, medical/replacement work and
    Punishment retain their original source IDs. A blocked command or narrative
    debrief does not resolve their effects.
+
+In `mission-desk.js`'s `renderMissions`, use `desk.can_offer` to expose the offer
+form and display `desk.offer_blocker` / `desk.off_duty_blocker` as text when
+applicable. Display each Handler-only `mission.blocked` reason beside its named
+transition. Keep using the supplied `mission.actions` list for buttons. These are
+presentation changes; command eligibility remains in HarpyEngine. The supplied
+Python tests verify the returned controls, not this browser presentation change.
 
 The source-only bundle omits artwork, the browser SDK and installed browser test
 dependencies. Python adapter verification uses an empty artwork catalog and an
@@ -101,6 +110,10 @@ source contracts and an explicitly curated set of integration branches.
 [Curated ports](../../docs/integration/ACTIVITY_READY_PORTS.json) give original
 owners, prerequisites, commands, queries, effects, Activity dependencies and named
 checks. Each status applies to its particular branch and gate.
+
+[The type port map](../../docs/integration/ACTIVITY_TYPE_PORTS.md) locates native
+queries and commands for all ten Girls and nine official Frames, with their
+source and ownership dependencies. It is navigation, not whole-type acceptance.
 
 Unreviewed source-index rows intentionally remain `Evidence pending`. Their
 candidate files and test references are navigation aids, not proof of a consumer

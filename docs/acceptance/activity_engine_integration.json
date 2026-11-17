@@ -1,0 +1,100 @@
+{
+  "source_revision": "49f08335a0f652b6dce28b8ea8e1ebe2d804219b",
+  "normalized_registry_sha256": "73c4e0c1f3a350fa715fc17d082e40f82f1de05cd520804dae260f542a2f9941",
+  "registry_file_sha256": "0d2016cb4a7c98f0839fa3a48b282ec9cc17870f7b004bcc4f55c5765b28e400",
+  "schema": "0023",
+  "manifest_files_verified": 1969,
+  "baseline_reconciliation": {
+    "identical": 1548,
+    "destination-only retained": 72,
+    "destination-newer": 62,
+    "both-changed": 3,
+    "mirror-change": 18,
+    "mirror-only": 1
+  },
+  "discovery_full_suite": {
+    "tests": 3473,
+    "passed": 3376,
+    "failures": 97,
+    "errors": 0,
+    "skipped": 0
+  },
+  "final_collected_tests": 3475,
+  "final_regression": {
+    "status": "passed",
+    "tests": 3475,
+    "passed": 3475,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "partitions": [
+      {
+        "tests": 867,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 1512.592,
+        "partition": 1
+      },
+      {
+        "tests": 868,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 1518.933,
+        "partition": 2
+      },
+      {
+        "tests": 870,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 1541.368,
+        "partition": 3
+      },
+      {
+        "tests": 870,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 1499.407,
+        "partition": 4
+      }
+    ],
+    "complete_collection_proved": true,
+    "frozen_files_match": 1706,
+    "activity_engine_hashes_match": true
+  },
+  "activity_python_tests": {
+    "tests": 65,
+    "passed": 65,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 142.1
+  },
+  "static": {
+    "ruff": "passed",
+    "format_files": 2045,
+    "mypy_source_files": 955,
+    "repository_findings": 0
+  },
+  "restore": {
+    "schema": "0023",
+    "tables": 51,
+    "rows": 182,
+    "source_sha256": "aa81bdc3e9e04cbddcc2488098b8bdfecb3b28db691dcea31322db06000bb160",
+    "all_table_rows_match": true,
+    "integrity": "ok",
+    "restored_mode": "0600",
+    "source_unchanged_during_readback": true
+  },
+  "restore_service_readback": {
+    "canonical_pilots": 2,
+    "owner_sheet_readable": true,
+    "session_work_readable": true,
+    "external_calls": 0,
+    "external_cost": 0,
+    "verified_source_revision": "49f08335a0f652b6dce28b8ea8e1ebe2d804219b"
+  }
+}

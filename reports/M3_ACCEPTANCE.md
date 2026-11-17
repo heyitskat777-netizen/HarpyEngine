@@ -6224,3 +6224,14 @@ The bot restarted gracefully after a fresh0600backup, preserving policy/schema
 Bond acceptance, review or activation was automatically chosen. Scope unchanged;
 no AI, Ancillary, environment publication, private-engine write or main merge.
 See reports/P1_LIVE_SETUP_FIX.md for precise scope and limits.
+# Activity source integration — exact candidate 49f0833
+
+The November 16 source handoff is reconciled against newer P2 source. Complete
+offline regression passes **3,475 tests / zero failures, errors or skips**, including
+both existing session-mix files; 65 supplied Python Activity checks also pass.
+Global static checks, unchanged registry, schema0023 migration check and synthetic
+51-table restore pass. See [the integration report](ACTIVITY_ENGINE_INTEGRATION.md)
+and [Activity return](../integrations/activity/INTEGRATION_HANDOFF.md) for exact
+scope, source hashes, curated ports and remaining all-type review/UI/release gates.
+No campaign operation, runtime rollout, independent approval or model spend.
+

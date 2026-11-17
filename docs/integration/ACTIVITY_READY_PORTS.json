@@ -10,7 +10,7 @@
     "test_evidence": "Activity:test_mission_lifecycle.py::test_mission_desk_debrief_then_off_duty_and_next_dispatch",
     "activity_dependency": "mission_desk.py; preserve original invitation and revision",
     "gate": "Current M3 subsystem/rulings and exact registry digest; no policy is installed by this package",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "world.world.missions",
@@ -23,7 +23,7 @@
     "test_evidence": "tests/rules/test_activity_integration.py::test_mission_controls_share_dispatch_blockers_are_private_and_never_write; Activity:test_mission_lifecycle.py",
     "activity_dependency": "Use supplied mission_desk.py replacement; commands revalidate",
     "gate": "Current M3 subsystem/rulings and exact registry digest; no policy is installed by this package",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "world.world.missions",
@@ -36,7 +36,7 @@
     "test_evidence": "Activity:test_mission_lifecycle.py; tests/rules/test_mission_service.py",
     "activity_dependency": "Keep debrief text separate from any AI proposal; reuse command key on retry",
     "gate": "Current M3 subsystem/rulings and exact registry digest; no policy is installed by this package",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "world.world.missions",
@@ -49,7 +49,7 @@
     "test_evidence": "Activity:test_mission_lifecycle.py; tests/rules/test_mission_service.py",
     "activity_dependency": "Open assigned source forms; never treat debrief text as resolving work",
     "gate": "Current M3 subsystem/rulings and exact registry digest; no policy is installed by this package",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "handler.handler.handler-off-duty",
@@ -62,7 +62,7 @@
     "test_evidence": "Activity:test_mission_lifecycle.py; tests/rules/test_off_duty_cycle.py",
     "activity_dependency": "Existing off_duty_followups.py; persist period IDs, revisions and command keys",
     "gate": "Current M3 subsystem/rulings and exact registry digest; no policy is installed by this package",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "owner.player-reset",
@@ -75,7 +75,7 @@
     "test_evidence": "tests/rules/test_activity_integration.py::test_owner_reset_preserves_original_receipts_and_starts_clean_replacement; Activity:test_player_reset.py",
     "activity_dependency": "Replace Activity player_reset.py with compatibility import; retain both confirmation controls",
     "gate": "Current M3 subsystem/rulings and exact registry digest; no policy is installed by this package",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "owner.player-reset",
@@ -88,7 +88,7 @@
     "test_evidence": "Activity:test_player_reset.py; tests/rules/test_career_service.py",
     "activity_dependency": "Existing PlayerSetup starts native replacement; do not recreate old resources",
     "gate": "Current M3 subsystem/rulings and exact registry digest; no policy is installed by this package",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "frame.changeling.blank-slate",
@@ -101,7 +101,7 @@
     "test_evidence": "tests/rules/test_changeling.py; Activity:test_identity_specialists.py",
     "activity_dependency": "specialist_scene.py and source popup; use actual original choice owner",
     "gate": "Only matching digest-bound activity_specialist_rules membership or existing independent registry admission; plays subsystem and recorded rulings; no whole-playbook release",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "frame.changeling.blank-slate",
@@ -114,7 +114,7 @@
     "test_evidence": "tests/rules/test_changeling.py; Activity:test_identity_specialists.py",
     "activity_dependency": "specialist_scene.py and source popup; use actual original choice owner",
     "gate": "Only matching digest-bound activity_specialist_rules membership or existing independent registry admission; plays subsystem and recorded rulings; no whole-playbook release",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "frame.changeling.blank-slate",
@@ -127,7 +127,7 @@
     "test_evidence": "tests/rules/test_changeling.py; Activity:test_identity_specialists.py",
     "activity_dependency": "specialist_scene.py and source popup; use actual original choice owner",
     "gate": "Only matching digest-bound activity_specialist_rules membership or existing independent registry admission; plays subsystem and recorded rulings; no whole-playbook release",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "frame.changeling.blank-slate",
@@ -140,7 +140,7 @@
     "test_evidence": "tests/rules/test_changeling_mid_push.py; Activity:test_identity_specialists.py",
     "activity_dependency": "Existing specialist source popup; do not create an extra roll",
     "gate": "Only matching digest-bound activity_specialist_rules membership or existing independent registry admission; plays subsystem and recorded rulings; no whole-playbook release",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "frame.changeling.blank-slate",
@@ -153,7 +153,7 @@
     "test_evidence": "tests/rules/test_changeling.py; Activity:test_identity_specialists.py",
     "activity_dependency": "Existing speak/disclose/adopt popup operations",
     "gate": "Only matching digest-bound activity_specialist_rules membership or existing independent registry admission; plays subsystem and recorded rulings; no whole-playbook release",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "frame.changeling.psych-strings",
@@ -166,7 +166,7 @@
     "test_evidence": "tests/rules/test_changeling.py; Activity:test_identity_specialists.py",
     "activity_dependency": "Display native balance; no blanket enablement of Fingers or spending",
     "gate": "Only matching digest-bound activity_specialist_rules membership or existing independent registry admission; plays subsystem and recorded rulings; no whole-playbook release",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "frame.changeling.body-of-clay",
@@ -179,7 +179,7 @@
     "test_evidence": "tests/rules/test_changeling.py; tests/rules/test_changeling_clay_copy.py; Activity:test_identity_specialists.py",
     "activity_dependency": "specialist_scene.py; preserve owner/Handler split",
     "gate": "Only matching digest-bound activity_specialist_rules membership or existing independent registry admission; plays subsystem and recorded rulings; no whole-playbook release",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "frame.changeling.body-of-clay",
@@ -192,7 +192,7 @@
     "test_evidence": "tests/rules/test_changeling.py; tests/rules/test_changeling_clay_copy.py; Activity:test_identity_specialists.py",
     "activity_dependency": "specialist_scene.py; preserve owner/Handler split",
     "gate": "Only matching digest-bound activity_specialist_rules membership or existing independent registry admission; plays subsystem and recorded rulings; no whole-playbook release",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "frame.changeling.body-of-clay",
@@ -205,7 +205,7 @@
     "test_evidence": "tests/rules/test_changeling.py; tests/rules/test_changeling_clay_copy.py; Activity:test_identity_specialists.py",
     "activity_dependency": "specialist_scene.py; preserve owner/Handler split",
     "gate": "Only matching digest-bound activity_specialist_rules membership or existing independent registry admission; plays subsystem and recorded rulings; no whole-playbook release",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "frame.red-queen.queens-court",
@@ -218,7 +218,7 @@
     "test_evidence": "tests/rules/test_red_queen.py; Activity:test_identity_specialists.py",
     "activity_dependency": "Existing setup allocation and specialist prerequisite",
     "gate": "Only matching digest-bound activity_specialist_rules membership or existing independent registry admission; plays subsystem and recorded rulings; no whole-playbook release",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "frame.red-queen.memory-extraction",
@@ -231,7 +231,7 @@
     "test_evidence": "tests/rules/test_red_queen.py::test_memory_categories_actual_linked_identity_removal_and_real_recall_consumer; Activity:test_identity_specialists.py",
     "activity_dependency": "specialist_scene.py; low AM options must be empty",
     "gate": "Only matching digest-bound activity_specialist_rules membership or existing independent registry admission; plays subsystem and recorded rulings; no whole-playbook release",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "frame.red-queen.memory-extraction",
@@ -244,7 +244,7 @@
     "test_evidence": "tests/rules/test_red_queen.py::test_memory_categories_actual_linked_identity_removal_and_real_recall_consumer; Activity:test_identity_specialists.py",
     "activity_dependency": "specialist_scene.py; low AM options must be empty",
     "gate": "Only matching digest-bound activity_specialist_rules membership or existing independent registry admission; plays subsystem and recorded rulings; no whole-playbook release",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "frame.red-queen.memory-extraction",
@@ -257,7 +257,7 @@
     "test_evidence": "tests/rules/test_red_queen.py::test_memory_categories_actual_linked_identity_removal_and_real_recall_consumer; Activity:test_identity_specialists.py",
     "activity_dependency": "specialist_scene.py; low AM options must be empty",
     "gate": "Only matching digest-bound activity_specialist_rules membership or existing independent registry admission; plays subsystem and recorded rulings; no whole-playbook release",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "frame.red-queen.memory-extraction",
@@ -270,7 +270,7 @@
     "test_evidence": "tests/rules/test_memory_extraction_restore.py::test_low_pilot_restores_only_from_owned_genuine_later_identity",
     "activity_dependency": "Source-linked restoration in original popup/Inbox; optional AM is affected-controller choice",
     "gate": "Only matching digest-bound activity_specialist_rules membership or existing independent registry admission; plays subsystem and recorded rulings; no whole-playbook release",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "frame.red-queen.memory-extraction",
@@ -283,7 +283,7 @@
     "test_evidence": "tests/rules/test_red_queen.py; Activity:test_identity_specialists.py",
     "activity_dependency": "Source-linked restoration in original popup/Inbox; optional AM is affected-controller choice",
     "gate": "Only matching digest-bound activity_specialist_rules membership or existing independent registry admission; plays subsystem and recorded rulings; no whole-playbook release",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "frame.red-queen.am-transfer",
@@ -296,7 +296,7 @@
     "test_evidence": "tests/rules/test_court_native_am_transfer.py; tests/rules/test_court_group_transfer.py; tests/rules/test_court_learned_am_transfer.py",
     "activity_dependency": "Existing SpecialistScene transfer uses native eligible source/event",
     "gate": "Only matching digest-bound activity_specialist_rules membership or existing independent registry admission; plays subsystem and recorded rulings; no whole-playbook release",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "frame.red-queen.am-transfer",
@@ -309,7 +309,7 @@
     "test_evidence": "tests/rules/test_red_queen.py; Activity:test_identity_specialists.py",
     "activity_dependency": "Existing SpecialistScene transfer uses native eligible source/event",
     "gate": "Only matching digest-bound activity_specialist_rules membership or existing independent registry admission; plays subsystem and recorded rulings; no whole-playbook release",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "frame.red-queen.am-transfer",
@@ -322,7 +322,7 @@
     "test_evidence": "tests/rules/test_red_queen_transfer_sources.py::test_transfer_requires_completed_actual_higher_status_punishment",
     "activity_dependency": "Existing SpecialistScene transfer uses native eligible source/event",
     "gate": "Only matching digest-bound activity_specialist_rules membership or existing independent registry admission; plays subsystem and recorded rulings; no whole-playbook release",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "core.core.punishment",
@@ -335,7 +335,7 @@
     "test_evidence": "Activity:test_owned_followups.py::test_punishment_materializes_an_owned_canonical_followup",
     "activity_dependency": "Existing handler_punishments.py and owned_followups.py; keep source IDs and pending work visible",
     "gate": "Current M3 subsystem/rulings and exact registry digest; no policy is installed by this package",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "core.core.punishment",
@@ -348,7 +348,7 @@
     "test_evidence": "Activity:test_owned_followups.py::test_punishment_materializes_an_owned_canonical_followup",
     "activity_dependency": "Existing handler_punishments.py and owned_followups.py; keep source IDs and pending work visible",
     "gate": "Current M3 subsystem/rulings and exact registry digest; no policy is installed by this package",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "core.core.punishment",
@@ -361,7 +361,7 @@
     "test_evidence": "Activity:test_owned_followups.py::test_punishment_materializes_an_owned_canonical_followup",
     "activity_dependency": "Existing handler_punishments.py and owned_followups.py; keep source IDs and pending work visible",
     "gate": "Current M3 subsystem/rulings and exact registry digest; no policy is installed by this package",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "core.core.punishment",
@@ -374,7 +374,7 @@
     "test_evidence": "Activity:test_owned_followups.py::test_punishment_materializes_an_owned_canonical_followup",
     "activity_dependency": "Existing handler_punishments.py and owned_followups.py; keep source IDs and pending work visible",
     "gate": "Current M3 subsystem/rulings and exact registry digest; no policy is installed by this package",
-    "status": "Evidence pending"
+    "status": "Activity port ready"
   },
   {
     "rule_id": "frame.changeling.fingers-in-the-brain",
