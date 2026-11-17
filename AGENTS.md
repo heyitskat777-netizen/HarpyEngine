@@ -1,4 +1,15 @@
-> Current owner continuation: the four bounded workstreams in
+> Latest owner continuation: the connected mission lifecycle is implemented on
+> source bd2deb3 and locally passes53focused cases. See
+> reports/P2_MISSION_CYCLE.md and integrations/activity/P2_SESSION_UI_HANDOFF.md.
+> DirectorSessionService.campaign_work and the local /campaign-work command are
+> recipient-safe OOC views, never Handler knowledge or generic execution routes.
+> The rehearsal resolves actual rewards/discipline, three low Strain effects,
+> both owned recovery flows, acknowledgements, Status and world advancement before
+> dispatching the next mission. Preserve its declared non-Void starting fixture
+> limitation. Actual Activity frontend ports/browser acceptance and human pacing
+> remain next; no paid/live operations or broadened release approval.
+>
+> Previous owner continuation: the four bounded workstreams in
 > docs/work_orders/P2_CONNECTED_CAMPAIGN.md are implemented and locally checked.
 > See reports/P2_CONNECTED_CAMPAIGN.md for exact scope, final affected evidence
 > and next priorities. Preserve closed-scene consent withdrawal, metadata-only

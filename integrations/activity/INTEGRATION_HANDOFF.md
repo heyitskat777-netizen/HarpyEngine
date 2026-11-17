@@ -1,5 +1,10 @@
 # Activity integration return
 
+The consolidated P2 implementation brief is
+[Session UI handoff](P2_SESSION_UI_HANDOFF.md). It includes the subsequent
+campaign-work dashboard and complete synthetic mission-cycle findings; those
+source additions are newer than the earlier packaged integration ZIP.
+
 This integrates the November 16 source bundle into the newer P2 engine. The bundle
 is comparison input, not an instruction to operate a campaign. No policy, live
 campaign, bot process, Discord application or model provider is changed.

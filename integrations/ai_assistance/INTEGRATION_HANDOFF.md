@@ -1,5 +1,10 @@
 # Activity integration — synthetic assistance v1
 
+For the current consolidated screen/control requirements, use the
+[Activity session UI handoff](../activity/P2_SESSION_UI_HANDOFF.md). The newer
+`DirectorSessionService.campaign_work` exposes native recipient-safe mission,
+period and required-work projections as OOC UI state, never Handler knowledge.
+
 The owner's approved [Activity-first Director design](../../docs/AI_DIRECTOR_ARCHITECTURE.md)
 and [next synthetic observation work order](../../docs/work_orders/P2_DIRECTOR_OBSERVATION.md)
 extend the future product plan. They preserve this delivered summary v1 API.

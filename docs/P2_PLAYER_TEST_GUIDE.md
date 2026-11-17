@@ -86,7 +86,9 @@ proposals need a fresh request; unimplemented rules remain blocked/manual.
   authorization blocks optional session output; the console does not bypass it.
 - `/memory` shows the GM's active references. `/remember SOURCE lark,handler topic`
   explicitly assigns a real source to those roles. `-` means GM-only reference.
-  Supported topics: `general`, `objective`, `scope`, `status`.
+  Supported topics: `general`, `objective`, `scope`, `status`, `briefing`,
+  `tactical`, `debrief`. The last three explicitly enable queued Handler updates
+  from that role's actual knowledge; reported claims remain claims.
 - Active context is bounded to 100 references. `/archive ID,ID reason` explicitly
   retires selected references from prompts while preserving immutable history.
   Dependent references must be retained together or explicitly retired together.
@@ -116,3 +118,26 @@ automatically. Real-model quality, retention/redaction for real conversation,
 connected Activity auth/delivery and live installation remain separate gates.
 
 Verification and findings: [candidate report](../reports/P2_PLAYER_TEST_CANDIDATE.md).
+
+## Campaign continuation
+
+`/campaign-work` shows native mission controls, current Off-Duty progress and
+campaign work owned by or concerning the current persona. `/campaign-work PERIOD`
+reopens a particular native period. This read-only OOC view does not teach the
+fictional Handler any information and does not enable another owner's controls.
+The console still uses the trial's existing native release policy.
+
+The automated connected mission rehearsal can be reproduced with:
+
+```bash
+.venv/bin/pytest -q tests/rules/test_p2_mission_cycle.py
+```
+
+It runs actual mission acceptance, contextual GM/owner-confirmed Plays, reward and
+discipline work, all three selected Strain effects, both Pilot Off-Duty rolls,
+individual scene acknowledgements, recovery, Status review and world advancement,
+then dispatches the next mission in the same store. Its initial non-Void fixture
+and specific low-severity Strain branches are declared test setup, not universal
+rules coverage. This does not add mission/period write commands to the console;
+use the native services/forms described in the
+[consolidated Activity handoff](../integrations/activity/P2_SESSION_UI_HANDOFF.md).
