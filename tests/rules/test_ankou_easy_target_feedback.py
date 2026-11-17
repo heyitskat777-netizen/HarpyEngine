@@ -84,7 +84,6 @@ def last_mistake(game, worker, gateway):
             heat=("2",),
             disposable_heat=("0",),
             piloting=("no",),
-            witnessed=("no",),
             trigger=("yes",),
             context="PRIVATE_MISTAKE_SOURCE: I make a foolish mistake using my last Identity",
         )

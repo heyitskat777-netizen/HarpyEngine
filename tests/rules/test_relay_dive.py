@@ -111,7 +111,6 @@ def test_native_relay_dive_cancel_retry_owned_identity_table_answers_and_restore
             gain=("0",),
             pair_share=("0",),
             piloting=("no",),
-            witnessed=("no",),
             trigger=("yes",),
             context="I actually commune with my own Vital Frame as nominated",
         )

@@ -115,6 +115,23 @@ def source(
 
             for point in for_family(proof, actor, family):
                 prove_stored_point(game, c, proof, point)
+        if body.get("reason") == "punishment":
+            from girlframe.services.m3_punishment_sources import prove, void_families
+
+            parent, before, after = prove(
+                game,
+                c,
+                body["source_work"],
+                first["event_id"],
+                actor,
+                ("frame_disassembly", "compliance_surgery", "link_surgery_reversal"),
+            )
+            if family not in void_families(before, after, actor) or any(
+                first[key] != parent[key]
+                for key in ("scene_id", "off_duty_id", "mission_id", "campaign_context")
+            ):
+                raise ValueError()
+            return current, body, actor
         if body.get("reason") in (
             "supply_drop_expiry",
             "budget_removal",
@@ -499,6 +516,10 @@ def complete(
             from girlframe.services.m3_battle_dormant import complete_void
 
             complete_void(game, c, identity, event, viewer, key)
+        elif body.get("reason") == "punishment":
+            from girlframe.services.m3_role_punishments import synchronize
+
+            synchronize(game, c, None, event)
         elif body.get("reason") in (
             "supply_drop_expiry",
             "budget_removal",

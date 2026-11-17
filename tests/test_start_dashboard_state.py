@@ -118,7 +118,7 @@ def test_pending_owner_task_and_outgoing_bond_keep_distinct_inbox_scope(ledger, 
         "Your pending choice",
         "Your character",
         "pending",
-        False,
+        True,  # Native m2 choice projections mark their actual decision owner.
         False,
         "Complete your own choice",
         "",

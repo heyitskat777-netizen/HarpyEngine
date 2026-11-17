@@ -133,7 +133,8 @@ def begin_counter(game, worker, gateway, parent, choice, faces):
         await opened.response.defer(ephemeral=True)
         await open_alpha_choice(opened, game, choice["id"])
         form = opened.edit_original_response.call_args.kwargs["view"]
-        assert form.values["gain"] == ("0",)
+        assert "gain" not in form.values
+        assert "gain" not in {field.key for field in form.fields}
         assert "brutalize" in dict(next(x for x in form.fields if x.key == "play").options)
         assert not await form.interaction_check(interaction(2))
         form.values.update(play=("brutalize",), heat=("1",), context=prepared.context)

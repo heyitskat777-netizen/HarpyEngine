@@ -22,9 +22,11 @@ def test_native_actor_review_rechecks_current_request_and_facilitator_without_wr
 
     async def opened(viewer, key):
         current = interaction(viewer, key)
+        await current.response.defer(ephemeral=True)
         await open_request(current, game, request["id"])
-        packet = current.response.send_message.call_args.kwargs
-        assert packet["ephemeral"] and not packet["allowed_mentions"].everyone
+        packet = current.edit_original_response.call_args.kwargs
+        assert current.response.defer.call_args.kwargs["ephemeral"]
+        assert not packet["allowed_mentions"].everyone
         return current, packet["view"]
 
     async def submit(viewer, form, key):

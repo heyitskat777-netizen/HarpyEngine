@@ -1,5 +1,11 @@
 # HarpyEngine — GIRL FRAME private Discord pilot
 
+The November 16 Activity source bundle is reconciled against the newer P2 engine.
+Use the [Activity integration return](integrations/activity/INTEGRATION_HANDOFF.md)
+for native mission controls, owned character reset, specialist scope, required
+consequences, the workflow matrix and exact verification evidence. Source work
+does not install policy, deploy a runtime or approve all playbooks.
+
 ## Engine-first synthetic Director trial
 
 The [P2 assisted player-test candidate](docs/P2_PLAYER_TEST_GUIDE.md) now supplies

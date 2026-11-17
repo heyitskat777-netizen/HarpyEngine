@@ -57,7 +57,6 @@ def actual_social_source(ledger, tmp_path, monkeypatch):
             heat=("1",),
             disposable_heat=("0",),
             piloting=("no",),
-            witnessed=("no",),
             context="PRIVATE_BENEATH_FEEDBACK: confront the actual other Girl",
             trigger=("yes",),
         )

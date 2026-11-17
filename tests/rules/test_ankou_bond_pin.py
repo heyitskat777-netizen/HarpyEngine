@@ -137,7 +137,6 @@ def test_bond_rewrite_feedback_high_pin_continues_owned_keep(ledger, tmp_path, m
             heat=("0",),
             disposable_heat=("0",),
             piloting=("no",),
-            witnessed=("no",),
             trigger=("yes",),
             context=expected.context,
         )

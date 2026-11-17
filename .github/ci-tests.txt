@@ -74,3 +74,14 @@ tests/test_director_session.py
 tests/test_director_memory.py
 tests/test_p2_player_console.py
 tests/test_p2_sustained_session.py
+
+# Activity source reconciliation: native controls, exact specialist scope and owned reset.
+tests/rules/test_activity_integration.py
+tests/rules/test_memory_extraction_restore.py
+tests/rules/test_red_queen_transfer_sources.py
+tests/rules/test_changeling_mid_push.py
+tests/rules/test_red_queen.py::test_memory_categories_actual_linked_identity_removal_and_real_recall_consumer
+tests/test_bonds.py::test_enrollment_two_distinct_starting_bonds
+tests/test_bonds.py::test_enrollment_finished_targets_are_ineligible
+# Preserve route visibility while the actual decision owner controls Inbox urgency.
+tests/rules/test_physical_ui.py::test_inbox_uses_original_participants_and_one_read_snapshot_without_leaking_account

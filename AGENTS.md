@@ -1,3 +1,11 @@
+> Current owner task: reconcile the November 16 Activity source handoff against
+> the newer P2 engine. Follow docs/work_orders/ACTIVITY_ENGINE_INTEGRATION.md and
+> integrations/activity/INTEGRATION_HANDOFF.md. Source comparison and synthetic
+> automation do not authorize campaign writes, paid calls or runtime operations.
+> Preserve the default-empty, digest-bound specialist scope, original controller
+> choices and unchanged independent registry approval. The workflow source index
+> is not all-type certification; retain its explicit branch/evidence gaps.
+>
 > Latest owner direction: continue until P2 is ready for player testing. The
 > engine-side assisted offline candidate is described in docs/P2_PLAYER_TEST_GUIDE.md
 > and reports/P2_PLAYER_TEST_CANDIDATE.md. Use DirectorSessionService, actual native

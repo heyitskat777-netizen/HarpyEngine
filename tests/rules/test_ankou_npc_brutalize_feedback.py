@@ -99,7 +99,6 @@ def test_native_guard_feedback_retains_controller_and_real_brutalize_result(
             heat=("2",),
             disposable_heat=("0",),
             piloting=("no",),
-            witnessed=("no",),
             trigger=("yes",),
             context="PRIVATE_NPC_BRUTALIZE: I tear into this actual Guard",
         )

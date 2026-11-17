@@ -1,3 +1,9 @@
+> Current Activity integration: the November 16 source bundle is available and
+> reconciled against newer P2 work. Use
+> [the integration return](../integrations/activity/INTEGRATION_HANDOFF.md) and its
+> workflow matrix/evidence. Historical per-type rows below are not fresh all-type
+> acceptance; no runtime policy or campaign operation follows from source testing.
+>
 > Current continuation: engine-first development toward a synthetic trial is
 > authorized; Activity changes are deferred to a consolidated later handoff.
 > Tentative model preference: GPT-6.1 Terra. No spending or external calls.

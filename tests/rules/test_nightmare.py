@@ -69,7 +69,6 @@ def test_native_nightmare_keep_uses_void_without_heat_and_preserves_owned_traits
             gain=("0",),
             pair_share=("0",),
             piloting=("no",),
-            witnessed=("no",),
             trigger=("yes",),
             context="I keep my head while my actual Void alterations terrify the opposition",
         )

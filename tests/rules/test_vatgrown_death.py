@@ -289,9 +289,19 @@ def test_actual_vatgrown_death_fresh_native_activation_and_original_other_owned_
         assert set(labels) == {old_request["id"], new_request["id"]}
         assert "previous actor" in labels[old_request["id"]]
         assert "current actor" in labels[new_request["id"]]
-        visible = form.text() + "\n" + "\n".join(labels.values())
+        from girlframe.discord_adapter.member_names import render_member_labels
+
+        rendered_labels = {
+            key: await render_member_labels(inbox, value, markdown=False)
+            for key, value in labels.items()
+        }
+        visible = (
+            inbox.edit_original_response.call_args.kwargs["content"]
+            + "\n"
+            + "\n".join(rendered_labels.values())
+        )
         actual_options = next(child.options for child in form.children if hasattr(child, "options"))
-        assert {option.value: option.label for option in actual_options} == labels
+        assert {option.value: option.label for option in actual_options} == rendered_labels
         inbox.response.defer.assert_awaited_once_with(ephemeral=True)
         for request in (old_request, new_request):
             assert request["id"] in labels[request["id"]]
@@ -310,7 +320,7 @@ def test_actual_vatgrown_death_fresh_native_activation_and_original_other_owned_
         await saved_form.confirm.callback(selected_request)
         review_packet = selected_request.edit_original_response.call_args.kwargs
         review = review_packet["view"]
-        assert labels[old_request["id"]] in review_packet["content"]
+        assert rendered_labels[old_request["id"]] in review_packet["content"]
         assert new_request["id"] not in review_packet["content"]
         assert original.incarnation not in review_packet["content"]
         assert fresh.new_actor.incarnation not in review_packet["content"]

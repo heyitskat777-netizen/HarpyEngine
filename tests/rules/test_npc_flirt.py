@@ -141,7 +141,6 @@ def test_actual_high_native_court_npc_flirt_performed_escape_judged_bond_and_tru
             gain=("0",),
             pair_share=("0",),
             piloting=("no",),
-            witnessed=("no",),
             context="My actual Consort-required Flirt with this original NPC",
             trigger=("yes",),
         )

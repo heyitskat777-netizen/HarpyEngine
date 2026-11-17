@@ -105,6 +105,7 @@ For the bundled discord.py controls, provide a guild-scoped `character` group
 
 ```python
 from girlframe.discord_adapter.character_transfer import register_character_transfer
+
 register_character_transfer(tree, guild_id, transfer)
 # Synchronize using your application's normal guild-command startup path.
 ```

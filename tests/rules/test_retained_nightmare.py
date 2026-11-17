@@ -204,14 +204,15 @@ def test_retained_nightmare_paid_swap_real_keep_and_original_source_restore(
         await open_play(own, game)
         form = own.edit_original_response.call_args.kwargs["view"]
         assert "Nightmare Core" in form.text()
-        assert "Nightmare Keep uses 0" in next(x for x in form.fields if x.key == "heat").label
+        form.values["play"] = ("keep_your_head",)
+        form.controls()
+        assert dict(next(x for x in form.fields if x.key == "heat").options) == {"0": "0"}
         form.values.update(
             play=("keep_your_head",),
             heat=("0",),
             gain=("0",),
             pair_share=("0",),
             piloting=("no",),
-            witnessed=("no",),
             trigger=("yes",),
             context="Actual retained source keeps my head on the replacement Frame",
         )

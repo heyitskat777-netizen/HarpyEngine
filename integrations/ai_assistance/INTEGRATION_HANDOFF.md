@@ -194,25 +194,36 @@ from girlframe.services.ai_assistance import AssistanceService
 
 service = AssistanceService(store)  # default: local SyntheticProvider
 context = service.context(verified_viewer, audience="player")
-requested = service.request(verified_viewer, RequestAssistance(
-    command_key="assist:request:unique-intent",
-    expected_campaign_revision=context.context.campaign_revision,
-    audience=context.context.audience,
-    context_digest=context.context_digest,
-))
-draft = service.generate(verified_viewer, requested.proposal_id, GenerateDraft(
-    command_key="assist:generate:unique-intent",
-    expected_campaign_revision=requested.campaign_revision,
-    expected_proposal_revision=requested.proposal_revision,
-))
+requested = service.request(
+    verified_viewer,
+    RequestAssistance(
+        command_key="assist:request:unique-intent",
+        expected_campaign_revision=context.context.campaign_revision,
+        audience=context.context.audience,
+        context_digest=context.context_digest,
+    ),
+)
+draft = service.generate(
+    verified_viewer,
+    requested.proposal_id,
+    GenerateDraft(
+        command_key="assist:generate:unique-intent",
+        expected_campaign_revision=requested.campaign_revision,
+        expected_proposal_revision=requested.proposal_revision,
+    ),
+)
 private_view = service.get(verified_viewer, draft.proposal_id)
 # Present private_view.record.response; wait for the owner's explicit review.
-approved = service.review(verified_viewer, draft.proposal_id, ReviewDraft(
-    command_key="assist:approve:unique-intent",
-    expected_campaign_revision=private_view.campaign_revision,
-    expected_proposal_revision=private_view.record.revision,
-    decision="approve",
-))
+approved = service.review(
+    verified_viewer,
+    draft.proposal_id,
+    ReviewDraft(
+        command_key="assist:approve:unique-intent",
+        expected_campaign_revision=private_view.campaign_revision,
+        expected_proposal_revision=private_view.record.revision,
+        decision="approve",
+    ),
+)
 reopened = AssistanceService(store).get(verified_viewer, approved.proposal_id)
 assert reopened.application == "blocked"
 ```

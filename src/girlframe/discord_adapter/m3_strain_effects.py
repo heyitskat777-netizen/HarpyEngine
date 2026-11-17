@@ -27,6 +27,7 @@ from girlframe.engine.m3_world_state import (
 from girlframe.services.m3_strain_effects import EffectService
 from girlframe.services.m3_world import WorldService
 from girlframe.services.onboarding import WorkflowError
+from girlframe.services.read_only_bot import GuildViewer
 
 WAIT = (("pending", "Complete the earlier choices first"),)
 
@@ -94,28 +95,53 @@ async def open_effect(
 
         await open_patrol_harpy(interaction, PatrolHarpyService(service.strain), identity)
         return
-    if data["state"] != "pending":
-        await reply(
-            interaction,
-            "This effect is already applied. Reopen Off-Duty for current required work.",
+    try:
+        build, apply, instructions = await asyncio.to_thread(
+            effect_form,
+            viewer,
+            service,
+            identity,
+            ((str(interaction.channel_id), "Use this Play scene"),),
         )
+    except WorkflowError as error:
+        await reply(interaction, str(error))
         return
-    if not data["supported"]:
-        await reply(
-            interaction,
-            "This event awaits its specific rules support. Its saved result remains required work.",
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        return await asyncio.to_thread(
+            apply, viewer_from_interaction(current), str(current.id), values
         )
-        return
-    snapshot = await asyncio.to_thread(
-        WorldService(service.strain.missions).get, viewer, private=True
+
+    form = DependentForm(
+        viewer.user_id, "Apply the saved Strain event", instructions, build, submit
     )
+    await reply(interaction, form.text(), form)
+
+
+def effect_form(
+    viewer: GuildViewer,
+    service: EffectService,
+    identity: str,
+    channels: tuple[tuple[str, str], ...] = WAIT,
+) -> tuple[
+    Callable[[dict[str, Any]], list[Field]],
+    Callable[[GuildViewer, str, dict[str, Any]], str],
+    str,
+]:
+    """Return the native field builder and typed commit for the authorized saved work."""
+    data = service.get(viewer, identity)
+    if data["state"] != "pending":
+        raise WorkflowError(
+            "This effect is already applied. Reopen Off-Duty for current required work."
+        )
+    if not data["supported"]:
+        raise WorkflowError(
+            "This event awaits its specific rules support. Its saved result remains required work."
+        )
+    snapshot = WorldService(service.strain.missions).get(viewer, private=True)
     world = snapshot["world"]
     if world is None:
-        await reply(
-            interaction,
-            "Initialize the map with /mission world first, then reopen this event.",
-        )
-        return
+        raise WorkflowError("Initialize the campaign map first, then reopen this event.")
     if snapshot["game_revision"] != data["game_revision"]:
         raise WorkflowError("STALE_STATE: reopen the changed world before reviewing this effect.")
     with service.store.engine.connect() as c:
@@ -136,11 +162,7 @@ async def open_effect(
     if rule in ("strain.budget.low.1.2", "strain.budget.low.2.1") and not any(
         x["alive"] and "patron" in x["jobs"] for x in world["npcs"]
     ):
-        await reply(
-            interaction,
-            "Introduce the patron through /mission world, then reopen this result.",
-        )
-        return
+        raise WorkflowError("Introduce the actual patron, then reopen this result.")
     spawned = rule in {
         "strain.void.low.1.1",
         "strain.void.low.2.1",
@@ -151,13 +173,10 @@ async def open_effect(
     past_missions = []
     if rule == "strain.budget.low.4.1":
         past_missions = [
-            x
-            for x in await asyncio.to_thread(service.strain.missions.list, viewer)
-            if x["phase"] == "complete"
+            x for x in service.strain.missions.list(viewer) if x["phase"] == "complete"
         ]
         if not past_missions:
-            await reply(interaction, "This cleanup needs an actual completed past mission first.")
-            return
+            raise WorkflowError("This cleanup needs an actual completed past mission first.")
 
     from girlframe.engine.m3_actor_bonds import current_ref
     from girlframe.engine.m3_actor_state import ActorRef
@@ -463,7 +482,7 @@ async def open_effect(
                     Field(
                         "fight_channel",
                         "Actual Play scene for the televised fight",
-                        ((str(interaction.channel_id), "Use this Play scene"),),
+                        channels or WAIT,
                     ),
                 )
             )
@@ -631,7 +650,7 @@ async def open_effect(
         )
         return fields
 
-    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+    def apply(actor: GuildViewer, key: str, values: dict[str, Any]) -> str:
         payload: dict[str, Any] = {"rule_id": rule, "account": values["account"]}
         if rule == "strain.rebellion.high.5.2":
             payload["tags"] = (dict(owner=handler, label=values["backstory_tag"]),)
@@ -796,17 +815,16 @@ async def open_effect(
             )
         elif rule == "strain.budget.high.5.1":
             payload["target"] = values["target"][0]
-        await asyncio.to_thread(
-            service.apply,
-            viewer_from_interaction(current),
-            str(current.id),
+        service.apply(
+            actor,
+            key,
             identity,
             data["revision"],
             data["game_revision"],
             Choice(**payload),
         )
         if rule == "strain.budget.low.3.2":
-            saved = await asyncio.to_thread(service.get, viewer_from_interaction(current), identity)
+            saved = service.get(actor, identity)
             outcome = saved["supply_outcome"]
             return (
                 "Missing supply assigned to "
@@ -824,9 +842,7 @@ async def open_effect(
             return "Private find saved. The recipient can review it in their requests inbox."
         return "Event effects committed once. Reopen Off-Duty for remaining work."
 
-    form = DependentForm(
-        viewer.user_id,
-        "Apply the saved Strain event",
+    instructions = (
         "Review "
         + rule
         + ". "
@@ -836,8 +852,6 @@ async def open_effect(
             else ""
         )
         + "Confirming applies its named world and character consequences. "
-        "If no legal NPC/target exists, introduce it through /mission world, then reopen.",
-        build,
-        submit,
+        "If no legal target exists, recover its actual world setup and reopen."
     )
-    await reply(interaction, form.text(), form)
+    return build, apply, instructions

@@ -3885,7 +3885,9 @@ class InboxService:
                 if value == "history"
                 else x.state == "pending"
                 and (
-                    value == "pending" or bool(x.task or x.incoming or x.stale) == (value == "you")
+                    # A route can open readback for an outgoing request;
+                    # the native projection decides who actually owes an answer.
+                    value == "pending" or (x.incoming or x.stale) == (value == "you")
                 )
             )
 

@@ -157,7 +157,6 @@ def test_counter_pin_last_identity_keeps_native_ancestry(ledger, tmp_path, monke
             heat=("1",),
             disposable_heat=("0",),
             piloting=("no",),
-            witnessed=("no",),
             trigger=("yes",),
             context=expected.context,
         )

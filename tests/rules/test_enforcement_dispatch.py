@@ -68,7 +68,6 @@ def test_generic_native_actual_target_and_each_owned_low_response_preserve_one_r
             pair_share=("0",),
             heat=("0",),
             piloting=("no",),
-            witnessed=("no",),
             context="Actual native take hold; unknown cells stay unknown",
             trigger=("yes",),
         )

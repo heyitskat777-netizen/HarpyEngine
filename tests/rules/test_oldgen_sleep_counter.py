@@ -172,7 +172,6 @@ def test_native_oldgen_sleep_counter_real_advice_listening_owned_wake_and_privat
             gain=("0",),
             pair_share=("0",),
             piloting=("no",),
-            witnessed=("no",),
             context=prepared.context,
             trigger=("yes",),
         )

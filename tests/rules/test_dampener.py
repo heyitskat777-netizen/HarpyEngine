@@ -101,7 +101,6 @@ def test_native_dampener_keeps_full_heat_cost_and_uses_explicit_smaller_basis(
             gain=("0",),
             pair_share=("0",),
             piloting=("no",),
-            witnessed=("no",),
             trigger=("yes",),
             context="I keep my expression controlled under actual pressure",
         )

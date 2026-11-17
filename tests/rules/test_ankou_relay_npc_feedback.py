@@ -197,7 +197,6 @@ def test_native_relay_feedback_npc_tear_real_child_and_source_completion(
             gain=("0",),
             pair_share=("0",),
             piloting=("no",),
-            witnessed=("no",),
             context="PRIVATE_RELAY_REPRISAL: a real source-owned NPC Flirt",
             trigger=("yes",),
         )

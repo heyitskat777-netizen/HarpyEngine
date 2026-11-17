@@ -421,8 +421,9 @@ def test_memory_categories_actual_linked_identity_removal_and_real_recall_consum
     final = state(game)
     losses = [x for x in rules.records(final, rules.Extraction) if x.session == identity]
     assert len(losses) == (2 if faces == (5, 5) else 1)
-    assert original.id not in {x.id for x in final.sheets["3"].identities}
-    assert len([x for x in final.sheets["3"].identities if x.name == "The Consort"]) == 1
+    assert (original.id in {x.id for x in final.sheets["3"].identities}) == losses[0].low
+    assert any(x.name == "The Consort" for x in final.sheets["3"].identities) != losses[0].low
+    assert (losses[0].am is None) == losses[0].low
     from girlframe.engine.m3_am_memory import can_recall
 
     assert not can_recall(final, target, losses[0].memories[0], learned_revision=before.revision)

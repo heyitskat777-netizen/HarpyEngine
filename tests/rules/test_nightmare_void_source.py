@@ -130,7 +130,6 @@ def test_actual_dive_void_source_drives_native_nightmare_keep_without_heat(
             gain=("0",),
             pair_share=("0",),
             piloting=("yes",),
-            witnessed=("no",),
             trigger=("yes",),
             context="I keep my head while my actual Void alterations terrify the opposition",
         )

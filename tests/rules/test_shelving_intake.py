@@ -105,9 +105,11 @@ def test_native_self_request_saved_review_and_withdrawal(ledger):
         assert dict(form.fields[0].options) == {"withdraw": "Withdraw my shelving request"}
         row = service.tasks(PLAYER)[0]
         reopened = interaction(PLAYER, "native-shelf-reopen")
+        await reopened.response.defer(ephemeral=True)
         await open_request(reopened, game, row["id"])
-        packet = reopened.response.send_message.call_args.kwargs
-        assert packet["ephemeral"] and not packet["allowed_mentions"].everyone
+        packet = reopened.edit_original_response.call_args.kwargs
+        assert reopened.response.defer.call_args.kwargs["ephemeral"]
+        assert not packet["allowed_mentions"].everyone
         form = packet["view"]
         form.values.update(operation=("withdraw",))
         await form.confirm.callback(reopened)

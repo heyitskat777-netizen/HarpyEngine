@@ -68,7 +68,7 @@ def require_rule(
     registry = Access(game.store).registry
     if registry is None:
         raise WorkflowError("Recover the actual reviewed Changeling rules")
-    registry.require_available(rule)
+    Access(game.store, registry).require_specialist_rule(rule)
     if rule in rules.REQUISITIONS:
         receipt = rules.held(state, actor, rule)
         if receipt is None:
@@ -934,7 +934,7 @@ def _available(game: GameService, rule: str) -> bool:
     ):
         return False
     try:
-        access.registry.require_available(rule)
+        access.require_specialist_rule(rule)
     except (ValueError, WorkflowError):
         return False
     return True
@@ -1920,6 +1920,7 @@ class ChangelingService:
             if (
                 speech.kind != "push"
                 or speech.used_by
+                or any(x.session == source.id for x in rules.records(state, rules.Push))
                 or source.target != speech.actor
                 or source.actor != speech.addressed
                 or not 8 <= source.total <= 10
@@ -2078,14 +2079,21 @@ class ChangelingService:
         actual = _text(account)
 
         def operation(c: Connection, state: GameState, event: str) -> dict[str, Any]:
-            Access(self.store).authorize(c, viewer, "economy")
+            gate = Access(self.store)
+            gate.authorize(
+                c,
+                viewer,
+                "plays"
+                if rule == rules.CLAY and gate.activity_specialist_enabled(rule)
+                else "economy",
+            )
             RequisitionService(self.game)._safe(c, state, viewer.user_id)
             actor = current_ref(state, viewer.user_id)
             original = rules.frame(state, actor)
             registry = Access(self.store).registry
             if registry is None or rule not in rules.REQUISITIONS:
                 raise WorkflowError("Choose a real printed Changeling Requisition")
-            registry.require_available(rule)
+            gate.require_specialist_rule(rule)
             if rules.held(state, actor, rule) is not None or available(state, actor) < 2:
                 raise WorkflowError("Use an unowned actual two-Permission acquisition")
             identity = str(uuid4())

@@ -134,7 +134,39 @@ class CreationReviewService:
             for x in setup.status_order
         )
         status = None
-        if rank_fresh and viewer.user_id in rank_ids:
+        status_dependencies: tuple[str, ...] = ()
+        from girlframe.engine.m3_careers import binding
+        from girlframe.services.m2_state import load_state
+
+        canonical = load_state(connection, self.store.campaign_id)
+        career = binding(canonical, viewer.user_id)
+        if career and career.previous_archive and str(viewer.user_id) not in canonical.sheets:
+            rank_ids = []
+            if (
+                active_handler
+                and canonical.handler == setup.handler_id
+                and career.active
+                and career.status_event
+                and career.status_position is not None
+                and 0 <= career.status_position <= len(canonical.order)
+            ):
+                rank_ids = list(canonical.order)
+                rank_ids.insert(career.status_position, viewer.user_id)
+                status_dependencies = (
+                    "replacement_status:" + career.status_event,
+                    "canonical_status_order:" + ",".join(map(str, rank_ids)),
+                )
+        elif (
+            not rank_fresh
+            and active_handler
+            and canonical.handler == setup.handler_id
+            and viewer.user_id in canonical.order
+        ):
+            rank_ids = list(canonical.order)
+            status_dependencies = ("canonical_status_order:" + ",".join(map(str, rank_ids)),)
+        elif not rank_fresh:
+            rank_ids = []
+        if viewer.user_id in rank_ids:
             position = rank_ids.index(viewer.user_id)
             status = "Ace" if position == 0 else "Dog" if position == len(rank_ids) - 1 else "Wings"
         if status is None:
@@ -330,7 +362,8 @@ class CreationReviewService:
             dependency_tokens=tuple(
                 f"pilot:{uid}:{data['revision']}" for uid, data in sorted(roster.items())
             )
-            + ("handler_active:" + str(active_handler),),
+            + ("handler_active:" + str(active_handler),)
+            + status_dependencies,
         )
         fingerprint = hashlib.sha256(
             json.dumps(sheet.model_dump(mode="json"), sort_keys=True).encode()

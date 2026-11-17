@@ -161,7 +161,6 @@ def test_earned_alpha_npc_decline_fresh_native_contact_broken_tracking_and_once_
             gain=("0",),
             pair_share=("0",),
             piloting=("no",),
-            witnessed=("no",),
             trigger=("yes",),
             context="Actual learned source with independently confirmed original NPC contact",
             disposable_heat=("0",),

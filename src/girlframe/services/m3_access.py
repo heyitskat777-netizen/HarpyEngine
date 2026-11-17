@@ -47,6 +47,30 @@ class Access:
     def registry(self, value: Registry | None) -> None:
         self._registry = value
 
+    def activity_specialist_enabled(self, identity: str) -> bool:
+        approval = self.store.policy.m3_approval
+        if (
+            approval is None
+            or approval.scope != "rules_subset"
+            or identity not in approval.activity_specialist_rules
+            or "plays" not in approval.subsystems
+            or self.store.policy.owner_m3_rulings is None
+            or self.registry is None
+            or approval.registry_sha256 != digest(self.registry)
+        ):
+            return False
+        entry = self.registry.entry(identity)
+        return (
+            entry.module in self.registry.enabled_modules
+            and entry.implementation != "unimplemented"
+        )
+
+    def require_specialist_rule(self, identity: str) -> None:
+        if self.registry is None:
+            raise WorkflowError("M3 source registry is unavailable or invalid.")
+        if not self.activity_specialist_enabled(identity):
+            self.registry.require_available(identity)
+
     def authorize(
         self, c: Connection, viewer: GuildViewer, subsystem: str, *, director_response: bool = False
     ) -> None:

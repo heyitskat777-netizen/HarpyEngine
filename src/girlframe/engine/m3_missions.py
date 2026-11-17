@@ -23,6 +23,9 @@ class Mission(Model):
         "offered", "active", "ending", "awaiting_consequences", "complete", "cancelled"
     ] = "offered"
     success: bool | None = None
+    debrief: str | None = Field(
+        default=None, max_length=1200, exclude_if=lambda value: value is None
+    )
     consequence_ids: tuple[str, ...] = ()
     offered_characters: dict[str, str] = Field(default_factory=dict)
     character_ids: dict[str, str] = Field(default_factory=dict)

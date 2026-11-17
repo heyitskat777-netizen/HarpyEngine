@@ -477,10 +477,10 @@ def test_native_actual_role_play_has_private_owned_dropdowns_and_native_director
         await picker.open_item(review, "keep_your_head")
         form = review.edit_original_response.call_args.kwargs["view"]
         assert not game.dice.calls and "Actual Director" in form.instructions
-        assert {x.key for x in form.fields} == {"context", "identity", "gain", "heat", "confirm"}
-        form.values.update(
-            context="PRIVATE_KEEP_CONTEXT", gain=("1",), heat=("0",), confirm=("yes",)
-        )
+        assert {x.key for x in form.fields} == {"context", "identity", "heat", "confirm"}
+        # Heat gain is offered only after selecting a real Identity to mark.
+        assert "gain" not in form.values
+        form.values.update(context="PRIVATE_KEEP_CONTEXT", heat=("0",), confirm=("yes",))
         await form.confirm.callback(current(1, 15403))
         assert form.completed and game.dice.calls == 0
         await GameWorker(game).tick(Gateway())

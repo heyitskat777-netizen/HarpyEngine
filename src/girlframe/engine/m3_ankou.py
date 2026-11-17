@@ -223,7 +223,8 @@ class FeedbackSequence(Model):
     count: Literal[1, 5]
     venue: SceneCast | None = None
     activated_event: str | None = None
-    reason: Literal["relay", "obsession"]
+    reason: Literal["relay", "obsession", "punishment"]
+    punishment_event: str | None = Field(default=None, exclude_if=lambda value: value is None)
     steps: tuple[str, ...] = ()
     completed_event: str | None = None
     terminal_event: str | None = None

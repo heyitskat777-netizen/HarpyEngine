@@ -34,7 +34,7 @@ def start(
     event: str,
     *,
     count: Literal[1, 5],
-    reason: Literal["relay", "obsession"],
+    reason: Literal["relay", "obsession", "punishment"],
 ) -> rules.FeedbackSequence:
     key = rules.identity("feedback", source, event)
     if any(x.id == key for x in rules.records(state, rules.FeedbackSequence)):
@@ -53,7 +53,7 @@ def prove(
     born = rules.get(_history(c, game, value.event), rules.FeedbackSequence, identity)
     if any(
         getattr(value, k) != getattr(born, k)
-        for k in ("id", "actor", "cast", "source", "event", "count", "reason")
+        for k in ("id", "actor", "cast", "source", "event", "count", "reason", "punishment_event")
     ):
         raise WorkflowError("Preserve the original actual Feedback cause/count/person")
     if value.reason == "relay":
@@ -69,6 +69,22 @@ def prove(
             raise WorkflowError(
                 "Only the actual Handler-selected Relay consequence causes this Feedback"
             )
+    elif value.reason == "punishment":
+        from girlframe.services.m3_punishment_sources import prove as prove_punishment
+
+        _, before, after = prove_punishment(
+            game, c, value.source, value.punishment_event or value.event, value.actor, ("sedation",)
+        )
+        old = before.sheets[value.actor.entity]
+        new = after.sheets[value.actor.entity]
+        if (
+            value.count != 1
+            or new.frame != "PROJECT ANKOU"
+            or not new.identities
+            or all(identity.marked for identity in old.identities)
+            or not all(identity.marked for identity in new.identities)
+        ):
+            raise WorkflowError("Recover the Sedation that marked the last Ankou Identity.")
     else:
         original = rules.get(_history(c, game, value.event), rules.Obsession, value.source)
         if (
@@ -897,10 +913,22 @@ def materialize(game: "GameService", c: Connection, event: str) -> None:
                 work.c.campaign_id == game.store.campaign_id, work.c.id == sequence.id
             )
         ):
+            scope = dict(campaign_id=game.store.campaign_id, campaign_context=True)
+            if sequence.reason == "punishment":
+                from girlframe.services.m3_punishment_sources import prove as prove_punishment
+
+                scope, _, _ = prove_punishment(
+                    game,
+                    c,
+                    sequence.source,
+                    sequence.punishment_event or sequence.event,
+                    sequence.actor,
+                    ("sedation",),
+                )
             related(
                 c,
                 game.store,
-                dict(campaign_id=game.store.campaign_id, campaign_context=True),
+                scope,
                 sequence.id,
                 int(sequence.actor.entity),
                 int(sequence.actor.entity),
@@ -910,6 +938,7 @@ def materialize(game: "GameService", c: Connection, event: str) -> None:
                     actor=sequence.actor.model_dump(mode="json"),
                     immediate=True,
                     source_action=None,
+                    **({"source_work": sequence.source} if sequence.reason == "punishment" else {}),
                 ),
                 sequence.event,
             )
@@ -929,6 +958,10 @@ def materialize(game: "GameService", c: Connection, event: str) -> None:
                     ),
                     "resolved",
                 )
+                if sequence.reason == "punishment":
+                    from girlframe.services.m3_role_punishments import synchronize
+
+                    synchronize(game, c, None, event)
     for step in rules.records(state, rules.FeedbackStep):
         if step.choice != "tear" or not step.choice_event or step.work:
             continue

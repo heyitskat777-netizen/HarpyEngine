@@ -1,0 +1,9 @@
+{
+  "destination_revision": "484f6fc",
+  "destination_branch": "codex/r285-integration-20261114",
+  "mirror_base": "5412ee8c431cfee63ecbd8b5e4ff2db97b60c601",
+  "zip_sha256": "95f29cab1abc33b7a737b0356032da947df6ea714e910e09a65f420816291928",
+  "manifest_files": 1969,
+  "manifest_mismatches": [],
+  "dirty_before": []
+}

@@ -49,8 +49,13 @@ class PunishmentService:
             "punishment_paired_identity_heat",
             "punishment_helpless",
             "punishment_frame_loss",
+            "punishment_ankou_feedback",
+            "punishment_void_threshold_check",
         ):
             raise WorkflowError("This discipline task is unavailable.")
+        if row["kind"] in ("punishment_ankou_feedback", "punishment_void_threshold_check"):
+            # Recovery proves the owning original discipline event and scope separately.
+            return dict(row)
         if row["kind"] == "punishment" and json.loads(row["body_json"]).get("return_source_work"):
             from girlframe.services.m3_debts import check_returned
 
@@ -762,6 +767,25 @@ class PunishmentService:
 
                 assert details.surgery is not None
                 renamed_profile = rename_profile(c, self.store, result.state, details.surgery)
+            from girlframe.engine.m3_actor_bonds import current_ref
+            from girlframe.services.m3_ankou_feedback_sequences import start as start_feedback
+            from girlframe.services.m3_punishment_sources import void_families
+
+            feedback = False
+            for followup in result.followups:
+                if followup.kind == "ankou_feedback":
+                    start_feedback(
+                        self.game,
+                        c,
+                        result.state,
+                        current_ref(state, followup.owner),
+                        None,
+                        identity,
+                        event_id,
+                        count=1,
+                        reason="punishment",
+                    )
+                    feedback = True
             event = self.game.event(
                 c,
                 viewer.user_id,
@@ -809,6 +833,32 @@ class PunishmentService:
                             body=self._body(consultation) | {"approved": False, "superseded": True},
                         )
             for followup in result.followups:
+                if followup.kind == "ankou_feedback":
+                    continue
+                if followup.kind == "void_threshold_check":
+                    actor = current_ref(state, followup.owner)
+                    for family in void_families(state, result.state, actor):
+                        related(
+                            c,
+                            self.store,
+                            row,
+                            str(uuid4()),
+                            followup.owner,
+                            followup.owner,
+                            "void_threshold",
+                            dict(
+                                reason="punishment",
+                                source_work=identity,
+                                immediate=True,
+                                owner=actor.model_dump(mode="json"),
+                                character=actor.incarnation,
+                                source_action=None,
+                                source_pdf=19,
+                                details=dict(family=family),
+                            ),
+                            event,
+                        )
+                    continue
                 related(
                     c,
                     self.store,
@@ -822,6 +872,10 @@ class PunishmentService:
                     followup.model_dump(mode="json") | {"immediate": True, "source_work": identity},
                     event,
                 )
+            if feedback:
+                from girlframe.services.m3_ankou_feedback_sequences import materialize
+
+                materialize(self.game, c, event)
             if (
                 row["off_duty_id"] is not None
                 and self._body(row).get("reason") == "off_duty_handler"

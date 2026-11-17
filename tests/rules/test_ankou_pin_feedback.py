@@ -76,7 +76,6 @@ def actual_pin_response(game, worker, gateway):
             heat=("1",),
             disposable_heat=("0",),
             piloting=("no",),
-            witnessed=("no",),
             trigger=("yes",),
             context="PRIVATE_PIN_KEEP: rely on my own last Identity while pinned",
         )

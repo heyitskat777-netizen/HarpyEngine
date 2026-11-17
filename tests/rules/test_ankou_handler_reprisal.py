@@ -238,7 +238,6 @@ def test_native_relay_handler_reprisal_keeps_real_high_damage_and_completes_sour
             gain=("0",),
             pair_share=("0",),
             piloting=("no",),
-            witnessed=("no",),
             context="PRIVATE_HANDLER_RELAY: the actual fixed-Handler Engage",
             trigger=("yes",),
         )

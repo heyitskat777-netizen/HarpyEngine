@@ -41,7 +41,6 @@ def test_real_acquired_optional_native_pavlov_preserves_normal_keep_and_one_rece
             pair_share=("0",),
             heat=("0",),
             piloting=("no",),
-            witnessed=("no",),
             trigger=("yes",),
         )
         if invoke:

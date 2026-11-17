@@ -271,6 +271,10 @@ def migrate_actor(original: GameState, actor: ActorRef, source_event: str) -> Ga
             owners = key.split(":")
             if actor.entity in owners:
                 other_owner = next(x for x in owners if x != actor.entity)
+                if other_owner not in state.sheets and int(other_owner) != state.handler:
+                    # A starting Bond can exist while its other pilot is still in creation.
+                    # There is no live canonical counterpart to migrate for that edge.
+                    continue
                 pairs.append((current_ref(state, int(other_owner)), value))
     if state.world is not None:
         for npc in state.world.npcs:

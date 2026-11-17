@@ -55,7 +55,6 @@ def test_native_high_uses_one_base_and_one_extra_and_holds_lock_through_real_res
             pair_share=("0",),
             heat=("0",),
             piloting=("no",),
-            witnessed=("no",),
             trigger=("yes",),
         )
         await child_form.confirm.callback(current(3, 17105))
