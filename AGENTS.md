@@ -1,4 +1,13 @@
-> Latest owner task: source-bound GM knowledge acquisition is implemented on
+> Latest owner request: delegated Terra model review is complete on source8742516;
+> see reports/P2_TERRA_MODEL_REVIEW.md. Two explicitly Terra-configured internal
+> agents used separate GM/Handler packets. Natural Handler responses are still
+> rejected by the synthetic template transport; citations, actor aliases and
+> first-report contracts need adapter work. Do not silently relax those guards.
+> The review exposed/fixed unordered policy-set hashing across processes; preserve
+> canonical set hashing and the real-policy-change rejection test. Final12focused
+> checks pass. This is not an external API benchmark or live-model certification.
+>
+> Previous owner task: source-bound GM knowledge acquisition is implemented on
 > 8c1cec4. See reports/P2_KNOWLEDGE_ACQUISITION.md and
 > docs/work_orders/P2_KNOWLEDGE_ACQUISITION.md. Preserve explicit private/comms
 > input channels, private-question filtering, original actor identities,

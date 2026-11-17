@@ -1,5 +1,13 @@
 # Consolidated Activity session UI handoff
 
+The subsequent [delegated model review](../../reports/P2_TERRA_MODEL_REVIEW.md)
+exposes additional real-provider contract gaps: natural Handler prose is still
+rejected by the default synthetic transport; actor names/aliases, first-report
+testimony and machine-readable validation requirements need work. Do not treat
+fixture passes as permission to connect an arbitrary free-form model. Unordered
+policy-set fingerprints are now canonical across process restarts; reopen old
+unconfirmed packets when upgrading the source.
+
 This is the engine-first implementation brief for the Activity project. It joins
 the existing [native Activity ports](INTEGRATION_HANDOFF.md) and
 [AI-assistance contracts](../ai_assistance/INTEGRATION_HANDOFF.md).
