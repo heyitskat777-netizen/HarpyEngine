@@ -8,6 +8,11 @@ does not install policy, deploy a runtime or approve all playbooks.
 
 ## Engine-first synthetic Director trial
 
+The [model-contract revision and retest](reports/P2_MODEL_CONTRACT_REVISION.md)
+adds scoped speech classification, attributed testimony/paraphrases, native actor
+names, explicit response ownership and natural Handler drafts held for GM review.
+The default stays synthetic; external providers and Activity ports are not installed.
+
 The [P2 assisted player-test candidate](docs/P2_PLAYER_TEST_GUIDE.md) now supplies
 one resumable synthetic session flow, native GM/owner review, scoped retained
 knowledge and an offline console. Four 100-input scenes exercise actual native

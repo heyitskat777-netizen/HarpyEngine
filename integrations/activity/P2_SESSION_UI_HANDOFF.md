@@ -1,12 +1,11 @@
 # Consolidated Activity session UI handoff
 
-The subsequent [delegated model review](../../reports/P2_TERRA_MODEL_REVIEW.md)
-exposes additional real-provider contract gaps: natural Handler prose is still
-rejected by the default synthetic transport; actor names/aliases, first-report
-testimony and machine-readable validation requirements need work. Do not treat
-fixture passes as permission to connect an arbitrary free-form model. Unordered
-policy-set fingerprints are now canonical across process restarts; reopen old
-unconfirmed packets when upgrading the source.
+The [model-contract revision](../../reports/P2_MODEL_CONTRACT_REVISION.md) addresses
+the earlier delegated review with source-filtered hearing, testimony/paraphrase
+claims, native actor names, structured feedback and private reviewed Handler
+drafts. The default transport remains synthetic; a trusted server must explicitly
+configure reviewed mode. Reopen old unconfirmed packets when upgrading source.
+These contracts do not install a provider or authorize external model spending.
 
 This is the engine-first implementation brief for the Activity project. It joins
 the existing [native Activity ports](INTEGRATION_HANDOFF.md) and
@@ -21,27 +20,35 @@ HTTP route, frontend, authentication flow, model, worker or live policy.
 | Scene | `DirectorSessionService.submit`, `contributions` | Persist the full original command/key; render separate GM and Handler replies. WAIT is silence. Only approved participant contributions enter the shared transcript. Private GM packets/reasoning stay out. |
 | Scene work | `.work(viewer, scene, gm=False)` | Render original pending choices, declarations, proposals and their actual owners. A subject of a decision is not necessarily its decision owner. GM scope requires native authorization. |
 | Campaign work | `.campaign_work(viewer, scene, period_id=None)` | Show mission controls, current/selected Off-Duty progress and required campaign work. This is a recipient-specific OOC dashboard, not a Handler persona prompt. Keep private scenes and personal sheet choices in their native recipient projection. |
-| GM desk | `.decision_context`, `GMOutcomeService.open/packet/propose` | Bind the actual native source/receipt, context and declared goal. Show typed outcome fields, are/are-not assessments for Keep and unresolved prerequisites. GM visibility cannot confirm another source owner's choice. |
+| GM desk | `.decision_context`, `GMOutcomeService.open/packet/propose/feedback` | Bind the actual native source/receipt, context, declared goal and response ownership. Show typed outcome fields, are/are-not assessments for Keep and unresolved prerequisites. GM visibility cannot confirm another source owner's choice. |
 | Owner review | `GMOutcomeService.owner_review/confirm` and native choice services | Present intended effects/disclosures to the actual decision owner; preserve personal selections and acknowledgements. Reopen stale work; never auto-fill consent or clone an old confirmation onto a new source. |
-| Handler comms | Existing engine RESPOND/WAIT gate and narrow Handler request | Only explicit Handler-known references feed fictional speech. `briefing`, `tactical`, `debrief` can queue announcements. Successful delivery suppresses the same root update for the same Handler/roster across handoffs; a failed generation remains retryable. |
+| Handler comms | Engine RESPOND/WAIT gate, narrow request and reviewed draft APIs below | Only established speech and Handler-known references feed fictional speech. Reviewed replies stay private until GM approval. `briefing`, `tactical`, `debrief` can queue announcements. Approved exchanges suppress the same root update for the same Handler/roster across handoffs; a failed generation remains retryable. |
 | Continuity | `SceneContinuityService.preview/carry` | Close the original native scene, join/configure/consent to the next scene, then select references and dependencies. Use both actual revisions. Only the same roster is supported. Preserve known-by actors, claims and root provenance. |
 | Blocked memory | `DirectorContextService.archive_review/archive` | Metadata-only IDs/dependencies permit retiring blocked references. Require an explicit reason and dependency-closed selection. Withdrawal of original consent blocks use of its carried text; never restore a cached prompt to get around that block. |
 | Knowledge acquisition | `.work(..., gm=True).knowledge_sources`, `session.knowledge` | Review new messages/approved readbacks through a GM-only source packet. A trusted injected GM provider proposes quoted facts and actual recipients; the engine validates before creating references. Keep private proposals/reasoning outside role prompts and shared storage. |
 
 ## Fictional channels and knowledge acquisition
 
-`AppendSceneInput.fictional_channel` is `scene` (legacy/default scene speech),
-`private` (unreported narration/perception) or `comms` (an explicit report).
-Set this before routing the message: private text is removed from the Handler's
-current question as well as excluded from its knowledge. The GM can still read
-the source. Merely filtering stored references does not protect a prompt that
-already contains the private current message. Editing cannot change channels;
-sharing a private observation requires a separate comms message.
+`AppendSceneInput.fictional_channel` accepts `scene` (legacy/default), `private`,
+`comms`, `mixed` and `unclassified`. Add explicit narration/comms controls; use
+mixed or unclassified for prose combining actions, thoughts and dialogue. In
+**reviewed mode**, scene/mixed/unclassified input supplies the Handler only exact
+speech quotes accepted by the GM for that listener. Before classification the
+Handler gets a neutral update, not the raw message. Private input can never be
+disclosed by a proposal. The GM can still read the original source.
 
-This is a fictional hearing boundary, not a Discord DM or new OOC access rule.
-The existing synthetic scene audience and consent requirements remain in force.
-Do not infer a private channel from styling alone, and do not assume a later GM
-proposal can undo disclosure. Add an explicit narration/comms control to the UI.
+**Comms means explicit public scene speech.** Its entire message may enter the
+Handler's current question, even if another character is named. It is not a
+private radio or Discord DM implementation. For selective hearing, use a
+mixed/unclassified source with explicit disclosure recipients. Never put private
+asides in a comms input. Editing cannot change channels; sharing an existing
+private observation requires a new message.
+
+This is a fictional hearing boundary, not a new OOC access rule. Existing scene
+audience and consent requirements remain in force. Styling alone is not a
+privacy boundary. The legacy synthetic transport retains its earlier handling
+of ordinary scene speech; opt into reviewed mode before using mixed prose with
+a natural Handler provider.
 
 The service is available as `DirectorSessionService.knowledge`:
 
@@ -54,6 +61,7 @@ generate(gm, key, scene, request_id, injected_provider) -> proposal ID
 private(gm, scene, proposal_id) -> private GM proposal/reasoning and current status
 confirm(gm, key, scene, proposal_id) -> new reference IDs, effects_applied=false
 acquire(gm, key, scene, source_id, injected_provider) -> complete trusted GM path
+feedback(gm, scene, request_id, raw_proposal) -> {valid, errors: [{code, field, message}]}
 ```
 
 `generate` calls a provider outside the transaction and saves a validated private
@@ -72,11 +80,18 @@ configuration values, not fields in the user's message or browser permissions.
 Background processing must retain the existing selective-observer eligibility;
 listing unreviewed source metadata does not install a worker or generation schedule.
 
-`KnowledgeProposal` contains a request ID, private reasoning and up to ten updates.
-Each update has a `basis`, exact `quote`, actual `ActorRef` recipients, optional
-`prior_reference` and topic. Quote only the intended fact, not its source's whole
-private narration. The accepted reference exposes that quote and permitted
-provenance, excluding unrelated asides and private reasoning.
+`KnowledgePacket.actor_directory` supplies actual `ActorRef`, native name,
+controller and available native aliases. Resolve labels to those IDs; never
+authorize by a name or invent console aliases. `accepted_disclosures` records
+already accepted speech/listeners for that source revision.
+
+`KnowledgeProposal` contains a request ID, private reasoning, up to ten updates
+and optional `disclosures`. Each disclosure selects a unique exact source quote
+and actual listeners. Each update has a `basis`, exact current-source `quote`,
+actual `ActorRef` recipients, conditional `prior_reference` and topic. The engine
+checks source, revisions and recipients; the GM judges whether a quote was
+actually spoken and heard. Quote only the intended fact. Accepted references
+exclude unrelated asides and private reasoning.
 
 - **Perception:** a message can establish its own actor's perception claim. It
   cannot silently give that claim to the Handler or another Pilot.
@@ -84,6 +99,13 @@ provenance, excluding unrelated asides and private reasoning.
   original speaker. Only selected current actors receive it. The new reference
   remains a reported claim; the speaker's private prerequisite stays hidden from
   recipients who do not know it.
+- **Testimony:** a new spoken claim needs no earlier reference. It requires comms
+  or an accepted disclosure to each recipient. Preserve attribution, lies,
+  uncertainty and negation; it is a reported claim, not canonical truth.
+- **Paraphrase:** current spoken words link to a real speaker-known prior
+  reference, without requiring verbatim equality. Semantic equivalence remains
+  GM judgment. Recipients receive a claim with `reported_by` identifying its
+  speaker, not the hidden prerequisite text.
 - **Outcome:** confirmed knowledge requires an actual approved native outcome
   readback. Message prose cannot promote an enemy/location or success into canon.
 
@@ -98,6 +120,53 @@ Knowledge remains in append-only records across restarts and explicit scene
 handoffs. Corrections invalidate stale prompt material until reconciliation;
 metadata-only retirement preserves history rather than asserting fictional
 forgetting. Native mechanics and player/Handler choice ownership remain separate.
+
+## Reviewed Handler and response ownership
+
+Trusted server configuration may inject a Handler provider into
+`DirectorConversationService(context, handler=provider, handler_mode="reviewed")`
+and pass that conversation service into the session. The default is synthetic;
+the browser cannot select a provider, mode or GM authority. Reviewed session
+defaults also require explicit Keep response scope in `TaskFrame`.
+
+The engine must persist RESPOND before invoking the provider. WAIT remains
+silence. Reviewed replies use `provider="reviewed-handler-v1"`, real scoped
+`source_refs`, and no GM/Play decision fields. Factual `answer` replies need
+citations; unknown information uses `clarification`. Valid citations do not
+prove that prose follows from them, so accepted generation creates a private
+draft with `reply=null`, `status="awaiting_gm_review"`.
+
+```text
+conversation.pending_handler(gm, scene) -> draft metadata
+session.work(gm, scene, gm=True).handler_drafts -> same discovery metadata
+conversation.private_handler(gm, scene, draft_id) -> private request/reply/status
+conversation.feedback_handler(gm, scene, source_id, raw_reply) -> structured errors
+conversation.review_handler(gm, key, scene, draft_id, "approve"|"reject", reason)
+conversation.get(original_sender, scene, draft_id) -> approved private exchange or no reply
+```
+
+GM review checks grounding, scope and disclosures. Approval rechecks the original
+actor/source and current context, creates one private exchange and applies no
+mechanics. Rejection releases no prose. Neither approval nor generation posts a
+Discord message or inserts a shared scene contribution. UI delivery must respect
+the existing audience/approval path; do not broadcast private exchanges directly.
+
+For strict ordinary Keep outcomes, trusted facilitator frames declare
+`response_scope="self"|"other"|"unresolved"`. `other` additionally requires the
+actual `response_target: ActorRef`; the engine derives its controller from native
+state and casting. Unresolved authority permits clarification only. Another
+Pilot's agreement, feelings or voluntary action cannot be supplied by a GM
+verdict; this adapter holds for their response. Explicitly cast NPCs are eligible
+only under their actual controller/source authority. A goal to deliver a calm
+explanation can be self-scoped; a goal requiring the listener to become calm
+cannot silently use that scope. This declaration is a trusted semantic judgment,
+not automatic pronoun or intent detection. Legacy outcome services retain their
+default compatibility mode; integrations must enable `require_response_scope=True`
+if constructing them outside the reviewed session defaults.
+
+GM and knowledge feedback APIs are private, read-only diagnostics. Keep retries
+linked to their original failed proposal; do not replace first-pass evidence.
+Refresh stale requests rather than changing IDs on an old confirmation.
 
 ## Campaign dashboard contract
 

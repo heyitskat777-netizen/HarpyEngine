@@ -1,4 +1,18 @@
-> Latest owner request: delegated Terra model review is complete on source8742516;
+> Latest owner request: revise the six model-contract recommendations and retest.
+> Implemented on d7de985; see reports/P2_MODEL_CONTRACT_REVISION.md and the updated
+> integrations/activity/P2_SESSION_UI_HANDOFF.md. Reviewed Handler mode filters
+> scene/mixed/unclassified raw prose through accepted listener disclosures and
+> holds natural replies for explicit private GM review. Default synthetic mode
+> remains unchanged. Preserve testimony/paraphrase claims, reported_by provenance,
+> native actor IDs, strict response ownership and structured private feedback.
+> Fresh separate Terra role agents supplied19decisions:12/12GM accepted first
+> pass; Handler gates7/7matched, natural drafts3/4first pass and4/4after one
+> label-only correction. Integrated51checks and final18affected checks pass;
+> selections overlap. No full regression, external API benchmark or live release.
+> Comms is public scene speech, not a private DM. Semantic grounding still needs
+> GM review; UI/auth/provider installation and human pacing acceptance remain open.
+>
+> Previous owner request: delegated Terra model review is complete on source8742516;
 > see reports/P2_TERRA_MODEL_REVIEW.md. Two explicitly Terra-configured internal
 > agents used separate GM/Handler packets. Natural Handler responses are still
 > rejected by the synthetic template transport; citations, actor aliases and
