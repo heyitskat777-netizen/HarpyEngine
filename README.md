@@ -2,6 +2,11 @@
 
 ## Engine-first synthetic Director trial
 
+The [GM outcome-adapter review](reports/P2_GM_OUTCOME_ADAPTER_REVIEW.md) identifies
+which Plays need contextual rulings, grounded answers or world proposals, and
+which retain native/role-owned outcomes. Only ordinary Keep currently performs
+contextual adjudication; the other four structured adapters provide native readback.
+
 The [all-Play coverage review](reports/P2_ALL_PLAY_COVERAGE.md) extends Director
 referrals beyond those five outcome adapters: all 63 native entry points and the
 remaining source inventory can request private GM review. Actual Handler/controller

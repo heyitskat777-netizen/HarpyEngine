@@ -1,5 +1,11 @@
 # All-Play referral coverage and native verification
 
+See the later [GM outcome-adapter requirements review](P2_GM_OUTCOME_ADAPTER_REVIEW.md)
+for the per-Play design decisions. Referral/test coverage here does not imply a
+contextual GM outcome consumer: only ordinary Keep currently has that consumer;
+the other four structured adapters are native readback, and wider triage applies
+no outcome. The later review also covers the separate diceless AM workflow.
+
 The original five-Play candidate was not complete Director coverage. This change
 adds source-backed referrals for **63 native entry points**: 49 shared rolled
 identifiers, Receive Orders, ten basic/extra Handler Plays and three Gorgon

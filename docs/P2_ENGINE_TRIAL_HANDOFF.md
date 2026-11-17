@@ -8,6 +8,14 @@ is measured or emulated model intelligence.
 
 ## Current candidate: structured GM adapter v2
 
+The subsequent [outcome-adapter requirements review](../reports/P2_GM_OUTCOME_ADAPTER_REVIEW.md)
+classifies all 63 native entry points and the separate diceless AM path. Precision:
+ordinary Keep accepts a contextual enough/not-enough assessment; Sensors, Engage,
+Disobey and Flirt currently accept native pending/complete readback only. Wider
+GM triage is not an implemented outcome consumer. The review recommends shared
+answer/factual, combat and bounded-world consumers while retaining native choice
+owners, role knowledge and fixed results. It changes no runtime behavior.
+
 The subsequent [all-Play coverage review](../reports/P2_ALL_PLAY_COVERAGE.md)
 extends declaration/review coverage to 63 native entry points and all registered
 source-rule IDs. The five ordinary outcome consumers below remain deliberately

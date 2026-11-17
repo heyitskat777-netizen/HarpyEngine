@@ -1,5 +1,13 @@
 > Current continuation: engine-first development toward a synthetic trial is
 > authorized; Activity changes are deferred to a consolidated later handoff.
+> Latest review: reports/P2_GM_OUTCOME_ADAPTER_REVIEW.md distinguishes one current
+> ordinary-Keep contextual consumer from four native readback adapters. The 63-entry
+> design matrix recommends four shared GM families for 13 semantic entry points,
+> conditional fact bridges for 17 and native/role/table ownership for 33. This is
+> a review, not new consumers or rules certification; existing owner-authorized
+> development scope and release gates remain in force.
+> Preserve target-owned answers and table authors; printed Handler ownership does
+> not make the fictional Handler omniscient. See that review before adapter work.
 > Latest owner scope: verify all Plays and add required GM/Handler review. See
 > reports/P2_ALL_PLAY_COVERAGE.md and docs/work_orders/P2_ALL_PLAY_REVIEW.md.
 > All 63 native identifiers have source-backed referrals; all inventory entries
