@@ -90,3 +90,12 @@ model calls, real campaign capture, deployment or bot restart occurred.
 Earlier failed development runs exposed a Keep evidence-ID translation mismatch
 and several fixture setup errors. Those were corrected and the affected native
 flows rerun. No failed case is excluded from the final focused selection.
+
+### Exact committed candidate
+
+[CI run 44014179078](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/44014179078)
+passed on `e3a11f78fc635c090fc9eb82fbe4a28166fc943d`: **195 tests passed in
+272.46s**, zero failures/errors/skips. Changed-source lint/format and typing for
+nine source files, CLI smoke, runtime registry, original planning contracts and
+publishable-file/manifest checks all passed. This is the focused synthetic
+candidate selection, not full regression or live/human acceptance.
