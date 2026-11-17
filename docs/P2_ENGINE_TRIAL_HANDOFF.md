@@ -1,3 +1,10 @@
+> Current continuation: [P2 assisted player-test guide](P2_PLAYER_TEST_GUIDE.md)
+> and [candidate evidence](../reports/P2_PLAYER_TEST_CANDIDATE.md) supersede the
+> older implementation-status sections below. Typed v3 GM consumers, the session
+> coordinator, GM-discretion shared table outcomes, outcome knowledge and explicit
+> reference retirement are implemented for synthetic use. Activity integration and
+> real-provider/live gates remain open. Older v1/v2 experiments are historical.
+
 # Engine-first synthetic Director trial
 
 Owner direction: finish engine work independently; UI changes are delivered later.

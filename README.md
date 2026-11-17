@@ -2,6 +2,20 @@
 
 ## Engine-first synthetic Director trial
 
+The [P2 assisted player-test candidate](docs/P2_PLAYER_TEST_GUIDE.md) now supplies
+one resumable synthetic session flow, native GM/owner review, scoped retained
+knowledge and an offline console. Four 100-input scenes exercise actual native
+Plays and engine-selected Handler interventions; see [results and limits](reports/P2_PLAYER_TEST_CANDIDATE.md).
+
+```bash
+.venv/bin/python tools/playtest_director_session.py --new var/my-p2-trial --demo
+.venv/bin/python tools/playtest_director_session.py --resume var/my-p2-trial
+```
+
+The facilitator keeps GM records private and relays permitted output to players.
+This is assisted offline testing; no real model, Activity authentication or live
+rollout is installed. The explicit demo uses fixture choices and GM judgments.
+
 The [typed GM outcome adapters](reports/P2_GM_OUTCOME_ADAPTERS.md) connect contextual
 Keep rulings, Sensor answers, battle judgments and bounded world proposals to
 actual native consumers. Shared table outcomes use GM discretion under the

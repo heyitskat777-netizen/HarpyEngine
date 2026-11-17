@@ -16,7 +16,7 @@ class KnowledgeReference(Contract):
     dependencies: tuple[str, ...] = ()
     known_by: tuple[str, ...] = ()
     topic: Literal["general", "objective", "scope", "status"] = "general"
-    classification: Literal["reported_claim", "committed_play"]
+    classification: Literal["reported_claim", "committed_play", "approved_outcome"]
     text: str = Field(max_length=1200)
 
 
@@ -51,7 +51,11 @@ class SyntheticDirector:
     """No network/model emulation claims: conservative, deterministic reference policy."""
 
     def decide(self, context: DirectorContext) -> DirectorDecision:
-        plays = tuple(x.id for x in context.references if x.classification == "committed_play")
+        plays = tuple(
+            x.id
+            for x in context.references
+            if x.classification in ("committed_play", "approved_outcome")
+        )
         if plays:
             return DirectorDecision(
                 kind="NEEDS_REVIEW",

@@ -84,7 +84,13 @@ class HandlerProvider(Protocol):
 
 class HandlerDecision(Contract):
     action: Literal["RESPOND", "WAIT"]
-    reason: Literal["direct_question", "scope_boundary", "gm_request", "no_handler_need"]
+    reason: Literal[
+        "direct_question",
+        "scope_boundary",
+        "scope_already_addressed",
+        "gm_request",
+        "no_handler_need",
+    ]
     source_refs: tuple[str, ...] = Field(default=(), max_length=3)
 
 

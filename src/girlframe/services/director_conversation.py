@@ -12,6 +12,7 @@ from girlframe.ai.conversation import (
     GMDecision,
     GMProvider,
     GMRequest,
+    HandlerDecision,
     HandlerProvider,
     HandlerRequest,
     Route,
@@ -374,6 +375,45 @@ class DirectorConversationService:
             request, revision = self._requests(c, viewer, scene_id, source_id, "handler")
             assert isinstance(request, HandlerRequest)
             decision = SyntheticHandlerPolicy().decide(request)
+            need_key = None
+            if decision.reason == "scope_boundary":
+                # Repeat warnings only after a changed scope/role, not every restatement.
+                # A saved decision without a successful reply has addressed nothing.
+                need_key = _digest(
+                    {
+                        "sender": source.actor.model_dump(mode="json"),
+                        "handler": request.context.actor.model_dump(mode="json")
+                        if request.context.actor
+                        else None,
+                        "references": decision.source_refs,
+                    }
+                )
+                records = [
+                    json.loads(raw)
+                    for raw in c.scalars(
+                        sa.select(t.director_context["shadow"].c.body_json).where(
+                            t.director_context["shadow"].c.campaign_id == self.store.campaign_id,
+                            t.director_context["shadow"].c.scene_id == scene_id,
+                        )
+                    )
+                ]
+                prior = {
+                    r["id"]
+                    for r in records
+                    if r.get("record_type") == "handler_response_decision"
+                    and r.get("need_key") == need_key
+                }
+                if any(
+                    r.get("record_type") == "conversation_exchange"
+                    and r.get("route") == "handler"
+                    and r.get("handler_decision_id") in prior
+                    for r in records
+                ):
+                    decision = HandlerDecision(
+                        action="WAIT",
+                        reason="scope_already_addressed",
+                        source_refs=decision.source_refs,
+                    )
             identity = "handler-decision:" + str(uuid4())
             record = {
                 "id": identity,
@@ -384,6 +424,7 @@ class DirectorConversationService:
                 "source_revision": expected_source_revision,
                 "context_revision": revision,
                 "decision": decision.model_dump(mode="json"),
+                "need_key": need_key,
             }
             c.execute(
                 t.director_context["shadow"]

@@ -1,3 +1,12 @@
+> Latest owner direction: continue until P2 is ready for player testing. The
+> engine-side assisted offline candidate is described in docs/P2_PLAYER_TEST_GUIDE.md
+> and reports/P2_PLAYER_TEST_CANDIDATE.md. Use DirectorSessionService, actual native
+> consumers and the persistent development console. Keep GM/Handler roles separate,
+> private Keep assessments out of owner review, exact declaration/action bindings,
+> explicit outcome knowledge and append-only reference retirement. UI changes stay
+> in the later Activity handoff; no spending/model calls or live rollout. Human
+> narrative/pacing acceptance is pending; synthetic checks do not certify autonomy.
+>
 > Latest owner clarification: **table outcomes are GM-discretion**. This supersedes
 > the earlier review's unanimous-Assault/actor-only exploration recommendation.
 > Preserve player contributions and independently owned personal choices. Trusted

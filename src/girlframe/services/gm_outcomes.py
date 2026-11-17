@@ -10,6 +10,7 @@ from sqlalchemy import Connection
 from girlframe.ai.gm_outcomes import (
     BattleFacts,
     HandlerOutcome,
+    KeepOutcome,
     OutcomeNarration,
     OutcomePacket,
     OutcomeProposal,
@@ -137,7 +138,7 @@ class GMOutcomeService:
             context = next(
                 (
                     Context.model_validate_json(x["body"])
-                    for x in canon.facts
+                    for x in reversed(canon.facts)
                     if x.get("kind") == "battle_context" and x.get("id") == identity
                 ),
                 None,
@@ -425,7 +426,12 @@ class GMOutcomeService:
             return {
                 "id": identity,
                 "operation": packet.operation,
-                "decision": proposal.decision.model_dump(mode="json"),
+                "decision": proposal.decision.model_dump(
+                    mode="json",
+                    exclude={"assessments"}
+                    if isinstance(proposal.decision, KeepOutcome)
+                    else set(),
+                ),
                 "notice": "Review intended disclosures and effects. "
                 "Private GM reasoning is excluded.",
             }
@@ -505,6 +511,26 @@ class GMOutcomeService:
                         "scene_id": scene,
                         "action_id": packet.source_id,
                         "proposal_id": identity,
+                        "audience_ids": sorted(
+                            str(x)
+                            for x in self._scope(c, viewer, scene)["participants"]
+                            if str(x)
+                            in {str(u) for u in native["action"]["data"].get("participants", [])}
+                        ),
+                        "ordinal": 1
+                        + int(
+                            c.scalar(
+                                sa.select(sa.func.count())
+                                .select_from(t.director_context["shadow"])
+                                .where(
+                                    t.director_context["shadow"].c.campaign_id
+                                    == self.store.campaign_id,
+                                    t.director_context["shadow"].c.scene_id == scene,
+                                    t.director_context["shadow"].c.id.like("gm-narration:%"),
+                                )
+                            )
+                            or 0
+                        ),
                         "text": proposal.decision.text,
                         "effect_refs": list(proposal.decision.effect_refs),
                         "canon_effects": False,
@@ -531,6 +557,7 @@ class GMOutcomeService:
             return {
                 "id": identity,
                 "text": record["text"],
+                "ordinal": record.get("ordinal", 0),
                 "native": native,
                 "canon_effects": False,
                 "publication": "synthetic_projection_only",

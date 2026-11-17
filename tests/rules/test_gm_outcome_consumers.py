@@ -398,6 +398,8 @@ def test_battle_facts_use_actual_source_without_dice(ledger):
     from test_m2_game import state
 
     from girlframe.ai.gm_outcomes import BattleFacts
+    from girlframe.services.director_session import DirectorSessionService
+    from girlframe.services.onboarding import WorkflowError
 
     game, _, _, battle, data, declaration = prepared(ledger)
     proposed = battle.propose(PLAYER, str(uuid4()), data["revision"], 900, declaration)
@@ -412,6 +414,12 @@ def test_battle_facts_use_actual_source_without_dice(ledger):
     context = battle.context(ADMIN, proposed["id"])
     assert context and game.dice.calls == 0
     assert any(x.get("kind") == "battle_context" for x in state(game).facts)
+    assert not any(
+        x["source_id"] == proposed["id"]
+        for x in DirectorSessionService(svc.context).work(ADMIN, scene, gm=True)["outcome_sources"]
+    )
+    with pytest.raises(WorkflowError, match="STALE_BATTLE_SOURCE"):
+        svc.open(ADMIN, str(uuid4()), scene, "battle", proposed["id"])
 
 
 @pytest.mark.parametrize("play", ["escalate", "support"])

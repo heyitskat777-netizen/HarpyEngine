@@ -117,7 +117,13 @@ class PlayCatalog:
 
     def recognize(self, text: str) -> tuple[PlayReferral, ...]:
         """Explicit declarations only; ambiguity is retained for GM clarification."""
-        declaration = re.search(r"\b(?:declare|roll|resolve|request)\b", text, re.I)
+        text = text.strip()
+        declaration = re.search(
+            r"\b(?:declare|roll|resolve|request)\b|"
+            r"^(?:gm\s*[:,]\s*)?(?:(?:i|we)\s+)?(?:call|choose)\b",
+            text,
+            re.I,
+        )
         if declaration is None:
             return ()
         if re.search(r"\b(?:not|never|don't|won't)\b", text[: declaration.start()], re.I):
@@ -179,8 +185,8 @@ class PlayCatalog:
     @staticmethod
     def declared(text: str) -> bool:
         match = re.search(
-            r"\b(?:i|we)\s+(?:declare|roll|request)\b|"
-            r"^(?:gm\s*[:,]?\s*)?(?:declare|roll|resolve|request)\b",
+            r"\b(?:i|we)\s+(?:declare|roll|request|call|choose)\b|"
+            r"^(?:gm\s*[:,]?\s*)?(?:declare|roll|resolve|request|call|choose)\b",
             text.strip(),
             re.I,
         )

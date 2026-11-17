@@ -68,3 +68,9 @@ tests/test_gm_outcomes.py
 tests/rules/test_gm_outcome_consumers.py
 tests/rules/test_battle_pipeline.py::test_actual_mid_allout_damages_declared_opposing_asset_once_then_restores_chat
 tests/rules/test_wyvern.py::test_mid_exploration_actual_companion_attendance_and_lossless_private_frame_answers
+
+# P2 sustained assisted session, scoped memory, pacing and durable player-test console.
+tests/test_director_session.py
+tests/test_director_memory.py
+tests/test_p2_player_console.py
+tests/test_p2_sustained_session.py

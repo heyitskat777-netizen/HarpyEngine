@@ -1,6 +1,6 @@
 """Explicit synthetic reference chronology; observations never become automatic canon."""
 
-from typing import Literal
+from typing import Any, Literal
 from uuid import uuid4
 
 import sqlalchemy as sa
@@ -28,21 +28,158 @@ class DirectorContextService:
                 )
             )
         )
-        if len(rows) > 100:
-            raise WorkflowError("CONTEXT_LIMIT: explicit reference archival is required.")
         return tuple(
             sorted((KnowledgeReference.model_validate_json(x) for x in rows), key=lambda x: x.order)
         )
 
-    def _current(self, c: Connection, scene_id: str) -> tuple[KnowledgeReference, ...]:
+    def _active(self, c: Connection, scene_id: str) -> tuple[KnowledgeReference, ...]:
         references = tuple({x.source_id: x for x in self._references(c, scene_id)}.values())
+        archived = self._archived(c, scene_id)
+        references = tuple(x for x in references if x.id not in archived)
+        if len(references) > 100:
+            raise WorkflowError("CONTEXT_LIMIT: explicit reference archival is required.")
+        return references
+
+    def _current(self, c: Connection, scene_id: str) -> tuple[KnowledgeReference, ...]:
+        references = self._active(c, scene_id)
         for reference in references:
+            if reference.classification == "approved_outcome":
+                record = self._approved_outcome(c, scene_id, reference.source_id)
+                if reference.source_revision != 1 or reference.text != record["text"]:
+                    raise WorkflowError("STALE_KNOWLEDGE: retain the actual approved outcome.")
+                continue
             source = self.observations._latest_source(c, reference.source_id)
             if source is None or source.source_revision != reference.source_revision:
                 raise WorkflowError(
                     "STALE_KNOWLEDGE: source correction needs explicit reconciliation."
                 )
         return references
+
+    def _approved_outcome(self, c: Connection, scene: str, identity: str) -> dict[str, Any]:
+        import json
+
+        from girlframe.services.gm_outcomes import GMOutcomeService
+
+        service = GMOutcomeService(self)
+        record = service._record(c, scene, identity, "gm_outcome_narration")
+        action = self.observations.game.action(c, record["action_id"])
+        packet, proposal = service._load(c, scene, record["proposal_id"])
+        command = c.scalar(
+            sa.select(t.commands.c.outcome_json)
+            .where(
+                t.commands.c.campaign_id == self.store.campaign_id,
+                t.commands.c.interaction_key.like("gm-outcome:" + record["proposal_id"] + ":%"),
+            )
+            .limit(1)
+        )
+        if (
+            action["scene_id"] != scene
+            or action["state"] != "complete"
+            or packet.source_kind != "completed"
+            or packet.source_id != action["id"]
+            or proposal.decision.kind != "narration"
+            or proposal.decision.text != record["text"]
+            or not command
+            or json.loads(command).get("id") != identity
+        ):
+            raise WorkflowError("UNPROVEN_OUTCOME: retain its actual confirmed native source.")
+        participants = sorted(str(x) for x in self.observations._scene(c, scene)["participants"])
+        if record.get("audience_ids") != participants:
+            raise WorkflowError("SOURCE_SCOPE_CHANGED: outcome knowledge requires audience review.")
+        return record
+
+    def _archived(self, c: Connection, scene_id: str) -> set[str]:
+        import json
+
+        table = t.director_context["shadow"]
+        return {
+            identity
+            for raw in c.scalars(
+                sa.select(table.c.body_json).where(
+                    table.c.campaign_id == self.store.campaign_id,
+                    table.c.scene_id == scene_id,
+                    table.c.id.like("reference-archive:%"),
+                )
+            )
+            for identity in json.loads(raw)["reference_ids"]
+        }
+
+    def archive(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        scene_id: str,
+        expected_revision: str,
+        reference_ids: tuple[str, ...],
+        reason: str,
+    ) -> dict[str, str | int]:
+        """Retire explicit prompt references, preserving history and fictional knowledge."""
+        import json
+
+        self.observations._scope()
+
+        def authorize(c: Connection) -> None:
+            self._build(c, viewer, scene_id)
+            self.observations.game.unpaused(c)
+
+        def operation(c: Connection) -> dict[str, str | int]:
+            current = self._build(c, viewer, scene_id)
+            selected = set(reference_ids)
+            if current.revision != expected_revision:
+                raise WorkflowError("STALE_CONTEXT: refresh references before archival.")
+            if (
+                not selected
+                or len(selected) != len(reference_ids)
+                or not selected <= {x.id for x in current.references}
+                or not reason.strip()
+                or len(reason) > 1200
+            ):
+                raise WorkflowError("INVALID_ARCHIVE: select current references and give a reason.")
+            if any(
+                selected.intersection(x.dependencies)
+                for x in current.references
+                if x.id not in selected
+            ):
+                raise WorkflowError("ACTIVE_DEPENDENCY: retain prerequisites or retire dependents.")
+            identity = "reference-archive:" + str(uuid4())
+            c.execute(
+                t.director_context["shadow"]
+                .insert()
+                .values(
+                    campaign_id=self.store.campaign_id,
+                    scene_id=scene_id,
+                    id=identity,
+                    body_json=json.dumps(
+                        {
+                            "id": identity,
+                            "record_type": "reference_archive",
+                            "scene_id": scene_id,
+                            "owner_id": str(viewer.user_id),
+                            "reference_ids": reference_ids,
+                            "reason": reason,
+                        }
+                    ),
+                )
+            )
+            state = self.observations._state(c, scene_id)
+            self.observations._save(
+                c, scene_id, state.model_copy(update={"generation": state.generation + 1})
+            )
+            return {"id": identity, "retired": len(selected)}
+
+        return self.store._write(
+            viewer,
+            key,
+            "director.reference_archive",
+            {
+                "scene": scene_id,
+                "revision": expected_revision,
+                "reference_ids": reference_ids,
+                "reason": reason,
+            },
+            operation,
+            authorize=authorize,
+        )
 
     def record(
         self,
@@ -68,27 +205,39 @@ class DirectorContextService:
         def operation(c: Connection) -> dict[str, str | int]:
             self.observations.game.unpaused(c)
             prior = self._references(c, scene_id)
-            if len(prior) >= 100:
+            current = self._active(c, scene_id)
+            if len(current) >= 100 and source_id not in {x.source_id for x in current}:
                 raise WorkflowError("CONTEXT_LIMIT: explicit archival is required.")
             if len(prior) != expected_order:
                 raise WorkflowError("STALE_CHRONOLOGY: refresh the explicit scene order.")
-            if not set(dependencies) <= {x.id for x in prior}:
+            if not set(dependencies) <= {x.id for x in current}:
                 raise WorkflowError("INVALID_CHRONOLOGY: dependencies must precede this reference.")
-            source = self.observations._latest_source(c, source_id)
+            approved = (
+                self._approved_outcome(c, scene_id, source_id)
+                if source_id.startswith("gm-narration:")
+                else None
+            )
+            source = self.observations._latest_source(c, source_id) if approved is None else None
             inputs = t.director["inputs"]
-            if source is None or not c.scalar(
-                sa.select(inputs.c.source_id)
-                .where(
-                    inputs.c.campaign_id == self.store.campaign_id,
-                    inputs.c.scene_id == scene_id,
-                    inputs.c.source_id == source_id,
+            if approved is None and (
+                source is None
+                or not c.scalar(
+                    sa.select(inputs.c.source_id)
+                    .where(
+                        inputs.c.campaign_id == self.store.campaign_id,
+                        inputs.c.scene_id == scene_id,
+                        inputs.c.source_id == source_id,
+                    )
+                    .limit(1)
                 )
-                .limit(1)
             ):
                 raise WorkflowError("SOURCE_UNAVAILABLE: use this scene’s actual observation.")
             scene = self.observations._scene(c, scene_id, viewer)
-            if source.audience_ids != tuple(sorted(str(x) for x in scene["participants"])):
+            if source is not None and source.audience_ids != tuple(
+                sorted(str(x) for x in scene["participants"])
+            ):
                 raise WorkflowError("SOURCE_SCOPE_CHANGED: privacy reconciliation is required.")
+            source_revision = source.source_revision if source else 1
             tokens = []
             for actor in known_by:
                 if actor.kind not in ("pilot", "handler", "npc"):
@@ -118,22 +267,25 @@ class DirectorContextService:
                     raise WorkflowError("STALE_ACTOR: use an actual current scene role.") from None
                 tokens.append(actor.token)
             for previous in prior:
-                if (
-                    previous.source_id == source_id
-                    and previous.source_revision == source.source_revision
-                ):
+                if previous.source_id == source_id and previous.source_revision == source_revision:
                     tokens.extend(previous.known_by)
             reference = KnowledgeReference(
                 id=str(uuid4()),
-                source_id=source.source_id,
-                source_revision=source.source_revision,
+                source_id=source_id,
+                source_revision=source_revision,
                 order=len(prior) + 1,
                 dependencies=dependencies,
                 known_by=tuple(sorted(set(tokens))),
                 topic=topic,
-                classification="reported_claim" if source.kind == "message" else "committed_play",
-                text=("Reported claim: " + (source.text or ""))
-                if source.kind == "message"
+                classification="approved_outcome"
+                if approved
+                else "reported_claim"
+                if source and source.kind == "message"
+                else "committed_play",
+                text=approved["text"]
+                if approved
+                else ("Reported claim: " + (source.text or ""))
+                if source and source.kind == "message"
                 else "Committed native Keep Your Head outcome; use the original receipt.",
             )
             c.execute(

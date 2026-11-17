@@ -1,3 +1,10 @@
+> Current implemented synthetic candidate: [assisted player testing](P2_PLAYER_TEST_GUIDE.md)
+> and [actual evidence](../reports/P2_PLAYER_TEST_CANDIDATE.md). The session flow now
+> includes typed native outcomes, exact declaration bindings, role-specific outcome
+> references, explicit archival and persisted unsolicited-warning suppression.
+> Later-stage labels below retain the original sequencing, not current completion.
+> Connected Activity delivery, real-provider quality and human acceptance remain open.
+
 # AI Director — approved Activity-first architecture
 
 Status: approved product/design specification; runtime integration is not complete.

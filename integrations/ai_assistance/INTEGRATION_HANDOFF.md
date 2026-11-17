@@ -361,3 +361,84 @@ confirmation, visible pending follow-ups, stale/reopen handling and per-viewer
 outcome projection. Current Discord legacy forms are not the interface for these
 new policy-selected table controls. Engine-first implementation intentionally
 leaves that consolidated Activity work for later.
+
+## Assisted player-test session coordinator and required Activity alterations
+
+Current engine candidate: [player guide](../../docs/P2_PLAYER_TEST_GUIDE.md) and
+[verification/findings](../../reports/P2_PLAYER_TEST_CANDIDATE.md). The earlier
+v1/v2 status descriptions do not limit the new v3 native consumers. These are
+Python contracts and a local synthetic development console; no route is installed.
+
+`DirectorSessionService(context, conversation=None, outcomes=None)` reuses existing
+services rather than maintaining another campaign state:
+
+| Operation | Contract / UI responsibility |
+|---|---|
+| `submit(viewer, scene, AppendSceneInput)` | Returns saved `input` and discrete `conversation`. Persist the full original command/key for retry. A failure after input or GM success can resume with the same command. OOC input returns no conversation. |
+| `work(viewer, scene, gm=False)` | Own native work/proposal metadata and own declarations. `gm=True` additionally requires actual configured GM authorization and returns source metadata for native GM adapters and all scene declarations. It never grants another participant's choices. |
+| `bind_action(gm, key, scene, review_id, action_id)` | Exact Pilot declaration/Play/narration/author/incarnation proof; immutable metadata only. Show linked native state through completion. Do not bind another role/body by sharing a controller ID. Unsupported bindings retain manual review. |
+| `contributions(viewer, scene)` | Approved intended text and that viewer's native projection, sorted by durable narration ordinal. Rechecks current consent, scene membership, safety and native access. Never treat the private GM log as the shared transcript. |
+
+`work.outcome_sources` carries `source_kind`, `source_id`, `operation`, `owner_id`
+and `frame_required`. Open only a real listed source with `GMOutcomeService.open`;
+then follow private packet → proposal → owner review → confirmation. Proposed
+battle contexts use the latest canonical record per ID. Closed contexts do not
+reappear from their older proposed history.
+
+`work.proposals.status` distinguishes `awaiting_confirmation`, `confirmed` and
+`stale_reopen_source`. A native confirmation does not imply all subsequent owner
+work is complete. `work.declarations` distinguishes real linked native state from
+unlinked routing/clarification; `decision_current` tells whether an unlinked routing
+note still matches its current fingerprint. A source edit becomes `source_stale`.
+Triage remains with `DirectorPlayReviewService.review` and requires a fresh private
+fingerprint. Unknown/disabled/unimplemented mechanics are not completed by triage.
+
+Conversation rendering must honor the saved decision: show an ordinary GM reply
+only for `gm_decision.action=RESPOND`. WAIT is diagnostic metadata. Handler reply
+exists only after engine RESPOND; repeated unsolicited scope warnings with an
+actual saved reply stay silent until the relevant role/scope changes. The new
+`scope_already_addressed` reason is a WAIT reason. Direct requests remain eligible;
+no fixed quota or general semantic pacing is claimed. The conversation provider
+is still the bounded synthetic implementation; real-model free prose is not enabled.
+
+Keep `owner_review.decision` now contains intended verdict/narration and excludes
+all private assessment notes. Full assessment/reasoning belongs in GM-private
+review only. OOC native Handler-owner confirmation is not fictional Handler speech.
+The later Activity should distinguish these labels even when one human holds both.
+
+Explicit retained knowledge uses the existing `DirectorContextService.record`:
+ordinary observations keep their provenance; a confirmed `gm-narration:` source
+can become an `approved_outcome` reference after actual completion/proposal/command,
+text and original-audience checks. Add this classification to frontend enums.
+The GM explicitly selects the actual known actors; no automatic omniscience is
+granted. These references describe approved accounts, not new canon effects.
+
+`DirectorContextService.archive(gm, key, scene, expected_context_revision,
+reference_ids, reason)` retires selected active prompt references with an immutable
+record. Require exact current IDs/revision; dependent references must be retained
+or retired together. Keep history available to authorized GM review. Do not present
+this control as deleting evidence, erasing character memory or a real-data privacy
+redaction feature. Source corrections still require explicit reconciliation.
+
+The consolidated frontend work is:
+
+1. Real authenticated session → verified server principal and actual scene/role;
+   current consent/safety/permissions on every read, write and reconnect. The
+   console's `/as` fixture personas and trusted `synthetic=True` are never wire
+   permissions or live-authentication substitutes.
+2. Scene input/retry handling, separate visible GM/Handler interventions and quiet
+   turns; stable source/reply IDs and native scene-lock feedback.
+3. Role-specific work list, exact declaration/native-action binding, native choice
+   forms and source-specific manual escalation. Preserve players' voluntary inputs.
+4. Private GM framing/proposal panel, source evidence and separate actual-owner
+   confirmation; stale/reopen flow, visible costs/follow-ups and GM-discretion
+   shared outcomes. No browser-authored canonical effects.
+5. Explicit knowledge assignment/retirement controls and ordered participant-safe
+   approved readbacks. Invalidate cached protected data on scope/consent changes.
+6. Feedback capture and human pacing/fairness evaluation, followed separately by
+   real-provider usage/data handling, delivery/reconnect tests and live enablement.
+
+The backend source work does not need the Activity repository to finish its
+synthetic candidate. Connecting the real UI/authentication still needs that
+repository's concrete server adapter and ownership. No real capture, provider
+transport, Discord publication or deployment is supplied by this handoff.

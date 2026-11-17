@@ -39,6 +39,15 @@ def test_entire_inventory_and_every_native_identifier_have_explicit_review_route
     assert len(catalog.recognize("GM, I declare Sex Play.")) > 1
     assert catalog.recognize("GM, I declare Princess Sex Play.")[0].play_id == "princess_sex"
     assert not catalog.recognize("I will not declare Dive Deep.")
+    assert (
+        catalog.recognize("GM, I call Keep Your Head to hold steady.")[0].play_id
+        == "keep_your_head"
+    )
+    assert (
+        catalog.recognize("GM, I choose Check Sensors to inspect the approach.")[0].play_id
+        == "check_sensors"
+    )
+    assert not catalog.recognize("GM, if I choose Keep Your Head, what happens?")
     assert not catalog.declared("I request water.")
     assert catalog.declared("GM, I declare an unknown training technique.")
     for identity, label in (*BASIC, *EXTRA):
