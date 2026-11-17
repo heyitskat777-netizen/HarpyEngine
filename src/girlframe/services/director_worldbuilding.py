@@ -55,6 +55,7 @@ class DirectorWorldbuildingService:
         gm: bool = False,
         native_access: bool = True,
     ) -> None:
+        self.store.guild_member(viewer)
         self.observer._scope()
         self.observer.game.unpaused(c)
         row = self.observer._scene(c, scene, viewer)
@@ -340,10 +341,13 @@ class DirectorWorldbuildingService:
             review = self._saved(c, scene, identity + ":review")
             status = review["decision"] if review else "awaiting_gm_review"
             if not self._saved(c, scene, "world-commit:" + identity):
-                try:
-                    self._current(c, viewer, packet)
-                except WorkflowError:
-                    status = "stale_reopen_source"
+                if self._native_committed(c, identity):
+                    status = "native_committed_recover_receipt"
+                else:
+                    try:
+                        self._current(c, viewer, packet)
+                    except WorkflowError:
+                        status = "stale_reopen_source"
             else:
                 status = "committed"
             return {
@@ -354,6 +358,17 @@ class DirectorWorldbuildingService:
                 "semantic_review_required": True,
                 "publication": "private_only",
             }
+
+    def _native_committed(self, c: Connection, identity: str) -> bool:
+        return (
+            c.scalar(
+                sa.select(t.commands.c.interaction_key).where(
+                    t.commands.c.campaign_id == self.store.campaign_id,
+                    t.commands.c.interaction_key == "worldbuilding-native:" + identity,
+                )
+            )
+            is not None
+        )
 
     def feedback(
         self, viewer: GuildViewer, scene: str, request: str, raw: dict[str, Any]
@@ -818,7 +833,9 @@ class DirectorWorldbuildingService:
                         "id": identity,
                         "owner_id": packet.owner_id,
                         "kind": proposal.action.kind,
-                        "status": "stale_reopen_source"
+                        "status": "native_committed_recover_receipt"
+                        if self._native_committed(c, identity)
+                        else "stale_reopen_source"
                         if packet.native_guard != self._guard(c, scene)
                         else "awaiting_confirmation"
                         if review

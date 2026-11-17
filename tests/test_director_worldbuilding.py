@@ -242,6 +242,10 @@ def test_native_commit_recovers_after_private_finalize_failure_without_duplicate
     with pytest.raises(RuntimeError, match="after-native"):
         service.confirm(ADMIN, "confirm", scene, saved["id"])
     assert len(records(state(game))) == 1
+    assert (
+        service.private(ADMIN, scene, saved["id"])["status"] == "native_committed_recover_receipt"
+    )
+    assert service.pending(ADMIN, scene, gm=True)[0]["status"] == "native_committed_recover_receipt"
     committed = service.confirm(ADMIN, "confirm", scene, saved["id"])
     assert committed["canon_committed"] and len(records(state(game))) == 1
     assert not service.pending(ADMIN, scene, gm=True)
@@ -251,3 +255,5 @@ def test_existing_session_work_remains_readable_without_world_capability(routed)
     observer, context, scene, _, _ = routed
     assert observer.store.policy.m3_approval is None
     assert DirectorSessionService(context).work(PLAYER, scene)["worldbuilding"] == []
+    with pytest.raises(WorkflowError):
+        DirectorWorldbuildingService(context).pending(replace(ADMIN, guild_id=201), scene)
