@@ -670,6 +670,15 @@ class DirectorObservationService:
             ).tuples()
         )
         lock = self.game.lock(c, scene["channel_id"])
+        # Policy sets have no order. Their JSON array order can change with the
+        # process hash seed; that must not make unchanged saved proposals stale.
+        runtime_policy = self.store.policy.model_dump(mode="json")
+        runtime_policy["status_user_ids"] = sorted(runtime_policy["status_user_ids"])
+        approval = runtime_policy.get("m3_approval")
+        if approval is not None:
+            for name in ("subsystems", "activity_specialist_rules", "native_risk_plays"):
+                if name in approval:
+                    approval[name] = sorted(approval[name])
         return _digest(
             {
                 "generation": state.generation,
@@ -679,7 +688,7 @@ class DirectorObservationService:
                 "members": [tuple(row) for row in members],
                 "canonical": canonical,
                 "safety": safety,
-                "runtime_policy": self.store.policy.model_dump(mode="json"),
+                "runtime_policy": runtime_policy,
                 "actions": [tuple(row) for row in action_versions],
                 "choices": [tuple(row) for row in choice_versions],
                 "required_work": [tuple(row) for row in work_versions],
