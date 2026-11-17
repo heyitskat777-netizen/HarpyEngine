@@ -8,6 +8,13 @@ from girlframe.ai.contracts import Contract
 from girlframe.engine.m3_actor_state import ActorRef
 
 
+class KnowledgeRelation(Contract):
+    """A stated relationship between accounts, not an engine verdict about truth."""
+
+    kind: Literal["competes_with", "corrects"]
+    reference_id: str = Field(min_length=1, max_length=100)
+
+
 class KnowledgeReference(Contract):
     id: str
     source_id: str
@@ -16,6 +23,9 @@ class KnowledgeReference(Contract):
     dependencies: tuple[str, ...] = ()
     known_by: tuple[str, ...] = ()
     reported_by: ActorRef | None = Field(default=None, exclude_if=lambda x: x is None)
+    relations: tuple[KnowledgeRelation, ...] = Field(
+        default=(), max_length=10, exclude_if=lambda x: not x
+    )
     origin_scene: str | None = Field(default=None, exclude_if=lambda x: x is None)
     origin_reference: str | None = Field(default=None, exclude_if=lambda x: x is None)
     topic: Literal["general", "objective", "scope", "status", "briefing", "tactical", "debrief"] = (

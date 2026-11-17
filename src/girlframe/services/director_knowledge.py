@@ -257,6 +257,8 @@ class DirectorKnowledgeService:
                 raise WorkflowError("UNGROUNDED_KNOWLEDGE: quote actual source text.")
             if not set(update.recipients) <= set(packet.recipients):
                 raise WorkflowError("INVALID_RECIPIENT: select actual current scene actors.")
+            if not {relation.reference_id for relation in update.relations} <= refs.keys():
+                raise WorkflowError("STALE_RELATION: relate only current source-bound accounts.")
             if update.basis == "perception":
                 if packet.source.kind != "message" or update.recipients != (packet.source.actor,):
                     raise WorkflowError(
@@ -586,6 +588,16 @@ class DirectorKnowledgeService:
                         "quote": update.quote,
                         "topic": update.topic,
                         "prior": update.prior_reference,
+                        **(
+                            {
+                                "relations": [
+                                    relation.model_dump(mode="json")
+                                    for relation in update.relations
+                                ]
+                            }
+                            if update.relations
+                            else {}
+                        ),
                         "recipients": sorted(x.token for x in update.recipients),
                     }
                 )
@@ -609,7 +621,13 @@ class DirectorKnowledgeService:
                     source_revision=1,
                     order=len(previous) + index,
                     known_by=tuple(x.token for x in update.recipients),
-                    dependencies=(update.prior_reference,) if update.prior_reference else (),
+                    dependencies=tuple(
+                        dict.fromkeys(
+                            ((update.prior_reference,) if update.prior_reference else ())
+                            + tuple(relation.reference_id for relation in update.relations)
+                        )
+                    ),
+                    relations=update.relations,
                     topic=update.topic,
                     classification="approved_outcome"
                     if update.basis == "outcome"

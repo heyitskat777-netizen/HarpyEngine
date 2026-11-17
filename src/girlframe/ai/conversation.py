@@ -118,8 +118,97 @@ class HandlerDecision(Contract):
         "update_already_addressed",
         "gm_request",
         "no_handler_need",
+        "reviewed_indirect_request",
+        "reviewed_urgent_report",
+        "need_already_addressed",
     ]
     source_refs: tuple[str, ...] = Field(default=(), max_length=3)
+
+
+class HandlerNeedPacket(Contract):
+    request_id: str
+    scene_id: str
+    source_id: str
+    source_revision: int
+    request: HandlerRequest
+    revision: str
+
+
+class HandlerNeedProposal(Contract):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "allOf": [
+                {
+                    "if": {
+                        "properties": {"kind": {"const": "indirect_request"}},
+                        "required": ["kind"],
+                    },
+                    "then": {
+                        "required": ["speech_quote"],
+                        "properties": {"speech_quote": {"type": "string", "minLength": 1}},
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {"kind": {"const": "urgent_known_report"}},
+                        "required": ["kind"],
+                    },
+                    "then": {
+                        "required": ["source_refs"],
+                        "properties": {"source_refs": {"minItems": 1}},
+                    },
+                },
+                {
+                    "if": {"properties": {"kind": {"const": "no_need"}}, "required": ["kind"]},
+                    "then": {"properties": {"action": {"const": "WAIT"}}},
+                },
+                {
+                    "if": {"properties": {"action": {"const": "RESPOND"}}, "required": ["action"]},
+                    "then": {
+                        "properties": {
+                            "kind": {"enum": ["indirect_request", "urgent_known_report"]}
+                        }
+                    },
+                },
+            ]
+        }
+    )
+    request_id: str
+    action: Literal["RESPOND", "WAIT"]
+    kind: Literal["indirect_request", "urgent_known_report", "no_need"]
+    speech_quote: str | None = Field(
+        default=None,
+        max_length=1000,
+        description="For an indirect request, quote actual words heard by the Handler, "
+        "never private narration.",
+    )
+    source_refs: tuple[str, ...] = Field(
+        default=(),
+        max_length=3,
+        description="Only actual Handler-known references. Urgent reports require at least one.",
+    )
+    reason: str = Field(
+        min_length=1,
+        max_length=1200,
+        description="A brief private GM interpretation, not new facts, dialogue "
+        "or mechanical effects.",
+    )
+
+    @model_validator(mode="after")
+    def need_shape(self) -> "HandlerNeedProposal":
+        if len(set(self.source_refs)) != len(self.source_refs):
+            raise ValueError("Cite each Handler reference once")
+        if self.action == "RESPOND" and self.kind == "no_need":
+            raise ValueError("No need cannot request a response")
+        if self.kind == "indirect_request" and not (self.speech_quote or "").strip():
+            raise ValueError("An indirect request needs an exact heard speech quote")
+        if self.kind == "urgent_known_report" and not self.source_refs:
+            raise ValueError("An urgent report needs actual known references")
+        return self
+
+
+class HandlerNeedProvider(Protocol):
+    def propose(self, packet: HandlerNeedPacket) -> HandlerNeedProposal: ...
 
 
 class SyntheticHandlerPolicy:

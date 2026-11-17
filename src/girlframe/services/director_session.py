@@ -6,6 +6,7 @@ from typing import Any
 import sqlalchemy as sa
 from sqlalchemy import Connection
 
+from girlframe.ai.conversation import HandlerNeedProvider
 from girlframe.ai.knowledge import KnowledgeProvider
 from girlframe.ai.observation import AppendSceneInput
 from girlframe.database import tables as t
@@ -30,6 +31,8 @@ class DirectorSessionService:
         outcomes: GMOutcomeService | None = None,
         knowledge_provider: KnowledgeProvider | None = None,
         knowledge_gm: GuildViewer | None = None,
+        need_provider: HandlerNeedProvider | None = None,
+        need_gm: GuildViewer | None = None,
     ):
         self.context, self.observer, self.store = context, context.observations, context.store
         self.game = self.observer.game
@@ -38,12 +41,18 @@ class DirectorSessionService:
             context, require_response_scope=self.conversation.handler_mode == "reviewed"
         )
         self.reviews = DirectorPlayReviewService(context)
+        self.responses = self.outcomes.responses
         from girlframe.services.director_knowledge import DirectorKnowledgeService
 
         self.knowledge = DirectorKnowledgeService(context)
         if (knowledge_provider is None) != (knowledge_gm is None):
             raise ValueError("Configure the trusted GM principal and knowledge provider together")
         self.knowledge_provider, self.knowledge_gm = knowledge_provider, knowledge_gm
+        if (need_provider is None) != (need_gm is None):
+            raise ValueError("Configure the trusted response-need provider and GM together")
+        if need_provider is not None and self.conversation.handler_mode != "reviewed":
+            raise ValueError("Reviewed response needs require reviewed Handler mode")
+        self.need_provider, self.need_gm = need_provider, need_gm
 
     def submit(self, viewer: GuildViewer, scene: str, command: AppendSceneInput) -> dict[str, Any]:
         """Retry the same command to resume after a saved input or GM-only success."""
@@ -58,6 +67,15 @@ class DirectorSessionService:
                 scene,
                 source.source_id,
                 self.knowledge_provider,
+            )
+        if self.need_provider is not None:
+            assert self.need_gm is not None
+            self.conversation.acquire_handler_need(
+                self.need_gm,
+                command.command_key + ":need",
+                scene,
+                source.source_id,
+                self.need_provider,
             )
         conversation = self.conversation.process_message(
             viewer, command.command_key + ":route", scene, source.source_id, source.source_revision
@@ -174,6 +192,10 @@ class DirectorSessionService:
                 "scope": "gm" if gm else "own",
                 "knowledge_sources": self.knowledge.pending(viewer, scene) if gm else [],
                 "handler_drafts": self.conversation.pending_handler(viewer, scene) if gm else [],
+                "handler_needs": self.conversation.pending_handler_needs(viewer, scene)
+                if gm
+                else [],
+                "response_requests": self.responses.pending(viewer, scene, gm=gm),
                 "native": work,
                 "outcome_sources": sources,
                 "decision_routes": [self._decision_route(c, row) for row in work["choices"]],

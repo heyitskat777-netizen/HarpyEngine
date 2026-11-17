@@ -43,6 +43,9 @@ class GMOutcomeService:
         self.context, self.observer = context, context.observations
         self.game, self.store, self.provider = self.observer.game, context.store, provider
         self.require_response_scope = require_response_scope
+        from girlframe.services.director_responses import DirectorResponseService
+
+        self.responses = DirectorResponseService(self)
 
     def _scope(
         self, c: Connection, viewer: GuildViewer, scene: str, *, gm: bool = False
@@ -283,10 +286,12 @@ class GMOutcomeService:
                 data["response_authorized"] = (
                     target.ref.kind == "npc" and str(target.controller) == owner
                 )
-            elif frame.response_target is not None:
+            elif frame.response_target is not None or frame.response_request is not None:
                 raise WorkflowError(
                     "INVALID_RESPONSE_TARGET: select other scope for an affected actor."
                 )
+            if frame.response_request is not None:
+                self.responses.bind(c, scene, kind, identity, owner, frame, data, evidence)
         records = {}
         for name in ("m3_missions", "m3_off_duty", "m3_required_work"):
             table = t.m3[name]

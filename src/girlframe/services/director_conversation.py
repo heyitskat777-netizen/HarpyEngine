@@ -14,6 +14,9 @@ from girlframe.ai.conversation import (
     GMProvider,
     GMRequest,
     HandlerDecision,
+    HandlerNeedPacket,
+    HandlerNeedProposal,
+    HandlerNeedProvider,
     HandlerProvider,
     HandlerRequest,
     Route,
@@ -330,6 +333,8 @@ class DirectorConversationService:
             "source_revision": expected_source_revision,
             **({"handler_decision_id": handler_decision_id} if handler_decision_id else {}),
         }
+        selected_handler_decision = None
+        selected_need_key = None
         with self.store.transaction() as c:
             self._authorize_source(c, viewer, scene_id, source_id)
             row = (
@@ -372,6 +377,20 @@ class DirectorConversationService:
                     or decision["decision"]["action"] != "RESPOND"
                 ):
                     raise WorkflowError("STALE_HANDLER_DECISION: reconsider the actual message.")
+                if self.handler_mode == "reviewed":
+                    assert isinstance(request, HandlerRequest)
+                    selected_handler_decision, selected_need_key = self._handler_decision(
+                        c, scene_id, source, request
+                    )
+                    if (
+                        selected_handler_decision.action != "RESPOND"
+                        or selected_handler_decision.model_dump(mode="json") != decision["decision"]
+                        or selected_need_key != decision.get("need_key")
+                    ):
+                        raise WorkflowError(
+                            "STALE_HANDLER_DECISION: the actual response need "
+                            "is no longer eligible."
+                        )
         # Two distinct transports and schemas; synthetic providers run outside locks.
         try:
             if isinstance(request, HandlerRequest):
@@ -393,17 +412,28 @@ class DirectorConversationService:
             ) from None
         if route == "handler" and self.handler_mode == "reviewed":
             assert isinstance(request, HandlerRequest)
-            self._validate_handler_draft(request, reply)
+            self._validate_handler_draft(request, reply, selected_handler_decision)
 
         def authorize(c: Connection) -> None:
             self._authorize_source(c, viewer, scene_id, source_id)
 
         def operation(c: Connection) -> dict[str, Any]:
-            _, current = self._requests(c, viewer, scene_id, source_id, route)
+            current_request, current = self._requests(c, viewer, scene_id, source_id, route)
             if current != fingerprint:
                 raise WorkflowError("STALE_CONTEXT: no reply committed; refresh and retry.")
             identity = "exchange:" + str(uuid4())
             if route == "handler" and self.handler_mode == "reviewed":
+                assert isinstance(current_request, HandlerRequest)
+                current_decision, current_need_key = self._handler_decision(
+                    c, scene_id, source, current_request
+                )
+                if (
+                    current_decision != selected_handler_decision
+                    or current_need_key != selected_need_key
+                ):
+                    raise WorkflowError(
+                        "STALE_HANDLER_DECISION: reconsider the changed response need."
+                    )
                 identity = "handler-draft:" + str(uuid4())
                 self._save_handler_record(
                     c,
@@ -484,7 +514,12 @@ class DirectorConversationService:
             )
         )
 
-    def _validate_handler_draft(self, request: HandlerRequest, reply: ConversationReply) -> None:
+    def _validate_handler_draft(
+        self,
+        request: HandlerRequest,
+        reply: ConversationReply,
+        decision: HandlerDecision | None = None,
+    ) -> None:
         if (
             reply.provider != "reviewed-handler-v1"
             or reply.play_id is not None
@@ -505,7 +540,7 @@ class DirectorConversationService:
             raise WorkflowError(
                 "HANDLER_CITATION_REQUIRED: factual answers need scoped references."
             )
-        decision = SyntheticHandlerPolicy().decide(request)
+        decision = decision or SyntheticHandlerPolicy().decide(request)
         if decision.action != "RESPOND":
             raise WorkflowError("HANDLER_WAIT: this message has no eligible response.")
         if not set(decision.source_refs) <= refs:
@@ -535,7 +570,8 @@ class DirectorConversationService:
             assert isinstance(request, HandlerRequest)
             try:
                 reply = ConversationReply.model_validate_json(json.dumps(raw))
-                self._validate_handler_draft(request, reply)
+                decision, _ = self._handler_decision(c, scene, source, request)
+                self._validate_handler_draft(request, reply, decision)
             except ValidationError:
                 return {
                     "valid": False,
@@ -673,7 +709,9 @@ class DirectorConversationService:
             if decision == "approve":
                 request = self._current_handler_draft(c, viewer, scene, draft)
                 reply = ConversationReply.model_validate_json(json.dumps(draft["reply"]))
-                self._validate_handler_draft(request, reply)
+                source = self._need_source(c, scene, draft["source_id"])
+                current_decision, _ = self._handler_decision(c, scene, source, request)
+                self._validate_handler_draft(request, reply, current_decision)
                 exchange_id = "exchange:" + str(uuid4())
                 self._save_handler_record(
                     c,
@@ -766,6 +804,494 @@ class DirectorConversationService:
                 )
         return {"gm": gm, "handler": handler}
 
+    def _need_source(self, c: Connection, scene: str, source_id: str) -> Observation:
+        from girlframe.services.director_knowledge import DirectorKnowledgeService
+
+        knowledge = DirectorKnowledgeService(self.context)
+        knowledge._source(c, scene, source_id)
+        source = self.observations._latest_source(c, source_id)
+        if source is None or source.actor not in knowledge._actors(
+            c, self.observations._scene(c, scene)
+        ):
+            raise WorkflowError("STALE_HANDLER_NEED: recover the actual source actor.")
+        return source
+
+    def _need_revision(
+        self, c: Connection, scene: str, source: Observation, request: HandlerRequest
+    ) -> str:
+        from girlframe.services.handler_setup import HandlerService
+
+        state = self.observations._state(c, scene)
+        stable = state.model_copy(update={"generation": 0})
+        return _digest(
+            {
+                "source": source.source_id,
+                "source_revision": source.source_revision,
+                "actor": source.actor.model_dump(mode="json"),
+                "speech": request.question,
+                "handler": request.context.actor.model_dump(mode="json")
+                if request.context.actor
+                else None,
+                "references": [x.model_dump(mode="json") for x in request.context.references],
+                "guard": self.observations._guard(c, self.observations._scene(c, scene), stable),
+                "policy_revision": state.policy_revision,
+                "consent_generation": state.consent_generation,
+                "consents": state.consents,
+                "appointment": HandlerService(self.store).current(c)[0],
+            }
+        )
+
+    def _need_packet(
+        self, c: Connection, viewer: GuildViewer, scene: str, source_id: str, identity: str
+    ) -> HandlerNeedPacket:
+        self._handler_review_scope(c, viewer, scene)
+        if self.handler_mode != "reviewed":
+            raise WorkflowError(
+                "HANDLER_NEED_MODE: explicit response-need review requires reviewed mode."
+            )
+        source = self._need_source(c, scene, source_id)
+        request, _ = self._requests(c, viewer, scene, source_id, "handler", review_source=source)
+        assert isinstance(request, HandlerRequest)
+        return HandlerNeedPacket(
+            request_id=identity,
+            scene_id=scene,
+            source_id=source_id,
+            source_revision=source.source_revision,
+            request=request,
+            revision=self._need_revision(c, scene, source, request),
+        )
+
+    def _need_record(self, c: Connection, scene: str, identity: str, kind: str) -> dict[str, Any]:
+        saved = self._saved(c, identity)
+        if not saved or saved.get("record_type") != kind or saved.get("scene_id") != scene:
+            raise WorkflowError("HANDLER_NEED_UNAVAILABLE: reopen actual scene response-need work.")
+        return saved
+
+    def open_handler_need(
+        self, viewer: GuildViewer, key: str, scene: str, source_id: str
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            identity = "handler-need-request:" + str(uuid4())
+            packet = self._need_packet(c, viewer, scene, source_id, identity)
+            self._save_handler_record(
+                c,
+                scene,
+                identity,
+                {
+                    "id": identity,
+                    "scene_id": scene,
+                    "record_type": "handler_need_request",
+                    "packet": packet.model_dump(mode="json"),
+                },
+            )
+            return {"id": identity}
+
+        return self.store._write(
+            viewer,
+            key,
+            "director.handler_need_open",
+            {"scene": scene, "source": source_id},
+            operation,
+            authorize=lambda c: self._handler_review_scope(c, viewer, scene),
+        )
+
+    def handler_need_packet(
+        self, viewer: GuildViewer, scene: str, identity: str
+    ) -> HandlerNeedPacket:
+        with self.store.engine.connect() as c:
+            self._handler_review_scope(c, viewer, scene)
+            saved = self._need_record(c, scene, identity, "handler_need_request")
+            return HandlerNeedPacket.model_validate_json(json.dumps(saved["packet"]))
+
+    def _fresh_need(self, c: Connection, viewer: GuildViewer, packet: HandlerNeedPacket) -> None:
+        current = self._need_packet(c, viewer, packet.scene_id, packet.source_id, packet.request_id)
+        if current.revision != packet.revision:
+            raise WorkflowError(
+                "STALE_HANDLER_NEED: re-review current speech, knowledge and authority."
+            )
+
+    def _validate_need(
+        self, c: Connection, packet: HandlerNeedPacket, proposal: HandlerNeedProposal
+    ) -> None:
+        if proposal.request_id != packet.request_id:
+            raise WorkflowError("HANDLER_NEED_SOURCE: preserve the exact source request.")
+        refs = {x.id: x for x in packet.request.context.references}
+        if not set(proposal.source_refs) <= refs.keys():
+            raise WorkflowError("HANDLER_NEED_CITATION: cite only actual Handler-known references.")
+        if proposal.kind == "indirect_request":
+            quote = proposal.speech_quote or ""
+            if packet.request.question == "Scene update." or quote not in packet.request.question:
+                raise WorkflowError(
+                    "HANDLER_NEED_SPEECH: quote actual heard words, not private narration."
+                )
+        if proposal.kind == "urgent_known_report":
+            if packet.request.question == "Scene update.":
+                raise WorkflowError(
+                    "HANDLER_NEED_REPORT: require an actually heard report from this source."
+                )
+            for identity in proposal.source_refs:
+                ref = refs[identity]
+                source = ref.source_id
+                if source.startswith("knowledge-acquired:"):
+                    event = self._saved(c, source)
+                    if not event or event.get("source", {}).get("id") != packet.source_id:
+                        raise WorkflowError(
+                            "HANDLER_NEED_REPORT: cite a known report from this source."
+                        )
+                elif source != packet.source_id:
+                    raise WorkflowError(
+                        "HANDLER_NEED_REPORT: cite a known report from this source."
+                    )
+
+    def _save_need_proposal(
+        self,
+        c: Connection,
+        viewer: GuildViewer,
+        scene: str,
+        request_id: str,
+        proposal: HandlerNeedProposal,
+    ) -> dict[str, Any]:
+        record = self._need_record(c, scene, request_id, "handler_need_request")
+        packet = HandlerNeedPacket.model_validate_json(json.dumps(record["packet"]))
+        self._fresh_need(c, viewer, packet)
+        self._validate_need(c, packet, proposal)
+        table = t.director_context["shadow"]
+        count = (
+            c.scalar(
+                sa.select(sa.func.count())
+                .select_from(table)
+                .where(
+                    table.c.campaign_id == self.store.campaign_id,
+                    table.c.scene_id == scene,
+                    sa.func.json_extract(table.c.body_json, "$.record_type")
+                    == "handler_need_proposal",
+                )
+            )
+            or 0
+        )
+        identity = "handler-need-proposal:" + str(uuid4())
+        self._save_handler_record(
+            c,
+            scene,
+            identity,
+            {
+                "id": identity,
+                "scene_id": scene,
+                "record_type": "handler_need_proposal",
+                "order": count + 1,
+                "packet": packet.model_dump(mode="json"),
+                "proposal": proposal.model_dump(mode="json"),
+            },
+        )
+        return {"id": identity, "effects_applied": False}
+
+    def propose_handler_need(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        scene: str,
+        request_id: str,
+        proposal: HandlerNeedProposal,
+    ) -> dict[str, Any]:
+        proposal = HandlerNeedProposal.model_validate_json(proposal.model_dump_json())
+        return self.store._write(
+            viewer,
+            key,
+            "director.handler_need_propose",
+            {"scene": scene, "request": request_id, "proposal": proposal.model_dump(mode="json")},
+            lambda c: self._save_need_proposal(c, viewer, scene, request_id, proposal),
+            authorize=lambda c: self._handler_review_scope(c, viewer, scene),
+        )
+
+    def generate_handler_need(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        scene: str,
+        request_id: str,
+        provider: HandlerNeedProvider,
+    ) -> dict[str, Any]:
+        payload = {"scene": scene, "request": request_id}
+        with self.store.engine.connect() as c:
+            self._handler_review_scope(c, viewer, scene)
+            old = (
+                c.execute(
+                    sa.select(t.commands).where(
+                        t.commands.c.campaign_id == self.store.campaign_id,
+                        t.commands.c.interaction_key == key,
+                    )
+                )
+                .mappings()
+                .first()
+            )
+            if old:
+                if old["request_hash"] != _digest(
+                    {
+                        "actor": viewer.user_id,
+                        "kind": "director.handler_need_generate",
+                        "payload": payload,
+                    }
+                ):
+                    raise WorkflowError("IDEMPOTENCY_CONFLICT: response-need generation changed.")
+                return dict(json.loads(old["outcome_json"]))
+            saved = self._need_record(c, scene, request_id, "handler_need_request")
+            packet = HandlerNeedPacket.model_validate_json(json.dumps(saved["packet"]))
+            self._fresh_need(c, viewer, packet)
+        try:
+            proposal = HandlerNeedProposal.model_validate_json(
+                provider.propose(packet).model_dump_json()
+            )
+        except Exception:
+            raise WorkflowError(
+                "HANDLER_NEED_PROVIDER_UNAVAILABLE: retry without committing a need."
+            ) from None
+        return self.store._write(
+            viewer,
+            key,
+            "director.handler_need_generate",
+            payload,
+            lambda c: self._save_need_proposal(c, viewer, scene, request_id, proposal),
+            authorize=lambda c: self._handler_review_scope(c, viewer, scene),
+        )
+
+    def private_handler_need(
+        self, viewer: GuildViewer, scene: str, identity: str
+    ) -> dict[str, Any]:
+        with self.store.engine.connect() as c:
+            self._handler_review_scope(c, viewer, scene)
+            saved = self._need_record(c, scene, identity, "handler_need_proposal")
+            packet = HandlerNeedPacket.model_validate_json(json.dumps(saved["packet"]))
+            review = self._saved(c, identity + ":review")
+            status = review["decision"] if review else "awaiting_gm_review"
+            try:
+                self._fresh_need(c, viewer, packet)
+            except WorkflowError:
+                status = "stale_reopen_source"
+            return {
+                "id": identity,
+                "packet": saved["packet"],
+                "proposal": saved["proposal"],
+                "status": status,
+                "effects_applied": False,
+            }
+
+    def pending_handler_needs(self, viewer: GuildViewer, scene: str) -> list[dict[str, Any]]:
+        with self.store.engine.connect() as c:
+            self._handler_review_scope(c, viewer, scene)
+            table = t.director_context["shadow"]
+            rows = [
+                json.loads(raw)
+                for raw in c.scalars(
+                    sa.select(table.c.body_json).where(
+                        table.c.campaign_id == self.store.campaign_id,
+                        table.c.scene_id == scene,
+                        sa.func.json_extract(table.c.body_json, "$.record_type")
+                        == "handler_need_proposal",
+                    )
+                )
+            ]
+            return [
+                {
+                    "id": row["id"],
+                    "source_id": row["packet"]["source_id"],
+                    "status": "awaiting_gm_review",
+                }
+                for row in rows
+                if self._saved(c, row["id"] + ":review") is None
+            ]
+
+    def review_handler_need(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        scene: str,
+        identity: str,
+        decision: Literal["approve", "reject"],
+        reason: str,
+    ) -> dict[str, Any]:
+        if decision not in ("approve", "reject") or not reason.strip() or len(reason) > 1200:
+            raise WorkflowError("HANDLER_NEED_REVIEW: give an explicit review and short reason.")
+
+        def operation(c: Connection) -> dict[str, Any]:
+            saved = self._need_record(c, scene, identity, "handler_need_proposal")
+            if self._saved(c, identity + ":review"):
+                raise WorkflowError("HANDLER_NEED_FINAL: this proposal already has a review.")
+            if decision == "approve":
+                packet = HandlerNeedPacket.model_validate_json(json.dumps(saved["packet"]))
+                self._fresh_need(c, viewer, packet)
+                self._validate_need(
+                    c,
+                    packet,
+                    HandlerNeedProposal.model_validate_json(json.dumps(saved["proposal"])),
+                )
+            self._save_handler_record(
+                c,
+                scene,
+                identity + ":review",
+                {
+                    "id": identity + ":review",
+                    "scene_id": scene,
+                    "record_type": "handler_need_review",
+                    "decision": decision,
+                    "reason": reason,
+                    "reviewer_id": str(viewer.user_id),
+                },
+            )
+            return {"id": identity, "status": decision, "effects_applied": False}
+
+        return self.store._write(
+            viewer,
+            key,
+            "director.handler_need_review",
+            {"scene": scene, "proposal": identity, "decision": decision, "reason": reason},
+            operation,
+            authorize=lambda c: self._handler_review_scope(c, viewer, scene),
+        )
+
+    def acquire_handler_need(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        scene: str,
+        source_id: str,
+        provider: HandlerNeedProvider,
+    ) -> dict[str, Any]:
+        """Explicitly configured trusted GM worker; no default provider or public approval."""
+        request = self.open_handler_need(viewer, key + ":source", scene, source_id)
+        proposal = self.generate_handler_need(
+            viewer, key + ":proposal", scene, request["id"], provider
+        )
+        return self.review_handler_need(
+            viewer,
+            key + ":review",
+            scene,
+            proposal["id"],
+            "approve",
+            "Trusted GM provider reviewed this source-bound response need.",
+        )
+
+    def _approved_handler_need(
+        self, c: Connection, scene: str, source: Observation, request: HandlerRequest
+    ) -> tuple[HandlerDecision, str] | None:
+        if self.handler_mode != "reviewed":
+            return None
+        table = t.director_context["shadow"]
+        records = [
+            json.loads(raw)
+            for raw in c.scalars(
+                sa.select(table.c.body_json).where(table.c.campaign_id == self.store.campaign_id)
+            )
+        ]
+        candidates = [
+            r
+            for r in records
+            if r.get("record_type") == "handler_need_proposal"
+            and r["packet"]["scene_id"] == scene
+            and r["packet"]["source_id"] == source.source_id
+            and r["packet"]["revision"] == self._need_revision(c, scene, source, request)
+        ]
+        for row in sorted(candidates, key=lambda r: r["order"], reverse=True):
+            review = self._saved(c, row["id"] + ":review")
+            if not review or review["decision"] != "approve":
+                continue
+            proposal = HandlerNeedProposal.model_validate_json(json.dumps(row["proposal"]))
+            if proposal.action == "WAIT":
+                return HandlerDecision(action="WAIT", reason="no_handler_need"), ""
+            refs = {x.id: x for x in request.context.references}
+            need_key = _digest(
+                {
+                    "kind": proposal.kind,
+                    "handler": request.context.actor.model_dump(mode="json")
+                    if request.context.actor
+                    else None,
+                    "audience": sorted(self.observations._scene(c, scene)["participants"]),
+                    "source": (source.source_id, source.source_revision, proposal.speech_quote)
+                    if proposal.kind == "indirect_request"
+                    else None,
+                    "refs": [
+                        (refs[x].origin_scene or scene, refs[x].origin_reference or x)
+                        for x in proposal.source_refs
+                    ],
+                }
+            )
+            prior = {
+                r["id"]
+                for r in records
+                if r.get("record_type") == "handler_response_decision"
+                and r.get("need_key") == need_key
+            }
+            delivered = any(
+                r.get("record_type") == "conversation_exchange"
+                and r.get("route") == "handler"
+                and r.get("handler_decision_id") in prior
+                for r in records
+            )
+            if delivered or (
+                proposal.kind == "urgent_known_report"
+                and set(proposal.source_refs) <= set(request.addressed_update_refs)
+            ):
+                return HandlerDecision(action="WAIT", reason="need_already_addressed"), need_key
+            reason: Literal["reviewed_indirect_request", "reviewed_urgent_report"] = (
+                "reviewed_indirect_request"
+                if proposal.kind == "indirect_request"
+                else "reviewed_urgent_report"
+            )
+            return HandlerDecision(
+                action="RESPOND", reason=reason, source_refs=proposal.source_refs
+            ), need_key
+        return None
+
+    def _handler_decision(
+        self, c: Connection, scene_id: str, source: Observation, request: HandlerRequest
+    ) -> tuple[HandlerDecision, str | None]:
+        decision = SyntheticHandlerPolicy().decide(request)
+        need_key = None
+        if decision.action == "WAIT" and decision.reason != "gm_request":
+            proposed = self._approved_handler_need(c, scene_id, source, request)
+            if proposed is not None:
+                decision, need_key = proposed
+        if decision.reason == "known_update":
+            need_key = self._update_key(c, scene_id, request.context, decision.source_refs[0])
+        if decision.reason == "scope_boundary":
+            # Repeat warnings only after a changed scope/role, not every restatement.
+            # A saved decision without a successful reply has addressed nothing.
+            need_key = _digest(
+                {
+                    "sender": source.actor.model_dump(mode="json"),
+                    "handler": request.context.actor.model_dump(mode="json")
+                    if request.context.actor
+                    else None,
+                    "references": decision.source_refs,
+                }
+            )
+            records = [
+                json.loads(raw)
+                for raw in c.scalars(
+                    sa.select(t.director_context["shadow"].c.body_json).where(
+                        t.director_context["shadow"].c.campaign_id == self.store.campaign_id,
+                        t.director_context["shadow"].c.scene_id == scene_id,
+                    )
+                )
+            ]
+            prior = {
+                r["id"]
+                for r in records
+                if r.get("record_type") == "handler_response_decision"
+                and r.get("need_key") == need_key
+            }
+            if any(
+                r.get("record_type") == "conversation_exchange"
+                and r.get("route") == "handler"
+                and r.get("handler_decision_id") in prior
+                for r in records
+            ):
+                decision = HandlerDecision(
+                    action="WAIT",
+                    reason="scope_already_addressed",
+                    source_refs=decision.source_refs,
+                )
+        return decision, need_key
+
     def decide_handler(
         self,
         viewer: GuildViewer,
@@ -787,48 +1313,7 @@ class DirectorConversationService:
                 raise WorkflowError("STALE_SOURCE: refresh the actual question before routing.")
             request, revision = self._requests(c, viewer, scene_id, source_id, "handler")
             assert isinstance(request, HandlerRequest)
-            decision = SyntheticHandlerPolicy().decide(request)
-            need_key = None
-            if decision.reason == "known_update":
-                need_key = self._update_key(c, scene_id, request.context, decision.source_refs[0])
-            if decision.reason == "scope_boundary":
-                # Repeat warnings only after a changed scope/role, not every restatement.
-                # A saved decision without a successful reply has addressed nothing.
-                need_key = _digest(
-                    {
-                        "sender": source.actor.model_dump(mode="json"),
-                        "handler": request.context.actor.model_dump(mode="json")
-                        if request.context.actor
-                        else None,
-                        "references": decision.source_refs,
-                    }
-                )
-                records = [
-                    json.loads(raw)
-                    for raw in c.scalars(
-                        sa.select(t.director_context["shadow"].c.body_json).where(
-                            t.director_context["shadow"].c.campaign_id == self.store.campaign_id,
-                            t.director_context["shadow"].c.scene_id == scene_id,
-                        )
-                    )
-                ]
-                prior = {
-                    r["id"]
-                    for r in records
-                    if r.get("record_type") == "handler_response_decision"
-                    and r.get("need_key") == need_key
-                }
-                if any(
-                    r.get("record_type") == "conversation_exchange"
-                    and r.get("route") == "handler"
-                    and r.get("handler_decision_id") in prior
-                    for r in records
-                ):
-                    decision = HandlerDecision(
-                        action="WAIT",
-                        reason="scope_already_addressed",
-                        source_refs=decision.source_refs,
-                    )
+            decision, need_key = self._handler_decision(c, scene_id, source, request)
             identity = "handler-decision:" + str(uuid4())
             record = {
                 "id": identity,

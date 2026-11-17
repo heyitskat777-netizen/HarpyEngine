@@ -36,6 +36,11 @@ class TaskFrame(Contract):
         "unresolved cannot settle a verdict.",
     )
     response_target: ActorRef | None = Field(default=None, exclude_if=lambda x: x is None)
+    response_request: str | None = Field(
+        default=None,
+        exclude_if=lambda x: x is None,
+        description="Actual answered controller handoff; valid only for other response scope.",
+    )
 
 
 class Evidence(Contract):

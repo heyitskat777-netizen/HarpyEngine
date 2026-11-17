@@ -5,7 +5,7 @@ from typing import Literal, Protocol
 from pydantic import ConfigDict, Field, model_validator
 
 from girlframe.ai.contracts import Contract
-from girlframe.ai.director import DirectorContext, KnowledgeReference
+from girlframe.ai.director import DirectorContext, KnowledgeReference, KnowledgeRelation
 from girlframe.engine.m3_actor_state import ActorRef
 
 
@@ -73,6 +73,12 @@ class Acquisition(Contract):
         min_length=1,
         description="Required for relay report/paraphrase; forbidden for new testimony.",
     )
+    relations: tuple[KnowledgeRelation, ...] = Field(
+        default=(),
+        max_length=10,
+        exclude_if=lambda x: not x,
+        description="Explicit competing/correcting accounts; these do not establish truth.",
+    )
     topic: Literal["general", "objective", "scope", "status", "briefing", "tactical", "debrief"] = (
         "general"
     )
@@ -86,6 +92,8 @@ class Acquisition(Contract):
             raise ValueError(
                 "A relayed report or paraphrase requires one speaker-known prior reference"
             )
+        if len({x.reference_id for x in self.relations}) != len(self.relations):
+            raise ValueError("Select each related account once")
         return self
 
 

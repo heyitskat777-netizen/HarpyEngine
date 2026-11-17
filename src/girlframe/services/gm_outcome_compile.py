@@ -61,6 +61,13 @@ def validate(packet: OutcomePacket, proposal: OutcomeProposal) -> ChoiceAnswer |
                 raise ValueError(
                     "RESPONSE_OWNERSHIP: preserve the actual target controller's response"
                 )
+            if packet.frame.response_request is not None:
+                if "target_response" not in citations:
+                    raise ValueError("Cite the actual target_response evidence")
+                if native.get("response_decision") == "decline" and d.verdict == "enough":
+                    raise ValueError(
+                        "RESPONSE_OWNERSHIP: a declined voluntary response cannot pass"
+                    )
         action = native["action"]
         result = action["data"]["result"]
         # Reuse actual trait/coverage/prerequisite validation; no alternate keyword oracle.

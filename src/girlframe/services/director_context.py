@@ -48,7 +48,7 @@ class DirectorContextService:
             if reference.origin_scene is not None:
                 from girlframe.services.director_continuity import validate_origin
 
-                validate_origin(self, c, reference)
+                validate_origin(self, c, reference, destination_scene=scene_id)
                 continue
             if reference.source_id.startswith("knowledge-acquired:"):
                 from girlframe.services.director_knowledge import DirectorKnowledgeService
@@ -69,7 +69,39 @@ class DirectorContextService:
                 raise WorkflowError(
                     "STALE_KNOWLEDGE: source correction needs explicit reconciliation."
                 )
+        by_id = {reference.id: reference for reference in references}
+        for reference in references:
+            for relation in reference.relations:
+                target = by_id.get(relation.reference_id)
+                if (
+                    target is None
+                    or target.order >= reference.order
+                    or relation.reference_id not in reference.dependencies
+                ):
+                    raise WorkflowError("STALE_RELATION: reconcile the related account chronology.")
         return references
+
+    @staticmethod
+    def _actor_references(
+        references: tuple[KnowledgeReference, ...], actor: ActorRef
+    ) -> tuple[KnowledgeReference, ...]:
+        """A relationship is visible only when both actual accounts are known."""
+        known = tuple(x for x in references if actor.token in x.known_by)
+        visible = {x.id for x in known}
+        return tuple(
+            x.model_copy(
+                update={
+                    "known_by": (actor.token,),
+                    "dependencies": tuple(
+                        identity for identity in x.dependencies if identity in visible
+                    ),
+                    "relations": tuple(
+                        relation for relation in x.relations if relation.reference_id in visible
+                    ),
+                }
+            )
+            for x in known
+        )
 
     def _approved_outcome(
         self, c: Connection, scene: str, identity: str, *, allow_closed: bool = False
@@ -429,17 +461,7 @@ class DirectorContextService:
                 _, _, actual = self.observations._authorize_input(c, viewer, scene_id, actor.kind)
             if actual != actor:
                 raise WorkflowError("ACTOR_UNAVAILABLE: use your own actual role.")
-            references = tuple(x for x in references if actor.token in x.known_by)
-            visible = {x.id for x in references}
-            references = tuple(
-                x.model_copy(
-                    update={
-                        "known_by": (actor.token,),
-                        "dependencies": tuple(d for d in x.dependencies if d in visible),
-                    }
-                )
-                for x in references
-            )
+            references = self._actor_references(references, actor)
             audience = "actor"
         return DirectorContext(
             campaign_id=self.store.campaign_id,
@@ -493,17 +515,7 @@ class DirectorContextService:
                 validate_role(cast, actual)
         except ValueError:
             raise WorkflowError("HANDLER_UNAVAILABLE: recover the actual Handler role.") from None
-        refs = tuple(x for x in self._current(c, scene_id) if actor.token in x.known_by)
-        visible = {x.id for x in refs}
-        refs = tuple(
-            x.model_copy(
-                update={
-                    "known_by": (actor.token,),
-                    "dependencies": tuple(d for d in x.dependencies if d in visible),
-                }
-            )
-            for x in refs
-        )
+        refs = self._actor_references(self._current(c, scene_id), actor)
         return DirectorContext(
             campaign_id=self.store.campaign_id,
             scene_id=scene_id,

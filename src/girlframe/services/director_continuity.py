@@ -7,7 +7,7 @@ from uuid import uuid4
 import sqlalchemy as sa
 from sqlalchemy import Connection
 
-from girlframe.ai.director import DirectorContext, KnowledgeReference
+from girlframe.ai.director import DirectorContext, KnowledgeReference, KnowledgeRelation
 from girlframe.database import tables as t
 from girlframe.services.director_observation import _digest
 from girlframe.services.onboarding import WorkflowError
@@ -17,8 +17,29 @@ if TYPE_CHECKING:
     from girlframe.services.director_context import DirectorContextService
 
 
+def _relation_origins(
+    context: "DirectorContextService", c: Connection, scene: str, reference: KnowledgeReference
+) -> set[tuple[str, str, str]]:
+    if not reference.relations:
+        return set()
+    history = {item.id: item for item in context._references(c, scene)}
+    origins: set[tuple[str, str, str]] = set()
+    for relation in reference.relations:
+        target = history.get(relation.reference_id)
+        if target is None:
+            raise WorkflowError("STALE_CONTINUITY: reconcile the related account provenance.")
+        origins.add(
+            (relation.kind, target.origin_scene or scene, target.origin_reference or target.id)
+        )
+    return origins
+
+
 def validate_origin(
-    context: "DirectorContextService", c: Connection, reference: KnowledgeReference
+    context: "DirectorContextService",
+    c: Connection,
+    reference: KnowledgeReference,
+    *,
+    destination_scene: str,
 ) -> None:
     scene_id = reference.origin_scene
     original = next(
@@ -59,6 +80,10 @@ def validate_origin(
         )
     ):
         raise WorkflowError("STALE_CONTINUITY: reconcile the original knowledge and consent.")
+    if _relation_origins(context, c, scene_id or "", original) != _relation_origins(
+        context, c, destination_scene, reference
+    ):
+        raise WorkflowError("STALE_CONTINUITY: preserve the original account relationships.")
     if original.source_id.startswith("knowledge-acquired:"):
         from girlframe.services.director_knowledge import DirectorKnowledgeService
 
@@ -213,6 +238,12 @@ class SceneContinuityService:
                         "id": ids[ref.id],
                         "order": order + index,
                         "dependencies": tuple(ids[d] for d in ref.dependencies),
+                        "relations": tuple(
+                            KnowledgeRelation(
+                                kind=relation.kind, reference_id=ids[relation.reference_id]
+                            )
+                            for relation in ref.relations
+                        ),
                         "origin_scene": ref.origin_scene or source_scene,
                         "origin_reference": ref.origin_reference or ref.id,
                     }

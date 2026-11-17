@@ -94,3 +94,7 @@ tests/test_director_process_restart.py
 tests/test_handler_contract_revision.py
 tests/test_knowledge_contract_revision.py
 tests/test_gm_response_ownership.py
+# Connected Director follow-through: competing accounts, reviewed needs and owned responses.
+tests/test_director_knowledge_relations.py
+tests/test_director_handler_needs.py
+tests/rules/test_director_response_handoff.py
