@@ -5,6 +5,9 @@
 > Preserve the default-empty, digest-bound specialist scope, original controller
 > choices and unchanged independent registry approval. The workflow source index
 > is not all-type certification; retain its explicit branch/evidence gaps.
+> Source49f0833 now passes3,475complete offline cases and65supplied Python
+> Activity checks. See reports/ACTIVITY_ENGINE_INTEGRATION.md for exact evidence.
+> Broader type/branch review, remaining UI ports and human acceptance remain open.
 >
 > Latest owner direction: continue until P2 is ready for player testing. The
 > engine-side assisted offline candidate is described in docs/P2_PLAYER_TEST_GUIDE.md

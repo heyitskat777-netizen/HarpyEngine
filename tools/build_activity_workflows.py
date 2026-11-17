@@ -140,7 +140,7 @@ def main() -> None:
         "evidence_limit",
     ]
     with (output / "ACTIVITY_WORKFLOWS.csv").open("w", newline="") as target:
-        writer = csv.DictWriter(target, fieldnames=fields)
+        writer = csv.DictWriter(target, fieldnames=fields, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
     (output / "ACTIVITY_READY_PORTS.json").write_text(json.dumps(curated, indent=2) + "\n")

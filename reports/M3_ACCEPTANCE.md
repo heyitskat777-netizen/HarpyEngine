@@ -6234,4 +6234,3 @@ Global static checks, unchanged registry, schema0023 migration check and synthet
 and [Activity return](../integrations/activity/INTEGRATION_HANDOFF.md) for exact
 scope, source hashes, curated ports and remaining all-type review/UI/release gates.
 No campaign operation, runtime rollout, independent approval or model spend.
-
