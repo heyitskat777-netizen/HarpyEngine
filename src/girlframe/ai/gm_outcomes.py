@@ -20,8 +20,17 @@ class KeepOutcome(Contract):
 
 class SensorAnswers(Contract):
     kind: Literal["sensors"] = "sensors"
-    answers: dict[str, str] = Field(min_length=1, max_length=8)
-    consequence: Literal["incomplete_information", "punishment_later"] | None = None
+    answers: dict[str, str] = Field(
+        min_length=1,
+        max_length=8,
+        description="Use a1, a2, ... in the exact native question order, not question-name keys. "
+        "See native.answer_contract for the actual fields and questions.",
+    )
+    consequence: Literal["incomplete_information", "punishment_later"] | None = Field(
+        default=None,
+        description="Only the native high off-list branch requires a consequence; otherwise null. "
+        "Follow native.answer_contract, not an inferred tier-to-consequence rule.",
+    )
 
 
 class BattleFacts(Contract):

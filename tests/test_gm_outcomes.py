@@ -132,3 +132,38 @@ def test_native_guard_is_checked_inside_transaction_and_contextvar_resets(routed
             )
             == 0
         )
+
+
+def test_sensor_packet_and_private_feedback_expose_exact_consumer_field_mapping(routed):
+    svc, request, proposal, native, _, _ = sensors(routed)
+    scene, game, dice = routed[2:]
+    packet = svc.packet(ADMIN, scene, request["id"])
+    assert packet.native["answer_contract"] == {
+        "answers": {
+            "a1": "Where does the Foundation want us to go?",
+            "a2": "What does the Foundation want us to avoid?",
+        },
+        "consequence_required": False,
+        "allowed_consequences": [],
+    }
+    texts = list(proposal.decision.answers.values())
+    wrong = proposal.model_copy(
+        update={
+            "decision": SensorAnswers(
+                answers={"foundation_destination": texts[0], "foundation_avoid": texts[1]},
+                consequence="incomplete_information",
+            )
+        }
+    )
+    before = state(game).model_dump_json()
+    feedback = svc.feedback(ADMIN, scene, request["id"], wrong.model_dump(mode="json"))
+    assert not feedback["valid"]
+    assert feedback["errors"][0]["code"] == "SENSOR_INPUT_CONTRACT"
+    assert "a1, a2" in feedback["errors"][0]["message"]
+    assert "consequence=null" in feedback["errors"][0]["message"]
+    assert "SYNTHETIC_GM_PRIVATE_REASON" not in json.dumps(feedback)
+    with pytest.raises(WorkflowError):
+        svc.feedback(PLAYER, scene, request["id"], wrong.model_dump(mode="json"))
+    assert svc.feedback(ADMIN, scene, request["id"], proposal.model_dump(mode="json"))["valid"]
+    assert state(game).model_dump_json() == before and dice.calls == 1
+    assert game.inspect(PLAYER, native)["state"] != "complete"

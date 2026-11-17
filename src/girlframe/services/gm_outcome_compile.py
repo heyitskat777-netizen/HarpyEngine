@@ -19,7 +19,7 @@ from girlframe.ai.gm_outcomes import (
     WraithOutcome,
 )
 from girlframe.ai.gm_protocol import GMPacket, GMProposal, validate_proposal
-from girlframe.engine.m2 import ChoiceAnswer, sensors_off_list
+from girlframe.engine.m2 import ChoiceAnswer, sensor_question_text, sensors_off_list
 
 CHOICES = {
     "handler_keep": "keep",
@@ -38,6 +38,26 @@ CHOICES = {
     "battle_gm_table": "table",
     "wyvern_gm_outcome": "table",
 }
+
+
+def sensor_answer_contract(native: dict[str, Any]) -> dict[str, Any]:
+    """Describe the exact existing consumer fields; no alternative mechanics."""
+    result = native["action"]["data"]["result"]
+    if native["choice"]["kind"] == "harpy_sensor_answers":
+        return {
+            "answers": {"a1": "Answer the actual native Harpy question block."},
+            "consequence_required": False,
+            "allowed_consequences": [],
+        }
+    required = result["tier"] == "high" and sensors_off_list(result["questions"], result["tier"])
+    return {
+        "answers": {
+            f"a{index}": sensor_question_text(question)
+            for index, question in enumerate(result["questions"], 1)
+        },
+        "consequence_required": required,
+        "allowed_consequences": ["incomplete_information", "punishment_later"] if required else [],
+    }
 
 
 def validate(packet: OutcomePacket, proposal: OutcomeProposal) -> ChoiceAnswer | None:

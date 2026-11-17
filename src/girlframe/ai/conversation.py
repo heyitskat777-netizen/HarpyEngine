@@ -211,6 +211,19 @@ class HandlerNeedProvider(Protocol):
     def propose(self, packet: HandlerNeedPacket) -> HandlerNeedProposal: ...
 
 
+def handler_updates(context: DirectorContext) -> tuple[KnowledgeReference, ...]:
+    """Use one eligible-update definition for need selection and delivery suppression."""
+    return tuple(
+        x
+        for x in context.references
+        if x.topic in ("briefing", "tactical", "debrief")
+        or (
+            x.topic in ("objective", "scope", "status")
+            and any(relation.kind == "corrects" for relation in x.relations)
+        )
+    )
+
+
 class SyntheticHandlerPolicy:
     """Bounded local need detection; it does not infer emotions or choose PC actions."""
 
@@ -240,9 +253,7 @@ class SyntheticHandlerPolicy:
                 reason="scope_boundary",
                 source_refs=tuple(x.id for x in scope[-3:]),
             )
-        updates = tuple(
-            x for x in request.context.references if x.topic in ("briefing", "tactical", "debrief")
-        )
+        updates = handler_updates(request.context)
         pending = tuple(x for x in updates if x.id not in request.addressed_update_refs)
         if pending:
             return HandlerDecision(

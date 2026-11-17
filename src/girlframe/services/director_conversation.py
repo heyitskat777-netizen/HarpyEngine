@@ -23,6 +23,7 @@ from girlframe.ai.conversation import (
     SyntheticGM,
     SyntheticHandler,
     SyntheticHandlerPolicy,
+    handler_updates,
 )
 from girlframe.ai.director import DirectorContext
 from girlframe.ai.observation import Observation
@@ -115,9 +116,7 @@ class DirectorConversationService:
                 )
                 question = "\n".join(spoken) or "Scene update."
             keys = {
-                ref.id: self._update_key(c, scene_id, role, ref.id)
-                for ref in role.references
-                if ref.topic in ("briefing", "tactical", "debrief")
+                ref.id: self._update_key(c, scene_id, role, ref.id) for ref in handler_updates(role)
             }
             table = t.director_context["shadow"]
             decisions = (

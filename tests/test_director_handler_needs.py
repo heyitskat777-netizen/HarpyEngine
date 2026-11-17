@@ -273,3 +273,69 @@ def test_source_edits_and_consent_renewal_invalidate_old_need_reviews(routed):
             ADMIN, "edited-review", scene, fresh["id"], "approve", "Old source no longer applies."
         )
     assert "source_revision" in json.dumps(service.private_handler_need(ADMIN, scene, fresh["id"]))
+
+
+def test_known_operational_correction_announces_once_without_manual_urgency_label(routed):
+    from test_knowledge_contract_revision import commit
+
+    from girlframe.ai.director import KnowledgeRelation
+    from girlframe.ai.knowledge import Acquisition
+    from girlframe.services.director_knowledge import DirectorKnowledgeService
+
+    observer, context, scene, _, _ = routed
+    handler, pilot = roles(observer, scene)
+    knowledge = DirectorKnowledgeService(context)
+    old = "The east relay is clear."
+    correction = "I withdraw that clearance: I have not checked behind the relay."
+    _, first = send(observer, scene, "clearance", text=old, fictional_channel="comms")
+    learned = commit(
+        knowledge,
+        scene,
+        first.source_id,
+        "learn-clearance",
+        (Acquisition(basis="testimony", quote=old, recipients=(handler, pilot), topic="status"),),
+    )
+    _, source = send(
+        observer, scene, "correct-clearance", text=correction, fictional_channel="comms"
+    )
+    corrected = commit(
+        knowledge,
+        scene,
+        source.source_id,
+        "learn-correction",
+        (
+            Acquisition(
+                basis="testimony",
+                quote=correction,
+                recipients=(handler, pilot),
+                topic="status",
+                relations=(
+                    KnowledgeRelation(kind="corrects", reference_id=learned["references"][0]),
+                ),
+            ),
+        ),
+    )
+    identity = corrected["references"][0]
+    service = DirectorConversationService(
+        context, handler=NaturalHandler(identity), handler_mode="reviewed"
+    )
+    routed = service.process_message(PLAYER, "announce-correction", scene, source.source_id, 1)
+    assert routed["handler_decision"]["decision"]["reason"] == "known_update"
+    assert routed["handler_decision"]["decision"]["source_refs"] == [identity]
+    service.review_handler(
+        ADMIN,
+        "review-correction",
+        scene,
+        routed["handler"]["id"],
+        "approve",
+        "The clearance is corrected as a claim, without inventing an enemy.",
+    )
+    _, quiet = send(
+        observer, scene, "after-correction", text="I fold the map.", fictional_channel="comms"
+    )
+    assert (
+        service.process_message(PLAYER, "no-repeat-correction", scene, quiet.source_id, 1)[
+            "handler"
+        ]
+        is None
+    )

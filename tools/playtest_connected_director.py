@@ -164,6 +164,12 @@ class NaturalFixtureHandler:
                 "Report what you can actually observe before I advise."
             )
             disposition = "clarification"
+        elif "route reminder" in question:
+            text = (
+                "I do not have a briefed approach route to repeat. "
+                "Ask for that route to be established before committing to one."
+            )
+            disposition = "clarification"
         else:
             # This selection sees only Handler-known accounts, including their
             # actual reporter. It has no fixture acquisition plan or GM packet.
@@ -191,6 +197,8 @@ class NaturalFixtureHandler:
                     if any(relation.kind == "corrects" for relation in ref.relations)
                 ][-1:]
                 lead = "Report observations before an all-clear; correct mistakes explicitly. "
+            elif "kite said hangar door two is jammed" in question:
+                lead = "That is a second-hand door report, not a confirmed obstruction. "
             if not relevant:
                 relevant = [ref for ref in request.context.references if ref.topic == "objective"][
                     :1
@@ -349,7 +357,7 @@ class ConnectedTrial:
             self.trial.viewers()["gm"],
             self.trial.session.conversation,
         )
-        selected = text in INDIRECT or text in (HALLWAY[9], SIMULATION[15])
+        selected = text in INDIRECT or text in (HALLWAY[8], HALLWAY[9], SIMULATION[15])
         if not selected and self.number % 7 != 0 and text not in MATCHED:
             return
         key = f"connected:{self.number}:need"
@@ -363,10 +371,13 @@ class ConnectedTrial:
         )
         if not selected:
             return
-        urgent = text in (HALLWAY[9], SIMULATION[15])
-        source_refs = (
-            (self.named["competing" if text == HALLWAY[9] else "indicator"],) if urgent else ()
-        )
+        urgent_names = {
+            HALLWAY[8]: "hearsay",
+            HALLWAY[9]: "competing",
+            SIMULATION[15]: "indicator",
+        }
+        urgent = text in urgent_names
+        source_refs = (self.named[urgent_names[text]],) if urgent else ()
         proposal = HandlerNeedProposal(
             request_id=opened["id"],
             action="RESPOND",

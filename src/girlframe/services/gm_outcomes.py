@@ -16,6 +16,7 @@ from girlframe.ai.gm_outcomes import (
     OutcomePacket,
     OutcomeProposal,
     OutcomeProvider,
+    SensorAnswers,
     TableOutcome,
 )
 from girlframe.ai.gm_protocol import Evidence, TaskFrame
@@ -24,7 +25,7 @@ from girlframe.database import tables as t
 from girlframe.engine.m3_battle_state import Context
 from girlframe.services.director_context import DirectorContextService
 from girlframe.services.director_observation import _digest
-from girlframe.services.gm_outcome_compile import CHOICES, validate
+from girlframe.services.gm_outcome_compile import CHOICES, sensor_answer_contract, validate
 from girlframe.services.m2_state import load_state
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
@@ -203,6 +204,8 @@ class GMOutcomeService:
         if owner not in {str(x) for x in scene_row["participants"]}:
             raise WorkflowError("GM_SOURCE_OWNER_UNAVAILABLE: recover the actual scene controller.")
         data["state_revision"] = canon.revision
+        if operation == "sensors":
+            data["answer_contract"] = sensor_answer_contract(data)
         evidence = [
             Evidence(
                 id="source",
@@ -416,6 +419,19 @@ class GMOutcomeService:
                     "MISSING_CITATION",
                     "cited_evidence",
                     "Include source and native citations.",
+                )
+            elif isinstance(candidate.decision, SensorAnswers) and packet.operation == "sensors":
+                contract = sensor_answer_contract(packet.native)
+                code, field = "SENSOR_INPUT_CONTRACT", "decision"
+                message = (
+                    "Use answer keys "
+                    + ", ".join(contract["answers"])
+                    + " in native question order. "
+                )
+                message += (
+                    "This branch requires incomplete_information or punishment_later."
+                    if contract["consequence_required"]
+                    else "This branch requires consequence=null."
                 )
             return {"valid": False, "errors": [{"code": code, "field": field, "message": message}]}
         return {"valid": True, "errors": []}
