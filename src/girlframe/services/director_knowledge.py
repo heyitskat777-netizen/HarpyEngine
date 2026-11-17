@@ -55,6 +55,17 @@ class DirectorKnowledgeService:
         self, c: Connection, scene: str, identity: str, *, allow_closed: bool = False
     ) -> KnowledgeSource:
         row = self.observer._scene(c, scene, allow_closed=allow_closed)
+        if identity.startswith("world-disclosure:"):
+            record = self.context._approved_world(c, scene, identity, allow_closed=allow_closed)
+            return KnowledgeSource(
+                id=identity,
+                revision=record["revision"],
+                kind="approved_world",
+                text=record["text"],
+                allowed_recipients=tuple(
+                    ActorRef.model_validate(actor) for actor in record["recipients"]
+                ),
+            )
         if identity.startswith("gm-narration:"):
             record = self.context._approved_outcome(c, scene, identity, allow_closed=allow_closed)
             return KnowledgeSource(
@@ -127,6 +138,10 @@ class DirectorKnowledgeService:
         context = self.context._build(c, viewer, scene)
         actual = self._source(c, scene, source)
         actors = self._actors(c, row)
+        if actual.kind == "approved_world":
+            if not set(actual.allowed_recipients) <= set(actors):
+                raise WorkflowError("STALE_ACTOR: recover the actual disclosed world recipients.")
+            actors = tuple(actor for actor in actors if actor in actual.allowed_recipients)
         canon = load_state(c, self.store.campaign_id)
         directory = []
         for actor in actors:
@@ -297,6 +312,11 @@ class DirectorKnowledgeService:
                         raise WorkflowError(
                             "UNPROVEN_PARAPHRASE: cite actual speaker-known content."
                         )
+            elif update.basis == "world":
+                if packet.source.kind != "approved_world" or update.quote != packet.source.text:
+                    raise WorkflowError(
+                        "UNPROVEN_WORLD: retain the entire actually approved world disclosure."
+                    )
             elif packet.source.kind != "approved_outcome":
                 raise WorkflowError(
                     "UNPROVEN_OUTCOME: require an actual confirmed native readback."
@@ -631,6 +651,8 @@ class DirectorKnowledgeService:
                     topic=update.topic,
                     classification="approved_outcome"
                     if update.basis == "outcome"
+                    else "established_world"
+                    if update.basis == "world"
                     else "reported_claim",
                     text=reference_text(update),
                     reported_by=packet.source.actor

@@ -98,3 +98,8 @@ tests/test_gm_response_ownership.py
 tests/test_director_knowledge_relations.py
 tests/test_director_handler_needs.py
 tests/rules/test_director_response_handoff.py
+# Reviewed world authorship, native sources and explicitly scoped established knowledge.
+tests/rules/test_world_development.py
+tests/test_director_worldbuilding.py
+tests/test_worldbuilding_knowledge.py
+tests/rules/test_worldbuilding_npc_knowledge.py

@@ -31,7 +31,9 @@ class KnowledgeReference(Contract):
     topic: Literal["general", "objective", "scope", "status", "briefing", "tactical", "debrief"] = (
         "general"
     )
-    classification: Literal["reported_claim", "committed_play", "approved_outcome"]
+    classification: Literal[
+        "reported_claim", "committed_play", "approved_outcome", "established_world"
+    ]
     text: str = Field(max_length=1200)
 
     @model_validator(mode="after")

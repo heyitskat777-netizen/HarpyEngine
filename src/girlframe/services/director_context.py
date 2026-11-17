@@ -64,6 +64,18 @@ class DirectorContextService:
                 if reference.source_revision != 1 or reference.text != record["text"]:
                     raise WorkflowError("STALE_KNOWLEDGE: retain the actual approved outcome.")
                 continue
+            if reference.classification == "established_world":
+                record = self._approved_world(
+                    c, scene_id, reference.source_id, allow_closed=allow_closed
+                )
+                if (
+                    reference.source_revision != record["revision"]
+                    or reference.text != "Established world: " + record["text"]
+                    or not set(reference.known_by)
+                    <= {ActorRef.model_validate(actor).token for actor in record["recipients"]}
+                ):
+                    raise WorkflowError("STALE_KNOWLEDGE: preserve the approved world disclosure.")
+                continue
             source = self.observations._latest_source(c, reference.source_id)
             if source is None or source.source_revision != reference.source_revision:
                 raise WorkflowError(
@@ -150,6 +162,16 @@ class DirectorContextService:
         if record.get("audience_ids") != participants:
             raise WorkflowError("SOURCE_SCOPE_CHANGED: outcome knowledge requires audience review.")
         return record
+
+    def _approved_world(
+        self, c: Connection, scene: str, identity: str, *, allow_closed: bool = False
+    ) -> dict[str, Any]:
+        """The worldbuilding service owns native/review/disclosure proof, not prose."""
+        from girlframe.services.director_worldbuilding import DirectorWorldbuildingService
+
+        return DirectorWorldbuildingService(self)._disclosure_source(
+            c, scene, identity, allow_closed=allow_closed
+        )
 
     def _archived(self, c: Connection, scene_id: str) -> set[str]:
         import json
@@ -310,18 +332,31 @@ class DirectorContextService:
                 if source_id.startswith("gm-narration:")
                 else None
             )
-            source = self.observations._latest_source(c, source_id) if approved is None else None
+            world = (
+                self._approved_world(c, scene_id, source_id)
+                if source_id.startswith("world-disclosure:")
+                else None
+            )
+            source = (
+                self.observations._latest_source(c, source_id)
+                if approved is None and world is None
+                else None
+            )
             inputs = t.director["inputs"]
-            if approved is None and (
-                source is None
-                or not c.scalar(
-                    sa.select(inputs.c.source_id)
-                    .where(
-                        inputs.c.campaign_id == self.store.campaign_id,
-                        inputs.c.scene_id == scene_id,
-                        inputs.c.source_id == source_id,
+            if (
+                approved is None
+                and world is None
+                and (
+                    source is None
+                    or not c.scalar(
+                        sa.select(inputs.c.source_id)
+                        .where(
+                            inputs.c.campaign_id == self.store.campaign_id,
+                            inputs.c.scene_id == scene_id,
+                            inputs.c.source_id == source_id,
+                        )
+                        .limit(1)
                     )
-                    .limit(1)
                 )
             ):
                 raise WorkflowError("SOURCE_UNAVAILABLE: use this scene’s actual observation.")
@@ -330,7 +365,15 @@ class DirectorContextService:
                 sorted(str(x) for x in scene["participants"])
             ):
                 raise WorkflowError("SOURCE_SCOPE_CHANGED: privacy reconciliation is required.")
-            source_revision = source.source_revision if source else 1
+            source_revision = (
+                source.source_revision if source else world["revision"] if world else 1
+            )
+            if world is not None and not set(known_by) <= {
+                ActorRef.model_validate(actor) for actor in world["recipients"]
+            }:
+                raise WorkflowError(
+                    "INVALID_RECIPIENT: retain the approved world disclosure scope."
+                )
             if (
                 source is not None
                 and source.fictional_channel == "private"
@@ -380,11 +423,15 @@ class DirectorContextService:
                 topic=topic,
                 classification="approved_outcome"
                 if approved
+                else "established_world"
+                if world
                 else "reported_claim"
                 if source and source.kind == "message"
                 else "committed_play",
                 text=approved["text"]
                 if approved
+                else "Established world: " + world["text"]
+                if world
                 else ("Reported claim: " + (source.text or ""))
                 if source and source.kind == "message"
                 else "Committed native Keep Your Head outcome; use the original receipt.",

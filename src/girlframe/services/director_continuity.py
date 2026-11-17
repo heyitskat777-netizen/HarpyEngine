@@ -94,6 +94,17 @@ def validate_origin(
         record = context._approved_outcome(c, scene_id or "", original.source_id, allow_closed=True)
         if original.source_revision != 1 or original.text != record["text"]:
             raise WorkflowError("STALE_CONTINUITY: the original outcome changed.")
+    elif original.classification == "established_world":
+        from girlframe.engine.m3_actor_state import ActorRef
+
+        record = context._approved_world(c, scene_id or "", original.source_id, allow_closed=True)
+        if (
+            original.source_revision != record["revision"]
+            or original.text != "Established world: " + record["text"]
+            or not set(original.known_by)
+            <= {ActorRef.model_validate(actor).token for actor in record["recipients"]}
+        ):
+            raise WorkflowError("STALE_CONTINUITY: the original world disclosure changed.")
     else:
         source = context.observations._latest_source(c, original.source_id)
         if source is None or source.source_revision != original.source_revision:

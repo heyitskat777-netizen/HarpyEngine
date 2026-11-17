@@ -13,6 +13,8 @@ from girlframe.engine import m3_world as rules
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_harpy_defeat import offstage_travel
+from girlframe.engine.m3_world_development import Development, DevelopmentDraft
+from girlframe.engine.m3_world_development import validate as validate_development
 from girlframe.engine.m3_world_state import (
     AdversaryPilot,
     Board,
@@ -160,6 +162,62 @@ class WorldService:
                 "board": board.model_dump(mode="json"),
                 "locations": [x.model_dump(mode="json") for x in locations],
                 "secret": secret.model_dump(mode="json"),
+            },
+            operation,
+        )
+
+    def develop(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        expected: int,
+        draft: DevelopmentDraft,
+        *,
+        source_proposal: str,
+    ) -> dict[str, Any]:
+        """Commit reviewed narrative only; no world entity or gameplay field changes."""
+        value = DevelopmentDraft.model_validate_json(draft.model_dump_json())
+        if not source_proposal.strip() or len(source_proposal) > 200:
+            raise WorkflowError("WORLD_DEVELOPMENT_SOURCE: retain the actual proposal provenance.")
+
+        def operation(c: Connection) -> dict[str, Any]:
+            state = self._state(c, expected)
+            version = validate_development(state, value, viewer.user_id)
+            event = str(uuid4())
+            record = Development(
+                **value.model_dump(),
+                id="world-development:" + str(uuid4()),
+                source_event=event,
+                source_proposal=source_proposal,
+                version=version,
+                confirmed_by=viewer.user_id,
+            )
+            state.facts.append(dict(kind="world_development", body=record.model_dump_json()))
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.world_development_recorded",
+                state,
+                event_id=event,
+                entity_id=value.subject.id,
+                development_id=record.id,
+            )
+            return {
+                "id": record.id,
+                "source_event": event,
+                "version": version,
+                "game_revision": state.revision,
+            }
+
+        return self._write(
+            viewer,
+            key,
+            "m3.world_development_recorded",
+            {
+                "expected": expected,
+                "draft": value.model_dump(mode="json"),
+                "source_proposal": source_proposal,
             },
             operation,
         )

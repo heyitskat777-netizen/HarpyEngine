@@ -45,6 +45,9 @@ class DirectorSessionService:
         from girlframe.services.director_knowledge import DirectorKnowledgeService
 
         self.knowledge = DirectorKnowledgeService(context)
+        from girlframe.services.director_worldbuilding import DirectorWorldbuildingService
+
+        self.worldbuilding = DirectorWorldbuildingService(context)
         if (knowledge_provider is None) != (knowledge_gm is None):
             raise ValueError("Configure the trusted GM principal and knowledge provider together")
         self.knowledge_provider, self.knowledge_gm = knowledge_provider, knowledge_gm
@@ -196,6 +199,7 @@ class DirectorSessionService:
                 if gm
                 else [],
                 "response_requests": self.responses.pending(viewer, scene, gm=gm),
+                "worldbuilding": self.worldbuilding.pending(viewer, scene, gm=gm),
                 "native": work,
                 "outcome_sources": sources,
                 "decision_routes": [self._decision_route(c, row) for row in work["choices"]],

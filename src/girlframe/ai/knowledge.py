@@ -12,9 +12,10 @@ from girlframe.engine.m3_actor_state import ActorRef
 class KnowledgeSource(Contract):
     id: str
     revision: int
-    kind: Literal["message", "approved_outcome"]
+    kind: Literal["message", "approved_outcome", "approved_world"]
     text: str
     actor: ActorRef | None = None
+    allowed_recipients: tuple[ActorRef, ...] = Field(default=(), exclude_if=lambda x: not x)
     fictional_channel: Literal["scene", "private", "comms", "mixed", "unclassified"] = "scene"
 
 
@@ -59,7 +60,7 @@ class Acquisition(Contract):
             ]
         }
     )
-    basis: Literal["perception", "report", "testimony", "paraphrase", "outcome"]
+    basis: Literal["perception", "report", "testimony", "paraphrase", "outcome", "world"]
     quote: str = Field(
         min_length=1,
         max_length=1000,
@@ -122,12 +123,18 @@ class KnowledgeProvider(Protocol):
 
 
 def reference_text(update: Acquisition) -> str:
-    prefix = "Confirmed outcome: " if update.basis == "outcome" else "Reported claim: "
+    prefix = (
+        "Confirmed outcome: "
+        if update.basis == "outcome"
+        else "Established world: "
+        if update.basis == "world"
+        else "Reported claim: "
+    )
     return prefix + update.quote
 
 
 def fact_text(reference: KnowledgeReference) -> str:
-    for prefix in ("Reported claim: ", "Confirmed outcome: "):
+    for prefix in ("Reported claim: ", "Confirmed outcome: ", "Established world: "):
         if reference.text.startswith(prefix):
             return reference.text[len(prefix) :]
     return reference.text
