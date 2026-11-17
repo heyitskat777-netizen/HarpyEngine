@@ -1,3 +1,24 @@
+> Latest owner direction: longer-term synthetic missions with distinct pilot and
+> Handler personalities. Harness sourceef9d2dd; see reports/P2_SUSTAINED_CAMPAIGN.md.
+> Full601-input run:4native scenes,4missions(3success/1failure),9contextual Keep
+> rulings+4Sensors+4Off-Duty=17native receipts,6Strain dice,2complete periods.
+> Handler49RESPOND/552WAIT;609role auditgroups,0testedleaks, scoped citations.
+> All3dossiers reachv5; same native results/costs as reduced73-input rehearsal;
+> current-scene DB reopen/input/native-confirmation retries add no events/canon.
+> Simulated NPC pilots use native Pilot sheets/owners(MOCKINGBIRD/JANUS-B), not
+> ordinary Npc actors. Dialogue/judgments are fixtures, no autonomous model claim.
+> Runtime saves actualscene_channel; console Play/battle follows it.1console test
+> and4changed-file Ruff/format pass; registry/planning/repository checks pass.
+> No engine rules, release policy, spending, realcampaign or Discord changes.
+> Keep native Heat-all-at-five requirement, actual result-tier choices, refreshed
+> consequence work(overlapping obligations may resolve together), and owner input.
+> Unclear rulings stay held: pending Plays block IC clarification. Current trial
+> continues by explicit synthetic human-DM TaskFrame review, not automatic actor
+> clarification. Next: source-bound OOC intent handoff and safe dossier/memory in
+> actual role-provider packets. Standard HandlerRequest still has no dossier;
+> fixture Anchor tone does not certify dossier-driven characterization. Existing
+> source-bound NPC publication adapter and human/model quality review remain open.
+>
 > Latest owner direction: action the Living Campaign and Character Agency work
 > order within P2. Offline foundation is implemented on94f4d1e; see
 > reports/P2_LIVING_CAMPAIGN.md and docs/work_orders/P2_LIVING_CAMPAIGN.md.

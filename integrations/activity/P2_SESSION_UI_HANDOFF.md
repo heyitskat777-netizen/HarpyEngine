@@ -409,6 +409,31 @@ placing one into a shared transcript or teaching listeners requires a future
 source-bound contribution/disclosure adapter. Preserve unresolved choices and
 explicit consent; never implement those operations by copying cached prose.
 
+## Sustained mission rehearsal follow-through
+
+The [601-input synthetic campaign](../../reports/P2_SUSTAINED_CAMPAIGN.md) completes
+four missions and two native Off-Duty cycles. Its pilot characters are simulated
+owners of native Pilot sheets; their authored input is not a generic NPC publishing
+permission. No Activity routes or real model are installed.
+
+Two controls remain useful before a connected trial:
+
+- An OOC intent-clarification handoff bound to the original pending Play and its
+  actual actor. The GM can hold an unclear ruling, while the scene correctly blocks
+  new IC input. Do not work around that lock by submitting the answer as IC speech
+  or letting the model invent an intention. The current rehearsal uses explicitly
+  labelled human-facilitator TaskFrame review.
+- A safe persona/memory projection for the actual Handler provider. The standard
+  HandlerRequest currently contains known references, question and addressed
+  updates; it does not include the new self dossier. Never fill that gap with the
+  GM's dossier collection or private notes.
+
+Refresh budgets and native result choices for every new action; carrying five or
+more Heat requires spending all. Refresh the original work queue after every effect:
+one applied consequence may resolve overlapping tasks, and a stale task must not
+be applied again. Final mission failure still follows native reward and consequence
+rules; a higher roll alone does not establish a successful task or mission.
+
 ## Campaign dashboard contract
 
 `campaign_work(viewer, scene, *, period_id=None)` returns:
