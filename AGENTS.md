@@ -1,4 +1,22 @@
-> Latest owner request: continue all four follow-up recommendations and testing.
+> Latest owner request: start reviewed worldbuilding and continue into testing.
+> Core/trial525172e, recovery/access hardening92c3a90; see reports/P2_WORLDBUILDING.md
+> and updated consolidated Activity handoff. DirectorSessionService.worldbuilding
+> supports source-bound proposals, explicit GM review, actual native world-owner
+> confirmation and atomic selected disclosures. Preserve append-only developments,
+> current predecessor/subject checks, native world release/pending-Play guards and
+> original controller knowledge scope. Raw world commits never teach actors;
+> proved world-disclosure sources produce established_world, relays remain claims.
+> Final112-input rehearsal adds7nativeworldwrites and3scopeddisclosures; a new
+> complication motivates an actual Keep without resolving its unanswered factual
+> question.3Plays/3rolls, no replay duplicates; all112Handler projections exclude
+> private agendas.55integrated and14finalaffected checks pass (overlap), plus small
+> recovery/access checks. Fresh Terra3/3frozen proposals validate; no model writes
+> or autonomous campaign claim. World goals/hooks have no mechanical effects.
+> NPC/controller changes need explicit reconciliation, not silent private-source
+> inheritance. UI/auth, autonomous NPC strategy and human acceptance remain open;
+> no paid API, live campaign writes or deployment authorized by these tests.
+>
+> Previous owner request: continue all four follow-up recommendations and testing.
 > Implemented on 7e67492 after 98246a0; see reports/P2_CONNECTED_DIRECTOR_REVIEW.md.
 > Preserve controller-authored response handoffs and original native confirmation,
 > competing/correcting knowledge links with hidden edges filtered per actor,

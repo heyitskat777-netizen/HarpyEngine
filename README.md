@@ -15,6 +15,9 @@ The default stays synthetic; external providers and Activity ports are not insta
 The [connected follow-through](reports/P2_CONNECTED_DIRECTOR_REVIEW.md) adds actual
 controller response handoffs, competing/correcting account links and reviewed
 intervention needs for indirect requests and urgent known reports.
+The [worldbuilding workflow](reports/P2_WORLDBUILDING.md) adds reviewed native world
+developments and ordinary NPC/faction introductions. Commitments stay private until
+selected disclosures; narrative goals and complications apply no mechanical effects.
 
 The [P2 assisted player-test candidate](docs/P2_PLAYER_TEST_GUIDE.md) now supplies
 one resumable synthetic session flow, native GM/owner review, scoped retained

@@ -6,6 +6,9 @@ claims, native actor names, structured feedback and private reviewed Handler
 drafts. The default transport remains synthetic; a trusted server must explicitly
 configure reviewed mode. Reopen old unconfirmed packets when upgrading source.
 These contracts do not install a provider or authorize external model spending.
+The [reviewed worldbuilding workflow](../../reports/P2_WORLDBUILDING.md) adds
+native-backed setting details, owned agendas, unresolved complications and ordinary
+NPC/faction introductions, with explicit later recipient disclosures.
 
 This is the engine-first implementation brief for the Activity project. It joins
 the existing [native Activity ports](INTEGRATION_HANDOFF.md) and
@@ -26,6 +29,7 @@ HTTP route, frontend, authentication flow, model, worker or live policy.
 | Continuity | `SceneContinuityService.preview/carry` | Close the original native scene, join/configure/consent to the next scene, then select references and dependencies. Use both actual revisions. Only the same roster is supported. Preserve known-by actors, claims and root provenance. |
 | Blocked memory | `DirectorContextService.archive_review/archive` | Metadata-only IDs/dependencies permit retiring blocked references. Require an explicit reason and dependency-closed selection. Withdrawal of original consent blocks use of its carried text; never restore a cached prompt to get around that block. |
 | Knowledge acquisition | `.work(..., gm=True).knowledge_sources`, `session.knowledge` | Review new messages/approved readbacks through a GM-only source packet. A trusted injected GM provider proposes quoted facts and actual recipients; the engine validates before creating references. Keep private proposals/reasoning outside role prompts and shared storage. |
+| Worldbuilding | `session.worldbuilding`, `.work(...).worldbuilding` | GM privately proposes/reviews; actual native world owner separately confirms. Raw commitments remain outside fictional role knowledge. Selected exact disclosures create scoped established references. |
 
 ## Fictional channels and knowledge acquisition
 
@@ -262,6 +266,83 @@ one. Do not infer an extra consequence merely because the result is mid.
 GM-private feedback returns `SENSOR_INPUT_CONTRACT` for an invalid mapping/branch.
 The engine still validates the real native source and original owner; this is
 input metadata, not a change to the printed Sensor outcomes.
+
+## Reviewed worldbuilding
+
+`DirectorSessionService.worldbuilding` provides:
+
+```text
+open(gm, key, scene, source_id) -> request ID
+packet(gm, scene, request_id) -> private WorldbuildingPacket
+propose(gm, key, scene, request_id, WorldbuildingProposal) -> proposal ID
+generate(gm, key, scene, request_id, provider=None) -> proposal ID
+feedback(gm, scene, request_id, raw_proposal) -> structured private diagnostics
+private(gm, scene, proposal_id) -> packet/proposal/current review status
+review(gm, key, scene, proposal_id, "approve"|"reject", reason)
+owner_review(native_owner, scene, proposal_id) -> intended action without GM reasoning
+confirm(native_owner, key, scene, proposal_id) -> actual world-commit ID/native result
+pending(viewer, scene, gm=False) -> recipient-safe pending metadata
+disclose(gm, key, scene, commit_id, quote, recipients, topic="general")
+    -> world-disclosure ID, reference_ids
+```
+
+World packets bind the actual source, current canonical state/world revision,
+context, scene input frontier, consent/safety and runtime authority. Requests
+cannot backdate fiction or bypass pending Plays. Proposals cite `source` and
+`native`, plus any actual `reference:<id>` evidence used. The provider is an
+explicit trusted injection; no default model or scheduled world writer is enabled.
+
+There are three finite action shapes:
+
+- `DevelopmentAction(development=DevelopmentDraft(...))`: a setting `detail`,
+  an owned NPC/faction `goal`, or an unresolved `complication`, attached to an
+  actual location/NPC/faction. Durable lower-case `key` identifies one active
+  entry; revision requires its exact active `supersedes` ID and the same kind
+  and subject. All previous versions remain in canonical history.
+- `NpcAction(npc=...)`: a pristine, ordinary NPC under the actual native world's
+  owner. Other controllers, special source-created kinds, Director/prisoner roles,
+  initial Tags/Bonds/custody and automatic reveal are outside this adapter.
+- `FactionAction(faction=...)`: an ordinary native faction introduction. It cannot
+  import inactive or underfunded consequence state as an introduction shortcut.
+
+The native world subsystem still needs its existing release approval. Confirmation
+uses actual WorldService consumers; this does not grant administrative GMs another
+human's native world authority. GM approval and owner confirmation are separate
+actions, including when one person holds both permissions. The private commit
+receipt can resume after a crash following the native write without duplicating it.
+`native_committed_recover_receipt` in private/pending metadata means the world
+change already committed: retry confirmation of that original proposal to recover
+its receipt, rather than generating a replacement NPC, faction or development.
+
+Narrative developments do not mutate damage, costs, resources, custody, player
+responses, movement or clocks. A complication records an unresolved situation;
+it cannot declare the required Play complete. The GM must check whether free
+prose improperly claims those effects or contradicts canon. Schema validation
+cannot establish that semantic judgment. New goals on another human's NPC require
+their own future workflow and remain blocked here.
+
+**Commitment does not disclose knowledge.** `disclose` selects a unique exact quote
+of at most 1,000 characters from the committed permitted text and actual current
+recipient ActorRefs. Disclosure and its knowledge reference commit atomically.
+Only proved `world-disclosure:` sources can become `approved_world` knowledge;
+raw `world-commit:` IDs cannot. These references have classification
+`established_world`, which remains distinct from `reported_claim` and native
+`approved_outcome`. `Acquisition(basis="world", ...)` must quote the whole selected
+disclosure and cannot widen its recipients. A character relaying it creates an
+attributed claim rather than independent world authority.
+
+Role prompts contain only the disclosed quote and scoped provenance, not the
+unseen body, agenda, commit ID or private review. Same-controller NPC knowledge
+survives native scene closure and explicitly cast continuity. Recipient role or
+controller changes require fresh disclosure/reconciliation; old records stay in
+history. Consent withdrawal blocks carried prompt use. Metadata-only pending views
+remain readable when optional world capability is unavailable; writes retain
+the native gates.
+
+UI controls should present separate GM review, native owner confirmation and
+explicit disclosure selection. Do not automatically post a committed world record
+or treat the OOC world-owner desk as Handler persona knowledge. These are Python
+service contracts; authenticated HTTP/UI ports remain a later integration task.
 
 ## Campaign dashboard contract
 
