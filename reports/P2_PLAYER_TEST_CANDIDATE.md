@@ -123,3 +123,16 @@ Final exact-source verification is recorded below after checks complete.
 - The original planning package and frozen live runtime were not changed. This is
   focused candidate evidence; the full project regression and human/real-model
   acceptance were not run or claimed.
+
+## Exact committed candidate
+
+[CI run 44020338549](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/44020338549)
+passed on `3176d8ad779f41d6260a674b22aba548442775d4`: **201 passed in 249.91s**,
+zero failures/errors/skips. Changed-source lint/format, applicable typing for seven
+source files, CLI smoke, runtime registry, original planning contracts and the
+publishable-file/manifest check all passed (zero repository findings).
+
+This is the frozen engine-side candidate for an assisted offline human trial.
+No connected Activity, real-model quality, full-rule coverage or live deployment
+acceptance is implied. The later Activity alterations are consolidated in
+`integrations/ai_assistance/INTEGRATION_HANDOFF.md`.
