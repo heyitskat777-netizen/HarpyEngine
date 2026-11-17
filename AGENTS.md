@@ -1,3 +1,19 @@
+> Latest owner direction: make the Handler an active participant in P2. Source
+> 610092a connects the reviewed RESPOND gate to role-only dossier context, dialogue,
+> Handler-owned fictional actions, and a reviewed native briefing offer. A grant
+> binds the original scene/Pilot and exact approved wording. The native controller
+> confirms it and the intended recipient gets the notice. Preserve suppression of
+> repeated updates, silent WAIT, private GM notes and all other native ownership.
+> A held Keep can now ask its acting Pilot a private source-bound intent question.
+> Resume from the exact owner answer with actor_intent evidence and the same roll.
+> The IC lock and target response authority remain independent. See
+> reports/P2_HANDLER_PARTICIPATION.md and the consolidated Activity handoff.
+> Full601-input run:54Handler replies(5proactive actions),2native briefings,
+> 547WAIT, one private intent clarification, unchanged prior pilot outcomes and
+> costs, role audit0tested leaks and replay no new events.56affected and16exact
+> focused checks passed; overlapping selections.
+> Offline fixture evidence only. No provider spending or live rollout authorized.
+>
 > Latest owner direction: longer-term synthetic missions with distinct pilot and
 > Handler personalities. Harness sourceef9d2dd; see reports/P2_SUSTAINED_CAMPAIGN.md.
 > Full601-input run:4native scenes,4missions(3success/1failure),9contextual Keep

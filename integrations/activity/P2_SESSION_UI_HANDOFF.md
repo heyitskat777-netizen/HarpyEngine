@@ -416,17 +416,30 @@ four missions and two native Off-Duty cycles. Its pilot characters are simulated
 owners of native Pilot sheets; their authored input is not a generic NPC publishing
 permission. No Activity routes or real model are installed.
 
-Two controls remain useful before a connected trial:
+The [Handler participation follow-up](../../reports/P2_HANDLER_PARTICIPATION.md)
+adds two engine controls for the Activity to render.
 
-- An OOC intent-clarification handoff bound to the original pending Play and its
-  actual actor. The GM can hold an unclear ruling, while the scene correctly blocks
-  new IC input. Do not work around that lock by submitting the answer as IC speech
-  or letting the model invent an intention. The current rehearsal uses explicitly
-  labelled human-facilitator TaskFrame review.
-- A safe persona/memory projection for the actual Handler provider. The standard
-  HandlerRequest currently contains known references, question and addressed
-  updates; it does not include the new self dossier. Never fill that gap with the
-  GM's dossier collection or private notes.
+- On a persisted RESPOND, the reviewed Handler provider receives `response_need`
+  and an optional `persona` containing its own current dossier version, profile and
+  state. `handler_action` is the Handler's own proposed in-scene action, rendered
+  separately from dialogue after GM review. `handler_play_offer="brief"` is a
+  separate option for a grounded intervention. The review must confirm the
+  original pilot sender already knows the cited information. Display the reply
+  and action within their approved private exchange.
+- `session.work(handler, scene).handler_play_offers` lists approved, unstarted
+  briefing offers for the original Handler controller. Call
+  `conversation.start_handler_brief(handler, scene, offer_id, game_revision)` to
+  create the actual native grant. That grant fixes the scene, original Pilot and
+  exact approved wording. Use the existing `handler_grant` outcome proposal and
+  native owner confirmation to complete it. Keep the initial offer, pending
+  grant and completed recipient notice distinct. Other Handler Plays continue
+  through their own native workflows.
+- For a held Keep with `intent="needs_clarification"`, request a private question
+  with `responses.request(gm,key,scene,outcome_request,question,clarify_intent=True)`.
+  The acting pilot answers with `responses.answer(...,"clarify",text)` while the
+  Play stays pending. `responses.resume` uses the exact answer as the framed
+  stakes. The GM cites `actor_intent` in the ruling. The original roll, traits,
+  native owner and any separate target response remain in force.
 
 Refresh budgets and native result choices for every new action; carrying five or
 more Heat requires spending all. Refresh the original work queue after every effect:
