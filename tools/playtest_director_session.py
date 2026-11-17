@@ -9,7 +9,7 @@ from p2_trial_runtime import Trial
 
 HELP = """Synthetic personas: /as lark | kite | handler | gm
 Text submits your persona's IC scene input. /retry resumes the last operation.
-/work /choices /decision ID /status /narrations
+/work /campaign-work [PERIOD] /choices /decision ID /status /narrations
 /play JSON (native PlayInput) /choice ID JSON /answer KIND JSON /roll ACTION
 /battle-preview /battle-declare JSON (native Declaration) /grant [2,3]
 GM: /frame JSON /propose KIND SOURCE /propose-next OPERATION /load REQUEST FILE /review PROPOSAL
@@ -71,6 +71,8 @@ class Console:
             return {"help": HELP}
         elif command == "/work":
             result = trial.session.work(viewer, scene, gm=trial.role == "gm")
+        elif command == "/campaign-work":
+            result = trial.session.campaign_work(viewer, scene, period_id=argument or None)
         elif command == "/choices":
             result = trial.game.choices(viewer)
         elif command == "/decision":

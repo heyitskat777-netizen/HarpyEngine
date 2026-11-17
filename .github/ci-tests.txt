@@ -87,3 +87,4 @@ tests/test_bonds.py::test_enrollment_finished_targets_are_ineligible
 tests/rules/test_physical_ui.py::test_inbox_uses_original_participants_and_one_read_snapshot_without_leaking_account
 tests/test_director_continuity.py
 tests/rules/test_p2_connected_campaign.py
+tests/rules/test_p2_mission_cycle.py

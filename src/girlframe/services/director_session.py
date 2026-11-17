@@ -160,6 +160,31 @@ class DirectorSessionService:
                 "publication": "synthetic_only",
             }
 
+    def campaign_work(
+        self, viewer: GuildViewer, scene: str, *, period_id: str | None = None
+    ) -> dict[str, Any]:
+        """Recipient-safe OOC lifecycle dashboard; no implicit Handler knowledge."""
+        from girlframe.services.m3_mission_control import MissionControlService
+        from girlframe.services.m3_missions import MissionService
+        from girlframe.services.m3_off_duty import OffDutyService
+        from girlframe.services.m3_off_duty_cycle import CycleService
+
+        with self.store.engine.connect() as c:
+            self.outcomes._scope(c, viewer, scene)
+        missions = MissionService(self.store)
+        periods = OffDutyService(missions)
+        current = periods.current(viewer)
+        selected = period_id or (current["id"] if current else None)
+        return {
+            "scene_id": scene,
+            "missions": MissionControlService(missions).view(viewer),
+            "current_period_id": current["id"] if current else None,
+            "period": CycleService(periods).review(viewer, selected) if selected else None,
+            "required_work": missions.owned_work(viewer),
+            "scope": "recipient_ooc",
+            "application": "native_services_only",
+        }
+
     def _decision_route(self, c: Connection, choice: dict[str, Any]) -> dict[str, Any]:
         from girlframe.services.m3_princess_sex import decision_author
 
