@@ -1,4 +1,14 @@
-> Latest owner continuation: the connected mission lifecycle is implemented on
+> Latest owner task: source-bound GM knowledge acquisition is implemented on
+> 8c1cec4. See reports/P2_KNOWLEDGE_ACQUISITION.md and
+> docs/work_orders/P2_KNOWLEDGE_ACQUISITION.md. Preserve explicit private/comms
+> input channels, private-question filtering, original actor identities,
+> speaker-known report proof, claim/outcome distinction and append-only history.
+> Optional trusted knowledge_provider + knowledge_gm processes knowledge before
+> Handler routing; defaults remain provider-free. Local GM fixtures demonstrate
+> isolation, not real-model semantic competence. Broad60checks and final11affected
+> checks pass; no paid/live worker or Activity installation is authorized here.
+>
+> Previous owner continuation: the connected mission lifecycle is implemented on
 > source bd2deb3 and locally passes53focused cases. See
 > reports/P2_MISSION_CYCLE.md and integrations/activity/P2_SESSION_UI_HANDOFF.md.
 > DirectorSessionService.campaign_work and the local /campaign-work command are
