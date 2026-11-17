@@ -18,6 +18,10 @@ class DirectorDialogueService:
     def __init__(self, context: DirectorContextService):
         self.context = context
         self.store = context.store
+        from girlframe.services.director_reactions import DirectorReactionService
+
+        # Natural dialogue uses the same reviewed role-packet path as other reactions.
+        self.reactions = DirectorReactionService(context)
 
     def draft(
         self,

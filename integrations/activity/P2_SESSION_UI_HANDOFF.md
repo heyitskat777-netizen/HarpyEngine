@@ -16,6 +16,10 @@ the existing [native Activity ports](INTEGRATION_HANDOFF.md) and
 The source bundle remains comparison input; this document does not install an
 HTTP route, frontend, authentication flow, model, worker or live policy.
 
+The [Living Campaign work package](../../docs/work_orders/P2_LIVING_CAMPAIGN.md)
+adds controller-confirmed dossiers, private Front attention and reviewed NPC
+reactions. See [verification and limits](../../reports/P2_LIVING_CAMPAIGN.md).
+
 ## Session surfaces
 
 | Surface | Read contract | Required controls and visibility |
@@ -30,6 +34,9 @@ HTTP route, frontend, authentication flow, model, worker or live policy.
 | Blocked memory | `DirectorContextService.archive_review/archive` | Metadata-only IDs/dependencies permit retiring blocked references. Require an explicit reason and dependency-closed selection. Withdrawal of original consent blocks use of its carried text; never restore a cached prompt to get around that block. |
 | Knowledge acquisition | `.work(..., gm=True).knowledge_sources`, `session.knowledge` | Review new messages/approved readbacks through a GM-only source packet. A trusted injected GM provider proposes quoted facts and actual recipients; the engine validates before creating references. Keep private proposals/reasoning outside role prompts and shared storage. |
 | Worldbuilding | `session.worldbuilding`, `.work(...).worldbuilding` | GM privately proposes/reviews; actual native world owner separately confirms. Raw commitments remain outside fictional role knowledge. Selected exact disclosures create scoped established references. |
+| Character dossiers | `session.dossiers` | Controller-confirmed versioned persona/state; separate GM notes. Public personnel is an explicit allowlist with native identity visibility. |
+| Campaign pressures | `session.fronts` | GM-only Fronts and manual world-owner time review. Actors receive flat already-known fragments. Ready clocks/deadlines request attention without applying consequences. |
+| NPC agency | `session.reactions` / `DirectorDialogueService.reactions` | Role-only packets, private proposals and actual controller review. WAIT is silence. Scene offers preserve player choice; action requests link existing native work. |
 
 ## Fictional channels and knowledge acquisition
 
@@ -343,6 +350,64 @@ UI controls should present separate GM review, native owner confirmation and
 explicit disclosure selection. Do not automatically post a committed world record
 or treat the OOC world-owner desk as Handler persona knowledge. These are Python
 service contracts; authenticated HTTP/UI ports remain a later integration task.
+
+## Living Campaign and character agency
+
+These are synthetic Python service contracts; no Activity routes are installed.
+The existing Director scheduler owns batching and the 120-second quiet window.
+`submit` does not implicitly generate NPC speech, advance Fronts or fictional time.
+
+- `dossiers.propose(viewer,key,scene,actor,expected_version,profile,state,personnel)`
+  stages a version. `review(controller,scene,id)` shows it to its original actual
+  controller; `confirm(controller,key,scene,id)` appends the accepted version.
+  Background and recurring forms retain the same actor ID and incarnation.
+- Profile includes behavioral tendencies, voice, values, fears, contradictions,
+  plausible reaction tendencies and limits. State includes goal/objective IDs,
+  source-bound resource IDs, pressures, obligations, experiences, promises,
+  beliefs and one-sided relationship perspectives. Perspectives remain labelled
+  controller-authored; they do not establish world truth or change Bonds.
+- `dossiers.gm_notes` and `.gm` are private GM surfaces. `.role_packet` returns only
+  the actual controller's self context. `.personnel(viewer,scene,perspective,subject)`
+  returns only the published summary/mannerisms and native visible identity.
+  Controller replacement requires a complete explicitly confirmed rebase; it
+  does not transfer the previous private sheet or drafts.
+- `fronts.save(owner,key,scene,expected_game_revision,FrontDraft,advance=...)`
+  stores an evidence-backed situation. Reference actual world developments and
+  known-source IDs; keep hypotheses and possible moves visibly uncertain.
+  Revisions require an actual approved native outcome or explicit fictional-time
+  event; resolving requires a native outcome. One underlying native action cannot
+  tick the same Front again through a different narration receipt.
+- `fronts.fictional_time(owner,key,scene,expected_revision,steps,account)` is an
+  explicit world-owner command. It never runs on a wall clock or between inputs.
+  Due situations become ready; resources, disaster and native clocks do not change.
+  `fronts.view(gm,scene)` is private. Actor mode returns flat known fragments only,
+  excluding Front title, grouping, status, deadlines, clocks and hypotheses.
+- `reactions.open(gm,key,scene,actor,source_id,run_id=None)` freezes the role-only
+  context. Pass a real running observation claim for automatic batch work;
+  omission means an explicitly requested GM review, not a second scheduler.
+  `packet`/`propose`/`generate` support manual or trusted fixture proposals.
+  The provider receives no GM-private Front or dossier notes and cannot submit
+  executable effects. Natural speech/refusal/compromise/delay are NPC-only;
+  Handler speech retains the existing engine need/review/delivery path.
+- `reactions.owner_review(controller,scene,id)` excludes private model reasoning.
+  `review(controller,key,scene,id,decision,reason)` records a private staged reply,
+  silence, scene invitation or existing-work handoff. It never publishes speech,
+  teaches listeners, resolves a Play, moves a character or executes a route.
+  A successful batch review acknowledges only the existing frozen frontier;
+  repeating a command cannot produce a second contribution. Rejection leaves the
+  batch available for revised work. Both original and current controller must
+  match; renewed casting after transfer does not expose an old private draft.
+- `session.work` adds metadata-only `dossiers`, `reactions` and GM-only
+  `front_attention`. Use their exact owner review APIs for prose. `reactions.ensemble`
+  gives the GM current actor dossiers, review counts, latest reviewed source and
+  private Fronts for considering neglected opportunities. It imposes no appearance
+  quota or clock advancement.
+
+Render proposed scenes as invitations and action requests as links to original
+native workflows. Approved natural NPC drafts remain private in this version;
+placing one into a shared transcript or teaching listeners requires a future
+source-bound contribution/disclosure adapter. Preserve unresolved choices and
+explicit consent; never implement those operations by copying cached prose.
 
 ## Campaign dashboard contract
 

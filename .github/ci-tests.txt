@@ -103,3 +103,9 @@ tests/rules/test_world_development.py
 tests/test_director_worldbuilding.py
 tests/test_worldbuilding_knowledge.py
 tests/rules/test_worldbuilding_npc_knowledge.py
+
+# Living campaign dossiers, Front attention and controller-owned role reactions.
+tests/test_director_dossiers.py
+tests/test_director_fronts.py
+tests/test_director_reactions.py
+tests/test_director_reaction_transfer.py
