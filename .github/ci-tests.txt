@@ -90,3 +90,7 @@ tests/rules/test_p2_connected_campaign.py
 tests/rules/test_p2_mission_cycle.py
 tests/test_director_knowledge.py
 tests/test_director_process_restart.py
+# Revised model contracts: reviewed Handler drafts, hearing/provenance and response owners.
+tests/test_handler_contract_revision.py
+tests/test_knowledge_contract_revision.py
+tests/test_gm_response_ownership.py

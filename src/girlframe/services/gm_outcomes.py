@@ -5,6 +5,7 @@ from typing import Any, Literal
 from uuid import uuid4
 
 import sqlalchemy as sa
+from pydantic import ValidationError
 from sqlalchemy import Connection
 
 from girlframe.ai.gm_outcomes import (
@@ -32,9 +33,16 @@ SourceKind = Literal["choice", "battle", "handler_grant", "table", "completed"]
 
 
 class GMOutcomeService:
-    def __init__(self, context: DirectorContextService, provider: OutcomeProvider | None = None):
+    def __init__(
+        self,
+        context: DirectorContextService,
+        provider: OutcomeProvider | None = None,
+        *,
+        require_response_scope: bool = False,
+    ):
         self.context, self.observer = context, context.observations
         self.game, self.store, self.provider = self.observer.game, context.store, provider
+        self.require_response_scope = require_response_scope
 
     def _scope(
         self, c: Connection, viewer: GuildViewer, scene: str, *, gm: bool = False
@@ -243,6 +251,42 @@ class GMOutcomeService:
                 raise WorkflowError(
                     "INVALID_GM_FRAME: use distinct demands and actual prerequisite facts."
                 )
+            if self.require_response_scope:
+                data["response_scope_required"] = True
+            if frame.response_scope == "other":
+                from girlframe.engine.m3_actors import resolve
+                from girlframe.engine.m3_cast import validate_role
+                from girlframe.services.m3_actors import profiles
+
+                if frame.response_target is None:
+                    raise WorkflowError("INVALID_RESPONSE_TARGET: bind the actual affected actor.")
+                try:
+                    target = resolve(
+                        canon,
+                        frame.response_target,
+                        profiles(c, self.store.campaign_id),
+                        require_current_profile=False,
+                    )
+                    cast = next((x for x in canon.scene_casts if x.id == scene and x.open), None)
+                    if not target.alive or target.controller not in scene_row["participants"]:
+                        raise ValueError("Unavailable target")
+                    if cast is not None:
+                        validate_role(cast, target)
+                    elif target.ref.kind == "npc":
+                        raise ValueError("Explicit NPC casting required")
+                except ValueError:
+                    raise WorkflowError(
+                        "INVALID_RESPONSE_TARGET: recover current target and casting."
+                    ) from None
+                data["response_actor"] = target.ref.model_dump(mode="json")
+                data["response_controller"] = str(target.controller)
+                data["response_authorized"] = (
+                    target.ref.kind == "npc" and str(target.controller) == owner
+                )
+            elif frame.response_target is not None:
+                raise WorkflowError(
+                    "INVALID_RESPONSE_TARGET: select other scope for an affected actor."
+                )
         records = {}
         for name in ("m3_missions", "m3_off_duty", "m3_required_work"):
             table = t.m3[name]
@@ -331,6 +375,45 @@ class GMOutcomeService:
         )
         if current != packet:
             raise WorkflowError("STALE_GM_OUTCOME: source, context or authority changed; reopen.")
+
+    def feedback(
+        self, viewer: GuildViewer, scene: str, request: str, raw: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Private dry-run validation; never includes raw input or applies a proposal."""
+        with self.store.engine.connect() as c:
+            self._scope(c, viewer, scene, gm=True)
+            packet = OutcomePacket.model_validate_json(
+                json.dumps(self._record(c, scene, request, "gm_outcome_request")["packet"])
+            )
+            self._current(c, packet)
+        try:
+            candidate = OutcomeProposal.model_validate_json(json.dumps(raw))
+        except ValidationError as error:
+            return {
+                "valid": False,
+                "errors": [
+                    {
+                        "code": "SCHEMA_VALIDATION",
+                        "field": ".".join(map(str, issue["loc"])),
+                        "message": "Use the exported typed field contract.",
+                    }
+                    for issue in error.errors(include_input=False)
+                ],
+            }
+        try:
+            validate(packet, candidate)
+        except ValueError as error:
+            message = str(error)
+            code = "RESPONSE_OWNERSHIP" if "RESPONSE_OWNERSHIP" in message else "INVALID_PROPOSAL"
+            field = "frame.response_scope" if code == "RESPONSE_OWNERSHIP" else "decision"
+            if not {"source", "native"} <= set(candidate.cited_evidence):
+                code, field, message = (
+                    "MISSING_CITATION",
+                    "cited_evidence",
+                    "Include source and native citations.",
+                )
+            return {"valid": False, "errors": [{"code": code, "field": field, "message": message}]}
+        return {"valid": True, "errors": []}
 
     def propose(
         self,

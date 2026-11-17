@@ -1,10 +1,11 @@
 """Discrete GM/Handler direct-request routes; no spending, rolls or automatic effects."""
 
 import json
-from typing import Any
+from typing import Any, Literal
 from uuid import uuid4
 
 import sqlalchemy as sa
+from pydantic import ValidationError
 from sqlalchemy import Connection
 
 from girlframe.ai.conversation import (
@@ -38,12 +39,18 @@ class DirectorConversationService:
         *,
         gm: GMProvider | None = None,
         handler: HandlerProvider | None = None,
+        handler_mode: Literal["synthetic", "reviewed"] = "synthetic",
     ):
         self.context = context
         self.observations = context.observations
         self.store = context.store
         self.gm = gm if gm is not None else SyntheticGM()
         self.handler = handler if handler is not None else SyntheticHandler()
+        if handler_mode not in ("synthetic", "reviewed"):
+            raise ValueError("Choose synthetic or reviewed Handler mode")
+        if handler_mode == "reviewed" and handler is None:
+            raise ValueError("Reviewed Handler mode requires an injected provider")
+        self.handler_mode = handler_mode
         self.play_catalog = PlayCatalog()
 
     def _authorize_source(
@@ -76,9 +83,18 @@ class DirectorConversationService:
         return source
 
     def _requests(
-        self, c: Connection, viewer: GuildViewer, scene_id: str, source_id: str, route: Route
+        self,
+        c: Connection,
+        viewer: GuildViewer,
+        scene_id: str,
+        source_id: str,
+        route: Route,
+        *,
+        review_source: Observation | None = None,
     ) -> tuple[GMRequest | HandlerRequest, str]:
-        source = self._authorize_source(c, viewer, scene_id, source_id)
+        source = review_source or self._authorize_source(c, viewer, scene_id, source_id)
+        if review_source is not None and route != "handler":
+            raise ValueError("Review source projection is Handler-only")
         self.observations.game.unpaused(c)
         question = source.text or ""
         if route == "handler":
@@ -87,6 +103,14 @@ class DirectorConversationService:
                 # Scene membership is OOC access, not in-fiction hearing. Never
                 # expose the private narration as the Handler's current question.
                 question = "Scene update."
+            elif self.handler_mode == "reviewed":
+                from girlframe.services.director_knowledge import DirectorKnowledgeService
+
+                assert role.actor is not None
+                spoken = DirectorKnowledgeService(self.context).heard(
+                    c, scene_id, source_id, role.actor
+                )
+                question = "\n".join(spoken) or "Scene update."
             keys = {
                 ref.id: self._update_key(c, scene_id, role, ref.id)
                 for ref in role.references
@@ -256,12 +280,28 @@ class DirectorConversationService:
             saved = self._saved(c, identity)
             if (
                 not saved
-                or saved.get("record_type") != "conversation_exchange"
+                or saved.get("record_type") not in ("conversation_exchange", "handler_reply_draft")
                 or saved.get("owner_id") != str(viewer.user_id)
                 or saved.get("scene_id") != scene_id
             ):
                 raise WorkflowError("EXCHANGE_UNAVAILABLE: no accessible conversation reply.")
             self._authorize_source(c, viewer, scene_id, saved["source_id"])
+            if saved["record_type"] == "handler_reply_draft":
+                review = self._saved(c, identity + ":review")
+                if review and review["decision"] == "approve":
+                    exchange = self._saved(c, review["exchange_id"])
+                    assert exchange is not None
+                    return exchange
+                return {
+                    "id": identity,
+                    "record_type": "handler_reply_draft",
+                    "scene_id": scene_id,
+                    "route": "handler",
+                    "reply": None,
+                    "status": "rejected" if review else "awaiting_gm_review",
+                    "application": "blocked",
+                    "publication": "private_review_only",
+                }
             return saved
 
     def respond(
@@ -313,6 +353,12 @@ class DirectorConversationService:
             if source.source_revision != expected_source_revision:
                 raise WorkflowError("STALE_SOURCE: refresh the actual question before routing.")
             request, fingerprint = self._requests(c, viewer, scene_id, source_id, route)
+            if (
+                route == "handler"
+                and self.handler_mode == "reviewed"
+                and handler_decision_id is None
+            ):
+                raise WorkflowError("HANDLER_GATE_REQUIRED: use the persisted RESPOND decision.")
             if handler_decision_id:
                 decision = self._saved(c, handler_decision_id)
                 if (
@@ -330,17 +376,24 @@ class DirectorConversationService:
         try:
             if isinstance(request, HandlerRequest):
                 candidate = self.handler.respond(request)
-                expected = SyntheticHandler().respond(request)
+                expected = (
+                    SyntheticHandler().respond(request)
+                    if self.handler_mode == "synthetic"
+                    else None
+                )
             else:
                 candidate = self.gm.respond(request)
                 expected = SyntheticGM().respond(request)
             reply = ConversationReply.model_validate_json(candidate.model_dump_json())
-            if reply != expected or reply.route != route:
+            if (expected is not None and reply != expected) or reply.route != route:
                 raise ValueError("Unsupported synthetic response")
         except Exception:
             raise WorkflowError(
                 "CONVERSATION_UNAVAILABLE: no valid grounded response; retry the same request."
             ) from None
+        if route == "handler" and self.handler_mode == "reviewed":
+            assert isinstance(request, HandlerRequest)
+            self._validate_handler_draft(request, reply)
 
         def authorize(c: Connection) -> None:
             self._authorize_source(c, viewer, scene_id, source_id)
@@ -350,6 +403,27 @@ class DirectorConversationService:
             if current != fingerprint:
                 raise WorkflowError("STALE_CONTEXT: no reply committed; refresh and retry.")
             identity = "exchange:" + str(uuid4())
+            if route == "handler" and self.handler_mode == "reviewed":
+                identity = "handler-draft:" + str(uuid4())
+                self._save_handler_record(
+                    c,
+                    scene_id,
+                    identity,
+                    {
+                        "id": identity,
+                        "record_type": "handler_reply_draft",
+                        "scene_id": scene_id,
+                        "owner_id": str(viewer.user_id),
+                        "source_id": source_id,
+                        "source_revision": expected_source_revision,
+                        "actor": source.actor.model_dump(mode="json"),
+                        "handler_decision_id": handler_decision_id,
+                        "context_revision": fingerprint,
+                        "request": request.model_dump(mode="json"),
+                        "reply": reply.model_dump(mode="json"),
+                    },
+                )
+                return {"id": identity, "route": route, "application": "blocked"}
             result = {
                 "id": identity,
                 "record_type": "conversation_exchange",
@@ -396,6 +470,257 @@ class DirectorConversationService:
         )
         return self.get(viewer, scene_id, result["id"])
 
+    def _save_handler_record(
+        self, c: Connection, scene: str, identity: str, record: dict[str, Any]
+    ) -> None:
+        c.execute(
+            t.director_context["shadow"]
+            .insert()
+            .values(
+                campaign_id=self.store.campaign_id,
+                scene_id=scene,
+                id=identity,
+                body_json=json.dumps(record, sort_keys=True),
+            )
+        )
+
+    def _validate_handler_draft(self, request: HandlerRequest, reply: ConversationReply) -> None:
+        if (
+            reply.provider != "reviewed-handler-v1"
+            or reply.play_id is not None
+            or reply.gm_decision is not None
+            or reply.route != "handler"
+        ):
+            raise WorkflowError(
+                "HANDLER_AUTHORITY_INVALID: prose cannot supply GM or Play decisions."
+            )
+        refs = set(reply.source_refs)
+        if len(refs) != len(reply.source_refs) or not refs <= {
+            x.id for x in request.context.references
+        }:
+            raise WorkflowError(
+                "HANDLER_CITATION_INVALID: cite only actual Handler-known references."
+            )
+        if reply.disposition == "answer" and not refs:
+            raise WorkflowError(
+                "HANDLER_CITATION_REQUIRED: factual answers need scoped references."
+            )
+        decision = SyntheticHandlerPolicy().decide(request)
+        if decision.action != "RESPOND":
+            raise WorkflowError("HANDLER_WAIT: this message has no eligible response.")
+        if not set(decision.source_refs) <= refs:
+            raise WorkflowError("HANDLER_REQUIRED_REFERENCE: retain the actual response need.")
+
+    def _handler_review_scope(self, c: Connection, viewer: GuildViewer, scene: str) -> None:
+        self.store.administrator(viewer)
+        self.observations._scope()
+        self.observations.game.unpaused(c)
+        self.context._build(c, viewer, scene)
+
+    def feedback_handler(
+        self, viewer: GuildViewer, scene: str, source_id: str, raw: dict[str, Any]
+    ) -> dict[str, Any]:
+        """GM-private dry run; no draft, provider call or disclosure is committed."""
+        with self.store.engine.connect() as c:
+            self._handler_review_scope(c, viewer, scene)
+            from girlframe.services.director_knowledge import DirectorKnowledgeService
+
+            DirectorKnowledgeService(self.context)._source(c, scene, source_id)
+            source = self.observations._latest_source(c, source_id)
+            if source is None:
+                raise WorkflowError("SOURCE_UNAVAILABLE: reopen the current message.")
+            request, _ = self._requests(
+                c, viewer, scene, source_id, "handler", review_source=source
+            )
+            assert isinstance(request, HandlerRequest)
+            try:
+                reply = ConversationReply.model_validate_json(json.dumps(raw))
+                self._validate_handler_draft(request, reply)
+            except ValidationError:
+                return {
+                    "valid": False,
+                    "errors": [
+                        {
+                            "code": "INVALID_CONTRACT",
+                            "field": "reply",
+                            "message": "Use the reviewed Handler reply schema.",
+                        }
+                    ],
+                }
+            except WorkflowError as error:
+                code = str(error).partition(":")[0]
+                return {
+                    "valid": False,
+                    "errors": [
+                        {
+                            "code": code,
+                            "field": "reply",
+                            "message": "Use clarification for unknown information; factual answers "
+                            "require real Handler-known citations and the persisted response need.",
+                        }
+                    ],
+                }
+            return {"valid": True, "errors": []}
+
+    def _handler_draft(self, c: Connection, scene: str, identity: str) -> dict[str, Any]:
+        saved = self._saved(c, identity)
+        if (
+            not saved
+            or saved.get("record_type") != "handler_reply_draft"
+            or saved.get("scene_id") != scene
+        ):
+            raise WorkflowError("HANDLER_DRAFT_UNAVAILABLE: reopen the actual draft.")
+        return saved
+
+    def _current_handler_draft(
+        self, c: Connection, viewer: GuildViewer, scene: str, draft: dict[str, Any]
+    ) -> HandlerRequest:
+        from girlframe.services.director_knowledge import DirectorKnowledgeService
+
+        knowledge = DirectorKnowledgeService(self.context)
+        knowledge._source(c, scene, draft["source_id"])
+        source = self.observations._latest_source(c, draft["source_id"])
+        row = self.observations._scene(c, scene)
+        if (
+            source is None
+            or source.source_revision != draft["source_revision"]
+            or source.author_id != draft["owner_id"]
+            or source.actor.model_dump(mode="json") != draft["actor"]
+            or source.actor not in knowledge._actors(c, row)
+        ):
+            raise WorkflowError("STALE_HANDLER_DRAFT: recover its original source actor.")
+        request, fingerprint = self._requests(
+            c, viewer, scene, source.source_id, "handler", review_source=source
+        )
+        if (
+            fingerprint != draft["context_revision"]
+            or request.model_dump(mode="json") != draft["request"]
+        ):
+            raise WorkflowError(
+                "STALE_HANDLER_DRAFT: regenerate from current knowledge and speech."
+            )
+        assert isinstance(request, HandlerRequest)
+        return request
+
+    def pending_handler(self, viewer: GuildViewer, scene: str) -> list[dict[str, Any]]:
+        """GM-only discovery metadata; draft prose remains behind private review."""
+        with self.store.engine.connect() as c:
+            self._handler_review_scope(c, viewer, scene)
+            table = t.director_context["shadow"]
+            records = [
+                json.loads(raw)
+                for raw in c.scalars(
+                    sa.select(table.c.body_json).where(
+                        table.c.campaign_id == self.store.campaign_id,
+                        table.c.scene_id == scene,
+                        table.c.id.like("handler-draft:%"),
+                    )
+                )
+            ]
+            return [
+                {
+                    "id": row["id"],
+                    "source_id": row["source_id"],
+                    "owner_id": row["owner_id"],
+                    "status": "awaiting_gm_review",
+                }
+                for row in records
+                if row.get("record_type") == "handler_reply_draft"
+                and self._saved(c, row["id"] + ":review") is None
+            ]
+
+    def private_handler(self, viewer: GuildViewer, scene: str, identity: str) -> dict[str, Any]:
+        """Only the actual administrative GM can inspect a natural-language draft."""
+        with self.store.engine.connect() as c:
+            self._handler_review_scope(c, viewer, scene)
+            draft = self._handler_draft(c, scene, identity)
+            review = self._saved(c, identity + ":review")
+            status = review["decision"] if review else "awaiting_gm_review"
+            if review is None:
+                try:
+                    self._current_handler_draft(c, viewer, scene, draft)
+                except WorkflowError:
+                    status = "stale_reopen_source"
+            return {
+                "id": identity,
+                "request": draft["request"],
+                "reply": draft["reply"],
+                "status": status,
+                "semantic_grounding": "gm_review_required",
+                "effects_applied": False,
+            }
+
+    def review_handler(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        scene: str,
+        identity: str,
+        decision: Literal["approve", "reject"],
+        reason: str,
+    ) -> dict[str, Any]:
+        """Approve intended prose only; citation validity is not proof of entailment."""
+        if decision not in ("approve", "reject") or not reason.strip() or len(reason) > 1200:
+            raise WorkflowError(
+                "HANDLER_REVIEW_INVALID: give an explicit decision and short reason."
+            )
+
+        def operation(c: Connection) -> dict[str, Any]:
+            draft = self._handler_draft(c, scene, identity)
+            if self._saved(c, identity + ":review"):
+                raise WorkflowError("HANDLER_REVIEW_FINAL: the draft already has a decision.")
+            exchange_id = None
+            if decision == "approve":
+                request = self._current_handler_draft(c, viewer, scene, draft)
+                reply = ConversationReply.model_validate_json(json.dumps(draft["reply"]))
+                self._validate_handler_draft(request, reply)
+                exchange_id = "exchange:" + str(uuid4())
+                self._save_handler_record(
+                    c,
+                    scene,
+                    exchange_id,
+                    {
+                        "id": exchange_id,
+                        "record_type": "conversation_exchange",
+                        "scene_id": scene,
+                        "owner_id": draft["owner_id"],
+                        "source_id": draft["source_id"],
+                        "source_revision": draft["source_revision"],
+                        "route": "handler",
+                        "handler_decision_id": draft["handler_decision_id"],
+                        "context_revision": draft["context_revision"],
+                        "reply": draft["reply"],
+                        "review_id": identity + ":review",
+                        "external_tokens": 0,
+                        "external_cost": 0,
+                        "publication": "private_reply_only",
+                    },
+                )
+            self._save_handler_record(
+                c,
+                scene,
+                identity + ":review",
+                {
+                    "id": identity + ":review",
+                    "record_type": "handler_reply_review",
+                    "draft_id": identity,
+                    "decision": decision,
+                    "reason": reason,
+                    "reviewer_id": str(viewer.user_id),
+                    "exchange_id": exchange_id,
+                },
+            )
+            return {"id": identity, "status": decision, "effects_applied": False}
+
+        return self.store._write(
+            viewer,
+            key,
+            "director.handler_review",
+            {"scene": scene, "draft": identity, "decision": decision, "reason": reason},
+            operation,
+            authorize=lambda c: self._handler_review_scope(c, viewer, scene),
+        )
+
     def dispatch(
         self,
         viewer: GuildViewer,
@@ -414,13 +739,31 @@ class DirectorConversationService:
         if addressed_to not in ("gm", "handler"):
             raise WorkflowError("UNSUPPORTED_ROUTE: address gm or handler.")
         gm = self.respond(viewer, key + ":gm", scene_id, source_id, "gm", expected_source_revision)
-        handler = (
-            self.respond(
-                viewer, key + ":handler", scene_id, source_id, "handler", expected_source_revision
-            )
-            if addressed_to == "handler"
-            else None
-        )
+        handler = None
+        if addressed_to == "handler":
+            if self.handler_mode == "reviewed":
+                gate = self.decide_handler(
+                    viewer, key + ":decision", scene_id, source_id, expected_source_revision
+                )
+                if gate["decision"]["action"] == "RESPOND":
+                    handler = self.respond(
+                        viewer,
+                        key + ":handler",
+                        scene_id,
+                        source_id,
+                        "handler",
+                        expected_source_revision,
+                        handler_decision_id=gate["id"],
+                    )
+            else:
+                handler = self.respond(
+                    viewer,
+                    key + ":handler",
+                    scene_id,
+                    source_id,
+                    "handler",
+                    expected_source_revision,
+                )
         return {"gm": gm, "handler": handler}
 
     def decide_handler(

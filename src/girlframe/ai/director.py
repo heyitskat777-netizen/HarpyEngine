@@ -15,6 +15,7 @@ class KnowledgeReference(Contract):
     order: int
     dependencies: tuple[str, ...] = ()
     known_by: tuple[str, ...] = ()
+    reported_by: ActorRef | None = Field(default=None, exclude_if=lambda x: x is None)
     origin_scene: str | None = Field(default=None, exclude_if=lambda x: x is None)
     origin_reference: str | None = Field(default=None, exclude_if=lambda x: x is None)
     topic: Literal["general", "objective", "scope", "status", "briefing", "tactical", "debrief"] = (

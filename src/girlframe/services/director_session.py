@@ -34,7 +34,9 @@ class DirectorSessionService:
         self.context, self.observer, self.store = context, context.observations, context.store
         self.game = self.observer.game
         self.conversation = conversation or DirectorConversationService(context)
-        self.outcomes = outcomes or GMOutcomeService(context)
+        self.outcomes = outcomes or GMOutcomeService(
+            context, require_response_scope=self.conversation.handler_mode == "reviewed"
+        )
         self.reviews = DirectorPlayReviewService(context)
         from girlframe.services.director_knowledge import DirectorKnowledgeService
 
@@ -171,6 +173,7 @@ class DirectorSessionService:
                 "scene_id": scene,
                 "scope": "gm" if gm else "own",
                 "knowledge_sources": self.knowledge.pending(viewer, scene) if gm else [],
+                "handler_drafts": self.conversation.pending_handler(viewer, scene) if gm else [],
                 "native": work,
                 "outcome_sources": sources,
                 "decision_routes": [self._decision_route(c, row) for row in work["choices"]],

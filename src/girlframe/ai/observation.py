@@ -26,7 +26,7 @@ class AppendSceneInput(Contract):
     speaker: Literal["pilot", "handler"]
     text: str = Field(min_length=1, max_length=1000)
     classification: Literal["ic", "ooc"] = "ic"
-    fictional_channel: Literal["scene", "private", "comms"] = Field(
+    fictional_channel: Literal["scene", "private", "comms", "mixed", "unclassified"] = Field(
         default="scene", exclude_if=lambda x: x == "scene"
     )
     source_id: str | None = Field(default=None, min_length=1, max_length=100)
@@ -53,7 +53,7 @@ class Observation(Contract):
     audience_ids: tuple[WireSnowflake, ...]
     accepted_at: float
     text: str | None = Field(default=None, max_length=1000)
-    fictional_channel: Literal["scene", "private", "comms"] = Field(
+    fictional_channel: Literal["scene", "private", "comms", "mixed", "unclassified"] = Field(
         default="scene", exclude_if=lambda x: x == "scene"
     )
     action_id: str | None = None

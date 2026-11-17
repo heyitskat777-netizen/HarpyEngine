@@ -271,6 +271,12 @@ def apply_gm(root, ids):
         raw = json.loads((folder / (identity + ".json")).read_text())
         trial = Trial(root / "stores" / item["store"])
         try:
+            if item.get("reviewed"):
+                from girlframe.services.gm_outcomes import GMOutcomeService
+
+                trial.session.outcomes = GMOutcomeService(
+                    trial.context, require_response_scope=True
+                )
             before_dice = trial.dice.calls
             result = {"case_id": identity, "candidate": raw, "accepted": False}
             try:
@@ -446,7 +452,8 @@ def apply_handler(root, ids):
     results = json.loads(results_path.read_text()) if results_path.exists() else {}
     for identity in ids:
         item = entries[identity]
-        raw = json.loads((root / "handler-output" / (identity + ".json")).read_text())
+        folder = root / "handler-output" / item.get("handler_response_subdirectory", "")
+        raw = json.loads((folder / (identity + ".json")).read_text())
         result = {"case_id": identity, "candidate": raw, "engine_transport_accepted": None}
         if raw["action"] == "RESPOND":
             trial = Trial(root / "stores" / item["store"])
@@ -456,6 +463,9 @@ def apply_handler(root, ids):
                     disposition=raw["disposition"],
                     text=raw["text"],
                     source_refs=tuple(raw["source_refs"]),
+                    provider="reviewed-handler-v1"
+                    if item.get("reviewed")
+                    else "synthetic-conversation-v1",
                 )
 
                 class Supplied:
@@ -465,9 +475,16 @@ def apply_handler(root, ids):
                     def respond(self, request):
                         return self.value
 
-                trial.session.conversation.handler = Supplied(reply)
+                if item.get("reviewed"):
+                    from girlframe.services.director_conversation import DirectorConversationService
+
+                    trial.session.conversation = DirectorConversationService(
+                        trial.context, handler=Supplied(reply), handler_mode="reviewed"
+                    )
+                else:
+                    trial.session.conversation.handler = Supplied(reply)
                 try:
-                    trial.session.conversation.respond(
+                    saved = trial.session.conversation.respond(
                         trial.viewers()["lark"],
                         "model-reply:" + identity,
                         trial.scene,
@@ -477,6 +494,8 @@ def apply_handler(root, ids):
                         handler_decision_id=item["decision"],
                     )
                     result["engine_transport_accepted"] = True
+                    if item.get("reviewed"):
+                        result["draft"] = saved
                 except WorkflowError as error:
                     result.update(engine_transport_accepted=False, error=str(error))
             finally:

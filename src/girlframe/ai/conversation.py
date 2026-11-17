@@ -3,7 +3,7 @@
 import re
 from typing import Literal, Protocol
 
-from pydantic import Field, JsonValue, model_validator
+from pydantic import ConfigDict, Field, JsonValue, model_validator
 
 from girlframe.ai.contracts import Contract
 from girlframe.ai.director import DirectorContext, KnowledgeReference
@@ -58,15 +58,40 @@ class GMDecision(Contract):
 
 
 class ConversationReply(Contract):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "allOf": [
+                {
+                    "if": {
+                        "properties": {
+                            "provider": {"const": "reviewed-handler-v1"},
+                            "route": {"const": "handler"},
+                            "disposition": {"const": "answer"},
+                        },
+                        "required": ["provider", "route", "disposition"],
+                    },
+                    "then": {
+                        "required": ["source_refs"],
+                        "properties": {"source_refs": {"minItems": 1}},
+                    },
+                }
+            ]
+        }
+    )
     schema_version: Literal[1] = 1
     route: Route
-    disposition: Literal["answer", "clarification", "requires_engine_workflow"]
+    disposition: Literal["answer", "clarification", "requires_engine_workflow"] = Field(
+        description="Use clarification for unknown information, even when saying 'I do not know'. "
+        "Factual answers in reviewed Handler mode require actual scoped source_refs."
+    )
     text: str = Field(min_length=1, max_length=6000)
     source_refs: tuple[str, ...] = Field(default=(), max_length=3)
     play_id: str | None = None
     gm_decision: GMDecision | None = None
     application: Literal["blocked"] = "blocked"
-    provider: Literal["synthetic-conversation-v1"] = "synthetic-conversation-v1"
+    provider: Literal["synthetic-conversation-v1", "reviewed-handler-v1"] = (
+        "synthetic-conversation-v1"
+    )
 
     @model_validator(mode="after")
     def separate_gm_decision(self) -> "ConversationReply":

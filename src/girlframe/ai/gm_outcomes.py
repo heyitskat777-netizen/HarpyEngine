@@ -146,7 +146,16 @@ class OutcomePacket(Contract):
 class OutcomeProposal(Contract):
     request_id: str
     decision: Decision
-    cited_evidence: tuple[str, ...] = Field(min_length=1, max_length=64)
+    cited_evidence: tuple[str, ...] = Field(
+        min_length=1,
+        max_length=64,
+        json_schema_extra={
+            "minItems": 2,
+            "allOf": [{"contains": {"const": "source"}}, {"contains": {"const": "native"}}],
+            "uniqueItems": True,
+        },
+        description="Cite source and native, plus any other real evidence used.",
+    )
     private_reasoning: str = Field(min_length=1, max_length=12000)
 
 

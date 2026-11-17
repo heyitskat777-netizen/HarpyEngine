@@ -48,7 +48,14 @@ def validate_origin(
         or not set(reference.known_by) <= set(original.known_by)
         or any(
             getattr(reference, name) != getattr(original, name)
-            for name in ("source_id", "source_revision", "topic", "classification", "text")
+            for name in (
+                "source_id",
+                "source_revision",
+                "topic",
+                "classification",
+                "text",
+                "reported_by",
+            )
         )
     ):
         raise WorkflowError("STALE_CONTINUITY: reconcile the original knowledge and consent.")

@@ -44,6 +44,8 @@ def validate(packet: OutcomePacket, proposal: OutcomeProposal) -> ChoiceAnswer |
     if proposal.request_id != packet.request_id or proposal.decision.kind != packet.operation:
         raise ValueError("Wrong source request or operation")
     citations = set(proposal.cited_evidence)
+    if len(citations) != len(proposal.cited_evidence):
+        raise ValueError("Use distinct evidence citations")
     if not {"source", "native"} <= citations or not citations <= {e.id for e in packet.evidence}:
         raise ValueError("Cite the frozen source and actual native evidence")
     d = proposal.decision
@@ -51,6 +53,14 @@ def validate(packet: OutcomePacket, proposal: OutcomeProposal) -> ChoiceAnswer |
     if isinstance(d, KeepOutcome):
         if packet.frame is None:
             raise ValueError("Keep requires an explicit framed goal")
+        scope = packet.frame.response_scope
+        if d.verdict != "needs_clarification":
+            if scope == "unresolved" or (native.get("response_scope_required") and scope is None):
+                raise ValueError("RESPONSE_OWNERSHIP: establish whose response determines success")
+            if scope == "other" and not native.get("response_authorized"):
+                raise ValueError(
+                    "RESPONSE_OWNERSHIP: preserve the actual target controller's response"
+                )
         action = native["action"]
         result = action["data"]["result"]
         # Reuse actual trait/coverage/prerequisite validation; no alternate keyword oracle.

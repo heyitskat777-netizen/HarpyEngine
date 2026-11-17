@@ -5,10 +5,13 @@ from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 import sqlalchemy as sa
+from pydantic import ValidationError
 from sqlalchemy import Connection
 
 from girlframe.ai.director import KnowledgeReference
 from girlframe.ai.knowledge import (
+    ActorDirectoryEntry,
+    Disclosure,
     KnowledgePacket,
     KnowledgeProposal,
     KnowledgeProvider,
@@ -124,12 +127,37 @@ class DirectorKnowledgeService:
         context = self.context._build(c, viewer, scene)
         actual = self._source(c, scene, source)
         actors = self._actors(c, row)
+        canon = load_state(c, self.store.campaign_id)
+        directory = []
+        for actor in actors:
+            view = resolve(
+                canon, actor, profiles(c, self.store.campaign_id), require_current_profile=False
+            )
+            directory.append(
+                ActorDirectoryEntry(
+                    actor=actor,
+                    name=view.label,
+                    controller=view.controller,
+                    aliases=(view.label,) if view.label else (),
+                )
+            )
         if actual.actor is not None and actual.actor not in actors:
             raise WorkflowError("STALE_ACTOR: recover the original source actor.")
+        spoken: dict[str, list[ActorRef]] = {}
+        if actual.kind == "message" and actual.fictional_channel != "comms":
+            for actor in actors:
+                for quote in self.heard(c, scene, source, actor):
+                    spoken.setdefault(quote, []).append(actor)
+        disclosures = tuple(
+            Disclosure(quote=quote, recipients=tuple(listeners))
+            for quote, listeners in spoken.items()
+        )
         payload = {
             "source": actual.model_dump(mode="json"),
             "context": context.model_dump(mode="json"),
             "recipients": [x.model_dump(mode="json") for x in actors],
+            "actor_directory": [x.model_dump(mode="json") for x in directory],
+            "accepted_disclosures": [x.model_dump(mode="json") for x in disclosures],
         }
         return KnowledgePacket(
             request_id=request,
@@ -137,6 +165,8 @@ class DirectorKnowledgeService:
             source=actual,
             context=context,
             recipients=actors,
+            actor_directory=tuple(directory),
+            accepted_disclosures=disclosures,
             revision=_digest(payload),
         )
 
@@ -205,6 +235,22 @@ class DirectorKnowledgeService:
         if proposal.request_id != packet.request_id:
             raise WorkflowError("SOURCE_SUBSTITUTION: retain the original request.")
         refs = {x.id: x for x in packet.context.references}
+        for disclosure in proposal.disclosures:
+            if (
+                packet.source.kind != "message"
+                or packet.source.fictional_channel == "private"
+                or not disclosure.quote.strip()
+                or packet.source.text.count(disclosure.quote) != 1
+            ):
+                raise WorkflowError(
+                    "UNPROVEN_SPEECH: classify a unique actual nonprivate source quote."
+                )
+            if not set(disclosure.recipients) <= set(packet.recipients):
+                raise WorkflowError("INVALID_RECIPIENT: select actual current listeners.")
+        if len({x.quote for x in proposal.disclosures}) != len(proposal.disclosures):
+            raise WorkflowError(
+                "DUPLICATE_DISCLOSURE: combine listeners for the same speech quote."
+            )
         signatures = []
         for update in proposal.updates:
             if not update.quote.strip() or update.quote not in packet.source.text:
@@ -229,6 +275,26 @@ class DirectorKnowledgeService:
                     raise WorkflowError(
                         "UNPROVEN_REPORT: require comms and actual speaker-known content."
                     )
+            elif update.basis in ("testimony", "paraphrase"):
+                if packet.source.kind != "message" or packet.source.actor is None:
+                    raise WorkflowError(
+                        "UNPROVEN_TESTIMONY: require an actual speaker-owned message."
+                    )
+                for recipient in update.recipients:
+                    heard = packet.source.fictional_channel == "comms" or any(
+                        recipient in disclosure.recipients and update.quote in disclosure.quote
+                        for disclosure in (*packet.accepted_disclosures, *proposal.disclosures)
+                    )
+                    if not heard:
+                        raise WorkflowError(
+                            "UNPROVEN_TESTIMONY: recipient lacks classified speech."
+                        )
+                if update.basis == "paraphrase":
+                    prior = refs.get(update.prior_reference or "")
+                    if prior is None or packet.source.actor.token not in prior.known_by:
+                        raise WorkflowError(
+                            "UNPROVEN_PARAPHRASE: cite actual speaker-known content."
+                        )
             elif packet.source.kind != "approved_outcome":
                 raise WorkflowError(
                     "UNPROVEN_OUTCOME: require an actual confirmed native readback."
@@ -236,6 +302,86 @@ class DirectorKnowledgeService:
             signatures.append((update.basis, update.quote))
         if len(set(signatures)) != len(signatures):
             raise WorkflowError("DUPLICATE_KNOWLEDGE: combine recipients for the same source fact.")
+
+    def feedback(
+        self, viewer: GuildViewer, scene: str, request: str, raw: dict[str, Any]
+    ) -> dict[str, Any]:
+        """GM-private diagnostics; never echo untrusted input or private source prose."""
+        with self.store.engine.connect() as c:
+            self._scope(c, viewer, scene)
+            try:
+                packet = self._packet(c, scene, request)
+                self._fresh(c, viewer, packet)
+                proposal = KnowledgeProposal.model_validate_json(json.dumps(raw))
+                self._validate(packet, proposal)
+            except ValidationError as error:
+                return {
+                    "valid": False,
+                    "errors": [
+                        {
+                            "code": "INVALID_CONTRACT",
+                            "field": ".".join(map(str, item["loc"])),
+                            "message": "Proposal does not satisfy the declared knowledge contract.",
+                        }
+                        for item in error.errors(include_input=False, include_context=False)
+                    ],
+                }
+            except (ValueError, TypeError, WorkflowError) as error:
+                code = (
+                    str(error).partition(":")[0]
+                    if isinstance(error, WorkflowError)
+                    else "INVALID_CONTRACT"
+                )
+                return {
+                    "valid": False,
+                    "errors": [
+                        {
+                            "code": code,
+                            "field": "request_or_updates",
+                            "message": "Reopen the source and check the acquisition requirements.",
+                        }
+                    ],
+                }
+            return {"valid": True, "errors": []}
+
+    def heard(self, c: Connection, scene: str, source_id: str, actor: ActorRef) -> tuple[str, ...]:
+        """Only explicit comms or accepted classified speech reaches this listener."""
+        self.observer._scope()
+        self.observer.game.unpaused(c)
+        row = self.observer._scene(c, scene)
+        state = self.observer._state(c, scene)
+        if state.policy.mode != "shadow" or not self.observer._consented(c, row, state):
+            raise WorkflowError("OBSERVATION_DISABLED: retain current consent.")
+        if actor not in self._actors(c, row):
+            raise WorkflowError("INVALID_RECIPIENT: recover the actual current listener.")
+        source = self._source(c, scene, source_id)
+        if source.kind != "message" or source.fictional_channel == "private":
+            return ()
+        if source.fictional_channel == "comms":
+            return (source.text,)
+        table = t.director_context["shadow"]
+        records = [
+            json.loads(raw)
+            for raw in c.scalars(
+                sa.select(table.c.body_json).where(
+                    table.c.campaign_id == self.store.campaign_id,
+                    table.c.scene_id == scene,
+                    sa.func.json_extract(table.c.body_json, "$.record_type")
+                    == "knowledge_disclosure",
+                    sa.func.json_extract(table.c.body_json, "$.source_id") == source_id,
+                )
+            )
+        ]
+        quotes = set()
+        for record in records:
+            if (
+                record["source_revision"] == source.revision
+                and actor.token in record["recipients"]
+                and source.text.count(record["quote"]) == 1
+            ):
+                self._record(c, scene, record["proposal_id"] + ":accepted", "knowledge_acceptance")
+                quotes.add(record["quote"])
+        return tuple(sorted(quotes, key=source.text.index))
 
     def propose(
         self, viewer: GuildViewer, key: str, scene: str, request: str, proposal: KnowledgeProposal
@@ -414,6 +560,24 @@ class DirectorKnowledgeService:
             if len(self.context._active(c, scene)) + len(proposal.updates) > 100:
                 raise WorkflowError("CONTEXT_LIMIT: retire prompt references explicitly.")
             references = []
+            for disclosure in proposal.disclosures:
+                event = "knowledge-disclosure:" + str(uuid4())
+                self._save(
+                    c,
+                    scene,
+                    event,
+                    {
+                        "record_type": "knowledge_disclosure",
+                        "source_id": packet.source.id,
+                        "source_revision": packet.source.revision,
+                        "quote": disclosure.quote,
+                        "recipients": [actor.token for actor in disclosure.recipients],
+                        "source_actor": packet.source.actor.model_dump(mode="json")
+                        if packet.source.actor
+                        else None,
+                        "proposal_id": identity,
+                    },
+                )
             for index, update in enumerate(proposal.updates, 1):
                 signature = _digest(
                     {
@@ -451,6 +615,9 @@ class DirectorKnowledgeService:
                     if update.basis == "outcome"
                     else "reported_claim",
                     text=reference_text(update),
+                    reported_by=packet.source.actor
+                    if update.basis in ("report", "testimony", "paraphrase")
+                    else None,
                 )
                 self._save(
                     c,
