@@ -18,7 +18,7 @@ HTTP route, frontend, authentication flow, model, worker or live policy.
 | Surface | Read contract | Required controls and visibility |
 |---|---|---|
 | Scene | `DirectorSessionService.submit`, `contributions` | Persist the full original command/key; render separate GM and Handler replies. WAIT is silence. Only approved participant contributions enter the shared transcript. Private GM packets/reasoning stay out. |
-| Scene work | `.work(viewer, scene, gm=False)` | Render original pending choices, declarations, proposals and their actual owners. A subject of a decision is not necessarily its decision owner. GM scope requires native authorization. |
+| Scene work | `.work(viewer, scene, gm=False)` | Render original pending choices, declarations, proposals, `response_requests` and their actual owners. Target answers are separate from native ruling confirmations. A subject of a decision is not necessarily its decision owner. GM scope requires native authorization. |
 | Campaign work | `.campaign_work(viewer, scene, period_id=None)` | Show mission controls, current/selected Off-Duty progress and required campaign work. This is a recipient-specific OOC dashboard, not a Handler persona prompt. Keep private scenes and personal sheet choices in their native recipient projection. |
 | GM desk | `.decision_context`, `GMOutcomeService.open/packet/propose/feedback` | Bind the actual native source/receipt, context, declared goal and response ownership. Show typed outcome fields, are/are-not assessments for Keep and unresolved prerequisites. GM visibility cannot confirm another source owner's choice. |
 | Owner review | `GMOutcomeService.owner_review/confirm` and native choice services | Present intended effects/disclosures to the actual decision owner; preserve personal selections and acknowledgements. Reopen stale work; never auto-fill consent or clone an old confirmation onto a new source. |
@@ -121,6 +121,16 @@ handoffs. Corrections invalidate stale prompt material until reconciliation;
 metadata-only retirement preserves history rather than asserting fictional
 forgetting. Native mechanics and player/Handler choice ownership remain separate.
 
+`Acquisition.relations` optionally links current accounts using
+`KnowledgeRelation(kind="competes_with"|"corrects", reference_id=...)`. Accepted
+references retain those links, original authors and claim/outcome classification.
+Neither relation erases the earlier statement or establishes which account is
+true. A native approved outcome can correct a claim; testimony remains testimony.
+Actor/Handler projections include a link only when that actor knows both accounts,
+and remove hidden dependency IDs as well. Carry both endpoints across scene
+handoffs; the service remaps validated roots. Archival must be dependency-closed.
+Display these as attributed accounts/corrections, not automatic truth labels.
+
 ## Reviewed Handler and response ownership
 
 Trusted server configuration may inject a Handler provider into
@@ -167,6 +177,91 @@ if constructing them outside the reviewed session defaults.
 GM and knowledge feedback APIs are private, read-only diagnostics. Keep retries
 linked to their original failed proposal; do not replace first-pass evidence.
 Refresh stale requests rather than changing IDs on an old confirmation.
+
+## Controller response handoff
+
+`session.responses` (also `outcomes.responses`) supports an ordinary Keep goal
+whose outcome needs another actor's voluntary response:
+
+```text
+request(gm, key, scene, outcome_request_id, question) -> response request ID
+pending(viewer, scene, gm=False) -> actual controller's pending metadata
+get(viewer, scene, request_id, gm=False) -> private question/own answer/status
+answer(controller, key, scene, request_id, "accept"|"decline"|"clarify", text)
+resume(gm, key, scene, request_id) -> new source-bound GM outcome request
+```
+
+The GM explicitly selects the question to disclose; private stakes, assessments
+and canonical context are not forwarded. Only the frozen actual target controller
+can answer. The answer is private adjudication evidence, not a shared scene entry,
+fictional Handler knowledge, consent to unrelated actions or a mechanical effect.
+GM work lists answered requests as `answered_resume_required`. Resuming binds the
+new frame's `response_request` to the exact original attempt, target and answer.
+The proposal must cite `target_response`; refusal cannot become a successful
+voluntary agreement, and clarification cannot authorize an assumed response.
+The actual native choice owner still reviews/confirms the outcome separately.
+
+The handoff binds native choices/receipts, actors/casting, policy, safety and
+consent generation. Unrelated transcript additions do not revoke a question;
+withdrawal followed by renewed consent does not revive it. Answer retries reuse
+the saved record and do not reroll. A changed attempt needs a new question.
+Scope is bounded to supported ordinary Keep consumers; printed personal-choice
+services retain their existing independent ownership and APIs.
+The GM must still check that the disclosed question matches the framed goal.
+One target is supported per handoff; multi-target reactions require clarification
+or separately established native work, not blanket agreement from one answer.
+
+## Reviewed response needs
+
+The legacy response gate remains available. In reviewed mode a GM can additionally
+propose a source-bound need for an indirect request or an urgent known report:
+
+```text
+conversation.open_handler_need(gm, key, scene, source_id) -> need request ID
+conversation.handler_need_packet(gm, scene, request_id) -> narrow HandlerNeedPacket
+conversation.propose_handler_need(gm, key, scene, request_id, HandlerNeedProposal)
+conversation.generate_handler_need(gm, key, scene, request_id, injected_provider)
+conversation.private_handler_need(gm, scene, proposal_id) -> private review/status
+conversation.pending_handler_needs(gm, scene) -> pending metadata
+conversation.review_handler_need(gm, key, scene, proposal_id, "approve"|"reject", reason)
+```
+
+`HandlerNeedProposal` uses `action=RESPOND|WAIT`,
+`kind=indirect_request|urgent_known_report|no_need`, actual `source_refs`, an exact
+heard `speech_quote` for indirect requests, and private reasoning. Urgent reports
+must cite Handler-known references from that actual source. A hidden perception
+or unrelated reference cannot justify intervention. Semantic urgency/addressing
+remains GM judgment; an approved need can augment legacy WAIT but does not revoke
+an existing eligible direct request/update or a GM-addressed exclusion.
+
+A Handler-visible `corrects` relation on objective/scope/status knowledge also
+qualifies as an engine update. Both linked accounts must be known to that Handler
+for the relation to survive projection. Selection and delivery suppression share
+the same eligible-reference definition; an approved correction is announced once.
+
+The engine persists the final RESPOND/WAIT and rechecks the actual need before
+generation and draft save. Need approval does not approve natural reply prose:
+the separate private Handler draft review remains mandatory. Only approved
+exchanges count as delivered for suppression. A new genuine repeated request can
+be answered; replay of the same delivered need stays silent.
+
+Trusted servers may pair `need_provider` and `need_gm` on DirectorSessionService.
+This explicitly invokes `acquire_handler_need` (open/generate/trusted GM approve)
+after knowledge acquisition and before conversation routing. Defaults remain
+provider-free. The browser cannot choose that authority or enable model spending.
+Use the manual steps when a human should inspect each proposed response need.
+
+## Sensors provider input mapping
+
+Sensor outcome packets now expose `native.answer_contract`: actual positional
+answer fields with their printed questions, `consequence_required` and
+`allowed_consequences`. Use `a1`, `a2`, etc. in the native selected-question order;
+question names such as `foundation_destination` are not consumer field keys.
+Consequence is null except when the actual native high off-list branch requires
+one. Do not infer an extra consequence merely because the result is mid.
+GM-private feedback returns `SENSOR_INPUT_CONTRACT` for an invalid mapping/branch.
+The engine still validates the real native source and original owner; this is
+input metadata, not a change to the printed Sensor outcomes.
 
 ## Campaign dashboard contract
 

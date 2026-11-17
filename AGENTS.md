@@ -1,4 +1,18 @@
-> Latest owner request: revise the six model-contract recommendations and retest.
+> Latest owner request: continue all four follow-up recommendations and testing.
+> Implemented on 7e67492 after 98246a0; see reports/P2_CONNECTED_DIRECTOR_REVIEW.md.
+> Preserve controller-authored response handoffs and original native confirmation,
+> competing/correcting knowledge links with hidden edges filtered per actor,
+> reviewed source-bound intervention needs, and separate private Handler prose
+> review. Operational corrections and delivery suppression share handler_updates.
+> Final112-input rehearsal:12Handler interventions,3native Plays/rolls, no rerolls
+> or pending choices;112role prompts pass privacy checks. Final61affected tests
+> pass after fixing repeated correction announcements and adding Sensor positional
+> answer-contract feedback. Earlier63/17 selections overlap. Blind Handler25/27
+> initial agreement; GM9/10first pass and10/10after metadata-only feedback, not a
+> full autonomous model session. Engine-first; UI/auth/human acceptance remain
+> separate, no paid API calls or live rollout. See consolidated Activity handoff.
+>
+> Previous owner request: revise the six model-contract recommendations and retest.
 > Implemented on d7de985; see reports/P2_MODEL_CONTRACT_REVISION.md and the updated
 > integrations/activity/P2_SESSION_UI_HANDOFF.md. Reviewed Handler mode filters
 > scene/mixed/unclassified raw prose through accepted listener disclosures and

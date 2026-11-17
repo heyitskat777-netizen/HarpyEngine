@@ -12,6 +12,9 @@ The [model-contract revision and retest](reports/P2_MODEL_CONTRACT_REVISION.md)
 adds scoped speech classification, attributed testimony/paraphrases, native actor
 names, explicit response ownership and natural Handler drafts held for GM review.
 The default stays synthetic; external providers and Activity ports are not installed.
+The [connected follow-through](reports/P2_CONNECTED_DIRECTOR_REVIEW.md) adds actual
+controller response handoffs, competing/correcting account links and reviewed
+intervention needs for indirect requests and urgent known reports.
 
 The [P2 assisted player-test candidate](docs/P2_PLAYER_TEST_GUIDE.md) now supplies
 one resumable synthetic session flow, native GM/owner review, scoped retained
