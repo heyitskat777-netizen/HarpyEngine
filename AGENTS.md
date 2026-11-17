@@ -1,4 +1,11 @@
-> Current owner task: reconcile the November 16 Activity source handoff against
+> Current owner continuation: the four bounded workstreams in
+> docs/work_orders/P2_CONNECTED_CAMPAIGN.md are implemented and locally checked.
+> See reports/P2_CONNECTED_CAMPAIGN.md for exact scope, final affected evidence
+> and next priorities. Preserve closed-scene consent withdrawal, metadata-only
+> stale-reference retirement, original-owner GM routing and delivery-based Handler
+> suppression across same-roster scene handoffs. No paid calls or live rollout.
+>
+> Previous integration task: reconcile the November 16 Activity source handoff against
 > the newer P2 engine. Follow docs/work_orders/ACTIVITY_ENGINE_INTEGRATION.md and
 > integrations/activity/INTEGRATION_HANDOFF.md. Source comparison and synthetic
 > automation do not authorize campaign writes, paid calls or runtime operations.

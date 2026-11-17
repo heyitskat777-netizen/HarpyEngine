@@ -144,3 +144,15 @@ The verifier checks every supplied manifest hash, stages disposable source and
 synthetic stores, points the Activity at this engine, and applies only the two
 adapter replacements above. It runs the supplied Python tests except artwork.
 Keep the output directory new. It saves source hashes and JUnit results.
+## Subsequent connected-scene engine increment
+
+The November 17 source adds GM decision-routing metadata/private review, scoped
+Handler updates, closed-scene handoff and metadata-only retirement of stale
+references. Port the exact contracts in
+[the P2 continuation handoff](../ai_assistance/INTEGRATION_HANDOFF.md) and retain
+the original native owners and earlier specialist release gates. See
+[results and remaining priorities](../../reports/P2_CONNECTED_CAMPAIGN.md).
+
+This is newer than the existing integration ZIP and its 65 supplied adapter-test
+results. That package/result remains baseline evidence; it was not rebuilt or
+reverified against these additions. No Activity frontend or live backend changed.
