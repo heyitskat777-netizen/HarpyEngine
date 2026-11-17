@@ -260,4 +260,3 @@ The source/registry hashes and recommendations are retained at
 design data, not a runtime classifier or admission policy. No gameplay suite was
 rerun for this documentation-only review; earlier workflow evidence remains
 attached to its own source and is not new adapter implementation evidence.
-
