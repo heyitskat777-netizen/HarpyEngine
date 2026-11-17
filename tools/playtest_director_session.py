@@ -93,7 +93,7 @@ class Console:
             revision = self._resolve(
                 lambda: {"revision": state(trial.game).sheets[str(viewer.user_id)].revision}
             )["revision"]
-            result = trial.game.begin(viewer, key, 900, revision, value)
+            result = trial.game.begin(viewer, key, trial.scene_channel, revision, value)
             self.state["variables"]["action"] = result["action_id"]
             trial.tick()
         elif command in ("/choice", "/answer"):
@@ -117,11 +117,15 @@ class Console:
             result = trial.game.roll(viewer, key, argument)
             trial.tick()
         elif command == "/battle-preview":
-            result = BattleService(trial.store).preview(viewer, 900)
+            result = BattleService(trial.store).preview(viewer, trial.scene_channel)
         elif command == "/battle-declare":
             revision = self._resolve(lambda: {"revision": state(trial.game).revision})["revision"]
             result = BattleService(trial.store).propose(
-                viewer, key, revision, 900, Declaration.model_validate_json(argument)
+                viewer,
+                key,
+                revision,
+                trial.scene_channel,
+                Declaration.model_validate_json(argument),
             )
             self.state["variables"]["battle"] = result["id"]
         elif command == "/grant":

@@ -29,6 +29,7 @@ class Trial:
         self.directory = Path(directory).resolve()
         self.clock, self.dice, self.gateway = Clock(), Dice(), Gateway()
         self.role, self.last_message = "lark", None
+        self.scene_channel = 900
         self.console_state = {}
         self.fixture = self.patch = None
         if create:
@@ -67,6 +68,7 @@ class Trial:
             self.dice.faces = tuple(saved["faces"])
             self.dice.calls = saved["dice_calls"]
             self.role, self.last_message = saved["role"], saved["last_message"]
+            self.scene_channel = saved.get("scene_channel", 900)
             self.console_state = saved.get("console_state", {})
             self.gateway.values = {tuple(key): value for key, value in saved["gateway_values"]}
             self.gateway.messages = saved["gateway_messages"]
@@ -74,7 +76,7 @@ class Trial:
         self.observer = DirectorObservationService(self.store, synthetic=True)
         self.observer.game = self.game
         with self.store.engine.connect() as c:
-            self.scene = self.game.scene(c, 900)["id"]
+            self.scene = self.game.scene(c, self.scene_channel)["id"]
         self.context = DirectorContextService(self.observer)
         self.session = DirectorSessionService(self.context)
         if create:
@@ -206,6 +208,7 @@ class Trial:
             "faces": list(self.dice.faces),
             "dice_calls": self.dice.calls,
             "role": self.role,
+            "scene_channel": self.scene_channel,
             "last_message": self.last_message,
             "console_state": self.console_state,
             "gateway_values": [[list(k), v] for k, v in self.gateway.values.items()],
