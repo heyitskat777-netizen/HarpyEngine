@@ -148,6 +148,9 @@ class HandlerPlay(Model):
     targets: tuple[ActorRef, ...] = Field(min_length=1)
     target_controllers: dict[str, Snowflake] = Field(default_factory=dict)
     scope: WorkScope
+    brief_account: str | None = Field(
+        default=None, min_length=1, max_length=1200, exclude_if=lambda x: x is None
+    )
     final_original: bool = False
     nonbody_only: bool = False
     state: Literal["pending", "awaiting_effect", "complete", "withdrawn", "declined"] = "pending"
@@ -161,6 +164,17 @@ class HandlerPlay(Model):
 
     @model_validator(mode="after")
     def actual_authority(self) -> "HandlerPlay":
+        if self.brief_account is not None and (
+            self.source != "ordinary"
+            or self.clause != "director_brief"
+            or self.scope.scene_id is None
+            or len(self.targets) != 1
+            or self.targets[0].kind != "pilot"
+            or not self.brief_account.strip()
+        ):
+            raise ValueError("A reviewed briefing has one actual scene Pilot and approved wording")
+        if self.clause == "director_brief" and self.brief_account is None:
+            raise ValueError("Retain the exact approved briefing")
         if self.nonbody_only and (
             self.source != "required"
             or self.clause != "all_out_assault.low"

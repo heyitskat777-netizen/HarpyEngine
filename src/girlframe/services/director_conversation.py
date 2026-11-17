@@ -17,6 +17,7 @@ from girlframe.ai.conversation import (
     HandlerNeedPacket,
     HandlerNeedProposal,
     HandlerNeedProvider,
+    HandlerPersona,
     HandlerProvider,
     HandlerRequest,
     Route,
@@ -163,7 +164,12 @@ class DirectorConversationService:
                 sorted(identity for identity, key in keys.items() if key in delivered)
             )
             request: GMRequest | HandlerRequest = HandlerRequest(
-                question=question, context=role, addressed_update_refs=addressed
+                question=question,
+                context=role,
+                addressed_update_refs=addressed,
+                persona=self._handler_persona(c, scene_id, role)
+                if self.handler_mode == "reviewed"
+                else None,
             )
         else:
             # Trusted internal campaign projection. This broader context is never
@@ -251,6 +257,23 @@ class DirectorConversationService:
                 play_declaration=self.play_catalog.declared(question),
             )
         return request, _digest(request.model_dump(mode="json"))
+
+    def _handler_persona(
+        self, c: Connection, scene: str, role: DirectorContext
+    ) -> HandlerPersona | None:
+        from girlframe.services.director_dossiers import DirectorDossierService
+
+        assert role.actor is not None
+        try:
+            own = DirectorDossierService(self.context)._role_packet(c, scene, role.actor)
+        except WorkflowError as error:
+            # An outdated self dossier cannot expand knowledge or disable normal comms.
+            if str(error).startswith(("DOSSIER_UNKNOWN_", "DOSSIER_GOAL_UNAVAILABLE:")):
+                return None
+            raise
+        if own.profile is None or own.state is None:
+            return None
+        return HandlerPersona(version=own.dossier_version, profile=own.profile, state=own.state)
 
     def _update_key(
         self, c: Connection, scene_id: str, context: DirectorContext, reference_id: str
@@ -393,7 +416,10 @@ class DirectorConversationService:
         # Two distinct transports and schemas; synthetic providers run outside locks.
         try:
             if isinstance(request, HandlerRequest):
-                candidate = self.handler.respond(request)
+                provider_request = request.model_copy(
+                    update={"response_need": selected_handler_decision}
+                )
+                candidate = self.handler.respond(provider_request)
                 expected = (
                     SyntheticHandler().respond(request)
                     if self.handler_mode == "synthetic"
@@ -448,7 +474,9 @@ class DirectorConversationService:
                         "actor": source.actor.model_dump(mode="json"),
                         "handler_decision_id": handler_decision_id,
                         "context_revision": fingerprint,
-                        "request": request.model_dump(mode="json"),
+                        "request": current_request.model_copy(
+                            update={"response_need": current_decision}
+                        ).model_dump(mode="json"),
                         "reply": reply.model_dump(mode="json"),
                     },
                 )
@@ -544,6 +572,14 @@ class DirectorConversationService:
             raise WorkflowError("HANDLER_WAIT: this message has no eligible response.")
         if not set(decision.source_refs) <= refs:
             raise WorkflowError("HANDLER_REQUIRED_REFERENCE: retain the actual response need.")
+        if reply.handler_play_offer and (
+            decision.reason not in ("known_update", "reviewed_urgent_report", "scope_boundary")
+            or not decision.source_refs
+            or len(reply.text) > 1200
+        ):
+            raise WorkflowError(
+                "HANDLER_PLAY_NEED: a briefing offer needs a scoped intervention and bounded text."
+            )
 
     def _handler_review_scope(self, c: Connection, viewer: GuildViewer, scene: str) -> None:
         self.store.administrator(viewer)
@@ -627,10 +663,9 @@ class DirectorConversationService:
         request, fingerprint = self._requests(
             c, viewer, scene, source.source_id, "handler", review_source=source
         )
-        if (
-            fingerprint != draft["context_revision"]
-            or request.model_dump(mode="json") != draft["request"]
-        ):
+        if fingerprint != draft["context_revision"] or request.model_dump(mode="json") != {
+            name: value for name, value in draft["request"].items() if name != "response_need"
+        }:
             raise WorkflowError(
                 "STALE_HANDLER_DRAFT: regenerate from current knowledge and speech."
             )
@@ -705,12 +740,33 @@ class DirectorConversationService:
             if self._saved(c, identity + ":review"):
                 raise WorkflowError("HANDLER_REVIEW_FINAL: the draft already has a decision.")
             exchange_id = None
+            briefing: dict[str, Any] | None = None
             if decision == "approve":
                 request = self._current_handler_draft(c, viewer, scene, draft)
                 reply = ConversationReply.model_validate_json(json.dumps(draft["reply"]))
                 source = self._need_source(c, scene, draft["source_id"])
                 current_decision, _ = self._handler_decision(c, scene, source, request)
+                drafted_need = draft["request"].get("response_need")
+                if drafted_need is not None and drafted_need != current_decision.model_dump(
+                    mode="json"
+                ):
+                    raise WorkflowError("STALE_HANDLER_DECISION: review the current response need.")
                 self._validate_handler_draft(request, reply, current_decision)
+                if reply.handler_play_offer == "brief":
+                    assert request.context.actor is not None
+                    recipient_refs = self.context._actor_references(
+                        self.context._current(c, scene), source.actor
+                    )
+                    if source.actor.kind != "pilot" or not set(reply.source_refs) <= {
+                        ref.id for ref in recipient_refs
+                    }:
+                        raise WorkflowError(
+                            "HANDLER_PLAY_AUDIENCE: use facts shared with the recipient Pilot."
+                        )
+                    briefing = {
+                        "handler": request.context.actor.model_dump(mode="json"),
+                        "binding": self._need_revision(c, scene, source, request),
+                    }
                 exchange_id = "exchange:" + str(uuid4())
                 self._save_handler_record(
                     c,
@@ -745,9 +801,15 @@ class DirectorConversationService:
                     "reason": reason,
                     "reviewer_id": str(viewer.user_id),
                     "exchange_id": exchange_id,
+                    **({"briefing": briefing} if briefing else {}),
                 },
             )
-            return {"id": identity, "status": decision, "effects_applied": False}
+            return {
+                "id": identity,
+                "status": decision,
+                "effects_applied": False,
+                **({"handler_play_offer": "brief"} if briefing else {}),
+            }
 
         return self.store._write(
             viewer,
@@ -757,6 +819,103 @@ class DirectorConversationService:
             operation,
             authorize=lambda c: self._handler_review_scope(c, viewer, scene),
         )
+
+    @staticmethod
+    def _handler_brief_key(draft_id: str) -> str:
+        return "director-handler-brief:" + draft_id
+
+    def _handler_brief(
+        self, c: Connection, controller: GuildViewer, scene: str, draft_id: str
+    ) -> tuple[Observation, str, bool]:
+        role = self.context._handler_for_request(c, controller, scene)
+        if role.actor is None or role.actor.entity != str(controller.user_id):
+            raise WorkflowError("HANDLER_PLAY_OWNER: the original Handler must confirm.")
+        draft = self._handler_draft(c, scene, draft_id)
+        review = self._saved(c, draft_id + ":review")
+        briefing = review.get("briefing") if review else None
+        if review is None or review["decision"] != "approve" or not briefing:
+            raise WorkflowError("HANDLER_PLAY_REVIEW: select an approved briefing offer.")
+        if role.actor.model_dump(mode="json") != briefing["handler"]:
+            raise WorkflowError("HANDLER_PLAY_OWNER: the original Handler must confirm.")
+        source = self._need_source(c, scene, draft["source_id"])
+        if source.actor.kind != "pilot" or source.source_revision != draft["source_revision"]:
+            raise WorkflowError("HANDLER_PLAY_SOURCE: recover the original pilot source.")
+        started = (
+            c.scalar(
+                sa.select(t.commands.c.interaction_key).where(
+                    t.commands.c.campaign_id == self.store.campaign_id,
+                    t.commands.c.interaction_key == self._handler_brief_key(draft_id),
+                )
+            )
+            is not None
+        )
+        if not started:
+            request, _ = self._requests(
+                c, controller, scene, source.source_id, "handler", review_source=source
+            )
+            assert isinstance(request, HandlerRequest)
+            if self._need_revision(c, scene, source, request) != briefing["binding"]:
+                raise WorkflowError("STALE_HANDLER_PLAY: review the briefing from current context.")
+        return source, str(draft["reply"]["text"]), started
+
+    def start_handler_brief(
+        self, controller: GuildViewer, scene: str, draft_id: str, expected_game_revision: int
+    ) -> dict[str, Any]:
+        """Open native Handler work from an approved offer for the original pilot sender."""
+        from girlframe.services.m3_handler_plays import HandlerPlayService
+
+        with self.store.engine.connect() as c:
+            source, account, _ = self._handler_brief(c, controller, scene, draft_id)
+
+        def guard(c: Connection) -> None:
+            current, current_account, _ = self._handler_brief(c, controller, scene, draft_id)
+            if (current, current_account) != (source, account):
+                raise WorkflowError("HANDLER_PLAY_SOURCE: the original actor changed.")
+
+        with self.store.source_guard(guard):
+            return HandlerPlayService(self.store).start(
+                controller,
+                self._handler_brief_key(draft_id),
+                expected_game_revision,
+                (source.actor,),
+                director_brief=(scene, account),
+            )
+
+    def handler_play_offers(self, viewer: GuildViewer, scene: str) -> list[dict[str, Any]]:
+        """Discover unstarted briefings for the actual Handler without returning draft prose."""
+        if self.handler_mode != "reviewed":
+            return []
+        self.store.guild_member(viewer)
+        with self.store.engine.connect() as c:
+            state = load_state(c, self.store.campaign_id)
+            if state.handler != viewer.user_id:
+                return []
+            table = t.director_context["shadow"]
+            offers = []
+            for raw in c.scalars(
+                sa.select(table.c.body_json).where(
+                    table.c.campaign_id == self.store.campaign_id,
+                    table.c.scene_id == scene,
+                    sa.func.json_type(table.c.body_json, "$.briefing") == "object",
+                    sa.func.json_extract(table.c.body_json, "$.record_type")
+                    == "handler_reply_review",
+                )
+            ):
+                draft_id = json.loads(raw)["draft_id"]
+                try:
+                    source, _, started = self._handler_brief(c, viewer, scene, draft_id)
+                except WorkflowError:
+                    continue
+                if not started:
+                    offers.append(
+                        {
+                            "id": draft_id,
+                            "play": "brief",
+                            "target": source.actor.model_dump(mode="json"),
+                            "game_revision": state.revision,
+                        }
+                    )
+            return offers
 
     def dispatch(
         self,
@@ -1243,6 +1402,8 @@ class DirectorConversationService:
     def _handler_decision(
         self, c: Connection, scene_id: str, source: Observation, request: HandlerRequest
     ) -> tuple[HandlerDecision, str | None]:
+        if self.handler_mode == "reviewed" and source.actor == request.context.actor:
+            return HandlerDecision(action="WAIT", reason="no_handler_need"), None
         decision = SyntheticHandlerPolicy().decide(request)
         need_key = None
         if decision.action == "WAIT" and decision.reason != "gm_request":

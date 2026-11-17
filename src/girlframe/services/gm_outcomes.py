@@ -295,6 +295,8 @@ class GMOutcomeService:
                 )
             if frame.response_request is not None:
                 self.responses.bind(c, scene, kind, identity, owner, frame, data, evidence)
+            if frame.intent_request is not None:
+                self.responses.bind_intent(c, scene, kind, identity, frame, evidence)
         records = {}
         for name in ("m3_missions", "m3_off_duty", "m3_required_work"):
             table = t.m3[name]

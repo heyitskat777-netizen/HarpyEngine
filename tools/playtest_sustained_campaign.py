@@ -96,7 +96,7 @@ class AnchorProvider(NaturalFixtureHandler):
         from girlframe.ai.conversation import ConversationReply, SyntheticHandlerPolicy
         from girlframe.ai.knowledge import fact_text
 
-        gate = SyntheticHandlerPolicy().decide(request)
+        gate = request.response_need or SyntheticHandlerPolicy().decide(request)
         refs = {ref.id: ref for ref in request.context.references}
         question = request.question.casefold()
         topic = (
@@ -107,7 +107,21 @@ class AnchorProvider(NaturalFixtureHandler):
             if topic
             else [refs[identity] for identity in gate.source_refs if identity in refs]
         )
-        if "what enemy" in question:
+        action = None
+        offer = None
+        lead = "Copy. " if request.persona and "Brief" in request.persona.profile.voice else ""
+        if gate.reason == "known_update" and selected:
+            ref = selected[0]
+            fact = fact_text(ref)
+            if ref.topic == "briefing":
+                action = "I put the current briefing beside the route map and clear the old note."
+                text = fact + " Call out your own approach before committing."
+                if "relay" in fact or "convoys" in fact:
+                    offer = "brief"
+            else:
+                action = "I mark the reported location separately from confirmed contacts."
+                text = "That is a pilot report. " + fact + " Keep the identity open."
+        elif "what enemy" in question:
             selected = []
             text = (
                 "I have no reported identity for that location. Hold a safe "
@@ -128,9 +142,11 @@ class AnchorProvider(NaturalFixtureHandler):
         return ConversationReply(
             route="handler",
             disposition="answer" if selected else "clarification",
-            text="Anchor: " + text,
+            text=lead + text,
             source_refs=tuple(ref.id for ref in selected[-2:]),
             provider="reviewed-handler-v1",
+            handler_action=action,
+            handler_play_offer=offer,
         )
 
 
@@ -143,6 +159,7 @@ class Campaign(ConnectedTrial):
         self.role_audits, self.hidden = [], []
         self.period_rows, self.rejections, self.snapshots = [], [], []
         self.heat_spends = []
+        self.handler_plays = []
         self.current_mission, self.current_phase = 0, "setup"
         self.channel = 900
 
@@ -338,7 +355,12 @@ class Campaign(ConnectedTrial):
                 "Synthetic GM reviewed role grounding and voluntary agency.",
             )
             self.log("handler_intervention", reply=raw["reply"], source_id=source.source_id)
-            self.transcript.append("    **Handler / Anchor:** " + raw["reply"]["text"])
+            reply = raw["reply"]
+            if reply.get("handler_action"):
+                self.transcript.append("    **Anchor acts:** " + reply["handler_action"])
+            self.transcript.append("    **Handler / Anchor:** " + reply["text"])
+            if reply.get("handler_play_offer") == "brief":
+                self.handler_brief(draft["id"], reply["text"], viewer)
         result = t.session.submit(viewer, t.scene, command)
         assert t.session.submit(viewer, t.scene, command) == result
         self.replays.append((viewer, command, result))
@@ -353,6 +375,36 @@ class Campaign(ConnectedTrial):
                 flush=True,
             )
         return source, route
+
+    def handler_brief(self, draft, text, recipient):
+        from test_m2_game import state
+
+        from girlframe.ai.gm_outcomes import HandlerOutcome
+        from girlframe.engine.m3_handler_play_state import Effect
+        from girlframe.services.m3_handler_plays import HandlerPlayService
+
+        t, owner = self.trial, self.trial.viewers()["handler"]
+        revision = state(t.game).revision
+        grant = t.session.conversation.start_handler_brief(owner, t.scene, draft, revision)
+        request = t.session.outcomes.open(
+            t.viewers()["gm"], f"handler-brief:{self.number}", t.scene, "handler_grant", grant["id"]
+        )
+        self.proposal(
+            request, HandlerOutcome(play="brief", effect=Effect(kind="brief", account=text))
+        )
+        notice = HandlerPlayService(t.store).notice(recipient, grant["id"])
+        assert notice["state"] == "complete" and notice["account"] == text
+        assert t.session.conversation.start_handler_brief(owner, t.scene, draft, revision) == grant
+        self.handler_plays.append(
+            dict(
+                input=self.number,
+                mission=self.current_mission,
+                id=grant["id"],
+                play=notice["play"],
+                recipient=recipient.user_id,
+            )
+        )
+        self.transcript.append("    **Native Handler Play:** Brief them on the situation.")
 
     def learn(self, source, quote, recipients, basis="testimony", prior=None, topic="status"):
         from girlframe.ai.knowledge import Acquisition, KnowledgeProposal
@@ -524,6 +576,7 @@ class Campaign(ConnectedTrial):
             commit["id"],
             mission["complication"],
             tuple(self.actors.values()),
+            topic="briefing",
         )
         front = FrontDraft(
             key=f"mission-{self.current_mission}",
@@ -675,23 +728,24 @@ class Campaign(ConnectedTrial):
                     dict(
                         kind="ic_clarification_blocked",
                         continuation=(
-                            "Explicit synthetic human-DM TaskFrame review; "
-                            "no actor speech published."
+                            "Original Pilot clarifies through private source-bound OOC review."
                         ),
                     )
                 )
-            self.transcript.append(
-                "    **Facilitator review:** the unclear ruling is held. "
-                "IC clarification is blocked by the active Play. A synthetic human-DM "
-                "explicitly reframes the narrow task; no player reply is fabricated or published."
-            )
-            opened = t.session.outcomes.open(
+            handoff = t.session.responses.request(
                 gm,
-                key + ":clear",
+                key + ":intent-question",
                 t.scene,
-                "choice",
-                choice["id"],
-                frame.model_copy(update={"intent": "established", "stakes": goal}),
+                opened["id"],
+                "What are you trying to achieve with this attempt?",
+                clarify_intent=True,
+            )
+            t.session.responses.answer(
+                viewer, key + ":intent-answer", t.scene, handoff["id"], "clarify", goal
+            )
+            opened = t.session.responses.resume(gm, key + ":clear", t.scene, handoff["id"])
+            self.transcript.append(
+                f"    **{CAST[role]['callsign']} clarifies privately to the GM:** {goal}."
             )
         if other:
             handoff = t.session.responses.request(
@@ -716,6 +770,11 @@ class Campaign(ConnectedTrial):
             )
             opened = t.session.responses.resume(gm, key + ":resume", t.scene, handoff["id"])
         packet = t.session.outcomes.packet(gm, t.scene, opened["id"])
+        citations = (("target_response",) if other else ()) + (("actor_intent",) if clarify else ())
+        if clarify:
+            assert packet.frame.stakes == goal and any(
+                e.id == "actor_intent" for e in packet.evidence
+            )
         actual = packet.native["action"]["data"]["result"]
         positive, negative = tuple(actual["positive"]), tuple(actual["negative"])
         sufficient = required in positive and (
@@ -742,7 +801,7 @@ class Campaign(ConnectedTrial):
                         "source",
                         "native",
                         "traits",
-                        *(("target_response",) if other else ()),
+                        *citations,
                     ),
                     traits=traits,
                     private_reason=(
@@ -754,7 +813,7 @@ class Campaign(ConnectedTrial):
             ),
         )
         packet = t.session.outcomes.packet(gm, t.scene, opened["id"])
-        self.proposal(opened, decision, extra=("target_response",) if other else ())
+        self.proposal(opened, decision, extra=citations)
         t.tick()
         result = t.game.inspect(viewer, action)
         assert result["state"] == "complete"
@@ -766,7 +825,7 @@ class Campaign(ConnectedTrial):
             positive=positive,
             negative=negative,
             verdict=decision.verdict,
-            manual_facilitator_reframe=clarify,
+            actor_intent_clarification=clarify,
             narration=narration,
             request=packet.model_dump(mode="json"),
         )
@@ -1170,7 +1229,11 @@ class Campaign(ConnectedTrial):
                 public = (
                     "I can see an amber silhouette by the east rail; its identity is unconfirmed."
                 )
-                self.turn(public, "lark", learning=(public, tuple(self.actors)))
+                self.turn(
+                    public,
+                    "lark",
+                    learning=(public, tuple(self.actors), "testimony", None, "tactical"),
+                )
             self.sensors(mission)
             self.chat(mission, "worksite", self.chat_count)
             if number == 1:
@@ -1287,6 +1350,12 @@ class Campaign(ConnectedTrial):
             strain_rolls=self.strain.dice.calls,
             quiet_batches=sum(e["kind"] == "quiet_batch_review" for e in self.events),
             handler_interventions=sum(e["kind"] == "handler_intervention" for e in self.events),
+            handler_plays=self.handler_plays,
+            handler_actions=sum(
+                bool(e["reply"].get("handler_action"))
+                for e in self.events
+                if e["kind"] == "handler_intervention"
+            ),
             handler_gates=dict(
                 Counter(
                     e["handler_gate"]["action"] + ":" + e["handler_gate"]["reason"]

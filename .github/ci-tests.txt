@@ -97,6 +97,7 @@ tests/test_gm_response_ownership.py
 # Connected Director follow-through: competing accounts, reviewed needs and owned responses.
 tests/test_director_knowledge_relations.py
 tests/test_director_handler_needs.py
+tests/rules/test_director_handler_participation.py
 tests/rules/test_director_response_handoff.py
 # Reviewed world authorship, native sources and explicitly scoped established knowledge.
 tests/rules/test_world_development.py

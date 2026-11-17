@@ -29,6 +29,7 @@ class TaskFrame(Contract):
     demands: tuple[Demand, ...] = Field(default=(), max_length=12)
     prerequisites: tuple[Prerequisite, ...] = Field(default=(), max_length=32)
     intent: Literal["established", "needs_clarification"] = "established"
+    intent_request: str | None = Field(default=None, exclude_if=lambda x: x is None)
     response_scope: Literal["self", "other", "unresolved"] | None = Field(
         default=None,
         exclude_if=lambda x: x is None,

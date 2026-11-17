@@ -24,6 +24,10 @@ def select(state: GameState, identity: str, play: Play, effect: Effect, event: s
     expected = "mess" if effect.kind in ("status", "tag", "damage") else effect.kind
     if grant.state != "pending" or play != expected or not event.strip():
         raise ValueError("Use this actual pending Handler Play and its matching effect")
+    if grant.brief_account is not None and (
+        play != "brief" or effect.account != grant.brief_account or effect.source_label is not None
+    ):
+        raise ValueError("This offer grants only the reviewed briefing and its exact wording")
     from girlframe.engine import m3_tracker_implants as trackers
 
     tracker_source = next(

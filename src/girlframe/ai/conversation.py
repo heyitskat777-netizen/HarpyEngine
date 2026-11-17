@@ -7,6 +7,7 @@ from pydantic import ConfigDict, Field, JsonValue, model_validator
 
 from girlframe.ai.contracts import Contract
 from girlframe.ai.director import DirectorContext, KnowledgeReference
+from girlframe.ai.director_dossiers import DossierProfile, DossierState
 from girlframe.ai.observation import Observation
 from girlframe.ai.play_names import LABELS, requested_play
 from girlframe.ai.play_review import PlayReferral
@@ -14,11 +15,36 @@ from girlframe.ai.play_review import PlayReferral
 Route = Literal["gm", "handler"]
 
 
+class HandlerDecision(Contract):
+    action: Literal["RESPOND", "WAIT"]
+    reason: Literal[
+        "direct_question",
+        "scope_boundary",
+        "scope_already_addressed",
+        "known_update",
+        "update_already_addressed",
+        "gm_request",
+        "no_handler_need",
+        "reviewed_indirect_request",
+        "reviewed_urgent_report",
+        "need_already_addressed",
+    ]
+    source_refs: tuple[str, ...] = Field(default=(), max_length=3)
+
+
+class HandlerPersona(Contract):
+    version: int = Field(ge=1)
+    profile: DossierProfile
+    state: DossierState
+
+
 class HandlerRequest(Contract):
     schema_version: Literal[1] = 1
     question: str = Field(min_length=1, max_length=1000)
     context: DirectorContext
     addressed_update_refs: tuple[str, ...] = Field(default=(), exclude_if=lambda x: not x)
+    persona: HandlerPersona | None = Field(default=None, exclude_if=lambda x: x is None)
+    response_need: HandlerDecision | None = Field(default=None, exclude_if=lambda x: x is None)
 
     @model_validator(mode="after")
     def handler_boundary(self) -> "HandlerRequest":
@@ -87,6 +113,12 @@ class ConversationReply(Contract):
     text: str = Field(min_length=1, max_length=6000)
     source_refs: tuple[str, ...] = Field(default=(), max_length=3)
     play_id: str | None = None
+    handler_action: str | None = Field(
+        default=None, min_length=1, max_length=600, exclude_if=lambda x: x is None
+    )
+    handler_play_offer: Literal["brief"] | None = Field(
+        default=None, exclude_if=lambda x: x is None
+    )
     gm_decision: GMDecision | None = None
     application: Literal["blocked"] = "blocked"
     provider: Literal["synthetic-conversation-v1", "reviewed-handler-v1"] = (
@@ -97,6 +129,12 @@ class ConversationReply(Contract):
     def separate_gm_decision(self) -> "ConversationReply":
         if self.route == "handler" and self.gm_decision is not None:
             raise ValueError("GM intervention decisions are not Handler output")
+        if (self.handler_action is not None or self.handler_play_offer is not None) and (
+            self.route != "handler" or self.provider != "reviewed-handler-v1"
+        ):
+            raise ValueError("Handler initiative requires reviewed Handler output")
+        if self.handler_action is not None and not self.handler_action.strip():
+            raise ValueError("Describe the Handler's own action")
         return self
 
 
@@ -106,23 +144,6 @@ class GMProvider(Protocol):
 
 class HandlerProvider(Protocol):
     def respond(self, request: HandlerRequest) -> ConversationReply: ...
-
-
-class HandlerDecision(Contract):
-    action: Literal["RESPOND", "WAIT"]
-    reason: Literal[
-        "direct_question",
-        "scope_boundary",
-        "scope_already_addressed",
-        "known_update",
-        "update_already_addressed",
-        "gm_request",
-        "no_handler_need",
-        "reviewed_indirect_request",
-        "reviewed_urgent_report",
-        "need_already_addressed",
-    ]
-    source_refs: tuple[str, ...] = Field(default=(), max_length=3)
 
 
 class HandlerNeedPacket(Contract):

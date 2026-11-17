@@ -202,6 +202,7 @@ class DirectorSessionService:
                 "scope": "gm" if gm else "own",
                 "knowledge_sources": self.knowledge.pending(viewer, scene) if gm else [],
                 "handler_drafts": self.conversation.pending_handler(viewer, scene) if gm else [],
+                "handler_play_offers": self.conversation.handler_play_offers(viewer, scene),
                 "handler_needs": self.conversation.pending_handler_needs(viewer, scene)
                 if gm
                 else [],

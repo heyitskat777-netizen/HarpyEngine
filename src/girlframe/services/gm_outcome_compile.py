@@ -75,6 +75,8 @@ def validate(packet: OutcomePacket, proposal: OutcomeProposal) -> ChoiceAnswer |
             raise ValueError("Keep requires an explicit framed goal")
         scope = packet.frame.response_scope
         if d.verdict != "needs_clarification":
+            if packet.frame.intent_request is not None and "actor_intent" not in citations:
+                raise ValueError("Cite the original Pilot's actor_intent evidence")
             if scope == "unresolved" or (native.get("response_scope_required") and scope is None):
                 raise ValueError("RESPONSE_OWNERSHIP: establish whose response determines success")
             if scope == "other" and not native.get("response_authorized"):
@@ -238,7 +240,16 @@ def validate(packet: OutcomePacket, proposal: OutcomeProposal) -> ChoiceAnswer |
     if isinstance(d, FactOutcome):
         return ChoiceAnswer(flag=d.established, text=d.account)
     if isinstance(d, HandlerOutcome):
-        if d.play not in ("escalate", "support", "contaminant_warp") or d.effect.kind != d.play:
+        brief = native["grant"].get("brief_account")
+        if brief is not None:
+            if (
+                d.play != "brief"
+                or d.effect.kind != "brief"
+                or d.effect.account != brief
+                or (d.effect.source_label is not None)
+            ):
+                raise ValueError("Use the exact reviewed Handler briefing")
+        elif d.play not in ("escalate", "support", "contaminant_warp") or d.effect.kind != d.play:
             raise ValueError("This adapter only consumes its finite world-authoring Handler grant")
     if isinstance(d, TableOutcome):
         if native["action"]["data"]["play"] == "all_out_assault":

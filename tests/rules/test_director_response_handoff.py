@@ -202,3 +202,83 @@ def test_explicit_cast_director_can_supply_their_npc_response_under_actual_nativ
     saved = service.propose(ADMIN, "npc-proposal", scene, opened["id"], p)
     service.confirm(OTHER, "actual-director-confirm", scene, saved["id"])
     assert game.inspect(ADMIN, action)["state"] == "complete" and game.dice.calls == 1
+
+
+def test_acting_pilot_clarifies_locked_keep_without_publishing_or_rerolling(routed):
+    observer, context, scene, game, dice = routed
+    _, _, action, _, _ = prepare(routed, "GM, I Keep Your Head to help here.", "unclear-keep")
+    choice = next(x for x in game.choices(ADMIN) if x["kind"] == "handler_keep")
+    service = GMOutcomeService(context, require_response_scope=True)
+    opened = service.open(
+        ADMIN,
+        "unclear-frame",
+        scene,
+        "choice",
+        choice["id"],
+        TaskFrame(
+            stakes="Help here",
+            intent="needs_clarification",
+            response_scope="self",
+            demands=(
+                Demand(id="control", question="Can the pilot maintain the attempted control?"),
+            ),
+        ),
+    )
+    handoff = service.responses.request(
+        ADMIN,
+        "intent-question",
+        scene,
+        opened["id"],
+        "What result are you attempting?",
+        clarify_intent=True,
+    )
+    identity = handoff["id"]
+    before = state(game).model_dump_json()
+    with pytest.raises(WorkflowError, match="INTENT_ANSWER_REQUIRED"):
+        service.responses.resume(ADMIN, "not-yet", scene, identity)
+    assert service.responses.pending(PLAYER, scene)[0]["purpose"] == "intent"
+    assert not service.responses.pending(OTHER, scene)
+    with pytest.raises(WorkflowError, match="RESPONSE_NOT_OWNED"):
+        service.responses.answer(ADMIN, "not-actor", scene, identity, "clarify", "My guessed goal")
+    text = "Hold the calibration needle on its mark."
+    saved = service.responses.answer(PLAYER, "intent-answer", scene, identity, "clarify", text)
+    assert (
+        service.responses.answer(PLAYER, "intent-answer", scene, identity, "clarify", text) == saved
+    )
+    resumed = service.responses.resume(ADMIN, "resume", scene, identity)
+    packet = service.packet(ADMIN, scene, resumed["id"])
+    assert packet.frame.stakes == text and packet.frame.intent == "established"
+    assert state(game).model_dump_json() == before and dice.calls == 1
+    with pytest.raises(WorkflowError, match="INTENT_SOURCE"):
+        service.open(
+            ADMIN,
+            "changed-intent",
+            scene,
+            "choice",
+            choice["id"],
+            packet.frame.model_copy(update={"stakes": "Force someone else to agree"}),
+        )
+    outcome = OutcomeProposal(
+        request_id=packet.request_id,
+        decision=KeepOutcome(
+            verdict="enough",
+            narration="The Pilot holds the needle steady.",
+            assessments=(
+                Assessment(
+                    demand_id="control",
+                    sufficient=True,
+                    evidence_ids=("traits", "actor_intent"),
+                    traits=(TraitClaim(trait="in_control", polarity="are"),),
+                    private_reason="Control supports the Pilot's clarified precision task.",
+                ),
+            ),
+        ),
+        cited_evidence=("source", "native", "actor_intent"),
+        private_reasoning="Reviewed actual intent.",
+    )
+    proposal = service.propose(ADMIN, "intent-ruling", scene, resumed["id"], outcome)
+    service.confirm(ADMIN, "confirm-intent", scene, proposal["id"])
+    assert game.inspect(PLAYER, action)["state"] == "complete" and dice.calls == 1
+    with observer.store.engine.connect() as c:
+        role = context._handler_for_request(c, ADMIN, scene)
+        assert text not in role.model_dump_json()

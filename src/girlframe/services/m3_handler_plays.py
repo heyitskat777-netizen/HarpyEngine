@@ -461,6 +461,7 @@ def _source(c: Connection, game: "GameService", identity: str) -> tuple[GameStat
         "targets",
         "target_controllers",
         "scope",
+        "brief_account",
         "final_original",
         "nonbody_only",
     )
@@ -1149,7 +1150,13 @@ class HandlerPlayService:
         )
 
     def start(
-        self, viewer: GuildViewer, key: str, expected: int, targets: tuple[ActorRef, ...]
+        self,
+        viewer: GuildViewer,
+        key: str,
+        expected: int,
+        targets: tuple[ActorRef, ...],
+        *,
+        director_brief: tuple[str, str] | None = None,
     ) -> dict[str, Any]:
         def access(c: Connection) -> None:
             Access(self.store).authorize(c, viewer, "plays")
@@ -1171,7 +1178,7 @@ class HandlerPlayService:
                     id=identity,
                     source="ordinary",
                     source_event=event,
-                    clause="basic_handler_play",
+                    clause="director_brief" if director_brief else "basic_handler_play",
                     chooser_actor=active_handler(state),
                     chooser_controller=owner,
                     appointment=appointment,
@@ -1182,7 +1189,10 @@ class HandlerPlayService:
                         ).controller
                         for target in targets
                     },
-                    scope=WorkScope(campaign_context=True),
+                    scope=WorkScope(scene_id=director_brief[0])
+                    if director_brief
+                    else WorkScope(campaign_context=True),
+                    brief_account=director_brief[1] if director_brief else None,
                 )
             )
             self.game.event(
@@ -1200,7 +1210,11 @@ class HandlerPlayService:
             viewer,
             key,
             "m3.handler_play_started",
-            dict(expected=expected, targets=[x.model_dump(mode="json") for x in targets]),
+            dict(
+                expected=expected,
+                targets=[x.model_dump(mode="json") for x in targets],
+                **({"director_brief": director_brief} if director_brief else {}),
+            ),
             operation,
             auto_audit=False,
             authorize=access,
@@ -1337,8 +1351,11 @@ class HandlerPlayService:
                 or tuple(
                     x
                     for x in BASIC
-                    if not grant.nonbody_only
-                    or x[0] in ("brief", "escalate", "support", "expectation")
+                    if (grant.brief_account is None or x[0] == "brief")
+                    and (
+                        not grant.nonbody_only
+                        or x[0] in ("brief", "escalate", "support", "expectation")
+                    )
                 ),
                 executors=executors,
                 locations=tuple((x.id, x.name) for x in state.world.locations)

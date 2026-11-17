@@ -305,16 +305,12 @@ def counter(store, svc, game):
 def test_counter_is_source_bound_to_dying_original_and_never_appoints_chooser_gm(
     ledger, monkeypatch
 ):
-    import sys
-    import types
     from unittest.mock import Mock
 
+    from girlframe.services import m3_battle
+
     callback = Mock()
-    monkeypatch.setitem(
-        sys.modules,
-        "girlframe.services.m3_battle",
-        types.SimpleNamespace(complete_handler_play=callback),
-    )
+    monkeypatch.setattr(m3_battle, "complete_handler_play", callback)
     svc, game = ready(ledger)
     identity = counter(ledger, svc, game)
     before = state(game)
