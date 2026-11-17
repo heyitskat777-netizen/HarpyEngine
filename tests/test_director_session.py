@@ -119,6 +119,10 @@ def test_session_work_discovers_actual_keep_and_completion_and_orders_safe_readb
     work = service.work(ADMIN, scene, gm=True)
     source = next(x for x in work["outcome_sources"] if x["operation"] == "keep")
     assert source["owner_id"] == "1" and source["frame_required"]
+    route = next(x for x in work["decision_routes"] if x["choice_id"] == source["source_id"])
+    assert route["route"] == "typed_outcome" and route["owner_id"] == "1"
+    packet_review = service.decision_context(ADMIN, scene, source["source_id"])
+    assert packet_review["action"]["id"] == native and packet_review["operation"] == "keep"
     assert not service.work(PLAYER, scene)["outcome_sources"]
     frame = TaskFrame(
         stakes="Keep the needle on its mark",

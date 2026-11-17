@@ -2,7 +2,7 @@
 
 from typing import Literal, Protocol
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from girlframe.ai.contracts import Contract
 from girlframe.engine.m3_actor_state import ActorRef
@@ -15,9 +15,19 @@ class KnowledgeReference(Contract):
     order: int
     dependencies: tuple[str, ...] = ()
     known_by: tuple[str, ...] = ()
-    topic: Literal["general", "objective", "scope", "status"] = "general"
+    origin_scene: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    origin_reference: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    topic: Literal["general", "objective", "scope", "status", "briefing", "tactical", "debrief"] = (
+        "general"
+    )
     classification: Literal["reported_claim", "committed_play", "approved_outcome"]
     text: str = Field(max_length=1200)
+
+    @model_validator(mode="after")
+    def complete_origin(self) -> "KnowledgeReference":
+        if (self.origin_scene is None) != (self.origin_reference is None):
+            raise ValueError("Continuity requires both original scene and reference")
+        return self
 
 
 class DirectorContext(Contract):

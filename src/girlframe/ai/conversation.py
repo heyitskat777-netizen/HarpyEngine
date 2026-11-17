@@ -18,6 +18,7 @@ class HandlerRequest(Contract):
     schema_version: Literal[1] = 1
     question: str = Field(min_length=1, max_length=1000)
     context: DirectorContext
+    addressed_update_refs: tuple[str, ...] = Field(default=(), exclude_if=lambda x: not x)
 
     @model_validator(mode="after")
     def handler_boundary(self) -> "HandlerRequest":
@@ -88,6 +89,8 @@ class HandlerDecision(Contract):
         "direct_question",
         "scope_boundary",
         "scope_already_addressed",
+        "known_update",
+        "update_already_addressed",
         "gm_request",
         "no_handler_need",
     ]
@@ -123,6 +126,16 @@ class SyntheticHandlerPolicy:
                 reason="scope_boundary",
                 source_refs=tuple(x.id for x in scope[-3:]),
             )
+        updates = tuple(
+            x for x in request.context.references if x.topic in ("briefing", "tactical", "debrief")
+        )
+        pending = tuple(x for x in updates if x.id not in request.addressed_update_refs)
+        if pending:
+            return HandlerDecision(
+                action="RESPOND", reason="known_update", source_refs=(pending[0].id,)
+            )
+        if updates:
+            return HandlerDecision(action="WAIT", reason="update_already_addressed")
         return HandlerDecision(action="WAIT", reason="no_handler_need")
 
 
@@ -220,6 +233,16 @@ def _answer(
 class SyntheticHandler:
     def respond(self, request: HandlerRequest) -> ConversationReply:
         decision = SyntheticHandlerPolicy().decide(request)
+        if decision.reason == "known_update":
+            references = tuple(
+                x for x in request.context.references if x.id in decision.source_refs
+            )
+            return ConversationReply(
+                route="handler",
+                disposition="answer",
+                text="Recorded " + references[0].topic + " update: " + references[0].text,
+                source_refs=decision.source_refs,
+            )
         if decision.reason == "scope_boundary":
             references = tuple(
                 x for x in request.context.references if x.id in decision.source_refs

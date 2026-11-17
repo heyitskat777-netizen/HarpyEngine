@@ -83,7 +83,58 @@ class DirectorConversationService:
         question = source.text or ""
         if route == "handler":
             role = self.context._handler_for_request(c, viewer, scene_id)
-            request: GMRequest | HandlerRequest = HandlerRequest(question=question, context=role)
+            keys = {
+                ref.id: self._update_key(c, scene_id, role, ref.id)
+                for ref in role.references
+                if ref.topic in ("briefing", "tactical", "debrief")
+            }
+            table = t.director_context["shadow"]
+            decisions = (
+                {
+                    row.id: row.need_key
+                    for row in c.execute(
+                        sa.select(
+                            table.c.id,
+                            sa.func.json_extract(table.c.body_json, "$.need_key").label("need_key"),
+                        ).where(
+                            table.c.campaign_id == self.store.campaign_id,
+                            sa.func.json_extract(table.c.body_json, "$.record_type")
+                            == "handler_response_decision",
+                            sa.func.json_extract(table.c.body_json, "$.need_key").in_(
+                                keys.values()
+                            ),
+                        )
+                    )
+                }
+                if keys
+                else {}
+            )
+            successful = (
+                set(
+                    c.scalars(
+                        sa.select(
+                            sa.func.json_extract(table.c.body_json, "$.handler_decision_id")
+                        ).where(
+                            table.c.campaign_id == self.store.campaign_id,
+                            sa.func.json_extract(table.c.body_json, "$.record_type")
+                            == "conversation_exchange",
+                            sa.func.json_extract(table.c.body_json, "$.route") == "handler",
+                            sa.func.json_extract(table.c.body_json, "$.handler_decision_id").in_(
+                                decisions
+                            ),
+                        )
+                    )
+                )
+                if decisions
+                else set()
+            )
+            delivered = {decisions[identity] for identity in successful}
+            addressed = tuple(
+                sorted(identity for identity, key in keys.items() if key in delivered)
+            )
+            request: GMRequest | HandlerRequest = HandlerRequest(
+                question=question, context=role, addressed_update_refs=addressed
+            )
         else:
             # Trusted internal campaign projection. This broader context is never
             # returned to the caller or passed to the Handler provider.
@@ -170,6 +221,21 @@ class DirectorConversationService:
                 play_declaration=self.play_catalog.declared(question),
             )
         return request, _digest(request.model_dump(mode="json"))
+
+    def _update_key(
+        self, c: Connection, scene_id: str, context: DirectorContext, reference_id: str
+    ) -> str:
+        ref = next(x for x in context.references if x.id == reference_id)
+        scene = self.observations._scene(c, scene_id)
+        return _digest(
+            {
+                "kind": "known_update",
+                "scene": ref.origin_scene or scene_id,
+                "reference": ref.origin_reference or ref.id,
+                "handler": context.actor.model_dump(mode="json") if context.actor else None,
+                "audience": sorted(scene["participants"]),
+            }
+        )
 
     def _saved(self, c: Connection, key: str) -> dict[str, Any] | None:
         table = t.director_context["shadow"]
@@ -376,6 +442,8 @@ class DirectorConversationService:
             assert isinstance(request, HandlerRequest)
             decision = SyntheticHandlerPolicy().decide(request)
             need_key = None
+            if decision.reason == "known_update":
+                need_key = self._update_key(c, scene_id, request.context, decision.source_refs[0])
             if decision.reason == "scope_boundary":
                 # Repeat warnings only after a changed scope/role, not every restatement.
                 # A saved decision without a successful reply has addressed nothing.
@@ -425,6 +493,9 @@ class DirectorConversationService:
                 "context_revision": revision,
                 "decision": decision.model_dump(mode="json"),
                 "need_key": need_key,
+                "handler_actor": request.context.actor.model_dump(mode="json")
+                if request.context.actor
+                else None,
             }
             c.execute(
                 t.director_context["shadow"]

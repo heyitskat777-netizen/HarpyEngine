@@ -11,6 +11,7 @@ from girlframe.database import tables as t
 from girlframe.engine.m3_battle_state import Context
 from girlframe.services.director_context import DirectorContextService
 from girlframe.services.director_conversation import DirectorConversationService
+from girlframe.services.director_observation import _digest
 from girlframe.services.director_play_review import DirectorPlayReviewService
 from girlframe.services.gm_outcome_compile import CHOICES
 from girlframe.services.gm_outcomes import GMOutcomeService, SourceKind
@@ -153,10 +154,49 @@ class DirectorSessionService:
                 "scope": "gm" if gm else "own",
                 "native": work,
                 "outcome_sources": sources,
+                "decision_routes": [self._decision_route(c, row) for row in work["choices"]],
                 "proposals": proposals,
                 "declarations": self._declarations(c, viewer, scene, gm=gm),
                 "publication": "synthetic_only",
             }
+
+    def _decision_route(self, c: Connection, choice: dict[str, Any]) -> dict[str, Any]:
+        from girlframe.services.m3_princess_sex import decision_author
+
+        action = self.game.action(c, choice["action_id"])
+        author = decision_author(
+            self.game, c, load_state(c, self.store.campaign_id), action, choice
+        )
+        return {
+            "choice_id": choice["id"],
+            "kind": choice["kind"],
+            "owner_id": str(author if author is not None else choice["actor_id"]),
+            "route": "typed_outcome" if choice["kind"] in CHOICES else "native_owner",
+            "operation": CHOICES.get(choice["kind"]),
+            "confirmation": "original_owner_required",
+        }
+
+    def decision_context(self, viewer: GuildViewer, scene: str, choice_id: str) -> dict[str, Any]:
+        """Private GM review of native owner work; never an extra confirmation route."""
+        with self.store.engine.connect() as c:
+            self.outcomes._scope(c, viewer, scene, gm=True)
+            choice = next(
+                (x for x in self.reviews._work(c, scene, None)["choices"] if x["id"] == choice_id),
+                None,
+            )
+            if choice is None:
+                raise WorkflowError("SOURCE_UNAVAILABLE: reopen the actual pending scene choice.")
+            context = self.context._build(c, viewer, scene)
+            packet = {
+                "scene_id": scene,
+                "choice": choice,
+                "action": self.game.action(c, choice["action_id"]),
+                "context": context.model_dump(mode="json"),
+                "canonical_state": load_state(c, self.store.campaign_id).model_dump(mode="json"),
+                **self._decision_route(c, choice),
+                "application": "blocked",
+            }
+            return {**packet, "revision": _digest(packet)}
 
     def _declarations(
         self, c: Connection, viewer: GuildViewer, scene: str, *, gm: bool

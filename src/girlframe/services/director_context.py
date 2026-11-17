@@ -40,11 +40,20 @@ class DirectorContextService:
             raise WorkflowError("CONTEXT_LIMIT: explicit reference archival is required.")
         return references
 
-    def _current(self, c: Connection, scene_id: str) -> tuple[KnowledgeReference, ...]:
+    def _current(
+        self, c: Connection, scene_id: str, *, allow_closed: bool = False
+    ) -> tuple[KnowledgeReference, ...]:
         references = self._active(c, scene_id)
         for reference in references:
+            if reference.origin_scene is not None:
+                from girlframe.services.director_continuity import validate_origin
+
+                validate_origin(self, c, reference)
+                continue
             if reference.classification == "approved_outcome":
-                record = self._approved_outcome(c, scene_id, reference.source_id)
+                record = self._approved_outcome(
+                    c, scene_id, reference.source_id, allow_closed=allow_closed
+                )
                 if reference.source_revision != 1 or reference.text != record["text"]:
                     raise WorkflowError("STALE_KNOWLEDGE: retain the actual approved outcome.")
                 continue
@@ -55,7 +64,9 @@ class DirectorContextService:
                 )
         return references
 
-    def _approved_outcome(self, c: Connection, scene: str, identity: str) -> dict[str, Any]:
+    def _approved_outcome(
+        self, c: Connection, scene: str, identity: str, *, allow_closed: bool = False
+    ) -> dict[str, Any]:
         import json
 
         from girlframe.services.gm_outcomes import GMOutcomeService
@@ -83,7 +94,20 @@ class DirectorContextService:
             or json.loads(command).get("id") != identity
         ):
             raise WorkflowError("UNPROVEN_OUTCOME: retain its actual confirmed native source.")
-        participants = sorted(str(x) for x in self.observations._scene(c, scene)["participants"])
+        if allow_closed:
+            raw = c.scalar(
+                sa.select(t.m2["m2_scenes"].c.participants_json).where(
+                    t.m2["m2_scenes"].c.campaign_id == self.store.campaign_id,
+                    t.m2["m2_scenes"].c.id == scene,
+                )
+            )
+            if raw is None:
+                raise WorkflowError("SOURCE_UNAVAILABLE: original scene is missing.")
+            participants = sorted(str(x) for x in json.loads(raw))
+        else:
+            participants = sorted(
+                str(x) for x in self.observations._scene(c, scene)["participants"]
+            )
         if record.get("audience_ids") != participants:
             raise WorkflowError("SOURCE_SCOPE_CHANGED: outcome knowledge requires audience review.")
         return record
@@ -104,6 +128,37 @@ class DirectorContextService:
             for identity in json.loads(raw)["reference_ids"]
         }
 
+    def _archive_snapshot(
+        self, c: Connection, viewer: GuildViewer, scene_id: str
+    ) -> tuple[str, tuple[KnowledgeReference, ...]]:
+        # Retirement must remain available when an origin was corrected or its
+        # consent withdrawn. This snapshot is never a provider prompt or readback.
+        self.observations._scope()
+        self.store.administrator(viewer)
+        self.observations.game.unpaused(c)
+        scene = self.observations._scene(c, scene_id, viewer)
+        state = self.observations._state(c, scene_id)
+        if state.policy.mode != "shadow" or not self.observations._consented(c, scene, state):
+            raise WorkflowError("OBSERVATION_DISABLED: current scene consent is required.")
+        refs = self._active(c, scene_id)
+        return _digest(
+            {
+                "guard": self.observations._guard(c, scene, state),
+                "references": [x.model_dump(mode="json") for x in refs],
+            }
+        ), refs
+
+    def archive_review(self, viewer: GuildViewer, scene_id: str) -> dict[str, Any]:
+        """Metadata-only retirement review, including references blocked by old consent."""
+        with self.store.engine.connect() as c:
+            revision, refs = self._archive_snapshot(c, viewer, scene_id)
+            return {
+                "revision": revision,
+                "references": [
+                    {"id": ref.id, "dependencies": list(ref.dependencies)} for ref in refs
+                ],
+            }
+
     def archive(
         self,
         viewer: GuildViewer,
@@ -119,26 +174,23 @@ class DirectorContextService:
         self.observations._scope()
 
         def authorize(c: Connection) -> None:
-            self._build(c, viewer, scene_id)
-            self.observations.game.unpaused(c)
+            self._archive_snapshot(c, viewer, scene_id)
 
         def operation(c: Connection) -> dict[str, str | int]:
-            current = self._build(c, viewer, scene_id)
+            revision, references = self._archive_snapshot(c, viewer, scene_id)
             selected = set(reference_ids)
-            if current.revision != expected_revision:
+            if revision != expected_revision:
                 raise WorkflowError("STALE_CONTEXT: refresh references before archival.")
             if (
                 not selected
                 or len(selected) != len(reference_ids)
-                or not selected <= {x.id for x in current.references}
+                or not selected <= {x.id for x in references}
                 or not reason.strip()
                 or len(reason) > 1200
             ):
                 raise WorkflowError("INVALID_ARCHIVE: select current references and give a reason.")
             if any(
-                selected.intersection(x.dependencies)
-                for x in current.references
-                if x.id not in selected
+                selected.intersection(x.dependencies) for x in references if x.id not in selected
             ):
                 raise WorkflowError("ACTIVE_DEPENDENCY: retain prerequisites or retire dependents.")
             identity = "reference-archive:" + str(uuid4())
@@ -191,7 +243,9 @@ class DirectorContextService:
         *,
         known_by: tuple[ActorRef, ...] = (),
         dependencies: tuple[str, ...] = (),
-        topic: Literal["general", "objective", "scope", "status"] = "general",
+        topic: Literal[
+            "general", "objective", "scope", "status", "briefing", "tactical", "debrief"
+        ] = "general",
     ) -> dict[str, str | int]:
         self.observations._scope()
 

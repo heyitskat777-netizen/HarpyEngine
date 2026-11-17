@@ -49,7 +49,12 @@ class DirectorObservationService:
             raise WorkflowError("SYNTHETIC_ONLY: real conversation observation is not implemented.")
 
     def _scene(
-        self, c: Connection, scene_id: str, viewer: GuildViewer | None = None
+        self,
+        c: Connection,
+        scene_id: str,
+        viewer: GuildViewer | None = None,
+        *,
+        allow_closed: bool = False,
     ) -> dict[str, Any]:
         if not self.store._binding_matches(c):
             raise WorkflowError("SCENE_UNAVAILABLE: campaign binding is unavailable.")
@@ -61,7 +66,7 @@ class DirectorObservationService:
                 sa.select(table).where(
                     table.c.campaign_id == self.store.campaign_id,
                     table.c.id == scene_id,
-                    table.c.open.is_(True),
+                    sa.true() if allow_closed else table.c.open.is_(True),
                 )
             )
             .mappings()
@@ -227,7 +232,9 @@ class DirectorObservationService:
         self._scope()
 
         def authorize(c: Connection) -> None:
-            self._scene(c, scene_id, viewer)
+            # A former participant can always withdraw use of a closed scene's
+            # carried references. Granting new consent still requires an open scene.
+            self._scene(c, scene_id, viewer, allow_closed=consent is False)
 
         def operation(c: Connection) -> dict[str, Any]:
             state = self._state(c, scene_id)
