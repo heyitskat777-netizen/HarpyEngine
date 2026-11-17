@@ -1,3 +1,21 @@
+> Latest owner direction: action the Living Campaign and Character Agency work
+> order within P2. Offline foundation is implemented on94f4d1e; see
+> reports/P2_LIVING_CAMPAIGN.md and docs/work_orders/P2_LIVING_CAMPAIGN.md.
+> Preserve versioned native-identity dossiers, separate GM notes/personnel allowlist,
+> source-backed Fronts, full-clock/deadline attention only, explicit fictional time,
+> role-filtered NPC reactions and original/current-controller draft isolation.
+> Natural NPC replies remain private candidates; they do not publish speech or
+> teach listeners. Handler speech retains existing need/review/delivery routing.
+> Session work adds metadata-only dossier/reaction work and GM-only Front attention;
+> batch reactions reuse real observation claims and WAIT may acknowledge silence.
+> Frozen39affected tests pass, changed13Python Ruff/format and8source mypy pass.
+> New112-input agency rehearsal:7reviewed candidates,3attention branches,0detected
+> leaks, unchanged mechanical state/dice; separate112worldbuilding run retains
+> 3native Plays/rolls,7worldwrites,3disclosures,13Handler replies and safe replay.
+> This is fixture evidence, not autonomous/model/storytelling acceptance. Next is
+> source-bound NPC contribution/disclosure, then multi-NPC and human pacing review.
+> No paid calls, live Discord/campaign changes, deployment or milestone renumbering.
+>
 > Latest owner request: start reviewed worldbuilding and continue into testing.
 > Core/trial525172e, recovery/access hardening92c3a90; see reports/P2_WORLDBUILDING.md
 > and updated consolidated Activity handoff. DirectorSessionService.worldbuilding
