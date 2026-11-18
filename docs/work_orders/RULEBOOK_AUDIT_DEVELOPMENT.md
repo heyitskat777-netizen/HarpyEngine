@@ -328,3 +328,20 @@ original draw and effect history still prove the same source. Legacy
 threshold IDs that fit the Play field continue to use their saved proofs.
 The synthetic nested path completes the actual resistance and resolves
 the original High Void effect. [High Void contact tests](../../tests/rules/test_strain_void_signal.py)
+
+## High Void cult occupation
+
+The base is `6aeeea1923f20f697003c7721dddc5a9f5601830`.
+High Void 3.2 now creates the cult and transfers control of the chosen
+available site. Its original location, physical condition and affiliation
+are preserved. The Handler can choose an existing living Harpy without
+moving or transferring her, or create an actual new Harpy with Girl and
+Frame components. The player map shows the occupation. The venerated
+Harpy's identity and the Handler's source account remain private there.
+An existing loss or active protection cannot be overridden by this event.
+Both printed Harpy choices passed through the native Inbox controls,
+including an application replay and subsequent Off-Duty activation.
+The three High 6 cascade entries now cite the existing saved-roll,
+recursive choice and completion evidence. Their child effects and
+Endgames retain their individual coverage.
+[High Void p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) · [Cult tests](../../tests/rules/test_strain_cult_occupation.py) · [Cascade tests](../../tests/rules/test_strain_cascade_completion.py)

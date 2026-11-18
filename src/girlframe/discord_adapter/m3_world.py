@@ -191,6 +191,9 @@ class MapPages(discord.ui.View):
         ]
         locations = {x["id"]: clean(x["name"]) for x in world["locations"]}
         for condition in world.get("civic_conditions", []):
+            if condition["kind"] == "cult_occupation":
+                site = locations[condition["site"]]
+                lines.append(f"{site} · occupied by {clean(condition['name'])}")
             label = CIVIC_LABELS.get(condition["kind"])
             if label is not None:
                 city = locations.get(condition.get("city"))

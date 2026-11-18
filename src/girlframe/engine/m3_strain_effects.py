@@ -13,6 +13,7 @@ from girlframe.engine.m3_budget_sabotage import Pin
 from girlframe.engine.m3_cadre_leak import RULE as CADRE_LEAK
 from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_contraband_state import ContrabandFind
+from girlframe.engine.m3_cult_occupation import RULE as CULT_OCCUPATION
 from girlframe.engine.m3_doppelganger_reveal import RULE as DOPPELGANGER_REVEAL
 from girlframe.engine.m3_harpy_raid import RULE as HARPY_RAID
 from girlframe.engine.m3_orbital_threat import RULE as ORBITAL_THREAT
@@ -52,6 +53,7 @@ SUPPORTED = frozenset(
         PILOT_FEARS,
         DOPPELGANGER_REVEAL,
         HARPY_RAID,
+        CULT_OCCUPATION,
         CADRE_LEAK,
         "strain.rebellion.low.1.1",
         "strain.rebellion.low.1.2",
@@ -124,6 +126,8 @@ class Choice(Model):
     protest_city: str | None = Field(default=None, exclude_if=lambda x: x is None)
     raid_base: str | None = Field(default=None, exclude_if=lambda x: x is None)
     new_raid_harpy: AdversaryPilot | None = Field(default=None, exclude_if=lambda x: x is None)
+    cult_harpy: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    new_cult_harpy: AdversaryPilot | None = Field(default=None, exclude_if=lambda x: x is None)
     leak_parties: tuple[ActorRef, ...] = Field(default=(), exclude_if=lambda x: not x)
     leak_report: str | None = Field(default=None, max_length=1200, exclude_if=lambda x: x is None)
 
@@ -227,6 +231,24 @@ def apply(
             or int(choice.victim) not in state.order
         ):
             raise ValueError("Choose the original Harpy, occupied base and obsession")
+    elif rule == CULT_OCCUPATION:
+        from girlframe.engine.m3_cult_occupation import occupy
+
+        fields(choice, {"target", "faction", "cult_harpy", "new_cult_harpy"})
+        if source_event is None:
+            raise ValueError("Recover the original High Void capture event")
+        occupy(
+            state,
+            work=source_work,
+            event=source_event,
+            site_id=choice.target,
+            faction=choice.faction,
+            harpy=choice.cult_harpy,
+            new=choice.new_cult_harpy,
+            account=choice.account.strip(),
+        )
+        assert state.world is not None
+        world = state.world
     elif rule == CADRE_LEAK:
         fields(choice, {"target", "leak_parties", "leak_report"})
         if not choice.target or not choice.leak_parties or not (choice.leak_report or "").strip():

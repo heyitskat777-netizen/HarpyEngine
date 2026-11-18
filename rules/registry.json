@@ -16846,14 +16846,16 @@
         "heading": "Void high: die 3, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain_cult_occupation.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -16991,14 +16993,17 @@
         "heading": "Void high: die 6, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain.py",
+        "tests/rules/test_strain_cascade_completion.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -17991,14 +17996,17 @@
         "heading": "Rebellion high: die 6, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain.py",
+        "tests/rules/test_strain_cascade_completion.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -19107,14 +19115,17 @@
         "heading": "Budget high: die 6, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain.py",
+        "tests/rules/test_strain_cascade_completion.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

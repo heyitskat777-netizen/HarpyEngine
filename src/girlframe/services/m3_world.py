@@ -224,6 +224,7 @@ class WorldService:
 
     def get(self, viewer: GuildViewer, *, private: bool = False) -> dict[str, Any]:
         from girlframe.engine.m3_civic_directive import public_conditions
+        from girlframe.engine.m3_cult_occupation import public_occupations
 
         with self.store.engine.connect() as c:
             self.game.authorize(c, viewer, game=False)
@@ -233,7 +234,7 @@ class WorldService:
             world = state.world
             if world is None:
                 return {"game_revision": state.revision, "world": None}
-            conditions = public_conditions(state)
+            conditions = public_conditions(state) + public_occupations(state)
             civic = {"civic_conditions": conditions} if conditions else {}
             if private:
                 return {

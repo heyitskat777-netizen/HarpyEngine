@@ -15,6 +15,7 @@ from girlframe.engine.m3_budget_anarchy import REBELLION as REBEL_PROTEST
 from girlframe.engine.m3_cadre_leak import RULE as CADRE_LEAK
 from girlframe.engine.m3_civic_directive import PROTEST as CIVIC_PROTEST
 from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
+from girlframe.engine.m3_cult_occupation import RULE as CULT_OCCUPATION
 from girlframe.engine.m3_doppelganger_reveal import RULE as DOPPELGANGER_REVEAL
 from girlframe.engine.m3_gorgon_catalog import ASSETS
 from girlframe.engine.m3_harpy_raid import RULE as HARPY_RAID
@@ -250,6 +251,7 @@ def effect_form(
     orbital = rule == ORBITAL_THREAT
     disguise = rule == DOPPELGANGER_REVEAL
     new_raid_actor = stable(identity, "new raid Harpy")
+    new_cult_actor = stable(identity, "new cult Harpy")
     spawned = rule in {
         "strain.void.low.1.1",
         "strain.void.low.2.1",
@@ -310,6 +312,38 @@ def effect_form(
 
     def build(values: dict[str, Any]) -> list[Field]:
         fields: list[Field] = []
+        if rule == CULT_OCCUPATION:
+            sites = [
+                x
+                for x in regional_locations
+                if x["condition"] != "destroyed"
+                and not any(
+                    x.get(key)
+                    for key in (
+                        "blocked_by",
+                        "fallout_sources",
+                        "control_loss",
+                        "protection_sources",
+                    )
+                )
+            ]
+            harpies = {
+                x["id"]: x["name"] for x in world["pilots"] if x["kind"] == "harpy" and x["alive"]
+            }
+            harpies.update({x.id: x.name for x in state.harpy_states if x.alive})
+            harpies[new_cult_actor] = "Create a Harpy for this cult"
+            fields += [
+                Field("cult_site", "Which location does the cult take over?", options(sites)),
+                Field("cult_name", "Name of the Gorgon-worshipping cult"),
+                Field("cult_harpy", "Which Harpy does the cult venerate?", tuple(harpies.items())),
+            ]
+            if values.get("cult_harpy") == (new_cult_actor,):
+                fields += [
+                    Field("harpy_name", "Harpy name"),
+                    Field("harpy_frame", "Current Frame description", paragraph=True),
+                    Field("girl_component", "Known Girl-body component"),
+                    Field("frame_component", "Known Frame component"),
+                ]
         if rule == HARPY_RAID:
             bases = [
                 x
@@ -900,6 +934,47 @@ def effect_form(
 
     def apply(actor: GuildViewer, key: str, values: dict[str, Any]) -> str:
         payload: dict[str, Any] = {"rule_id": rule, "account": values["account"]}
+        if rule == CULT_OCCUPATION:
+            selected = values["cult_harpy"][0]
+            site_id = values["cult_site"][0]
+            assert state.world is not None
+            site = next((x for x in state.world.locations if x.id == site_id), None)
+            if site is None:
+                raise WorkflowError("Choose the actual location the cult occupies.")
+            payload.update(
+                target=site.id,
+                faction=Faction(
+                    id=stable(identity, "cult"),
+                    name=values["cult_name"],
+                    kind="cult",
+                    cells=(site.cell,),
+                ),
+                cult_harpy=selected,
+            )
+            if selected == new_cult_actor:
+                payload["new_cult_harpy"] = AdversaryPilot(
+                    id=selected,
+                    kind="harpy",
+                    girl="HARPY",
+                    controller=handler,
+                    cell=site.cell,
+                    name=values["harpy_name"],
+                    frame=values["harpy_frame"],
+                    assets=(
+                        Asset(
+                            id=stable(identity, "cult girl component"),
+                            family="girl",
+                            name=values["girl_component"],
+                            description=values["girl_component"],
+                        ),
+                        Asset(
+                            id=stable(identity, "cult frame component"),
+                            family="frame",
+                            name=values["frame_component"],
+                            description=values["frame_component"],
+                        ),
+                    ),
+                )
         if rule == HARPY_RAID:
             selected = values["harpy"][0]
             site_id = values["raid_base"][0]
