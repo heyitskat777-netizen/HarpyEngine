@@ -203,6 +203,7 @@ class DirectorSessionService:
                 "knowledge_sources": self.knowledge.pending(viewer, scene) if gm else [],
                 "handler_drafts": self.conversation.pending_handler(viewer, scene) if gm else [],
                 "handler_play_offers": self.conversation.handler_play_offers(viewer, scene),
+                "handler_deliveries": self.conversation.delivery.pending(viewer, scene),
                 "handler_needs": self.conversation.pending_handler_needs(viewer, scene)
                 if gm
                 else [],
@@ -421,4 +422,5 @@ class DirectorSessionService:
             except WorkflowError:
                 # Native access loss suppresses optional output, never widens its audience.
                 continue
+        result.extend(self.conversation.delivery.contributions(viewer, scene))
         return sorted(result, key=lambda x: (x["ordinal"], x["id"]))

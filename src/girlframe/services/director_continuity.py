@@ -90,6 +90,10 @@ def validate_origin(
         DirectorKnowledgeService(context).validate_reference(
             c, scene_id or "", original, allow_closed=True
         )
+    elif original.source_id.startswith("handler-delivery:"):
+        from girlframe.services.director_handler_delivery import validate_delivery_reference
+
+        validate_delivery_reference(context, c, scene_id or "", original)
     elif original.classification == "approved_outcome":
         record = context._approved_outcome(c, scene_id or "", original.source_id, allow_closed=True)
         if original.source_revision != 1 or original.text != record["text"]:

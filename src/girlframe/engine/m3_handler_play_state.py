@@ -148,6 +148,7 @@ class HandlerPlay(Model):
     targets: tuple[ActorRef, ...] = Field(min_length=1)
     target_controllers: dict[str, Snowflake] = Field(default_factory=dict)
     scope: WorkScope
+    offered_play: Play | None = Field(default=None, exclude_if=lambda x: x is None)
     brief_account: str | None = Field(
         default=None, min_length=1, max_length=1200, exclude_if=lambda x: x is None
     )
@@ -164,6 +165,15 @@ class HandlerPlay(Model):
 
     @model_validator(mode="after")
     def actual_authority(self) -> "HandlerPlay":
+        if self.offered_play is not None and (
+            self.source != "ordinary"
+            or self.clause != "director_offer"
+            or self.scope.scene_id is None
+            or self.offered_play not in dict(BASIC)
+        ):
+            raise ValueError("A reviewed offer binds one ordinary Play in its original scene")
+        if self.clause == "director_offer" and self.offered_play is None:
+            raise ValueError("Recover the reviewed ordinary Play")
         if self.brief_account is not None and (
             self.source != "ordinary"
             or self.clause != "director_brief"

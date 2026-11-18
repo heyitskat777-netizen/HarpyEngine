@@ -1,7 +1,7 @@
 """Finite Handler Play grants; a printed counter never changes campaign GM authority."""
 
 from girlframe.engine.m2 import GameState, TagState, shift_status
-from girlframe.engine.m3_handler_play_state import Effect, HandlerPlay, Play
+from girlframe.engine.m3_handler_play_state import BASIC, Effect, HandlerPlay, Play
 from girlframe.engine.m3_void_state import HarpyTag
 from girlframe.engine.m3_world import introduce_npc
 from girlframe.engine.m3_world_state import WorldTag
@@ -18,6 +18,24 @@ def replace(state: GameState, value: HandlerPlay) -> None:
     state.handler_plays = [value if x.id == value.id else x for x in state.handler_plays]
 
 
+def available_plays(state: GameState, grant: HandlerPlay) -> tuple[str, ...]:
+    if grant.brief_account is not None:
+        return ("brief",)
+    if grant.offered_play is not None:
+        return (grant.offered_play,)
+    if grant.clause.startswith("tracker:"):
+        from girlframe.engine import m3_tracker_implants as trackers
+
+        return tuple(
+            x.play for x in trackers.records(state, trackers.PlaySource) if x.id == grant.id
+        )
+    if grant.clause.startswith("contaminant-zone:"):
+        return ("contaminant_warp",)
+    if grant.nonbody_only:
+        return ("brief", "escalate", "support", "expectation")
+    return tuple(play for play, _ in BASIC)
+
+
 def select(state: GameState, identity: str, play: Play, effect: Effect, event: str) -> GameState:
     changed = GameState.model_validate_json(state.model_dump_json())
     grant = record(changed, identity)
@@ -28,6 +46,8 @@ def select(state: GameState, identity: str, play: Play, effect: Effect, event: s
         play != "brief" or effect.account != grant.brief_account or effect.source_label is not None
     ):
         raise ValueError("This offer grants only the reviewed briefing and its exact wording")
+    if grant.offered_play is not None and play != grant.offered_play:
+        raise ValueError("This grant permits only its reviewed Handler Play")
     from girlframe.engine import m3_tracker_implants as trackers
 
     tracker_source = next(

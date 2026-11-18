@@ -462,6 +462,7 @@ def _source(c: Connection, game: "GameService", identity: str) -> tuple[GameStat
         "target_controllers",
         "scope",
         "brief_account",
+        "offered_play",
         "final_original",
         "nonbody_only",
     )
@@ -1113,7 +1114,9 @@ class HandlerPlayService:
                 warp_zones=warp_options(self.game, c, state, active_handler(state)),
             )
 
-    def start_warp(self, viewer: GuildViewer, key: str, expected: int, zone: str) -> dict[str, Any]:
+    def start_warp(
+        self, viewer: GuildViewer, key: str, expected: int, zone: str, *, scene: str | None = None
+    ) -> dict[str, Any]:
         def access(c: Connection) -> None:
             Access(self.store).authorize(c, viewer, "plays")
             HandlerService(self.store).authorize(c, viewer)
@@ -1127,7 +1130,7 @@ class HandlerPlayService:
             if state.revision != expected:
                 raise WorkflowError("Reopen the actual active quarantined zone")
             event = str(uuid4())
-            identity = start_warp(self.game, c, state, viewer, zone, event)
+            identity = start_warp(self.game, c, state, viewer, zone, event, scene=scene)
             self.game.event(
                 c,
                 viewer.user_id,
@@ -1143,7 +1146,7 @@ class HandlerPlayService:
             viewer,
             key,
             "m3.handler_play_started",
-            dict(expected=expected, zone=zone),
+            dict(expected=expected, zone=zone, **({"scene": scene} if scene else {})),
             operation,
             auto_audit=False,
             authorize=access,
@@ -1157,13 +1160,18 @@ class HandlerPlayService:
         targets: tuple[ActorRef, ...],
         *,
         director_brief: tuple[str, str] | None = None,
+        director_offer: tuple[str, Play] | None = None,
     ) -> dict[str, Any]:
+        offer_scope = director_brief or director_offer
+
         def access(c: Connection) -> None:
             Access(self.store).authorize(c, viewer, "plays")
             HandlerService(self.store).authorize(c, viewer)
             self.game.unpaused(c)
 
         def operation(c: Connection) -> dict[str, Any]:
+            if director_offer and director_brief:
+                raise WorkflowError("Use one reviewed Handler source.")
             _ordinary_scene_idle(c, self.game)
             state = load_state(c, self.store.campaign_id)
             if state.revision != expected:
@@ -1178,7 +1186,13 @@ class HandlerPlayService:
                     id=identity,
                     source="ordinary",
                     source_event=event,
-                    clause="director_brief" if director_brief else "basic_handler_play",
+                    clause=(
+                        "director_brief"
+                        if director_brief
+                        else "director_offer"
+                        if director_offer
+                        else "basic_handler_play"
+                    ),
                     chooser_actor=active_handler(state),
                     chooser_controller=owner,
                     appointment=appointment,
@@ -1189,10 +1203,11 @@ class HandlerPlayService:
                         ).controller
                         for target in targets
                     },
-                    scope=WorkScope(scene_id=director_brief[0])
-                    if director_brief
+                    scope=WorkScope(scene_id=offer_scope[0])
+                    if offer_scope
                     else WorkScope(campaign_context=True),
                     brief_account=director_brief[1] if director_brief else None,
+                    offered_play=director_offer[1] if director_offer else None,
                 )
             )
             self.game.event(
@@ -1214,6 +1229,7 @@ class HandlerPlayService:
                 expected=expected,
                 targets=[x.model_dump(mode="json") for x in targets],
                 **({"director_brief": director_brief} if director_brief else {}),
+                **({"director_offer": director_offer} if director_offer else {}),
             ),
             operation,
             auto_audit=False,
@@ -1348,15 +1364,7 @@ class HandlerPlayService:
                 observed_moment=observed,
                 zone=zone,
                 plays=special_plays
-                or tuple(
-                    x
-                    for x in BASIC
-                    if (grant.brief_account is None or x[0] == "brief")
-                    and (
-                        not grant.nonbody_only
-                        or x[0] in ("brief", "escalate", "support", "expectation")
-                    )
-                ),
+                or tuple(x for x in BASIC if x[0] in rules.available_plays(state, grant)),
                 executors=executors,
                 locations=tuple((x.id, x.name) for x in state.world.locations)
                 if state.world

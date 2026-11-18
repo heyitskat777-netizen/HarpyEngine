@@ -1,4 +1,16 @@
-> Latest owner direction: make the Handler an active participant in P2. Source
+> Latest owner direction: complete Handler participation and wire every native
+> Handler Play. See reports/P2_HANDLER_ALL_PLAYS.md and the Activity handoff.
+> The reviewed Director supports all seven basic and three specialist Plays.
+> Preserve original owner confirmation, tracker/co-presence/private-moment and
+> quarantine provenance, attendance/recovery, and exact previous briefings.
+> Scene follow-through opens only after scoped delivery and uses an actual heard
+> change from the original speaker. The Handler previews and delivers; only
+> actual recipients gain attributed memory, and addressed turns return to WAIT.
+> Offline fixtures completed all10 Plays and12 effect examples, including each
+> Mess effect. 71affected,22conversation,2finaldelivery tests pass with overlap.
+> No paid model calls, live Discord/campaign behavior or deployment in this trial.
+>
+> Earlier owner direction: make the Handler an active participant in P2. Source
 > 610092a connects the reviewed RESPOND gate to role-only dossier context, dialogue,
 > Handler-owned fictional actions, and a reviewed native briefing offer. A grant
 > binds the original scene/Pilot and exact approved wording. The native controller

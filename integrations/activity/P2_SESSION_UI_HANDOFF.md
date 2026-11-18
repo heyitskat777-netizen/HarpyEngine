@@ -417,23 +417,37 @@ owners of native Pilot sheets; their authored input is not a generic NPC publish
 permission. No Activity routes or real model are installed.
 
 The [Handler participation follow-up](../../reports/P2_HANDLER_PARTICIPATION.md)
-adds two engine controls for the Activity to render.
+and [all-Play rehearsal](../../reports/P2_HANDLER_ALL_PLAYS.md) define these controls.
 
-- On a persisted RESPOND, the reviewed Handler provider receives `response_need`
-  and an optional `persona` containing its own current dossier version, profile and
-  state. `handler_action` is the Handler's own proposed in-scene action, rendered
-  separately from dialogue after GM review. `handler_play_offer="brief"` is a
-  separate option for a grounded intervention. The review must confirm the
-  original pilot sender already knows the cited information. Display the reply
-  and action within their approved private exchange.
-- `session.work(handler, scene).handler_play_offers` lists approved, unstarted
-  briefing offers for the original Handler controller. Call
-  `conversation.start_handler_brief(handler, scene, offer_id, game_revision)` to
-  create the actual native grant. That grant fixes the scene, original Pilot and
-  exact approved wording. Use the existing `handler_grant` outcome proposal and
-  native owner confirmation to complete it. Keep the initial offer, pending
-  grant and completed recipient notice distinct. Other Handler Plays continue
-  through their own native workflows.
+- On a persisted RESPOND, the reviewed provider receives `response_need`, its
+  role-filtered `persona`, and the `open_concerns` relevant to that speaker.
+  A reviewed `handler_action` describes the Handler's own scene action. A reply
+  may open `handler_concern`. The GM approves scoped delivery with
+  `review_handler(..., delivery_recipients=(actor_refs, ...))`. Each listener
+  must already know the cited information, or the GM must use a separate
+  disclosure. A purely private exchange remains available through legacy review.
+- `session.work(handler, scene).handler_deliveries` lists approved deliveries
+  awaiting the original Handler. Fetch the approved action and dialogue via
+  `conversation.delivery.preview(handler, scene, draft_id)` before confirmation.
+  `conversation.delivery.deliver(handler, key, scene, draft_id)` creates one
+  receipt and attributed memory. Render dialogue
+  and action via `session.contributions(viewer, scene)` in ordinal order.
+  The original sender's exchange points to the delivery once it exists. Render
+  that delivery once, and carry its memory through the existing scene handoff.
+- A reviewed `HandlerNeedProposal(kind="follow_up", concern_id=...)` requires
+  actual newly heard words and a Handler-known report from the same source.
+  Routine turns do not close a concern. Delivery of the scoped follow-up closes
+  it, and a new concern can be recorded if another decision remains open.
+- `session.work(handler, scene).handler_play_offers` lists approved native Plays.
+  Use `conversation.start_handler_play(handler, scene, offer_id, game_revision)`
+  for any basic Play. It binds the actual scene, Pilot and offered Play. The
+  `start_handler_brief` alias still pins the exact reviewed briefing wording.
+  For a specialist Play, pass an approved `native_grant` from that offer. The
+  original tracker or quarantine workflow earns that grant before offer review.
+  A `handler_grant` outcome packet lists `allowed_plays` for that grant. Use the
+  native owner confirmation and any pending native follow-ups to complete it.
+  Keep the offer, pending grant, scoped scene contribution and native notice
+  distinct. Specialist offer metadata stays with the Handler controller.
 - For a held Keep with `intent="needs_clarification"`, request a private question
   with `responses.request(gm,key,scene,outcome_request,question,clarify_intent=True)`.
   The acting pilot answers with `responses.answer(...,"clarify",text)` while the

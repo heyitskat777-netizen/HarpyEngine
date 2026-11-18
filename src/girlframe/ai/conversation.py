@@ -11,6 +11,7 @@ from girlframe.ai.director_dossiers import DossierProfile, DossierState
 from girlframe.ai.observation import Observation
 from girlframe.ai.play_names import LABELS, requested_play
 from girlframe.ai.play_review import PlayReferral
+from girlframe.engine.m3_handler_play_state import Play
 
 Route = Literal["gm", "handler"]
 
@@ -27,15 +28,22 @@ class HandlerDecision(Contract):
         "no_handler_need",
         "reviewed_indirect_request",
         "reviewed_urgent_report",
+        "reviewed_follow_up",
         "need_already_addressed",
     ]
     source_refs: tuple[str, ...] = Field(default=(), max_length=3)
+    concern_id: str | None = Field(default=None, exclude_if=lambda x: x is None)
 
 
 class HandlerPersona(Contract):
     version: int = Field(ge=1)
     profile: DossierProfile
     state: DossierState
+
+
+class HandlerConcern(Contract):
+    id: str
+    text: str = Field(min_length=1, max_length=300)
 
 
 class HandlerRequest(Contract):
@@ -45,6 +53,7 @@ class HandlerRequest(Contract):
     addressed_update_refs: tuple[str, ...] = Field(default=(), exclude_if=lambda x: not x)
     persona: HandlerPersona | None = Field(default=None, exclude_if=lambda x: x is None)
     response_need: HandlerDecision | None = Field(default=None, exclude_if=lambda x: x is None)
+    open_concerns: tuple[HandlerConcern, ...] = Field(default=(), exclude_if=lambda x: not x)
 
     @model_validator(mode="after")
     def handler_boundary(self) -> "HandlerRequest":
@@ -116,8 +125,9 @@ class ConversationReply(Contract):
     handler_action: str | None = Field(
         default=None, min_length=1, max_length=600, exclude_if=lambda x: x is None
     )
-    handler_play_offer: Literal["brief"] | None = Field(
-        default=None, exclude_if=lambda x: x is None
+    handler_play_offer: Play | None = Field(default=None, exclude_if=lambda x: x is None)
+    handler_concern: str | None = Field(
+        default=None, min_length=1, max_length=300, exclude_if=lambda x: x is None
     )
     gm_decision: GMDecision | None = None
     application: Literal["blocked"] = "blocked"
@@ -129,12 +139,15 @@ class ConversationReply(Contract):
     def separate_gm_decision(self) -> "ConversationReply":
         if self.route == "handler" and self.gm_decision is not None:
             raise ValueError("GM intervention decisions are not Handler output")
-        if (self.handler_action is not None or self.handler_play_offer is not None) and (
-            self.route != "handler" or self.provider != "reviewed-handler-v1"
-        ):
+        if any(
+            x is not None
+            for x in (self.handler_action, self.handler_play_offer, self.handler_concern)
+        ) and (self.route != "handler" or self.provider != "reviewed-handler-v1"):
             raise ValueError("Handler initiative requires reviewed Handler output")
         if self.handler_action is not None and not self.handler_action.strip():
             raise ValueError("Describe the Handler's own action")
+        if self.handler_concern is not None and not self.handler_concern.strip():
+            raise ValueError("Describe the actual concern that remains open")
         return self
 
 
@@ -171,7 +184,7 @@ class HandlerNeedProposal(Contract):
                 },
                 {
                     "if": {
-                        "properties": {"kind": {"const": "urgent_known_report"}},
+                        "properties": {"kind": {"enum": ["urgent_known_report", "follow_up"]}},
                         "required": ["kind"],
                     },
                     "then": {
@@ -187,7 +200,9 @@ class HandlerNeedProposal(Contract):
                     "if": {"properties": {"action": {"const": "RESPOND"}}, "required": ["action"]},
                     "then": {
                         "properties": {
-                            "kind": {"enum": ["indirect_request", "urgent_known_report"]}
+                            "kind": {
+                                "enum": ["indirect_request", "urgent_known_report", "follow_up"]
+                            }
                         }
                     },
                 },
@@ -196,7 +211,8 @@ class HandlerNeedProposal(Contract):
     )
     request_id: str
     action: Literal["RESPOND", "WAIT"]
-    kind: Literal["indirect_request", "urgent_known_report", "no_need"]
+    kind: Literal["indirect_request", "urgent_known_report", "follow_up", "no_need"]
+    concern_id: str | None = Field(default=None, exclude_if=lambda x: x is None)
     speech_quote: str | None = Field(
         default=None,
         max_length=1000,
@@ -221,10 +237,14 @@ class HandlerNeedProposal(Contract):
             raise ValueError("Cite each Handler reference once")
         if self.action == "RESPOND" and self.kind == "no_need":
             raise ValueError("No need cannot request a response")
-        if self.kind == "indirect_request" and not (self.speech_quote or "").strip():
-            raise ValueError("An indirect request needs an exact heard speech quote")
-        if self.kind == "urgent_known_report" and not self.source_refs:
+        if self.kind in ("indirect_request", "follow_up") and not (self.speech_quote or "").strip():
+            raise ValueError("The response needs an exact heard speech quote")
+        if self.kind in ("urgent_known_report", "follow_up") and not self.source_refs:
             raise ValueError("An urgent report needs actual known references")
+        if (self.kind == "follow_up") != bool(self.concern_id) or (
+            self.kind == "follow_up" and self.action != "RESPOND"
+        ):
+            raise ValueError("A follow-up responds to one actual open concern")
         return self
 
 

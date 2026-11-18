@@ -263,7 +263,9 @@ def test_actual_native_consumers_through_typed_proposals(
     monkeypatch.setattr(HandlerPlayService, "submit", handler_routed)
     monkeypatch.setattr(GameService, "respond", routed)
     function = getattr(native, name)
-    values = dict(ledger=ledger, tmp_path=tmp_path, monkeypatch=monkeypatch, **extra)
+    values = dict(
+        ledger=ledger, tmp_path=tmp_path, monkeypatch=monkeypatch, via_director=False, **extra
+    )
     function(**{k: values[k] for k in inspect.signature(function).parameters})
     assert operations, "Scenario must exercise a real typed adapter consumer"
 

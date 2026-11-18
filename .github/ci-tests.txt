@@ -98,6 +98,8 @@ tests/test_gm_response_ownership.py
 tests/test_director_knowledge_relations.py
 tests/test_director_handler_needs.py
 tests/rules/test_director_handler_participation.py
+tests/rules/test_director_handler_play_examples.py
+tests/rules/test_director_handler_follow_through.py
 tests/rules/test_director_response_handoff.py
 # Reviewed world authorship, native sources and explicitly scoped established knowledge.
 tests/rules/test_world_development.py
@@ -110,3 +112,7 @@ tests/test_director_dossiers.py
 tests/test_director_fronts.py
 tests/test_director_reactions.py
 tests/test_director_reaction_transfer.py
+
+# Director specialist Play effects with actual tracker and quarantine provenance.
+tests/rules/test_tracker_implants.py::test_native_secret_tracker_location_both_plays_real_removal_and_exact_site_void[director]
+tests/rules/test_contaminant_zone.py::test_actual_group_harpy_study_warp_protection_expiry_and_private_history[director]

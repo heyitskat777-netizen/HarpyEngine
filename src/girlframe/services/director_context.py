@@ -14,6 +14,23 @@ from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
 
+def next_contribution_ordinal(c: Connection, campaign: str, scene: str) -> int:
+    """Book actual scene deliveries and approved narration on the same timeline."""
+    table = t.director_context["shadow"]
+    return 1 + int(
+        c.scalar(
+            sa.select(sa.func.count())
+            .select_from(table)
+            .where(
+                table.c.campaign_id == campaign,
+                table.c.scene_id == scene,
+                sa.or_(table.c.id.like("gm-narration:%"), table.c.id.like("handler-delivery:%")),
+            )
+        )
+        or 0
+    )
+
+
 class DirectorContextService:
     def __init__(self, observations: DirectorObservationService):
         self.observations = observations
@@ -56,6 +73,11 @@ class DirectorContextService:
                 DirectorKnowledgeService(self).validate_reference(
                     c, scene_id, reference, allow_closed=allow_closed
                 )
+                continue
+            if reference.source_id.startswith("handler-delivery:"):
+                from girlframe.services.director_handler_delivery import validate_delivery_reference
+
+                validate_delivery_reference(self, c, scene_id, reference)
                 continue
             if reference.classification == "approved_outcome":
                 record = self._approved_outcome(

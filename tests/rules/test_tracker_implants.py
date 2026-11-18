@@ -147,8 +147,9 @@ def dive(game, worker, gateway, viewer, asset):
     return event
 
 
+@pytest.mark.parametrize("via_director", [False, True], ids=["native", "director"])
 def test_native_secret_tracker_location_both_plays_real_removal_and_exact_site_void(
-    ledger, tmp_path, monkeypatch
+    ledger, tmp_path, monkeypatch, via_director
 ):
     game, worker, gateway = ordinary_pr_award(ledger, tmp_path, monkeypatch)
     approved(ledger, game, tmp_path, monkeypatch, extra=(ordinary.RULE, rules.RULE))
@@ -239,7 +240,38 @@ def test_native_secret_tracker_location_both_plays_real_removal_and_exact_site_v
     contact = service.start_play(
         ADMIN, str(uuid4()), state(game).revision, first.id, "tracker_intercept", 900
     )
-    perform_native(plays, contact["id"], "tracker_intercept", first.actor)
+    if via_director:
+        from test_director_handler_play_examples import open_offer, record_example
+        from test_gm_outcome_consumers import attach, consume
+
+        from girlframe.ai.gm_outcomes import HandlerOutcome
+
+        director, scene = attach(game)
+        linked = open_offer(
+            director,
+            scene,
+            game,
+            "tracker_intercept",
+            "I can speak with her in the current room.",
+            contact["id"],
+        )
+        consume(
+            director,
+            scene,
+            "handler_grant",
+            linked,
+            HandlerOutcome(
+                play="tracker_intercept",
+                effect=Effect(
+                    kind="tracker_intercept",
+                    target=first.actor,
+                    account="I intercept her in the room we actually share.",
+                ),
+            ),
+        )
+        record_example(game, linked)
+    else:
+        perform_native(plays, contact["id"], "tracker_intercept", first.actor)
     assert "intercept" in plays.notice(PLAYER, contact["id"])["account"]
     text = "PRIVATE_FICTION: I quietly mend the ribbon from my original home."
     moment = service.record_moment(PLAYER, str(uuid4()), state(game).revision, 900, text)
@@ -252,7 +284,33 @@ def test_native_secret_tracker_location_both_plays_real_removal_and_exact_site_v
         900,
         moment=moment["id"],
     )
-    perform_native(plays, observed["id"], "tracker_voyeur", first.actor)
+    if via_director:
+        linked = open_offer(
+            director,
+            scene,
+            game,
+            "tracker_voyeur",
+            "I leave the public relay plan as written.",
+            observed["id"],
+        )
+        consume(
+            director,
+            scene,
+            "handler_grant",
+            linked,
+            HandlerOutcome(
+                play="tracker_voyeur",
+                effect=Effect(
+                    kind="tracker_voyeur",
+                    target=first.actor,
+                    detail=text,
+                    account="The Handler observes the original Pilot-authored moment.",
+                ),
+            ),
+        )
+        record_example(game, linked)
+    else:
+        perform_native(plays, observed["id"], "tracker_voyeur", first.actor)
     assert plays.notice(ADMIN, observed["id"])["detail"] == text
     with pytest.raises(WorkflowError):
         plays.notice(OTHER, observed["id"])

@@ -249,8 +249,12 @@ def validate(packet: OutcomePacket, proposal: OutcomeProposal) -> ChoiceAnswer |
                 or (d.effect.source_label is not None)
             ):
                 raise ValueError("Use the exact reviewed Handler briefing")
-        elif d.play not in ("escalate", "support", "contaminant_warp") or d.effect.kind != d.play:
-            raise ValueError("This adapter only consumes its finite world-authoring Handler grant")
+        expected = "mess" if d.effect.kind in ("status", "tag", "damage") else d.effect.kind
+        if d.play != expected or d.play not in native["allowed_plays"]:
+            raise ValueError("Use a Play actually available to this grant and its matching effect")
+        target = d.effect.target
+        if target is not None and target.model_dump(mode="json") not in native["grant"]["targets"]:
+            raise ValueError("Use an actual original target of this grant")
     if isinstance(d, TableOutcome):
         if native["action"]["data"]["play"] == "all_out_assault":
             if d.vast_advantage is None or d.answers:

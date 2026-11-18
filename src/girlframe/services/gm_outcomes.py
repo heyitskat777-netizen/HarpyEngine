@@ -23,7 +23,7 @@ from girlframe.ai.gm_protocol import Evidence, TaskFrame
 from girlframe.ai.observation import Observation
 from girlframe.database import tables as t
 from girlframe.engine.m3_battle_state import Context
-from girlframe.services.director_context import DirectorContextService
+from girlframe.services.director_context import DirectorContextService, next_contribution_ordinal
 from girlframe.services.director_observation import _digest
 from girlframe.services.gm_outcome_compile import CHOICES, sensor_answer_contract, validate
 from girlframe.services.m2_state import load_state
@@ -163,9 +163,11 @@ class GMOutcomeService:
                 "battle_facts",
             )
         elif kind == "handler_grant":
-            from girlframe.services.m3_handler_plays import _source
+            from girlframe.engine.m3_handler_plays import available_plays
+            from girlframe.services.m3_handler_plays import _authority, _source
 
             _, grant = _source(c, self.game, identity)
+            _authority(c, self.game, canon, grant)
             # Non-scene grants must be connected through their actual source action.
             action = self.game.action(c, grant.source_action) if grant.source_action else None
             campaign_targets = (
@@ -176,6 +178,12 @@ class GMOutcomeService:
                     for x in grant.target_controllers.values()
                 )
             )
+            if grant.clause.startswith("tracker:"):
+                from girlframe.services.m3_tracker_implants import prove_tracker_play
+
+                campaign_targets = campaign_targets and (
+                    prove_tracker_play(self.game, c, canon, grant).cast.id == scene
+                )
             if grant.state != "pending" or not (
                 grant.scope.scene_id == scene
                 or campaign_targets
@@ -184,7 +192,10 @@ class GMOutcomeService:
             ):
                 raise WorkflowError("STALE_HANDLER_GRANT: use its actual pending scene source.")
             data, owner, operation = (
-                {"grant": grant.model_dump(mode="json")},
+                {
+                    "grant": grant.model_dump(mode="json"),
+                    "allowed_plays": list(available_plays(canon, grant)),
+                },
                 str(grant.chooser_controller),
                 "handler_effect",
             )
@@ -623,20 +634,7 @@ class GMOutcomeService:
                             if str(x)
                             in {str(u) for u in native["action"]["data"].get("participants", [])}
                         ),
-                        "ordinal": 1
-                        + int(
-                            c.scalar(
-                                sa.select(sa.func.count())
-                                .select_from(t.director_context["shadow"])
-                                .where(
-                                    t.director_context["shadow"].c.campaign_id
-                                    == self.store.campaign_id,
-                                    t.director_context["shadow"].c.scene_id == scene,
-                                    t.director_context["shadow"].c.id.like("gm-narration:%"),
-                                )
-                            )
-                            or 0
-                        ),
+                        "ordinal": next_contribution_ordinal(c, self.store.campaign_id, scene),
                         "text": proposal.decision.text,
                         "effect_refs": list(proposal.decision.effect_refs),
                         "canon_effects": False,
