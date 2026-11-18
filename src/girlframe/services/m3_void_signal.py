@@ -2,7 +2,7 @@
 
 import json
 from typing import Any, Literal
-from uuid import uuid4
+from uuid import NAMESPACE_URL, uuid4, uuid5
 
 import sqlalchemy as sa
 from sqlalchemy import Connection
@@ -22,6 +22,10 @@ from girlframe.services.m3_strain_effects import EffectService
 from girlframe.services.m3_work import related
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
+
+
+def _threshold_id(signal: str, family: str) -> str:
+    return str(uuid5(NAMESPACE_URL, f"girlframe:void-signal:{signal}:{family}"))
 
 
 def stage(
@@ -139,7 +143,7 @@ class SignalService:
                 piloting=actor.piloting,
             )
             families = tuple("girl" if x.kind == "girl_void_threshold" else "frame" for x in follow)
-            thresholds = tuple(f"{identity}:signal:{family}" for family in families)
+            thresholds = tuple(_threshold_id(identity, family) for family in families)
             rules.put(
                 changed,
                 record.model_copy(
@@ -222,6 +226,7 @@ def prove_threshold(
         if raw
         else None
     )
+    family = body["details"]["family"]
     if (
         proof is None
         or proof.actor != actor
@@ -229,8 +234,8 @@ def prove_threshold(
         or row["id"] not in proof.thresholds
         or row["off_duty_id"] != parent["off_duty_id"]
         or json.loads(parent["body_json"]).get("signal_gained") != row["event_id"]
-        or body["details"]["family"] not in ("girl", "frame")
-        or row["id"] != f"{identity}:signal:{body['details']['family']}"
+        or family not in ("girl", "frame")
+        or row["id"] not in (_threshold_id(identity, family), f"{identity}:signal:{family}")
     ):
         raise ValueError("Recover the actual gain and original threshold for this Strain effect")
 

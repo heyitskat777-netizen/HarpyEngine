@@ -318,3 +318,13 @@ Handler can finish that effect after reopening the service. The exact
 submission replays its receipt. The untouched future obligations, such
 as the Rebel protest's next-mission deadline, remain recorded.
 [Void p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) · [Rebellion p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) · [Budget p. 149](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=151) · [Cascade tests](../../tests/rules/test_strain_cascade_completion.py)
+
+The continuation from `93887e595ee2732461d9e57c8336ef687fe84ec1`
+reproduced a blocked High Void 5.2 fallback when three High 6 cascades
+preceded a full-family alteration. The saved consequence ID exceeded the
+native Play source limit and prevented the original resistance Play.
+New threshold work uses bounded, deterministic IDs. The immutable
+original draw and effect history still prove the same source. Legacy
+threshold IDs that fit the Play field continue to use their saved proofs.
+The synthetic nested path completes the actual resistance and resolves
+the original High Void effect. [High Void contact tests](../../tests/rules/test_strain_void_signal.py)

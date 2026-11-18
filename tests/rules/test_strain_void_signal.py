@@ -20,6 +20,7 @@ from girlframe.engine.m2 import PlayInput
 from girlframe.engine.m3_strain_effects import Choice
 from girlframe.engine.m3_void_signal import RULE, signals
 from girlframe.engine.m3_world import introduce_gorgon
+from girlframe.services import m3_void_signal as signal_service
 from girlframe.services.inbox import InboxService
 from girlframe.services.m3_strain_effects import EffectService
 from girlframe.services.m3_void import VoidService
@@ -27,7 +28,7 @@ from girlframe.services.m3_void_signal import SignalService
 from girlframe.services.onboarding import WorkflowError
 
 
-def source(ledger, threshold=False, prior=False):
+def source(ledger, threshold=False, prior=False, cascades=0):
     strain, game = ready(ledger, face=5)
     approval = ledger.policy.m3_approval
     ledger.policy = ledger.policy.model_copy(
@@ -56,14 +57,30 @@ def source(ledger, threshold=False, prior=False):
     period = prepared(strain, game, high=frozenset({"void"}))
     request = next(x for x in state(game).strain.requests if x.track == "void")
     assert request.severity == "high"
+    for depth in range(cascades):
+        strain.dice.face = 6
+        strain.roll(ADMIN, f"cascade-roll-{depth}", request.id, 1, state(game).revision)
+        strain.choose(ADMIN, f"cascade-choice-{depth}", request.id, 2, state(game).revision, 2)
+        request = next(
+            x
+            for x in state(game).strain.requests
+            if x.parent == request.id and x.severity == "high"
+        )
+    strain.dice.face = 5
     strain.roll(ADMIN, "signal-roll", request.id, 1, state(game).revision)
     strain.choose(ADMIN, "signal-column", request.id, 2, state(game).revision, 2)
     return strain, game, period, request.id + ":effect", frame_assets[0].id
 
 
-@pytest.mark.parametrize("threshold", [False, True], ids=["ordinary", "full-family"])
-def test_high_void_draw_and_original_inbox_gain_resolve_only_after_actual_effect(ledger, threshold):
-    strain, game, period, identity, asset = source(ledger, threshold=threshold)
+@pytest.mark.parametrize(
+    ("threshold", "cascades", "legacy"),
+    [(False, 0, False), (True, 0, False), (True, 3, False), (True, 0, True)],
+    ids=["ordinary", "full-family", "nested-cascade", "legacy-work-id"],
+)
+def test_high_void_draw_and_original_inbox_gain_resolve_only_after_actual_effect(
+    ledger, threshold, cascades, legacy, monkeypatch
+):
+    strain, game, period, identity, asset = source(ledger, threshold=threshold, cascades=cascades)
     draw = Draw()
     effects = EffectService(strain, selector=draw)
     start_revision = state(game).revision
@@ -116,7 +133,12 @@ def test_high_void_draw_and_original_inbox_gain_resolve_only_after_actual_effect
         assert form.completed
 
     revision = state(game).revision
-    asyncio.run(gain_from_inbox())
+    with monkeypatch.context() as old_writer:
+        if legacy:
+            old_writer.setattr(
+                signal_service, "_threshold_id", lambda parent, family: f"{parent}:signal:{family}"
+            )
+        asyncio.run(gain_from_inbox())
     expected = "pending" if threshold else "resolved"
     assert (
         SignalService(strain).gain(PLAYER, "96301", identity, revision, asset, account)["state"]
@@ -128,6 +150,9 @@ def test_high_void_draw_and_original_inbox_gain_resolve_only_after_actual_effect
     assert effects.get(ADMIN, identity)["state"] == expected
     if threshold:
         (required,) = saved.thresholds
+        if legacy:
+            assert required == f"{identity}:signal:frame"
+        assert len(required) <= 100
         assert VoidService(ledger).get(PLAYER, required)["stage"] == "resist_pending"
         worker, gateway = GameWorker(game), Gateway()
         game.dice.faces = (1, 1)
