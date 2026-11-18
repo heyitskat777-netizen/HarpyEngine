@@ -134,6 +134,7 @@ class Procedure(Model):
     source_event: str
     account: str
     channel: int
+    npc_call_scene: str | None = Field(default=None, exclude_if=lambda value: value is None)
     heat: int = 0
     asset: str | None = None
     replace: str | None = Field(default=None, exclude_if=lambda value: value is None)

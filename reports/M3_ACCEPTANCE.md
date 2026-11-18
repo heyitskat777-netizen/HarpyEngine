@@ -6224,6 +6224,7 @@ The bot restarted gracefully after a fresh0600backup, preserving policy/schema
 Bond acceptance, review or activation was automatically chosen. Scope unchanged;
 no AI, Ancillary, environment publication, private-engine write or main merge.
 See reports/P1_LIVE_SETUP_FIX.md for precise scope and limits.
+
 # Activity source integration — exact candidate 49f0833
 
 The November 16 source handoff is reconciled against newer P2 source. Complete
@@ -6234,3 +6235,46 @@ Global static checks, unchanged registry, schema0023 migration check and synthet
 and [Activity return](../integrations/activity/INTEGRATION_HANDOFF.md) for exact
 scope, source hashes, curated ports and remaining all-type review/UI/release gates.
 No campaign operation, runtime rollout, independent approval or model spend.
+
+## GIRL FRAME Play audit and ordinary NPC Running Ragged
+
+Development base `484f6fcecc532e2acfb3ccd9021cb95d2e3718de`. Local branch
+`codex/girl-frame-play-coverage`. [Coverage matrix](GIRL_FRAME_PLAY_COVERAGE.md)
+records the printed rulebook, sheets, outcome tests, campaign interpretations
+and remaining Activity and player evidence. Running Ragged uses printed p70,
+official sheet PDF21 and the existing `doctor-arrival-body` ruling.
+
+The original NPC controller declares the call. The original NPC or Doctor can
+mark their own Tag from the private Inbox. Confirmation validates the same
+original scene and people, current paid Requisition and an eligible Tag. The
+arrival applies once with its saved source. A parked Frame stays in place.
+The focused tests use disposable SQLite and fake Discord interactions.
+
+```bash
+.venv/bin/pytest -q --tb=short tests/rules/test_doctor_caller_native.py tests/rules/test_doctor_runtime.py::test_running_ragged_caller_marks_own_tag_and_actual_doctor_arrives
+.venv/bin/ruff check src/girlframe/engine/m3_doctor.py src/girlframe/services/m3_doctor_procedures.py src/girlframe/discord_adapter/m3_doctor.py tests/rules/test_doctor_caller_native.py
+.venv/bin/ruff format --check src/girlframe/engine/m3_doctor.py src/girlframe/services/m3_doctor_procedures.py src/girlframe/discord_adapter/m3_doctor.py tests/rules/test_doctor_caller_native.py
+.venv/bin/mypy src/girlframe/engine/m3_doctor.py src/girlframe/services/m3_doctor_procedures.py src/girlframe/discord_adapter/m3_doctor.py
+.venv/bin/python tools/check_rules_registry.py
+.venv/bin/python GIRLFRAME_Discord_Codex_Handoff_v0.2/verification/verify_handoff.py
+.venv/bin/python tools/check_repository.py
+```
+
+Final focused run: **4 passed in 11.48s**. The two NPC cases exercise separate
+payer roles, consent, pre-acquisition visibility, ownership, stale forms, scene
+withdrawal and rejoin, OOC pause, duplicate requests and payments, private
+readback after service reopen, and physical placement. The two Pilot cases
+preserve their earlier entry and payment behavior. Earlier attempts failed in
+the test harness on an incorrect Inbox field and a cached synthetic registry,
+then passed after fixture corrections. The default sandbox test invocation
+stalled and was terminated. The successful run used the repository's
+network-blocking test fixture with sandbox permissions that permit the async
+worker wakeup.
+
+Changed-file lint and format and the three source types passed. Registry is
+`RULES_SUBSET`. Planning contracts and the publishable-file check passed with
+zero repository findings. Fresh disposable migration and offline CLI health
+passed. Exact branch verification is local and focused. Full regression,
+remote CI, Activity browser round trip and human play acceptance remain open.
+The published Director delta has no shared changed paths with this patch.
+The recorded v0.1.4 trial SHA, release policy and live campaign were untouched.

@@ -8,8 +8,9 @@ from sqlalchemy import Connection
 from girlframe.engine import m3_doctor as rules
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import current_ref
-from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_actor_state import ActorRef, ActorView, SceneCast
 from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_mockingbird import actor_tags
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
@@ -50,6 +51,18 @@ def wings_thresholds(state: GameState, donor: ActorRef, asset: str) -> None:
         )
 
 
+def _npc_caller(state: GameState, actor: ActorView, cast: SceneCast, controller: int) -> bool:
+    return (
+        actor.rules == "npc"
+        and actor.alive
+        and not actor.offstage_source
+        and actor.controller == controller
+        and any(role.actor == actor.ref and role.controller == controller for role in cast.roles)
+        and state.world is not None
+        and any(npc.id == actor.ref.entity and npc.source_kind is None for npc in state.world.npcs)
+    )
+
+
 class ProcedureService:
     def __init__(self, game: "GameService"):
         self.game, self.store = game, game.store
@@ -60,31 +73,58 @@ class ProcedureService:
             Access(self.store).authorize(c, viewer, "playbooks")
             self.game.authorize(c, viewer, game=False)
             state = load_state(c, self.store.campaign_id)
-            caller = current_ref(state, viewer.user_id)
             cast = _cast(self.game, c, state, channel)
-            if caller not in {x.actor for x in cast.roles}:
-                raise WorkflowError("Join the actual call scene first")
             try:
-                rules.sheet(state, caller)
-                native = True
+                caller = current_ref(state, viewer.user_id)
             except ValueError:
-                native = False
+                caller = None
+            if not any(x.actor == caller and x.controller == viewer.user_id for x in cast.roles):
+                caller = None
+            bound = profiles(c, self.store.campaign_id)
+            npc_callers = []
             doctors = []
+            native = False
             for role in cast.roles:
                 actor = role.actor
-                if actor == caller or actor.kind != "pilot":
+                if actor.kind not in ("npc", "pilot"):
                     continue
-                if not owned(self.game, c, state, actor, rules.RAGGED):
+                if actor.kind == "npc" and role.controller != viewer.user_id:
                     continue
-                actual = resolve(state, actor, profiles(c, self.store.campaign_id))
-                doctors.append(
-                    dict(ref=actor.model_dump(mode="json"), token=actor.token, label=actual.label)
+                try:
+                    actual = resolve(state, actor, bound)
+                except ValueError:
+                    continue
+                choice = dict(
+                    ref=actor.model_dump(mode="json"), token=actor.token, label=actual.label
                 )
+                if _npc_caller(state, actual, cast, viewer.user_id):
+                    npc_callers.append(choice)
+                elif actor == caller:
+                    try:
+                        rules.sheet(state, actor)
+                    except ValueError:
+                        continue
+                    native = True
+                if (
+                    actor.kind != "pilot"
+                    or not actual.alive
+                    or not rules.held(state, actor, rules.RAGGED)
+                ):
+                    continue
+                try:
+                    if owned(self.game, c, state, actor, rules.RAGGED):
+                        doctors.append(choice)
+                except (WorkflowError, ValueError):
+                    continue
+            if caller is None and not npc_callers:
+                raise WorkflowError("Join the actual call scene first")
             return dict(
                 revision=state.revision,
-                caller=caller.model_dump(mode="json"),
+                caller=caller.model_dump(mode="json") if caller else None,
                 native=native,
-                doctors=doctors,
+                doctors=[x for x in doctors if caller is not None and x["token"] != caller.token],
+                npc_callers=npc_callers,
+                npc_doctors=doctors if npc_callers else [],
             )
 
     def propose(
@@ -108,7 +148,8 @@ class ProcedureService:
         def change(c: Connection) -> dict[str, Any]:
             self.game.unpaused(c)
             state = load_state(c, self.store.campaign_id)
-            initiator = current_ref(state, viewer.user_id)
+            npc_call = kind == "ragged" and called_doctor is not None and counterpart.kind == "npc"
+            initiator = counterpart if npc_call else current_ref(state, viewer.user_id)
             actor = called_doctor or initiator
             if called_doctor is not None and (
                 kind != "ragged" or counterpart != initiator or actor.kind != "pilot"
@@ -119,7 +160,7 @@ class ProcedureService:
                 or self.game.pending_actions(c)
                 or not account.strip()
                 or actor == counterpart
-                or counterpart.kind != "pilot"
+                or (counterpart.kind != "pilot" and not npc_call)
             ):
                 raise WorkflowError("Refresh the two actual original people and performed trigger")
             rule = rules.WINGS if kind == "wings" else rules.RAGGED
@@ -128,7 +169,22 @@ class ProcedureService:
             cast = _cast(self.game, c, state, channel)
             if not {actor, counterpart} <= {x.actor for x in cast.roles}:
                 raise WorkflowError("Both actual original people must join the source scene")
+            if npc_call and not any(
+                x.actor == counterpart and x.controller == viewer.user_id for x in cast.roles
+            ):
+                raise WorkflowError("Recover the original NPC, Doctor and call scene")
             target = resolve(state, counterpart, profiles(c, self.store.campaign_id))
+            if npc_call:
+                self._check_npc_call(c, state, cast, actor, target, viewer.user_id)
+                if any(
+                    x.npc_call_scene == cast.id
+                    and x.doctor == actor
+                    and x.counterpart == counterpart
+                    and x.controller == viewer.user_id
+                    and x.phase == "proposal"
+                    for x in rules.values(state, "doctor_procedure", rules.Procedure)
+                ):
+                    raise WorkflowError("Reopen your existing call in the private Inbox")
             if kind == "wings":
                 if self.game.immediate_work(c, target.controller):
                     raise WorkflowError(
@@ -168,6 +224,7 @@ class ProcedureService:
                 source_event=event,
                 account=account,
                 channel=channel,
+                npc_call_scene=cast.id if npc_call else None,
                 asset=asset,
                 heat=heat,
                 replace=replace,
@@ -215,6 +272,44 @@ class ProcedureService:
             raise WorkflowError("Open only your actual original Doctor procedure")
         return state, value
 
+    def _check_npc_call(
+        self,
+        c: Connection,
+        state: GameState,
+        cast: SceneCast,
+        doctor: ActorRef,
+        caller: ActorView,
+        controller: int,
+    ) -> None:
+        provider = resolve(state, doctor, profiles(c, self.store.campaign_id))
+        if (
+            not _npc_caller(state, caller, cast, controller)
+            or not provider.alive
+            or provider.offstage_source
+            or not any(
+                x.actor == doctor and x.controller == provider.controller for x in cast.roles
+            )
+        ):
+            raise WorkflowError("Recover the original NPC, Doctor and call scene")
+
+    def _npc_call_payers(
+        self, c: Connection, state: GameState, value: rules.Procedure, viewer: GuildViewer
+    ) -> tuple[ActorRef, ...]:
+        assert value.npc_call_scene is not None
+        cast = _cast(self.game, c, state, value.channel)
+        if cast.id != value.npc_call_scene:
+            raise WorkflowError("Recover the original NPC call scene")
+        caller = resolve(state, value.counterpart, profiles(c, self.store.campaign_id))
+        self._check_npc_call(c, state, cast, value.doctor, caller, value.controller)
+        return tuple(
+            actor
+            for actor, controller in (
+                (value.doctor, int(value.doctor.entity)),
+                (value.counterpart, value.controller),
+            )
+            if viewer.user_id == controller
+        )
+
     def get(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
         with self.store.engine.connect() as c:
             state = load_state(c, self.store.campaign_id)
@@ -239,6 +334,30 @@ class ProcedureService:
                     can_confirm=protection.phase == "protecting",
                 )
             state, value = self._source(c, viewer, identity)
+            if value.npc_call_scene is not None:
+                tags: list[dict[str, Any]] = []
+                if value.phase == "proposal":
+                    payers = self._npc_call_payers(c, state, value, viewer)
+                    for actor in payers:
+                        tags.extend(
+                            dict(
+                                id=tag.id,
+                                payer=actor.model_dump(mode="json"),
+                                label=tag.label
+                                if len(payers) == 1
+                                else ("Doctor — " if actor == value.doctor else "Caller — ")
+                                + tag.label,
+                            )
+                            for tag in actor_tags(state, actor)
+                            if not tag.marked
+                        )
+                return dict(
+                    id=identity,
+                    revision=state.revision,
+                    procedure=value.model_dump(mode="json"),
+                    tags=tags,
+                    can_confirm=bool(tags),
+                )
             actor = current_ref(state, viewer.user_id)
             return dict(
                 id=identity,
@@ -261,6 +380,8 @@ class ProcedureService:
         revision: int,
         account: str,
         tag: str | None = None,
+        *,
+        payer: ActorRef | None = None,
     ) -> dict[str, Any]:
         def access(c: Connection) -> None:
             Access(self.store).authorize(c, viewer, "playbooks", director_response=True)
@@ -282,6 +403,8 @@ class ProcedureService:
                 raise WorkflowError("Recover the current original Doctor entitlement")
             event = str(uuid4())
             before_transfer = state.model_copy(deep=True)
+            if payer is not None and value.npc_call_scene is None:
+                raise WorkflowError("Choose a source actor only for an actual NPC call")
             if value.kind == "wings":
                 if viewer.user_id != value.controller or tag is not None:
                     raise WorkflowError(
@@ -327,9 +450,15 @@ class ProcedureService:
                     ),
                 )
             else:
-                actor = current_ref(state, viewer.user_id)
+                caller = resolve(state, value.counterpart, profiles(c, self.store.campaign_id))
+                if value.npc_call_scene is None:
+                    actor = current_ref(state, viewer.user_id)
+                else:
+                    if payer is None or payer not in self._npc_call_payers(c, state, value, viewer):
+                        raise WorkflowError("Choose only an actual Tag holder you control")
+                    actor = payer
                 marker = next(
-                    (x for x in state.sheets[actor.entity].tags if x.id == tag and not x.marked),
+                    (x for x in actor_tags(state, actor) if x.id == tag and not x.marked),
                     None,
                 )
                 if marker is None:
@@ -337,7 +466,6 @@ class ProcedureService:
                         "Either actual participant must mark their own unmarked Tag"
                     )
                 doc = next((x for x in state.placements if x.actor == value.doctor), None)
-                caller = resolve(state, value.counterpart, profiles(c, self.store.campaign_id))
                 if (
                     doc is None
                     or doc.custody
@@ -352,8 +480,30 @@ class ProcedureService:
                     for x in state.escort_journeys
                 ):
                     raise WorkflowError("Resolve the original Doctor journey before arrival")
-                marker.marked = True
-                state.sheets[actor.entity].revision += 1
+                if actor.kind == "npc":
+                    assert state.world is not None
+                    state.world = state.world.model_copy(
+                        update=dict(
+                            npcs=tuple(
+                                npc.model_copy(
+                                    update=dict(
+                                        tags=tuple(
+                                            item.model_copy(update=dict(marked=True))
+                                            if item.id == marker.id
+                                            else item
+                                            for item in npc.tags
+                                        )
+                                    )
+                                )
+                                if npc.id == actor.entity
+                                else npc
+                                for npc in state.world.npcs
+                            )
+                        )
+                    )
+                else:
+                    marker.marked = True
+                    state.sheets[actor.entity].revision += 1
                 update = dict(girl_cell=caller.cell, source_event=event, account=account)
                 if doc.mode != "outside_frame":
                     update["frame_cell"] = caller.cell
@@ -363,8 +513,19 @@ class ProcedureService:
                 ]
             value = value.model_copy(update={"phase": "complete", "completion_event": event})
             rules.put(state, "doctor_procedure", value)
+            details: dict[str, Any] = (
+                dict(procedure=identity, payer=payer.model_dump(mode="json"), tag=tag)
+                if payer is not None
+                else {}
+            )
             self.game.event(
-                c, viewer.user_id, key, "m3.doctor_procedure_completed", state, event_id=event
+                c,
+                viewer.user_id,
+                key,
+                "m3.doctor_procedure_completed",
+                state,
+                event_id=event,
+                **details,
             )
             if value.kind == "wings":
                 from girlframe.services.m3_asset_loss import create_loss_work
@@ -389,7 +550,8 @@ class ProcedureService:
             viewer,
             key,
             "m3.doctor_procedure_completed",
-            dict(id=identity, revision=revision, account=account, tag=tag),
+            dict(id=identity, revision=revision, account=account, tag=tag)
+            | ({"payer": payer.model_dump(mode="json")} if payer is not None else {}),
             change,
             auto_audit=False,
             authorize=access,
