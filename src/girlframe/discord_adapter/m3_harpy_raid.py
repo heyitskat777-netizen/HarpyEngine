@@ -18,6 +18,14 @@ async def open_raid(
 ) -> None:
     data = await asyncio.to_thread(service.get, viewer_from_interaction(interaction), identity)
     summary = f"{data['base']} · Obsession {data['obsession']}"
+    if data["setup"] is not None:
+        from girlframe.discord_adapter.m3_harpy_defeat import open_setup
+        from girlframe.services.m3_harpy_defeat import HarpyDefeatService
+
+        await open_setup(
+            interaction, HarpyDefeatService(service.store, service.game), data["setup"]
+        )
+        return
     if data["action"] or not data["attacks"]:
         description = (
             "The confirmed Assault is preserved."

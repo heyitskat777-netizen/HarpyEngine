@@ -18,6 +18,7 @@ class Raid(Model):
     handler: ActorRef
     obsession: ActorRef
     defenders: tuple[ActorRef, ...]
+    introduced: bool = False
     action: str | None = None
     completion: str | None = None
 

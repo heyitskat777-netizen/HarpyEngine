@@ -99,14 +99,14 @@ def ready(store, *, faces=(2, 3), heat=0):
     return ActorPlayService(game), game, cast, actor
 
 
-def begin(svc, actor, **values):
-    view = svc.preview(PLAYER, 900, actor)
+def begin(svc, actor, *, viewer=PLAYER, **values):
+    view = svc.preview(viewer, 900, actor)
     prepared = dict(
         play="keep_your_head", context="PRIVATE_HARPY_DANGER", trigger_confirmed=True, heat=0
     )
     prepared.update(values)
     return svc.begin(
-        PLAYER,
+        viewer,
         str(uuid4()),
         900,
         actor,

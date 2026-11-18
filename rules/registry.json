@@ -16727,7 +16727,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_strain_harpy_raid.py::test_harpy_raid_consumes_real_attack_and_records_original_obsession"
+        "tests/rules/test_strain_harpy_raid.py::test_harpy_raid_consumes_real_attack_and_records_original_obsession",
+        "tests/rules/test_strain_harpy_raid.py::test_printed_raid_can_introduce_its_harpy_then_run_actual_attack"
       ],
       "m2_play_id": null,
       "module": "core"

@@ -245,9 +245,9 @@ position after this roll's source, then links that attack once. The
 synthetic check verified the original Girl's Asset damage and Off-Duty
 activation with the same Strain dice and one actual Assault roll.
 
-This slice needs a live Harpy already established in the native world
-and the existing reviewed battle route. Its test uses the same
-candidate-only Assault gate as the established Harpy battle tests.
-A new Harpy introduction specifically tied to this source still
-needs its own provenance.
+The continuation based on `cd18e605b540e10475489b3fd4dc6be691f742b3`
+also permits a new Harpy at the occupied site. Its native creation,
+body setup review and actual Assault run through the same saved source.
+Both tests use the candidate-only Assault gate from the established
+Harpy combat tests. Independent release approval remains separate.
 [High Void p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) · [Raid test](../../tests/rules/test_strain_harpy_raid.py)

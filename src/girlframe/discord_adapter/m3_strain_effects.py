@@ -29,6 +29,7 @@ from girlframe.engine.m3_void_spread import RULE as VOID_SPREAD
 from girlframe.engine.m3_world import CLASS_ASSETS, distance
 from girlframe.engine.m3_world_state import (
     NPC_JOBS,
+    AdversaryPilot,
     Asset,
     CorePlan,
     Faction,
@@ -242,6 +243,7 @@ def effect_form(
         raise WorkflowError("Introduce the actual patron, then reopen this result.")
     orbital = rule == ORBITAL_THREAT
     disguise = rule == DOPPELGANGER_REVEAL
+    new_raid_actor = stable(identity, "new raid Harpy")
     spawned = rule in {
         "strain.void.low.1.1",
         "strain.void.low.2.1",
@@ -300,15 +302,17 @@ def effect_form(
                 and x["allegiance"] == "foundation"
                 and x["condition"] != "destroyed"
             ]
+            harpies = {
+                x["id"]: x["name"] for x in world["pilots"] if x["kind"] == "harpy" and x["alive"]
+            }
+            harpies.update({x.id: x.name for x in state.harpy_states if x.alive})
+            harpies.setdefault(new_raid_actor, "Introduce a Harpy for this raid")
             fields += [
                 Field("raid_base", "Which occupied Foundation base?", options(bases)),
                 Field(
                     "harpy",
                     "Which real Harpy attacks?",
-                    options(
-                        [x for x in world["pilots"] if x["kind"] == "harpy" and x["alive"]]
-                        + [dict(id=x.id, name=x.name) for x in state.harpy_states if x.alive]
-                    ),
+                    tuple(harpies.items()),
                 ),
                 Field(
                     "obsession",
@@ -316,6 +320,13 @@ def effect_form(
                     tuple((str(uid), state.sheets[str(uid)].callsign) for uid in state.order),
                 ),
             ]
+            if values.get("harpy") == (new_raid_actor,):
+                fields += [
+                    Field("harpy_name", "Harpy name"),
+                    Field("harpy_frame", "Current Frame description", paragraph=True),
+                    Field("girl_component", "Known Girl-body component"),
+                    Field("frame_component", "Known Frame component"),
+                ]
         if rule == VOID_SIGNAL:
             fields.append(
                 Field(
@@ -864,11 +875,41 @@ def effect_form(
     def apply(actor: GuildViewer, key: str, values: dict[str, Any]) -> str:
         payload: dict[str, Any] = {"rule_id": rule, "account": values["account"]}
         if rule == HARPY_RAID:
+            selected = values["harpy"][0]
+            site_id = values["raid_base"][0]
             payload.update(
-                target=values["harpy"][0],
+                target=selected,
                 victim=values["obsession"][0],
-                raid_base=values["raid_base"][0],
+                raid_base=site_id,
             )
+            if selected == new_raid_actor:
+                assert state.world is not None
+                base = next((x for x in state.world.locations if x.id == site_id), None)
+                if base is None:
+                    raise WorkflowError("Choose the actual occupied base.")
+                payload["new_raid_harpy"] = AdversaryPilot(
+                    id=selected,
+                    kind="harpy",
+                    girl="HARPY",
+                    controller=handler,
+                    cell=base.cell,
+                    name=values["harpy_name"],
+                    frame=values["harpy_frame"],
+                    assets=(
+                        Asset(
+                            id=stable(identity, "raid girl component"),
+                            family="girl",
+                            name=values["girl_component"],
+                            description=values["girl_component"],
+                        ),
+                        Asset(
+                            id=stable(identity, "raid frame component"),
+                            family="frame",
+                            name=values["frame_component"],
+                            description=values["frame_component"],
+                        ),
+                    ),
+                )
         if rule == VOID_SIGNAL:
             payload["target"] = values["signal"][0]
         if rule in CIVIC_DIRECTIVES or rule == PILOT_FEARS:

@@ -24,6 +24,7 @@ from girlframe.engine.m3_void_revelation import Play as RevelationPlay
 from girlframe.engine.m3_void_revelation import Revelation
 from girlframe.engine.m3_void_signal import RULE as VOID_SIGNAL
 from girlframe.engine.m3_world_state import (
+    AdversaryPilot,
     Asset,
     CorePlan,
     Faction,
@@ -119,6 +120,7 @@ class Choice(Model):
     revelation_channel: int | None = Field(default=None, ge=1, exclude_if=lambda x: x is None)
     protest_city: str | None = Field(default=None, exclude_if=lambda x: x is None)
     raid_base: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    new_raid_harpy: AdversaryPilot | None = Field(default=None, exclude_if=lambda x: x is None)
 
 
 def fields(choice: Choice, allowed: set[str]) -> None:
@@ -210,7 +212,7 @@ def apply(
         assert state.world is not None
         world = state.world
     elif rule == HARPY_RAID:
-        fields(choice, {"target", "victim", "raid_base"})
+        fields(choice, {"target", "victim", "raid_base", "new_raid_harpy"})
         if (
             not choice.target
             or not choice.raid_base

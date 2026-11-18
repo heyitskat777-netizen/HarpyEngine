@@ -539,6 +539,7 @@ class EffectService:
                     choice.target,
                     choice.raid_base,
                     int(choice.victim),
+                    new=choice.new_raid_harpy,
                 )
             pending = needs_offer or needs_directive or needs_signal or needs_fear or needs_raid
             scientific_period, scientific_events = None, []

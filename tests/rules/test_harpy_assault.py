@@ -27,8 +27,12 @@ def rolled(store, monkeypatch, faces=(4, 4), *, before_attack=None):
         game.event(c, 3, "actual-opponent-frame", "synthetic.state", canon)
     if before_attack:
         before_attack(game, actor)
-    battle = BattleService(store)
-    data = battle.preview(PLAYER, 900)
+    return play_assault(plays, game, actor)
+
+
+def play_assault(plays, game, actor, viewer=PLAYER):
+    battle = BattleService(game.store)
+    data = battle.preview(viewer, 900)
     source = next(x for x in data["actors"] if x["ref"] == actor.model_dump(mode="json"))
     target = next(
         x for x in data["actors"] if x["ref"]["kind"] == "pilot" and x["ref"]["entity"] == "3"
@@ -43,7 +47,7 @@ def rolled(store, monkeypatch, faces=(4, 4), *, before_attack=None):
         target_sha256=target["sha256"],
         account="The actual Harpy takes an established opening",
     )
-    proposed = battle.propose(PLAYER, str(uuid4()), data["revision"], 900, declaration)
+    proposed = battle.propose(viewer, str(uuid4()), data["revision"], 900, declaration)
     battle.confirm(
         ADMIN,
         str(uuid4()),
@@ -58,6 +62,7 @@ def rolled(store, monkeypatch, faces=(4, 4), *, before_attack=None):
     action = begin(
         plays,
         actor,
+        viewer=viewer,
         play="all_out_assault",
         target_actor=declaration.target,
         attacking_asset=declaration.attacking_asset,

@@ -16,6 +16,8 @@ from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_battle_state import Context
 from girlframe.engine.m3_handler_consequences import active_handler, same_handler_body
 from girlframe.engine.m3_promotional_opportunity import in_responsibility
+from girlframe.engine.m3_world import update
+from girlframe.engine.m3_world_state import AdversaryPilot
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_actor_history import snapshot_profiles
@@ -37,6 +39,8 @@ def stage(
     harpy: str,
     base: str,
     obsession: int,
+    *,
+    new: AdversaryPilot | None = None,
 ) -> None:
     world = state.world
     site = next((x for x in world.locations if x.id == base), None) if world else None
@@ -54,11 +58,37 @@ def stage(
         or any(x.id == row["id"] for x in rules.raids(state))
     ):
         raise WorkflowError("Choose the actual occupied Foundation base and original Girl")
+    assert world is not None
     people = tuple(current_ref(state, uid) for uid in period.pilots)
     if any(period.character_ids.get(x.entity) != x.incarnation for x in people):
         raise WorkflowError("Recover the actual original Cadre")
     ref = ActorRef(kind="external_pilot", entity=harpy)
-    HarpyDefeatService(strain.store, strain.game)._runtime(c, state, ref)
+    if new is not None:
+        if (
+            new.id != harpy
+            or new.kind != "harpy"
+            or new.girl.upper() != "HARPY"
+            or new.controller != state.handler
+            or not new.alive
+            or new.cell != site.cell
+            or new.revealed
+            or new.exposed
+            or new.tags
+            or new.custody != "free"
+            or new.faction is not None
+            or new.rebel_resources_json is not None
+            or not new.frame.strip()
+            or {x.family for x in new.assets} != {"girl", "frame"}
+            or any(x.damaged for x in new.assets)
+            or any(x.facts.actor == ref for x in state.harpy_setups)
+            or any(x.id == harpy for x in state.harpy_states)
+            or any(x.id == harpy for x in state.native_harpies)
+            or any(x.id == harpy for x in state.janus_cores)
+        ):
+            raise WorkflowError("Introduce one original living Harpy and its real components")
+        state.world = update(world, pilots=world.pilots + (new,))
+    else:
+        HarpyDefeatService(strain.store, strain.game)._runtime(c, state, ref)
     bound = profiles(c, strain.store.campaign_id)
     attacker = resolve(state, ref, bound, require_current_profile=False)
     defenders = tuple(
@@ -68,7 +98,8 @@ def stage(
     )
     if (
         not defenders
-        or attacker.girl != "harpy"
+        or attacker.girl is None
+        or attacker.girl.casefold() != "harpy"
         or attacker.cell != site.cell
         or attacker.custody not in (None, "free")
         or not HandlerService(strain.store)._member(c, attacker.controller)
@@ -86,6 +117,7 @@ def stage(
             handler=handler,
             obsession=current_ref(state, obsession),
             defenders=defenders,
+            introduced=new is not None,
         ),
     )
 
@@ -216,6 +248,12 @@ class RaidService:
                 if subject and subject.character_id == raid.obsession.incarnation
                 else "original selected Girl",
                 action=raid.action,
+                setup=raid.harpy
+                if raid.introduced
+                and not raid.action
+                and viewer.user_id == raid.controller
+                and not any(x.id == raid.harpy.entity for x in state.native_harpies)
+                else None,
             )
 
     def finish(
