@@ -5,7 +5,7 @@ no generic resolver for the resulting event/endgame work or period start gate.
 """
 
 import json
-from typing import Any
+from typing import Any, Literal
 from uuid import uuid4
 
 import sqlalchemy as sa
@@ -32,7 +32,9 @@ class StrainService:
         self.periods, self.store, self.game = periods, periods.store, periods.game
         self.missions = periods.missions
         self.dice = dice if dice is not None else OsD6()
-        self.rng_source = "test_injected" if dice is not None else "os"
+        self.rng_source: Literal["os", "test_injected"] = (
+            "test_injected" if dice is not None else "os"
+        )
 
     def _authorize(self, c: Connection, viewer: GuildViewer) -> None:
         self.missions.access.authorize(c, viewer, "strain")

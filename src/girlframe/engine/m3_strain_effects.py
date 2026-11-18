@@ -9,6 +9,7 @@ from girlframe.engine import m3_world as world_rules
 from girlframe.engine.m2 import GameState, Model, TagState, pair_key
 from girlframe.engine.m3_budget_anarchy import REBELLION as REBEL_PROTEST
 from girlframe.engine.m3_budget_sabotage import Pin
+from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_contraband_state import ContrabandFind
 from girlframe.engine.m3_orbital_threat import RULE as ORBITAL_THREAT
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
@@ -46,6 +47,7 @@ SUPPORTED = frozenset(
         "strain.rebellion.low.5.2",
         REBEL_PROTEST,
         REBEL_ESCAPE_OFFER,
+        *CIVIC_DIRECTIVES,
         "strain.rebellion.high.4.2",
         "strain.rebellion.high.5.2",
         "strain.rebellion.low.6.1",
@@ -107,6 +109,7 @@ class Choice(Model):
     fight_channel: int | None = Field(default=None, ge=1, exclude_if=lambda value: value is None)
     revelation_play: RevelationPlay | None = Field(default=None, exclude_if=lambda x: x is None)
     revelation_channel: int | None = Field(default=None, ge=1, exclude_if=lambda x: x is None)
+    protest_city: str | None = Field(default=None, exclude_if=lambda x: x is None)
 
 
 def fields(choice: Choice, allowed: set[str]) -> None:
@@ -168,6 +171,21 @@ def apply(
         fields(choice, set())
         if period_id is None or source_event is None or not state.order:
             raise ValueError("Bind the required exams to the actual period and its Girls")
+    elif rule in CIVIC_DIRECTIVES:
+        from girlframe.engine.m3_civic_directive import create as create_civic_directive
+
+        fields(choice, {"target", "protest_city"})
+        if period_id is None or source_event is None:
+            raise ValueError("Recover the original civic directive and Strain period")
+        create_civic_directive(
+            state,
+            rule=rule,
+            identity=source_work,
+            event=source_event,
+            period=period_id,
+            speaker=choice.target,
+            city=choice.protest_city,
+        )
     elif rule == REBEL_ESCAPE_OFFER:
         from girlframe.engine.m3_rebel_escape_offer import speaker
 

@@ -132,6 +132,7 @@ class AnarchyService:
                 changed = state
             else:
                 changed = rules.restore(state, value, method, result, event)
+            metadata: dict[str, Any] = {"mission_id": value.mission} if engagement else {}
             self.game.event(
                 c,
                 viewer.user_id,
@@ -141,7 +142,7 @@ class AnarchyService:
                 event_id=event,
                 source_work=identity,
                 city=value.city,
-                **({"mission_id": value.mission} if engagement else {}),
+                **metadata,
             )
             return (
                 dict(id=identity, addressed=True)

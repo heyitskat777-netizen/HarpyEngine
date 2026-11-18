@@ -12,6 +12,8 @@ from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.m3_world import TYPES, coordinates, squares
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_budget_anarchy import REBELLION as REBEL_PROTEST
+from girlframe.engine.m3_civic_directive import PROTEST as CIVIC_PROTEST
+from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_gorgon_catalog import ASSETS
 from girlframe.engine.m3_orbital_threat import RULE as ORBITAL_THREAT
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
@@ -82,6 +84,11 @@ async def open_effect(
         return
     if data["awaiting_rebel_offer"]:
         await reply(interaction, "The actual Rebel controller has the private offer request.")
+        return
+    if data["awaiting_civic_directive"]:
+        await reply(
+            interaction, "The fictional Director's controller has the private order request."
+        )
         return
     if data["rule_id"] == "strain.budget.high.1.2":
         from girlframe.discord_adapter.m3_fuel_shortage import open_fuel_shortage
@@ -256,6 +263,39 @@ def effect_form(
 
     def build(values: dict[str, Any]) -> list[Field]:
         fields: list[Field] = []
+        if rule in CIVIC_DIRECTIVES:
+            fields.append(
+                Field(
+                    "civic_director",
+                    "Who actually plays the fictional Director?",
+                    options(
+                        [
+                            x
+                            for x in world["npcs"]
+                            if x["alive"]
+                            and x["captive_of"] is None
+                            and "director" in x["jobs"]
+                            and x["controller"] != handler
+                        ]
+                    ),
+                )
+            )
+            if rule == CIVIC_PROTEST:
+                fields.append(
+                    Field(
+                        "protest_city",
+                        "Which nearby operational city holds the protest?",
+                        options(
+                            [
+                                x
+                                for x in regional_locations
+                                if x["kind"] == "city"
+                                and x["condition"] != "destroyed"
+                                and not x["blocked_by"]
+                            ]
+                        ),
+                    )
+                )
         if rule == VOID_REVELATION:
             fields += [
                 Field("revelation", "Which printed revelation do you make?", REVELATIONS),
@@ -750,6 +790,10 @@ def effect_form(
 
     def apply(actor: GuildViewer, key: str, values: dict[str, Any]) -> str:
         payload: dict[str, Any] = {"rule_id": rule, "account": values["account"]}
+        if rule in CIVIC_DIRECTIVES:
+            payload["target"] = values["civic_director"][0]
+            if rule == CIVIC_PROTEST:
+                payload["protest_city"] = values["protest_city"][0]
         if rule == VOID_REVELATION:
             payload.update(
                 revelation_play=values["revelation"][0],
@@ -949,6 +993,8 @@ def effect_form(
             return "Private find saved. The recipient can review it in their requests inbox."
         if rule == REBEL_ESCAPE_OFFER:
             return "The private offer is pending with the original rebel controller."
+        if rule in CIVIC_DIRECTIVES:
+            return "The original Director's order is pending in their private Inbox."
         return "Event effects committed once. Reopen Off-Duty for remaining work."
 
     instructions = (

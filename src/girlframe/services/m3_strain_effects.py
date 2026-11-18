@@ -11,8 +11,11 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_strain_effects as rules
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_contraband_state import ContrabandFind
+from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_supply_state import SupplyLoss
+from girlframe.engine.m3_void_revelation import RULE as VOID_REVELATION
 from girlframe.engine.m3_void_revelation import Revelation, revelations
 from girlframe.engine.m3_void_spread import RULE as VOID_SPREAD
 from girlframe.engine.m3_void_spread import Spread, select
@@ -76,6 +79,8 @@ class EffectService:
                 "game_revision": state.revision,
                 **({"spread": body.get("spread")} if body["rule_id"] == VOID_SPREAD else {}),
                 "awaiting_rebel_offer": bool(body.get("offer_requested"))
+                and row["state"] == "pending",
+                "awaiting_civic_directive": bool(body.get("directive_requested"))
                 and row["state"] == "pending",
                 "supply_outcome": {
                     "recipient": label,
@@ -204,7 +209,7 @@ class EffectService:
             cleanup_index = None
             cleanup_rng = None
             revelation = None
-            if choice.rule_id == rules.VOID_REVELATION:
+            if choice.rule_id == VOID_REVELATION:
                 from girlframe.services.m3_actors import ActorService
                 from girlframe.services.m3_cast import CastService
 
@@ -459,11 +464,21 @@ class EffectService:
                 cleanup_rng=cleanup_rng,
                 revelation=revelation,
             )
-            needs_offer = choice.rule_id == rules.REBEL_ESCAPE_OFFER
+            needs_offer = choice.rule_id == REBEL_ESCAPE_OFFER
             if needs_offer:
                 from girlframe.services.m3_rebel_escape_offer import stage
 
                 stage(c, self.strain, updated, row, choice.target, event_id)
+            needs_directive = choice.rule_id in CIVIC_DIRECTIVES
+            if needs_directive:
+                from girlframe.engine.m3_civic_directive import director
+                from girlframe.services.handler_setup import HandlerService
+
+                if not HandlerService(self.store)._member(
+                    c, director(updated, choice.target).controller
+                ):
+                    raise WorkflowError("Recover the fictional Director's campaign controller")
+            pending = needs_offer or needs_directive
             scientific_period, scientific_events = None, []
             if choice.rule_id == "strain.budget.low.3.1":
                 from girlframe.engine.m3_scientific_observation import materialize
@@ -674,12 +689,13 @@ class EffectService:
                 event,
                 json.loads(row["body_json"])
                 | {"choice": choice.model_dump(mode="json")}
-                | ({"offer_requested": event} if needs_offer else {}),
-                resolved=not needs_offer,
+                | ({"offer_requested": event} if needs_offer else {})
+                | ({"directive_requested": event} if needs_directive else {}),
+                resolved=not pending,
             )
             return {
                 "id": identity,
-                "state": "pending" if needs_offer else "resolved",
+                "state": "pending" if pending else "resolved",
                 "game_revision": updated.revision,
             }
 

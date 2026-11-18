@@ -223,6 +223,8 @@ class WorldService:
         )
 
     def get(self, viewer: GuildViewer, *, private: bool = False) -> dict[str, Any]:
+        from girlframe.engine.m3_civic_directive import public_conditions
+
         with self.store.engine.connect() as c:
             self.game.authorize(c, viewer, game=False)
             if private:
@@ -231,10 +233,12 @@ class WorldService:
             world = state.world
             if world is None:
                 return {"game_revision": state.revision, "world": None}
+            conditions = public_conditions(state)
+            civic = {"civic_conditions": conditions} if conditions else {}
             if private:
                 return {
                     "game_revision": state.revision,
-                    "world": _world_projection(state),
+                    "world": _world_projection(state) | civic,
                     "offstage_world": [
                         x.model_dump(mode="json") for x in offstage_world_actors(state)
                     ],
@@ -243,6 +247,7 @@ class WorldService:
                 "game_revision": state.revision,
                 "world": {
                     "board": world.board.model_dump(mode="json"),
+                    **civic,
                     **(
                         {
                             "regions": [

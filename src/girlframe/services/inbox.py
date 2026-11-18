@@ -2926,17 +2926,18 @@ class InboxService:
                         task="m3_handler_notice",
                     )
                 )
+            from girlframe.engine.m3_civic_directive import cases as civic_directives
             from girlframe.engine.m3_void_revelation import revelations
             from girlframe.services.m3_handler_tags import HandlerTagService
             from girlframe.services.m3_rebel_escape_offer import visible as visible_escape_offers
 
-            for notice in revelations(canon)[-25:]:
-                if any(role.controller == viewer.user_id for role in notice.recipients):
+            for revelation in revelations(canon)[-25:]:
+                if any(role.controller == viewer.user_id for role in revelation.recipients):
                     items.append(
                         InboxItem(
-                            "void-revelation:" + notice.id,
+                            "void-revelation:" + revelation.id,
                             "void_revelation",
-                            notice.id,
+                            revelation.id,
                             canon.revision,
                             "plays",
                             "Actual Void revelation",
@@ -2951,13 +2952,39 @@ class InboxService:
                         )
                     )
 
-            for offer in visible_escape_offers(canon, viewer.user_id)[-25:]:
-                delivered = offer.delivered_event is not None
+            for directive in civic_directives(canon):
+                is_director = viewer.user_id == directive.controller
+                is_handler = str(viewer.user_id) == directive.handler.entity
+                if not is_director and (not is_handler or not directive.order_event):
+                    continue
+                can_order = is_director and not directive.order_event
+                can_act = is_handler and not directive.action_event
                 items.append(
                     InboxItem(
-                        "rebel-escape-offer:" + offer.id,
+                        "civic-directive:" + directive.id,
+                        "civic_directive",
+                        directive.id,
+                        canon.revision,
+                        "off_duty",
+                        "Private civic directive",
+                        "Original Director and Handler",
+                        "pending" if (can_order or can_act) else "resolved",
+                        can_order or can_act,
+                        False,
+                        "Issue the actual order." if can_order else "Read the original order.",
+                        "",
+                        "Review directive",
+                        task="m3_civic_directive",
+                    )
+                )
+
+            for escape_offer in visible_escape_offers(canon, viewer.user_id)[-25:]:
+                delivered = escape_offer.delivered_event is not None
+                items.append(
+                    InboxItem(
+                        "rebel-escape-offer:" + escape_offer.id,
                         "rebel_escape_offer",
-                        offer.id,
+                        escape_offer.id,
                         canon.revision,
                         "off_duty",
                         "Private Rebel escape offer",

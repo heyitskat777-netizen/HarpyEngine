@@ -17432,14 +17432,16 @@
         "heading": "Rebellion low: die 3, column 1"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain_void_spread.py::test_fictional_director_and_handler_complete_only_their_own_civic_actions"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -17772,14 +17774,16 @@
         "heading": "Rebellion high: die 3, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain_void_spread.py::test_fictional_director_and_handler_complete_only_their_own_civic_actions"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

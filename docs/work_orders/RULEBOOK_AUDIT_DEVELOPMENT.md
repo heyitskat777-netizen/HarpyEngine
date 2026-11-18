@@ -86,7 +86,6 @@ with quarantine and Armoured protection. Those paths retain the active
 mission and its pending deadline when an automatic strike would bypass
 existing protections or require a judgment about whether the threat was
 dealt with. The authored ordinary threat can be averted by an actual defeat.
-The next checkpoint should add direct interception evidence to this case.
 
 ## Second checkpoint
 
@@ -113,3 +112,31 @@ including a person with no eligible Asset and existing Harpies. The
 engine preserves the chosen squares, source snapshot and dice while this
 question is open. It records no corruption, punishment or waiver.
 [Void rules p. 17](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=19) · [High Void p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145)
+
+## Third checkpoint
+
+The base is `c0548d762839a64abf9047f30145becefddffe4a`.
+Low Rebellion 3.1 and High Rebellion 3.2 record distinct public conditions.
+The first stages a protest at an actual nearby city. The second records
+the shift in public opinion. Either table effect stays pending until the
+original fictional Director's controller issues the actual order through
+the private Inbox. The Director chooses the original active Rebel faction
+for 3.2. A separate Inbox follow-up records a public action authored by
+the original Handler. Public records contain the condition and its
+response without the private quotation. They do not declare the protest
+dispersed or assign a numerical reputation change. A later adjudicated
+protest resolution still needs proof of what happened in the scene.
+
+The synthetic cases cover both original sources and owners, native
+delivery, private readback, stale and paused submissions, and retries.
+Registry scope is `subset` with independent review still pending.
+[Civic tests](../../tests/rules/test_strain_void_spread.py) · [Low Rebellion p. 145](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=147) · [High Rebellion p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148)
+
+The Low Void intercept regression lands the original Gorgon during the
+actual dispatched mission, sets up indirect Asset damage using the
+canonical damage reducer, then uses native Core exposure, battle
+adjudication, and the player's own Core roll. Mission settlement after a
+service restart records the threat averted and preserves the city. The
+fixture enables the existing candidate-only Core Play without changing
+the shipped gate.
+[Orbital regression](../../tests/rules/test_strain_orbital.py)

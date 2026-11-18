@@ -12,9 +12,11 @@ from test_world import initial
 
 from girlframe.discord_adapter.inbox import InboxView
 from girlframe.discord_adapter.m2_forms import NativeForm
+from girlframe.discord_adapter.m3_strain_effects import effect_form
 from girlframe.engine.m3_strain_effects import Choice
 from girlframe.engine.m3_world_state import Faction, Npc
 from girlframe.services.inbox import InboxService
+from girlframe.services.m3_civic_directive import CivicService
 from girlframe.services.m3_npc_roles import NpcRoleService
 from girlframe.services.m3_rebel_escape_offer import EscapeOfferService
 from girlframe.services.m3_strain_effects import EffectService
@@ -22,7 +24,7 @@ from girlframe.services.m3_world import WorldService
 from girlframe.services.onboarding import WorkflowError
 
 
-def high_source(ledger, face, track="void", column=1):
+def strain_source(ledger, face, track="void", column=1, *, high=True):
     strain, game = ready(ledger, face=face)
     policy = ledger.policy
     approval = policy.m3_approval
@@ -37,7 +39,7 @@ def high_source(ledger, face, track="void", column=1):
     WorldService(strain.missions).initialize(
         ADMIN, "map", state(game).revision, world.board, world.locations, world.gorgons[0]
     )
-    period = prepared(strain, game, high=frozenset({track}))
+    period = prepared(strain, game, high=frozenset({track}) if high else frozenset())
     request = next(x for x in state(game).strain.requests if x.track == track)
     strain.roll(ADMIN, "high-die", request.id, 1, state(game).revision)
     strain.choose(ADMIN, "high-column", request.id, 2, state(game).revision, column)
@@ -45,7 +47,7 @@ def high_source(ledger, face, track="void", column=1):
 
 
 def test_spread_area_dice_reopen_without_a_fake_void_consequence(ledger):
-    strain, game, world, period, identity = high_source(ledger, 2)
+    strain, game, world, period, identity = strain_source(ledger, 2)
     service = EffectService(strain)
     strain.dice.face = 1
     assert any(
@@ -92,7 +94,7 @@ def test_spread_area_dice_reopen_without_a_fake_void_consequence(ledger):
 
 @pytest.mark.parametrize("play", ["recontextualize_void", "reveal_near_disaster"])
 def test_revelation_creates_one_notice_for_the_actual_original_audience(ledger, play):
-    strain, game, world, _, identity = high_source(ledger, 5)
+    strain, game, world, _, identity = strain_source(ledger, 5)
     service = EffectService(strain)
     game.leave_scene(OTHER, "other-leaves", 900)
     revision = state(game).revision
@@ -123,7 +125,7 @@ def test_revelation_creates_one_notice_for_the_actual_original_audience(ledger, 
 
 
 def test_rebel_controller_sends_private_offer_to_one_original_girl(ledger):
-    strain, game, _, _, identity = high_source(ledger, 2, "rebellion", 2)
+    strain, game, _, _, identity = strain_source(ledger, 2, "rebellion", 2)
     world = WorldService(strain.missions)
     world.faction(
         ADMIN,
@@ -191,3 +193,109 @@ def test_rebel_controller_sends_private_offer_to_one_original_girl(ledger):
     assert effects.get(ADMIN, identity)["state"] == "resolved"
     after = state(game)
     assert after.sheets == before.sheets and after.world == before.world
+
+
+@pytest.mark.parametrize("high", [False, True], ids=["city-protest", "rebel-sympathy"])
+def test_fictional_director_and_handler_complete_only_their_own_civic_actions(ledger, high):
+    strain, game, _, _, identity = strain_source(
+        ledger,
+        3,
+        "rebellion",
+        2 if high else 1,
+        high=high,
+    )
+    world = WorldService(strain.missions)
+    if high:
+        world.faction(
+            ADMIN,
+            "rebel-faction",
+            state(game).revision,
+            Faction(id="rebel", name="Rebel group", kind="rebel", cells=((0, 4),)),
+        )
+    cast = NpcRoleService(world)
+    offered = cast.offer(
+        ADMIN,
+        "director-role",
+        state(game).revision,
+        Npc(
+            id="director",
+            name="Original Director",
+            jobs=("director",),
+            detail="Independent human actor",
+            controller=OTHER.user_id,
+            cell=(0, 0),
+        ),
+    )
+    cast.respond(OTHER, "accept-director", offered["id"], state(game).revision, "accept")
+    service = EffectService(strain)
+    build, commit, _ = effect_form(ADMIN, service, identity)
+    values = dict(civic_director=("director",), account="The actual civic situation develops.")
+    if not high:
+        assert "protest_city" in {x.key for x in build({})}
+        values["protest_city"] = ("city0",)
+    assert "order is pending" in commit(ADMIN, "stage-civic", values)
+    assert service.get(ADMIN, identity)["state"] == "pending"
+    civic = CivicService(strain)
+    with pytest.raises(WorkflowError, match="original participants"):
+        civic.get(PLAYER, identity)
+    revision = state(game).revision
+    faction = "rebel" if high else None
+    with pytest.raises(WorkflowError, match="original fictional Director"):
+        civic.act(
+            ADMIN, "wrong-order", identity, revision, "Not my order", issue=True, faction=faction
+        )
+    with pytest.raises(WorkflowError, match="STALE_STATE"):
+        civic.act(
+            OTHER, "stale-order", identity, revision - 1, "Old order", issue=True, faction=faction
+        )
+    ledger.safety(PLAYER, "pause", ledger.status(PLAYER)["revision"], pause=True)
+    with pytest.raises(WorkflowError, match="SAFETY_PAUSED"):
+        civic.act(
+            OTHER, "paused-order", identity, revision, "Paused order", issue=True, faction=faction
+        )
+    ledger.safety(PLAYER, "resume", ledger.status(PLAYER)["revision"], pause=False)
+    revision = state(game).revision
+
+    inbox = InboxService(ledger)
+    assert not any(x.task == "m3_civic_directive" for x in inbox.items(PLAYER))
+    assert not any(x.task == "m3_civic_directive" for x in inbox.items(ADMIN))
+
+    async def submit_from_inbox(viewer, number, values):
+        item = next(x for x in inbox.items(viewer) if x.task == "m3_civic_directive")
+        click = current(viewer.user_id, number)
+        await click.response.defer(ephemeral=True)
+        await InboxView(inbox, viewer.user_id).route(click, item)
+        form = click.edit_original_response.call_args.kwargs["view"]
+        assert isinstance(form, NativeForm)
+        form.values.update(values)
+        await form.confirm.callback(current(viewer.user_id, number + 1))
+        assert form.completed
+
+    order = "PRIVATE_ORIGINAL_ORDER"
+    selection = dict(account=order)
+    if high:
+        selection["faction"] = (faction,)
+    asyncio.run(submit_from_inbox(OTHER, 96000, selection))
+    assert service.get(ADMIN, identity)["state"] == "resolved"
+    assert CivicService(strain).get(ADMIN, identity)["order"] == order
+    assert (
+        CivicService(strain).act(
+            OTHER,
+            "96001",
+            identity,
+            revision,
+            order,
+            issue=True,
+            faction=faction,
+        )["state"]
+        == "awaiting_public_action"
+    )
+    with pytest.raises(WorkflowError, match="original addressed Handler"):
+        civic.act(OTHER, "wrong-act", identity, state(game).revision, "Made up", issue=False)
+    before = world.get(PLAYER)["world"]["civic_conditions"]
+    asyncio.run(submit_from_inbox(ADMIN, 96100, dict(account="ACTUAL_PUBLIC_ACT")))
+    after = world.get(PLAYER)["world"]["civic_conditions"]
+    assert after[:-1] == before
+    assert after[-1]["kind"] == ("public_show_of_support" if high else "public_response_to_protest")
+    assert order not in str(world.get(PLAYER))
+    assert CivicService(strain).get(ADMIN, identity)["action"] == "ACTUAL_PUBLIC_ACT"

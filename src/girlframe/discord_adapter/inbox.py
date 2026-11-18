@@ -1478,17 +1478,30 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_battle import BattleService
 
             await open_battle_context(interaction, BattleService(self.service.store), item.identity)
+        elif item.task == "m3_civic_directive":
+            from girlframe.discord_adapter.m3_civic_directive import open_directive
+            from girlframe.services.m3_civic_directive import CivicService
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_off_duty import OffDutyService
+            from girlframe.services.m3_strain import StrainService
+
+            civic_service = CivicService(
+                StrainService(OffDutyService(MissionService(self.service.store)))
+            )
+            await open_directive(interaction, civic_service, item.identity)
         elif item.task == "m3_rebel_escape_offer":
-            from girlframe.discord_adapter.m3_rebel_escape_offer import open_offer
+            from girlframe.discord_adapter.m3_rebel_escape_offer import (
+                open_offer as open_escape_offer,
+            )
             from girlframe.services.m3_missions import MissionService
             from girlframe.services.m3_off_duty import OffDutyService
             from girlframe.services.m3_rebel_escape_offer import EscapeOfferService
             from girlframe.services.m3_strain import StrainService
 
-            service = EscapeOfferService(
+            escape_service = EscapeOfferService(
                 StrainService(OffDutyService(MissionService(self.service.store)))
             )
-            await open_offer(interaction, service, item.identity)
+            await open_escape_offer(interaction, escape_service, item.identity)
         elif item.task == "m3_strain_revelation":
             from girlframe.engine.m3_void_revelation import PLAYS
             from girlframe.services.m3_missions import MissionService
@@ -1496,10 +1509,10 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_strain import StrainService
             from girlframe.services.m3_strain_effects import EffectService
 
-            service = EffectService(
+            effect_service = EffectService(
                 StrainService(OffDutyService(MissionService(self.service.store)))
             )
-            value = await asyncio.to_thread(service.revelation, viewer, item.identity)
+            value = await asyncio.to_thread(effect_service.revelation, viewer, item.identity)
             title = next(title for play, title in PLAYS if play == value["play"])
             await reply(interaction, title + "\n" + value["account"])
         elif item.task == "m3_handler_notice":

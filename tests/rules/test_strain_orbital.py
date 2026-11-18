@@ -3,25 +3,38 @@
 import asyncio
 
 import pytest
+from test_battle_service import confirm
+from test_cast_service import change
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger
-from test_m2_game import state
+from test_m2_game import Gateway, pass_tags, state, tick
 from test_mission_service import launched
 from test_mission_ui import current
 from test_off_duty_cycle import activate, call, finish_routine, recover_both
+from test_physical_operations import place
 from test_strain_service import prepared, ready
 from test_world import gorgon, initial
 
+from girlframe.delivery.m2_worker import GameWorker
 from girlframe.discord_adapter.inbox import InboxView
 from girlframe.discord_adapter.m2_forms import NativeForm
 from girlframe.discord_adapter.m3_strain_effects import open_effect
+from girlframe.engine.m2 import PlayInput
+from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_battle_state import Declaration
 from girlframe.engine.m3_budget_anarchy import get as civic_source
+from girlframe.engine.m3_gorgon_combat import Exposure
 from girlframe.engine.m3_orbital_threat import threats
 from girlframe.engine.m3_punishments import Details
 from girlframe.engine.m3_strain_effects import Choice
+from girlframe.engine.m3_world import damage_gorgon
 from girlframe.engine.m3_world_state import Faction
 from girlframe.services.inbox import InboxService
+from girlframe.services.m3_actors import ActorService
+from girlframe.services.m3_battle import BattleService
 from girlframe.services.m3_budget_anarchy import AnarchyService
+from girlframe.services.m3_cast import CastService
+from girlframe.services.m3_gorgon import GorgonService
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_off_duty import OffDutyService
 from girlframe.services.m3_off_duty_cycle import CycleService
@@ -120,6 +133,104 @@ def test_low_void_six_creates_the_threat_and_unblocks_off_duty(ledger):
     (trigger,) = final.strain.triggers
     assert trigger.entity == "city0" and trigger.source_event == threat.resolved_event
     assert final.strain.events == before.strain.events
+
+
+def test_original_orbital_gorgon_defeat_saves_city_at_actual_mission_settlement(
+    ledger, monkeypatch
+):
+    import girlframe.services.m2_game as shared
+
+    cycle, effects, game, period, identity = orbital_period(ledger)
+    effects.apply(
+        ADMIN,
+        "spawn",
+        identity,
+        1,
+        state(game).revision,
+        Choice(
+            rule_id="strain.void.low.6.1",
+            account="Orbit above the city",
+            gorgon=gorgon("directed", "orbital", None, revealed=True),
+        ),
+    )
+    activate(cycle, game, period)
+    recover_both(cycle, game, period)
+    finish_routine(cycle, game, period)
+    call(cycle, game, ADMIN, period, "finish", ())
+    mission, revision = launched(effects.strain.missions)
+    world = WorldService(effects.strain.missions)
+    world.locate_gorgon(
+        ADMIN,
+        "locate",
+        state(game).revision,
+        "orbital",
+        (0, 0),
+        "The same Gorgon leaves orbit during the intercept",
+    )
+    with ledger.transaction() as c:
+        canon = place(place(state(game), 2), 3)
+        canon.world = damage_gorgon(canon.world, "orbital", "orbital:0", indirect=True)
+        game.event(c, ADMIN.user_id, "damage", "synthetic.intercept_setup", canon)
+    enemy = ActorRef(kind="gorgon", entity="orbital")
+    cast = CastService(ActorService(effects.strain.missions))
+    change(cast, ADMIN, "join", enemy)
+    gorgons = GorgonService(world)
+    available = gorgons.cores(ADMIN)
+    original = next(x for x in available["gorgons"] if x["ref"]["entity"] == "orbital")
+    gorgons.expose(
+        ADMIN,
+        "expose",
+        state(game).revision,
+        Exposure(
+            actor=enemy,
+            source_sha256=original["source_sha256"],
+            account="The indirect strike removed its shield.",
+            weakness_confirmed=True,
+        ),
+    )
+    # Use the same candidate-only Play gate as the existing synthetic Gorgon runtime tests.
+    monkeypatch.setattr(shared, "M3_HEAT_IDS", (*shared.M3_HEAT_IDS, "go_for_the_core"))
+    battle = BattleService(ledger)
+    data = battle.preview(PLAYER, 900)
+    attacker = next(x for x in data["actors"] if x["owned"])
+    target = next(x for x in data["actors"] if x["ref"]["entity"] == "orbital")
+    declared = Declaration(
+        play="go_for_the_core",
+        actor=ActorRef.model_validate(attacker["ref"]),
+        target=enemy,
+        attacking_asset=attacker["assets"][0]["id"],
+        actor_sha256=attacker["sha256"],
+        target_sha256=target["sha256"],
+        account="I strike the exposed Core of the orbital threat.",
+    )
+    context = confirm(battle, game, data, declared)
+    game.dice.faces = (6, 6)
+    action = game.begin(
+        PLAYER,
+        "intercept",
+        900,
+        state(game).sheets["2"].revision,
+        PlayInput(
+            play="go_for_the_core",
+            heat=0,
+            piloting=True,
+            target_actor=enemy,
+            attacking_asset=declared.attacking_asset,
+            battle_context=context,
+            context=declared.account,
+            trigger_confirmed=True,
+        ),
+    )["action_id"]
+    tick(GameWorker(game), Gateway(), 3)
+    pass_tags(game)
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+    assert not next(x for x in state(game).world.gorgons if x.id == "orbital").alive
+    restarted = MissionService(ledger)
+    restarted.end(ADMIN, "end", mission, revision, True)
+    final = state(game)
+    assert final.world.locations[3].condition == "intact"
+    assert threats(final)[0].outcome == "averted"
+    assert not final.strain.triggers
 
 
 def test_medical_exam_is_patient_owned_and_only_actual_discovery_creates_discipline(ledger):
