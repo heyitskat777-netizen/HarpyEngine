@@ -4,6 +4,11 @@ The audited development base is [484f6fcecc532e2acfb3ccd9021cb95d2e3718de](https
 
 **T** means implemented and tested for the stated outcome and actors. Verification can be historical on an identified candidate. **V** means implemented with insufficient direct verification for the stated branch or scope. **U** means unsupported, release-gated optional material, or manual GM escalation. **D** marks an interpretation requiring clarity review, including settled campaign behavior that remains subject to independent review. **M** means missing automation. Where a row contains multiple grades, each applies to the immediately following branch. Links to test files identify scoped assertions and are also an index for unresolved variants. An inventory entry, a passing suite, or a source referral cannot promote a branch to T.
 
+The [Girl playbook verification](GIRL_PLAYBOOK_VERIFICATION.md) records the later
+outcome-by-outcome run for the ten core Girls, the combined Harpy playbook and
+the Ancillary release gate. Its named assertions and open gaps supersede the
+selected historical Girl evidence below.
+
 ## Engine, Activity and player acceptance
 
 | Evidence layer | Finding |

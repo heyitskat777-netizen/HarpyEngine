@@ -176,10 +176,10 @@ def exact_setup(ledger, tmp_path, monkeypatch):
         }
     )
     for viewer in viewers:
-        approved_review = review.get(viewer)
-        review.save(
-            viewer, str(uuid4()), approved_review.saved_revision, approved_review.fingerprint
-        )
+        current = review.get(viewer)
+        assert current.sheet.ready_for_rules_review
+        if not current.saved_current:
+            review.save(viewer, str(uuid4()), current.saved_revision, current.fingerprint)
         game.activate(viewer, str(uuid4()), review.get(viewer).fingerprint)
     record(
         "fixture_activation",

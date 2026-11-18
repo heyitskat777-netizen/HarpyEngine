@@ -69,15 +69,12 @@ def mark_native(game, identity, gain, extra, heat):
         await interaction.response.defer(ephemeral=True)
         await open_play(interaction, game, _pilot=True)
         form = interaction.edit_original_response.call_args.kwargs["view"]
+        assert all(x.key != "disposable_heat" for x in form.fields)
         form.values.update(play=("keep_your_head",), identity=(identity,))
         form.controls()
         assert any(x.key == "disposable_heat" for x in form.fields)
         form.values.update(
-            play=("keep_your_head",),
-            target=(),
-            identity=(identity,),
             gain=(str(gain),),
-            pair_share=("0",),
             heat=(str(heat),),
             piloting=("no",),
             context="I rely on this real Identity and discard it while evading danger",

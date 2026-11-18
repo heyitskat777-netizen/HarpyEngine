@@ -411,6 +411,40 @@ def test_actual_keep_runtime_and_native_ui_respect_borrowed_and_removed_rules(
     assert ("vicious" in positives) == ("vicious" in expected)
 
 
+@pytest.mark.parametrize(
+    ("girl", "extra"),
+    [("OLDGEN", "experienced"), ("ALPHA", "vicious")],
+)
+def test_native_keep_rider_adds_trait_alongside_the_ordinary_choices(ledger, girl, extra):
+    from test_m2_game import setup_game
+
+    from girlframe.discord_adapter.m2_ui import choice_fields
+
+    game, worker, gateway, dice = setup_game(ledger, girl=girl, faces=(4, 5))
+    action = start(game)
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    owned = next(row for row in game.choices(PLAYER) if row["kind"] == "actor_keep")
+    fields = choice_fields(game.decision(PLAYER, owned["id"]))
+    if girl == "OLDGEN":
+        assert any(field.key == "flag" and "experienced" in field.label for field in fields)
+    else:
+        forbidden = next(field for field in fields if field.key == "denied")
+        assert "vicious" not in dict(forbidden.options)
+    answer(
+        game,
+        PLAYER,
+        "actor_keep",
+        options=("tough", "in_control"),
+        denied=("desperate",),
+        flag=girl == "OLDGEN",
+    )
+    answer(game, ADMIN, "handler_keep", flag=True, text="Actual contextual ruling")
+    finished = game.inspect(PLAYER, action)
+    assert finished["state"] == "complete" and dice.calls == 1
+    assert set(finished["result"]["positive"]) == {"tough", "in_control", extra}
+
+
 def test_removed_mockingbird_risk_factor_stops_its_corruption_exception(ledger):
     from test_mission_service import service
 

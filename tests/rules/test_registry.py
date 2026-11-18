@@ -57,13 +57,24 @@ def test_registry_rejects_invalid_sources_and_false_verification(mutation):
 
 def test_ancillary_module_disabled_and_not_executable_by_toggling_a_flag():
     registry = Registry.model_validate_json(json.dumps(data()))
-    optional = next(x for x in registry.entries if x.scope == "ancillary")
+    optional = [x for x in registry.entries if x.scope == "ancillary"]
+    assert {x.title.casefold() for x in optional if x.kind == "playbook"} == {
+        "soldier",
+        "mercenary",
+        "prodigy",
+        "revolutionary idealist",
+        "angel-wife",
+        "chained darling",
+        "warboy",
+        "abyssal acolyte",
+    }
     assert registry.enabled_modules == frozenset({"core"})
-    with pytest.raises(ValueError, match="MODULE_DISABLED"):
-        registry.require_available(optional.id)
     enabled = registry.model_copy(update={"enabled_modules": frozenset({"core", "ancillary"})})
-    with pytest.raises(ValueError, match="UNSUPPORTED_RULE"):
-        enabled.require_available(optional.id)
+    for entry in optional:
+        with pytest.raises(ValueError, match="MODULE_DISABLED"):
+            registry.require_available(entry.id)
+        with pytest.raises(ValueError, match="UNSUPPORTED_RULE"):
+            enabled.require_available(entry.id)
     assert enabled.coverage == "RULES_SUBSET"
     assert (
         next(x for x in registry.entries if x.id == "strain.rebellion.endgame.3").module

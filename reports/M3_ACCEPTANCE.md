@@ -6278,3 +6278,25 @@ passed. Exact branch verification is local and focused. Full regression,
 remote CI, Activity browser round trip and human play acceptance remain open.
 The published Director delta has no shared changed paths with this patch.
 The recorded v0.1.4 trial SHA, release policy and live campaign were untouched.
+
+## Girl playbook focused verification
+
+Audited the runtime at `d21e21136ffd3ebb52faee7ae98cf1f5158a7660` for all ten core
+Girl playbooks. The local follow-up changes test fixtures, adds direct native
+Princess Flirt and Oldgen/Alpha Keep cases, and extends the disabled-module
+assertion across every Ancillary entry. The production runtime and rules registry
+match the audited base.
+
+The [exact test selection](../tools/fixtures/girl_playbook_verification.txt)
+collected **429** cases. The initial core and setup packets covered 378 cases
+with nine fixture failures. All nine passed targeted retries, and all three
+added cases passed. The separate combined Harpy packet passed **48 in 86.51s**.
+The combined evidence has no remaining failures, errors or skips. The
+[playbook verification report](GIRL_PLAYBOOK_VERIFICATION.md) provides linked
+assertions, the repeatable command, retry details and remaining source gaps.
+
+Changed-test Ruff and formatting, registry validation, original planning
+contracts and repository checks passed. The full regression, remote CI,
+connected Activity access, independent review and real-player acceptance are
+outside this verification. The pinned Discord trial and live campaign were
+untouched.
