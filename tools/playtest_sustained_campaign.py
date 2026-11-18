@@ -1382,7 +1382,7 @@ class Campaign(ConnectedTrial):
                     "fixtures, not an autonomous model benchmark."
                 ),
                 (
-                    "Both simulated NPC pilots use native MOCKINGBIRD/JANUS-B "
+                    "Both simulated NPC pilots use native MOCKINGBIRD/JANUS "
                     "sheets and actual synthetic owner workflows."
                 ),
                 "Non-Void starting fixture; only declared low-Strain effect branches exercised.",

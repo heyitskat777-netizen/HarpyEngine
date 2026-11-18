@@ -45,7 +45,7 @@ def ready(store, tmp_path, monkeypatch):
     monkeypatch.setattr(
         counter,
         "selected",
-        lambda girl, frame: selected(girl, "PROJECT ANKOU" if frame == "JANUS-B" else frame),
+        lambda girl, frame: selected(girl, "PROJECT ANKOU" if frame == "JANUS" else frame),
     )
     game, worker, gateway = counter.ready(store, tmp_path, monkeypatch)
     approved(store, game, tmp_path, monkeypatch, extra=(feedback.RULE, alpha.RULE, doll.RULE))

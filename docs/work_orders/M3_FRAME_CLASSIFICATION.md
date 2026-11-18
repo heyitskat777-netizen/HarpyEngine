@@ -10,8 +10,7 @@ unsupported ability.
 | Priestess | CONSUME, JANUS, CHANGELING |
 | LEGION | DoctorDoctor Mk. II, Wyvern 0.4, Project Ankou |
 
-Sources: book PDF 61, 65, 68, 71, 74, 78, 81, 84 and 88. JANUS-B remains the
-server label for JANUS and creates no extra playbook/Class.
+Sources: book PDF 61, 65, 68, 71, 74, 78, 81, 84 and 88.
 
 The 104 Frame entries now identify their actual playbook, Class and category:
 9 playbook headings, 30 base rules, 52 playbook Requisitions and 13 Class

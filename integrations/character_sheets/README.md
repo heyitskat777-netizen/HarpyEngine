@@ -12,15 +12,14 @@ live-state migration and external-actor sheets are separate extensions.
 ```js
 import { createDraft, serializeDraft } from "./harpyengine-sheets.mjs";
 const document = createDraft({
-  callsign: "SYNTHETIC_DEMO", girl_playbook: "MOCKINGBIRD", frame_playbook: "JANUS-B"
+  callsign: "SYNTHETIC_DEMO", girl_playbook: "MOCKINGBIRD", frame_playbook: "JANUS"
 }, { girl_appearance: "Player-authored appearance" });
 const file = new Blob([serializeDraft(document)], { type: "application/json" });
 // Download `file`; import it using the Discord application's character importer.
 ```
 
 Use `creation-catalog-v1.json` for the dropdown labels, ordinary Asset options,
-NPC roles and special starting-choice sections. JANUS-B retains its server label
-and uses official JANUS metadata. Campaign rulings/defaults must come from the
+NPC roles and special starting-choice sections. Campaign rulings/defaults must come from the
 engine; the catalog grants no starting Heat, Permissions, Status or accepted
 relationships. Incomplete drafts are valid exchange documents and remain drafts.
 Girl/Frame static legality, live ownership and coordination are engine-validated.

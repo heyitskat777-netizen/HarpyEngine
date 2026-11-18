@@ -6,8 +6,7 @@ Girl and Frame playbook names come from the supplied official GIRL FRAME ruleboo
 PDF page 3 (contents). The JANUS playbook begins at PDF page 68 (printed page 66).
 Only short factual names are stored in `engine/playbooks.py`; no rulebook prose or
 mechanics are included. Ten Girl choices and nine official Frame choices fit native
-Discord dropdown limits. JANUS-B is an additional owner-requested server variant
-label of JANUS, clearly marked in the menu. No JANUS-B-specific rules are inferred.
+Discord dropdown limits. Frame choices use the printed playbook names.
 
 ## Human flow
 
@@ -18,8 +17,8 @@ old data is not silently deleted. Callsign is limited to Discord's 32-character
 nickname limit. Selection and confirmation remain owner/guild-bound.
 
 Saving explicitly requests cosmetic label roles plus the callsign as server
-nickname. For SORROW / Mockingbird / JANUS-B the desired roles are MOCKINGBIRD and
-JANUS-B, with nickname SORROW. Backend identifiers and ownership remain Discord IDs,
+nickname. For SORROW / Mockingbird / JANUS the desired roles are MOCKINGBIRD and
+JANUS, with nickname SORROW. Backend identifiers and ownership remain Discord IDs,
 not nicknames. Selecting a playbook name is not complete official character creation.
 
 ## Persistence and safety

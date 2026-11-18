@@ -13,6 +13,7 @@ from girlframe.engine.bonds import starting_kind
 from girlframe.engine.creation import CreationDraft
 from girlframe.engine.creation_details import GirlDetails, PsychStringAnchor
 from girlframe.engine.creation_review import ReviewIssue, ReviewSheet, SheetBond
+from girlframe.engine.playbooks import normalize_frame_fields
 from girlframe.services.bonds import BondService
 from girlframe.services.creation import CreationService
 from girlframe.services.creation_coordination import CoordinationService
@@ -365,15 +366,22 @@ class CreationReviewService:
             + ("handler_active:" + str(active_handler),)
             + status_dependencies,
         )
-        fingerprint = hashlib.sha256(
-            json.dumps(sheet.model_dump(mode="json"), sort_keys=True).encode()
-        ).hexdigest()
+        body = sheet.model_dump(mode="json")
+        fingerprint = hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()
         saved = self._latest(connection, viewer)
+        saved_current = saved is not None and saved["dependency_hash"] == fingerprint
+        if saved is not None and not saved_current:
+            previous = json.loads(saved["body_json"])
+            saved_current = (
+                normalize_frame_fields(previous) == body
+                and hashlib.sha256(json.dumps(previous, sort_keys=True).encode()).hexdigest()
+                == saved["dependency_hash"]
+            )
         return CurrentReview(
             sheet,
             fingerprint,
             saved["revision"] if saved else 0,
-            saved is not None and saved["dependency_hash"] == fingerprint,
+            saved_current,
         )
 
     def get(self, viewer: GuildViewer) -> CurrentReview:

@@ -12,6 +12,7 @@ from girlframe.engine.bonds import starting_kind
 from girlframe.engine.creation import CreationDraft
 from girlframe.engine.frame_setup import frame_setup
 from girlframe.engine.pair_assets import PairChoice
+from girlframe.engine.playbooks import normalize_frame_fields
 from girlframe.engine.shared_setup import AcceptedSetup
 from girlframe.services.bonds import BondService
 from girlframe.services.handler_setup import HandlerService
@@ -50,7 +51,7 @@ class CreationService:
         )
         if character is None:
             raise WorkflowError("Save a character draft with /character create first.")
-        profile = json.loads(character["public_json"])
+        profile = normalize_frame_fields(json.loads(character["public_json"]))
         empty = CreationDraft(
             girl_playbook=profile["girl_playbook"],
             frame_playbook=profile["frame_playbook"],

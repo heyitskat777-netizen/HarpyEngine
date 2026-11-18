@@ -7,12 +7,13 @@ from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_core import install
 from girlframe.engine.m3_intracadre_marriage import available, debit, payment_for
 from girlframe.engine.m3_requisition_state import Installation, Receipt
+from girlframe.engine.playbooks import normalize_frame_name
 
 
 def asset_name(choice: Installation) -> str:
     if choice.from_frame is None:
         return choice.name.strip()
-    frame = "JANUS" if choice.from_frame == "JANUS-B" else choice.from_frame
+    frame = normalize_frame_name(choice.from_frame)
     book = CATALOG.get(frame)
     if (
         book is None

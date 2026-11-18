@@ -46,9 +46,7 @@ def ready(store, tmp_path, monkeypatch):
         str(uuid4()),
         draft.revision,
         store.draft(OTHER)["revision"],
-        selected("ALPHA", "JANUS-B").model_copy(
-            update={"shared_tokens": draft.draft.shared_tokens}
-        ),
+        selected("ALPHA", "JANUS").model_copy(update={"shared_tokens": draft.draft.shared_tokens}),
     )
     other_review = CreationReviewService(store)
     incoming = next(x for x in other_review.get(OTHER).sheet.bonds if not x.outgoing)

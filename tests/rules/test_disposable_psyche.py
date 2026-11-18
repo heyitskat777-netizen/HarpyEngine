@@ -559,7 +559,7 @@ def test_actual_native_battery_disposal_preserves_tag_modifier_and_owned_effects
     from girlframe.services.m3_frame_control import FrameControlService
     from girlframe.services.m3_janus import JanusService
 
-    _, game = service(ledger, girl="STIM-BLISSED", frame="JANUS-B")
+    _, game = service(ledger, girl="STIM-BLISSED", frame="JANUS")
     approved(ledger, game, tmp_path, monkeypatch, extra=(rules.RULE, janus.CORE, janus.BATTERY))
     approval = ledger.policy.m3_approval
     ledger.policy = ledger.policy.model_copy(

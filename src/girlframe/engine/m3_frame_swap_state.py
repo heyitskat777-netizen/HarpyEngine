@@ -2,11 +2,12 @@
 
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from girlframe.engine.creation import AssetChoice
 from girlframe.engine.fanbase import Fanbase
 from girlframe.engine.m3_actor_state import ActorRef, Model
+from girlframe.engine.playbooks import normalize_frame_name
 
 
 class Selection(Model):
@@ -24,6 +25,11 @@ class Selection(Model):
     court_target: ActorRef | None = None
     psych_strings: tuple[ActorRef, ...] = ()
     account: str = Field(min_length=1, max_length=1200)
+
+    @field_validator("frame")
+    @classmethod
+    def printed_frame(cls, value: str) -> str:
+        return normalize_frame_name(value)
 
     @model_validator(mode="after")
     def actual_choices(self) -> "Selection":

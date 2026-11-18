@@ -1,7 +1,7 @@
 """Canonical pilot state and typed human inputs for the audited M2 subset."""
 
 from collections.abc import Sequence
-from typing import Literal
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -65,6 +65,7 @@ from girlframe.engine.m3_strain_state import State as StrainState
 from girlframe.engine.m3_supply_state import SupplyLoss
 from girlframe.engine.m3_void_state import HarpyState, VoidThreshold
 from girlframe.engine.m3_world_state import World
+from girlframe.engine.playbooks import normalize_saved_frame_json
 
 RULESET: Literal["girlframe-m2-pilot-1"] = "girlframe-m2-pilot-1"
 PLAY_IDS = ("keep_your_head", "check_sensors", "engage", "disobey_orders", "flirt")
@@ -370,6 +371,26 @@ class GameState(Model):
     enforcer_ranks: list[RankFact] = Field(default_factory=list)
     enforcer_accusations: list[Accusation] = Field(default_factory=list)
     enforcer_grasps: list[Grasp] = Field(default_factory=list)
+
+    @classmethod
+    def model_validate_json(
+        cls,
+        json_data: str | bytes | bytearray,
+        *,
+        strict: bool | None = None,
+        extra: Literal["allow", "ignore", "forbid"] | None = None,
+        context: Any = None,
+        by_alias: bool | None = None,
+        by_name: bool | None = None,
+    ) -> Self:
+        return super().model_validate_json(
+            normalize_saved_frame_json(json_data),
+            strict=strict,
+            extra=extra,
+            context=context,
+            by_alias=by_alias,
+            by_name=by_name,
+        )
 
     @model_validator(mode="after")
     def distinct_original_placements(self) -> "GameState":

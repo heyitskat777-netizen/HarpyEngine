@@ -10,9 +10,7 @@ from girlframe.engine.shared_setup import AM_ROLES
 
 def different_frame(current: str, selected: str) -> str:
     frame = canonical_frame(selected)
-    frame = "JANUS-B" if frame == "JANUS" else frame
     previous = canonical_frame(current)
-    previous = "JANUS-B" if previous == "JANUS" else previous
     if frame not in FRAME_TYPES or frame == previous:
         raise ValueError("Choose a different official core Frame playbook")
     return frame
@@ -106,8 +104,8 @@ def replace(
         source_work=work_id,
         frame_name=selected.frame_name,
         frame_appearance=selected.frame_appearance,
-        core_id=frame_id + ":core" if selected.frame == "JANUS-B" else None,
-        harpy_core=HarpyCore() if selected.frame == "JANUS-B" else None,
+        core_id=frame_id + ":core" if selected.frame == "JANUS" else None,
+        harpy_core=HarpyCore() if selected.frame == "JANUS" else None,
         fanbase=selected.fanbase,
         court=court,
         consume_hunger=supplied.consume_hunger,

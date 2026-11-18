@@ -8,7 +8,7 @@ See M3_ACCEPTANCE.md November8W0 section and P1_CURRENT_QUEUE.md. Two minimal re
 
 ## Final candidate gates
 
-- All10Girl/10Frame-label ordinary source checklists closed, including real creation/resources, typed effects, native ownership and immediate consequences. JANUS-B aliases JANUS.
+- Ordinary source checklists for all ten Girl and nine Frame playbooks closed, including real creation/resources, typed effects, native ownership and immediate consequences.
 - Durable configured human-facilitator request, audience-safe channel notice, private view, actual validated manual effect and scoped resume; unsupported effect remains blocked.
 - Human-operated mission→combat/social→OffDuty/recovery→next mission without model key; provider-outage path preserves state.
 - Exact integrated candidate full tests/global static and applicable fresh-migration/upgrade/restore/campaign-isolation/privacy checks, including memory pagination native/boundary tests.

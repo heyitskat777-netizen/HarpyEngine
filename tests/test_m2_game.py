@@ -80,7 +80,7 @@ class Gateway:
         return {1: ADMIN, 2: PLAYER, 3: OTHER}[identity]
 
 
-def setup_game(store, girl="MOCKINGBIRD", frame="JANUS-B", faces=(4, 5)):
+def setup_game(store, girl="MOCKINGBIRD", frame="JANUS", faces=(4, 5)):
     review, creation, _ = ready(store, girl, frame)
     store.policy = store.policy.model_copy(
         update={
@@ -94,7 +94,7 @@ def setup_game(store, girl="MOCKINGBIRD", frame="JANUS-B", faces=(4, 5)):
     )
     # Both players choose the same mutual starting agreement explicitly.
     current = creation.get(OTHER)
-    draft = selected("MOCKINGBIRD", "JANUS-B").model_copy(
+    draft = selected("MOCKINGBIRD", "JANUS").model_copy(
         update={"shared_tokens": current.draft.shared_tokens}
     )
     creation.save(OTHER, "other-build", 0, 1, draft)
@@ -719,7 +719,7 @@ def test_live_default_gate_and_active_editor_protection(ledger):
             PLAYER,
             "reset-draft",
             2,
-            DraftInput(callsign="RESET", girl_playbook="ALPHA", frame_playbook="JANUS-B"),
+            DraftInput(callsign="RESET", girl_playbook="ALPHA", frame_playbook="JANUS"),
         )
     creation = CreationService(ledger)
     current = creation.get(PLAYER)
@@ -791,7 +791,7 @@ def test_every_girl_activation_preserves_source_and_printed_exceptions(ledger, g
 
 
 @pytest.mark.parametrize(
-    "frame", [x for x, v in CATALOG.items() if v["family"] == "frame"] + ["JANUS-B"]
+    "frame", [x for x, v in CATALOG.items() if v["family"] == "frame"] + ["JANUS"]
 )
 def test_every_frame_activation_retains_baseline(ledger, frame):
     review, _, _ = ready(ledger, frame=frame)

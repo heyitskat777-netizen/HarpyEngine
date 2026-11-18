@@ -4,10 +4,9 @@ Owner-authorized extension: Girl and Frame selections use dropdowns, not free-te
 playbook fields. Callsign and private notes remain text. Saving the reviewed draft
 also requests the selected type/frame roles and callsign as server nickname.
 
-Use a bounded, source-referenced name catalog. MOCKINGBIRD and JANUS-B must create
+Use a bounded, source-referenced name catalog. MOCKINGBIRD and JANUS must create
 roles with exactly those names, with nickname SORROW when the human chose SORROW.
-JANUS-B is the owner's server label/variant of the official JANUS family; do not
-invent independent mechanics or certify full creation through this UI change.
+This UI change covers cosmetic roles and nicknames.
 
 Queue the request in the same database transaction as the draft revision. Retry
 on explicit `/character sync` and after restart. Never lose a saved draft because

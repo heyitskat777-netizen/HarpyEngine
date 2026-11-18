@@ -251,7 +251,7 @@ def refusal(source, game, worker, gateway, faces):
 def test_graft_real_npc_follow_all_refusal_branches_rank_punishment_and_once_roll(
     ledger, tmp_path, monkeypatch
 ):
-    game, source, missions = ready(ledger, tmp_path, monkeypatch, frame="JANUS-B")
+    game, source, missions = ready(ledger, tmp_path, monkeypatch, frame="JANUS")
     paid = buy(source, "THE ENFORCER")
     actor = current_ref(state(game), 2)
     receipt = rules.held(state(game), actor)

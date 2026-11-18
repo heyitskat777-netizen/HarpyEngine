@@ -26,8 +26,8 @@ def test_nine_actual_frame_playbooks_and_three_printed_classes_are_distinct():
 
 
 def test_janus_server_label_uses_its_actual_printed_class_without_creating_a_tenth_playbook():
-    assert official_frame("JANUS-B") == official_frame("JANUS") == "JANUS"
-    assert frame_class("janus-b") == "priestess"
+    assert official_frame("janus") == "JANUS"
+    assert frame_class("janus") == "priestess"
     assert len(FRAME_CLASSES) == 9
     with pytest.raises(ValueError):
         frame_class("invented Frame")

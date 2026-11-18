@@ -15,7 +15,7 @@ from girlframe.engine.m2 import GameState, PilotSheet
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_frame_swap_state import Selection, SwapReceipt
-from girlframe.engine.playbooks import FRAME_TYPES
+from girlframe.engine.playbooks import FRAME_TYPES, normalize_frame_fields
 from girlframe.engine.rules_registry import Registry
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
@@ -83,7 +83,7 @@ class FrameSwapService(PersonalFirearmService):
         row = next((x for x in self._rows(c) if x["id"] == identity), None)
         if row is None:
             raise WorkflowError("This original paid-exchange plan is unavailable.")
-        body = json.loads(row["body_json"])
+        body = normalize_frame_fields(json.loads(row["body_json"]))
         work = t.m3["m3_required_work"]
         first = (
             c.execute(
@@ -106,7 +106,7 @@ class FrameSwapService(PersonalFirearmService):
             .mappings()
             .first()
         )
-        original = json.loads(first["body_json"]) if first else {}
+        original = normalize_frame_fields(json.loads(first["body_json"])) if first else {}
         if (
             source is None
             or source["kind"] != "m3.frame_swap_planned"
@@ -250,7 +250,7 @@ class FrameSwapService(PersonalFirearmService):
     def get(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
         with self.store.engine.connect() as c:
             row = self._row(c, viewer, identity)
-            body = json.loads(row["body_json"])
+            body = normalize_frame_fields(json.loads(row["body_json"]))
             own = row["owner_id"] == str(viewer.user_id)
             if not own:
                 selection = body["selection"]
@@ -336,7 +336,7 @@ class FrameSwapService(PersonalFirearmService):
 
         def operation(c: Connection) -> dict[str, Any]:
             row = self._row(c, viewer, identity)
-            body = json.loads(row["body_json"])
+            body = normalize_frame_fields(json.loads(row["body_json"]))
             if row["state"] == "resolved" or row["revision"] != revision:
                 raise WorkflowError("STALE_FRAME_SWAP: reopen your actual saved exchange.")
             if sum((selection is not None, accept, cancel, purchase)) != 1:

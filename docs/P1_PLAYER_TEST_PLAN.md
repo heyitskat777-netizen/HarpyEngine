@@ -91,7 +91,7 @@ bypass channel permission locks. Complete the campaign/Handler setup prompts.
 | Test | Expected live result |
 |---|---|
 |1. Online/private replies — `/help`, `/health`, `/campaign status` | Bot responds; private replies stay private. `/health` remains administrator-only. |
-|2. Draft dropdowns and Discord labels | Create/edit SORROW as Mockingbird/JANUS-B; selected roles/nickname sync, or an explicit hierarchy/permission warning. |
+|2. Draft dropdowns and Discord labels | Create/edit SORROW as Mockingbird/JANUS; selected roles/nickname sync, or an explicit hierarchy/permission warning. |
 |3. Saved build — `/character build` | Choose Assets/details, save and reopen. Selections persist; another player cannot edit the draft. |
 |4. Canonical sheet — `/character review`, `/character activate`, `/character state`, `/sheet` | Complete listed requests, confirm activation, and see actual resources. Only approved public fields appear publicly. |
 |5. Real scene setup | Handler sets world/positions; owners confirm facts. Bind the test channel with `/campaign scene_bind`, join with `/campaign scene_join`, select actual roles through `/mission cast`. |
@@ -141,7 +141,7 @@ observed behavior and the running commit; do not publish private campaign text.
 | Character creation and reopening | Dropdown choices, actual rule resources, owned coordination and usable saved sheet persist across reopen/restart. Cosmetic nickname/roles match the agreed character. |
 | Requests inbox and ownership | Pending work opens the correct native workflow, shows its next actual decision owner and retains earlier choices. A different user cannot answer or read private fields. |
 | Roll, public receipt and scene pause | Actual cost/receipt applies once; the public roll appears by default. Chat pauses for required choices and restores after real completion without losing unrelated permissions. OOC safety remains available. |
-| Ordinary Girl and Frame play | For each selected type, follow its matrix/source checklist through one ordinary owned outcome and its immediate consequences. Rotate types across sessions as needed; do not require every tier or a Girl×Frame Cartesian matrix. JANUS-B uses official JANUS. |
+| Ordinary Girl and Frame play | For each selected type, follow its matrix/source checklist through one ordinary owned outcome and its immediate consequences. Rotate types across sessions as needed; do not require every tier or a Girl×Frame Cartesian matrix. JANUS uses official JANUS. |
 | Coordination and controlled performances | Confirm consent/assignment separately; use the actual performer's resources. Only printed granted actor decisions transfer; Handler, recipient and other players keep their own choices. |
 | Body, damage and recovery | Actual body/Frame/component identity, damage and temporary effects survive readback and restart. Resolve any real required work before source completion; no copied resources, invented cure or narration-only clearance. |
 | Private memory/contact workflows | Long returned text stays ordered and lossless in bounded pages; controls and private access survive reopening. Completed contact shows saved route and response privately. Unrelated users/public exports reveal neither. |
@@ -169,10 +169,10 @@ These scenarios become live-test candidates only after that exact integration
 passes its new regression and matching scope approval. They have not been run by
 players.
 
-Use the saved SORROW Mockingbird/JANUS-B character only after its own actual review
+Use the saved SORROW Mockingbird/JANUS character only after its own actual review
 and activation. A Core has its own fictional identity and consenting human
 controller; that controller's separate Pilot supplies neither the Core's resources
-nor its Bond endpoint. JANUS-B continues to use official JANUS rules.
+nor its Bond endpoint.
 
 | Scenario | Owned actions and acceptance |
 |---|---|

@@ -138,7 +138,7 @@ def _price(state: GameState, actor: ActorRef, product: str, detail: str) -> int:
             raise WorkflowError("Use the actual DoctorDoctor Frame source")
         return 2
     if product in janus.RULES:
-        return 2 if state.sheets[actor.entity].frame in ("JANUS", "JANUS-B") else 3
+        return 2 if state.sheets[actor.entity].frame == "JANUS" else 3
     if product in grafts.CLASSES:
         return grafts.acquisition(state, actor, product, detail or None)[3]
     from girlframe.engine import m3_enforcer_requisitions as enforcer

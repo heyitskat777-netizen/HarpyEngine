@@ -30,7 +30,7 @@ class TransferFake:
         self.preview_result = SimpleNamespace(
             document=SimpleNamespace(
                 profile=SimpleNamespace(
-                    callsign="SYNTH", girl_playbook="MOCKINGBIRD", frame_playbook="JANUS-B"
+                    callsign="SYNTH", girl_playbook="MOCKINGBIRD", frame_playbook="JANUS"
                 )
             ),
             changes=("profile.callsign", "creation.girl_assets"),
@@ -56,7 +56,7 @@ class TransferFake:
     def snapshot(self, viewer, *, audience, owner, include_private):
         self.authorize(viewer)
         self.snapshots.append((audience, owner, include_private))
-        sheet = {"callsign": "SYNTH", "girl_playbook": "MOCKINGBIRD", "frame_playbook": "JANUS-B"}
+        sheet = {"callsign": "SYNTH", "girl_playbook": "MOCKINGBIRD", "frame_playbook": "JANUS"}
         if audience == "owner":
             sheet.update(
                 heat=2, bonds=[{"counterpart_id": "3", "depth": "Personal", "context": "shared"}]

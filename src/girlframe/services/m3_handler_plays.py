@@ -43,7 +43,6 @@ SOURCE_PROMPTS = {
     "BONDED": "Bonded: separation or conflicting aims",
     "THE PRINCE": "The Prince: fanbase demands",
     "CONSUME": "CONSUME: opportunity to take a bite",
-    "JANUS-B": "JANUS: Harpy Core",
     "JANUS": "JANUS: Harpy Core",
     "DOCTORDOCTOR MK. II": "DoctorDoctor: time and Foundation demands",
     "WYVERN 0.4": "Wyvern: mysteries",

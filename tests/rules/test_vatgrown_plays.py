@@ -55,12 +55,12 @@ def ready(store, tmp_path, monkeypatch, *, teacher="ALPHA", group=False):
             DraftInput(
                 callsign="ACTUAL_" + teacher.replace("-", "_"),
                 girl_playbook=teacher,
-                frame_playbook="JANUS-B",
+                frame_playbook="JANUS",
                 notes=notes,
             ),
         )
 
-    def selected_actual(girl="MOCKINGBIRD", frame="JANUS-B"):
+    def selected_actual(girl="MOCKINGBIRD", frame="JANUS"):
         chosen = original_selected(teacher if girl == "MOCKINGBIRD" else girl, frame)
         if chosen.girl_playbook == "OLDGEN":
             chosen = chosen.model_copy(update={"girl_details": GirlDetails(maxims=(0, 1))})
@@ -1013,7 +1013,7 @@ def test_actual_newgirl_teacher_learned_easy_target_native_request_real_keep_and
     review, creation, _ = creation_ready(
         ledger, girl="NEWGIRL", frame="THE ENFORCER", other_girl="VATGROWN"
     )
-    selected_learner = selected("VATGROWN", "JANUS-B")
+    selected_learner = selected("VATGROWN", "JANUS")
     coordination = CoordinationService(ledger)
     request = coordination.propose(
         ADMIN,
@@ -3380,7 +3380,7 @@ def test_actual_native_same_book_doll_lesson_history_does_not_stack_or_spend_on_
     # no activated Girl label, DNA source or investor is rewritten.
     original_selected, original_ready = game_fixture.selected, game_fixture.ready
 
-    def selected_vatgrown(girl="MOCKINGBIRD", frame="JANUS-B"):
+    def selected_vatgrown(girl="MOCKINGBIRD", frame="JANUS"):
         draft = original_selected(girl, frame)
         if girl == "VATGROWN":
             draft = draft.model_copy(
@@ -4183,7 +4183,7 @@ def _actual_newgirl_teacher_vatgrown_sex_learner(ledger, tmp_path, monkeypatch, 
     )
     coordination.decide(OTHER, str(uuid4()), request["id"], 1, "accept")
     current_draft = creation.get(OTHER)
-    learner = selected("VATGROWN", "JANUS-B")
+    learner = selected("VATGROWN", "JANUS")
     learner = learner.model_copy(
         update=dict(
             shared_tokens=current_draft.draft.shared_tokens,
@@ -4474,7 +4474,7 @@ def _actual_two_vatgrown_sex_bodies(ledger, tmp_path, monkeypatch):
     # Both actual bodies/Investor accounts exist before activation.
     original_selected, original_ready = game_fixture.selected, game_fixture.ready
 
-    def selected_both(girl="MOCKINGBIRD", frame="JANUS-B"):
+    def selected_both(girl="MOCKINGBIRD", frame="JANUS"):
         draft = original_selected(girl, frame)
         if girl == "VATGROWN":
             draft = draft.model_copy(

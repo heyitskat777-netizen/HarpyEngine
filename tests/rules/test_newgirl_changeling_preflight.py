@@ -47,7 +47,7 @@ def exact_setup(ledger, tmp_path, monkeypatch):
     TRACE.clear()
     # Deliberately distinct roster, not a claim of random or exhaustive coverage.
     girls = ["AM", "CASUALTY", "NEWGIRL", "MOCKINGBIRD"]
-    frames = ["PROJECT ANKOU", "DOCTORDOCTOR MK. II", "CHANGELING", "JANUS-B"]
+    frames = ["PROJECT ANKOU", "DOCTORDOCTOR MK. II", "CHANGELING", "JANUS"]
     viewers = [GuildViewer(i, 200, True, False) for i in range(2, 6)]
     record(
         "deliberate_distinct_selection",

@@ -140,7 +140,7 @@ def test_choice_models_reject_invalid_owner_fields_and_allow_same_standard_for_e
         ),
     ]:
         with pytest.raises(ValueError):
-            CreationDraft(girl_playbook=girl, frame_playbook="JANUS-B", girl_details=details)
+            CreationDraft(girl_playbook=girl, frame_playbook="JANUS", girl_details=details)
         assert InitialConditions().permissions == 0
     with pytest.raises(ValueError):
         InitialConditions(assets_damaged=True)

@@ -18,7 +18,7 @@
     },
     {
       "id": "TAG-01",
-      "requirement": "SORROW / MOCKINGBIRD / JANUS-B exact safe role/nickname request",
+      "requirement": "SORROW / MOCKINGBIRD / JANUS exact safe role/nickname request",
       "automated_status": "PASS",
       "test": "tests/test_character_tags.py::test_sorrow_sync_creates_safe_roles_and_nickname_preserves_unrelated_roles",
       "manual_status": "ROLES_CONFIRMED_NICKNAME_OWNER_RESTRICTED"

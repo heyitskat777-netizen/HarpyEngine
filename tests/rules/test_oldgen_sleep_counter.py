@@ -40,7 +40,7 @@ def ready(store, tmp_path, monkeypatch):
         store, girl="ALPHA", frame="THE ENFORCER", other_girl="OLDGEN"
     )
     own = creation.get(OTHER)
-    draft = selected("OLDGEN", "JANUS-B").model_copy(
+    draft = selected("OLDGEN", "JANUS").model_copy(
         update={
             "shared_tokens": own.draft.shared_tokens,
             "girl_details": GirlDetails(maxims=(0, 1)),

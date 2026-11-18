@@ -74,7 +74,7 @@ def test_actual_doctor_nanobots_preserve_cost_and_patient_owns_void_replacement(
     monkeypatch.setattr(
         test_m2_game,
         "selected",
-        lambda girl, frame: original(girl, "WYVERN 0.4" if frame == "JANUS-B" else frame),
+        lambda girl, frame: original(girl, "WYVERN 0.4" if frame == "JANUS" else frame),
     )
     source, game = doctor(ledger, tmp_path, monkeypatch)
     approved(ledger, game, tmp_path, monkeypatch, extra=(rules.RULE,))

@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from girlframe.engine.playbooks import normalize_frame_name
+
 
 class HarpyCore(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
@@ -28,7 +30,7 @@ class FrameSetup(BaseModel):
 
 
 def frame_setup(label: str) -> FrameSetup:
-    frame = "JANUS" if label == "JANUS-B" else label
+    frame = normalize_frame_name(label)
     if frame == "JANUS":
         return FrameSetup(frame=frame, source_pdf_pages=(68,), harpy_core=HarpyCore())
     if frame == "CONSUME":

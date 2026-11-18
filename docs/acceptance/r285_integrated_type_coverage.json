@@ -2,7 +2,7 @@
   "status": "AUTOMATED_CANDIDATE_PASSED_REVIEW_PENDING",
   "baseline": "b265003783c0870c6b8fd855a836010380d11b89",
   "input_archive_sha256": "e73c7ec7145f6bac848e49188078b187c148ab2f0d6a8649fa82ff85a4f46076",
-  "scope": "10Girl labels +10Frame labels /9official Frame rulesets. JANUS-B is alias. Rows are unequal source groups, not percentages.",
+  "scope": "Ten Girl and nine Frame playbooks. Rows are unequal source groups, not percentages.",
   "evidence_limits": "Complete authored suite passes on exact a36acab; rows retain historical source-specific evidence/limits. No whole-type certification, independent rules approval or human acceptance.",
   "rows": [
     {
@@ -117,16 +117,7 @@
       "category": "Frame",
       "type": "JANUS",
       "implemented_groups": "Core/control, Living Battery, PANDORA, training/storage/plug/requisitions",
-      "retained_evidence_and_gaps": "r281 last-Tag takeover/all-Frame-Void/owned resistance FT; r277\u2013280 high/low/mid births FT; r279 genuine placement required before roll/birth. JANUS-B is official JANUS alias, not an extra ruleset. Legacy already-born null birthplaces lack evidence for repair; broader child movement/harm/lifecycle unverified.",
-      "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
-      "independent_review": "pending",
-      "human_acceptance": "pending"
-    },
-    {
-      "category": "Frame",
-      "type": "JANUS-B",
-      "implemented_groups": "Official JANUS mechanics with JANUS-B server label; same ruleset.",
-      "retained_evidence_and_gaps": "r281 last-Tag takeover/all-Frame-Void/owned resistance FT; r277\u2013280 high/low/mid births FT; r279 genuine placement required before roll/birth. JANUS-B is official JANUS alias, not an extra ruleset. Legacy already-born null birthplaces lack evidence for repair; broader child movement/harm/lifecycle unverified.",
+      "retained_evidence_and_gaps": "r281 last-Tag takeover/all-Frame-Void/owned resistance FT; r277\u2013280 high/low/mid births FT; r279 genuine placement required before roll/birth. Legacy already-born null birthplaces lack evidence for repair; broader child movement/harm/lifecycle unverified.",
       "integrated_status": "IMPLEMENTED_UNVERIFIED_BY_WHOLE_TYPE",
       "independent_review": "pending",
       "human_acceptance": "pending"

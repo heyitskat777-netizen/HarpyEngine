@@ -11,7 +11,7 @@ one-Asset/one-rule retention for compulsory replacement.
 
 The owner ruled that the current Handler specifies each replacement package and
 the player must choose a different Frame playbook. Compare official identities,
-including JANUS/JANUS-B normalization; a cosmetic alias is not a different Frame.
+including differences in input capitalization.
 The owner also ruled that compulsory replacement is free. Never charge Permissions
 or reuse Frame Swap's price. Current replacement work remains blocking until its
 actual package and application commit. The DoctorDoctor path now implements this

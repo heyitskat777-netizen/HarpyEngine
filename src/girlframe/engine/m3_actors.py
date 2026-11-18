@@ -625,7 +625,7 @@ def _resolve(
             alive=janus.alive,
             rules="external_pilot",
             girl="harpy",
-            frame="JANUS-B" if janus.attached or janus.linked else None,
+            frame="JANUS" if janus.attached or janus.linked else None,
             frame_instance=janus.frame_instance if janus.attached or janus.linked else None,
             heat=janus.heat,
             assets=resource_view,

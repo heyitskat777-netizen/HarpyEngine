@@ -30,7 +30,7 @@ PRIVATE = "SYNTHETIC_PRIVATE_IMPORT_NOTES"
 
 
 def document(notes=PRIVATE):
-    source = selected("MOCKINGBIRD", "JANUS-B").model_dump(mode="json")
+    source = selected("MOCKINGBIRD", "JANUS").model_dump(mode="json")
     source["npc_bonds"] = [
         NpcBond(
             slot=0, name="SYNTHETIC_STARTING_NPC", feelings="Owner starting context"
@@ -44,7 +44,7 @@ def document(notes=PRIVATE):
                 "profile": {
                     "callsign": "SYNTH_IMPORT",
                     "girl_playbook": "MOCKINGBIRD",
-                    "frame_playbook": "JANUS-B",
+                    "frame_playbook": "JANUS",
                     "notes": notes,
                 },
                 "creation": {key: source[key] for key in PortableChoices.model_fields},
@@ -140,7 +140,7 @@ def test_stale_owner_binding_revocation_and_changed_preview_do_not_overwrite(led
         PLAYER,
         "newer-profile",
         0,
-        DraftInput(callsign="KEEP_NEWER", girl_playbook="MOCKINGBIRD", frame_playbook="JANUS-B"),
+        DraftInput(callsign="KEEP_NEWER", girl_playbook="MOCKINGBIRD", frame_playbook="JANUS"),
     )
     newer = counts(ledger)
     with pytest.raises(WorkflowError, match="STALE_IMPORT"):

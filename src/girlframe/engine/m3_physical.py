@@ -829,12 +829,7 @@ def frame_voice(state: GameState, owner: ActorRef, frame_instance: str) -> int:
         ):
             raise ValueError("Recover the actual captured Harpy Core's original Frame binding")
         return harpy_core.controller
-    if (
-        same_character
-        and frame == frame_instance
-        and sheet is not None
-        and sheet.frame in ("JANUS", "JANUS-B")
-    ):
+    if same_character and frame == frame_instance and sheet is not None and sheet.frame == "JANUS":
         raise ValueError("CORE_SETUP_REQUIRED: admit this original JANUS's actual Core first")
     if state.world is not None and core_id is not None:
         npc = next((x for x in state.world.npcs if x.id == core_id), None)

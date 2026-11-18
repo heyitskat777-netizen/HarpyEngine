@@ -1,6 +1,6 @@
 # Current delivery priorities — P1 authorized
 
-1. **P1:** functional ordinary Discord gameplay for all10Girls and10Frame labels (9officialFrames), with durable human-facilitator resolution and stated manual boundaries.
+1. **P1:** functional ordinary Discord gameplay for all ten Girl and nine Frame playbooks, with durable human-facilitator resolution and stated manual boundaries.
 2. **P2:** persistent audience-filtered scene/knowledge controls, then AI Director/GM, NPC and Handler proposals through validated engine operations; later explicit authorization required.
 3. **P3:** remaining long-term/unusual automation and eventual full-rule certification; retain required backlog and disabled Ancillary boundary.
 

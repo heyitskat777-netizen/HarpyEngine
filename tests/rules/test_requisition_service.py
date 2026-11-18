@@ -23,7 +23,7 @@ from girlframe.services.onboarding import WorkflowError
 ledger = ledger_fixture
 
 
-def ready(store, frame="JANUS-B"):
+def ready(store, frame="JANUS"):
     missions, game = service(store, frame=frame)
     approval = store.policy.m3_approval
     store.policy = store.policy.model_copy(

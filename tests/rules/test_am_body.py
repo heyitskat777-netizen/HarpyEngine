@@ -39,7 +39,7 @@ def test_real_code_body_swap_new_asset_damage_and_private_hooked_return(
 ):
     selected = test_creation_review.selected
 
-    def actual_assets(girl="MOCKINGBIRD", frame="JANUS-B"):
+    def actual_assets(girl="MOCKINGBIRD", frame="JANUS"):
         value = selected(girl, frame)
         if girl == "AM":
             return value.model_copy(
@@ -763,7 +763,7 @@ def test_actual_native_connected_code_swap_preserves_original_jack_and_hooked_re
 
     selected = test_creation_review.selected
 
-    def real_assets(girl="MOCKINGBIRD", frame="JANUS-B"):
+    def real_assets(girl="MOCKINGBIRD", frame="JANUS"):
         actual = selected(girl, frame)
         if girl == "AM":
             return actual.model_copy(

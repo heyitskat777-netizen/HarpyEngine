@@ -24,7 +24,7 @@ from girlframe.services.read_only_bot import GuildViewer
 ledger = ledger_fixture
 
 
-def selected(girl="MOCKINGBIRD", frame="JANUS-B"):
+def selected(girl="MOCKINGBIRD", frame="JANUS"):
     return CreationDraft(
         girl_playbook=girl,
         frame_playbook=frame,
@@ -62,10 +62,8 @@ def test_source_catalog_and_starting_identities(girl):
         assert any("Pair-owned" in item for item in data.missing())
 
 
-@pytest.mark.parametrize(
-    "frame", [k for k, v in CATALOG.items() if v["family"] == "frame"] + ["JANUS-B"]
-)
-def test_frame_assets_and_owner_approved_janus_alias(frame):
+@pytest.mark.parametrize("frame", [k for k, v in CATALOG.items() if v["family"] == "frame"])
+def test_frame_assets_for_each_printed_playbook(frame):
     data = selected(frame=frame)
     assert len(data.frame_assets) == 2 and len(CATALOG[official_frame(frame)]["assets"]) == 9
     assert data.intrinsic_frame_assets == (("Enormous",) if frame == "WYVERN 0.4" else ())
@@ -83,7 +81,7 @@ def test_invalid_assets_duplicates_void_and_pair_authority():
     ]:
         with pytest.raises(ValueError):
             CreationDraft.model_validate(base | change)
-    blank = CreationDraft(girl_playbook="MOCKINGBIRD", frame_playbook="JANUS-B")
+    blank = CreationDraft(girl_playbook="MOCKINGBIRD", frame_playbook="JANUS")
     assert "one selected Girl Asset altered by the Void" in blank.missing()
     assert not hasattr(blank, "heat") and not hasattr(blank, "status")
 

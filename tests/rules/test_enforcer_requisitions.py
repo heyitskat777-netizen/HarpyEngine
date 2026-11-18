@@ -82,7 +82,7 @@ def buy(service, rule, kind="ability_unlock", *, key=None):
 
 
 @pytest.mark.parametrize(
-    "frame,kind,cost", [("THE ENFORCER", "ability_unlock", 2), ("JANUS-B", "frame_grafting", 3)]
+    "frame,kind,cost", [("THE ENFORCER", "ability_unlock", 2), ("JANUS", "frame_grafting", 3)]
 )
 def test_master_actual_paid_acquisition_once_and_temporary_removal_preserves_earned_bond(
     ledger, tmp_path, monkeypatch, frame, kind, cost

@@ -15,7 +15,7 @@ model calls and cost are zero.
 | Corin Hale / Anchor | Brief, calm and evidence-focused. Provides structure without choosing pilots' cooperation or claiming unreported information. |
 
 These are NPCs in the rehearsal's fiction, driven by simulated owners. The pilots
-use real native Pilot identities and MOCKINGBIRD/JANUS-B sheets. Ordinary engine
+use real native Pilot identities and MOCKINGBIRD/JANUS sheets. Ordinary engine
 Npc records cannot substitute for Girl/Frame Play actors. Callsigns are portrayal
 labels, not authorization or storage keys. Each role has its own versioned dossier,
 private fears and controller-authored goal; experiences accumulate after missions.

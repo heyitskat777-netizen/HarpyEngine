@@ -1,6 +1,6 @@
 # GIRL FRAME Frame playbook verification
 
-This matrix covers all nine printed core Frames, the JANUS-B catalog label and the thirteen shared Class Requisitions. Each row names the supported outcome, the test evidence and any remaining scope. Harpy combined playbook evidence is carried forward below. Rules are from the attached GIRL FRAME book and official sheets. [Earlier coverage matrix](GIRL_FRAME_PLAY_COVERAGE.md), [Girl verification](GIRL_PLAYBOOK_VERIFICATION.md).
+This matrix covers all nine printed core Frames and the thirteen shared Class Requisitions. Each row names the supported outcome, the test evidence and any remaining scope. Harpy combined playbook evidence is carried forward below. Rules are from the attached GIRL FRAME book and official sheets. [Earlier coverage matrix](GIRL_FRAME_PLAY_COVERAGE.md), [Girl verification](GIRL_PLAYBOOK_VERIFICATION.md).
 
 **T** means direct automated evidence for the stated result. **V** means implemented with gaps in direct coverage. **U** means a manual, unsupported or release-gated path. **D** means a recorded or disputed interpretation. **M** means missing automation. The direct evidence column links selected outcome assertions. The last column carries supporting test references outside this run and the rule registry or ruling. The earlier reports also link variations that are outside the selected assertions. A test of one actor, source or tier leaves other combinations open.
 
@@ -8,7 +8,7 @@ The test environment used synthetic release approvals, temporary databases, dete
 
 ## Common setup and Permission rewards
 
-Catalog and setup tests exercise each core Frame, both JANUS labels, baseline Assets, reviewed starting choices and dedicated reward ownership. The real source predicate is exercised per Frame, including explicit no-trigger examples, held or stale scope, durable private review, rollback and one award per actual event. Combined source review and full lifecycle of every starting resource remain open. [Creation](../tests/test_creation.py), [Creation review](../tests/test_creation_review.py), [Frame Assets](../tests/test_pair_assets.py), [Frame rewards](../tests/rules/test_frame_rewards.py), [service and recovery](../tests/rules/test_frame_reward_service.py), [offline forms](../tests/rules/test_frame_reward_ui.py).
+Catalog and setup tests exercise each printed Frame, baseline Assets, reviewed starting choices and dedicated reward ownership. The real source predicate is exercised per Frame, including explicit no-trigger examples, held or stale scope, durable private review, rollback and one award per actual event. Combined source review and full lifecycle of every starting resource remain open. [Creation](../tests/test_creation.py), [Creation review](../tests/test_creation_review.py), [Frame Assets](../tests/test_pair_assets.py), [Frame rewards](../tests/rules/test_frame_rewards.py), [service and recovery](../tests/rules/test_frame_reward_service.py), [offline forms](../tests/rules/test_frame_reward_ui.py).
 
 ## Core Frames
 
@@ -48,9 +48,7 @@ Setup and native scope. [Book 63 / PDF 65](../../attachments/d8b9bce2-0761-4629-
 | Time to Eat | [Book 65 / PDF 67](../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=67), [Sheet 19](../../attachments/328941e7-a37f-49b6-979a-5067cfd6d48c/GIRL_FRAME_official_sheets.pdf#page=19) | **T** actual 8+ and optional owned Identity cost for Just Meat. **V** body/target variants. | [paid optional Identity mark](../tests/rules/test_consume.py#L454) | [registry](../rules/registry.json#L11213) |
 | Handler-facing prompt | [Book 118 / PDF 120](../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=120) | **U** Offer a chance to bite. Human Handler owns the fiction and uses separately validated effects for any resulting mechanical change. | Manual adjudication | [Extra Plays and source review](P2_ALL_PLAY_COVERAGE.md) |
 
-### JANUS and JANUS-B
-
-JANUS-B is the campaign's Discord label for the official JANUS mechanics. The same rule coverage and gaps apply. [Campaign rulings](../docs/CAMPAIGN_RULINGS.md).
+### JANUS
 
 Setup and native scope. [Book 66 / PDF 68](../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=68), [Sheet 20](../../attachments/328941e7-a37f-49b6-979a-5067cfd6d48c/GIRL_FRAME_official_sheets.pdf#page=20). [m3 janus](../src/girlframe/services/m3_janus.py), [m3 janus play](../src/girlframe/services/m3_janus_play.py), [m3 janus storage](../src/girlframe/services/m3_janus_storage.py).
 

@@ -18,10 +18,6 @@ PAGES = {
 }
 
 
-def official(frame: str) -> str:
-    return "JANUS" if frame == "JANUS-B" else frame
-
-
 def incarnation(sheet: PilotSheet) -> str:
     return sheet.frame_runtime.id if sheet.frame_runtime else "initial"
 
@@ -40,7 +36,7 @@ def _credit(state: GameState, owner: int, source: str, event: str | None) -> Non
 
 
 def queen(sheet: PilotSheet, *, state: GameState | None = None) -> int:
-    if official(sheet.frame) != "THE RED QUEEN":
+    if sheet.frame != "THE RED QUEEN":
         raise ValueError("The Queen choice needs its actual Red Queen Frame")
     if state is not None and sheet.character_id:
         from girlframe.engine import m3_red_queen as court
@@ -167,7 +163,7 @@ def review(
         or facts.handler is None
     ):
         raise ValueError("Review the actual current Frame and source event")
-    frame = official(sheet.frame)
+    frame = sheet.frame
     if source_rule is not None:
         from girlframe.engine.m3_actor_state import ActorRef
         from girlframe.engine.m3_enforcer_requisitions import PERMISSION, held

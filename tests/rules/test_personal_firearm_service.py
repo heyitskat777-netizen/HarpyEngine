@@ -25,7 +25,7 @@ from girlframe.services.onboarding import WorkflowError
 ledger = ledger_fixture
 
 
-def setup(store, tmp_path, monkeypatch, *, frame="JANUS-B", period=False, reviewed=True):
+def setup(store, tmp_path, monkeypatch, *, frame="JANUS", period=False, reviewed=True):
     if period:
         _, cycle, game, identity = scene_ready(store)
     else:
@@ -91,7 +91,7 @@ def sync(service, period):
 
 
 @pytest.mark.parametrize(
-    "kind,frame,price", [("ability_unlock", "THE ENFORCER", 2), ("frame_grafting", "JANUS-B", 3)]
+    "kind,frame,price", [("ability_unlock", "THE ENFORCER", 2), ("frame_grafting", "JANUS", 3)]
 )
 def test_actual_source_eligible_acquisition_charges_once_and_installs_one_pistol(
     ledger, tmp_path, monkeypatch, kind, frame, price

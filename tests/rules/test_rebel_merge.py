@@ -70,7 +70,7 @@ def test_actual_endgame_source_native_merger_memberships_recruitment_and_replay(
                     name="Existing Rebel Pilot",
                     kind="rebel",
                     girl="MOCKINGBIRD",
-                    frame="JANUS-B",
+                    frame="JANUS",
                     assets=(),
                     controller=1,
                     cell=(0, 4),

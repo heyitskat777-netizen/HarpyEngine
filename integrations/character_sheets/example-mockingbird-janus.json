@@ -44,7 +44,7 @@
   "format": "harpyengine.character-draft",
   "profile": {
     "callsign": "SYNTHETIC_DEMO",
-    "frame_playbook": "JANUS-B",
+    "frame_playbook": "JANUS",
     "girl_playbook": "MOCKINGBIRD",
     "notes": null
   },

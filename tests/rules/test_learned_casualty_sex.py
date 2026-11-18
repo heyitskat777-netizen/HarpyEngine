@@ -46,12 +46,12 @@ def actual_retained_casualty_vatgrown(ledger, tmp_path, monkeypatch):
             DraftInput(
                 callsign="Actual Casualty teacher",
                 girl_playbook="CASUALTY",
-                frame_playbook="JANUS-B",
+                frame_playbook="JANUS",
                 notes=notes,
             ),
         )
 
-    def selected_casualty(girl="MOCKINGBIRD", frame="JANUS-B"):
+    def selected_casualty(girl="MOCKINGBIRD", frame="JANUS"):
         return original_selected("CASUALTY" if girl == "MOCKINGBIRD" else girl, frame)
 
     monkeypatch.setattr(creation_fixture, "seed", seed_casualty)

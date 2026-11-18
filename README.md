@@ -485,12 +485,11 @@ last saved draft. Persistent entry buttons are restored at startup; slash fallba
 remain available if the entry message is deleted.
 
 Saving queues the Girl/Frame label roles and callsign nickname. SORROW + Mockingbird
-+ JANUS-B requests **MOCKINGBIRD**, **JANUS-B** and **SORROW**. Only app-owned,
++ JANUS requests **MOCKINGBIRD**, **JANUS** and **SORROW**. Only app-owned,
 permission-free label roles are managed; unrelated roles are preserved. A blocked
 Discord update leaves the draft saved and can be retried. Discord forbids renaming
 the server owner; that test account must set its own nickname manually. Other
-hierarchy and permissions restrictions also apply. JANUS-B is an owner-requested
-server label using official JANUS rules, as confirmed by the owner. See
+hierarchy and permissions restrictions also apply. See
 [character tags](docs/CHARACTER_TAGS.md).
 
 After saving the profile, use `/character build` to select two Girl Assets and two
@@ -565,7 +564,7 @@ description text for owner review and explicit saving against the new allocation
 
 **Frame setup** in `/character build` shows verified starting facts and preserves
 the existing form. Save progress persists a schema-versioned baseline with source
-PDF pages. JANUS/JANUS-B has a separate unnamed Harpy Core with its four prescribed
+PDF pages. JANUS has a separate unnamed Harpy Core with its four prescribed
 starting Tags. DoctorDoctor has eight-box obsolescence capacity; CONSUME has three
 starvation levels; Wyvern has fixed Enormous. Red Queen records five AM roles and
 the default four-self/one-other split. Unverified starting counters remain explicitly pending; actual starting AM

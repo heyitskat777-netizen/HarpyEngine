@@ -66,7 +66,7 @@ or unreviewed optional rules. Coverage reports identify their enabled module sco
 | Compulsory Frame package | The current Handler specifies each package; the player must choose a different official Frame playbook | Book PDF 71 / printed 69 and PDF 29 / printed 27; owner decision |
 | Compulsory Frame price | No Permission charge; optional paid Frame Swap remains separate | Book PDF 16, 29 and 71; owner decision |
 
-Previously approved starting conditions, JANUS-B alias and Intense ±2 modifier
+Previously approved starting conditions and Intense ±2 modifier
 remain separate existing rulings. No new ruling is silently applied to live policy.
 
 ## Implemented offline foundations

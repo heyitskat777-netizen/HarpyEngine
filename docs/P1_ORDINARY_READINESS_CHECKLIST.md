@@ -129,19 +129,10 @@ Paths below are relative to `source/`; short service/test names retain their ful
 - Retained rule locators (not newly reopened PDFs): rulebook PDF 68 / printed 66; rulebook PDF 69 / printed 67; rulebook PDF 70 / printed 68.
 - Ordinary workflow group to close: Harpy Core; Living Battery; PANDORA; training; plug/storage.
 - Production evidence: `src/girlframe/services/m3_janus.py`, `src/girlframe/services/m3_janus_storage.py`.
-- Authored test entry points (not rerun): `tests/rules/test_janus_core_service.py`, `tests/rules/test_janus_battery.py`, `tests/rules/test_janus_control_lifecycle.py`.
+- Authored test entry points (not rerun): `tests/rules/test_janus_core_service.py`, `tests/rules/test_janus_battery.py`, `tests/rules/test_janus_control_lifecycle.py`, `tests/rules/test_janus_requisitions.py`, `tests/rules/test_janus_storage.py`.
 - [ ] Reconcile ordinary result branches and immediate consequences to exact source/rule references.
 - [ ] Establish exact-candidate native choice/Inbox and saved-state evidence; preserve unsupported variants explicitly.
 - Current boundary: no whole missing playbook established; absence of a listed blocker is not proof all interactions are implemented.
-
-### Frame: JANUS-B — IU
-- Retained rule locators (not newly reopened PDFs): rulebook PDF 68 / printed 66; rulebook PDF 69 / printed 67; rulebook PDF 70 / printed 68.
-- Ordinary workflow group to close: Uses official JANUS workflow; label/creation mapping must remain consistent.
-- Production evidence: `src/girlframe/engine/creation.py`, `src/girlframe/engine/frame_classes.py`.
-- Authored test entry points (not rerun): `tests/rules/test_janus_requisitions.py`, `tests/rules/test_janus_storage.py`.
-- [ ] Reconcile ordinary result branches and immediate consequences to exact source/rule references.
-- [ ] Establish exact-candidate native choice/Inbox and saved-state evidence; preserve unsupported variants explicitly.
-- Current boundary: Alias of JANUS, not an independent ruleset or extra completion unit.
 
 ### Frame: DoctorDoctor Mk. II — IU
 - Retained rule locators (not newly reopened PDFs): rulebook PDF 71 / printed 69; rulebook PDF 72 / printed 70; rulebook PDF 73 / printed 71.

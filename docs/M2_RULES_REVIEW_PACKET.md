@@ -28,7 +28,7 @@ with printed exceptions preserved. Trusted policy records owner approval without
 or Handler confirmation. Appointed Handler overrides remain explicit, versioned
 and separately labelled. No startup change writes fictional resources.
 
-`tests/test_creation_review.py` covers every Girl branch, every Frame plus JANUS-B,
+`tests/test_creation_review.py` covers every Girl branch, every printed Frame,
 mutual incoming choice, role/depth rejection, missing dependencies, current source
 provenance, stale profile/roster/relationship data, private projection, explicit
 campaign rulings, immutable snapshots, replay, concurrency, rollback, actual backup

@@ -101,7 +101,7 @@ Source: `{sha}`. Read `INTEGRATION_HANDOFF.md` first.
   a local venv and installs the included engine source with locked runtime dependencies;
   network access may be needed for dependencies). No bot/database is started.
 - Offline codec example after installation:
-  `.venv/bin/python python_adapter_example.py campaign-ui/example-mockingbird-janus-b.json`
+  `.venv/bin/python python_adapter_example.py campaign-ui/example-mockingbird-janus.json`
 - Engine source and locked dependencies are included under `engine_source/`.
   To initialize a NEW isolated engine database, set its GIRLFRAME_DATABASE_URL,
   use the included Alembic migrations and the actual authorized campaign policy.

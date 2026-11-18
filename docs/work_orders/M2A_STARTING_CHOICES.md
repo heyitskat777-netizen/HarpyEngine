@@ -1,7 +1,7 @@
 # M2A — starting choices and private saved progress
 
-Authorized continuation after the owner's M1 smoke confirmation. JANUS-B uses the
-published JANUS rules while retaining the owner-requested server label.
+Authorized continuation after the owner's M1 smoke confirmation. Frame selections
+use the printed playbook names.
 
 Deliver `/character build` for joined players with an existing saved profile.
 Use the official sources identified in `docs/RULE_COVERAGE_REPORT.md`. Provide
@@ -24,7 +24,7 @@ step. Back up before migration; preserve existing data and handoff files.
 Acceptance for this bounded step:
 
 - START-01: all ten Girl and nine Frame catalogues have verified source anchors;
-  tests exercise every branch and the JANUS-B alias.
+  tests exercise each printed Frame branch.
 - START-02: reject invented/duplicate options and invalid Void/Pair selections;
   derive four Identities and Wyvern's extra Asset without inventing resources.
 - START-03: saved choices survive new service instances and a real backup restore;

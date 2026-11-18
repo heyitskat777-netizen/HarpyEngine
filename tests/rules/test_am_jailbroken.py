@@ -42,7 +42,7 @@ def test_voluntary_occupancy_real_new_body_damage_and_same_ability_moveback(
 ):
     selected = test_creation_review.selected
 
-    def actual_assets(girl="MOCKINGBIRD", frame="JANUS-B"):
+    def actual_assets(girl="MOCKINGBIRD", frame="JANUS"):
         value = selected(girl, frame)
         return (
             value.model_copy(

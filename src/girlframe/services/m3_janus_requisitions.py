@@ -74,10 +74,7 @@ class JanusRequisitionService(RequisitionService):
             access = Access(self.store)
             choices = []
             for rule in IMPLEMENTED:
-                if (
-                    state.sheets[actor.entity].frame not in ("JANUS", "JANUS-B")
-                    and rule != rules.PANDORA
-                ):
+                if state.sheets[actor.entity].frame != "JANUS" and rule != rules.PANDORA:
                     continue  # Other grafts require their actual base-Core runtime first.
                 try:
                     assert access.registry is not None
@@ -89,7 +86,7 @@ class JanusRequisitionService(RequisitionService):
             return data | dict(
                 rules=choices,
                 kind="ability_unlock"
-                if canonical_frame(state.sheets[actor.entity].frame) in ("JANUS", "JANUS-B")
+                if canonical_frame(state.sheets[actor.entity].frame) == "JANUS"
                 else "frame_grafting",
                 held=[
                     dict(id=r, label=rules.TITLES[r])
@@ -119,7 +116,7 @@ class JanusRequisitionService(RequisitionService):
             self._safe(c, state, viewer.user_id)
             actor = current_ref(state, viewer.user_id)
             view = resolve(state, actor, profiles(c, self.store.campaign_id))
-            if view.frame not in ("JANUS", "JANUS-B") and rule != rules.PANDORA:
+            if view.frame != "JANUS" and rule != rules.PANDORA:
                 raise WorkflowError(
                     "This graft needs an implemented original Core/base ability source"
                 )
@@ -137,7 +134,7 @@ class JanusRequisitionService(RequisitionService):
                 )
             kind: Literal["ability_unlock", "frame_grafting"] = (
                 "ability_unlock"
-                if canonical_frame(view.frame or "") in ("JANUS", "JANUS-B")
+                if canonical_frame(view.frame or "") == "JANUS"
                 else "frame_grafting"
             )
             price: Literal[2, 3] = 2 if kind == "ability_unlock" else 3

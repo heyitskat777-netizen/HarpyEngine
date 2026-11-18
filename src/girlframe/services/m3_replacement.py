@@ -13,7 +13,7 @@ from girlframe.database import tables as t
 from girlframe.engine import m3_replacement as rules
 from girlframe.engine.drafts import DraftInput
 from girlframe.engine.m3_frame_state import Package, Preferences
-from girlframe.engine.playbooks import FRAME_TYPES
+from girlframe.engine.playbooks import FRAME_TYPES, normalize_frame_fields
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_missions import MissionService
@@ -49,7 +49,7 @@ class ReplacementService:
         return dict(row)
 
     def _body(self, row: dict[str, Any]) -> dict[str, Any]:
-        return dict(json.loads(row["body_json"]))
+        return dict(normalize_frame_fields(json.loads(row["body_json"])))
 
     def _handler_id(self, c: Connection) -> int | None:
         return HandlerService(self.store).current(c)[1].handler_id
@@ -199,8 +199,7 @@ class ReplacementService:
             result["frames"] = tuple(
                 (name, label)
                 for name, label in FRAME_TYPES.items()
-                if name != "JANUS"
-                and name != ("JANUS-B" if sheet.frame == "JANUS" else sheet.frame)
+                if name != "JANUS" and name != sheet.frame
             )
             people = [
                 (int(uid), other.callsign)

@@ -45,7 +45,7 @@ write to the recovered private engine/campaign template.
 |---|---|---|
 | M3A | Source inventory and M2 interaction audit | `rules/registry.json`, exact verified PDF/printed anchors, complete branch inventory and cross-rule dependency map; carry forward M2 review/play-test gaps |
 | M3B | Core state and remaining shared Plays | Typed canonical resources/conditions, pure reducers, legal targets/Assets, remaining combat/Girl/Frame/misc Plays and every immediate follow-up |
-| M3C | Playbook runtime mechanics | Ten base Girl, nine official Frame and seven Handler playbooks; JANUS-B remains a JANUS label; passives, counters, control, special Assets and owner-specific choices |
+| M3C | Playbook runtime mechanics | Ten base Girl, nine official Frame and seven Handler playbooks; passives, counters, control, special Assets and owner-specific choices |
 | M3D | Missions, rewards and discipline | Explicit offer/individual response/participants/start/end lifecycle; source-correct Permissions/Requisitions, Status/Bonds and Punishments, including an absent Dog |
 | M3E | Off-Duty and recovery | Go Off-Duty, Void Observation, Defeat, repairs/recovery and printed conditions; required harsh scenes and playbook follow-ups must actually resolve |
 | M3F | Strain and mandatory cascades | Void/Rebellion/Budget, every Low/High row and event column, thresholds, recursive results, endgames and restart-safe compulsory work |
@@ -75,7 +75,7 @@ A completed M3 sub-package is not approval to claim the whole milestone complete
    resource changes, loss of the last Asset, Defeat/Helplessness, NPC/Gorgon targets,
    special Tag/Identity rules and conditional compulsory effects. A list of new
    commands alone cannot satisfy rules coverage.
-5. Carry forward approved campaign rulings: JANUS-B uses JANUS; initial Heat 0,
+5. Carry forward approved campaign rulings: initial Heat 0,
    CONSUME Quiet, DoctorDoctor zero marked boxes; approved unmarked/undamaged
    baselines and printed exceptions; Personal and Intense Tag adjustments both ±2.
    Any new genuine source ambiguity needs an explicit campaign decision, rather

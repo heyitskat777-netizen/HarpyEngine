@@ -93,7 +93,7 @@ class JanusCore(Model):
 
     @property
     def original_frame(self) -> str:
-        return "JANUS-B"
+        return "JANUS"
 
     @property
     def core_frame_owner(self) -> ActorRef:

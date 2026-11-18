@@ -57,7 +57,7 @@ def context(canon, frame):
     [
         ("THE PRINCE", {}),
         ("CONSUME", {"prisoner": "npc:prisoner"}),
-        ("JANUS-B", {"official": "handler:1"}),
+        ("JANUS", {"official": "handler:1"}),
         ("WYVERN 0.4", {"offering": "An unusual sample"}),
         ("THE ENFORCER", {"prisoner": "npc:prisoner"}),
         ("THE ENFORCER", {"evidence": "A factual report of a cadremate's refusal"}),
@@ -93,7 +93,7 @@ def test_each_conditional_bonus_grants_one_permission_on_actual_owner_review(can
     (
         "THE PRINCE",
         "CONSUME",
-        "JANUS-B",
+        "JANUS",
         "WYVERN 0.4",
         "THE ENFORCER",
         "CHANGELING",
@@ -119,7 +119,7 @@ def test_no_trigger_is_an_explicit_owned_record_without_free_permissions(canon, 
     "frame,details",
     [
         ("CONSUME", {}),
-        ("JANUS-B", {"official": "handler:99"}),
+        ("JANUS", {"official": "handler:99"}),
         ("WYVERN 0.4", {}),
         ("CHANGELING", {"influenced_pilot": 2}),
         ("THE ENFORCER", {}),
@@ -140,7 +140,7 @@ def test_prisoner_reward_cannot_invent_capture_transport_or_rebel_affiliation(ca
         name="A free Harpy",
         kind="harpy",
         girl="MOCKINGBIRD",
-        frame="JANUS-B",
+        frame="JANUS",
         assets=(Asset(id="a", name="Armour", description="An actual capability", family="frame"),),
         controller=3,
         cell=(0, 0),
@@ -212,7 +212,7 @@ def test_one_delivery_is_not_reused_but_joint_contributors_have_no_invented_quot
 
 
 def test_historical_frame_evaluation_grants_only_current_permission_without_state_reset(canon):
-    prior = context(canon, "JANUS-B")
+    prior = context(canon, "JANUS")
     current = type(prior).model_validate_json(prior.model_dump_json())
     current.sheets["2"].frame = "CONSUME"
     current.sheets["2"].heat = 20

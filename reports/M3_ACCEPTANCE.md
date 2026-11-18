@@ -1599,10 +1599,10 @@ mutation, AI/M4 or Ancillary activation.
 
 Isolated candidate extends `409670549db925e3a3740fc29ee79ae514c08ec1`.
 The unchanged cockpit service suite reproduced **6 failed / 6 passed, 9.52s**
-(`var/cockpit-triage/before.xml`). Its ordinary-Frame fixtures inherited JANUS-B
+(`var/cockpit-triage/before.xml`). Its ordinary-Frame fixtures inherited JANUS
 without admitting an original Core; `12a08c2` correctly made that voice fail closed.
 The shared test setup now accepts an explicit Frame while retaining its previous
-JANUS-B default. Cockpit tests explicitly select an ordinary Enforcer; the existing
+JANUS default. Cockpit tests explicitly select an ordinary Enforcer; the existing
 legacy represented-Core case and all prior assertions are retained.
 
 A new actual owner-request/controller-facts/Handler-admission workflow exposed a
@@ -3277,8 +3277,7 @@ unit: Put Someone Beneath You, then Dive Deep. This does not complete all M3 rul
 Code commit `af0a2213a3a23f231f0b5f002197d545ffb0b88e` closes the existing paid
 acquisition and original-receipt workflow. Source checklist and exact contract:
 `docs/acceptance/m3_units.json`. All 81 base-Frame catalogue Asset names were matched
-against normalized text in their actual supplied rulebook sections; JANUS-B retains
-JANUS source rules. This source-name check does not certify complete Frame runtimes.
+against normalized text in their actual supplied rulebook sections. This source-name check does not certify complete Frame runtimes.
 
 The identified gap was original receipt retrieval after Asset/Frame/profile changes.
 Owned history now proves the actual purchase event and original canonical snapshot,
@@ -4868,8 +4867,7 @@ and preserve the actual nine-Frame inventory; no extra playbook is introduced.
 
 The 104 Frame entries now distinguish **9 playbook headings / 30 base rules /
 52 playbook Requisitions / 13 Class Requisitions**. Three official Frames belong
-to each printed Class. JANUS-B uses JANUS eligibility without changing its server
-label. Actual mixed-page heading positions were inspected from the supplied
+to each printed Class. Actual mixed-page heading positions were inspected from the supplied
 source, including Nanobot Injection and Psych Strings as base rules. Project
 Ankou's header kind is corrected. PDF 92–94 / printed pp.90–92 Class rules have
 proper canonical IDs with all 13 old references retained as unambiguous aliases.
@@ -6327,12 +6325,13 @@ and checks transport and persisted-command retries. Each branch marks only
 its own Tag and moves the Doctor's body while leaving the parked Frame in
 place. The fixture uses synthetic SQLite and fake Discord interactions.
 
-The package's Oldgen rank and Stim-to-NPC Order questions remain open for human
-review. Apply the current Oldgen exclusion and keep the Stim path pending
-under current rules. Ancillary stays disabled. Compound and learned-source
+At this checkpoint, the package's Oldgen rank and Stim-to-NPC Order questions
+remained open. The follow-up below covers the newer Stim implementation.
+Ancillary stays disabled. Compound and learned-source
 branches, complete Captured and Timeskip continuations, and authenticated
 Activity and real-player acceptance remain open. [Coverage gaps and review
 questions](GIRL_FRAME_PLAY_COVERAGE.md#open-coverage)
+
 ## Girl and Frame follow-up integration evidence
 
 The [Frame outcome matrix](FRAME_PLAYBOOK_VERIFICATION.md) links direct
@@ -6348,3 +6347,29 @@ conditional Princess Order questions for private human-GM adjudication,
 the exact test selections, and instructions for reconciling a newer engine
 and running the authenticated Activity acceptance checks. The package
 README records its revision and local test results.
+
+### Combined development candidate
+
+The review branch starts at `8866979c586a5caaebb55d4f4354c6c0d1c44515`.
+The five original commit IDs were verified in order. The bundle and both
+patches reproduced the package tree `e6abee014cc889f3809f910bf1fd57f5a1095d83`.
+Both previous package changes were already reconciled on the base. This review
+added the three follow-up commits and preserved the existing Running Ragged
+Inbox selection, stale-form and retry checks. It also kept the newer Activity
+acceptance records and the current scoped access and safety rules.
+
+The catalog, native controls, portable sheets and coverage inventories now
+use the printed JANUS name. Older saved selections are translated on read,
+without rewriting historical receipts, player prose, or either trial pin.
+The registry approval recognizes the same reviewed content after the exact
+two description edits. Changes to other registry contents still require their
+own digest and approval.
+
+Use the [Frame test selection](../tools/fixtures/frame_playbook_verification.txt)
+and [integration test selection](../tools/fixtures/girl_frame_integration_verification.txt)
+with the [printed-name regression](../tests/test_printed_frame_names.py).
+The archive's 507 passing cases are historical results on its own source
+revisions. Princess's conditional NPC Orders still need a human ruling on
+upkeep and refusal. Stim orders are supported in the covered original-cast
+path. Other role and scene transitions still need verification. [Open rule
+questions](GIRL_FRAME_INTEGRATION_HANDOFF.md#rule-decisions)

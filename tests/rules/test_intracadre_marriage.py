@@ -123,7 +123,7 @@ def third_presence(store, game):
     physical.decide(ADMIN, str(uuid4()), proposal["id"], 1, "accept", "Actual initial body facts")
 
 
-def setup_three(store, girl="MOCKINGBIRD", frame="JANUS-B", faces=(4, 5)):
+def setup_three(store, girl="MOCKINGBIRD", frame="JANUS", faces=(4, 5)):
     review, creation, _ = creation_ready(store, girl, frame)
     store.policy = store.policy.model_copy(
         update={
@@ -136,7 +136,7 @@ def setup_three(store, girl="MOCKINGBIRD", frame="JANUS-B", faces=(4, 5)):
         }
     )
     current_creation = creation.get(OTHER)
-    draft = selected("MOCKINGBIRD", "JANUS-B").model_copy(
+    draft = selected("MOCKINGBIRD", "JANUS").model_copy(
         update={"shared_tokens": current_creation.draft.shared_tokens}
     )
     creation.save(OTHER, str(uuid4()), 0, store.draft(OTHER)["revision"], draft)

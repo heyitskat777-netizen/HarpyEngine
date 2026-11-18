@@ -40,7 +40,7 @@ def buy(canon, choice=None, identity=None, source=None, ref=None, expected=None)
     )
 
 
-def test_each_printed_base_frame_asset_and_janus_b_label_is_selectable():
+def test_each_printed_base_frame_asset_is_selectable():
     for frame, book in CATALOG.items():
         if book["family"] != "frame":
             continue
@@ -53,18 +53,6 @@ def test_each_printed_base_frame_asset_and_janus_b_label_is_selectable():
                 trigger_confirmed=True,
             )
             assert asset_name(choice) == name
-    assert (
-        asset_name(
-            Installation(
-                from_frame="JANUS-B",
-                index=0,
-                description="Gear",
-                account="Installed",
-                trigger_confirmed=True,
-            )
-        )
-        == CATALOG["JANUS"]["assets"][0]
-    )
 
 
 def test_installation_charges_once_preserves_other_resources_and_records_actual_provenance(canon):

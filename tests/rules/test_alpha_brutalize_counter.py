@@ -35,9 +35,7 @@ def ready(store, tmp_path, monkeypatch):
         store, girl="ALPHA", frame="THE ENFORCER", other_girl="ALPHA"
     )
     own = creation.get(OTHER)
-    draft = selected("ALPHA", "JANUS-B").model_copy(
-        update={"shared_tokens": own.draft.shared_tokens}
-    )
+    draft = selected("ALPHA", "JANUS").model_copy(update={"shared_tokens": own.draft.shared_tokens})
     creation.save(OTHER, str(uuid4()), own.revision, store.draft(OTHER)["revision"], draft)
     incoming = next(x for x in review.get(OTHER).sheet.bonds if not x.outgoing)
     own = creation.get(OTHER)

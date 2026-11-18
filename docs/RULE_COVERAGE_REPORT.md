@@ -27,7 +27,7 @@ anchors; do not apply historical approximate offsets without checking the source
 | Bonded | 57 / 55 | 15 |
 | The Prince | 61 / 59 | 18 |
 | CONSUME | 65 / 63 | 19 |
-| JANUS (also JANUS-B label) | 68 / 66 | 20 |
+| JANUS | 68 / 66 | 20 |
 | DoctorDoctor Mk. II | 71 / 69 | 21 |
 | Wyvern 0.4 | 74 / 72 | 22 |
 | The Enforcer | 78 / 76 | 23 |
@@ -41,7 +41,7 @@ normalized source text found one abbreviation: Prince's book says Onboard AM
 (Artificial Mind), sheet 18 says Onboard AM. The catalogue retains the book label.
 Other labels matched corresponding sheets after whitespace/typographic normalization.
 This comparison checks names, not every rule attached to an Asset or playbook.
-The owner explicitly approved official JANUS rules with the JANUS-B server label.
+Use the printed JANUS name and rules.
 
 ## Implemented starting choices
 

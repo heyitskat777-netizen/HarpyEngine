@@ -75,7 +75,7 @@ it has not been applied to the running policy. Release approval remains absent.
 
 Tests retain all 304 baseline cases and add 129 M2 cases, using synthetic records,
 fake Discord and injected test dice. They cover all ten Girl and nine official
-Frame activation branches plus JANUS-B, exact Play tiers/counts, ownership, public
+Frame activation branches, exact Play tiers/counts, ownership, public
 projection, forced Heat, post-roll Tags, duplicate/concurrent actions, low Disobey,
 all high Flirt branches, nested response Plays, mutual follow-through, permissions,
 OOC pause, transaction rollback, restart/backup/rebuild and native selector/modal
@@ -118,7 +118,7 @@ session. New M2 gameplay remains separately gated until independent release revi
 **Base:** tested M1 commit `76653db6872e6ff4a146b18541ec8d27fc5578bf`.
 
 The owner authorized continuation after M1 smoke and explicitly chose official
-JANUS rules with JANUS-B as the server label. This delivery implements
+JANUS rules. The historical review also exercised its then-current cosmetic label. This delivery implements
 `docs/work_orders/M2A_STARTING_CHOICES.md`, within the larger character-builder
 work order. It does not implement the original M2 Play wizard or activate PCs.
 
@@ -126,7 +126,7 @@ work order. It does not implement the original M2 Play wizard or activate PCs.
 
 `/character build` opens an owner-only ephemeral form for an existing saved draft.
 Ten Girl and nine Frame catalogues provide source-backed starting Identities and
-Asset options. JANUS-B resolves to JANUS mechanics while preserving its label.
+Asset options.
 The player chooses up to two distinct Assets of each family, describes them,
 and supplies Frame name and appearances. Partial saves are supported; completing
 these fields does not activate the character. Mockingbird's Void choice is tied
@@ -186,7 +186,7 @@ Discord REST readback confirms 11 guild command groups, character children
 registration, not human interaction acceptance. The process remains temporary
 session hosting. Environment configuration was neither changed nor published.
 
-Human save/reopen smoke was requested for Mockingbird + JANUS-B. The owner replied
+Human save/reopen smoke was requested for Mockingbird + JANUS with the then-current cosmetic label. The owner replied
 “I’ll test later” and requested continued development; it is **deferred by the owner**. No successful human builder interaction is claimed.
 START-01 through START-04 have offline evidence; START-05 has offline migration,
 actual preserved-database migration and registry evidence, with human smoke pending.
@@ -399,7 +399,7 @@ can be retained for owner review and explicit saving against the new allocation.
 The Pair can never choose Frame Assets or write descriptions for the Bonded owner.
 
 Saved creation progress also records a schema-versioned Frame baseline with source
-PDF anchors. JANUS/JANUS-B includes a distinct unnamed Harpy Core with its four
+PDF anchors. JANUS includes a distinct unnamed Harpy Core with its four
 prescribed starting Tags. This is a nested draft record, not a fully implemented
 targetable game entity. DoctorDoctor records eight-box capacity; CONSUME records
 Quiet/Gnawing/Ravenous; Wyvern records fixed Enormous; Red Queen records five AM roles
@@ -412,7 +412,7 @@ remains readable; deriving facts on reopen does not write until Save progress.
 Executed validation:
 
 - Final `.venv/bin/pytest -q --junitxml=var/m2-pair-frame-pytest.xml`: **213 passed in
-  9.75 seconds**, no skips. The 14 new cases exercise every Frame branch/JANUS-B,
+  9.75 seconds**, no skips. The 14 new cases exercise every Frame branch and the then-current cosmetic label,
   serialization and rejected baseline/Core forgery, illegal/duplicate names, Pair
   vs owner/administrator authority, owner descriptions and provenance, changed
   selection/withdrawal, revoked replay, privacy, concurrent choices, transaction
@@ -650,7 +650,7 @@ Executed validation:
 - `bash tools/install.sh`: resolved 36 packages / checked 35, committed lock unchanged.
 - Final `.venv/bin/pytest -q --junitxml=var/m2-creation-review-pytest.xml`:
   **283 passed in 13.80 seconds**, no skips. Forty-one new cases include all ten
-  Girls, all nine Frames plus JANUS-B, combined Newgirl/Court/Prince and Pair/Prince/
+  Girls, all nine Frames, combined Newgirl/Court/Prince and Pair/Prince/
   Wyvern branches, missing/unsupported choices, current-role and depth enforcement,
   stale source/roster/ruling dependencies, owner-only projections, explicit native
   confirmation, old clicks, long-text paging, unchanged mutation throttles,

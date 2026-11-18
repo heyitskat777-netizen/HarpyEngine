@@ -75,7 +75,7 @@ def prepare(
     target = prepared.target_actor
     own = resolve(state, actor, profiles(c, game.store.campaign_id))
     value = bound(state, actor, str(own.frame_instance))
-    if state.sheets[actor.entity].frame not in ("JANUS", "JANUS-B"):
+    if state.sheets[actor.entity].frame != "JANUS":
         raise WorkflowError("Recover actual Living Battery ownership on this non-JANUS Frame")
     from girlframe.engine.m3_janus_requisitions import UNIVERSAL
     from girlframe.services.m3_janus_requisitions import owned
@@ -663,7 +663,7 @@ def preview(
             state = load_state(c, game.store.campaign_id)
             actor = current_ref(state, viewer.user_id)
             sheet = state.sheets[actor.entity]
-            if sheet.frame not in ("JANUS", "JANUS-B"):
+            if sheet.frame != "JANUS":
                 return dict(available=False)
             actual = resolve(state, actor, profiles(c, game.store.campaign_id))
             core = bound(state, actor, str(actual.frame_instance))

@@ -32,8 +32,8 @@ that nickname changed. Permissions/hierarchy failures preserve the saved draft.
 ## Source and scope
 
 Catalog names verified from the supplied official rulebook PDF contents page 3.
-JANUS begins at PDF page 68 (printed 66). JANUS-B is the owner's requested server
-variant/label, not a separate certified official playbook. No stats, legal build
+JANUS begins at PDF page 68 (printed 66). The historical smoke used the
+then-current cosmetic label. No stats, legal build
 combinations or rules mechanics are inferred. These remain draft sheets.
 
 See [CHARACTER_TAGS.md](../docs/CHARACTER_TAGS.md), the M1C work order and
@@ -51,7 +51,7 @@ Sanitized commands and actual results: [M1_CHARACTER_TAGS_VALIDATION.txt](M1_CHA
 | Strict mypy | No issues in 37 application source files |
 | Migration | Fresh/repeated head upgrade, check, downgrade tested; live 0002 applied after local backup |
 | Catalog and input | Native limits, unknown/forged choices, selector owner and nickname length tested |
-| SORROW scenario offline | MOCKINGBIRD + JANUS-B assigned, nickname SORROW set, unrelated roles preserved |
+| SORROW scenario offline | MOCKINGBIRD and the then-current JANUS role assigned, nickname SORROW set, unrelated roles preserved |
 | Edit / retries | Only owned old tags replaced; missing permissions, renamed/privileged/deleted roles, unknown create outcomes and persisted queue covered |
 | Revision race | Older completion cannot clear a newer pending draft |
 | Worker | One retry worker across repeated READY; cancellation on shutdown tested |

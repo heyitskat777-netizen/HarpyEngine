@@ -15,7 +15,7 @@ tests/rules/test_consume.py
 tests/rules/test_consume_clone_scope.py
 tests/rules/test_consume_optional_feral.py
 
-# JANUS and JANUS-B
+# JANUS
 tests/rules/test_janus_core.py
 tests/rules/test_janus_core_service.py
 tests/rules/test_janus_battery.py

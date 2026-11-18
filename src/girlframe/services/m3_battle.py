@@ -2234,7 +2234,7 @@ def damage_frame_at_scene(
         raise WorkflowError("Prove actual vacancy; missing or passenger facts are not permission.")
     sheet = state.sheets[target.entity]
     runtime = sheet.frame_runtime
-    if (runtime and runtime.core_id) or (runtime is None and sheet.frame in ("JANUS", "JANUS-B")):
+    if (runtime and runtime.core_id) or (runtime is None and sheet.frame == "JANUS"):
         raise WorkflowError(
             "An inhabited independent Core requires its own actual control/damage port."
         )

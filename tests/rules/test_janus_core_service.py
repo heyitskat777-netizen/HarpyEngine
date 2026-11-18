@@ -22,7 +22,7 @@ from girlframe.services.onboarding import WorkflowError
 
 
 def ready(store, tmp_path, monkeypatch):
-    _, game = campaign(store, frame="JANUS-B")
+    _, game = campaign(store, frame="JANUS")
     approved(store, game, tmp_path, monkeypatch, extra=(rules.CORE, rules.BATTERY))
     approval = store.policy.m3_approval
     store.policy = store.policy.model_copy(

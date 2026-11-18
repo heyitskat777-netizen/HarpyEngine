@@ -15,7 +15,7 @@ from girlframe.engine.creation_details import GirlDetails
 from girlframe.engine.drafts import DraftInput
 from girlframe.engine.fanbase import Fanbase
 from girlframe.engine.npc_bonds import NpcBond
-from girlframe.engine.playbooks import canonical_frame, canonical_girl
+from girlframe.engine.playbooks import canonical_frame, canonical_girl, normalize_frame_fields
 
 MAX_DOCUMENT_BYTES = 256 * 1024
 DRAFT_FORMAT: Literal["harpyengine.character-draft"] = "harpyengine.character-draft"
@@ -130,6 +130,11 @@ class CharacterSheetDocument(BaseModel):
     members: dict[str, str] = Field(default_factory=dict)
     sheet: dict[str, Any]
     rules_status: Literal["RULES_SUBSET"] = "RULES_SUBSET"
+
+    @field_validator("sheet")
+    @classmethod
+    def frame_names(cls, sheet: dict[str, Any]) -> dict[str, Any]:
+        return dict(normalize_frame_fields(sheet))
 
 
 def _model_json(value: Any) -> Any:

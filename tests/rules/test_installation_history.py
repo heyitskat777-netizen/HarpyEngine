@@ -213,7 +213,7 @@ def test_native_history_reopens_after_character_change_and_reads_each_page_with_
         view = owner.edit_original_response.call_args.kwargs["view"]
         assert isinstance(view, InstallationPages) and not await view.interaction_check(current(3))
         text = owner.edit_original_response.call_args.kwargs["content"]
-        assert "PRIVATE\\_ORIGINAL\\_NAME" in text and "JANUS-B" in text
+        assert "PRIVATE\\_ORIGINAL\\_NAME" in text and "JANUS" in text
         await view.next.callback(owner)
         assert (
             "PRIVATE\\_ORIGINAL\\_DESCRIPTION"

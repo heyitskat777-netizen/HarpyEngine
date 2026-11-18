@@ -98,7 +98,7 @@ def roster(state: GameState, cells: tuple[Cell, ...]) -> tuple[rules.Resource, .
             or body.subsumed
             or body.frame_cell in cells
             and (
-                sheet.frame in ("JANUS", "JANUS-B")
+                sheet.frame == "JANUS"
                 or sheet.frame_runtime is not None
                 and sheet.frame_runtime.core_id is not None
             )

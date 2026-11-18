@@ -1,7 +1,7 @@
 # M3 — Frame Off-Duty Permission reviews
 
 Status: IN_PROGRESS / RULES_SUBSET. Book PDF 61, 65, 68, 71, 74, 78,
-81, 84 and 88; official sheets PDF 18–26. JANUS-B retains its server label.
+81, 84 and 88; official sheets PDF 18–26.
 
 Implemented offline: typed conditional reviews for Prince, CONSUME, JANUS,
 WYVERN, ENFORCER, CHANGELING and ANKOU; the actual Queen holder's recipient

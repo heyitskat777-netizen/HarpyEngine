@@ -30,7 +30,7 @@ def ready(ledger, girl="MOCKINGBIRD"):
             PLAYER,
             "girl",
             1,
-            DraftInput(callsign="SYNTH", girl_playbook=girl, frame_playbook="JANUS-B"),
+            DraftInput(callsign="SYNTH", girl_playbook=girl, frame_playbook="JANUS"),
         )
     return BondService(ledger)
 
@@ -185,7 +185,7 @@ def test_profile_staleness_revocation_and_isolation(ledger):
         OTHER,
         "edit",
         1,
-        DraftInput(callsign="UPDATED", girl_playbook="ALPHA", frame_playbook="JANUS-B"),
+        DraftInput(callsign="UPDATED", girl_playbook="ALPHA", frame_playbook="JANUS"),
     )
     assert service.get(OTHER, result["id"])["stale"]
     with pytest.raises(WorkflowError, match="STALE_PROFILE"):

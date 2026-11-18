@@ -9,6 +9,7 @@ import sqlalchemy as sa
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
+from girlframe.engine.playbooks import normalize_frame_fields
 from girlframe.engine.rolls import DiceSource, OsDice, RollReceipt
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
@@ -419,7 +420,9 @@ class CampaignLedger(OnboardingStore):
 
             state = load_state(connection, self.campaign_id)
             public = [
-                public_sheet(state.sheets[uid], state) if uid in state.sheets else json.loads(body)
+                public_sheet(state.sheets[uid], state)
+                if uid in state.sheets
+                else normalize_frame_fields(json.loads(body))
                 for uid, body in sheets
             ]
             return {

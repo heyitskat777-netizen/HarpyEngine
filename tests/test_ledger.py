@@ -74,7 +74,7 @@ def seed(
     callsign="SYNTH_A",
     notes="PRIVATE_CANARY",
     *,
-    frame="JANUS-B",
+    frame="JANUS",
     girl="MOCKINGBIRD",
 ):
     ledger.join(viewer, f"join-{viewer.user_id}")
@@ -317,7 +317,7 @@ def test_m1_012_rebuild_private_snapshots_without_reroll(ledger):
         "edit",
         1,
         DraftInput(
-            callsign="SYNTH_B", girl_playbook="OLDGEN", frame_playbook="JANUS-B", notes="NEW_CANARY"
+            callsign="SYNTH_B", girl_playbook="OLDGEN", frame_playbook="JANUS", notes="NEW_CANARY"
         ),
     )
     original, events = ledger.draft(PLAYER), count(ledger, t.events)
@@ -502,7 +502,7 @@ def test_fake_discord_command_sequence(ledger, monkeypatch):
                 DraftInput(
                     callsign="SYNTH_A",
                     girl_playbook="OLDGEN",
-                    frame_playbook="JANUS-B",
+                    frame_playbook="JANUS",
                     notes="CANARY",
                 ),
             )

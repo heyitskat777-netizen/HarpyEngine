@@ -92,7 +92,7 @@
 > Handler49RESPOND/552WAIT;609role auditgroups,0testedleaks, scoped citations.
 > All3dossiers reachv5; same native results/costs as reduced73-input rehearsal;
 > current-scene DB reopen/input/native-confirmation retries add no events/canon.
-> Simulated NPC pilots use native Pilot sheets/owners(MOCKINGBIRD/JANUS-B), not
+> Simulated NPC pilots use native Pilot sheets/owners(MOCKINGBIRD/JANUS), not
 > ordinary Npc actors. Dialogue/judgments are fixtures, no autonomous model claim.
 > Runtime saves actualscene_channel; console Play/battle follows it.1console test
 > and4changed-file Ruff/format pass; registry/planning/repository checks pass.
@@ -387,7 +387,7 @@ Off-Duty, broader all-type approval, AI, Ancillary, environment publication and
 private-engine writes remain outside this release. Historical bot-off and pending
 deployment statements below do not revoke this actual owner authorization.
 
-The owner approved the November8 milestone proposal and authorized continuation until **P1 is ready for player testing**. Follow `docs/work_orders/P1_PLAYABLE_RELEASE.md` and `docs/P1_CURRENT_QUEUE.md`. P1 covers ordinary gameplay for every catalogued Girl/Frame and working durable human-facilitator escalation. P2 AI and P3 remaining unusual automation are later, separately authorized milestones. Preserve the original full-M3 backlog and certification; P1 remains RULES_SUBSET. Ordinary body/identity/AM/Court/Pair dependencies cannot be deferred merely because they are difficult. JANUS-B uses official JANUS; Gorgon Leviathan does not implement Wyvern Leviathan Chassis. Keep the bot OFF, and keep deployment/environment publication/model calls/Ancillary/private-engine writes separate.
+The owner approved the November8 milestone proposal and authorized continuation until **P1 is ready for player testing**. Follow `docs/work_orders/P1_PLAYABLE_RELEASE.md` and `docs/P1_CURRENT_QUEUE.md`. P1 covers ordinary gameplay for every catalogued Girl/Frame and working durable human-facilitator escalation. P2 AI and P3 remaining unusual automation are later, separately authorized milestones. Preserve the original full-M3 backlog and certification; P1 remains RULES_SUBSET. Ordinary body/identity/AM/Court/Pair dependencies cannot be deferred merely because they are difficult. Gorgon Leviathan does not implement Wyvern Leviathan Chassis. Keep the bot OFF, and keep deployment/environment publication/model calls/Ancillary/private-engine writes separate.
 
 Latest owner testing instruction supersedes older per-workflow/coherent-checkpoint demands: **defer most automated testing until the final P1 candidate**. During development use only the minimum likely-flow smoke needed for functionality, preserve tests and record what was not run. Workers author meaningful normal-flow tests without running pytest; root consolidates the minimum checks after integration. Do not repeatedly run existing successes, compatibility sweeps or speculative role/tier/lifecycle matrices. At final P1 freeze run full regression and required global static/migration/privacy/restore checks on the exact integrated candidate; independent and human approval remain pending until actual review. Use at most two implementation workers; root owns shared integration and freezes explicit ownership. Existing sanitized source publication remains authorized; it is not deployment approval.
 
@@ -413,8 +413,7 @@ and the additive work orders under `docs/work_orders/`. Build resumable setup,
 membership, dropdown draft sheets, and owner-confirmed cosmetic role/nickname sync.
 The owner explicitly authorized these Discord tags and continuation of the remaining
 M1 dice/ledger, safety, durable delivery and local backup/rebuild foundation.
-The owner subsequently authorized continuation into M2 and confirmed that JANUS-B
-uses official JANUS rules while keeping its Discord label. M2A starting choices are implemented and verified. The owner requested further
+The owner subsequently authorized continuation into M2. M2A starting choices are implemented and verified. The owner requested further
 continuation; M2B and M2C are implemented. Handler/NPC setup is implemented; the owner authorized further M2 continuation. The current owner instruction explicitly authorizes beginning M3 development.
 Read `docs/work_orders/M3_RULES_COMPLETION.md` and the original `CODEX_M3_RULES.md`.
 M3 is now scoped into M3A–M3H; begin with the source inventory and M2 interaction audit.

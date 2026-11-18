@@ -6,11 +6,11 @@
   "cases": [
     {
       "id": "START-01",
-      "title": "Source-anchored catalogues and official JANUS alias",
+      "title": "Source-anchored Girl and Frame catalogues",
       "automated_status": "PASS",
       "tests": [
         "tests/test_creation.py::test_source_catalog_and_starting_identities",
-        "tests/test_creation.py::test_frame_assets_and_owner_approved_janus_alias"
+        "tests/test_creation.py::test_frame_assets_for_each_printed_playbook"
       ],
       "manual_status": "NOT_RUN_LIVE_COVERED_OFFLINE"
     },

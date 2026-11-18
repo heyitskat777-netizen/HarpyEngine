@@ -141,11 +141,7 @@ class JanusService:
         actual = resolve(
             state, setup.owner, profiles(c, self.store.campaign_id), require_current_profile=False
         )
-        if (
-            actual.frame_instance != setup.frame
-            or actual.frame not in ("JANUS", "JANUS-B")
-            or actual.frame_scrapped
-        ):
+        if actual.frame_instance != setup.frame or actual.frame != "JANUS" or actual.frame_scrapped:
             raise WorkflowError("STALE_JANUS_FRAME: recover the actual original JANUS and owner")
         if MedicalService(self.store)._handler(c) != (setup.judge, setup.appointment):
             raise WorkflowError("Recover the actual original Foundation source-review appointment")
@@ -162,12 +158,12 @@ class JanusService:
             )
             if (
                 actual.rules != "girl_frame"
-                or actual.frame not in ("JANUS", "JANUS-B")
+                or actual.frame != "JANUS"
                 or not actual.frame_instance
                 or actual.frame_scrapped
                 or rules.bound(state, actor, actual.frame_instance)
             ):
-                raise WorkflowError("Set up one actual original Core for your existing JANUS-B")
+                raise WorkflowError("Set up one actual original Core for your existing JANUS")
             if self.game.pending_actions(c):
                 raise WorkflowError("Finish the actual pending Play before admitting a Core")
             if not HandlerService(self.store)._member(c, controller):
@@ -430,11 +426,7 @@ class JanusService:
             tasks = self._tasks(c, viewer)
             sheet = state.sheets.get(str(viewer.user_id))
             can_request = False
-            if (
-                sheet is not None
-                and sheet.frame in ("JANUS", "JANUS-B")
-                and not sheet.frame_scrapped
-            ):
+            if sheet is not None and sheet.frame == "JANUS" and not sheet.frame_scrapped:
                 actor = current_ref(state, viewer.user_id)
                 frame = (
                     sheet.frame_runtime.id

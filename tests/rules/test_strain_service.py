@@ -28,7 +28,7 @@ class D6:
         return self.face
 
 
-def ready(store, *, frame="JANUS-B", face=1):
+def ready(store, *, frame="JANUS", face=1):
     missions, game = service(store, frame=frame)
     approval = store.policy.m3_approval
     store.policy = store.policy.model_copy(

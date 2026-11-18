@@ -294,7 +294,7 @@ def test_stale_accept_disabled_and_court_task_opens_authorized_recipient_picker(
             PLAYER,
             "changed",
             1,
-            DraftInput(callsign="PLAYER", girl_playbook="AM", frame_playbook="JANUS-B"),
+            DraftInput(callsign="PLAYER", girl_playbook="AM", frame_playbook="JANUS"),
         )
         inbound = InboxView(service, OTHER.user_id)
         inbound.overview = False

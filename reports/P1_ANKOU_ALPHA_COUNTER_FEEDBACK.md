@@ -64,7 +64,7 @@ No live Discord, model, private-engine write, publication, merge or deployment.
 ## Root first minimum and fixture repair
 
 Root reports the first accepted-purpose normal failed **1 in 2.39s** before
-play creation: the fixture's saved OTHER profile still selected JANUS-B while
+play creation: the fixture's saved OTHER profile still selected JANUS while
 its creation choices selected PROJECT ANKOU. The v2 test now passes the real
 `other_frame="PROJECT ANKOU"` option to the existing creation bootstrap as well
 as selecting the matching creation choices. No validation is weakened, and all

@@ -126,7 +126,7 @@ or all printed branches. Package headings and references do not become invented
 mechanics. Full-suite execution does not establish complete rules coverage.
 Ordinary branches outside the curated ports still need source-specific Activity
 forms and branch/owner/continuation review before the all-type handoff can close.
-JANUS-B uses JANUS; Wyvern's chassis is separate from Gorgon Leviathan.
+Wyvern's chassis is separate from Gorgon Leviathan.
 
 The P2 session/GM/Handler APIs and privacy boundaries remain as documented in
 [the P2 handoff](../ai_assistance/INTEGRATION_HANDOFF.md). Fictional Handler context

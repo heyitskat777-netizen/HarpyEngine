@@ -52,7 +52,7 @@ def main() -> None:
             operator,
             "synthetic-draft",
             0,
-            DraftInput(callsign="SYNTH_A", girl_playbook="OLDGEN", frame_playbook="JANUS-B"),
+            DraftInput(callsign="SYNTH_A", girl_playbook="OLDGEN", frame_playbook="JANUS"),
         )
         ledger.roll_basic(operator, "synthetic-roll", ledger.status(operator)["revision"])
         # Offline metadata only: not a usable Discord policy or executable engine.

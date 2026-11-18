@@ -1,4 +1,4 @@
-"""Printed Frame classes; JANUS-B keeps its server label and JANUS eligibility."""
+"""Printed Frame classes."""
 
 from typing import Literal
 
@@ -21,8 +21,7 @@ FRAME_CLASSES: dict[str, FrameClass] = {
 
 
 def official_frame(value: str) -> str:
-    frame = canonical_frame(value)
-    return "JANUS" if frame == "JANUS-B" else frame
+    return canonical_frame(value)
 
 
 def frame_class(value: str) -> FrameClass:

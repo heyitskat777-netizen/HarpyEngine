@@ -368,7 +368,7 @@ def test_actual_frame_wraith_cannot_receive_nanobots_or_pay_doctor_cost(
     monkeypatch.setattr(
         test_m2_game,
         "selected",
-        lambda girl, frame: choose_starting(girl, rules.BOOK if frame == "JANUS-B" else frame),
+        lambda girl, frame: choose_starting(girl, rules.BOOK if frame == "JANUS" else frame),
     )
     game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch)
     approved(

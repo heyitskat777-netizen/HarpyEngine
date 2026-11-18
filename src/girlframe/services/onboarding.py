@@ -19,7 +19,7 @@ from sqlalchemy import Connection, Engine
 from girlframe.database import tables as t
 from girlframe.discord_adapter.config import BotPolicy
 from girlframe.engine.drafts import DraftInput
-from girlframe.engine.playbooks import FRAME_TYPES, GIRL_TYPES
+from girlframe.engine.playbooks import FRAME_TYPES, GIRL_TYPES, normalize_frame_fields
 from girlframe.services.read_only_bot import GuildViewer
 
 
@@ -177,7 +177,7 @@ class OnboardingStore:
             if existing:
                 if existing["request_hash"] != digest:
                     raise WorkflowError("IDEMPOTENCY_CONFLICT: this request changed.")
-                return dict(json.loads(existing["outcome_json"]))
+                return dict(normalize_frame_fields(json.loads(existing["outcome_json"])))
             result = operation(connection)
             connection.execute(
                 t.commands.insert().values(
@@ -270,7 +270,7 @@ class OnboardingStore:
                     result["notes"] = json.loads(row["private_json"])["notes"]
                     result["canonical"] = sheet.model_dump(mode="json")
                 return result
-            result = dict(json.loads(row["public_json"]))
+            result = dict(normalize_frame_fields(json.loads(row["public_json"])))
             result.update(id=row["id"], revision=row["revision"], status="draft_rules_unverified")
             if owner == viewer.user_id:
                 result["notes"] = json.loads(row["private_json"])["notes"]

@@ -74,7 +74,7 @@ def bonded_game(
         pair_update["girl_details"] = GirlDetails(
             investors=tuple(
                 NpcInvestor(npc_slot=x.slot, desires=DesireChoice(slots=(0,)))
-                for x in selected(native_pair_book, "JANUS-B").npc_bonds
+                for x in selected(native_pair_book, "JANUS").npc_bonds
             )
         )
         coordination = CoordinationService(store)
@@ -113,7 +113,7 @@ def bonded_game(
         str(uuid4()),
         own.revision,
         store.draft(OTHER)["revision"],
-        selected(native_pair_book, "JANUS-B").model_copy(
+        selected(native_pair_book, "JANUS").model_copy(
             update={"shared_tokens": own.draft.shared_tokens, **pair_update}
         ),
     )

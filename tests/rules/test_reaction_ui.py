@@ -31,7 +31,7 @@ def test_doctor_native_confirmation_applies_the_source_effect_once(ledger):
 
 
 def test_princess_native_review_saves_human_fact_and_does_not_commit_normal_rewards(ledger):
-    svc, missions, game, mission = setup(ledger, girl="PRINCESS", frame="JANUS-B")
+    svc, missions, game, mission = setup(ledger, girl="PRINCESS", frame="JANUS")
     task = work(missions, mission, "princess_mission_end")
 
     async def run():

@@ -20,9 +20,9 @@ Source: printed36/PDF38, with Tag/self-mark context printed37/PDF39.
 
 Interpretation boundaries remain explicit in `docs/CAMPAIGN_RULINGS.md:3518–3522`: distinct high third component, typed self-order transfers roller slots but not named Handler slots, and two recipient-participated scene closures including source scene. Printed text leaves duration and order precedence open; retain delegated printed-clarity review rather than call these literal certainty. No verified production mismatch established in these scoped ordinary branches. Native body/contact/cast limitations are enforced before play; this report does not certify every NPC/AM/borrowed body combination.
 
-## JANUS / JANUS-B: Living Battery and PANDORA
+## JANUS: Living Battery and PANDORA
 
-Source: Living Battery and PANDORA printed67/PDF69. JANUS-B remains the official JANUS alias, not an extra implementation unit.
+Source: Living Battery and PANDORA printed67/PDF69.
 
 | Printed result / consequence | Current code and authored evidence | Classification |
 |---|---|---|

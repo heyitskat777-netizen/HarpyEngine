@@ -887,7 +887,7 @@ def test_actual_princess_controls_native_stim_self_dose_real_resources_author_an
         ledger, girl="PRINCESS", frame="THE ENFORCER", other_girl="STIM-BLISSED"
     )
     current_draft = creation.get(OTHER)
-    draft = selected("STIM-BLISSED", "JANUS-B").model_copy(
+    draft = selected("STIM-BLISSED", "JANUS").model_copy(
         update={"shared_tokens": current_draft.draft.shared_tokens}
     )
     creation.save(OTHER, "actual-original-stim-build", current_draft.revision, 1, draft)

@@ -65,9 +65,9 @@
       "human_acceptance": "NOT_RUN",
       "checks": [
         {
-          "branch": "All enabled base Frame selections and JANUS-B alias",
+          "branch": "All enabled base Frame selections",
           "tests": [
-            "test_each_printed_base_frame_asset_and_janus_b_label_is_selectable"
+            "test_each_printed_base_frame_asset_is_selectable"
           ]
         },
         {
@@ -141,7 +141,7 @@
         }
       ],
       "code_commit": "af0a2213a3a23f231f0b5f002197d545ffb0b88e",
-      "source_check": "All 81 base-Frame catalogue Asset names matched normalized text in the actual nine rulebook sections; JANUS-B uses JANUS."
+      "source_check": "All 81 base-Frame catalogue Asset names matched normalized text in the actual nine rulebook sections."
     },
     {
       "id": "M3-UNIT-1B",
