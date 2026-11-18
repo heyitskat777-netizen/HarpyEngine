@@ -13,6 +13,7 @@ from girlframe.engine import m3_strain_effects as rules
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_contraband_state import ContrabandFind
+from girlframe.engine.m3_doppelganger_reveal import reveals as disguise_reveals
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_supply_state import SupplyLoss
@@ -111,6 +112,24 @@ class EffectService:
             ):
                 raise WorkflowError("This revelation belongs to its actual original audience")
             return dict(play=value.play, account=value.account)
+
+    def disguise_revelation(self, viewer: GuildViewer, identity: str) -> dict[str, str]:
+        with self.store.engine.connect() as c:
+            self.game.authorize(c, viewer, game=False)
+            value = next(
+                (
+                    x
+                    for x in disguise_reveals(load_state(c, self.store.campaign_id))
+                    if x.id == identity
+                    and any(r.entity == str(viewer.user_id) for r in x.recipients)
+                ),
+                None,
+            )
+            if value is None:
+                raise WorkflowError("Only the original audience receives this mask revelation")
+            return dict(
+                name=value.mask.name, gorgon_class=value.gorgon_class, account=value.account
+            )
 
     def prepare_spread(
         self,

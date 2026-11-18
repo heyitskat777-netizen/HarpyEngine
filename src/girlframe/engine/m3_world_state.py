@@ -230,6 +230,7 @@ class Gorgon(Entity):
     tags: tuple[WorldTag, ...] = ()
     cell: Cell | None = None
     position_event: str | None = None
+    mask_source: str | None = Field(default=None, min_length=1, exclude_if=lambda x: x is None)
     gorgon_class: GorgonClass
     types: tuple[GorgonType, ...] = Field(min_length=1)
     assets: tuple[Asset, ...]
@@ -259,6 +260,8 @@ class Gorgon(Entity):
         ids = {asset.id for asset in records}
         if len(ids) != len(records) or len(set(self.types)) != len(self.types):
             raise ValueError("Gorgon Assets and Types must be distinct")
+        if self.mask_source is not None and "doppleganger" not in self.types:
+            raise ValueError("Only an actual Dopplegänger has a person disguise")
         if not set(self.core_plan.assets) <= ids or any(a.family != "gorgon" for a in records):
             raise ValueError("Core exposure must name current or destroyed original Gorgon Assets")
         if (self.flesh_layers is None) != (self.flesh_layers_event is None):
@@ -515,7 +518,8 @@ class World(Model):
                 site.protection_sources
             ) != {x.zone for x in self.field_studies if x.location == site.id and x.protected}:
                 raise ValueError("Protected locations require their actual source-owned study")
-        if any(x.npc not in npcs for x in self.starting_npc_links) or len(
+        former_npcs = {x.id for x in self.gorgons if x.mask_source}
+        if any(x.npc not in npcs | former_npcs for x in self.starting_npc_links) or len(
             {(x.owner, x.character_id, x.slot) for x in self.starting_npc_links}
         ) != len(self.starting_npc_links):
             raise ValueError("Starting NPC slots link once to actual persistent NPCs")

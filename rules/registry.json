@@ -16742,14 +16742,16 @@
         "heading": "Void high: die 1, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain_doppelganger_reveal.py::test_native_disguise_reveal_preserves_original_body_bonds_and_audience"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

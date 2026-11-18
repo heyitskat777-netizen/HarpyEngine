@@ -211,10 +211,15 @@ class ActorService:
                         and self._patrol_known(c, state, perspective, x.id)
                     )
                 )
+                from girlframe.engine.m3_doppelganger_reveal import reveals as disguise_reveals
+
+                known_masks = {
+                    x.mask.id for x in disguise_reveals(state) if perspective in x.recipients
+                }
                 refs.extend(
                     ActorRef(kind="gorgon", entity=x.id)
                     for x in state.world.gorgons
-                    if x.alive and x.revealed
+                    if x.alive and (x.revealed or x.id in known_masks)
                 )
             known = []
             for ref in dict.fromkeys(refs):

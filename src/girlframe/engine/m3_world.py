@@ -61,6 +61,8 @@ def create(board: Board, locations: tuple[Location, ...], secret: Gorgon) -> Wor
 
 
 def validate_initial_gorgon(gorgon: Gorgon) -> None:
+    if gorgon.mask_source:
+        raise ValueError("Only the actual NPC reveal can preserve a disguise source")
     if gorgon.destroyed_assets:
         raise ValueError("A newly introduced Gorgon cannot import destroyed Asset history")
     if len(gorgon.assets) != CLASS_ASSETS[gorgon.gorgon_class] + int(gorgon.sprite_group):

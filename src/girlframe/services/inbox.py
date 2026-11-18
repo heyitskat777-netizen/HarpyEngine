@@ -2927,6 +2927,7 @@ class InboxService:
                     )
                 )
             from girlframe.engine.m3_civic_directive import cases as civic_directives
+            from girlframe.engine.m3_doppelganger_reveal import reveals as disguise_reveals
             from girlframe.engine.m3_pilot_fears import cases as public_fears
             from girlframe.engine.m3_void_revelation import revelations
             from girlframe.engine.m3_void_signal import signals as void_signals
@@ -2980,6 +2981,27 @@ class InboxService:
                         task="m3_civic_directive",
                     )
                 )
+
+            for disguise in disguise_reveals(canon)[-25:]:
+                if any(r.entity == str(viewer.user_id) for r in disguise.recipients):
+                    items.append(
+                        InboxItem(
+                            "strain-disguise:" + disguise.id,
+                            "disguise_revealed",
+                            disguise.id,
+                            canon.revision,
+                            "off_duty",
+                            "Original Bond revelation",
+                            "Original audience",
+                            "resolved",
+                            False,
+                            False,
+                            "Read what your original Bond revealed.",
+                            "",
+                            "Read revelation",
+                            task="m3_strain_disguise_revelation",
+                        )
+                    )
 
             for fear in public_fears(canon):
                 is_director, is_cadre, is_handler = fear_access(fear, viewer.user_id)

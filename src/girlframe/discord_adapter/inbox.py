@@ -1524,7 +1524,7 @@ class InboxView(discord.ui.View):
                 StrainService(OffDutyService(MissionService(self.service.store)))
             )
             await open_escape_offer(interaction, escape_service, item.identity)
-        elif item.task == "m3_strain_revelation":
+        elif item.task in ("m3_strain_revelation", "m3_strain_disguise_revelation"):
             from girlframe.engine.m3_void_revelation import PLAYS
             from girlframe.services.m3_missions import MissionService
             from girlframe.services.m3_off_duty import OffDutyService
@@ -1534,8 +1534,14 @@ class InboxView(discord.ui.View):
             effect_service = EffectService(
                 StrainService(OffDutyService(MissionService(self.service.store)))
             )
-            value = await asyncio.to_thread(effect_service.revelation, viewer, item.identity)
-            title = next(title for play, title in PLAYS if play == value["play"])
+            if item.task == "m3_strain_disguise_revelation":
+                value = await asyncio.to_thread(
+                    effect_service.disguise_revelation, viewer, item.identity
+                )
+                title = value["name"] + " · " + value["gorgon_class"].title() + " Dopplegänger"
+            else:
+                value = await asyncio.to_thread(effect_service.revelation, viewer, item.identity)
+                title = next(title for play, title in PLAYS if play == value["play"])
             await reply(interaction, title + "\n" + value["account"])
         elif item.task == "m3_handler_notice":
             from girlframe.discord_adapter.m3_handler_plays import open_notice

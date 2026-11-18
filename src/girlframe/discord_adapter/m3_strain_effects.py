@@ -14,6 +14,7 @@ from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_budget_anarchy import REBELLION as REBEL_PROTEST
 from girlframe.engine.m3_civic_directive import PROTEST as CIVIC_PROTEST
 from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
+from girlframe.engine.m3_doppelganger_reveal import RULE as DOPPELGANGER_REVEAL
 from girlframe.engine.m3_gorgon_catalog import ASSETS
 from girlframe.engine.m3_orbital_threat import RULE as ORBITAL_THREAT
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
@@ -236,12 +237,14 @@ def effect_form(
     ):
         raise WorkflowError("Introduce the actual patron, then reopen this result.")
     orbital = rule == ORBITAL_THREAT
+    disguise = rule == DOPPELGANGER_REVEAL
     spawned = rule in {
         "strain.void.low.1.1",
         "strain.void.low.2.1",
         "strain.void.low.4.1",
         "strain.void.low.5.1",
         ORBITAL_THREAT,
+        DOPPELGANGER_REVEAL,
     }
     gorgons = {x["id"]: x for x in world["gorgons"]}
     past_missions = []
@@ -256,6 +259,20 @@ def effect_form(
     from girlframe.engine.m3_actor_state import ActorRef
     from girlframe.engine.m3_battle import category
     from girlframe.engine.m3_budget_sabotage import Pin
+    from girlframe.engine.m3_doppelganger_reveal import original_bonds
+
+    masks = (
+        {
+            x.id: x
+            for x in state.world.npcs
+            if x.alive
+            and x.controller == handler
+            and "director" not in x.jobs
+            and original_bonds(state, x)
+        }
+        if disguise and state.world
+        else {}
+    )
 
     asset_pins = {}
     asset_labels = {}
@@ -367,7 +384,9 @@ def effect_form(
             )
         elif spawned:
             classes = (
-                ("directed",)
+                ("benevolent", "erratic")
+                if disguise
+                else ("directed",)
                 if orbital or rule.endswith("1.1")
                 else ("dormant", "erratic")
                 if rule.endswith("2.1")
@@ -401,6 +420,15 @@ def effect_form(
                         "type", "Inherited Type", (("inherit", "Use the selected leader's Types"),)
                     )
                 )
+            elif disguise:
+                fields.append(
+                    Field(
+                        "mask",
+                        "Which original NPC Bond is revealed?",
+                        tuple((npc.id, npc.name) for npc in masks.values()) or WAIT,
+                    )
+                )
+                types = ("doppleganger",)
             else:
                 fields.append(Field("type", "Gorgon archetype Type", TYPES))
                 types = values.get("type", ())
@@ -440,8 +468,9 @@ def effect_form(
                     "core", "Core-protecting Assets (one or two)", assets, 1, min(2, len(assets))
                 ),
                 Field("weakness", "What tactical weakness exposes its Core?", paragraph=True),
-                Field("name", "Name or identifying label"),
             ]
+            if not disguise:
+                fields.append(Field("name", "Name or identifying label"))
             cells = squares(world["board"])
             bases = [
                 x["cell"]
@@ -469,7 +498,7 @@ def effect_form(
                 cells = tuple(x for x in cells if coordinates(x[0]) in cities)
             else:
                 cells = tuple(x for x in cells if list(coordinates(x[0])) in bases)
-            if not orbital:
+            if not (orbital or disguise):
                 fields.append(Field("cell", "Choose a source-legal map square", cells or WAIT))
             if selected_class in ("aggressive", "sprite"):
                 selected_cell = values.get("cell", ("",))[0]
@@ -829,7 +858,9 @@ def effect_form(
         elif spawned:
             selected_class = values["class"][0]
             types = (
-                tuple(gorgons[values["leader"][0]]["types"])
+                ("doppleganger",)
+                if disguise
+                else tuple(gorgons[values["leader"][0]]["types"])
                 if selected_class == "sprite"
                 else tuple(values["type"])
             )
@@ -851,13 +882,18 @@ def effect_form(
                 )
             if selected_class == "sprite":
                 setup["follows"] = values["leader"][0]
+            mask = masks.get(values["mask"][0]) if disguise else None
+            if disguise and mask is None:
+                raise WorkflowError("Recover a bonded NPC under the Handler's actual control.")
+            if mask is not None:
+                payload["target"] = mask.id
             payload["gorgon"] = Gorgon(
-                id=stable(identity, "gorgon"),
-                name=values["name"],
+                id=mask.id if mask else stable(identity, "gorgon"),
+                name=mask.name if mask else values["name"],
                 gorgon_class=cast(Any, selected_class),
                 types=cast(Any, types),
                 assets=assets,
-                cell=None if orbital else coordinates(values["cell"][0]),
+                cell=mask.cell if mask else None if orbital else coordinates(values["cell"][0]),
                 core_plan=CorePlan(
                     assets=tuple(asset_ids[x] for x in values["core"]), weakness=values["weakness"]
                 ),

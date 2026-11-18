@@ -212,3 +212,24 @@ the Punishments clears the Off-Duty start gate. Both native outcomes
 passed, including actual Link Surgery Reversal in the discipline case,
 stale and paused forms, scope checks and retry.
 [High Void p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) · [Demand tests](../../tests/rules/test_strain_pilot_fears.py)
+
+## Sixth checkpoint
+
+The base is `da626a1397c0c400d106cde6ecbf9ed71988bd8b`.
+High Void 1.2 exposes the original NPC as the same living entity in
+its Benevolent or Erratic Dopplegänger form. The form retains the
+entity ID, position and rebinds its live Bonds with their sources.
+The archived disguise and original starting-link receipts remain
+available as historical proof. The native Gorgon actor becomes
+available to the people who actually knew the revelation. The Handler
+can choose public world visibility separately. The notice only shows
+the revelation, without the archived NPC sheet.
+
+If another human originally controlled the NPC, the ordinary role
+transfer must be offered and accepted before this reveal. Outstanding
+custody, held items, an active cast or a structurally assigned role
+can still require source recovery. The engine holds those cases
+instead of silently dropping their obligations. This slice covers
+the Strain reveal. Sniff You Out and the ongoing type mechanics still
+belong to the Gorgon milestone.
+[High Void p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) · [Dopplegänger p. 168](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=170) · [Revelation tests](../../tests/rules/test_strain_doppelganger_reveal.py)

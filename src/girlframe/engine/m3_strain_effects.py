@@ -11,6 +11,7 @@ from girlframe.engine.m3_budget_anarchy import REBELLION as REBEL_PROTEST
 from girlframe.engine.m3_budget_sabotage import Pin
 from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_contraband_state import ContrabandFind
+from girlframe.engine.m3_doppelganger_reveal import RULE as DOPPELGANGER_REVEAL
 from girlframe.engine.m3_orbital_threat import RULE as ORBITAL_THREAT
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
@@ -45,6 +46,7 @@ SUPPORTED = frozenset(
         VOID_REVELATION,
         VOID_SIGNAL,
         PILOT_FEARS,
+        DOPPELGANGER_REVEAL,
         "strain.rebellion.low.1.1",
         "strain.rebellion.low.1.2",
         "strain.rebellion.low.2.2",
@@ -188,6 +190,22 @@ def apply(
 
         fields(choice, {"target"})
         director(state, choice.target)
+    elif rule == DOPPELGANGER_REVEAL:
+        from girlframe.engine.m3_doppelganger_reveal import reveal as reveal_disguise
+
+        fields(choice, {"target", "gorgon"})
+        if choice.gorgon is None or period_id is None or source_event is None:
+            raise ValueError("Recover the original mask revelation in this preparing period")
+        state = reveal_disguise(
+            state,
+            source_work,
+            source_event,
+            choice.target,
+            choice.gorgon,
+            choice.account.strip(),
+        )
+        assert state.world is not None
+        world = state.world
     elif rule in CIVIC_DIRECTIVES:
         from girlframe.engine.m3_civic_directive import create as create_civic_directive
 
