@@ -353,11 +353,12 @@ is a synthetic **read-only engine-status fixture**, not a runnable game engine.
 Policy examples are in `config/discord-policy.example.json`. The offline `--check`
 validates policy/sandbox only, not schema, credentials or live guild access.
 
-Actual startup checks the authenticated application and guild, then synchronizes
-14 top-level commands/groups in that guild only. The currently running frozen
-pre-M3 release retains 13. Reconnect does not resync commands
-or duplicate workers. Responses are ephemeral, with mentions disabled. Only an
-explicit confirmed setup posts onboarding controls; raw rolls publish by default unless `publish:false`; approved M2 Plays post minimal scene controls and receipts. SDK DEBUG logging must stay disabled because it can
+Engine startup checks the authenticated application and guild, then removes the
+retired HarpyEngine guild slash commands by name. The Activity's command listener
+owns `/activity-campaign create` (including the role and channel binding) and
+`/activity-campaign launch`. The engine worker preserves that group, unrelated
+commands, and the game services used by the Activity. Reconnect does not repeat
+startup or duplicate workers. SDK DEBUG logging must stay disabled because it can
 include interaction credentials. HTTP/Gateway use the inherited HTTPS proxy and
 verified TLS. SIGTERM and Ctrl-C close the bot.
 
@@ -398,7 +399,12 @@ environment restoration. This work does not publish environment configuration.
 HTTP 404 / Discord 10004 at startup means the application cannot access the guild:
 check installation and guild ID. Errors omit raw provider bodies and private paths.
 
-## Commands and player flow
+## Activity commands and legacy player flow
+
+Use `/activity-campaign create` to create a campaign and bind its launch channel,
+then `/activity-campaign launch` in that channel. Gameplay, sheets, inbox and
+safety controls are in the Activity. The slash commands listed below document the
+legacy offline adapter and its native workflows.
 
 Campaign interpretations, their authority, remaining clarity questions and how to
 change them are recorded in [the rulings register](docs/CAMPAIGN_RULINGS.md).

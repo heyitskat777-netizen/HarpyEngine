@@ -5,6 +5,7 @@ from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
 import pytest
+import sqlalchemy as sa
 from test_director_continuity import carry, roles
 from test_director_observation import observed as observed
 from test_ledger import ADMIN, OTHER, PLAYER
@@ -15,6 +16,7 @@ from girlframe.ai.conversation import ConversationReply
 from girlframe.ai.gm_outcomes import KeepOutcome, OutcomeProposal
 from girlframe.ai.gm_protocol import Assessment, Demand, TaskFrame, TraitClaim
 from girlframe.ai.observation import AppendSceneInput, ObservationPolicy
+from girlframe.database import tables as t
 from girlframe.services.director_context import DirectorContextService
 from girlframe.services.director_conversation import DirectorConversationService
 from girlframe.services.director_session import DirectorSessionService
@@ -70,6 +72,72 @@ def add_scene(observer, channel, roster):
     for viewer in roster:
         observer.set_consent(viewer, f"consent:{channel}:{viewer.user_id}", scene, 1, consent=True)
     return scene
+
+
+def test_opening_draft_previews_only_each_cast_members_facts(observed):
+    observer, scene, _, game, *_ = observed
+    app, handler = adapter(observer)
+    handler_role, pilot = roles(observer, scene)
+    data = {
+        "revision": 0,
+        "draft": {
+            "location": "Relay service hall",
+            "situation": "Maintenance wants to shut down the relay.",
+            "first_choice": "Ask for a delay or check in elsewhere?",
+            "gm_pressure": "GM_PRIVATE_PLAN",
+            "facts": [
+                {
+                    "text": "Maintenance requested a delay.",
+                    "learned_from": "Shift briefing",
+                    "known_by": [handler_role.token],
+                },
+                {
+                    "text": "PILOT_ONLY_LIGHT",
+                    "learned_from": "Sole witness",
+                    "known_by": [pilot.token],
+                },
+                {"text": "GM_ONLY_CAUSE", "learned_from": "Planning note", "known_by": []},
+            ],
+        },
+    }
+    assert app.read(ADMIN, scene, "opening")["draft"] is None
+    saved = app.write(ADMIN, "save-opening", scene, "opening-save", data)
+    assert app.write(ADMIN, "save-opening", scene, "opening-save", data) == saved == {"revision": 1}
+    with pytest.raises(WorkflowError, match="STALE_OPENING"):
+        app.write(ADMIN, "old-opening", scene, "opening-save", data)
+    with pytest.raises(WorkflowError, match="administrator"):
+        app.read(PLAYER, scene, "opening")
+    with pytest.raises(WorkflowError, match="administrator"):
+        app.write(PLAYER, "other-editor", scene, "opening-save", data)
+    preview = app.read(ADMIN, scene, "opening")
+    facts = {role["id"]: role["facts"] for role in preview["previews"]}
+    assert facts[handler_role.token] == ["Maintenance requested a delay."]
+    assert facts[pilot.token] == ["PILOT_ONLY_LIGHT"]
+    assert "GM_ONLY_CAUSE" not in json.dumps(facts)
+    with observer.store.engine.connect() as c:
+        for table, column in (
+            (t.events, t.events.c.payload_json),
+            (t.commands, t.commands.c.outcome_json),
+        ):
+            bodies = json.dumps(
+                list(
+                    c.scalars(
+                        sa.select(column).where(table.c.campaign_id == observer.store.campaign_id)
+                    )
+                )
+            )
+            assert "GM_PRIVATE_PLAN" not in bodies and "PILOT_ONLY_LIGHT" not in bodies
+    app.submit(
+        PLAYER,
+        scene,
+        input_command(observer, PLAYER, scene, "query", "Handler, can you repeat the scope?"),
+    )
+    assert "PILOT_ONLY_LIGHT" not in handler.requests[-1].model_dump_json()
+    assert "Maintenance requested a delay." not in handler.requests[-1].model_dump_json()
+    game.leave_scene(PLAYER, "pilot-leaves-opening", 900)
+    assert app.read(ADMIN, scene, "opening")["stale_audience"]
+    with pytest.raises(WorkflowError, match="OPENING_AUDIENCE"):
+        app.write(ADMIN, "stale-cast", scene, "opening-save", data | {"revision": 1})
 
 
 def test_parallel_scenes_file_only_approved_reports_after_native_close(observed):

@@ -15,6 +15,7 @@ from girlframe.ai.model_adapters import (
 from girlframe.ai.model_transport import OpenAIResponses
 from girlframe.ai.observation import AppendSceneInput, ObservationPolicy
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.services.campaign_opening import CampaignOpeningService, OpeningDraft
 from girlframe.services.director_context import DirectorContextService
 from girlframe.services.director_conversation import DirectorConversationService
 from girlframe.services.director_session import DirectorSessionService
@@ -29,6 +30,7 @@ class P2Scene:
     def __init__(self, session: DirectorSessionService, *, models: OpenAIResponses | None = None):
         self.session = session
         self.models = models
+        self.opening = CampaignOpeningService(session.knowledge)
 
     @classmethod
     def model_fixture(
@@ -173,6 +175,8 @@ class P2Scene:
     def read(
         self, viewer: GuildViewer, scene: str, route: str, identity: str | None = None
     ) -> dict[str, Any]:
+        if route == "opening":
+            return self.opening.view(viewer, scene)
         if route == "status":
             return self.session.observer.status(viewer, scene).model_dump(mode="json")
         if route == "timeline":
@@ -213,6 +217,11 @@ class P2Scene:
         route: str,
         data: dict[str, Any],
     ) -> dict[str, Any]:
+        if route == "opening-save" and data.keys() == {"revision", "draft"}:
+            if type(data["revision"]) is not int:
+                raise ValueError("Supply the last saved opening revision.")
+            draft = OpeningDraft.model_validate_json(json.dumps(data["draft"]))
+            return self.opening.save(viewer, key, scene, data["revision"], draft)
         if route == "configure" and data.keys() == {"revision"} and type(data["revision"]) is int:
             return self.session.observer.configure_scene(
                 viewer,

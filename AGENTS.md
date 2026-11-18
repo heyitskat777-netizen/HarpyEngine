@@ -1,3 +1,11 @@
+> Latest owner direction: Activity-only play and staged campaign setup. The
+> HarpyEngine Gateway runtime stops registering legacy gameplay commands and
+> selectively retires its known guild slash commands. The Activity listener owns
+> /activity-campaign create (role/channel binding) and launch. The local P2 lab
+> saves revisioned, facilitator-only opening plans and previews each current
+> actor's assigned facts. Drafts stay private. See the Activity UI
+> handoff for the routes and remaining explicit publication step.
+>
 > Latest owner direction: proceed with Handler-first model wiring and verify native
 > Handler sheets and NPC authority. See reports/P2_MODEL_ADAPTERS.md. The local
 > Activity desk reviews/delivers scoped Handler replies. Preserve WAIT, consent,

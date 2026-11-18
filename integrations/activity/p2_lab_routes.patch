@@ -130,7 +130,7 @@
 +                    key = self.headers.get("Idempotency-Key", "")
 +                    if not KEY.fullmatch(key):
 +                        raise ValueError
-+                    data = self.read_object(16384)
++                    data = self.read_object(96_000 if match[2] == "opening-save" else 16384)
 +                    value = director.write(session[1], key, match[1], match[2], data)
 +                    self.send_json(HTTPStatus.OK, value)
 +                except (TypeError, ValueError, UnicodeError):

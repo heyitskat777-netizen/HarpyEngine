@@ -622,6 +622,28 @@ current synthetic scene membership, consent and safety guard.
    scene handoff; new mission acceptance and dispatch still require their own
    native commands. Preserve the changed Status order and original characters.
 
+## Campaign opening and Discord command ownership
+
+The Activity's existing `/activity-campaign create` binds a campaign to the
+chosen Discord role and channel. `/activity-campaign launch` verifies the current
+channel and member role. The HarpyEngine Gateway worker retires only the known
+legacy guild slash commands on startup and leaves the Activity group registered.
+The Activity retains the safety pause and resume controls on the native service.
+
+The disposable `--p2-routes` lab exposes the opening draft under **Director
+work**. A joined facilitator can save the opening location, situation, first
+player decision, a private pressure and starting facts. Each fact records how it
+was learned and the exact fictional actors who should start knowing it. The
+facilitator can preview each role's proposed facts before observation begins.
+
+`GET /api/director/{scene}/opening` returns the current revision, draft, actual
+cast and per-role preview. `POST /api/director/{scene}/opening-save` requires the
+saved revision, the edited draft and the original command key for retries.
+HarpyEngine checks the current cast and administrator authority. The draft stays
+private and attached to an already-bound scene. Campaign-wide setup and explicit
+publication into role context are separate follow-ups. Opening a scene and
+starting Plays use the native workflows.
+
 ## Reviewed model adapters in the local Activity lab
 
 The `--p2-routes` overlay adds a private Director work panel to the synthetic

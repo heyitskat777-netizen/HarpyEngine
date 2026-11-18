@@ -58,6 +58,20 @@ async function verify() {
       return value;
     }
     await get(outsider, "status", 403);
+    await get(pilot, "opening", 403);
+    await handler.getByText("Director work", {exact:true}).click();
+    await handler.getByLabel("Opening location").fill("Relay service hall");
+    await handler.getByLabel("Opening situation").fill("The technicians need a maintenance window.");
+    await handler.getByLabel("First player decision").fill("Wait for maintenance or reroute the check-in?");
+    await handler.getByRole("button", {name:"Add starting fact"}).click();
+    await handler.getByLabel("Fact to share").fill("Technicians filed a delay notice.");
+    await handler.getByLabel("How it was learned (GM notes)").fill("The Handler read the notice.");
+    await handler.getByLabel("Who knows this? Leave empty for GM only.").selectOption({label:"Handler"});
+    await handler.getByRole("button", {name:"Save opening draft"}).click();
+    await handler.getByRole("heading", {name:"Who knows what"}).waitFor();
+    const opening = (await get(handler, "opening")).previews;
+    assert.deepEqual(opening.find(role => role.label === "Handler").facts, ["Technicians filed a delay notice."]);
+    assert.equal(opening.filter(role => role.facts.length).length, 1);
     const init = await get(handler, "status");
     await post(handler, "configure", {revision:init.policy_revision});
     const policy = (await get(handler, "status")).policy_revision;
@@ -77,7 +91,7 @@ async function verify() {
     assert.equal(timeline.entries[0].channel, "comms");
     await get(pilot, "gm-work", 403);
     const draft = (await get(handler, "gm-work")).handler_drafts[0].id;
-    await handler.getByText("Director work", {exact:true}).click();
+    await handler.getByRole("button", {name:"Refresh Director work"}).click();
     await handler.getByRole("button", {name:"Review Handler draft"}).click();
     await handler.getByLabel("Review reason").fill("Review the reply and the original listener.");
     await handler.getByRole("button", {name:"Approve Handler draft"}).click();
@@ -102,7 +116,7 @@ async function verify() {
     await post(pilot, "consent", {policy_revision:policy, consent:false});
     await get(reopened, "timeline", 403);
     process.stdout.write(JSON.stringify({
-      activity_login:true, wrong_owner_denied:true, facilitator_review_ui:true, handler_delivery_ui:true,
+      activity_login:true, opening_preview:true, wrong_owner_denied:true, facilitator_review_ui:true, handler_delivery_ui:true,
       engine_composer:true, rendered_scoped_delivery:true, reconnect_entries:2,
       closed_scene_report_count:receipt.handler_report_count, withdrawal_blocked:true,
     }) + "\n");

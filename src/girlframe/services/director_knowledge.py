@@ -20,7 +20,7 @@ from girlframe.ai.knowledge import (
     reference_text,
 )
 from girlframe.database import tables as t
-from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_actor_state import ActorRef, ActorView
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_cast import validate_role
 from girlframe.engine.m3_handler_consequences import active_handler
@@ -99,6 +99,9 @@ class DirectorKnowledgeService:
         )
 
     def _actors(self, c: Connection, scene: dict[str, Any]) -> tuple[ActorRef, ...]:
+        return tuple(actor.ref for actor in self._actor_views(c, scene))
+
+    def _actor_views(self, c: Connection, scene: dict[str, Any]) -> tuple[ActorView, ...]:
         canon = load_state(c, self.store.campaign_id)
         cast = next((x for x in canon.scene_casts if x.id == scene["id"] and x.open), None)
         refs = [x.actor for x in cast.roles] if cast else []
@@ -126,7 +129,7 @@ class DirectorKnowledgeService:
                     continue
                 if cast:
                     validate_role(cast, actor)
-                available[ref.token] = ref
+                available[ref.token] = actor
             except ValueError:
                 continue
         return tuple(available.values())

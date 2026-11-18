@@ -74,6 +74,76 @@ export function mountDirectorDesk(parent, scene, activityFetch) {
     return row;
   }
 
+  function renderOpening(opening) {
+    const row = card(body, "Campaign opening");
+    const draft = opening.draft ?? {};
+    const [locationLabel, location] = field("Opening location", draft.location);
+    const [situationLabel, situation] = field("Opening situation", draft.situation);
+    const [choiceLabel, choice] = field("First player decision", draft.first_choice);
+    const [pressureLabel, pressure] = field("GM-only pressure", draft.gm_pressure);
+    pressure.required = false;
+    row.append(locationLabel, situationLabel, choiceLabel, pressureLabel);
+    const facts = element("div");
+    const editors = [];
+    row.append(facts);
+
+    function addFact(fact = {}) {
+      const editor = element("fieldset");
+      editor.append(element("legend", "Starting fact"));
+      const [textLabel, factText] = field("Fact to share", fact.text);
+      const [sourceLabel, source] = field("How it was learned (GM notes)", fact.learned_from);
+      editor.append(textLabel, sourceLabel);
+      const recipients = element("select");
+      recipients.multiple = true;
+      const audience = element("label", "Who knows this? Leave empty for GM only.");
+      for (const role of opening.roles) {
+        const option = element("option", role.label);
+        option.value = role.id;
+        option.selected = fact.known_by?.includes(role.id) ?? false;
+        recipients.append(option);
+      }
+      audience.append(recipients);
+      const entry = {factText, source, recipients};
+      editors.push(entry);
+      editor.append(audience, button("Remove fact", () => {
+        editors.splice(editors.indexOf(entry), 1);
+        editor.remove();
+      }));
+      facts.append(editor);
+    }
+
+    for (const fact of draft.facts ?? []) addFact(fact);
+    if (opening.stale_audience) {
+      row.append(element("p", "The cast has changed. Review each audience before saving again."));
+    }
+    const fields = () => ({
+      location: location.value, situation: situation.value, first_choice: choice.value,
+      gm_pressure: pressure.value,
+      facts: editors.map(({factText, source, recipients}) => ({
+        text: factText.value, learned_from: source.value,
+        known_by: Array.from(recipients.selectedOptions, option => option.value),
+      })),
+    });
+    row.append(button("Add starting fact", () => {
+      if (editors.length >= 16) throw new Error("An opening can include up to 16 facts.");
+      addFact();
+    }), button("Save opening draft", async key => {
+      if (Array.from(row.querySelectorAll("input")).some(input => !input.reportValidity())) return;
+      await write("opening-save", {revision: opening.revision, draft: fields()}, key);
+      await refresh();
+    }, () => JSON.stringify(fields())));
+
+    if (opening.draft) {
+      const preview = card(row, "Who knows what");
+      preview.append(element("p", "The opening location, situation and first decision are planned for the full cast."));
+      for (const role of opening.previews) {
+        const list = element("ul");
+        for (const fact of role.facts) list.append(element("li", fact));
+        preview.append(element("h5", role.label), role.facts.length ? list : element("p", "No assigned facts."));
+      }
+    }
+  }
+
   function renderOwn(work) {
     const owned = card(body, "Your pending decisions");
     if (work.native.choices.length) {
@@ -200,15 +270,18 @@ export function mountDirectorDesk(parent, scene, activityFetch) {
   }
 
   async function refresh() {
-    const [work, gm] = await Promise.all([read("work", true), read("gm-work", true)]);
+    const [work, gm, opening] = await Promise.all([
+      read("work", true), read("gm-work", true), read("opening", true),
+    ]);
     body.replaceChildren();
+    if (opening) renderOpening(opening);
     if (!work) {
       body.append(element("p", "Scene work is unavailable. Check scene membership and consent."));
-      return;
+    } else {
+      renderHandler(work);
+      if (gm) renderFacilitator(gm);
+      renderOwn(work);
     }
-    renderHandler(work);
-    if (gm) renderFacilitator(gm);
-    renderOwn(work);
     body.append(button("Refresh Director work", refresh));
   }
 
