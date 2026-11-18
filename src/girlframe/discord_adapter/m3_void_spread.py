@@ -70,8 +70,16 @@ async def open_gain(
     identity: str,
 ) -> None:
     data = await asyncio.to_thread(service.get, viewer_from_interaction(interaction), identity)
-    if data["state"] == "resolved" or data["gain"]:
+    if data["state"] == "resolved":
         await reply(interaction, "The original Void alteration is recorded.")
+        return
+    if data["external_followup"]:
+        await reply(
+            interaction, "The alteration is recorded. The actual transformation is required."
+        )
+        return
+    if data["gain"]:
+        await reply(interaction, "The alteration is recorded. Resolve its original threshold work.")
         return
     if data["role"] == "unsupported":
         await reply(interaction, "This original role still needs its specific Void rules.")

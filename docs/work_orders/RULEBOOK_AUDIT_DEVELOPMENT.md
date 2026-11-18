@@ -290,3 +290,18 @@ Their captured exposures keep required work pending. This scope
 uses ordinary Asset rewriting. Special Storage, growth and other
 gain replacement options retain their separate source requirements.
 [Owner-confirmed High Void p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) · [Ordinary Void pp. 17–18](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=19) · [Occupant tests](../../tests/rules/test_strain_void_spread_gain.py)
+
+## Tenth checkpoint
+
+The base is `439193038a4b14e5a5649284c55f6a026fc16bfa`.
+New High Void footprints also apply ordinary Asset rewriting to living
+Rebel and Foundation Girls stored in the world roster. The original
+controller must still control the body when accessing or altering the
+Asset. A successful rewrite preserves damage, faction and the original
+Frame. A fully Void family records its transformation as pending.
+Tests use a Rebel introduced through the ordinary actor service and a
+synthetic Foundation roster entry. They exercise private native Inbox
+controls, unrelated owners, invalid Assets and repeating a saved gain.
+Existing captured scopes retain their original receipts. External
+transformations and the temporary Handler Girl-rules role still need
+their own native follow-through. [Ordinary Void p. 17](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=19) · [External and mixed-occupant tests](../../tests/rules/test_strain_void_spread_gain.py)

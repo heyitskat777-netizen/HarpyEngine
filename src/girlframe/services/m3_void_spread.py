@@ -19,7 +19,7 @@ from girlframe.engine.m3_handler_void import require as require_handler_void
 from girlframe.engine.m3_harpy_resources import assets as harpy_assets
 from girlframe.engine.m3_janus_storage import alter, effective_assets
 from girlframe.engine.m3_world import update
-from girlframe.engine.m3_world_state import WorldTag
+from girlframe.engine.m3_world_state import AdversaryPilot, WorldTag
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_actor_history import snapshot_profiles
 from girlframe.services.m3_actors import profiles
@@ -122,6 +122,19 @@ def _application(state: GameState, identity: str) -> rules.Application:
     if result is None:
         raise WorkflowError("Recover the original footprint application")
     return result
+
+
+def _external_girl(state: GameState, ref: ActorRef) -> AdversaryPilot | None:
+    if state.world is None or ref.kind != "external_pilot":
+        return None
+    return next(
+        (
+            pilot
+            for pilot in state.world.pilots
+            if pilot.id == ref.entity and pilot.alive and pilot.kind in ("rebel", "foundation")
+        ),
+        None,
+    )
 
 
 def _verify(
@@ -317,6 +330,8 @@ class SpreadService:
                     role = "girl"
                 elif person.ref.kind == "external_pilot" and person.girl == "harpy":
                     role = "harpy"
+                elif _external_girl(original, person.ref) is not None:
+                    role = "external_girl"
                 else:
                     role = "unsupported"
                 occupants.append(
@@ -423,7 +438,19 @@ class SpreadService:
             row, _, person = self._owned(c, viewer, state, identity)
             body = json.loads(row["body_json"])
             asset_choices: tuple[tuple[str, str], ...] = ()
-            if row["state"] == "pending" and not body.get("gain"):
+            if (
+                row["state"] == "pending"
+                and not body.get("gain")
+                and person.role in ("girl", "harpy", "external_girl")
+            ):
+                current = resolve(
+                    state,
+                    person.actor,
+                    profiles(c, self.store.campaign_id),
+                    require_current_profile=False,
+                )
+                if current.controller != viewer.user_id:
+                    raise WorkflowError("Recover the original occupant's authority")
                 if person.role == "girl":
                     asset_choices = tuple(
                         (x.id, x.name) for x in effective_assets(state, person.actor) if not x.void
@@ -432,11 +459,17 @@ class SpreadService:
                     asset_choices = tuple(
                         (x.id, x.name) for x in harpy_assets(state, person.actor) if not x.void
                     )
+                else:
+                    external = _external_girl(state, person.actor)
+                    if external is None:
+                        raise WorkflowError("Recover this original external Girl body")
+                    asset_choices = tuple((x.id, x.name) for x in external.assets if not x.void)
             return dict(
                 role=person.role,
                 revision=state.revision,
                 state=row["state"],
                 gain=body.get("gain"),
+                external_followup=body.get("external_followup"),
                 assets=asset_choices,
                 actor=person.label,
             )
@@ -473,6 +506,7 @@ class SpreadService:
             )
             event = str(uuid4())
             families: tuple[str, ...] = ()
+            external_followup: str | None = None
             if person.role == "npc":
                 if (
                     pick not in MANIFESTATIONS
@@ -533,6 +567,26 @@ class SpreadService:
                     ),
                     event=event,
                 )
+            elif person.role == "external_girl":
+                external = _external_girl(state, person.actor)
+                if current.controller != viewer.user_id or external is None or state.world is None:
+                    raise WorkflowError("Recover this original external Girl body and authority")
+                selected = next((x for x in external.assets if x.id == pick and not x.void), None)
+                if selected is None:
+                    raise WorkflowError("Choose one actual uncorrupted external Girl Asset")
+                altered = tuple(
+                    x.model_copy(update=dict(void=True, description=account.strip()))
+                    if x.id == selected.id
+                    else x
+                    for x in external.assets
+                )
+                if all(x.void for x in altered if x.family == selected.family):
+                    external_followup = selected.family
+                updated = external.model_copy(update=dict(assets=altered))
+                state.world = update(
+                    state.world,
+                    pilots=tuple(updated if x.id == external.id else x for x in state.world.pilots),
+                )
             else:
                 raise WorkflowError("Recover this original role's specific Void gain workflow")
             thresholds = tuple(f"{identity}:{x}" for x in families)
@@ -565,15 +619,18 @@ class SpreadService:
                     ),
                     event,
                 )
+            if external_followup:
+                body["external_followup"] = external_followup
+            pending = bool(thresholds or external_followup)
             self.strain._save(
                 c,
                 row,
                 event,
                 body | dict(gain=event, pick=pick, account=account.strip(), thresholds=thresholds),
-                resolved=not thresholds,
+                resolved=not pending,
             )
             settle(c, self.strain, state, record.id, event)
-            return dict(id=identity, state="pending" if thresholds else "resolved")
+            return dict(id=identity, state="pending" if pending else "resolved")
 
         return self.strain.missions._write(
             viewer,

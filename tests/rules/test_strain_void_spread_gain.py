@@ -23,8 +23,9 @@ from girlframe.engine.m3_strain_effects import Choice
 from girlframe.engine.m3_void_spread import applications
 from girlframe.engine.m3_void_state import HarpyIdentity
 from girlframe.engine.m3_world import update
-from girlframe.engine.m3_world_state import AdversaryPilot, Asset, Npc
+from girlframe.engine.m3_world_state import AdversaryPilot, Asset, Faction, Npc
 from girlframe.services.inbox import InboxService
+from girlframe.services.m3_actors import ActorService
 from girlframe.services.m3_handler_void import HandlerVoidService
 from girlframe.services.m3_harpy_defeat import HarpyDefeatService
 from girlframe.services.m3_npc_roles import NpcRoleService
@@ -36,7 +37,7 @@ from girlframe.services.m3_world import WorldService
 from girlframe.services.onboarding import WorkflowError
 
 
-def footprint(ledger, *, threshold=False):
+def footprint(ledger, *, threshold=False, external=False):
     strain, game, _, period, identity = strain_source(ledger, 2)
     world = WorldService(strain.missions)
     world.npc(
@@ -67,13 +68,64 @@ def footprint(ledger, *, threshold=False):
         ),
     )
     roles.respond(OTHER, "accept-void-director", offered["id"], state(game).revision, "accept")
+    if external:
+        world.faction(
+            ADMIN,
+            "area-rebel-faction",
+            state(game).revision,
+            Faction(id="area-rebels", name="March Rebels", kind="rebel", cells=((0, 1),)),
+        )
+        ActorService(strain.missions).introduce_rebel(
+            ADMIN,
+            "area-rebel-pilot",
+            state(game).revision,
+            AdversaryPilot(
+                id="inside-rebel",
+                name="Rebel Pilot",
+                kind="rebel",
+                girl="MOCKINGBIRD",
+                frame="JANUS",
+                faction="area-rebels",
+                controller=ADMIN.user_id,
+                cell=(0, 1),
+                assets=(
+                    Asset(
+                        id="scarf", name="Scarf", family="girl", description="Torn", damaged=True
+                    ),
+                    Asset(id="patch", name="Patch", family="girl", description="Hand stitched"),
+                ),
+            ),
+            actual=True,
+            account="The Rebel is present in the affected area.",
+        )
     harpy = ActorRef(kind="external_pilot", entity="inside-harpy")
     with ledger.transaction() as connection:
         canon = state(game)
+        external_pilots = (
+            (
+                AdversaryPilot(
+                    id="inside-foundation",
+                    name="Foundation Pilot",
+                    kind="foundation",
+                    girl="MOCKINGBIRD",
+                    frame="JANUS",
+                    controller=OTHER.user_id,
+                    cell=(0, 0),
+                    assets=(
+                        Asset(
+                            id="gun", name="Frame weapon", family="frame", description="Twin barrel"
+                        ),
+                    ),
+                ),
+            )
+            if external
+            else ()
+        )
         canon.world = update(
             canon.world,
             pilots=(
                 *canon.world.pilots,
+                *external_pilots,
                 AdversaryPilot(
                     id=harpy.entity,
                     name="Original Harpy",
@@ -298,3 +350,33 @@ def test_area_applies_normal_girl_npc_and_handler_void_to_original_occupants(led
         assert VoidService(ledger).get(PLAYER, required)["stage"] == "prevented"
     assert effects.get(ADMIN, identity)["state"] == "resolved"
     assert activate(cycle, game, period)["phase"] == "active"
+
+
+def test_external_girls_use_owned_assets_and_hold_real_threshold_work(ledger):
+    strain, game, period, identity, effects = footprint(ledger, external=True)
+    native(ledger, ADMIN, 85000, identity, dict(apply=("yes",)), root=effects)
+    service = SpreadService(strain)
+    (record,) = applications(state(game))
+    people = {x.actor.entity: x for x in record.occupants}
+    rebel, foundation = (people["inside-rebel"], people["inside-foundation"])
+    assert rebel.role == foundation.role == "external_girl"
+    with pytest.raises(WorkflowError, match="original occupant"):
+        service.get(PLAYER, rebel.work)
+    with pytest.raises(WorkflowError, match="actual uncorrupted external Girl Asset"):
+        service.gain(OTHER, "wrong-asset", foundation.work, state(game).revision, "scarf", "Void")
+
+    native(ledger, ADMIN, 85010, rebel.work, dict(pick=("scarf",), account="Threads warp."))
+    native(ledger, OTHER, 85020, foundation.work, dict(pick=("gun",), account="Metal breathes."))
+    canon = state(game)
+    rebel_data = next(x for x in canon.world.pilots if x.id == rebel.actor.entity)
+    foundation_data = next(x for x in canon.world.pilots if x.id == foundation.actor.entity)
+    assert rebel_data.assets[0].void and rebel_data.assets[0].damaged
+    assert not rebel_data.assets[1].void and rebel_data.faction == "area-rebels"
+    assert service.get(ADMIN, rebel.work)["state"] == "resolved"
+    assert foundation_data.assets[0].void and foundation_data.frame == "JANUS"
+    reopened = SpreadService(strain).get(OTHER, foundation.work)
+    assert reopened["external_followup"] == "frame" and reopened["state"] == "pending"
+    with pytest.raises(WorkflowError, match="original pending Void gain"):
+        service.gain(OTHER, "repeat", foundation.work, canon.revision, "gun", "Twice")
+    with pytest.raises(WorkflowError, match="Resolve actual Strain"):
+        activate(CycleService(strain.periods), game, period)

@@ -12,7 +12,7 @@ from girlframe.engine.rolls import Face
 
 RULE = "strain.void.high.2.1"
 KIND = "void_spread_application"
-Role = Literal["girl", "handler", "npc", "harpy", "unsupported"]
+Role = Literal["girl", "handler", "npc", "harpy", "external_girl", "unsupported"]
 
 
 class Spread(Model):
