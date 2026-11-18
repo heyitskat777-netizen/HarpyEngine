@@ -305,3 +305,16 @@ controls, unrelated owners, invalid Assets and repeating a saved gain.
 Existing captured scopes retain their original receipts. External
 transformations and the temporary Handler Girl-rules role still need
 their own native follow-through. [Ordinary Void p. 17](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=19) · [External and mixed-occupant tests](../../tests/rules/test_strain_void_spread_gain.py)
+
+## Cascade verification
+
+The base is `a39eda9d830aeeb3b650f80d97c74530159cb1f1`.
+Run one High 6, column 2 cascade each for Void, Rebellion and Budget.
+Each rehearsal keeps the parent die, uses a separate saved die and
+Handler choice for both children, and applies both children's printed
+effects through the normal services. Off-Duty remains held with one die
+outstanding and again with a chosen but unperformed child. The original
+Handler can finish that effect after reopening the service. The exact
+submission replays its receipt. The untouched future obligations, such
+as the Rebel protest's next-mission deadline, remain recorded.
+[Void p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) · [Rebellion p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) · [Budget p. 149](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=151) · [Cascade tests](../../tests/rules/test_strain_cascade_completion.py)
