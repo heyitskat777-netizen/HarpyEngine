@@ -622,6 +622,28 @@ current synthetic scene membership, consent and safety guard.
    scene handoff; new mission acceptance and dispatch still require their own
    native commands. Preserve the changed Status order and original characters.
 
+## Reviewed model adapters in the local Activity lab
+
+The `--p2-routes` overlay adds a private Director work panel to the synthetic
+Activity. The facilitator can preview, approve for the original Pilot, or reject
+a Handler draft. The actual Handler previews and delivers approved work. The
+same engine timeline projects the delivery to its approved audience. The native
+Handler sheet is available through `handler-sheet` to the appointed Handler in
+the scene. The facilitator's roster shows living campaign NPCs and whether each
+is cast in the scene or was introduced through a completed Support Play.
+
+`P2Scene.model_fixture` is the server-side entry point for synthetic observation.
+It accepts separately configured Handler and Director clients. Keep all provider
+credentials and model selection server-side. The default lab uses an in-process
+Handler fixture. Optional Director generation takes actual native Play, observed
+input, or cast actor IDs. Existing engine review and owner confirmation are
+required for outcomes and additions. Table choices stay in the native GM flow.
+NPC candidate dialogue stays in private owner review. Keep both optional
+response-need generation and draft generation behind existing role checks.
+
+See the [model adapter results](../../reports/P2_MODEL_ADAPTERS.md) for the
+verified browser path and the remaining trial work.
+
 ## Retry, privacy and acceptance
 
 - Authenticate the actual Discord Activity session server-side. Persona switching

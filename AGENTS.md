@@ -1,10 +1,19 @@
+> Latest owner direction: proceed with Handler-first model wiring and verify native
+> Handler sheets and NPC authority. See reports/P2_MODEL_ADAPTERS.md. The local
+> Activity desk reviews/delivers scoped Handler replies. Preserve WAIT, consent,
+> original recipients and native owner confirmation. Model-generated Play rulings,
+> worldbuilding and actor reactions use separate typed proposals. Table selections
+> stay manual. Living NPCs are in the private GM roster; only actual scene cast may
+> react. Native Support keeps the actual Handler as controller. NPC reaction drafts
+> are private. Use inert transports until provider evaluation is authorized.
+>
 > Latest owner direction: use an engine timeline, share eligible scene knowledge
 > only on manual close, and route GM work directly from native Plays.
 > See reports/P2_ACTIVITY_SCENE_PORT.md. Preserve closed-source consent and source
 > provenance, original participant transcript visibility, typed GM work by actual
 > action ID, and original-owner confirmation. Offline Activity overlay renders
 > Relay's engine timeline. Facilitator/closeout/ruling routes and browser smoke
-> passed locally; dedicated role UI and real Discord sign-in acceptance remain.
+> passed locally. The follow-up above adds the dedicated local Handler review UI.
 >
 > Earlier owner direction: make Handler sheet types shape how and when they speak.
 > See reports/P2_HANDLER_CHARACTER.md. Native activation selects the playbook.

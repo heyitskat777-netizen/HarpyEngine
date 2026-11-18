@@ -6,6 +6,7 @@ from pydantic import Field, JsonValue
 
 from girlframe.ai.contracts import Contract
 from girlframe.ai.director import DirectorContext
+from girlframe.ai.director_fronts import Front
 from girlframe.ai.knowledge import KnowledgeSource
 from girlframe.engine.m3_world_development import DevelopmentDraft
 from girlframe.engine.m3_world_state import Faction, Npc
@@ -40,6 +41,7 @@ class WorldbuildingPacket(Contract):
     frontier: int
     native_guard: str
     revision: str
+    current_fronts: tuple[Front, ...] = Field(default=(), max_length=12, exclude_if=lambda x: not x)
     instructions: str = (
         "Propose one grounded current-scene development, ordinary NPC or faction. "
         "Cite source and native, plus actual reference:<id> evidence used. New reports "

@@ -39,6 +39,7 @@ def prepare(source: Path, output: Path, *, p2_routes: bool = False) -> Path:
     for adapter in ADAPTERS.glob("*.py"):
         shutil.copyfile(adapter, lab / adapter.name)
     if p2_routes:
+        shutil.copyfile(ADAPTERS / "p2-desk.js", lab / "p2-desk.js")
         subprocess.run(
             ["patch", "--batch", "--fuzz=0", "-p1", "-i", str(ADAPTERS / "p2_lab_routes.patch")],
             cwd=lab,

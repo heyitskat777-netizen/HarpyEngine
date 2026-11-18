@@ -1,7 +1,11 @@
 """Actual saved Handler sheets, scoped personal cues, and source-bound follow-through."""
 
+import json
+
 import pytest
+from test_director_activity_scene import P2Scene
 from test_director_continuity import roles
+from test_director_model_adapters import Recorder
 from test_director_observation import observed as observed
 from test_director_observation import send
 from test_handler_creation import agree, complete, ready, save
@@ -9,7 +13,12 @@ from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger
 from test_m2_game import state, tick
 
-from girlframe.ai.conversation import ConversationReply, HandlerNeedProposal, PeerResponse
+from girlframe.ai.conversation import (
+    ConversationReply,
+    HandlerNeedProposal,
+    HandlerRequest,
+    PeerResponse,
+)
 from girlframe.ai.observation import ObservationPolicy
 from girlframe.services.director_context import DirectorContextService
 from girlframe.services.director_conversation import DirectorConversationService
@@ -145,7 +154,29 @@ def test_all_printed_types_shape_the_saved_sheet_prompt_and_intervention(ledger,
     for viewer in (ADMIN, PLAYER, OTHER):
         observer.set_consent(viewer, f"consent:{viewer.user_id}", scene, 1, consent=True)
 
-    svc, performer = service(observer)
+    performer = Handler()
+
+    def reply(packet):
+        request = HandlerRequest.model_validate_json(json.dumps(packet))
+        return performer.respond(request).model_dump(
+            mode="json",
+            exclude={
+                "route",
+                "provider",
+                "schema_version",
+                "gm_decision",
+                "play_id",
+                "application",
+            },
+        )
+
+    recorder = Recorder(reply)
+    app = P2Scene.model_fixture(DirectorContextService(observer), recorder.client())
+    svc = app.session.conversation
+    saved_sheet = app.read(ADMIN, scene, "handler-sheet")
+    assert saved_sheet["playbook_profile"] == preview["playbook_profile"]
+    with pytest.raises(WorkflowError):
+        app.read(PLAYER, scene, "handler-sheet")
     cue, speech, expected = VOICES[playbook]
     _, source = send(observer, scene, "cue", text=speech, fictional_channel="comms")
     assert (
@@ -176,6 +207,7 @@ def test_all_printed_types_shape_the_saved_sheet_prompt_and_intervention(ledger,
     assert route["handler_decision"]["decision"]["reason"] == "reviewed_character_cue"
     handler, pilot = roles(observer, scene)
     assert packet.request.context.actor == handler
+    assert len(recorder.requests) == 1
     assert (
         performer.requests[-1].playbook_profile.model_dump(mode="json")
         == preview["playbook_profile"]

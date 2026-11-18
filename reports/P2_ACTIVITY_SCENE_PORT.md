@@ -43,8 +43,9 @@ The offline transport patch mounts recipient and facilitator routes under
 the existing lab session middleware. Browser-facing endpoints preserve
 command keys and expected revisions. The integrated Relay composer and
 transcript are present. Facilitator review, closeout, and typed ruling actions
-are available through the adapter routes. Dedicated Activity controls for
-those actions and a real Discord OAuth client pass remain open.
+are available through the adapter routes. The [model adapter follow-up](P2_MODEL_ADAPTERS.md)
+adds the local Handler review and delivery controls. Real Discord OAuth acceptance
+remains open.
 
 ## Reproduction
 

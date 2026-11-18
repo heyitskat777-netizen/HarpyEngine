@@ -14,6 +14,7 @@ from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.services.director_context import DirectorContextService
 from girlframe.services.director_knowledge import DirectorKnowledgeService
 from girlframe.services.director_observation import _digest
+from girlframe.services.m2_state import load_state
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -490,6 +491,40 @@ class DirectorReactionService:
                 "Review neglected opportunities; no required appearances or automatic advancement."
             ),
         )
+
+    def npc_roster(self, gm: GuildViewer, scene: str) -> list[dict[str, Any]]:
+        """Canonical living NPCs for the GM, with current cast and native Support origins."""
+        with self.store.engine.connect() as c:
+            self._scope(c, gm, scene)
+            native = load_state(c, self.store.campaign_id)
+            if native.world is None:
+                return []
+            present = {
+                actor.entity
+                for actor in DirectorKnowledgeService(self.context)._actors(
+                    c, self.observer._scene(c, scene)
+                )
+                if actor.kind == "npc"
+            }
+            support = {
+                play.effect.npc.id: play.id
+                for play in native.handler_plays
+                if play.state == "complete"
+                and play.selected == "support"
+                and play.effect
+                and play.effect.npc
+            }
+            return [
+                dict(
+                    id=npc.id,
+                    name=npc.name,
+                    controller=str(npc.controller),
+                    present=npc.id in present,
+                    support_play=support.get(npc.id),
+                )
+                for npc in native.world.npcs
+                if npc.alive
+            ]
 
     def review(
         self,

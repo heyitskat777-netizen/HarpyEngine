@@ -18,7 +18,15 @@
  TRANSCRIPT_ROUTE = re.compile(r"/api/rooms/(relay|[0-9a-f]{16})/transcript")
  COMMUNICATION_ROUTE = re.compile(
      r"/api/communications/((?:pilot|handler)-[0-9a-z-]{1,80})"
-@@ -379,7 +383,10 @@
+@@ -78,6 +82,7 @@
+     "mission-desk.js",
+     "battlefield-ui.js",
+     "communications-ui.js",
++    "p2-desk.js",
+     "character-sheet-ui.js",
+     "character-draft-ui.js",
+     "character-sheets/harpyengine-sheets.mjs",
+@@ -379,7 +384,10 @@
      bound_roster=False,
      campaign_registry=None,
      campaign_bot_token=None,
@@ -29,7 +37,7 @@
      if bound_roster and not discord:
          raise ValueError("The private roster requires Discord sign-in.")
      if discord and discord.config.tester_role_ids and not bound_roster:
-@@ -446,10 +453,23 @@
+@@ -446,10 +454,23 @@
          )
          if prepare_test_battlefield is not None:
              prepare_test_battlefield(battlefield)
@@ -53,7 +61,14 @@
      sessions: dict[str, tuple[str, GuildViewer]] = {}
      sdk = (
          (RUNTIME / "discord-sdk" / "embedded-app.js").read_bytes() if discord else None
-@@ -773,6 +793,17 @@
+@@ -767,12 +788,24 @@
+                         "allow_dm": discord.config.allow_dm if discord else False,
+                         "battlefield": battlefield is not None,
+                         "bound_roster": bound_roster,
++                        "director_scene": director_scene if director else None,
+                         "campaign_switcher": catalog is not None,
+                         "tester_role_gate": bool(
+                             discord and discord.config.tester_role_ids
                          ),
                      },
                  )
@@ -71,7 +86,7 @@
              elif path == "/api/presence" and bound_roster:
                  try:
                      _, viewer = self.session()
-@@ -874,7 +905,33 @@
+@@ -874,7 +907,33 @@
              elif match := TRANSCRIPT_ROUTE.fullmatch(path):
                  try:
                      _, viewer = self.session()
@@ -106,7 +121,7 @@
                  except SignInError as error:
                      self.send_json(error.status, {"error": str(error)})
                  except WorkflowError as error:
-@@ -936,6 +993,19 @@
+@@ -936,6 +995,19 @@
                  campaign.battlefield,
              )
              handler = setup.handler
@@ -126,7 +141,7 @@
              if match := COMMUNICATION_ROUTE.fullmatch(path):
                  try:
                      key = self.headers.get("Idempotency-Key", "")
-@@ -1062,7 +1132,17 @@
+@@ -1062,7 +1134,17 @@
                          else nullcontext()
                      )
                      with lock:
@@ -145,7 +160,7 @@
                      self.send_json(HTTPStatus.OK, receipt)
                  except (TypeError, ValueError, UnicodeError):
                      self.send_json(
-@@ -1113,9 +1193,11 @@
+@@ -1113,9 +1195,11 @@
      with ThreadingHTTPServer(("127.0.0.1", port), Handler) as server:
          server.origin_host = f"127.0.0.1:{server.server_port}"
          server.origin = f"http://{server.origin_host}"
@@ -157,7 +172,7 @@
                      "origin": server.origin,
                      "pilots": {}
                      if discord
-@@ -1173,7 +1255,10 @@
+@@ -1173,7 +1257,10 @@
      parser.add_argument("--port", type=int, default=8799)
      parser.add_argument("--audit", action="store_true")
      parser.add_argument("--stop-on-input-close", action="store_true")
@@ -168,7 +183,7 @@
      if args.allow_dm and not args.discord:
          parser.error("--allow-dm requires --discord.")
      if args.bound_roster and (not args.discord or args.audit):
-@@ -1204,6 +1289,7 @@
+@@ -1204,6 +1291,7 @@
              args.stop_on_input_close,
              discord,
              bound_roster=args.bound_roster,
@@ -253,3 +268,16 @@
        return {date:entry.created * 1000, id:entry.id, row};
      });
      for (const receipt of receipts) {
+--- a/index.html
++++ b/index.html
+@@ -1244,6 +1244,10 @@
+     if (!(await restoreCampaignSwitch())) await connectDiscord(config.client_id, config.allow_dm);
+   }
+   else await refresh();
++  if (config.director_scene) {
++    const {mountDirectorDesk} = await import("/p2-desk.js");
++    mountDirectorDesk(document.querySelector(".workbench"), config.director_scene, activityFetch);
++  }
+ }
+ start().then(() => {
+   clearTimeout(startupTimer);

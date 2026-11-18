@@ -829,6 +829,7 @@ class DirectorConversationService:
                 "id": identity,
                 "request": draft["request"],
                 "reply": draft["reply"],
+                "source_actor": draft["actor"],
                 "status": status,
                 "semantic_grounding": "gm_review_required",
                 "effects_applied": False,

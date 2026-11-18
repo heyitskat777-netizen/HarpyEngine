@@ -5,17 +5,54 @@ from typing import Any, cast
 
 from girlframe.ai.gm_outcomes import OutcomeProposal
 from girlframe.ai.gm_protocol import TaskFrame
+from girlframe.ai.model_adapters import (
+    ModelHandler,
+    ModelHandlerNeeds,
+    ModelOutcomes,
+    ModelReactions,
+    ModelWorldbuilding,
+)
+from girlframe.ai.model_transport import OpenAIResponses
 from girlframe.ai.observation import AppendSceneInput, ObservationPolicy
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.services.director_context import DirectorContextService
+from girlframe.services.director_conversation import DirectorConversationService
 from girlframe.services.director_session import DirectorSessionService
-from girlframe.services.gm_outcomes import SourceKind
+from girlframe.services.gm_outcomes import GMOutcomeService, SourceKind
+from girlframe.services.m2_game import GameService
+from girlframe.services.m2_state import load_state
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
 
 class P2Scene:
-    def __init__(self, session: DirectorSessionService):
+    def __init__(self, session: DirectorSessionService, *, models: OpenAIResponses | None = None):
         self.session = session
+        self.models = models
+
+    @classmethod
+    def model_fixture(
+        cls,
+        context: DirectorContextService,
+        handler: OpenAIResponses,
+        director: OpenAIResponses | None = None,
+    ) -> "P2Scene":
+        """Explicit server-side wiring for synthetic observation."""
+        context.observations._scope()
+        conversation = DirectorConversationService(
+            context,
+            handler=ModelHandler(handler),
+            handler_mode="reviewed",
+        )
+        outcomes = GMOutcomeService(
+            context,
+            ModelOutcomes(director) if director else None,
+            require_response_scope=True,
+        )
+        return cls(
+            DirectorSessionService(context, conversation=conversation, outcomes=outcomes),
+            models=director,
+        )
 
     def submit(self, viewer: GuildViewer, scene: str, command: AppendSceneInput) -> dict[str, Any]:
         result = self.session.submit(viewer, scene, command)
@@ -35,10 +72,28 @@ class P2Scene:
 
     def gm_work(self, viewer: GuildViewer, scene: str) -> dict[str, Any]:
         work = self.session.work(viewer, scene, gm=True)
+        with self.session.store.engine.connect() as c:
+            self.session.outcomes._scope(c, viewer, scene, gm=True)
+            row = self.session.observer._scene(c, scene, viewer)
+            state = load_state(c, self.session.store.campaign_id)
+            names = {npc.id: npc.name for npc in state.world.npcs} if state.world else {}
+            names.update({key: sheet.callsign for key, sheet in state.sheets.items()})
+            targets = [
+                {
+                    "actor": actor.model_dump(mode="json"),
+                    "label": "Handler"
+                    if actor.kind == "handler"
+                    else names.get(actor.entity, actor.entity),
+                }
+                for actor in self.session.knowledge._actors(c, row)
+            ]
         return {
             "outcome_sources": work["outcome_sources"],
             "handler_drafts": work["handler_drafts"],
             "response_requests": work["response_requests"],
+            "npc_roster": self.session.reactions.npc_roster(viewer, scene),
+            "model_rulings": self.session.outcomes.provider is not None,
+            "response_targets": targets,
         }
 
     def open_ruling(
@@ -138,6 +193,16 @@ class P2Scene:
             return self.session.conversation.delivery.preview(viewer, scene, identity)
         if route == "handler-draft" and identity is not None:
             return self.session.conversation.private_handler(viewer, scene, identity)
+        if route == "world-draft" and identity is not None:
+            return self.session.worldbuilding.private(viewer, scene, identity)
+        if route == "npc-owner-review" and identity is not None:
+            return self.session.reactions.owner_review(viewer, scene, identity)
+        if route == "handler-sheet":
+            from girlframe.services.m3_handler_creation import HandlerCreationService
+
+            with self.session.store.engine.connect() as c:
+                self.session.observer._authorize_input(c, viewer, scene, "handler")
+            return HandlerCreationService(self.session.store).view(viewer)
         raise ValueError("Unknown scene view.")
 
     def write(
@@ -217,38 +282,102 @@ class P2Scene:
             )
         if route == "handler-deliver" and data.keys() == {"draft"}:
             return self.deliver_handler(viewer, key, scene, data["draft"])
+        if route == "ruling-generate" and data.keys() == {"request"}:
+            return self.session.outcomes.propose(viewer, key, scene, data["request"])
+        if route == "handler-reject" and data.keys() == {"draft", "reason"}:
+            return self.session.conversation.review_handler(
+                viewer,
+                key,
+                scene,
+                data["draft"],
+                "reject",
+                data["reason"],
+            )
+        if route == "world-open" and data.keys() == {"source_id"}:
+            return self.session.worldbuilding.open(viewer, key, scene, data["source_id"])
+        if route == "reaction-open" and data.keys() == {"source_id", "actor"}:
+            actor = ActorRef.model_validate(data["actor"])
+            if actor.kind != "npc":
+                raise ValueError("Use an actual cast NPC for this reaction.")
+            return self.session.reactions.open(
+                viewer,
+                key,
+                scene,
+                actor,
+                data["source_id"],
+            )
+        if route == "handler-need-open" and data.keys() == {"source_id"}:
+            return self.session.conversation.open_handler_need(
+                viewer, key, scene, data["source_id"]
+            )
+        if self.models is not None and data.keys() == {"request"}:
+            request = data["request"]
+            if route == "world-generate":
+                return self.session.worldbuilding.generate(
+                    viewer,
+                    key,
+                    scene,
+                    request,
+                    ModelWorldbuilding(self.models),
+                )
+            if route == "reaction-generate":
+                return self.session.reactions.generate(
+                    viewer,
+                    key,
+                    scene,
+                    request,
+                    ModelReactions(self.models),
+                )
+            if route == "handler-need-generate":
+                return self.session.conversation.generate_handler_need(
+                    viewer,
+                    key,
+                    scene,
+                    request,
+                    ModelHandlerNeeds(self.models),
+                )
         raise ValueError("Unknown scene operation or malformed fields.")
 
 
-def local_fixture_director(game: Any) -> P2Scene:
-    """Configure the disposable Activity lab with a reviewed, local response fixture."""
-    from girlframe.ai.conversation import ConversationReply, HandlerRequest
-    from girlframe.services.director_context import DirectorContextService
-    from girlframe.services.director_conversation import DirectorConversationService
+def local_fixture_director(game: GameService) -> P2Scene:
+    """Exercise the real model contracts through a disposable, no-network lab transport."""
+    from urllib.request import Request
+
+    from girlframe.ai.model_transport import ModelLimits
     from girlframe.services.director_observation import DirectorObservationService
 
-    class LocalHandler:
-        def respond(self, request: HandlerRequest) -> ConversationReply:
-            refs = request.response_need.source_refs if request.response_need else ()
-            return ConversationReply(
-                route="handler",
-                provider="reviewed-handler-v1",
-                disposition="clarification",
-                text="I can stay here while you check the current report.",
-                source_refs=refs,
-                handler_action="I set my own report pad on the table.",
-            )
+    def reply(request: Request, timeout: float) -> bytes:
+        if not isinstance(request.data, bytes):
+            raise ValueError("Fixture requires a JSON request body.")
+        envelope = json.loads(request.data)
+        packet = json.loads(envelope["input"][1]["content"])["packet"]
+        result = {
+            "disposition": "clarification",
+            "source_refs": packet["response_need"]["source_refs"],
+            "text": "I can stay here while you check the current report.",
+            "handler_action": "I set my own report pad on the table.",
+        }
+        return json.dumps(
+            {
+                "status": "completed",
+                "output": [
+                    {
+                        "type": "message",
+                        "role": "assistant",
+                        "content": [{"type": "output_text", "text": json.dumps(result)}],
+                    }
+                ],
+            }
+        ).encode()
 
     observer = DirectorObservationService(game.store, synthetic=True)
     observer.game = game
-    context = DirectorContextService(observer)
-    return P2Scene(
-        DirectorSessionService(
-            context,
-            conversation=DirectorConversationService(
-                context,
-                handler=LocalHandler(),
-                handler_mode="reviewed",
-            ),
-        )
+    return P2Scene.model_fixture(
+        DirectorContextService(observer),
+        OpenAIResponses(
+            model="local-fixture",
+            api_key="offline-fixture",
+            limits=ModelLimits(attempts=1000, output_tokens=600),
+            post=reply,
+        ),
     )

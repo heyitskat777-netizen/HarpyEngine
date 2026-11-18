@@ -84,6 +84,12 @@ def test_front_world_sources_disclose_only_known_fragments_and_preserve_retry_hi
     assert fronts.save(ADMIN, "front", scene, expected, value) == saved
     assert len(records(state(game))) == 1
     assert "PRIVATE_FRONT_HYPOTHESIS" in json.dumps(fronts.view(ADMIN, scene))
+    dormant = draft(evidence, key="paused-maintenance", status="dormant")
+    fronts.save(ADMIN, "dormant", scene, state(game).revision, dormant)
+    _, source = send(observer, scene, "next-world-source", text="GM, frame the next choice.")
+    request = world.open(ADMIN, "front-world-context", scene, source.source_id)
+    packet = world.packet(ADMIN, scene, request["id"])
+    assert [front.id for front in packet.current_fronts] == [saved["id"]]
     handler, pilot = roles(observer, scene)
     assert fronts.view(ADMIN, scene, actor=handler)["fragments"] == []
     assert fronts.view(PLAYER, scene, actor=pilot)["fragments"] == []

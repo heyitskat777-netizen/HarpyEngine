@@ -77,10 +77,15 @@ async function verify() {
     assert.equal(timeline.entries[0].channel, "comms");
     await get(pilot, "gm-work", 403);
     const draft = (await get(handler, "gm-work")).handler_drafts[0].id;
-    await post(handler, "handler-approve", {
-      draft, reason:"Review the reply and the original listener.", recipients:[timeline.entries[0].actor],
-    });
+    await handler.getByText("Director work", {exact:true}).click();
+    await handler.getByRole("button", {name:"Review Handler draft"}).click();
+    await handler.getByLabel("Review reason").fill("Review the reply and the original listener.");
+    await handler.getByRole("button", {name:"Approve Handler draft"}).click();
+    await handler.getByRole("button", {name:"Preview Handler reply"}).click();
+    await handler.getByText("I set my own report pad on the table.", {exact:true}).waitFor();
     await post(pilot, "handler-deliver", {draft}, randomUUID(), 409);
+    await handler.getByRole("button", {name:"Deliver Handler reply"}).click();
+    await handler.getByRole("heading", {name:"Handler delivery"}).waitFor({state:"hidden"});
     const deliveryKey = randomUUID();
     const delivery = await post(handler, "handler-deliver", {draft}, deliveryKey);
     assert.deepEqual(await post(handler, "handler-deliver", {draft}, deliveryKey), delivery);
@@ -97,7 +102,7 @@ async function verify() {
     await post(pilot, "consent", {policy_revision:policy, consent:false});
     await get(reopened, "timeline", 403);
     process.stdout.write(JSON.stringify({
-      activity_login:true, wrong_owner_denied:true,
+      activity_login:true, wrong_owner_denied:true, facilitator_review_ui:true, handler_delivery_ui:true,
       engine_composer:true, rendered_scoped_delivery:true, reconnect_entries:2,
       closed_scene_report_count:receipt.handler_report_count, withdrawal_blocked:true,
     }) + "\n");

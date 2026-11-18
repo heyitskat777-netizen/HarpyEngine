@@ -4,34 +4,19 @@ import json
 from uuid import uuid4
 
 import pytest
+from test_director_activity_scene import P2Scene
+from test_director_model_adapters import Recorder
 from test_gm_outcome_consumers import attach, consume
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger
 from test_m2_game import state
 
-from girlframe.ai.conversation import ConversationReply
 from girlframe.ai.gm_outcomes import HandlerOutcome
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_handler_play_state import BASIC, EXTRA, Effect
 from girlframe.engine.m3_world_state import Npc
-from girlframe.services.director_conversation import DirectorConversationService
 from girlframe.services.m3_handler_plays import HandlerPlayService
 from girlframe.services.onboarding import WorkflowError
-
-
-class Offer:
-    def __init__(self, play, account):
-        self.play, self.account = play, account
-
-    def respond(self, request):
-        return ConversationReply(
-            route="handler",
-            provider="reviewed-handler-v1",
-            disposition="answer",
-            text=self.account,
-            source_refs=request.response_need.source_refs,
-            handler_play_offer=self.play,
-        )
 
 
 def open_offer(service, scene, game, play, account, native_grant=None):
@@ -39,9 +24,15 @@ def open_offer(service, scene, game, play, account, native_grant=None):
 
     context = service.context
     observer = context.observations
-    conversation = DirectorConversationService(
-        context, handler=Offer(play, account), handler_mode="reviewed"
+    provider = Recorder(
+        lambda packet: {
+            "disposition": "answer",
+            "text": account,
+            "source_refs": packet["response_need"]["source_refs"],
+            "handler_play_offer": play,
+        }
     )
+    conversation = P2Scene.model_fixture(context, provider.client()).session.conversation
     key = str(uuid4())
     handler, pilot = [current_ref(state(game), x) for x in (1, 2)]
     _, briefing = send(
@@ -73,6 +64,7 @@ def open_offer(service, scene, game, play, account, native_grant=None):
     )
     routed = conversation.process_message(PLAYER, key + ":route", scene, source.source_id, 1)
     assert routed["handler_decision"]["decision"]["reason"] == "known_update"
+    assert len(provider.requests) == 1
     draft = routed["handler"]["id"]
     review = conversation.review_handler(
         ADMIN,
@@ -214,6 +206,12 @@ def test_every_basic_handler_play_runs_through_review_to_native_completion(ledge
         call(cycle, game, ADMIN, period, "finish", movement(game))
     if play == "support":
         assert any(n.id == "relay-mechanic" and n.controller == 1 for n in state(game).world.npcs)
+        from girlframe.services.director_reactions import DirectorReactionService
+
+        roster = DirectorReactionService(service.context).npc_roster(ADMIN, scene)
+        support = next(x for x in roster if x["id"] == "relay-mechanic")
+        assert support["support_play"] == grant and support["controller"] == "1"
+        assert support["present"] is False
     if play == "mess":
         assert any(t.label == effect.tag for t in state(game).sheets["2"].tags)
     assert native.notice(PLAYER, grant)["account"] == effect.account

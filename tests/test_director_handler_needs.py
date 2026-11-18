@@ -3,8 +3,10 @@
 import json
 
 import pytest
+from test_director_activity_scene import P2Scene
 from test_director_continuity import roles
 from test_director_conversation import routed as routed
+from test_director_model_adapters import Recorder
 from test_director_observation import observed as observed
 from test_director_observation import send
 from test_ledger import ADMIN, PLAYER
@@ -54,8 +56,25 @@ def objective(context, scene):
 def test_indirect_request_needs_gm_review_then_actual_delivery_and_new_repeat_rearms(routed):
     observer, context, scene, game, _ = routed
     ref = objective(context, scene)
-    responder = NaturalHandler(ref)
-    service = DirectorConversationService(context, handler=responder, handler_mode="reviewed")
+    responder = Recorder(
+        {
+            "disposition": "answer",
+            "text": "Review this report and hold within the authorised scope.",
+            "source_refs": [ref],
+        }
+    )
+    suggestion = Recorder(
+        lambda packet: {
+            "request_id": packet["request_id"],
+            "kind": "indirect_request",
+            "action": "RESPOND",
+            "speech_quote": packet["request"]["question"],
+            "source_refs": [ref],
+            "reason": "A pilot asked for the inspection objective over comms.",
+        }
+    )
+    app = P2Scene.model_fixture(context, responder.client(), suggestion.client())
+    service = app.session.conversation
     _, source = send(
         observer,
         scene,
@@ -64,10 +83,16 @@ def test_indirect_request_needs_gm_review_then_actual_delivery_and_new_repeat_re
         fictional_channel="comms",
     )
     before = state(game).model_dump_json()
-    request = service.open_handler_need(ADMIN, "need-open", scene, source.source_id)
+    request = app.write(
+        ADMIN, "need-open", scene, "handler-need-open", {"source_id": source.source_id}
+    )
     packet = service.handler_need_packet(ADMIN, scene, request["id"])
     gm = NeedGM("indirect_request", ref)
-    saved = service.generate_handler_need(ADMIN, "need-generate", scene, request["id"], gm)
+    payload = {"request": request["id"]}
+    saved = app.write(ADMIN, "need-generate", scene, "handler-need-generate", payload)
+    assert app.write(ADMIN, "need-generate", scene, "handler-need-generate", payload) == saved
+    assert len(suggestion.requests) == 1
+    assert "SYNTHETIC_GM_SECRET_CANARY" not in json.dumps(suggestion.packets[0])
     assert service.pending_handler_needs(ADMIN, scene)[0]["id"] == saved["id"]
     first = service.process_message(PLAYER, "before-review", scene, source.source_id, 1)
     assert first["handler"] is None and not responder.requests

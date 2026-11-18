@@ -140,6 +140,12 @@ def test_native_npc_faction_and_goal_additions_remain_private_and_replay_once(ro
         assert service.confirm(ADMIN, f"another-key:{index}", scene, saved["id"]) == committed
     canon = state(game)
     assert canon.world.npcs[-1].id == "reviewed-tech"
+    roster = DirectorSessionService(context).reactions.npc_roster(ADMIN, scene)
+    ordinary = next(npc for npc in roster if npc["id"] == "reviewed-tech")
+    assert not ordinary["present"] and ordinary["controller"] == "1"
+    assert ordinary["support_play"] is None
+    with pytest.raises(WorkflowError):
+        DirectorSessionService(context).reactions.npc_roster(PLAYER, scene)
     assert canon.world.factions[-1].id == "reviewed-circle"
     assert len(records(canon)) == 1 and canon.sheets == sheets and dice.calls == 0
     assert not service.pending(ADMIN, scene, gm=True)

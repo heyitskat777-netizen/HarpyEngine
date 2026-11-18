@@ -72,6 +72,7 @@ tests/rules/test_wyvern.py::test_mid_exploration_actual_companion_attendance_and
 # P2 sustained assisted session, scoped memory, pacing and durable player-test console.
 tests/test_director_session.py
 tests/test_director_activity_scene.py
+tests/test_director_model_adapters.py
 tests/test_director_memory.py
 tests/test_p2_player_console.py
 tests/test_p2_sustained_session.py

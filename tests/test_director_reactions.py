@@ -6,6 +6,7 @@ import pytest
 from pydantic import ValidationError
 from test_director_continuity import roles
 from test_director_conversation import routed as routed
+from test_director_model_adapters import Recorder
 from test_director_observation import observed as observed
 from test_director_observation import send
 from test_ledger import ADMIN, OTHER, PLAYER
@@ -13,6 +14,7 @@ from test_ledger import ledger as ledger
 from test_m2_game import state
 
 from girlframe.ai.director_reactions import ReactionProposal
+from girlframe.ai.model_adapters import ModelReactions
 from girlframe.services.director_reactions import DirectorReactionService
 from girlframe.services.director_session import DirectorSessionService
 from girlframe.services.onboarding import WorkflowError
@@ -95,26 +97,23 @@ def test_filtered_provider_natural_reply_review_and_retry_never_apply_mechanics(
     service, request, _ = opened(routed, actor=npc)
     before = state(game).model_dump_json()
 
-    class Fixture:
-        calls = 0
+    def reply(packet):
+        encoded = json.dumps(packet)
+        assert "SYNTHETIC_GM_SECRET_CANARY" not in encoded
+        assert "SYNTHETIC_PC_ONLY_REFERENCE" not in encoded
+        assert "what is in scope" in packet["role"]["question"]
+        return {
+            "request_id": packet["request_id"],
+            "kind": "COMPROMISE",
+            "text": "I can review your report after the watch changes.",
+            "rationale": "PRIVATE_MODEL_REASON",
+        }
 
-        def propose(self, packet):
-            self.calls += 1
-            encoded = json.dumps(packet)
-            assert "SYNTHETIC_GM_SECRET_CANARY" not in encoded
-            assert "SYNTHETIC_PC_ONLY_REFERENCE" not in encoded
-            assert "what is in scope" in packet["role"]["question"]
-            return ReactionProposal(
-                request_id=packet["request_id"],
-                kind="COMPROMISE",
-                text="I can review your report after the watch changes.",
-                rationale="PRIVATE_MODEL_REASON",
-            )
-
-    fixture = Fixture()
+    recorder = Recorder(reply)
+    fixture = ModelReactions(recorder.client())
     saved = service.generate(ADMIN, "generate", scene, request, fixture)
     assert service.generate(ADMIN, "generate", scene, request, fixture) == saved
-    assert fixture.calls == 1
+    assert len(recorder.requests) == 1
     assert service.pending(PLAYER, scene) == []
     assert service.pending(OTHER, scene)[0]["id"] == saved["id"]
     assert "PRIVATE_MODEL_REASON" not in str(

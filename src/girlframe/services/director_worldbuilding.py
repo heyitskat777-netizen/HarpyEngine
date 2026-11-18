@@ -122,6 +122,15 @@ class DirectorWorldbuildingService:
         context = self.context._build(c, viewer, scene)
         actual = self.knowledge._source(c, scene, source)
         observation = self.observer._state(c, scene)
+        from girlframe.services.director_fronts import records as front_records
+
+        fronts = tuple(
+            front
+            for front in front_records(canon)
+            if front.scene_id == scene
+            and front.consent_generation == observation.consent_generation
+            and front.status in ("active", "ready")
+        )[-12:]
         payload = {
             "source": actual.model_dump(mode="json"),
             "context": context.model_dump(mode="json"),
@@ -139,6 +148,7 @@ class DirectorWorldbuildingService:
             owner_id=str(canon.handler),
             frontier=observation.sequence,
             revision=_digest(payload),
+            current_fronts=fronts,
             native_guard=self._guard(c, scene),
         )
 
