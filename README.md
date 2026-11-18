@@ -732,13 +732,17 @@ python -m girlframe db rebuild --config var/discord-dev/policy.json
 python tools/seed_synthetic.py --dest var/offline-synthetic.db
 ```
 
-Backup uses SQLite's backup API, includes committed WAL data, and verifies integrity
-and foreign keys. Backups contain private data and are created mode 0600. Restore
-always creates a **new offline file**, refusing any existing destination. Stop the
+Backup uses SQLite's backup API and includes committed WAL data. It verifies integrity
+and foreign keys in a private staging file before publishing the result without
+overwriting an existing path. Use a destination filesystem that supports hard links.
+Backups contain private data and are created with owner-only permissions on POSIX.
+Restore always creates a **new offline file**, refusing any existing destination. Stop the
 bot before deliberately switching `GIRLFRAME_DATABASE_URL` to a verified restore;
 keep the old database and policy. Restored pending outbox work may retry delivery.
 Public export excludes notes, private receipts and actor/membership IDs. It is a
 view, not a full restore source. Export and seed also refuse existing destinations.
+See the [P2 recovery runbook](docs/P2_RELEASE_RECOVERY_RUNBOOK.md) for the managed
+Activity stores, restore privacy checks, and rollback rehearsal.
 
 Rebuild restores current character public/private projections from immutable
 versioned snapshots, and appends local-operator audit provenance; it neither rolls

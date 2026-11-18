@@ -3,7 +3,9 @@
 import json
 import os
 import sqlite3
+from contextlib import closing
 from pathlib import Path
+from tempfile import mkstemp
 from typing import Any
 
 from sqlalchemy.engine import make_url
@@ -35,17 +37,26 @@ def copy_database(source: Path, destination: Path) -> None:
     if not source.is_file() or source == destination.resolve():
         raise ValueError("Source must be a separate database file")
     destination.parent.mkdir(parents=True, exist_ok=True)
-    # Exclusive creation rejects existing files and symlinks, including the active DB.
-    descriptor = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    if destination.exists() or destination.is_symlink():
+        raise FileExistsError("Database copy requires a new destination")
+    descriptor, temporary_name = mkstemp(
+        prefix=".harpy-db-", suffix=".pending", dir=destination.parent
+    )
     os.close(descriptor)
+    staged = Path(temporary_name)
     try:
-        with sqlite3.connect(source.as_uri() + "?mode=ro", uri=True) as src:
-            with sqlite3.connect(destination) as dst:
-                src.backup(dst)
-                _verify(dst)
-    except BaseException:
-        destination.unlink(missing_ok=True)
-        raise
+        with (
+            closing(sqlite3.connect(source.as_uri() + "?mode=ro", uri=True)) as src,
+            closing(sqlite3.connect(staged)) as dst,
+        ):
+            src.backup(dst)
+            _verify(dst)
+        with staged.open("r+b") as completed:
+            os.fsync(completed.fileno())
+        # Publish only the verified copy, without a window that can replace a winner.
+        os.link(staged, destination)
+    finally:
+        staged.unlink(missing_ok=True)
 
 
 def write_export(destination: Path, content: dict[str, Any]) -> None:
