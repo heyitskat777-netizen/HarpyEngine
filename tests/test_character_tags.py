@@ -206,14 +206,14 @@ def test_edit_replaces_only_owned_labels(store):
         PLAYER,
         "edit",
         1,
-        DraftInput(callsign="SORROW", girl_playbook="OLDGEN", frame_playbook="JANUS"),
+        DraftInput(callsign="SORROW", girl_playbook="OLDGEN", frame_playbook="THE ENFORCER"),
     )
     asyncio.run(sync.sync(PLAYER, DiscordCharacterTagGateway(guild)))
     assert {role.name for role in guild.member.roles} == {
         "everyone",
         "Community",
         "OLDGEN",
-        "JANUS",
+        "THE ENFORCER",
     }
     assert len(guild.member.removed) == 2
 

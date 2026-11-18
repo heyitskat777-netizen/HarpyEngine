@@ -6375,3 +6375,10 @@ revisions. Princess's conditional NPC Orders still need a human ruling on
 upkeep and refusal. Stim orders are supported in the covered original-cast
 path. Other role and scene transitions still need verification. [Open rule
 questions](GIRL_FRAME_INTEGRATION_HANDOFF.md#rule-decisions)
+
+The combined backend packet on `0507117` ran 655 distinct cases in four
+shards. Of those, 654 passed and one role-sync fixture still expected a change
+between two labels for the same Frame. The corrected fixture explicitly swaps
+to a different printed Frame so it tests replacing both managed roles.
+The fix changes only the test. The exact Activity overlay at `0d9a44c` passed
+13 simulated tests and both offline Chromium flows.
