@@ -115,8 +115,14 @@ class HandlerHistory(discord.ui.View):
     async def show(self, interaction: discord.Interaction) -> None:
         data = await asyncio.to_thread(self.service.view, viewer_from_interaction(interaction))
         draft = Draft.model_validate_json(json.dumps(data["draft"]))
+        profile = data["playbook_profile"]
         raw_pages = [
             "Playbook: " + str(draft.playbook or "Unchosen") + "\nName: " + draft.name,
+            *(
+                ["Voice\n" + profile["voice"] + "\n\nWhen to step in\n" + profile["initiative"]]
+                if profile
+                else []
+            ),
             "Appearance\n" + draft.appearance,
             "Outfit\n" + draft.outfit,
             "Background\n" + draft.background,

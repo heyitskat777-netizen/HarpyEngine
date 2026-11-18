@@ -1,6 +1,7 @@
 """Discrete GM/Handler direct-request routes; no spending, rolls or automatic effects."""
 
 import json
+import re
 from typing import Any, Literal
 from uuid import uuid4
 
@@ -20,6 +21,8 @@ from girlframe.ai.conversation import (
     HandlerPersona,
     HandlerProvider,
     HandlerRequest,
+    HeatAnswer,
+    PeerResponse,
     Route,
     SyntheticGM,
     SyntheticHandler,
@@ -30,6 +33,7 @@ from girlframe.ai.director import DirectorContext
 from girlframe.ai.observation import Observation
 from girlframe.database import tables as t
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_handler_character import PROFILES
 from girlframe.engine.m3_handler_play_state import BASIC, Play
 from girlframe.services.director_context import DirectorContextService
 from girlframe.services.director_observation import _digest
@@ -109,6 +113,12 @@ class DirectorConversationService:
         question = source.text or ""
         if route == "handler":
             role = self.context._handler_for_request(c, viewer, scene_id)
+            persona = (
+                load_state(c, self.store.campaign_id).handler_persona
+                if self.handler_mode == "reviewed"
+                else None
+            )
+            playbook = persona.draft.playbook if persona else None
             if source.fictional_channel == "private":
                 # Scene membership is OOC access, not in-fiction hearing. Never
                 # expose the private narration as the Handler's current question.
@@ -175,6 +185,7 @@ class DirectorConversationService:
                 persona=self._handler_persona(c, scene_id, role)
                 if self.handler_mode == "reviewed"
                 else None,
+                playbook_profile=PROFILES[playbook] if playbook else None,
                 open_concerns=self.delivery.open_concerns(
                     c, scene_id, role.actor, source.actor, {ref.id for ref in role.references}
                 )
@@ -265,8 +276,72 @@ class DirectorConversationService:
                 recipient_references=recipient.references,
                 play_candidates=self.play_catalog.recognize(question),
                 play_declaration=self.play_catalog.declared(question),
+                heat_answer=self._heat_question(c, scene_id, source.actor, question),
             )
         return request, _digest(request.model_dump(mode="json"))
+
+    def _heat_question(
+        self, c: Connection, scene: str, actor: ActorRef, question: str
+    ) -> HeatAnswer | None:
+        addressed = re.match(r"^\s*gm\s*[:,]\s*(.*)", question, re.IGNORECASE)
+        if addressed is None or not re.search(r"\bheat\b", addressed[1], re.IGNORECASE):
+            return None
+        text = addressed[1].strip().casefold()
+        action = re.fullmatch(r"heat for (?:action\s+)?([a-f0-9-]{36})[?.]?", text)
+        if action:
+            return self._action_heat(c, scene, actor, action[1])
+        if self.play_catalog.declared(question) or (
+            re.search(r"\b(?:resolve|roll|run)\b", text) and self.play_catalog.recognize(question)
+        ):
+            return None
+        if re.search(
+            r"\b(?:correction|correcting|correct|asking a question)\b", text
+        ) and re.search(r"\b(?:costs?|spend|uses?)\b", text):
+            return HeatAnswer(status="no_cost", amount=0)
+        if re.search(r"\b(?:this|that|last|previous|did|spent|charged|pay)\b", text):
+            return HeatAnswer(status="needs_source")
+        return HeatAnswer(status="rule")
+
+    def _action_heat(self, c: Connection, scene: str, actor: ActorRef, identity: str) -> HeatAnswer:
+        try:
+            action = self.observations.game.action(c, identity)
+        except WorkflowError:
+            return HeatAnswer(status="needs_source")
+        data = action["data"]
+        prepared = data.get("prepared", {})
+        if (
+            actor.kind != "pilot"
+            or str(action["actor_id"]) != actor.entity
+            or action["scene_id"] != scene
+            or data.get("character_ids", {}).get(actor.entity) != actor.incarnation
+            or prepared.get("play") not in ("keep_your_head", "check_sensors")
+            or any(data.get(x) for x in ("m3", "janus", "kicked_puppy", "nightmare_core"))
+        ):
+            return HeatAnswer(status="needs_source")
+        table = t.m2["m2_receipts"]
+        raw = c.scalar(
+            sa.select(table.c.body_json).where(
+                table.c.campaign_id == self.store.campaign_id,
+                table.c.action_id == action["id"],
+            )
+        )
+        if raw is not None:
+            receipt = json.loads(raw)
+            return HeatAnswer(
+                status="committed",
+                action_id=identity,
+                amount=receipt["heat"],
+                receipt_id=receipt["id"],
+            )
+        if action["state"] in ("cancelled", "aborted", "complete"):
+            return HeatAnswer(status="cancelled", action_id=identity, amount=0)
+        return HeatAnswer(status="pending", action_id=identity, amount=prepared["heat"])
+
+    def action_heat(self, viewer: GuildViewer, scene: str, action_id: str) -> HeatAnswer:
+        """Read an original Pilot's supported action cost without unlocking the scene."""
+        with self.store.engine.connect() as c:
+            _, _, actor = self.observations._authorize_input(c, viewer, scene, "pilot")
+            return self._action_heat(c, scene, actor, action_id)
 
     def _handler_persona(
         self, c: Connection, scene: str, role: DirectorContext
@@ -794,7 +869,11 @@ class DirectorConversationService:
                     delivery = self.delivery.plan(
                         c, scene, source, request, reply, current_decision, delivery_recipients
                     )
-                elif reply.handler_concern or current_decision.concern_id:
+                elif (
+                    reply.handler_concern
+                    or current_decision.concern_id
+                    or current_decision.reason == "reviewed_character_cue"
+                ):
                     raise WorkflowError("HANDLER_CONCERN_DELIVERY: select actual scene recipients.")
                 if reply.handler_play_offer is not None:
                     assert request.context.actor is not None
@@ -1170,6 +1249,11 @@ class DirectorConversationService:
                 "consents": state.consents,
                 "appointment": HandlerService(self.store).current(c)[0],
                 **(
+                    {"handler_playbook": request.playbook_profile.playbook}
+                    if request.playbook_profile
+                    else {}
+                ),
+                **(
                     {"open_concerns": [x.model_dump(mode="json") for x in request.open_concerns]}
                     if request.open_concerns and cited_refs is None
                     else {}
@@ -1254,12 +1338,32 @@ class DirectorConversationService:
         refs = {x.id: x for x in packet.request.context.references}
         if not set(proposal.source_refs) <= refs.keys():
             raise WorkflowError("HANDLER_NEED_CITATION: cite only actual Handler-known references.")
-        if proposal.kind in ("indirect_request", "follow_up"):
+        if proposal.kind in ("indirect_request", "follow_up", "character_cue"):
             quote = proposal.speech_quote or ""
             if packet.request.question == "Scene update." or quote not in packet.request.question:
                 raise WorkflowError(
                     "HANDLER_NEED_SPEECH: quote actual heard words, not private narration."
                 )
+        if proposal.kind == "character_cue":
+            cue_source = self._need_source(c, packet.scene_id, packet.source_id)
+            if cue_source.actor.kind != "pilot":
+                raise WorkflowError("HANDLER_NEED_SPEECH: select a cue from an actual Pilot.")
+            profile = packet.request.playbook_profile
+            if proposal.action == "RESPOND" and proposal.cue not in (
+                profile.cues if profile else ("personal",)
+            ):
+                raise WorkflowError(
+                    "HANDLER_PLAYBOOK_CUE: this cue falls outside the sheet's initiative."
+                )
+            if proposal.peer_response is not None:
+                handler = packet.request.context.actor
+                assert handler is not None
+                if not self._peer_heard(
+                    c, packet.scene_id, cue_source, handler, proposal.peer_response
+                ):
+                    raise WorkflowError(
+                        "HANDLER_PEER_RESPONSE: select a later heard reply from another Pilot."
+                    )
         if proposal.kind == "follow_up" and proposal.concern_id not in {
             concern.id for concern in packet.request.open_concerns
         }:
@@ -1282,6 +1386,78 @@ class DirectorConversationService:
                     raise WorkflowError(
                         "HANDLER_NEED_REPORT: cite a known report from this source."
                     )
+
+    def _peer_heard(
+        self, c: Connection, scene: str, source: Observation, handler: ActorRef, proof: PeerResponse
+    ) -> bool:
+        from girlframe.services.director_knowledge import DirectorKnowledgeService
+
+        try:
+            peer = self._need_source(c, scene, proof.source_id)
+        except WorkflowError:
+            return False
+        if (
+            peer.kind != "message"
+            or peer.actor.kind != "pilot"
+            or peer.actor == source.actor
+            or peer.author_id == source.author_id
+            or peer.source_revision != proof.source_revision
+            or not proof.quote.strip()
+        ):
+            return False
+        inputs = t.director["inputs"]
+        first = {
+            row.source_id: row.first
+            for row in c.execute(
+                sa.select(inputs.c.source_id, sa.func.min(inputs.c.sequence).label("first"))
+                .where(
+                    inputs.c.campaign_id == self.store.campaign_id,
+                    inputs.c.scene_id == scene,
+                    inputs.c.source_id.in_((source.source_id, peer.source_id)),
+                )
+                .group_by(inputs.c.source_id)
+            )
+        }
+        if first[peer.source_id] <= first[source.source_id]:
+            return False
+        knowledge = DirectorKnowledgeService(self.context)
+        return all(
+            any(proof.quote in text for text in knowledge.heard(c, scene, peer.source_id, actor))
+            for actor in (source.actor, handler)
+        )
+
+    def peer_covered(
+        self, c: Connection, scene: str, source: Observation, handler: ActorRef
+    ) -> bool:
+        """Use a reviewed reply with current listener, order and source proof."""
+        table = t.director_context["shadow"]
+        for raw in c.scalars(
+            sa.select(table.c.body_json).where(
+                table.c.campaign_id == self.store.campaign_id,
+                table.c.scene_id == scene,
+                sa.func.json_extract(table.c.body_json, "$.record_type") == "handler_need_proposal",
+                sa.func.json_extract(table.c.body_json, "$.packet.source_id") == source.source_id,
+                sa.func.json_extract(table.c.body_json, "$.packet.source_revision")
+                == source.source_revision,
+                sa.func.json_type(table.c.body_json, "$.proposal.peer_response") == "object",
+            )
+        ):
+            row = json.loads(raw)
+            review = self._saved(c, row["id"] + ":review")
+            if (
+                review
+                and review["decision"] == "approve"
+                and row["packet"]["request"]["context"]["actor"] == handler.model_dump(mode="json")
+                and self._peer_heard(
+                    c,
+                    scene,
+                    source,
+                    handler,
+                    PeerResponse.model_validate(row["proposal"]["peer_response"]),
+                )
+            ):
+                return True
+        return False
 
     def _save_need_proposal(
         self,
@@ -1535,6 +1711,13 @@ class DirectorConversationService:
             if not review or review["decision"] != "approve":
                 continue
             proposal = HandlerNeedProposal.model_validate_json(json.dumps(row["proposal"]))
+            if proposal.kind == "character_cue":
+                handler = request.context.actor
+                assert handler is not None
+                if self.peer_covered(c, scene, source, handler):
+                    return HandlerDecision(action="WAIT", reason="peer_response"), ""
+                if proposal.peer_response:
+                    continue
             if proposal.action == "WAIT":
                 return HandlerDecision(action="WAIT", reason="no_handler_need"), ""
             refs = {x.id: x for x in request.context.references}
@@ -1549,9 +1732,22 @@ class DirectorConversationService:
                     if proposal.kind in ("indirect_request", "follow_up")
                     else None,
                     **({"concern": proposal.concern_id} if proposal.concern_id else {}),
+                    **(
+                        {
+                            "cue": proposal.cue,
+                            "scene": scene,
+                            "speaker": source.actor.token,
+                            "words": re.sub(
+                                r"[^\w]+", " ", (proposal.speech_quote or "").casefold()
+                            ).strip(),
+                        }
+                        if proposal.kind == "character_cue"
+                        else {}
+                    ),
                     "refs": [
                         (refs[x].origin_scene or scene, refs[x].origin_reference or x)
                         for x in proposal.source_refs
+                        if proposal.kind != "character_cue"
                     ],
                 }
             )
@@ -1594,10 +1790,13 @@ class DirectorConversationService:
                     if proposal.kind == "follow_up"
                     else "reviewed_indirect_request"
                     if proposal.kind == "indirect_request"
+                    else "reviewed_character_cue"
+                    if proposal.kind == "character_cue"
                     else "reviewed_urgent_report"
                 ),
                 source_refs=proposal.source_refs,
                 concern_id=proposal.concern_id,
+                cue=proposal.cue,
             ), need_key
         return None
 

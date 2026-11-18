@@ -11,6 +11,7 @@ from girlframe.ai.director_dossiers import DossierProfile, DossierState
 from girlframe.ai.observation import Observation
 from girlframe.ai.play_names import LABELS, requested_play
 from girlframe.ai.play_review import PlayReferral
+from girlframe.engine.m3_handler_character import Cue, PlaybookProfile
 from girlframe.engine.m3_handler_play_state import Play
 
 Route = Literal["gm", "handler"]
@@ -29,10 +30,13 @@ class HandlerDecision(Contract):
         "reviewed_indirect_request",
         "reviewed_urgent_report",
         "reviewed_follow_up",
+        "reviewed_character_cue",
+        "peer_response",
         "need_already_addressed",
     ]
     source_refs: tuple[str, ...] = Field(default=(), max_length=3)
     concern_id: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    cue: Cue | None = Field(default=None, exclude_if=lambda x: x is None)
 
 
 class HandlerPersona(Contract):
@@ -52,6 +56,7 @@ class HandlerRequest(Contract):
     context: DirectorContext
     addressed_update_refs: tuple[str, ...] = Field(default=(), exclude_if=lambda x: not x)
     persona: HandlerPersona | None = Field(default=None, exclude_if=lambda x: x is None)
+    playbook_profile: PlaybookProfile | None = Field(default=None, exclude_if=lambda x: x is None)
     response_need: HandlerDecision | None = Field(default=None, exclude_if=lambda x: x is None)
     open_concerns: tuple[HandlerConcern, ...] = Field(default=(), exclude_if=lambda x: not x)
 
@@ -66,6 +71,15 @@ class HandlerRequest(Contract):
         return self
 
 
+class HeatAnswer(Contract):
+    rule_id: Literal["core.core.heat"] = "core.core.heat"
+    printed_page: Literal[8] = 8
+    status: Literal["rule", "no_cost", "needs_source", "pending", "committed", "cancelled"]
+    action_id: str | None = None
+    amount: int | None = Field(default=None, ge=0)
+    receipt_id: str | None = None
+
+
 class GMRequest(Contract):
     schema_version: Literal[1] = 1
     question: str = Field(min_length=1, max_length=1000)
@@ -77,6 +91,7 @@ class GMRequest(Contract):
     recipient_references: tuple[KnowledgeReference, ...]
     play_candidates: tuple[PlayReferral, ...] = ()
     play_declaration: bool = False
+    heat_answer: HeatAnswer | None = Field(default=None, exclude_if=lambda x: x is None)
 
     @model_validator(mode="after")
     def gm_boundary(self) -> "GMRequest":
@@ -88,7 +103,12 @@ class GMRequest(Contract):
 class GMDecision(Contract):
     action: Literal["RESPOND", "WAIT"]
     reason: Literal[
-        "no_gm_need", "explicit_gm_request", "play_request", "scope_adjudication", "completed_play"
+        "no_gm_need",
+        "explicit_gm_request",
+        "play_request",
+        "scope_adjudication",
+        "completed_play",
+        "rules_question",
     ]
 
 
@@ -130,6 +150,7 @@ class ConversationReply(Contract):
         default=None, min_length=1, max_length=300, exclude_if=lambda x: x is None
     )
     gm_decision: GMDecision | None = None
+    gm_rule: HeatAnswer | None = Field(default=None, exclude_if=lambda x: x is None)
     application: Literal["blocked"] = "blocked"
     provider: Literal["synthetic-conversation-v1", "reviewed-handler-v1"] = (
         "synthetic-conversation-v1"
@@ -137,7 +158,7 @@ class ConversationReply(Contract):
 
     @model_validator(mode="after")
     def separate_gm_decision(self) -> "ConversationReply":
-        if self.route == "handler" and self.gm_decision is not None:
+        if self.route == "handler" and (self.gm_decision is not None or self.gm_rule is not None):
             raise ValueError("GM intervention decisions are not Handler output")
         if any(
             x is not None
@@ -168,13 +189,26 @@ class HandlerNeedPacket(Contract):
     revision: str
 
 
+class PeerResponse(Contract):
+    source_id: str
+    source_revision: int = Field(ge=1)
+    quote: str = Field(min_length=1, max_length=1000)
+
+
 class HandlerNeedProposal(Contract):
     model_config = ConfigDict(
         json_schema_extra={
             "allOf": [
                 {
                     "if": {
-                        "properties": {"kind": {"const": "indirect_request"}},
+                        "properties": {"kind": {"const": "character_cue"}},
+                        "required": ["kind"],
+                    },
+                    "then": {"required": ["cue"], "properties": {"cue": {"type": "string"}}},
+                },
+                {
+                    "if": {
+                        "properties": {"kind": {"enum": ["indirect_request", "character_cue"]}},
                         "required": ["kind"],
                     },
                     "then": {
@@ -201,7 +235,12 @@ class HandlerNeedProposal(Contract):
                     "then": {
                         "properties": {
                             "kind": {
-                                "enum": ["indirect_request", "urgent_known_report", "follow_up"]
+                                "enum": [
+                                    "indirect_request",
+                                    "urgent_known_report",
+                                    "follow_up",
+                                    "character_cue",
+                                ]
                             }
                         }
                     },
@@ -211,8 +250,12 @@ class HandlerNeedProposal(Contract):
     )
     request_id: str
     action: Literal["RESPOND", "WAIT"]
-    kind: Literal["indirect_request", "urgent_known_report", "follow_up", "no_need"]
+    kind: Literal[
+        "indirect_request", "urgent_known_report", "follow_up", "character_cue", "no_need"
+    ]
     concern_id: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    cue: Cue | None = Field(default=None, exclude_if=lambda x: x is None)
+    peer_response: PeerResponse | None = Field(default=None, exclude_if=lambda x: x is None)
     speech_quote: str | None = Field(
         default=None,
         max_length=1000,
@@ -237,7 +280,10 @@ class HandlerNeedProposal(Contract):
             raise ValueError("Cite each Handler reference once")
         if self.action == "RESPOND" and self.kind == "no_need":
             raise ValueError("No need cannot request a response")
-        if self.kind in ("indirect_request", "follow_up") and not (self.speech_quote or "").strip():
+        if (
+            self.kind in ("indirect_request", "follow_up", "character_cue")
+            and not (self.speech_quote or "").strip()
+        ):
             raise ValueError("The response needs an exact heard speech quote")
         if self.kind in ("urgent_known_report", "follow_up") and not self.source_refs:
             raise ValueError("An urgent report needs actual known references")
@@ -245,6 +291,10 @@ class HandlerNeedProposal(Contract):
             self.kind == "follow_up" and self.action != "RESPOND"
         ):
             raise ValueError("A follow-up responds to one actual open concern")
+        if (self.kind == "character_cue") != (self.cue is not None):
+            raise ValueError("A character cue needs one recognised kind of heard situation")
+        if self.peer_response and (self.kind != "character_cue" or self.action != "WAIT"):
+            raise ValueError("A covering peer reply supports waiting on the original cue")
         return self
 
 
@@ -310,6 +360,8 @@ class SyntheticGMPolicy:
 
     def decide(self, request: GMRequest) -> GMDecision:
         text = request.question.strip().casefold()
+        if request.heat_answer is not None:
+            return GMDecision(action="RESPOND", reason="rules_question")
         if re.match(
             r"(?:i|we)\s+(?:will|intend to|am going to|are going to)\s+"
             r"(?:force|breach|break open)\b",
@@ -430,7 +482,27 @@ class SyntheticGM:
         # Reads the broader GM context, but this conservative synthetic adapter only
         # publishes recipient-permitted references or neutral engine referrals.
         decision = SyntheticGMPolicy().decide(request)
-        if decision.reason == "play_request":
+        if request.heat_answer is not None:
+            answer = request.heat_answer
+            text = {
+                "rule": "Each Heat adds +1 to an applicable roll. Spend before rolling. "
+                "At 5 or more, spend all available Heat when the rule applies.",
+                "no_cost": "An ordinary spoken question or correction spends no Heat. "
+                "A separate Play uses its own trigger and cost if called.",
+                "needs_source": "Which action do you mean? Use GM, Heat for <action ID> "
+                "for a supported Play owned by you in this scene.",
+                "pending": f"The prepared Play specifies {answer.amount} Heat. The roll has "
+                "not committed the cost.",
+                "committed": f"The native roll committed {answer.amount} Heat.",
+                "cancelled": "This Play closed before its roll. No Heat spend was recorded for it.",
+            }[answer.status]
+            reply = ConversationReply(
+                route="gm",
+                text=text,
+                gm_rule=answer,
+                disposition="clarification" if answer.status == "needs_source" else "answer",
+            )
+        elif decision.reason == "play_request":
             if len(request.play_candidates) > 1 or (
                 not request.play_candidates and requested_play(request.question) is None
             ):

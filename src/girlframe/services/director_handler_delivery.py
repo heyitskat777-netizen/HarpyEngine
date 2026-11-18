@@ -60,14 +60,29 @@ class HandlerDeliveryService:
     ) -> dict[str, Any]:
         actor = request.context.actor
         assert actor is not None
+        one_listener = decision.cue == "personal" or (
+            decision.reason == "reviewed_character_cue" and source.fictional_channel != "comms"
+        )
         if (
             source.actor not in recipients
             or actor in recipients
             or len(set(recipients)) != len(recipients)
+            or (one_listener and recipients != (source.actor,))
         ):
             raise WorkflowError(
                 "HANDLER_DELIVERY_AUDIENCE: select the addressed Pilot and actual listeners."
             )
+        if decision.concern_id:
+            origin = self.conversation._saved(c, decision.concern_id)
+            actual = [x.model_dump(mode="json") for x in recipients]
+            if (
+                not origin
+                or origin["speaker"] not in actual
+                or any(x not in origin["recipients"] for x in actual)
+            ):
+                raise WorkflowError(
+                    "HANDLER_CONCERN_AUDIENCE: report back to the original Pilot and listeners."
+                )
         current = self.context._current(c, scene)
         if any(
             not set(reply.source_refs)
@@ -90,6 +105,7 @@ class HandlerDeliveryService:
             text=text,
             closes=decision.concern_id,
             concern=reply.handler_concern,
+            **({"character_cue": True} if decision.reason == "reviewed_character_cue" else {}),
             appointment=HandlerService(self.store).current(c)[0],
             consent=self.observer._state(c, scene).consent_generation,
         )
@@ -135,7 +151,7 @@ class HandlerDeliveryService:
             and row["concern"]
             and row["reference"] in reference_ids
             and row["handler"] == handler.model_dump(mode="json")
-            and row["speaker"] == speaker.model_dump(mode="json")
+            and speaker.model_dump(mode="json") in row["recipients"]
         )[-8:]
 
     def _approved(
@@ -157,6 +173,14 @@ class HandlerDeliveryService:
             raise WorkflowError("HANDLER_DELIVERY_OWNER: the approved Handler must deliver.")
         if plan["consent"] != self.observer._state(c, scene).consent_generation:
             raise WorkflowError("HANDLER_DELIVERY_CONSENT: renew the actual review.")
+        if plan.get("character_cue") and not self.conversation._saved(
+            c, "handler-delivery:" + draft_id
+        ):
+            source = self.conversation._need_source(c, scene, draft["source_id"])
+            if self.conversation.peer_covered(c, scene, source, handler):
+                raise WorkflowError(
+                    "HANDLER_PEER_RESPONSE: another Pilot already attended to this cue."
+                )
         return draft, plan
 
     def deliver(

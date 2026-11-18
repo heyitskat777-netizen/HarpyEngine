@@ -238,8 +238,9 @@ conversation.review_handler_need(gm, key, scene, proposal_id, "approve"|"reject"
 ```
 
 `HandlerNeedProposal` uses `action=RESPOND|WAIT`,
-`kind=indirect_request|urgent_known_report|no_need`, actual `source_refs`, an exact
-heard `speech_quote` for indirect requests, and private reasoning. Urgent reports
+`kind=indirect_request|urgent_known_report|follow_up|character_cue|no_need`,
+actual `source_refs`, an exact heard `speech_quote` for speech-based needs,
+and private reasoning. Urgent reports
 must cite Handler-known references from that actual source. A hidden perception
 or unrelated reference cannot justify intervention. Semantic urgency/addressing
 remains GM judgment; an approved need can augment legacy WAIT but does not revoke
@@ -261,6 +262,43 @@ This explicitly invokes `acquire_handler_need` (open/generate/trusted GM approve
 after knowledge acquisition and before conversation routing. Defaults remain
 provider-free. The browser cannot choose that authority or enable model spending.
 Use the manual steps when a human should inspect each proposed response need.
+
+### Handler sheet, voice and optional cues
+
+`HandlerCreationService.view(handler)` exposes the selected native
+`draft.playbook` and `playbook_profile` in the private Handler sheet. The
+stored playbook comes from native creation. The derived profile contains the
+printed page, voice, initiative and supported cue categories. In reviewed
+mode the Handler provider gets the same profile from the active sheet and its
+own dossier if present. An older sheet without a selected playbook retains
+neutral behavior and may use the personal cue path.
+
+For an optional intervention, propose `kind="character_cue"` with the eligible
+`cue` and an exact heard `speech_quote`. Review whether this is a moment the
+Handler can usefully participate in. For a covered moment, send `action="WAIT"`
+and `peer_response={source_id,source_revision,quote}` from another Pilot's later
+heard reply. This suppresses generation or a pending delivery for that cue.
+The original Pilot alone receives a personal response. Bounded operational
+cues heard over comms may use the selected listeners. Preserve native direct
+questions, mandatory rulings, and the independent ordinary briefing gate.
+
+For `follow_up`, another Pilot who actually received the original contribution
+may supply the new reported fact. Cite the current report, scope it to the
+original listeners and include the original addressee in the follow-up delivery.
+The concern closes on delivery. A fictional visit or offer alone establishes
+no result, cost, status change or successful Play.
+
+### Heat in the GM rules surface
+
+Render `reply.gm_rule` as a rules result using `rule_id`, `printed_page`, `status`
+and the optional owned `action_id`, `amount` and `receipt_id`. An ordinary
+spoken question or correction costs zero Heat. Ambiguous charges ask for the
+actual action ID. During a Play lock, use
+`conversation.action_heat(pilot, scene, action_id)` for the same read-only
+projection. The initial action readback supports ordinary **Keep Your Head**
+and **Check Your Sensors** by the original Pilot. Treat `pending` as the
+prepared amount and `committed` as the receipt amount. The scene chat remains
+available only under its existing rules. A GM rule answer adds no scene dialogue.
 
 ## Sensors provider input mapping
 

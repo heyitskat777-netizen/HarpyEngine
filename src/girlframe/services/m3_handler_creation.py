@@ -14,6 +14,7 @@ from girlframe.engine import m3_handler_creation as rules
 from girlframe.engine.m3_actor_bonds import depth
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import fingerprint, resolve
+from girlframe.engine.m3_handler_character import PROFILES
 from girlframe.engine.m3_handler_state import Agreement, Draft, NpcAgreement, SavedDraft
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_game import GameService
@@ -306,6 +307,9 @@ class HandlerCreationService:
             and (saved is None or saved.appointment == appointment)
             and state.handler_persona is None,
             draft=draft.model_dump(mode="json"),
+            playbook_profile=PROFILES[draft.playbook].model_dump(mode="json")
+            if draft.playbook
+            else None,
             missing=list(draft.missing)
             + [
                 "NPC relationship history: " + x["name"]

@@ -1,4 +1,13 @@
-> Latest owner direction: test Handler pacing and the engine-only GM boundary.
+> Latest owner direction: make Handler sheet types shape how and when they speak.
+> See reports/P2_HANDLER_CHARACTER.md. Native activation selects the playbook.
+> All seven profiles guide voice and restrict optional reviewed cues. Preserve
+> heard speech, reviewed peer coverage, private personal delivery and original
+> recipients for follow-through. GM Heat answers are read-only typed results;
+> pending and committed amounts use the actual owned native action and receipt.
+> 46 affected tests and two100-input offline scenes pass. Printed mechanics
+> still require their source-specific workflows. No paid provider or live rollout.
+>
+> Earlier owner direction: test Handler pacing and the engine-only GM boundary.
 > See reports/P2_HANDLER_PACING.md. Four paired100-input scenes show14 scoped
 > Handler replies/10 own actions with reviewed needs;11/6 with automatic needs.
 > Both concern branches close only with reviewed follow-through. Check for
