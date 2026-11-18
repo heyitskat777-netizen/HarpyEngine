@@ -615,11 +615,6 @@ def apply_choice(
             )
         if len(answer.text) > 120:
             raise WorkflowError("A Tag label has at most120 characters")
-    if row["kind"] == "stim_sex_effects" and "orders" in answer.options and target.kind == "npc":
-        raise WorkflowError(
-            "NPC Orders need human adjudication; this source remains pending, "
-            "with no effect applied"
-        )
     selected = rules.Selection(
         id=row["id"],
         action=action["id"],
@@ -755,16 +750,10 @@ def projection(
         if value.phase == "actor_effects" and value.tier == "high"
         else 1
     )
-    _, target, _ = _roles(value)
     return dict(
         options=(
             ("helpless", "Helpless while drugged"),
-            (
-                "orders",
-                "NPC Orders: unsupported; pause for human adjudication"
-                if target.kind == "npc"
-                else "Give higher-Status Orders until drugs wear off",
-            ),
+            ("orders", "Give higher-Status Orders until drugs wear off"),
             ("bond", "Deepen your actual Bond"),
             ("tag", "Give an authored Tag"),
         ),
@@ -1208,7 +1197,9 @@ class SexService:
             if viewer.user_id in (x.caster, x.counterpart)
         ]
 
-    def view(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
+    def view(
+        self, viewer: GuildViewer, identity: str, *, order_channel: int | None = None
+    ) -> dict[str, Any]:
         with self.store.engine.connect() as c:
             self.game.authorize(c, viewer, game=False)
             state = load_state(c, self.store.campaign_id)
@@ -1227,16 +1218,39 @@ class SexService:
             from girlframe.services.m3_learned_sex import cancelled
 
             npc_order_effect = None
-            if value.target.kind == "npc" and viewer.user_id == value.counterpart:
+            pilot_order_effect = None
+            pilot_order_cast = None
+            if value.target.kind == "npc" and value.phase == "complete":
                 from girlframe.services.m3_stim_npc import order_authority as npc_authority
 
-                authority = npc_authority(
-                    self.game, c, state, value.target, value.actor, session_id=value.id
-                )
-                if authority is not None and authority.action == value.action:
-                    npc_order_effect = authority.id
+                if viewer.user_id == value.counterpart:
+                    authority = npc_authority(
+                        self.game, c, state, value.target, value.actor, session_id=value.id
+                    )
+                    if authority is not None and authority.action == value.action:
+                        npc_order_effect = authority.id
+                if viewer.user_id == value.caster:
+                    authority = npc_authority(
+                        self.game, c, state, value.actor, value.target, session_id=value.id
+                    )
+                    if authority is not None and authority.action == value.action:
+                        pilot_order_effect = authority.id
+                        if order_channel is not None:
+                            try:
+                                cast = _cast(self.game, c, state, order_channel)
+                            except WorkflowError:
+                                pass
+                            else:
+                                joined = {(x.actor, x.controller) for x in cast.roles}
+                                if {
+                                    (value.actor, value.caster),
+                                    (value.target, value.counterpart),
+                                } <= joined:
+                                    pilot_order_cast = fingerprint(cast)
             return value.model_dump(mode="json", exclude={"cast", "registry"}) | dict(
                 npc_order_effect=npc_order_effect,
+                pilot_order_effect=pilot_order_effect,
+                pilot_order_cast=pilot_order_cast,
                 lesson_cancelled=cancelled(
                     self.game, c, state, value.learned_source or parent_lesson(state, value)
                 ),

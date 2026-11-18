@@ -19,6 +19,7 @@ from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_intracadre_marriage import available, debit
 from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
+from girlframe.engine.m3_stim_sex import RULE as STIM_ORDER_RULE
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access, digest
@@ -34,7 +35,7 @@ if TYPE_CHECKING:
     from girlframe.services.m2_game import GameService
 
 
-def _registry(game: "GameService") -> str:
+def _registry(game: "GameService", rule: str = rules.RULE) -> str:
     registry = Access(game.store).registry
     approval = game.store.policy.m3_approval
     if (
@@ -46,8 +47,8 @@ def _registry(game: "GameService") -> str:
         or approval.scope == "core_complete"
         and registry.coverage != "RULES_COMPLETE"
     ):
-        raise WorkflowError("M3_REVIEW_PENDING: review this actual Succubus Order source")
-    registry.require_available(rules.RULE)
+        raise WorkflowError("M3_REVIEW_PENDING: review this actual NPC Order source")
+    registry.require_available(rule)
     return approval.registry_sha256
 
 
@@ -148,9 +149,9 @@ def _source(
         fact is None
         or rules.Order.model_validate_json(fact["body"]) != value
         or audit is None
-        or audit.kind != "m3.succubus_npc_order_issued"
+        or audit.kind != value.event_prefix + "order_issued"
         or audit.actor_id != value.issuer.entity
-        or value.registry != _registry(game)
+        or value.registry != _registry(game, value.source_rule)
         or value.action != action["id"]
         or str(value.controller) != action["actor_id"]
         or value.cast.id != action["scene_id"]
@@ -174,7 +175,31 @@ def _source(
         birth = _history(game, c, loss.event)
         if loss not in rules.rank_losses(birth, value.target):
             raise WorkflowError("Recover the actual original NPC Status-loss source")
-    if active:
+    if value.stim_effect is not None:
+        from girlframe.services.m3_stim_npc import order_authority
+
+        if (
+            value.authority is not None
+            or order_authority(
+                game, c, original, value.issuer, value.target, effect_id=value.stim_effect
+            )
+            is None
+            or (
+                active
+                and order_authority(
+                    game,
+                    c,
+                    state,
+                    value.issuer,
+                    value.target,
+                    effect_id=value.stim_effect,
+                    require_active=False,
+                )
+                is None
+            )
+        ):
+            raise WorkflowError("Recover the original Stim authority at actual issuance")
+    elif active:
         if value.authority is not None:
             _proof(game, c, state, value.authority)
         elif not rules.ordinary_higher(state, value.issuer, value.target):
@@ -254,9 +279,23 @@ class SuccubusService:
     def __init__(self, game: "GameService"):
         self.game, self.store = game, game.store
 
-    def _access(self, c: Connection, viewer: GuildViewer, subsystem: str = "plays") -> None:
+    def _access(
+        self,
+        c: Connection,
+        viewer: GuildViewer,
+        subsystem: str = "plays",
+        *,
+        rule: str = rules.RULE,
+    ) -> None:
         Access(self.store).authorize(c, viewer, subsystem, director_response=True)
-        _registry(self.game)
+        _registry(self.game, rule)
+
+    def _order_access(self, c: Connection, viewer: GuildViewer, action: dict[str, Any]) -> None:
+        payload = action["data"].get("succubus_npc_order")
+        if payload is None:
+            raise WorkflowError("Open the original NPC Order")
+        source = rules.Order.model_validate_json(json.dumps(payload))
+        self._access(c, viewer, rule=source.source_rule)
 
     def menu(self, viewer: GuildViewer) -> dict[str, Any]:
         with self.store.engine.connect() as c:
@@ -423,7 +462,12 @@ class SuccubusService:
         target: ActorRef,
         cast_sha: str,
         text: str,
+        *,
+        stim_effect: str | None = None,
     ) -> dict[str, Any]:
+        source_rule = STIM_ORDER_RULE if stim_effect is not None else rules.RULE
+        event_prefix = "m3.stim_pilot_npc_" if stim_effect is not None else "m3.succubus_npc_"
+
         def change(c: Connection) -> dict[str, Any]:
             self.game.unpaused(c)
             state = load_state(c, self.store.campaign_id)
@@ -445,12 +489,17 @@ class SuccubusService:
             rules.npc(state, target)
             if actual.rules != "npc":
                 raise WorkflowError("This recipient needs its own actual rules consumer")
-            authority = (
-                None
-                if rules.ordinary_higher(state, actor, target)
-                else rules.authority(state, actor, target)
-            )
-            if authority:
+            authority = None
+            if stim_effect is not None:
+                from girlframe.services.m3_stim_npc import order_authority
+
+                if (
+                    order_authority(self.game, c, state, actor, target, effect_id=stim_effect)
+                    is None
+                ):
+                    raise WorkflowError("Use the original unexpired Stim Order effect")
+            elif not rules.ordinary_higher(state, actor, target):
+                authority = rules.authority(state, actor, target)
                 _proof(self.game, c, state, authority)
             handler = active_handler(state)
             if handler is None:
@@ -470,7 +519,8 @@ class SuccubusService:
                 authority=authority,
                 instruction=text,
                 event=event,
-                registry=_registry(self.game),
+                registry=_registry(self.game, source_rule),
+                stim_effect=stim_effect,
             )
             body = dict(text=text, succubus_npc_order=value.model_dump(mode="json"))
             c.execute(
@@ -542,7 +592,7 @@ class SuccubusService:
                 c,
                 viewer.user_id,
                 key,
-                "m3.succubus_npc_order_issued",
+                event_prefix + "order_issued",
                 state,
                 event_id=event,
                 action_id=identity,
@@ -553,17 +603,18 @@ class SuccubusService:
         return self.store._write(
             viewer,
             key,
-            "m3.succubus_npc_order_issued",
+            event_prefix + "order_issued",
             dict(
                 channel=channel,
                 revision=revision,
                 target=target.model_dump(mode="json"),
                 cast_sha=cast_sha,
                 text=text,
-            ),
+            )
+            | ({"stim_effect": stim_effect} if stim_effect is not None else {}),
             change,
             auto_audit=False,
-            authorize=lambda c: self._access(c, viewer),
+            authorize=lambda c: self._access(c, viewer, rule=source_rule),
         )
 
     def _owner(self, action: dict[str, Any]) -> int:
@@ -606,8 +657,9 @@ class SuccubusService:
 
     def inspect(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
         with self.store.engine.connect() as c:
-            self._access(c, viewer)
+            self.game.authorize(c, viewer, game=False)
             action = self.game.action(c, identity)
+            self._order_access(c, viewer, action)
             state = load_state(c, self.store.campaign_id)
             value = _source(self.game, c, state, action, active=False)
             completed_reader = action["data"]["phase"] == "complete" and viewer.user_id in {
@@ -736,7 +788,7 @@ class SuccubusService:
                     rng_source=self.game.rng_source,
                     rolled_utc=datetime.now(UTC).isoformat(),
                     basis="ordinary_npc_no_heat",
-                    rule_id=rules.RULE,
+                    rule_id=value.source_rule,
                     source_order=value.id,
                     event=event,
                 )
@@ -905,7 +957,7 @@ class SuccubusService:
                 c,
                 viewer.user_id,
                 key,
-                "m3.succubus_npc_" + phase,
+                value.event_prefix + phase,
                 state,
                 event_id=event,
                 action_id=identity,
@@ -935,6 +987,6 @@ class SuccubusService:
                 heat_gain=heat_gain,
             ),
             change,
-            authorize=lambda c: self._access(c, viewer),
+            authorize=lambda c: self._order_access(c, viewer, self.game.action(c, identity)),
             auto_audit=False,
         )

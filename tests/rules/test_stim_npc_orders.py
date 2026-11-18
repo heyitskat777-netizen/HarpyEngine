@@ -15,26 +15,32 @@ from test_mission_ui import current
 from test_stim_sex import choose
 
 from girlframe.database import tables as t
+from girlframe.discord_adapter.inbox import InboxView
 from girlframe.discord_adapter.m2_ui import open_choice
 from girlframe.discord_adapter.m3_stim_sex import open_stim
 from girlframe.engine import m3_stim_sex as rules
 from girlframe.engine.m2 import PlayInput
 from girlframe.engine.m3_actor_bonds import current_ref, depth
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_actors import fingerprint
 from girlframe.engine.m3_mockingbird import actor_tags
 from girlframe.engine.m3_world_state import Npc
+from girlframe.services.inbox import InboxService
+from girlframe.services.m2_game import GameService
 from girlframe.services.m3_actors import ActorService
 from girlframe.services.m3_body_facts import BodyFactsService
 from girlframe.services.m3_cast import CastService
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_npc_orders import NpcOrderService, order, source
+from girlframe.services.m3_npc_roles import NpcRoleService
 from girlframe.services.m3_stim_npc import order_authority
 from girlframe.services.m3_stim_sex import SexService, _drug, prove_effect
+from girlframe.services.m3_succubus import SuccubusService
 from girlframe.services.m3_world import WorldService
 from girlframe.services.onboarding import WorkflowError
 
 
-def ready_npc(ledger, tmp_path, monkeypatch):
+def ready_npc(ledger, tmp_path, monkeypatch, controller=ADMIN):
     game, worker, gateway, _ = ready(ledger, tmp_path, monkeypatch)
     approved(ledger, game, tmp_path, monkeypatch, extra=(rules.RULE,))
     service = SexService(game)
@@ -48,22 +54,24 @@ def ready_npc(ledger, tmp_path, monkeypatch):
     )
     missions = MissionService(ledger)
     npc = ActorRef(kind="npc", entity="actual-stim-order-counterpart")
-    WorldService(missions).npc(
-        ADMIN,
-        str(uuid4()),
-        state(game).revision,
-        Npc(
-            id=npc.entity,
-            name="Pat",
-            jobs=("guard",),
-            controller=1,
-            detail="Ordinary original synthetic NPC",
-            revealed=True,
-            cell=(0, 0),
-        ),
+    world = WorldService(missions)
+    entry = Npc(
+        id=npc.entity,
+        name="Pat",
+        jobs=("guard",),
+        controller=controller.user_id,
+        detail="Ordinary original synthetic NPC",
+        revealed=True,
+        cell=(0, 0),
     )
+    if controller == ADMIN:
+        world.npc(ADMIN, str(uuid4()), state(game).revision, entry)
+    else:
+        roles = NpcRoleService(world)
+        offer = roles.offer(ADMIN, str(uuid4()), state(game).revision, entry)
+        roles.respond(controller, str(uuid4()), offer["id"], state(game).revision, "accept")
     cast_service = CastService(ActorService(missions))
-    cast_change(cast_service, ADMIN, "join", npc)
+    cast_change(cast_service, controller, "join", npc)
     BodyFactsService(game).record(
         ADMIN,
         str(uuid4()),
@@ -74,6 +82,231 @@ def ready_npc(ledger, tmp_path, monkeypatch):
         "Actual original ordinary human body and brain",
     )
     return game, worker, gateway, service, npc, cast_service
+
+
+@pytest.mark.parametrize("refuse", [False, True], ids=["middle-obey", "high-disobey"])
+def test_pilot_orders_original_drugged_npc_through_private_inbox(
+    ledger, tmp_path, monkeypatch, refuse
+):
+    game, worker, gateway, stim, npc, casts = ready_npc(ledger, tmp_path, monkeypatch, OTHER)
+    identity = stim.invite(
+        PLAYER,
+        "invite-npc",
+        900,
+        npc,
+        state(game).revision,
+        "PRIVATE_STIM_CONTACT Original voluntary source",
+    )["id"]
+    stim.respond(
+        OTHER,
+        "accept-npc",
+        identity,
+        state(game).revision,
+        True,
+        "The original NPC controller confirms the actual source",
+        npc_contact_account="Both original bodies are here and outside enclosures",
+    )
+    before = state(game)
+    game.dice.faces = (5, 5) if refuse else (3, 4)
+    parent = game.begin(
+        PLAYER,
+        "roll-npc-stim",
+        900,
+        before.sheets["2"].revision,
+        PlayInput(
+            play=rules.PLAY,
+            target_actor=npc,
+            source_work=identity,
+            heat=1,
+            context="The original participants have confirmed this source",
+            trigger_confirmed=True,
+        ),
+    )["action_id"]
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    choose(game, PLAYER, "stim_sex_drug", ("quick",), native=True)
+    if refuse:
+        choose(game, PLAYER, "stim_sex_drug", ("sense",), native=True)
+    choose(
+        game,
+        PLAYER,
+        "stim_sex_effects",
+        ("orders", "bond") if refuse else ("orders",),
+        native=True,
+    )
+    if refuse:
+        choose(game, OTHER, "stim_sex_effects", ("bond",), native=True)
+    tick(worker, gateway, 8)
+    actual = state(game)
+    pilot = current_ref(actual, PLAYER.user_id)
+    (effect,) = (x for x in rules.records(actual, rules.Effect) if x.kind == "orders")
+    drug = next(x for x in rules.records(actual, rules.Drug) if x.id == effect.drug)
+    assert drug.target == effect.target == npc and effect.giver == pilot
+    assert actual.order == before.order and not actual.requisitions
+    assert actual.sheets["2"].heat == before.sheets["2"].heat - 1
+    assert game.inspect(PLAYER, parent)["state"] == "complete" and game.dice.calls == 1
+
+    data = stim.view(PLAYER, identity, order_channel=900)
+    assert data["pilot_order_effect"] == effect.id
+    assert stim.view(OTHER, identity, order_channel=900)["pilot_order_effect"] is None
+    with pytest.raises(WorkflowError, match="original participants"):
+        stim.view(ADMIN, identity)
+    orders = SuccubusService(game)
+    args = (
+        PLAYER,
+        "wrong-basis",
+        900,
+        actual.revision,
+        npc,
+        data["pilot_order_cast"],
+        "Wait here",
+    )
+    with pytest.raises(WorkflowError, match="original unexpired Stim"):
+        orders.issue_npc(*args, stim_effect="wrong-effect")
+    with pytest.raises(WorkflowError, match="original scene cast"):
+        orders.issue_npc(
+            PLAYER,
+            "stale-npc-order",
+            900,
+            actual.revision - 1,
+            npc,
+            data["pilot_order_cast"],
+            "Wait here",
+            stim_effect=effect.id,
+        )
+    assert state(game) == actual
+
+    async def issue():
+        shown = current(2, 960001)
+        shown.channel_id = 900
+        await shown.response.defer(ephemeral=True)
+        await open_stim(shown, stim, identity)
+        form = shown.edit_original_response.call_args.kwargs["view"]
+        assert not await form.interaction_check(current(3, 960002))
+        form.values["instruction"] = "Wait by the door"
+        click = current(2, 960003)
+        await form.confirm.callback(click)
+        assert form.completed, click.edit_original_response.call_args_list
+        saved = state(game)
+        await form.confirm.callback(click)
+        assert state(game) == saved
+
+    asyncio.run(issue())
+    replay = orders.issue_npc(
+        PLAYER,
+        "960003",
+        900,
+        actual.revision,
+        npc,
+        data["pilot_order_cast"],
+        "Wait by the door",
+        stim_effect=effect.id,
+    )
+    action = replay["action_id"]
+    with ledger.engine.connect() as c:
+        row = game.action(c, action)
+        assert row["data"]["succubus_npc_order"]["stim_effect"] == effect.id
+        assert row["data"]["succubus_npc_order"]["authority"] is None
+    tick(worker, gateway, 5)
+
+    reopened = GameService(ledger, dice=game.dice)
+    control = SuccubusService(reopened)
+    inbox = InboxService(ledger)
+    item = next(x for x in inbox.items(OTHER) if x.identity == action)
+    assert not any(x.identity == action for x in inbox.items(PLAYER))
+    assert not any(x.identity == action for x in inbox.items(ADMIN))
+    with pytest.raises(WorkflowError, match="owns this choice"):
+        control.inspect(PLAYER, action)
+    with pytest.raises(WorkflowError, match="owns this choice"):
+        control.inspect(ADMIN, action)
+    view = control.inspect(OTHER, action)
+    decision = "disobey" if refuse else "obedient"
+    response_args = (action, view["revision"], decision, "The NPC's actual reply")
+    ledger.safety(OTHER, "pause-stim-npc-order", ledger.status(OTHER)["revision"], pause=True)
+    paused = state(reopened)
+    with pytest.raises(WorkflowError, match="SAFETY_PAUSED"):
+        control.choose(OTHER, "paused-npc-response", *response_args)
+    assert state(reopened) == paused
+    assert control.inspect(OTHER, action)["phase"] == view["phase"]
+    ledger.safety(OTHER, "resume-stim-npc-order", ledger.status(OTHER)["revision"], pause=False)
+    before_response = state(reopened)
+    with pytest.raises(WorkflowError):
+        control.choose(
+            OTHER, "stale-npc-response", action, view["revision"] - 1, decision, "Stale reply"
+        )
+    assert state(reopened) == before_response
+
+    async def respond():
+        shown = current(3, 960004)
+        await shown.response.defer(ephemeral=True)
+        await InboxView(inbox, 3).route(shown, item)
+        form = shown.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            option=(decision,),
+            account="The NPC's actual reply",
+        )
+        submitted = current(3, 960005)
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+
+    asyncio.run(respond())
+    saved_response = state(reopened)
+    control.choose(OTHER, "960005", *response_args)
+    with pytest.raises(WorkflowError):
+        control.choose(OTHER, "duplicate-npc-response", *response_args)
+    assert state(reopened) == saved_response
+    if refuse:
+        game.dice.faces = (1, 2)
+        view = control.inspect(OTHER, action)
+        roll = (OTHER, "npc-refusal-roll", action, view["revision"], "roll", "Actual refusal")
+        receipt = control.choose(*roll)["receipt"]
+        assert control.choose(*roll)["receipt"] == receipt
+        assert receipt["rule_id"] == rules.RULE and receipt["heat_spent"] == 0
+        view = control.inspect(OTHER, action)
+        control.choose(
+            OTHER, "npc-failed-refusal", action, view["revision"], "hesitant", "NPC obeys"
+        )
+        view = control.inspect(ADMIN, action)
+        control.choose(
+            ADMIN,
+            "npc-refusal-review",
+            action,
+            view["revision"],
+            "review",
+            "The actual Handler reviews the attempt",
+            knows=False,
+            punish=False,
+        )
+    completed = control.inspect(OTHER, action)
+    assert completed["phase"] == "complete"
+    assert game.dice.calls == 1 + refuse
+    assert state(game).sheets == actual.sheets and state(game).order == actual.order
+    tick(worker, gateway, 8)
+
+    for _ in range(2):
+        game.close_scene(ADMIN, str(uuid4()), 900)
+        game.bind_scene(ADMIN, str(uuid4()), 900)
+        for viewer in (ADMIN, PLAYER, OTHER):
+            game.join_scene(viewer, str(uuid4()), 900)
+        cast_change(casts, OTHER, "join", npc)
+    after = state(game)
+    assert rules.expired(after, drug.id)
+    assert stim.view(PLAYER, identity, order_channel=900)["pilot_order_effect"] is None
+    cast = next(x for x in after.scene_casts if x.open and x.channel == 900)
+    with pytest.raises(WorkflowError, match="original unexpired Stim"):
+        control.issue_npc(
+            PLAYER,
+            "expired-npc-order",
+            900,
+            after.revision,
+            npc,
+            fingerprint(cast),
+            "An expired effect cannot order",
+            stim_effect=effect.id,
+        )
+    assert state(game) == after
+    assert "PRIVATE_STIM_CONTACT" not in str(gateway.messages)
+    assert "Wait by the door" not in str(gateway.messages)
 
 
 def low_orders(game, worker, gateway, service, npc):
