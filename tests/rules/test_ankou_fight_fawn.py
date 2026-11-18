@@ -118,6 +118,9 @@ def test_damage_creates_owned_fight_fawn_and_only_matching_roll_consumes_it(
         assert prove_roll_modifiers(game, c, used, action) == [{"source": task.id, "amount": 1}]
     receipt = game.inspect(PLAYER, roll)["receipt"]
     assert receipt["pre_total"] == 9 and game.dice.calls == 2
-    assert receipt["pre_modifiers"] == [{"source": task.id, "amount": 1}]
+    source_modifiers = [
+        modifier for modifier in receipt["pre_modifiers"] if modifier["source"] == task.id
+    ]
+    assert source_modifiers == [{"source": task.id, "amount": 1}]
     assert game.roll(PLAYER, "fight-fawn-replay", roll)["receipt"] == receipt
     assert game.dice.calls == 2

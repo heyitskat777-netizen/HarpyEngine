@@ -6333,3 +6333,18 @@ under current rules. Ancillary stays disabled. Compound and learned-source
 branches, complete Captured and Timeskip continuations, and authenticated
 Activity and real-player acceptance remain open. [Coverage gaps and review
 questions](GIRL_FRAME_PLAY_COVERAGE.md#open-coverage)
+## Girl and Frame follow-up integration evidence
+
+The [Frame outcome matrix](FRAME_PLAYBOOK_VERIFICATION.md) links direct
+offline evidence for the core Frames and Class Requisitions and carries
+forward the relevant historical references. The follow-up adds Stim
+Pilot-to-ordinary-NPC temporary Orders within the existing scoped authority
+and NPC-owned response protocol. It also verifies both Fight/Fawn options,
+the Web Implant Assault rider and CONSUME's optional erasure refusal. Fawn
+now binds modifier consumption to its actual roll event.
+
+The [integration handoff](GIRL_FRAME_INTEGRATION_HANDOFF.md) supplies the
+conditional Princess Order questions for private human-GM adjudication,
+the exact test selections, and instructions for reconciling a newer engine
+and running the authenticated Activity acceptance checks. The package
+README records its revision and local test results.

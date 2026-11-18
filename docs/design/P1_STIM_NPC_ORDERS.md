@@ -1,4 +1,12 @@
-# Stim NPC-to-Pilot temporary Orders
+# Stim temporary Orders with ordinary NPCs
+
+The coverage follow-up adds the Pilot-to-NPC direction through the existing
+controller-owned NPC Order service. The private Stim source supplies the exact
+effect. New authority is temporary and scoped to the original actors. The
+separate Stim event verifies authority at issuance. The ordinary NPC response
+workflow remains shared. [Current scope and tests](../../reports/GIRL_FRAME_INTEGRATION_HANDOFF.md#stim-blissed-pilot-to-ordinary-npc-orders).
+
+## Original NPC-to-Pilot adapter record
 
 Source: Girl Frame 2026_09_01, PDF39/printed37, Stim Sex. The low counterpart
 chooses three effects; the high counterpart chooses one reciprocal effect. The
