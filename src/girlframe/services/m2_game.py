@@ -4775,6 +4775,7 @@ class GameService:
 
             if (
                 psychic_flirt
+                or ankou_modifiers
                 or prepared.ankou_pulse
                 or court_doll is not None
                 or any(
