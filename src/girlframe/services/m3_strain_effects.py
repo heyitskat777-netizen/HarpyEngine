@@ -80,9 +80,16 @@ class EffectService:
             return {
                 **{k: row[k] for k in ("id", "revision", "state", "off_duty_id")},
                 "rule_id": body["rule_id"],
-                "supported": body["rule_id"] in rules.SUPPORTED,
+                "supported": body["rule_id"] in rules.SUPPORTED or body["rule_id"] == VOID_SPREAD,
                 "game_revision": state.revision,
-                **({"spread": body.get("spread")} if body["rule_id"] == VOID_SPREAD else {}),
+                **(
+                    {
+                        "spread": body.get("spread"),
+                        "spread_started": bool(body.get("spread_started")),
+                    }
+                    if body["rule_id"] == VOID_SPREAD
+                    else {}
+                ),
                 "awaiting_rebel_offer": bool(body.get("offer_requested"))
                 and row["state"] == "pending",
                 "awaiting_civic_directive": bool(body.get("directive_requested"))

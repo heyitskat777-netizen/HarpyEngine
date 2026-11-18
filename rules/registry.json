@@ -16770,7 +16770,7 @@
         "heading": "Void high: die 2, column 1"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
@@ -16778,7 +16778,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_strain_void_spread.py"
+        "tests/rules/test_strain_void_spread.py",
+        "tests/rules/test_strain_void_spread_gain.py::test_area_applies_normal_girl_npc_and_handler_void_to_original_occupants"
       ],
       "m2_play_id": null,
       "module": "core"

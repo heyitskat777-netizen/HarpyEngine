@@ -29,7 +29,7 @@ Off-Duty resumes only at its genuine completion boundary.
 | --- | --- | --- |
 | Low Void 6 | Create a Directed Gorgon in orbit over a real location, bind the next dispatch, prevent destruction on an actual defeat, or apply destruction once at the deadline. The implemented scope handles defeat and ordinary unprotected sites. Redirection and protection interactions hold for review. | Give each original Girl a private examination. A revealed Void Asset produces Observation, and a revealed concealed Asset creates one real Punishment. Unreported concealment remains private. [Rulebook p. 142](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=144) |
 | High Void 1 | Record an actual Harpy attack at the occupied base and preserve its original obsession target. | Reveal an original NPC Bond as the selected Benevolent or Erratic Doppelgänger, preserving the same source identity and Bond history. [Rulebook p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) |
-| High Void 2 | Save 2d6 once, verify that many distinct connected squares, and resolve the effects on the actual occupants. Clarify whether *touched* means mechanically gaining Void in this row. | Draw an original Girl once. Record the outside-Frame Harpy in that Girl's actual bunk. Handler knowledge requires the printed reveal or a real contact Play. [Rulebook p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) |
+| High Void 2 | Save 2d6 once, verify that many distinct connected squares, and apply each actual occupant's ordinary Void gain as the owner confirmed. Preserve required work for unsupported role variants. | Draw an original Girl once. Record the outside-Frame Harpy in that Girl's actual bunk. Handler knowledge requires the printed reveal or a real contact Play. [Rulebook p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) |
 | High Void 4 | Select an eligible Priestess Frame, with fallback only if no Priestess qualifies. Consume once on original activation, apply subsumption, and retain the exact hostile body until defeat. | Record the Directors' demand. Resolve demonstrated action to alleviate the fear, or queue every actual Severe Punishment from a decision of failure. [Rulebook p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) |
 | High Void 5 | Make an explicit Handler-owned revelation through an approved audience-scoped scene. Record which of the two Plays was made and what its recipients actually learned. | Bind the Gorgon as the Frame source of the mandatory Dive for each actual eligible Girl, or draw once and resolve an actual Void gain if none qualifies. [Rulebook p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) |
 | Low Rebellion 3 | Record a protest at a real city and an original fictional Director's binding demand. Prove the protest was addressed through the actual mission or scene. | Preserve the original private leak. Verify elimination of the actual responsible parties or require the higher-ups' public apology and its real delivery. [Rulebook p. 145](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=147) |
@@ -266,3 +266,27 @@ synthetic outcomes checked rejected premature elimination, private
 and public readback, stale and replayed submissions, original NPC
 death through native damage and Off-Duty activation.
 [Low Rebellion p. 145](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=147) · [Incident tests](../../tests/rules/test_strain_cadre_leak.py)
+
+## Ninth checkpoint
+
+The base is `5d7ac02f662504a965c230f8de39188225aa6839`.
+The owner confirmed that everyone touched by High Void 2.1 uses
+ordinary Void gain. The original saved dice and connected footprint
+now open separate required work for the people present in that
+snapshot. Later movement does not move the exposure with them.
+A Girl or Harpy chooses an actual owned Asset. The Handler chooses
+each ordinary NPC's manifestation. The Handler and fictional
+Director each use their existing medical choices for their own body.
+Full-family ordinary Girl corruption keeps Off-Duty held until the
+actual transformation or resistance is resolved. The mixed-role
+synthetic test also leaves a Harpy's parked Frame in its original
+separate location and preserves its marked Identity.
+
+Unknown snapshot positions require documented absence or source
+recovery. The engine never automatically classifies them as outside.
+External Rebel and Foundation Girls, and the Handler in temporary
+Girl rules, still need their specific gain and conversion ports.
+Their captured exposures keep required work pending. This scope
+uses ordinary Asset rewriting. Special Storage, growth and other
+gain replacement options retain their separate source requirements.
+[Owner-confirmed High Void p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) · [Ordinary Void pp. 17–18](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=19) · [Occupant tests](../../tests/rules/test_strain_void_spread_gain.py)

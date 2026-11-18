@@ -178,6 +178,11 @@ def source(
             signal = SignalService(StrainService(OffDutyService(MissionService(game.store))))
             prove_threshold(c, signal, first, body, actor)
             return current, body, actor
+        if body.get("reason") == "void_spread":
+            from girlframe.services.m3_void_spread import prove_threshold as prove_spread_threshold
+
+            prove_spread_threshold(c, game.store, first, body, actor)
+            return current, body, actor
         if body.get("reason") == "janus_storage_replug":
             from girlframe.services.m3_janus_storage import prove_replug
 
@@ -567,6 +572,10 @@ def complete(
 
             signal = SignalService(StrainService(OffDutyService(MissionService(game.store))))
             complete_signal(c, signal, body["signal"], event)
+        elif body.get("reason") == "void_spread":
+            from girlframe.services.m3_void_spread import complete_threshold as complete_spread
+
+            complete_spread(c, game.store, body["source_work"], event)
         elif body.get("reason") == "am_body_adjustment":
             from girlframe.services.m3_am_body_consequences import complete_void_continuation
 

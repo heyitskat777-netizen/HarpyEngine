@@ -3887,6 +3887,7 @@ class InboxService:
                     "mockingbird_redirect_handler_void",
                     "mockingbird_redirect_handler_girl_void",
                     "dive_handler_void",
+                    "void_spread_handler_void",
                     "call_guest_handler_girl_void",
                     "sprite_intercept",
                     "gorgon_dormant_void",
@@ -3935,6 +3936,8 @@ class InboxService:
                     primary, task_name = "Review Observation", "m3_observation"
                 elif kind == "strain_void_exam":
                     primary, task_name = "Record your examination", "m3_strain_void_exam"
+                elif kind == "void_spread_gain":
+                    primary, task_name = "Resolve the original Void gain", "m3_void_spread_gain"
                 elif kind == "director_presence":
                     primary, task_name = "Review actual presence", "m3_director_review"
                 elif kind in (
@@ -4032,6 +4035,8 @@ class InboxService:
                     "observation_choice": "Your Void Observation consequences",
                     "observation_effect": "Required Observation details",
                     "strain_void_exam": "Required medical examination",
+                    "void_spread_gain": "Area Void gain · "
+                    + str(json.loads(work["body_json"]).get("label", "Original occupant")),
                     "director_presence": "Director presence: Handler rule context",
                     "frame_off_duty_reward": "Frame Off-Duty Permission review",
                     "frame_reward_court": "Resolve actual Queen AM holder",

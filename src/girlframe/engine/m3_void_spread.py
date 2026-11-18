@@ -4,11 +4,15 @@ from typing import Literal
 
 from pydantic import Field
 
+from girlframe.engine.m2 import GameState
+from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_world import distance
 from girlframe.engine.m3_world_state import Board, Cell, Model
 from girlframe.engine.rolls import Face
 
 RULE = "strain.void.high.2.1"
+KIND = "void_spread_application"
+Role = Literal["girl", "handler", "npc", "harpy", "unsupported"]
 
 
 class Spread(Model):
@@ -17,6 +21,30 @@ class Spread(Model):
     roll_event: str
     cells: tuple[Cell, ...] = Field(default=(), max_length=12)
     scope_event: str | None = None
+
+
+class Occupant(Model):
+    actor: ActorRef
+    label: str
+    controller: int
+    role: Role
+    cell: Cell
+    work: str
+
+
+class Application(Model):
+    id: str
+    scope: str
+    event: str
+    handler: ActorRef
+    occupants: tuple[Occupant, ...]
+    reviewed_outside: tuple[ActorRef, ...] = ()
+
+
+def applications(state: GameState) -> tuple[Application, ...]:
+    return tuple(
+        Application.model_validate_json(x["body"]) for x in state.facts if x.get("kind") == KIND
+    )
 
 
 def select(board: Board, spread: Spread, cells: tuple[Cell, ...], event: str) -> Spread:

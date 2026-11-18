@@ -160,7 +160,9 @@ async def open_spread(
 ) -> None:
     spread = data["spread"]
     if spread and spread["scope_event"]:
-        await reply(interaction, "The dice and squares are saved. Void exposure remains pending.")
+        from girlframe.discord_adapter.m3_void_spread import open_application
+
+        await open_application(interaction, service, data, identity)
         return
     fields = (
         [Field("squares", "Connected map squares, one x,y per line", paragraph=True)]
@@ -186,7 +188,7 @@ async def open_spread(
         if cells is None:
             count = sum(result["spread"]["faces"])
             return f"The roll covers {count} squares. Reopen this request to choose the area."
-        return "The connected area is saved. Exposure remains required work."
+        return "The connected area is saved. Reopen it to apply each occupant's Void gain."
 
     form = NativeForm(
         interaction.user.id,
