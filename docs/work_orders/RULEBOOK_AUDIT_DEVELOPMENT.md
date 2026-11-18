@@ -87,3 +87,29 @@ mission and its pending deadline when an automatic strike would bypass
 existing protections or require a judgment about whether the threat was
 dealt with. The authored ordinary threat can be averted by an actual defeat.
 The next checkpoint should add direct interception evidence to this case.
+
+## Second checkpoint
+
+The base is `cb400bf00f1c294447f9f742557b178d3f585f93`.
+High Void 5.1 can record either printed revelation from the original
+Handler in a real joined scene. Its private notice belongs to its original
+audience. This scope covers the Play made at this source. If the Handler
+may use a gained revelation again after this event, the duration and trigger
+need a source ruling before reusable access is granted.
+
+High Rebellion 2.2 keeps the Strain effect pending until a separately
+controlled Rebel Handler sends the actual offer. The contacted original
+Girl and the Rebel controller can reopen it. No player response or escape
+result is supplied by the offer. [Private effect checks](../../tests/rules/test_strain_void_spread.py)
+
+High Void 2.1 now saves the additional 2d6 and the Handler's connected
+map footprint. The branch **remains pending** after that preparation.
+Page 143 says every person there becomes “touched by the Void”; page 17
+specifies the consequences when an actor *gains* Void, and the neighboring
+5.2 column explicitly says a Girl “gains Void.” The unresolved question is
+whether the spread is a full Void gain for each original living occupant
+or a separate exposure condition. Confirm the effect by actor kind,
+including a person with no eligible Asset and existing Harpies. The
+engine preserves the chosen squares, source snapshot and dice while this
+question is open. It records no corruption, punishment or waiver.
+[Void rules p. 17](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=19) · [High Void p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145)

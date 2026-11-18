@@ -11,9 +11,13 @@ from girlframe.engine.m3_budget_anarchy import REBELLION as REBEL_PROTEST
 from girlframe.engine.m3_budget_sabotage import Pin
 from girlframe.engine.m3_contraband_state import ContrabandFind
 from girlframe.engine.m3_orbital_threat import RULE as ORBITAL_THREAT
+from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_refusal_state import RefusalBonus
 from girlframe.engine.m3_scientific_observation import Demand, require_orders
 from girlframe.engine.m3_supply_state import SupplyLoss
+from girlframe.engine.m3_void_revelation import RULE as VOID_REVELATION
+from girlframe.engine.m3_void_revelation import Play as RevelationPlay
+from girlframe.engine.m3_void_revelation import Revelation
 from girlframe.engine.m3_world_state import (
     Asset,
     CorePlan,
@@ -35,11 +39,13 @@ SUPPORTED = frozenset(
         ORBITAL_THREAT,
         VOID_EXAMINATION,
         "strain.void.high.3.1",
+        VOID_REVELATION,
         "strain.rebellion.low.1.1",
         "strain.rebellion.low.1.2",
         "strain.rebellion.low.2.2",
         "strain.rebellion.low.5.2",
         REBEL_PROTEST,
+        REBEL_ESCAPE_OFFER,
         "strain.rebellion.high.4.2",
         "strain.rebellion.high.5.2",
         "strain.rebellion.low.6.1",
@@ -99,6 +105,8 @@ class Choice(Model):
     backstory_observers: tuple[int, ...] = Field(default=(), exclude_if=lambda value: not value)
     storage_owner: int | None = Field(default=None, ge=1, exclude_if=lambda value: value is None)
     fight_channel: int | None = Field(default=None, ge=1, exclude_if=lambda value: value is None)
+    revelation_play: RevelationPlay | None = Field(default=None, exclude_if=lambda x: x is None)
+    revelation_channel: int | None = Field(default=None, ge=1, exclude_if=lambda x: x is None)
 
 
 def fields(choice: Choice, allowed: set[str]) -> None:
@@ -124,6 +132,7 @@ def apply(
     tag_setter_appointment: str | None = None,
     cleanup_index: int | None = None,
     cleanup_rng: Literal["os", "test_injected"] | None = None,
+    revelation: Revelation | None = None,
 ) -> GameState:
     if choice.rule_id not in SUPPORTED:
         raise ValueError("UNSUPPORTED_RULE: this Strain effect has no complete typed resolver")
@@ -142,10 +151,28 @@ def apply(
             raise ValueError("Supply the actual orbital Gorgon, period and event")
         introduce(state, choice.gorgon, source_work, period_id, source_event, choice.account)
         world = state.world
+    elif rule == VOID_REVELATION:
+        from girlframe.engine.m3_void_revelation import commit
+
+        fields(choice, {"revelation_play", "revelation_channel"})
+        if (
+            revelation is None
+            or revelation.id != source_work
+            or revelation.event != source_event
+            or revelation.play != choice.revelation_play
+            or revelation.account != choice.account.strip()
+        ):
+            raise ValueError("Recover the actual revelation and original scene audience")
+        commit(state, revelation)
     elif rule == VOID_EXAMINATION:
         fields(choice, set())
         if period_id is None or source_event is None or not state.order:
             raise ValueError("Bind the required exams to the actual period and its Girls")
+    elif rule == REBEL_ESCAPE_OFFER:
+        from girlframe.engine.m3_rebel_escape_offer import speaker
+
+        fields(choice, {"target"})
+        speaker(state, choice.target)
     elif rule == "strain.rebellion.low.2.2":
         fields(choice, {"target"})
         if (

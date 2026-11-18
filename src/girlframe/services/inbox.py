@@ -2926,7 +2926,51 @@ class InboxService:
                         task="m3_handler_notice",
                     )
                 )
+            from girlframe.engine.m3_void_revelation import revelations
             from girlframe.services.m3_handler_tags import HandlerTagService
+            from girlframe.services.m3_rebel_escape_offer import visible as visible_escape_offers
+
+            for notice in revelations(canon)[-25:]:
+                if any(role.controller == viewer.user_id for role in notice.recipients):
+                    items.append(
+                        InboxItem(
+                            "void-revelation:" + notice.id,
+                            "void_revelation",
+                            notice.id,
+                            canon.revision,
+                            "plays",
+                            "Actual Void revelation",
+                            "Original scene",
+                            "resolved",
+                            False,
+                            False,
+                            "Read the Handler's revelation heard in your original scene.",
+                            "",
+                            "Read revelation",
+                            task="m3_strain_revelation",
+                        )
+                    )
+
+            for offer in visible_escape_offers(canon, viewer.user_id)[-25:]:
+                delivered = offer.delivered_event is not None
+                items.append(
+                    InboxItem(
+                        "rebel-escape-offer:" + offer.id,
+                        "rebel_escape_offer",
+                        offer.id,
+                        canon.revision,
+                        "off_duty",
+                        "Private Rebel escape offer",
+                        "Original actor",
+                        "resolved" if delivered else "pending",
+                        not delivered,
+                        False,
+                        "Read the actual offer." if delivered else "Make the actual private offer.",
+                        "",
+                        "Read offer" if delivered else "Compose offer",
+                        task="m3_rebel_escape_offer",
+                    )
+                )
 
             for notice in HandlerTagService(GameService(self.store)).notices(connection, viewer):
                 items.append(
@@ -3785,6 +3829,7 @@ class InboxService:
                     if json.loads(work["body_json"])["rule_id"] in SUPPORTED | {
                         "strain.void.low.1.2",
                         "strain.void.low.3.1",
+                        "strain.void.high.2.1",
                         "strain.rebellion.low.4.2",
                         "strain.budget.high.1.2",
                     }:

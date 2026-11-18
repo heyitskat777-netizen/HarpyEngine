@@ -13,6 +13,10 @@ from girlframe.engine import m3_strain_effects as rules
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_contraband_state import ContrabandFind
 from girlframe.engine.m3_supply_state import SupplyLoss
+from girlframe.engine.m3_void_revelation import Revelation, revelations
+from girlframe.engine.m3_void_spread import RULE as VOID_SPREAD
+from girlframe.engine.m3_void_spread import Spread, select
+from girlframe.engine.m3_world_state import Cell
 from girlframe.engine.rolls import IndexSource, OsIndex
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_strain import StrainService
@@ -70,6 +74,9 @@ class EffectService:
                 "rule_id": body["rule_id"],
                 "supported": body["rule_id"] in rules.SUPPORTED,
                 "game_revision": state.revision,
+                **({"spread": body.get("spread")} if body["rule_id"] == VOID_SPREAD else {}),
+                "awaiting_rebel_offer": bool(body.get("offer_requested"))
+                and row["state"] == "pending",
                 "supply_outcome": {
                     "recipient": label,
                     "resource": supply.resource,
@@ -79,6 +86,82 @@ class EffectService:
                 if supply is not None
                 else None,
             }
+
+    def revelation(self, viewer: GuildViewer, identity: str) -> dict[str, str]:
+        with self.store.engine.connect() as c:
+            self.game.authorize(c, viewer, game=False)
+            value = next(
+                (x for x in revelations(load_state(c, self.store.campaign_id)) if x.id == identity),
+                None,
+            )
+            if value is None or (
+                value.handler != viewer.user_id
+                and not any(role.controller == viewer.user_id for role in value.recipients)
+            ):
+                raise WorkflowError("This revelation belongs to its actual original audience")
+            return dict(play=value.play, account=value.account)
+
+    def prepare_spread(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        identity: str,
+        revision: int,
+        game_revision: int,
+        *,
+        cells: tuple[Cell, ...] | None = None,
+    ) -> dict[str, Any]:
+        def authorize(c: Connection) -> None:
+            self.strain._authorize(c, viewer)
+            self.strain.missions.access.authorize(c, viewer, "world")
+            self.game.unpaused(c)
+
+        def operation(c: Connection) -> dict[str, Any]:
+            row = self._row(c, identity)
+            self.strain._check(c, viewer, row, revision)
+            state = self.strain._state(c, game_revision)
+            body = json.loads(row["body_json"])
+            if body["rule_id"] != VOID_SPREAD or state.world is None:
+                raise WorkflowError("Open the saved High Void spread on the actual map")
+            event_id = str(uuid4())
+            if cells is None:
+                if "spread" in body:
+                    raise WorkflowError("The 2d6 are already saved for this effect")
+                spread = Spread(
+                    faces=(self.strain.dice.roll_d6(), self.strain.dice.roll_d6()),
+                    rng_source=self.strain.rng_source,
+                    roll_event=event_id,
+                )
+            else:
+                if "spread" not in body:
+                    raise WorkflowError("Save the actual 2d6 before choosing squares")
+                spread = select(
+                    state.world.board,
+                    Spread.model_validate_json(json.dumps(body["spread"])),
+                    cells,
+                    event_id,
+                )
+            event = self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.void_spread_rolled" if cells is None else "m3.void_spread_scoped",
+                state if cells is not None else None,
+                event_id=event_id,
+                work_id=identity,
+            )
+            saved = spread.model_dump(mode="json")
+            self.strain._save(c, row, event, body | {"spread": saved})
+            return dict(id=identity, revision=revision + 1, state="pending", spread=saved)
+
+        return self.strain.missions._write(
+            viewer,
+            key,
+            "m3.void_spread_preparation",
+            dict(id=identity, revision=revision, game_revision=game_revision, cells=cells),
+            operation,
+            authorize,
+        )
 
     def apply(
         self,
@@ -120,6 +203,29 @@ class EffectService:
             public_appointment = None
             cleanup_index = None
             cleanup_rng = None
+            revelation = None
+            if choice.rule_id == rules.VOID_REVELATION:
+                from girlframe.services.m3_actors import ActorService
+                from girlframe.services.m3_cast import CastService
+
+                if choice.revelation_channel is None or choice.revelation_play is None:
+                    raise WorkflowError("Choose a printed revelation in an actual joined scene")
+                cast, _ = CastService(ActorService(self.strain.missions))._current(
+                    c, state, choice.revelation_channel
+                )
+                audience = tuple(role for role in cast.roles if role.actor.kind == "pilot")
+                if cast.facilitator != viewer.user_id or not audience:
+                    raise WorkflowError("Join as facilitator with an actual original audience")
+                revelation = Revelation(
+                    id=identity,
+                    event=event_id,
+                    scene=cast.id,
+                    cast_revision=cast.revision,
+                    handler=viewer.user_id,
+                    play=choice.revelation_play,
+                    recipients=audience,
+                    account=choice.account.strip(),
+                )
             if choice.rule_id == "strain.budget.high.6.1":
                 from girlframe.services.m3_medical import MedicalService
 
@@ -351,7 +457,13 @@ class EffectService:
                 tag_setter_appointment=public_appointment,
                 cleanup_index=cleanup_index,
                 cleanup_rng=cleanup_rng,
+                revelation=revelation,
             )
+            needs_offer = choice.rule_id == rules.REBEL_ESCAPE_OFFER
+            if needs_offer:
+                from girlframe.services.m3_rebel_escape_offer import stage
+
+                stage(c, self.strain, updated, row, choice.target, event_id)
             scientific_period, scientific_events = None, []
             if choice.rule_id == "strain.budget.low.3.1":
                 from girlframe.engine.m3_scientific_observation import materialize
@@ -560,10 +672,16 @@ class EffectService:
                 c,
                 row,
                 event,
-                json.loads(row["body_json"]) | {"choice": choice.model_dump(mode="json")},
-                resolved=True,
+                json.loads(row["body_json"])
+                | {"choice": choice.model_dump(mode="json")}
+                | ({"offer_requested": event} if needs_offer else {}),
+                resolved=not needs_offer,
             )
-            return {"id": identity, "state": "resolved", "game_revision": updated.revision}
+            return {
+                "id": identity,
+                "state": "pending" if needs_offer else "resolved",
+                "game_revision": updated.revision,
+            }
 
         try:
             return self.strain.missions._write(

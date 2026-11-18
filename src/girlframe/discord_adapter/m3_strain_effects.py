@@ -14,8 +14,12 @@ from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_budget_anarchy import REBELLION as REBEL_PROTEST
 from girlframe.engine.m3_gorgon_catalog import ASSETS
 from girlframe.engine.m3_orbital_threat import RULE as ORBITAL_THREAT
+from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_scientific_observation import Demand
 from girlframe.engine.m3_strain_effects import Choice, TagChoice
+from girlframe.engine.m3_void_revelation import PLAYS as REVELATIONS
+from girlframe.engine.m3_void_revelation import RULE as VOID_REVELATION
+from girlframe.engine.m3_void_spread import RULE as VOID_SPREAD
 from girlframe.engine.m3_world import CLASS_ASSETS, distance
 from girlframe.engine.m3_world_state import (
     NPC_JOBS,
@@ -73,6 +77,12 @@ async def open_effect(
 ) -> None:
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(service.get, viewer, identity)
+    if data["rule_id"] == VOID_SPREAD:
+        await open_spread(interaction, service, data, identity)
+        return
+    if data["awaiting_rebel_offer"]:
+        await reply(interaction, "The actual Rebel controller has the private offer request.")
+        return
     if data["rule_id"] == "strain.budget.high.1.2":
         from girlframe.discord_adapter.m3_fuel_shortage import open_fuel_shortage
         from girlframe.services.m3_fuel_shortage import FuelService
@@ -116,6 +126,51 @@ async def open_effect(
 
     form = DependentForm(
         viewer.user_id, "Apply the saved Strain event", instructions, build, submit
+    )
+    await reply(interaction, form.text(), form)
+
+
+async def open_spread(
+    interaction: discord.Interaction, service: EffectService, data: dict[str, Any], identity: str
+) -> None:
+    spread = data["spread"]
+    if spread and spread["scope_event"]:
+        await reply(interaction, "The dice and squares are saved. Void exposure remains pending.")
+        return
+    fields = (
+        [Field("squares", "Connected map squares, one x,y per line", paragraph=True)]
+        if spread
+        else [Field("roll", "Roll the printed area dice", (("yes", "Roll 2d6"),))]
+    )
+
+    async def submit(click: discord.Interaction, values: dict[str, Any]) -> str:
+        cells = (
+            tuple(coordinates(line) for line in values["squares"].splitlines() if line.strip())
+            if spread
+            else None
+        )
+        result = await asyncio.to_thread(
+            service.prepare_spread,
+            viewer_from_interaction(click),
+            str(click.id),
+            identity,
+            data["revision"],
+            data["game_revision"],
+            cells=cells,
+        )
+        if cells is None:
+            count = sum(result["spread"]["faces"])
+            return f"The roll covers {count} squares. Reopen this request to choose the area."
+        return "The connected area is saved. Exposure remains required work."
+
+    form = NativeForm(
+        interaction.user.id,
+        "Prepare the High Void spread",
+        f"Use the saved total of {sum(spread['faces'])} squares."
+        if spread
+        else "Save the two actual dice once.",
+        fields,
+        submit,
     )
     await reply(interaction, form.text(), form)
 
@@ -201,6 +256,30 @@ def effect_form(
 
     def build(values: dict[str, Any]) -> list[Field]:
         fields: list[Field] = []
+        if rule == VOID_REVELATION:
+            fields += [
+                Field("revelation", "Which printed revelation do you make?", REVELATIONS),
+                Field("revelation_scene", "Where was it actually spoken?", channels),
+            ]
+        if rule == REBEL_ESCAPE_OFFER:
+            rebels = {x["id"] for x in world["factions"] if x["kind"] == "rebel" and x["active"]}
+            fields.append(
+                Field(
+                    "rebel_handler",
+                    "Which Rebel Handler initiates the private contact?",
+                    options(
+                        [
+                            x
+                            for x in world["npcs"]
+                            if "handler" in x["jobs"]
+                            and x["alive"]
+                            and x.get("captive_of") is None
+                            and x.get("faction") in rebels
+                            and x["controller"] != handler
+                        ]
+                    ),
+                )
+            )
         if rule == "strain.rebellion.high.5.2":
             fields.append(Field("backstory_tag", "Your backstory-based Handler Tag"))
             fields.append(
@@ -671,6 +750,13 @@ def effect_form(
 
     def apply(actor: GuildViewer, key: str, values: dict[str, Any]) -> str:
         payload: dict[str, Any] = {"rule_id": rule, "account": values["account"]}
+        if rule == VOID_REVELATION:
+            payload.update(
+                revelation_play=values["revelation"][0],
+                revelation_channel=int(values["revelation_scene"][0]),
+            )
+        if rule == REBEL_ESCAPE_OFFER:
+            payload["target"] = values["rebel_handler"][0]
         if rule == "strain.rebellion.high.5.2":
             payload["tags"] = (dict(owner=handler, label=values["backstory_tag"]),)
             payload["backstory_observers"] = tuple(
@@ -861,6 +947,8 @@ def effect_form(
             )
         if rule == "strain.rebellion.low.2.2":
             return "Private find saved. The recipient can review it in their requests inbox."
+        if rule == REBEL_ESCAPE_OFFER:
+            return "The private offer is pending with the original rebel controller."
         return "Event effects committed once. Reopen Off-Duty for remaining work."
 
     instructions = (
