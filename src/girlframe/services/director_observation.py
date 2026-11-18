@@ -234,7 +234,18 @@ class DirectorObservationService:
         def authorize(c: Connection) -> None:
             # A former participant can always withdraw use of a closed scene's
             # carried references. Granting new consent still requires an open scene.
-            self._scene(c, scene_id, viewer, allow_closed=consent is False)
+            try:
+                self._scene(c, scene_id, viewer, allow_closed=consent is False)
+            except WorkflowError as error:
+                if consent is not False or not str(error).startswith("SCENE_UNAVAILABLE:"):
+                    raise
+                from girlframe.services.director_closeout import report_participant
+
+                self.game.authorize(c, viewer, game=False)
+                if not self.store._binding_matches(c) or not report_participant(
+                    self.store, c, scene_id, viewer.user_id
+                ):
+                    raise
 
         def operation(c: Connection) -> dict[str, Any]:
             state = self._state(c, scene_id)

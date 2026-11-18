@@ -33,6 +33,7 @@ class HandlerDecision(Contract):
         "reviewed_character_cue",
         "peer_response",
         "need_already_addressed",
+        "handler_absent",
     ]
     source_refs: tuple[str, ...] = Field(default=(), max_length=3)
     concern_id: str | None = Field(default=None, exclude_if=lambda x: x is None)
@@ -59,6 +60,12 @@ class HandlerRequest(Contract):
     playbook_profile: PlaybookProfile | None = Field(default=None, exclude_if=lambda x: x is None)
     response_need: HandlerDecision | None = Field(default=None, exclude_if=lambda x: x is None)
     open_concerns: tuple[HandlerConcern, ...] = Field(default=(), exclude_if=lambda x: not x)
+    closed_scene_reports: tuple[KnowledgeReference, ...] = Field(
+        default=(),
+        max_length=100,
+        exclude_if=lambda x: not x,
+        description="Private debrief memory. Scene speech uses current audience-scoped citations.",
+    )
 
     @model_validator(mode="after")
     def handler_boundary(self) -> "HandlerRequest":

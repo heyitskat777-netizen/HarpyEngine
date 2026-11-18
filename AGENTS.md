@@ -1,4 +1,12 @@
-> Latest owner direction: make Handler sheet types shape how and when they speak.
+> Latest owner direction: use an engine timeline, share eligible scene knowledge
+> only on manual close, and route GM work directly from native Plays.
+> See reports/P2_ACTIVITY_SCENE_PORT.md. Preserve closed-source consent and source
+> provenance, original participant transcript visibility, typed GM work by actual
+> action ID, and original-owner confirmation. Offline Activity overlay renders
+> Relay's engine timeline. Facilitator/closeout/ruling routes and browser smoke
+> passed locally; dedicated role UI and real Discord sign-in acceptance remain.
+>
+> Earlier owner direction: make Handler sheet types shape how and when they speak.
 > See reports/P2_HANDLER_CHARACTER.md. Native activation selects the playbook.
 > All seven profiles guide voice and restrict optional reviewed cues. Preserve
 > heard speech, reviewed peer coverage, private personal delivery and original

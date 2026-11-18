@@ -59,6 +59,7 @@ def validate_origin(
     state = context.observations._state(c, scene_id or "")
     if (
         not row
+        or row["open"]
         or state.policy.mode != "shadow"
         or not context.observations._consented(
             c, {"participants": json.loads(row["participants_json"])}, state
@@ -184,6 +185,10 @@ class SceneContinuityService:
             ):
                 raise WorkflowError("Select distinct existing references for a different scene.")
             before, source = self._source(c, viewer, source_scene)
+            if before["open"]:
+                raise WorkflowError(
+                    "SCENE_REPORT_OPEN: close the original scene before carrying knowledge."
+                )
             target = self.context._build(c, viewer, target_scene)
             if (source.revision, target.revision) != (source_revision, target_revision):
                 raise WorkflowError("STALE_CONTEXT: reopen both scene contexts.")

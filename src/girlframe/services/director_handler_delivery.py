@@ -37,8 +37,12 @@ class HandlerDeliveryService:
         self.observer = conversation.observations
         self.knowledge = DirectorKnowledgeService(self.context)
 
-    def _audience(self, c: Connection, scene: str, roles: tuple[ActorRef, ...]) -> dict[str, int]:
-        available = self.knowledge._actors(c, self.observer._scene(c, scene))
+    def _audience(
+        self, c: Connection, scene: str, roles: tuple[ActorRef, ...], *, allow_closed: bool = False
+    ) -> dict[str, int]:
+        available = self.knowledge._actors(
+            c, self.observer._scene(c, scene, allow_closed=allow_closed)
+        )
         if not set(roles) <= set(available):
             raise WorkflowError("HANDLER_DELIVERY_AUDIENCE: recover the original current roles.")
         state = load_state(c, self.store.campaign_id)
@@ -110,10 +114,12 @@ class HandlerDeliveryService:
             consent=self.observer._state(c, scene).consent_generation,
         )
 
-    def _scope(self, c: Connection, viewer: GuildViewer, scene: str) -> dict[str, Any]:
+    def _scope(
+        self, c: Connection, viewer: GuildViewer, scene: str, *, allow_closed: bool = False
+    ) -> dict[str, Any]:
         self.observer._scope()
         self.observer.game.unpaused(c)
-        row = self.observer._scene(c, scene, viewer)
+        row = self.observer._scene(c, scene, viewer, allow_closed=allow_closed)
         policy = self.observer._state(c, scene)
         if policy.policy.mode != "shadow" or not self.observer._consented(c, row, policy):
             raise WorkflowError("OBSERVATION_DISABLED: retain current scene consent.")
@@ -240,6 +246,8 @@ class HandlerDeliveryService:
                 id=identity,
                 reference=ref.id,
                 ordinal=next_contribution_ordinal(c, self.store.campaign_id, scene),
+                after_sequence=self.observer._state(c, scene).sequence,
+                delivered_at=float(self.store.clock()),
                 record_type="handler_delivery",
                 speaker=draft["actor"],
                 dialogue=reply.text,
@@ -312,36 +320,43 @@ class HandlerDeliveryService:
 
     def contributions(self, viewer: GuildViewer, scene: str) -> list[dict[str, Any]]:
         with self.store.engine.connect() as c:
-            self._scope(c, viewer, scene)
-            result = []
-            for row in self._records(c, scene):
-                audience = tuple(
-                    ActorRef.model_validate(x) for x in (row["handler"], *row["recipients"])
+            return self._contributions(c, viewer, scene)
+
+    def _contributions(
+        self, c: Connection, viewer: GuildViewer, scene: str, *, allow_closed: bool = False
+    ) -> list[dict[str, Any]]:
+        self._scope(c, viewer, scene, allow_closed=allow_closed)
+        result = []
+        for row in self._records(c, scene):
+            audience = tuple(
+                ActorRef.model_validate(x) for x in (row["handler"], *row["recipients"])
+            )
+            if viewer.user_id not in row["controllers"].values():
+                continue
+            try:
+                current = self._audience(c, scene, audience, allow_closed=allow_closed)
+            except WorkflowError:
+                continue
+            if (
+                current != row["controllers"]
+                or row["consent"] != self.observer._state(c, scene).consent_generation
+            ):
+                continue
+            result.append(
+                dict(
+                    id=row["id"],
+                    ordinal=row["ordinal"],
+                    after_sequence=row.get("after_sequence"),
+                    delivered_at=row.get("delivered_at"),
+                    text=row["dialogue"],
+                    action=row["action"],
+                    actor=row["handler"],
+                    route="handler",
+                    canon_effects=False,
+                    publication="scoped_scene_delivery",
                 )
-                if viewer.user_id not in row["controllers"].values():
-                    continue
-                try:
-                    current = self._audience(c, scene, audience)
-                except WorkflowError:
-                    continue
-                if (
-                    current != row["controllers"]
-                    or row["consent"] != self.observer._state(c, scene).consent_generation
-                ):
-                    continue
-                result.append(
-                    dict(
-                        id=row["id"],
-                        ordinal=row["ordinal"],
-                        text=row["dialogue"],
-                        action=row["action"],
-                        actor=row["handler"],
-                        route="handler",
-                        canon_effects=False,
-                        publication="scoped_scene_delivery",
-                    )
-                )
-            return result
+            )
+        return result
 
 
 def validate_delivery_reference(

@@ -20,6 +20,62 @@ The [Living Campaign work package](../../docs/work_orders/P2_LIVING_CAMPAIGN.md)
 adds controller-confirmed dossiers, private Front attention and reviewed NPC
 reactions. See [verification and limits](../../reports/P2_LIVING_CAMPAIGN.md).
 
+## Proposed first Activity integration
+
+The November 16 Activity source already has a Discord session resolver, bound
+campaign selection, a room transcript and owned Play forms. Its transcript writes
+to the Activity's `dialogue` table. Its native room/channel mapping gives the
+adapter a starting point for resolving the current HarpyEngine scene. Use that
+source as the local integration baseline and apply the changes to the maintained
+Activity checkout before scheduling a private Discord client trial.
+
+- **Identity and authority.** Resolve the existing verified session and current
+  campaign membership on the server. Resolve the room to the native scene there.
+  Start with the existing authorized administrator as facilitator. Show the
+  separate controls for the appointed Handler and for each actual decision
+  owner, even when a person holds more than one role.
+- **Transcript and hearing.** In a Director-enabled test room, use its engine
+  scene input and scoped contribution records as the timeline source. Update the
+  viewer-specific projection through the existing room UI. The Activity's
+  ordinary room and private message flows remain available independently. Send
+  explicit public IC speech and classified narration through the new route.
+  Keep OOC and private Communications threads outside Director observation.
+  Treat selective fictional hearing and participant read access as separate
+  checks. The first lab slice renders the recipient-filtered engine timeline
+  in Relay's existing Scene composer and transcript.
+- **UI and review.** Reuse the current Scene transcript, owned work inbox and
+  Mission Desk. Put delivered Handler dialogue and actions in the Scene, GM
+  rulings and typed Heat/results in the rules surface, and review drafts in
+  the facilitator's private work. Start with manual review, original-owner
+  confirmation, and explicit Handler preview and delivery. Route writes with
+  the existing command keys and revisions. Use refresh after a write or
+  reconnect for the first slice.
+- **Parallel scenes.** Scene input and drafts stay in their native scene.
+  The facilitator closes a scene explicitly. The same native transaction files
+  a Handler report containing approved Handler-known references and any explicitly
+  selected, accepted public pilot reports. Private narration and raw transcripts
+  stay in their original audience. An absent Handler produces WAIT. Closed
+  reports are Handler-only durable memory for later requests. Withdrawal blocks
+  recall even after the original channel is rebound. Public delivery still
+  requires a current-scene disclosure and scoped review.
+- **GM work comes from Plays.** Build the review work list from `outcome_sources`
+  after a native Play step or reconnect. Match the actual `action_id` where
+  present. A typed choice opens when its real prerequisites exist. No GM chat
+  declaration is required. Keep the original owner's confirmation and the
+  native results view.
+- **Trial scope.** Wire and verify the first slice in the disposable Activity
+  lab with synthetic inputs and a local fixture or facilitator. The engine
+  currently rejects real conversation observation. Accepting actual player
+  text calls for an explicit opt-in route and decisions about who can read
+  stored text, how long it stays, and what withdrawal and redaction do to
+  derived knowledge. Paid providers are a later choice.
+
+First browser acceptance should prove one scene for two Pilots and a Handler
+with a facilitator, a delivered scoped Handler line, a typed GM ruling, and a
+native owned choice. Include wrong-owner denial, exact retry after reconnect,
+and consent withdrawal. Then extend the same session to mission completion and
+Off-Duty with the existing native desk and forms.
+
 ## Session surfaces
 
 | Surface | Read contract | Required controls and visibility |

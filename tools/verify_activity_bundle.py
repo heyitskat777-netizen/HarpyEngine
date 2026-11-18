@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ADAPTERS = ROOT / "integrations/activity"
 
 
-def prepare(source: Path, output: Path) -> Path:
+def prepare(source: Path, output: Path, *, p2_routes: bool = False) -> Path:
     manifest = json.loads((source / "SOURCE-MANIFEST.json").read_text())
     for name, expected in manifest["included_files"].items():
         path = (source / name).resolve()
@@ -38,6 +38,12 @@ def prepare(source: Path, output: Path) -> Path:
     (runtime / "discord-sdk/embedded-app.js").write_text("// Python adapter tests only.\n")
     for adapter in ADAPTERS.glob("*.py"):
         shutil.copyfile(adapter, lab / adapter.name)
+    if p2_routes:
+        subprocess.run(
+            ["patch", "--batch", "--fuzz=0", "-p1", "-i", str(ADAPTERS / "p2_lab_routes.patch")],
+            cwd=lab,
+            check=True,
+        )
     metadata = {
         "engine_revision": subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
@@ -49,6 +55,7 @@ def prepare(source: Path, output: Path) -> Path:
             for p in sorted((ROOT / "src").rglob("*.py"))
         },
         "adapter_overrides": [p.name for p in sorted(ADAPTERS.glob("*.py"))],
+        "p2_routes": p2_routes,
         "excluded": ["test_artwork_activity.py", "browser SDK", "live Discord", "artwork"],
     }
     (output / "source.json").write_text(json.dumps(metadata, indent=2) + "\n")
@@ -60,11 +67,18 @@ def main() -> int:
     parser.add_argument("--source", required=True, type=Path, help="Extracted handoff root")
     parser.add_argument("--output", required=True, type=Path, help="New disposable directory")
     parser.add_argument("--test", action="append", help="Optional explicit test module")
+    parser.add_argument("--p2-routes", action="store_true", help="Apply the offline P2 overlay")
+    parser.add_argument(
+        "--prepare-only", action="store_true", help="Prepare without running pytest"
+    )
     args = parser.parse_args()
     output = args.output.resolve()
     if not output.is_relative_to(ROOT / "var"):
         parser.error("Keep disposable campaign stores under this checkout's ignored var directory")
-    lab = prepare(args.source.resolve(), output)
+    lab = prepare(args.source.resolve(), output, p2_routes=args.p2_routes)
+    if args.prepare_only:
+        print("Prepared disposable lab:", lab)
+        return 0
     tests = args.test or [
         p.name for p in sorted(lab.glob("test_*.py")) if p.name != "test_artwork_activity.py"
     ]

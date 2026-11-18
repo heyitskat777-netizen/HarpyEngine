@@ -1,0 +1,206 @@
+"""Engine-backed Activity routes over parallel native scenes and native Plays."""
+
+import json
+from importlib.util import module_from_spec, spec_from_file_location
+from pathlib import Path
+
+import pytest
+from test_director_continuity import carry, roles
+from test_director_observation import observed as observed
+from test_ledger import ADMIN, OTHER, PLAYER
+from test_ledger import ledger as ledger
+from test_m2_game import answer, pass_tags, start, tick
+
+from girlframe.ai.conversation import ConversationReply
+from girlframe.ai.gm_outcomes import KeepOutcome, OutcomeProposal
+from girlframe.ai.gm_protocol import Assessment, Demand, TaskFrame, TraitClaim
+from girlframe.ai.observation import AppendSceneInput, ObservationPolicy
+from girlframe.services.director_context import DirectorContextService
+from girlframe.services.director_conversation import DirectorConversationService
+from girlframe.services.director_session import DirectorSessionService
+from girlframe.services.onboarding import WorkflowError
+
+adapter_file = Path(__file__).resolve().parents[1] / "integrations" / "activity" / "p2_scene.py"
+adapter_spec = spec_from_file_location("activity_p2_scene", adapter_file)
+assert adapter_spec and adapter_spec.loader
+activity_adapter = module_from_spec(adapter_spec)
+adapter_spec.loader.exec_module(activity_adapter)
+P2Scene = activity_adapter.P2Scene
+
+
+class Handler:
+    def __init__(self):
+        self.requests = []
+
+    def respond(self, request):
+        self.requests.append(request)
+        return ConversationReply(
+            route="handler",
+            disposition="clarification",
+            provider="reviewed-handler-v1",
+            text="I can wait here while you check.",
+            handler_action="I turn my own report pad to a fresh page.",
+        )
+
+
+def adapter(observer):
+    context = DirectorContextService(observer)
+    handler = Handler()
+    conversation = DirectorConversationService(context, handler=handler, handler_mode="reviewed")
+    return P2Scene(DirectorSessionService(context, conversation=conversation)), handler
+
+
+def input_command(observer, viewer, scene, key, text, channel="comms"):
+    return AppendSceneInput(
+        command_key=key,
+        expected_scene_revision=observer.status(viewer, scene).scene_revision,
+        speaker="pilot",
+        text=text,
+        fictional_channel=channel,
+    )
+
+
+def add_scene(observer, channel, roster):
+    observer.game.bind_scene(ADMIN, f"bind:{channel}", channel)
+    for viewer in roster:
+        observer.game.join_scene(viewer, f"join:{channel}:{viewer.user_id}", channel)
+    with observer.store.engine.connect() as c:
+        scene = observer.game.scene(c, channel)["id"]
+    observer.configure_scene(ADMIN, f"config:{channel}", scene, 0, ObservationPolicy(mode="shadow"))
+    for viewer in roster:
+        observer.set_consent(viewer, f"consent:{channel}:{viewer.user_id}", scene, 1, consent=True)
+    return scene
+
+
+def test_parallel_scenes_file_only_approved_reports_after_native_close(observed):
+    observer, source, _, _, *_ = observed
+    app, handler = adapter(observer)
+    session = app.session
+    observer.game.leave_scene(OTHER, "other-leaves-source", 900)
+    target = add_scene(observer, 901, (ADMIN, OTHER))
+    pilot = roles(observer, source)[1]
+    text, secret = "We found a loose cover on the east rail.", "UNREPORTED_CELLAR_ENTRY"
+    posted = []
+    for i, (speech, channel) in enumerate(((text, "comms"), (secret, "private"))):
+        item = app.submit(
+            PLAYER, source, input_command(observer, PLAYER, source, f"post:{i}", speech, channel)
+        )
+        posted.append(
+            session.context.record(
+                ADMIN,
+                f"know:{i}",
+                source,
+                item["input"]["source_id"],
+                i,
+                known_by=(pilot,),
+                topic="tactical",
+            )["id"]
+        )
+    assert secret in json.dumps(app.timeline(PLAYER, source))
+    assert secret not in json.dumps(app.timeline(ADMIN, source))
+    assert not app.timeline(OTHER, target)["entries"]
+    assert not session.handler_reports(ADMIN, target)["reports"]
+
+    def question(key):
+        cmd = input_command(observer, OTHER, target, key, "Handler, can you repeat the scope?")
+        app.submit(OTHER, target, cmd)
+        return handler.requests[-1]
+
+    assert not question("before-close").closed_scene_reports
+    with pytest.raises(WorkflowError, match="SCENE_REPORT_OPEN"):
+        carry(session.context, source, target, (posted[0],), key="early-carry")
+    revision = observer.status(ADMIN, source).scene_revision
+    with pytest.raises(WorkflowError, match="SCENE_REPORT_SCOPE"):
+        app.close(ADMIN, "bad-close", source, 900, revision, tuple(posted))
+    assert app.timeline(PLAYER, source)["open"]
+    with pytest.raises(WorkflowError):
+        app.close(OTHER, "wrong-owner", source, 900, revision, (posted[0],))
+    receipt = app.close(ADMIN, "manual-close", source, 900, revision, (posted[0],))
+    assert receipt["closed"] and receipt["handler_report_count"] == 1
+    assert app.close(ADMIN, "manual-close", source, 900, revision, (posted[0],)) == receipt
+    assert app.timeline(PLAYER, source)["open"] is False
+    expected = ["Reported claim: " + text]
+    assert [ref.text for ref in question("after-close").closed_scene_reports] == expected
+    assert secret not in json.dumps(session.handler_reports(ADMIN, target))
+    with pytest.raises(WorkflowError):
+        session.handler_reports(OTHER, target)
+    observer.game.bind_scene(ADMIN, "reuse-channel", 900)
+    assert [ref.text for ref in question("after-rebind").closed_scene_reports] == expected
+    observer.set_consent(PLAYER, "withdraw-origin", source, 1, consent=False)
+    assert not question("after-withdrawal").closed_scene_reports
+
+
+def test_room_without_handler_records_input_without_an_interjection(observed):
+    observer, scene, *_ = observed
+    observer.game.leave_scene(ADMIN, "handler-leaves", 900)
+    app, handler = adapter(observer)
+    alone = input_command(observer, OTHER, scene, "away", "I survey the other room.")
+    outcome = app.session.submit(OTHER, scene, alone)["conversation"]
+    assert outcome["handler_decision"]["decision"]["reason"] == "handler_absent"
+    assert outcome["handler"] is None and not handler.requests
+
+
+def test_activity_timeline_shows_one_scoped_delivery_on_reopen(observed):
+    observer, scene, *_ = observed
+    app, _ = adapter(observer)
+    pilot = roles(observer, scene)[1]
+    cmd = input_command(observer, PLAYER, scene, "input", "Handler, can you say what you saw?")
+    assert app.submit(PLAYER, scene, cmd) == app.submit(PLAYER, scene, cmd)
+    draft = app.gm_work(ADMIN, scene)["handler_drafts"][0]["id"]
+    app.approve_handler(ADMIN, "review", scene, draft, "Scoped fixture reply.", (pilot,))
+    assert [x["kind"] for x in app.timeline(PLAYER, scene)["entries"]] == ["input"]
+    delivered = app.deliver_handler(ADMIN, "deliver", scene, draft)
+    assert app.deliver_handler(ADMIN, "deliver", scene, draft) == delivered
+    reopened, _ = adapter(observer)
+    assert [x["kind"] for x in reopened.timeline(PLAYER, scene)["entries"]] == ["input", "handler"]
+    assert [x["kind"] for x in reopened.timeline(OTHER, scene)["entries"]] == ["input"]
+    observer.set_consent(OTHER, "withdraw-destination", scene, 1, consent=False)
+    with pytest.raises(WorkflowError, match="OBSERVATION_DISABLED"):
+        reopened.timeline(PLAYER, scene)
+
+
+def test_native_play_creates_gm_work_without_a_conversation_source(observed):
+    observer, scene, _, game, worker, gateway, dice = observed
+    app, _ = adapter(observer)
+    action = start(game, context="Hold the relay needle on the marked limit.")
+    tick(worker, gateway)
+    pass_tags(game)
+    answer(game, PLAYER, "actor_keep", options=("tough", "in_control"), denied=("desperate",))
+    work = next(x for x in app.gm_work(ADMIN, scene)["outcome_sources"] if x["action_id"] == action)
+    assert work["operation"] == "keep" and work["frame_required"]
+    assert not app.timeline(PLAYER, scene)["entries"]
+    with pytest.raises(WorkflowError):
+        app.gm_work(OTHER, scene)
+
+    frame = TaskFrame(
+        stakes="The needle stays within the marked limit.",
+        demands=(Demand(id="control", question="Did the pilot maintain control?"),),
+        response_scope="self",
+    )
+    opened = app.open_ruling(ADMIN, "open", scene, work["source_kind"], work["source_id"], frame)
+    packet = app.ruling_packet(ADMIN, scene, opened["id"])
+    proposal = OutcomeProposal(
+        request_id=packet["request_id"],
+        decision=KeepOutcome(
+            verdict="enough",
+            narration="The needle stayed within the mark.",
+            assessments=(
+                Assessment(
+                    demand_id="control",
+                    sufficient=True,
+                    evidence_ids=("traits", "source", "native"),
+                    traits=(TraitClaim(trait="in_control", polarity="are"),),
+                    private_reason="The saved trait matches the declared approach.",
+                ),
+            ),
+        ),
+        cited_evidence=("source", "native"),
+        private_reasoning="Fixture reviewed saved native traits.",
+    )
+    pending = app.propose_ruling(ADMIN, "propose", scene, opened["id"], proposal)
+    with pytest.raises(WorkflowError):
+        app.confirm_ruling(OTHER, "wrong-ruling-owner", scene, pending["id"])
+    done = app.confirm_ruling(ADMIN, "confirm", scene, pending["id"])
+    assert app.confirm_ruling(ADMIN, "confirm", scene, pending["id"]) == done
+    assert app.play_results(PLAYER, scene, action)["state"] == "complete"
+    assert dice.calls == 1

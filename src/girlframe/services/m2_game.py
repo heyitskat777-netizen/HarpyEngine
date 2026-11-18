@@ -6517,7 +6517,15 @@ class GameService:
             authorize=authorize,
         )
 
-    def close_scene(self, viewer: GuildViewer, key: str, channel: int) -> dict[str, Any]:
+    def close_scene(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        channel: int,
+        *,
+        director_scene: tuple[str, int] | None = None,
+        report_ids: tuple[str, ...] = (),
+    ) -> dict[str, Any]:
         def authorize(c: Connection) -> None:
             self.authorize(c, viewer, game=False)
             self.gate()
@@ -6525,6 +6533,8 @@ class GameService:
 
         def operation(c: Connection) -> dict[str, Any]:
             scene = self.scene(c, channel)
+            if director_scene is not None and director_scene != (scene["id"], scene["revision"]):
+                raise WorkflowError("STALE_SCENE: reopen the original scene for closeout.")
             from girlframe.services.p1_source_pause import require_clear as require_source_clear
 
             require_source_clear(self, c, channel)
@@ -6571,6 +6581,18 @@ class GameService:
                 x["scene_id"] == scene["id"] and x["state"] != "resolved" for x in latest.values()
             ):
                 raise WorkflowError("Resolve the actual source-bound scene work before closing it.")
+            close_event = str(uuid4())
+            closeout = {}
+            if director_scene is not None:
+                from girlframe.services.director_closeout import file_report
+
+                self.unpaused(c)
+                closeout = {
+                    "handler_report_count": file_report(
+                        self.store, c, scene, close_event, report_ids
+                    ),
+                    "scene_id": scene["id"],
+                }
             table = t.m2["m2_scenes"]
             c.execute(
                 table.update()
@@ -6589,7 +6611,6 @@ class GameService:
                     else x
                     for x in state.scene_casts
                 ]
-            close_event = str(uuid4())
             from girlframe.services.m3_ankou import expire_scene as expire_ankou_scene
             from girlframe.services.m3_changeling_effects import expire_scene as expire_eyes
 
@@ -6612,13 +6633,20 @@ class GameService:
                 channel=channel,
                 event_id=close_event,
             )
-            return {"channel": channel, "closed": True}
+            return {"channel": channel, "closed": True, **closeout}
 
         return self.store._write(
             viewer,
             key,
             "m2.scene_closed",
-            {"channel": channel},
+            {
+                "channel": channel,
+                **(
+                    {"director_scene": director_scene, "report_ids": report_ids}
+                    if director_scene is not None
+                    else {}
+                ),
+            },
             operation,
             auto_audit=False,
             authorize=authorize,

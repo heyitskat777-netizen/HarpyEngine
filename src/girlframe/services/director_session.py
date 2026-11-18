@@ -8,7 +8,7 @@ from sqlalchemy import Connection
 
 from girlframe.ai.conversation import HandlerNeedProvider
 from girlframe.ai.knowledge import KnowledgeProvider
-from girlframe.ai.observation import AppendSceneInput
+from girlframe.ai.observation import AppendSceneInput, Observation
 from girlframe.database import tables as t
 from girlframe.engine.m3_battle_state import Context
 from girlframe.services.director_context import DirectorContextService
@@ -91,6 +91,107 @@ class DirectorSessionService:
             viewer, command.command_key + ":route", scene, source.source_id, source.source_revision
         )
         return {"input": source.model_dump(mode="json"), "conversation": conversation}
+
+    def timeline(self, viewer: GuildViewer, scene: str) -> dict[str, Any]:
+        """The Activity scene timeline contains persisted, viewer-visible fiction only."""
+        self.observer._scope()
+        with self.store.engine.connect() as c:
+            row = self.observer._scene(c, scene, viewer, allow_closed=True)
+            state = self.observer._state(c, scene)
+            if state.policy.mode != "shadow" or not self.observer._consented(c, row, state):
+                raise WorkflowError("OBSERVATION_DISABLED: retain current scene consent.")
+            inputs = self.observer._pending(scene, 0, include_handled=True).subquery()
+            audience = sa.func.json_each(inputs.c.body_json, "$.audience_ids").table_valued("value")
+            observations = (
+                Observation.model_validate_json(raw)
+                for raw in c.scalars(
+                    sa.select(inputs.c.body_json)
+                    .where(
+                        inputs.c.kind == "message",
+                        sa.exists(
+                            sa.select(audience.c.value).where(
+                                audience.c.value == str(viewer.user_id)
+                            )
+                        ),
+                        sa.or_(
+                            inputs.c.owner_id == str(viewer.user_id),
+                            sa.func.coalesce(
+                                sa.func.json_extract(inputs.c.body_json, "$.fictional_channel"),
+                                "scene",
+                            )
+                            != "private",
+                        ),
+                    )
+                    .order_by(inputs.c.sequence.desc())
+                    .limit(75)
+                )
+            )
+            entries = [
+                {
+                    "id": item.source_id,
+                    "revision": item.source_revision,
+                    "sequence": item.sequence,
+                    "created": item.accepted_at,
+                    "ordinal": 0,
+                    "actor": item.actor.model_dump(mode="json"),
+                    "kind": "input",
+                    "channel": item.fictional_channel,
+                    "text": item.text,
+                }
+                for item in observations
+            ]
+            for entry in self.conversation.delivery._contributions(
+                c, viewer, scene, allow_closed=True
+            ):
+                entries.append(
+                    {
+                        "id": entry["id"],
+                        "actor": entry["actor"],
+                        "kind": "handler",
+                        "sequence": entry["after_sequence"]
+                        if entry["after_sequence"] is not None
+                        else state.sequence,
+                        "ordinal": entry["ordinal"],
+                        "created": entry["delivered_at"],
+                        "text": entry["text"],
+                        "action": entry["action"],
+                    }
+                )
+            entries.sort(key=lambda item: (item["sequence"], item["ordinal"]))
+            return {
+                "scene_id": scene,
+                "revision": row["revision"],
+                "open": row["open"],
+                "entries": entries[-75:],
+            }
+
+    def close_scene(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        scene: str,
+        channel: int,
+        expected_revision: int,
+        *,
+        report_ids: tuple[str, ...] = (),
+    ) -> dict[str, Any]:
+        """Close the native scene and file its approved Handler report atomically."""
+        self.observer._scope()
+        return self.game.close_scene(
+            viewer, key, channel, director_scene=(scene, expected_revision), report_ids=report_ids
+        )
+
+    def handler_reports(self, viewer: GuildViewer, scene: str) -> dict[str, Any]:
+        from girlframe.services.director_closeout import handler_reports
+
+        self.observer._scope()
+        with self.store.engine.connect() as c:
+            _, _, actor = self.observer._authorize_input(c, viewer, scene, "handler")
+            return {
+                "reports": [
+                    x.model_dump(mode="json") for x in handler_reports(self.context, c, actor)
+                ]
+            }
 
     def work(self, viewer: GuildViewer, scene: str, *, gm: bool = False) -> dict[str, Any]:
         """One current work list; selecting GM scope never grants another owner's choices."""
@@ -188,10 +289,12 @@ class DirectorSessionService:
                         packet = self.outcomes._snapshot(c, scene, kind, identity, None)
                     except (WorkflowError, ValueError):
                         continue
+                    action = packet.native.get("action")
                     sources.append(
                         {
                             "source_kind": kind,
                             "source_id": identity,
+                            "action_id": action.get("id") if isinstance(action, dict) else None,
                             "operation": packet.operation,
                             "owner_id": packet.owner_id,
                             "frame_required": packet.operation == "keep",

@@ -35,6 +35,7 @@ from girlframe.database import tables as t
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_handler_character import PROFILES
 from girlframe.engine.m3_handler_play_state import BASIC, Play
+from girlframe.services.director_closeout import handler_reports
 from girlframe.services.director_context import DirectorContextService
 from girlframe.services.director_observation import _digest
 from girlframe.services.director_play_catalog import PlayCatalog
@@ -189,6 +190,9 @@ class DirectorConversationService:
                 open_concerns=self.delivery.open_concerns(
                     c, scene_id, role.actor, source.actor, {ref.id for ref in role.references}
                 )
+                if self.handler_mode == "reviewed" and role.actor is not None
+                else (),
+                closed_scene_reports=handler_reports(self.context, c, role.actor)
                 if self.handler_mode == "reviewed" and role.actor is not None
                 else (),
             )
@@ -1880,9 +1884,19 @@ class DirectorConversationService:
             source = self._authorize_source(c, viewer, scene_id, source_id)
             if source.source_revision != expected_source_revision:
                 raise WorkflowError("STALE_SOURCE: refresh the actual question before routing.")
-            request, revision = self._requests(c, viewer, scene_id, source_id, "handler")
-            assert isinstance(request, HandlerRequest)
-            decision, need_key = self._handler_decision(c, scene_id, source, request)
+            try:
+                request, revision = self._requests(c, viewer, scene_id, source_id, "handler")
+            except WorkflowError as error:
+                if not str(error).startswith("HANDLER_UNAVAILABLE:"):
+                    raise
+                actor, revision, need_key = None, None, None
+                decision = HandlerDecision(action="WAIT", reason="handler_absent")
+            else:
+                assert isinstance(request, HandlerRequest)
+                decision, need_key = self._handler_decision(c, scene_id, source, request)
+                actor = (
+                    request.context.actor.model_dump(mode="json") if request.context.actor else None
+                )
             identity = "handler-decision:" + str(uuid4())
             record = {
                 "id": identity,
@@ -1894,9 +1908,7 @@ class DirectorConversationService:
                 "context_revision": revision,
                 "decision": decision.model_dump(mode="json"),
                 "need_key": need_key,
-                "handler_actor": request.context.actor.model_dump(mode="json")
-                if request.context.actor
-                else None,
+                "handler_actor": actor,
             }
             c.execute(
                 t.director_context["shadow"]
