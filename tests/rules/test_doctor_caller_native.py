@@ -8,11 +8,15 @@ from test_cast_service import change as cast_change
 from test_doctor_npc_nanobot import setup as npc_setup
 from test_doctor_runtime import acquire, doctor
 from test_enforcer_requisitions import approved
+from test_inbox import request as inbox_interaction
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger
 from test_m2_game import state
 from test_mission_ui import current
 
+from girlframe.discord_adapter import onboarding
+from girlframe.discord_adapter.inbox import InboxView, RequestSelect
+from girlframe.discord_adapter.m2_forms import NativeForm
 from girlframe.discord_adapter.m3_doctor import open_doctor, open_request
 from girlframe.engine import m3_doctor as rules
 from girlframe.engine.m2 import TagState
@@ -123,6 +127,7 @@ def test_native_caller_initiates_ragged_and_owns_tag_payment(ledger, tmp_path, m
 
 @pytest.mark.parametrize("pay_as_npc", [True, False], ids=["npc-pays", "doctor-pays"])
 def test_native_npc_call_and_owned_ragged_payment(ledger, tmp_path, monkeypatch, pay_as_npc):
+    monkeypatch.setattr(onboarding, "allow_action", lambda *a, **kw: True)
     game, _, _, npc, _ = npc_setup(ledger, tmp_path, monkeypatch)
     approved(ledger, game, tmp_path, monkeypatch, extra=(rules.NANO, rules.TRACK, rules.RAGGED))
     approval = ledger.policy.m3_approval
@@ -215,9 +220,33 @@ def test_native_npc_call_and_owned_ragged_payment(ledger, tmp_path, monkeypatch,
         reopened_game = GameService(ledger, dice=game.dice)
         reopened = ProcedureService(reopened_game)
         inbox = InboxService(ledger)
+
+        async def payment_from_inbox():
+            view = InboxView(InboxService(ledger), payment_owner.user_id)
+            view.category = "plays"
+            start = inbox_interaction(payment_owner, int(uuid4()))
+            await start.response.defer(ephemeral=True)
+            await view.present(start)
+            item = next(x for x in view.page.window if x.identity == request.id)
+            assert item.task == "m3_doctor_procedure"
+            select = next(x for x in view.children if isinstance(x, RequestSelect))
+            select._values = [item.key]
+            await select.callback(inbox_interaction(payment_owner, int(uuid4())))
+            opened = inbox_interaction(payment_owner, int(uuid4()), view.primary.custom_id)
+            await view.primary.callback(opened)
+            payment = opened.edit_original_response.call_args.kwargs["view"]
+            assert isinstance(payment, NativeForm)
+            assert payment.fields[0].options == (
+                ("0", "Caller ready" if pay_as_npc else "Doctor ready"),
+            )
+            return payment
+
         for viewer in (ADMIN, PLAYER):
             assert any(item.identity == request.id for item in inbox.items(viewer))
         assert not any(item.identity == request.id for item in inbox.items(OTHER))
+        outsider = InboxView(InboxService(ledger), OTHER.user_id)
+        await outsider.present(inbox_interaction(OTHER, int(uuid4())))
+        assert all(item.identity != request.id for item in outsider.page.window)
         with pytest.raises(WorkflowError, match="actual original Doctor procedure"):
             reopened.get(OTHER, request.id)
         with pytest.raises(WorkflowError, match="Tag holder you control"):
@@ -240,6 +269,8 @@ def test_native_npc_call_and_owned_ragged_payment(ledger, tmp_path, monkeypatch,
                 tag,
                 payer=payer,
             )
+        old_form = await payment_from_inbox()
+        old_form.values.update(tag=("0",), account="Confirm the original arrival")
         cast_change(casts, ADMIN, "withdraw", npc)
         with pytest.raises(WorkflowError, match="original NPC, Doctor and call scene"):
             reopened.confirm(
@@ -252,6 +283,14 @@ def test_native_npc_call_and_owned_ragged_payment(ledger, tmp_path, monkeypatch,
                 payer=payer,
             )
         cast_change(casts, ADMIN, "join", npc)
+        stale_click = current(payment_owner.user_id, 998805)
+        await old_form.confirm.callback(stale_click)
+        assert not old_form.completed
+        assert (
+            "original pending procedure"
+            in stale_click.edit_original_response.call_args.kwargs["content"]
+        )
+        payment = await payment_from_inbox()
         ledger.safety(OTHER, "pause-ragged", ledger.status(OTHER)["revision"], pause=True)
         paused = state(game)
         with pytest.raises(WorkflowError, match="paused"):
@@ -264,23 +303,27 @@ def test_native_npc_call_and_owned_ragged_payment(ledger, tmp_path, monkeypatch,
                 tag,
                 payer=payer,
             )
+        payment.values.update(tag=("0",), account="Wait for the safety pause")
+        paused_click = current(payment_owner.user_id, 998806)
+        await payment.confirm.callback(paused_click)
+        assert not payment.completed
+        assert "paused" in paused_click.edit_original_response.call_args.kwargs["content"]
         assert state(game) == paused
         ledger.safety(OTHER, "resume-ragged", ledger.status(OTHER)["revision"], pause=False)
 
-        response = current(payment_owner.user_id, 998803)
-        await response.response.defer(ephemeral=True)
-        await open_request(response, DoctorService(reopened_game), request.id)
-        payment = response.edit_original_response.call_args.kwargs["view"]
-        assert payment.fields[0].options == (
-            ("0", "Caller ready" if pay_as_npc else "Doctor ready"),
-        )
-        payment.values.update(tag=("0",), account="I mark my own Tag for the actual arrival")
+        payment = await payment_from_inbox()
+        revision = state(game).revision
+        account = "I mark my own Tag for the actual arrival"
+        payment.values.update(tag=("0",), account=account)
         confirmed = current(payment_owner.user_id, 998804)
         await payment.confirm.callback(confirmed)
         assert payment.completed, confirmed.edit_original_response.call_args_list
         done = state(game)
         await payment.confirm.callback(confirmed)
-        assert state(game).revision == done.revision
+        assert reopened.confirm(
+            payment_owner, str(confirmed.id), request.id, revision, account, tag, payer=payer
+        ) == {"id": request.id}
+        assert state(game) == done
         with pytest.raises(WorkflowError, match="original pending procedure"):
             reopened.confirm(
                 payment_owner,

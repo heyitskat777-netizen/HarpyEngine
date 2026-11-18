@@ -6300,3 +6300,36 @@ contracts and repository checks passed. The full regression, remote CI,
 connected Activity access, independent review and real-player acceptance are
 outside this verification. The pinned Discord trial and live campaign were
 untouched.
+
+## Girl and Frame package integration
+
+The review branch starts at `d75d17a533695ba63f67c73f73daf18415bf79b2`.
+That head includes the current manual Activity candidate, the opt-in Director
+shadow work, and the recovery changes. Four payload checksums, the bundle
+prerequisite, both original commits in order, and the resulting tree
+`f58eb231ed9e247a4078ad3074249dabcc7f95bb` were verified. Applying the cumulative
+patch to a temporary index at `484f6fc` reproduced that tree. Neither bundled
+change was already applied. The two sections above are historical package
+evidence for their stated revisions.
+
+The integration preserved the newer Activity acceptance record and the
+existing rulings, registry and Director source. The test reconciliation kept
+the stronger Alpha controls and diagnostics, tested conditional Disposable
+Psyche controls, required a current saved Newgirl review before activation,
+and retained the Vatgrown Inbox privacy and original-actor checks with a
+deterministic nickname. No competing ruling needed selection.
+
+The integrated Running Ragged fixture now follows the real private Inbox
+selection and confirm callbacks for both payers. It verifies access for the
+original pair, rejects an unrelated viewer, rejects a stale form after the
+caller rejoins, rejects confirmation during safety pause, reopens after resume,
+and checks transport and persisted-command retries. Each branch marks only
+its own Tag and moves the Doctor's body while leaving the parked Frame in
+place. The fixture uses synthetic SQLite and fake Discord interactions.
+
+The package's Oldgen rank and Stim-to-NPC Order questions remain open for human
+review. Apply the current Oldgen exclusion and keep the Stim path pending
+under current rules. Ancillary stays disabled. Compound and learned-source
+branches, complete Captured and Timeskip continuations, and authenticated
+Activity and real-player acceptance remain open. [Coverage gaps and review
+questions](GIRL_FRAME_PLAY_COVERAGE.md#open-coverage)
