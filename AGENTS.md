@@ -1,4 +1,14 @@
-> Latest owner direction: complete Handler participation and wire every native
+> Latest owner direction: test Handler pacing and the engine-only GM boundary.
+> See reports/P2_HANDLER_PACING.md. Four paired100-input scenes show14 scoped
+> Handler replies/10 own actions with reviewed needs;11/6 with automatic needs.
+> Both concern branches close only with reviewed follow-through. Check for
+> personally relevant heard cues and repeated stock readbacks before adjusting
+> pacing. GM workflow referrals do not roll or alter canon. Keep GM rule results
+> separate from in-character Handler speech. The 601-input rerun completed four
+> missions and two Off-Duty periods, with54 replies and11 distinct wordings.
+> Role audit and replay passed. Offline fixture evidence only.
+>
+> Earlier owner direction: complete Handler participation and wire every native
 > Handler Play. See reports/P2_HANDLER_ALL_PLAYS.md and the Activity handoff.
 > The reviewed Director supports all seven basic and three specialist Plays.
 > Preserve original owner confirmation, tracker/co-presence/private-moment and
