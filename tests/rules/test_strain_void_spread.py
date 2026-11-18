@@ -10,18 +10,26 @@ from test_mission_ui import current
 from test_strain_service import prepared, ready
 from test_world import initial
 
+from girlframe.config import Settings
+from girlframe.database import tables as t
+from girlframe.database.connection import create_database_engine
+from girlframe.database.maintenance import copy_database
 from girlframe.discord_adapter.inbox import InboxView
 from girlframe.discord_adapter.m2_forms import NativeForm
 from girlframe.discord_adapter.m3_strain_effects import effect_form
+from girlframe.discord_adapter.m3_world import MapPages
 from girlframe.engine.m3_strain_effects import Choice
 from girlframe.engine.m3_world_state import Faction, Npc
 from girlframe.services.inbox import InboxService
 from girlframe.services.m3_civic_directive import CivicService
+from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_npc_roles import NpcRoleService
+from girlframe.services.m3_off_duty import OffDutyService
 from girlframe.services.m3_rebel_escape_offer import EscapeOfferService
+from girlframe.services.m3_strain import StrainService
 from girlframe.services.m3_strain_effects import EffectService
 from girlframe.services.m3_world import WorldService
-from girlframe.services.onboarding import WorkflowError
+from girlframe.services.onboarding import OnboardingStore, WorkflowError
 
 
 def strain_source(ledger, face, track="void", column=1, *, high=True):
@@ -196,7 +204,9 @@ def test_rebel_controller_sends_private_offer_to_one_original_girl(ledger):
 
 
 @pytest.mark.parametrize("high", [False, True], ids=["city-protest", "rebel-sympathy"])
-def test_fictional_director_and_handler_complete_only_their_own_civic_actions(ledger, high):
+def test_fictional_director_and_handler_complete_only_their_own_civic_actions(
+    ledger, high, tmp_path
+):
     strain, game, _, _, identity = strain_source(
         ledger,
         3,
@@ -290,6 +300,36 @@ def test_fictional_director_and_handler_complete_only_their_own_civic_actions(le
         )["state"]
         == "awaiting_public_action"
     )
+    if high:
+        # Verify clean recovery with the saved private order and pending public action.
+        backup = tmp_path / "backup" / "civic.sqlite"
+        restored = tmp_path / "restore" / "civic.sqlite"
+        copy_database(tmp_path / "ledger.db", backup)
+        copy_database(backup, restored)
+        engine = create_database_engine(Settings(database_url=f"sqlite:///{restored}"))
+        try:
+            clean_store = OnboardingStore(engine, ledger.policy)
+            clean_strain = StrainService(OffDutyService(MissionService(clean_store)))
+            reopened = CivicService(clean_strain)
+            assert reopened.get(ADMIN, identity)["can_act"]
+            assert reopened.get(OTHER, identity)["order"] == order
+            assert not any(x.identity == identity for x in InboxService(clean_store).items(PLAYER))
+            with clean_store.transaction() as c:
+                c.execute(
+                    t.members.update()
+                    .where(
+                        t.members.c.campaign_id == clean_store.campaign_id,
+                        t.members.c.user_id == str(OTHER.user_id),
+                    )
+                    .values(active=False)
+                )
+            with pytest.raises(WorkflowError):
+                reopened.get(OTHER, identity)
+            with pytest.raises(WorkflowError):
+                reopened.act(OTHER, "96001", identity, revision, order, issue=True, faction=faction)
+            assert reopened.get(ADMIN, identity)["order"] == order
+        finally:
+            engine.dispose()
     with pytest.raises(WorkflowError, match="original addressed Handler"):
         civic.act(OTHER, "wrong-act", identity, state(game).revision, "Made up", issue=False)
     before = world.get(PLAYER)["world"]["civic_conditions"]
@@ -299,3 +339,15 @@ def test_fictional_director_and_handler_complete_only_their_own_civic_actions(le
     assert after[-1]["kind"] == ("public_show_of_support" if high else "public_response_to_protest")
     assert order not in str(world.get(PLAYER))
     assert CivicService(strain).get(ADMIN, identity)["action"] == "ACTUAL_PUBLIC_ACT"
+
+    async def see_public_map():
+        page = MapPages(world, PLAYER.user_id)
+        page.page = 1
+        click = current(PLAYER.user_id, 96200)
+        await click.response.defer(ephemeral=True)
+        await page.show(click)
+        contents = click.edit_original_response.call_args.kwargs["content"]
+        assert ("public show of support" if high else "public response to a protest") in contents
+        assert order not in contents
+
+    asyncio.run(see_public_map())

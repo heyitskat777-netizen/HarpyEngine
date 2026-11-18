@@ -155,6 +155,14 @@ def map_cell(cell: list[int] | tuple[int, int] | None) -> str:
     return f"{cell[0]},{cell[1]}" if cell is not None else "position unknown or offstage"
 
 
+CIVIC_LABELS = {
+    "protest": "Public protest",
+    "public_response_to_protest": "Handler's public response to a protest",
+    "rebel_public_sympathy": "Public sympathy for the Rebels",
+    "public_show_of_support": "Handler's public show of support",
+}
+
+
 class MapPages(discord.ui.View):
     def __init__(self, service: WorldService, owner: int):
         super().__init__(timeout=600)
@@ -181,6 +189,12 @@ class MapPages(discord.ui.View):
             f"{clean(x['name'])} · {map_cell(x['cell'])} · known {x['gorgon_class']}"
             for x in world["gorgons"]
         ]
+        locations = {x["id"]: clean(x["name"]) for x in world["locations"]}
+        for condition in world.get("civic_conditions", []):
+            label = CIVIC_LABELS.get(condition["kind"])
+            if label is not None:
+                city = locations.get(condition.get("city"))
+                lines.append(f"{city} · {label}" if city is not None else label)
         self.page = min(self.page, max(0, (len(lines) - 1) // 8))
         self.previous.disabled = self.page == 0
         self.next.disabled = (self.page + 1) * 8 >= len(lines)

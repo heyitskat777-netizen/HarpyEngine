@@ -140,3 +140,33 @@ service restart records the threat averted and preserves the city. The
 fixture enables the existing candidate-only Core Play without changing
 the shipped gate.
 [Orbital regression](../../tests/rules/test_strain_orbital.py)
+
+The affected regression passed **239 checks** on
+`9d3294b39a358eac77fb6f3f9565c9e947fc3620`, including the pinned
+backup, restore, restart and rollback rehearsal. It used
+`HARPY_RECOVERY_PINNED_CHECKOUT=/workspace/HarpyEngine-pinned-rehearsal`
+with the following offline selection from the worktree:
+
+```bash
+export PYTHONPATH="$PWD/src"
+python -m pytest -q --tb=short tests/rules/test_strain*.py \
+  tests/rules/test_off_duty_cycle*.py tests/rules/test_mission_service.py \
+  tests/rules/test_world.py tests/rules/test_world_service.py \
+  tests/rules/test_budget_anarchy.py tests/rules/test_punishment_service.py \
+  tests/rules/test_npc_roles.py tests/test_inbox.py tests/test_release_recovery.py \
+  tests/test_activity_shadow_readiness.py
+```
+
+The archived Activity source and P2 overlay passed 12 Python adapter
+checks on the same revision. That run used the managed recovery,
+managed opening and campaign switch modules, with an inert SDK.
+Authenticated Discord, browser SDK and real-player acceptance remain
+unverified. [Activity verifier](../../tools/verify_activity_bundle.py)
+
+The next checkpoint adds the redacted conditions to the native public
+map and extends civic coverage to a verified backup restored to a
+clean SQLite path. The original Handler can still see the unfinished
+action. Neither a third player nor the revoked original Director's
+controller can read or replay the private order. The 13 selected
+Strain and map checks passed, including the existing world UI and rift
+projection cases.
