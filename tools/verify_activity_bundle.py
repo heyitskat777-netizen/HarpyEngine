@@ -40,6 +40,8 @@ def prepare(source: Path, output: Path, *, p2_routes: bool = False) -> Path:
         shutil.copyfile(adapter, lab / adapter.name)
     if p2_routes:
         shutil.copyfile(ADAPTERS / "p2-desk.js", lab / "p2-desk.js")
+        for test_path in (ADAPTERS / "tests").glob("test_*.py"):
+            shutil.copyfile(test_path, lab / test_path.name)
         subprocess.run(
             ["patch", "--batch", "--fuzz=0", "-p1", "-i", str(ADAPTERS / "p2_lab_routes.patch")],
             cwd=lab,
@@ -68,7 +70,7 @@ def main() -> int:
     parser.add_argument("--source", required=True, type=Path, help="Extracted handoff root")
     parser.add_argument("--output", required=True, type=Path, help="New disposable directory")
     parser.add_argument("--test", action="append", help="Optional explicit test module")
-    parser.add_argument("--p2-routes", action="store_true", help="Apply the offline P2 overlay")
+    parser.add_argument("--p2-routes", action="store_true", help="Apply the P2 Activity overlay")
     parser.add_argument(
         "--prepare-only", action="store_true", help="Prepare without running pytest"
     )
@@ -88,7 +90,7 @@ def main() -> int:
     env = os.environ.copy()
     # Never inherit a real campaign database or tokens into a synthetic subprocess.
     for name in list(env):
-        if name.startswith(("GIRLFRAME_", "DISCORD_")):
+        if name.startswith(("GIRLFRAME_", "DISCORD_")) or name in ("DiscordBot", "OPENAI_API_KEY"):
             env.pop(name)
     env["PYTHONPATH"] = os.pathsep.join(str(ROOT / p) for p in ("src", "tests", "tests/rules"))
     env["GIRLFRAME_RULES_REGISTRY"] = str(ROOT / "rules/registry.json")

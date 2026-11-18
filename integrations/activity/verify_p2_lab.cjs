@@ -7,7 +7,7 @@ const path = require("node:path");
 const [labPath, pythonPath, chromePath, playwrightPath] = process.argv.slice(2);
 const { chromium } = require(playwrightPath || "playwright");
 const env = Object.fromEntries(
-  Object.entries(process.env).filter(([name]) => !/^(GIRLFRAME_|DISCORD_)/.test(name))
+  Object.entries(process.env).filter(([name]) => !/^(GIRLFRAME_|DISCORD_|DiscordBot$|OPENAI_API_KEY$)/.test(name))
 );
 
 async function verify() {
@@ -77,6 +77,13 @@ async function verify() {
     const policy = (await get(handler, "status")).policy_revision;
     await post(handler, "consent", {policy_revision:policy, consent:true});
     await post(pilot, "consent", {policy_revision:policy, consent:true});
+    await handler.getByRole("button", {name:"Refresh Director work"}).click();
+    await handler.getByText("Review & launch", {exact:true}).click();
+    await handler.getByRole("button", {name:"Launch reviewed opening"}).click();
+    await handler.getByText("The campaign opening has been launched.", {exact:true}).waitFor();
+    const scoped = await get(pilot, "opening-brief");
+    assert.equal(scoped.location, "Relay service hall");
+    assert.ok(scoped.roles.every(role => role.facts.length === 0));
 
     await pilot.getByRole("button", {name:"Scenes", exact:true}).click();
     await pilot.getByRole("button", {name:"Open Relay operations", exact:true}).click();
@@ -111,12 +118,13 @@ async function verify() {
 
     const final = await get(handler, "status");
     const receipt = await post(handler, "close", {revision:final.scene_revision,reports:[]});
-    assert.equal(receipt.handler_report_count, 1);
+    assert.equal(receipt.handler_report_count, 5);
     assert.equal((await get(reopened, "timeline")).open, false);
     await post(pilot, "consent", {policy_revision:policy, consent:false});
     await get(reopened, "timeline", 403);
     process.stdout.write(JSON.stringify({
-      activity_login:true, opening_preview:true, wrong_owner_denied:true, facilitator_review_ui:true, handler_delivery_ui:true,
+      activity_login:true, opening_preview:true, opening_launch:true, private_brief:true,
+      wrong_owner_denied:true, facilitator_review_ui:true, handler_delivery_ui:true,
       engine_composer:true, rendered_scoped_delivery:true, reconnect_entries:2,
       closed_scene_report_count:receipt.handler_report_count, withdrawal_blocked:true,
     }) + "\n");

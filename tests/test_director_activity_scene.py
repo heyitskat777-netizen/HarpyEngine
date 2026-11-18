@@ -19,6 +19,7 @@ from girlframe.ai.observation import AppendSceneInput, ObservationPolicy
 from girlframe.database import tables as t
 from girlframe.services.director_context import DirectorContextService
 from girlframe.services.director_conversation import DirectorConversationService
+from girlframe.services.director_observation import DirectorObservationService
 from girlframe.services.director_session import DirectorSessionService
 from girlframe.services.onboarding import WorkflowError
 
@@ -42,6 +43,7 @@ class Handler:
             provider="reviewed-handler-v1",
             text="I can wait here while you check.",
             handler_action="I turn my own report pad to a fresh page.",
+            source_refs=request.response_need.source_refs if request.response_need else (),
         )
 
 
@@ -136,8 +138,90 @@ def test_opening_draft_previews_only_each_cast_members_facts(observed):
     assert "Maintenance requested a delay." not in handler.requests[-1].model_dump_json()
     game.leave_scene(PLAYER, "pilot-leaves-opening", 900)
     assert app.read(ADMIN, scene, "opening")["stale_audience"]
+    with pytest.raises(WorkflowError, match="STALE_OPENING"):
+        app.write(ADMIN, "stale-launch", scene, "opening-launch", {"review": preview["review"]})
     with pytest.raises(WorkflowError, match="OPENING_AUDIENCE"):
         app.write(ADMIN, "stale-cast", scene, "opening-save", data | {"revision": 1})
+
+
+def launch_opening(app, scene, *, facts=()):
+    app.write(
+        ADMIN,
+        "opening-draft",
+        scene,
+        "opening-save",
+        {
+            "revision": 0,
+            "draft": {
+                "location": "Relay hall",
+                "situation": "Check the main relay circuit.",
+                "first_choice": "Inspect the panel or wait for the technician?",
+                "gm_pressure": "GM_ONLY_MAINTENANCE_PLAN",
+                "facts": facts,
+                "session_zero": {
+                    "tone": "Quiet operational drama",
+                    "human_fallback": "Facilitator",
+                },
+            },
+        },
+    )
+    payload = {"review": app.read(ADMIN, scene, "opening")["review"]}
+    with pytest.raises(WorkflowError, match="administrator"):
+        app.write(OTHER, "opening-impersonation", scene, "opening-launch", payload)
+    receipt = app.write(ADMIN, "opening-confirm", scene, "opening-launch", payload)
+    assert app.write(ADMIN, "opening-confirm", scene, "opening-launch", payload) == receipt
+    assert receipt == {"launched": True, "revision": 1}
+    with pytest.raises(WorkflowError, match="OPENING_LAUNCHED"):
+        app.write(ADMIN, "opening-repeat", scene, "opening-launch", payload)
+
+
+def test_manual_activity_opening_publishes_role_briefs_without_observation(ledger, monkeypatch):
+    from test_m2_game import setup_game
+
+    from girlframe.services.m2_game import GameService
+    from girlframe.services.m3_handler_creation import HandlerCreationService
+
+    activate = GameService.activate
+
+    def check_intermediate_cast(game, viewer, *args):
+        result = activate(game, viewer, *args)
+        if viewer == PLAYER:
+            mid_creation = HandlerCreationService(ledger).view(ADMIN)
+            assert len(mid_creation["pilots"]) == 1
+            assert mid_creation["pilots"][0]["ref"]["entity"] == str(PLAYER.user_id)
+        return result
+
+    monkeypatch.setattr(GameService, "activate", check_intermediate_cast)
+    game, _, _, _ = setup_game(ledger)
+    observer = DirectorObservationService(ledger)
+    observer.game = game
+    app, _ = adapter(observer)
+    with ledger.engine.connect() as c:
+        scene = game.scene(c, 900)["id"]
+        pilot = next(
+            actor.ref
+            for actor in app.session.knowledge._actor_views(c, observer._scene(c, scene))
+            if actor.controller == PLAYER.user_id
+        )
+    assert app.read(PLAYER, scene, "opening-brief") == {"launched": False}
+    launch_opening(
+        app,
+        scene,
+        facts=[
+            {
+                "text": "Red inspection tag",
+                "learned_from": "Private inspection",
+                "known_by": [pilot.token],
+            }
+        ],
+    )
+    brief = app.read(PLAYER, scene, "opening-brief")
+    assert brief["roles"][0]["facts"] == ["Red inspection tag"]
+    assert brief["session_zero"]["tone"] == "Quiet operational drama"
+    assert app.read(ADMIN, scene, "opening-brief")["roles"][0]["facts"] == []
+    assert "GM_ONLY_MAINTENANCE_PLAN" not in json.dumps(brief)
+    with ledger.engine.connect() as c:
+        assert app.session.context._references(c, scene) == ()
 
 
 def test_parallel_scenes_file_only_approved_reports_after_native_close(observed):
@@ -146,6 +230,25 @@ def test_parallel_scenes_file_only_approved_reports_after_native_close(observed)
     session = app.session
     observer.game.leave_scene(OTHER, "other-leaves-source", 900)
     target = add_scene(observer, 901, (ADMIN, OTHER))
+    with observer.store.engine.connect() as c:
+        handler_role = observer._authorize_input(c, ADMIN, target, "handler")[2]
+        target_pilot = observer._authorize_input(c, OTHER, target, "pilot")[2]
+    launch_opening(
+        app,
+        target,
+        facts=[
+            {
+                "text": "HANDLER_APPROVED_BRIEF",
+                "learned_from": "Shift report",
+                "known_by": [handler_role.token],
+            },
+            {
+                "text": "TARGET_PILOT_ONLY_NOTE",
+                "learned_from": "Personal note",
+                "known_by": [target_pilot.token],
+            },
+        ],
+    )
     pilot = roles(observer, source)[1]
     text, secret = "We found a loose cover on the east rail.", "UNREPORTED_CELLAR_ENTRY"
     posted = []
@@ -174,7 +277,14 @@ def test_parallel_scenes_file_only_approved_reports_after_native_close(observed)
         app.submit(OTHER, target, cmd)
         return handler.requests[-1]
 
-    assert not question("before-close").closed_scene_reports
+    before_close = question("before-close")
+    assert not before_close.closed_scene_reports
+    prompt = before_close.model_dump_json()
+    assert "HANDLER_APPROVED_BRIEF" in prompt
+    assert all(
+        hidden not in prompt
+        for hidden in (secret, text, "TARGET_PILOT_ONLY_NOTE", "GM_ONLY_MAINTENANCE_PLAN")
+    )
     with pytest.raises(WorkflowError, match="SCENE_REPORT_OPEN"):
         carry(session.context, source, target, (posted[0],), key="early-carry")
     revision = observer.status(ADMIN, source).scene_revision

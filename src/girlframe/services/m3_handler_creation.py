@@ -61,14 +61,20 @@ class HandlerCreationService:
         if rulings is None or rulings.handler_creation != "owned_shared_choices_preserve_existing":
             raise WorkflowError("UNRESOLVED_RULING: record the Handler creation interpretation.")
 
-    def _appointment(self, c: Connection, viewer: GuildViewer) -> str:
+    def _appointment(
+        self, c: Connection, viewer: GuildViewer, *, before_pilots: bool = False
+    ) -> str:
         HandlerService(self.store).authorize(c, viewer)
-        return self._appointment_source(c, viewer.user_id)
+        return self._appointment_source(c, viewer.user_id, before_pilots=before_pilots)
 
-    def _appointment_source(self, c: Connection, owner: int) -> str:
+    def _appointment_source(self, c: Connection, owner: int, *, before_pilots: bool = False) -> str:
         handler = HandlerService(self.store)
+        state = load_state(c, self.store.campaign_id)
         if (
-            load_state(c, self.store.campaign_id).handler != owner
+            (
+                state.handler != owner
+                and not (before_pilots and state.handler is None and not state.sheets)
+            )
             or handler.current(c)[1].handler_id != owner
             or not handler._member(c, owner)
         ):
@@ -201,10 +207,10 @@ class HandlerCreationService:
             )
 
         selected_npcs = set(saved.draft.surveilled)
-        if state.handler is None:
-            raise WorkflowError("Recover the actual Handler appointment before starting labels.")
         if saved.draft.sympathizer is not None:
             selected_npcs.add(saved.draft.sympathizer)
+        if state.handler is None and (complete or selected_npcs):
+            raise WorkflowError("Recover the actual Handler appointment before starting labels.")
         npcs = {x.id: x for x in state.world.npcs} if state.world else {}
         packages = {x.npc.entity: x for x in saved.draft.npc_starting}
         for identity in selected_npcs:
@@ -237,7 +243,7 @@ class HandlerCreationService:
     def _view(self, c: Connection, viewer: GuildViewer) -> dict[str, Any]:
         self.game.authorize(c, viewer, game=False)
         try:
-            appointment = self._appointment(c, viewer)
+            appointment = self._appointment(c, viewer, before_pilots=True)
         except WorkflowError:
             appointment = None
         row = self._draft_row(c, viewer.user_id, appointment)
@@ -249,7 +255,7 @@ class HandlerCreationService:
         pilots = []
         if appointment is not None:
             for uid in state.order:
-                if HandlerService(self.store)._member(c, uid):
+                if str(uid) in state.sheets and HandlerService(self.store)._member(c, uid):
                     ref = ActorRef(
                         kind="pilot",
                         entity=str(uid),
@@ -349,7 +355,7 @@ class HandlerCreationService:
                 generation is None and current_generation == "initial"
             ):
                 raise WorkflowError("STALE_HANDLER_GENERATION: reopen the new persona's creation.")
-            if self._appointment(c, viewer) != appointment:
+            if self._appointment(c, viewer, before_pilots=True) != appointment:
                 raise WorkflowError("STALE_HANDLER: reopen the original appointment.")
 
         def operation(c: Connection) -> dict[str, Any]:
@@ -843,7 +849,7 @@ class HandlerCreationService:
         self.game.authorize(c, viewer, game=False)
         result = []
         try:
-            appointment = self._appointment(c, viewer)
+            appointment = self._appointment(c, viewer, before_pilots=True)
         except WorkflowError:
             appointment = None
         row = self._draft_row(c, viewer.user_id, appointment)
@@ -880,11 +886,28 @@ class HandlerCreationService:
                 .order_by(table.c.revision)
             ).mappings()
         }
+        canon = load_state(c, self.store.campaign_id)
         for request in requests.values():
             if not history and request["state"] == "resolved":
                 continue
             _, offer = self._agreement(c, viewer, request["id"])
             current = self._current_offer(c, offer)
+            if isinstance(offer, NpcAgreement):
+                assigned = (
+                    next(
+                        (
+                            npc.name + "’s controller"
+                            for npc in canon.world.npcs
+                            if npc.id == offer.relationship.npc.entity
+                        ),
+                        "NPC controller",
+                    )
+                    if canon.world
+                    else "NPC controller"
+                )
+            else:
+                pilot = canon.sheets.get(offer.bond.pilot.entity)
+                assigned = pilot.callsign if pilot else "Original Pilot"
             result.append(
                 dict(
                     id=request["id"],
@@ -895,6 +918,7 @@ class HandlerCreationService:
                     and request["state"] == "pending"
                     and _recipient(offer) == viewer.user_id,
                     stale=not current,
+                    assignee=assigned,
                     label="NPC starting relationship"
                     if isinstance(offer, NpcAgreement)
                     else "Shared starting Bond and rank",

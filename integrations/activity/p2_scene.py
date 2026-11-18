@@ -15,22 +15,33 @@ from girlframe.ai.model_adapters import (
 from girlframe.ai.model_transport import OpenAIResponses
 from girlframe.ai.observation import AppendSceneInput, ObservationPolicy
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_handler_state import GEAR, HISTORY_LABELS, PLAYBOOKS, Draft
 from girlframe.services.campaign_opening import CampaignOpeningService, OpeningDraft
 from girlframe.services.director_context import DirectorContextService
 from girlframe.services.director_conversation import DirectorConversationService
+from girlframe.services.director_observation import DirectorObservationService
 from girlframe.services.director_session import DirectorSessionService
 from girlframe.services.gm_outcomes import GMOutcomeService, SourceKind
+from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
+from girlframe.services.m3_handler_creation import HandlerCreationService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
 
 class P2Scene:
-    def __init__(self, session: DirectorSessionService, *, models: OpenAIResponses | None = None):
+    def __init__(
+        self,
+        session: DirectorSessionService,
+        *,
+        models: OpenAIResponses | None = None,
+        facilitator_id: int | None = None,
+    ):
         self.session = session
         self.models = models
-        self.opening = CampaignOpeningService(session.knowledge)
+        self.opening = CampaignOpeningService(session.knowledge, facilitator_id=facilitator_id)
+        self.handler_setup = HandlerCreationService(session.store)
 
     @classmethod
     def model_fixture(
@@ -177,6 +188,27 @@ class P2Scene:
     ) -> dict[str, Any]:
         if route == "opening":
             return self.opening.view(viewer, scene)
+        if route == "opening-brief":
+            return self.opening.brief(viewer, scene)
+        if route == "persona-setup":
+            with self.session.store.engine.connect() as c:
+                self.session.game.authorize(c, viewer, game=False)
+                appointed = (
+                    HandlerService(self.session.store).current(c)[1].handler_id == viewer.user_id
+                )
+            sheet = self.handler_setup.view(viewer) if appointed else None
+            if sheet is not None:
+                for npc in sheet["npcs"]:
+                    npc["controller"] = str(npc["controller"])
+            return {
+                "sheet": sheet,
+                "requests": self.handler_setup.tasks(viewer),
+                "playbooks": PLAYBOOKS if appointed else (),
+                "gear": GEAR if appointed else (),
+                "histories": HISTORY_LABELS if appointed else {},
+            }
+        if route == "persona-agreement" and identity is not None:
+            return self.handler_setup.get_agreement(viewer, identity)
         if route == "status":
             return self.session.observer.status(viewer, scene).model_dump(mode="json")
         if route == "timeline":
@@ -202,11 +234,9 @@ class P2Scene:
         if route == "npc-owner-review" and identity is not None:
             return self.session.reactions.owner_review(viewer, scene, identity)
         if route == "handler-sheet":
-            from girlframe.services.m3_handler_creation import HandlerCreationService
-
             with self.session.store.engine.connect() as c:
                 self.session.observer._authorize_input(c, viewer, scene, "handler")
-            return HandlerCreationService(self.session.store).view(viewer)
+            return self.handler_setup.view(viewer)
         raise ValueError("Unknown scene view.")
 
     def write(
@@ -222,6 +252,74 @@ class P2Scene:
                 raise ValueError("Supply the last saved opening revision.")
             draft = OpeningDraft.model_validate_json(json.dumps(data["draft"]))
             return self.opening.save(viewer, key, scene, data["revision"], draft)
+        if route == "opening-launch" and data.keys() == {"review"}:
+            if not isinstance(data["review"], str) or len(data["review"]) != 64:
+                raise ValueError("Confirm the actual opening review.")
+            return self.opening.launch(viewer, key, scene, data["review"])
+        if route == "persona-save" and data.keys() == {
+            "revision",
+            "appointment",
+            "draft",
+            "generation",
+        }:
+            if (
+                type(data["revision"]) is not int
+                or not isinstance(data["appointment"], str)
+                or not isinstance(data["generation"], str)
+            ):
+                raise ValueError("Use the saved Handler draft and appointment.")
+            raw = data["draft"]
+            if isinstance(raw, dict) and isinstance(raw.get("npc_starting"), list):
+                for npc in raw["npc_starting"]:
+                    if isinstance(npc, dict) and isinstance(
+                        controller := npc.get("controller"), str
+                    ):
+                        if (
+                            not controller.isascii()
+                            or not controller.isdecimal()
+                            or len(controller) > 20
+                        ):
+                            raise ValueError("Use the exact NPC controller.")
+                        npc["controller"] = int(controller)
+            draft_sheet = Draft.model_validate_json(json.dumps(raw))
+            return self.handler_setup.save(
+                viewer,
+                key,
+                data["revision"],
+                data["appointment"],
+                draft_sheet,
+                generation=data["generation"],
+            )
+        if route == "persona-propose" and data.keys() == {"revision", "generation"}:
+            if type(data["revision"]) is not int or not isinstance(data["generation"], str):
+                raise ValueError("Use the saved Handler draft revision.")
+            return self.handler_setup.propose(
+                viewer, key, data["revision"], generation=data["generation"]
+            )
+        if route == "persona-activate" and data.keys() == {
+            "revision",
+            "game_revision",
+            "confirmed",
+        }:
+            if (
+                type(data["revision"]) is not int
+                or type(data["game_revision"]) is not int
+                or data["confirmed"] is not True
+            ):
+                raise ValueError("Confirm the current Handler profile.")
+            return self.handler_setup.activate(
+                viewer, key, data["revision"], data["game_revision"], True
+            )
+        if route == "persona-answer" and data.keys() == {"id", "revision", "accept"}:
+            if (
+                not isinstance(data["id"], str)
+                or type(data["revision"]) is not int
+                or type(data["accept"]) is not bool
+            ):
+                raise ValueError("Answer the exact saved relationship proposal.")
+            return self.handler_setup.answer(
+                viewer, key, data["id"], data["revision"], data["accept"]
+            )
         if route == "configure" and data.keys() == {"revision"} and type(data["revision"]) is int:
             return self.session.observer.configure_scene(
                 viewer,
@@ -348,12 +446,20 @@ class P2Scene:
         raise ValueError("Unknown scene operation or malformed fields.")
 
 
+def manual_campaign_setup(game: GameService, facilitator: int) -> P2Scene:
+    """Use verified campaign identity for setup with Director observation disabled."""
+    observer = DirectorObservationService(game.store)
+    observer.game = game
+    return P2Scene(
+        DirectorSessionService(DirectorContextService(observer)), facilitator_id=facilitator
+    )
+
+
 def local_fixture_director(game: GameService) -> P2Scene:
     """Exercise the real model contracts through a disposable, no-network lab transport."""
     from urllib.request import Request
 
     from girlframe.ai.model_transport import ModelLimits
-    from girlframe.services.director_observation import DirectorObservationService
 
     def reply(request: Request, timeout: float) -> bytes:
         if not isinstance(request.data, bytes):

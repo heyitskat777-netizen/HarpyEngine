@@ -1,10 +1,17 @@
+> Latest owner direction: carry the managed Activity to its supervised trial.
+> Review & Launch freezes the approved opening and publishes recipient-scoped
+> briefs. Synthetic observation additionally writes source-backed starting
+> knowledge with current consent. The managed Activity uses manual play. The
+> appointed Handler can save a private persona draft before Pilot activation;
+> normal owner confirmations still govern starting relationships and activation.
+> See reports/P2_ACTIVITY_TRIAL.md for the simulated Discord and browser evidence.
+>
 > Latest owner direction: Activity-only play and staged campaign setup. The
 > HarpyEngine Gateway runtime stops registering legacy gameplay commands and
 > selectively retires its known guild slash commands. The Activity listener owns
 > /activity-campaign create (role/channel binding) and launch. The local P2 lab
 > saves revisioned, facilitator-only opening plans and previews each current
-> actor's assigned facts. Drafts stay private. See the Activity UI
-> handoff for the routes and remaining explicit publication step.
+> actor's assigned facts. The launch workflow above adds explicit publication.
 >
 > Latest owner direction: proceed with Handler-first model wiring and verify native
 > Handler sheets and NPC authority. See reports/P2_MODEL_ADAPTERS.md. The local

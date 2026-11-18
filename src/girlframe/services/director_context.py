@@ -189,6 +189,13 @@ class DirectorContextService:
         self, c: Connection, scene: str, identity: str, *, allow_closed: bool = False
     ) -> dict[str, Any]:
         """The worldbuilding service owns native/review/disclosure proof, not prose."""
+        if identity.startswith("opening-source:"):
+            from girlframe.services.campaign_opening import CampaignOpeningService
+            from girlframe.services.director_knowledge import DirectorKnowledgeService
+
+            return CampaignOpeningService(DirectorKnowledgeService(self)).source(
+                c, scene, identity, allow_closed=allow_closed
+            )
         from girlframe.services.director_worldbuilding import DirectorWorldbuildingService
 
         return DirectorWorldbuildingService(self)._disclosure_source(

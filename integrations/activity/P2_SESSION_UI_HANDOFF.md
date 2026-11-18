@@ -630,19 +630,28 @@ channel and member role. The HarpyEngine Gateway worker retires only the known
 legacy guild slash commands on startup and leaves the Activity group registered.
 The Activity retains the safety pause and resume controls on the native service.
 
-The disposable `--p2-routes` lab exposes the opening draft under **Director
-work**. A joined facilitator can save the opening location, situation, first
-player decision, a private pressure and starting facts. Each fact records how it
-was learned and the exact fictional actors who should start knowing it. The
-facilitator can preview each role's proposed facts before observation begins.
+The overlay exposes the draft under **Campaign setup** for role-bound managed
+campaigns and under **Director work** in the synthetic lab. The facilitator
+saves opening location, situation, the first player decision, private pressure,
+Session Zero notes, and starting facts with their audiences. The optional NPC
+Pilot assignment selects an existing, activated Pilot controlled by a verified
+account. Authored setup notes preserve native control and relationship approvals.
 
-`GET /api/director/{scene}/opening` returns the current revision, draft, actual
-cast and per-role preview. `POST /api/director/{scene}/opening-save` requires the
-saved revision, the edited draft and the original command key for retries.
-HarpyEngine checks the current cast and administrator authority. The draft stays
-private and attached to an already-bound scene. Campaign-wide setup and explicit
-publication into role context are separate follow-ups. Opening a scene and
-starting Plays use the native workflows.
+**Review & launch** binds the exact saved draft, current cast and scene. The
+server checks blockers and concurrent edits before committing. Each participant
+receives only the shared introduction and facts approved for their own cast
+roles. Synthetic launch also writes source-backed Director knowledge under the
+current observation consent. The managed Activity uses manual play with scene
+observation off. The GM sees the private pressure and sourcing notes in setup.
+
+Managed mode uses `/api/campaign-opening/{route}` for the campaign selected by
+the existing verified session. The synthetic lab uses `/api/director/{scene}/{route}`.
+`opening` reads the review, `opening-save` saves by revision, `opening-launch`
+publishes the reviewed version with a command key, and `opening-brief` reads the
+recipient projection. `persona-setup` shows the appointed Handler's private
+sheet and each participant's owned starting requests. `persona-save`,
+`persona-propose`, `persona-answer` and `persona-activate` reuse the native
+appointment, approval and activation workflows. See the [private trial runbook](../../reports/P2_ACTIVITY_TRIAL.md).
 
 ## Reviewed model adapters in the local Activity lab
 
