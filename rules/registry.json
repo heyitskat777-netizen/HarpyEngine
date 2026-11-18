@@ -17467,14 +17467,16 @@
         "heading": "Rebellion low: die 3, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain_cadre_leak.py::test_leak_preserves_private_parties_and_requires_a_real_end"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

@@ -11,6 +11,7 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_strain_effects as rules
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_cadre_leak import RULE as CADRE_LEAK
 from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_contraband_state import ContrabandFind
 from girlframe.engine.m3_doppelganger_reveal import reveals as disguise_reveals
@@ -91,6 +92,8 @@ class EffectService:
                 "awaiting_pilot_fears": bool(body.get("fear_requested"))
                 and row["state"] == "pending",
                 "awaiting_harpy_raid": bool(body.get("raid_requested"))
+                and row["state"] == "pending",
+                "awaiting_cadre_leak": bool(body.get("leak_requested"))
                 and row["state"] == "pending",
                 "supply_outcome": {
                     "recipient": label,
@@ -541,7 +544,29 @@ class EffectService:
                     int(choice.victim),
                     new=choice.new_raid_harpy,
                 )
-            pending = needs_offer or needs_directive or needs_signal or needs_fear or needs_raid
+            needs_leak = choice.rule_id == CADRE_LEAK
+            if needs_leak:
+                from girlframe.services.m3_cadre_leak import stage as stage_cadre_leak
+
+                assert choice.target and choice.leak_report
+                stage_cadre_leak(
+                    c,
+                    self.strain,
+                    updated,
+                    identity,
+                    event_id,
+                    choice.target,
+                    choice.leak_parties,
+                    choice.leak_report.strip(),
+                )
+            pending = (
+                needs_offer
+                or needs_directive
+                or needs_signal
+                or needs_fear
+                or needs_raid
+                or needs_leak
+            )
             scientific_period, scientific_events = None, []
             if choice.rule_id == "strain.budget.low.3.1":
                 from girlframe.engine.m3_scientific_observation import materialize
@@ -756,7 +781,8 @@ class EffectService:
                 | ({"directive_requested": event} if needs_directive else {})
                 | ({"signal_requested": event} if needs_signal else {})
                 | ({"fear_requested": event} if needs_fear else {})
-                | ({"raid_requested": event} if needs_raid else {}),
+                | ({"raid_requested": event} if needs_raid else {})
+                | ({"leak_requested": event} if needs_leak else {}),
                 resolved=not pending,
             )
             return {

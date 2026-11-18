@@ -1478,6 +1478,26 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_battle import BattleService
 
             await open_battle_context(interaction, BattleService(self.service.store), item.identity)
+        elif item.task in ("m3_cadre_leak", "m3_cadre_report", "m3_cadre_apology"):
+            from girlframe.discord_adapter.m3_cadre_leak import open_leak
+            from girlframe.services.m3_cadre_leak import LeakService
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_off_duty import OffDutyService
+            from girlframe.services.m3_strain import StrainService
+
+            leak_service = LeakService(
+                StrainService(OffDutyService(MissionService(self.service.store)))
+            )
+            if item.task in ("m3_cadre_report", "m3_cadre_apology"):
+                statement = await asyncio.to_thread(
+                    leak_service.bulletin,
+                    viewer,
+                    item.identity,
+                    apology=item.task == "m3_cadre_apology",
+                )
+                await reply(interaction, discord.utils.escape_mentions(statement))
+            else:
+                await open_leak(interaction, leak_service, item.identity)
         elif item.task == "m3_harpy_raid":
             from girlframe.discord_adapter.m3_harpy_raid import open_raid
             from girlframe.services.m3_harpy_raid import RaidService

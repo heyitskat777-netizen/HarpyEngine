@@ -251,3 +251,18 @@ body setup review and actual Assault run through the same saved source.
 Both tests use the candidate-only Assault gate from the established
 Harpy combat tests. Independent release approval remains separate.
 [High Void p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) · [Raid test](../../tests/rules/test_strain_harpy_raid.py)
+
+## Eighth checkpoint
+
+The base is `adc40423e40a4f59c8957e76bb4f2d5fb6a27034`. Low Rebellion
+3.2 publishes only the Handler-authored in-world leak bulletin. The
+original parties and private incident notes stay scoped. The follow-up
+either proves every original party's actual death after the leak or
+delivers a separately controlled fictional Director's demand and the
+Handler's actual public apology. A signed demand remains in force
+until the apology is delivered. The book gives no elapsed deadline,
+so the higher-ups' original controller authors that demand. The two
+synthetic outcomes checked rejected premature elimination, private
+and public readback, stale and replayed submissions, original NPC
+death through native damage and Off-Duty activation.
+[Low Rebellion p. 145](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=147) · [Incident tests](../../tests/rules/test_strain_cadre_leak.py)

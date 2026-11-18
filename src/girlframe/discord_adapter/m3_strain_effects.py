@@ -12,6 +12,7 @@ from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.m3_world import TYPES, coordinates, squares
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_budget_anarchy import REBELLION as REBEL_PROTEST
+from girlframe.engine.m3_cadre_leak import RULE as CADRE_LEAK
 from girlframe.engine.m3_civic_directive import PROTEST as CIVIC_PROTEST
 from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_doppelganger_reveal import RULE as DOPPELGANGER_REVEAL
@@ -103,6 +104,9 @@ async def open_effect(
         return
     if data["awaiting_harpy_raid"]:
         await reply(interaction, "The Harpy's completed Assault is required in the original raid.")
+        return
+    if data["awaiting_cadre_leak"]:
+        await reply(interaction, "The actual leak stays pending. Review its private case.")
         return
     if data["rule_id"] == "strain.budget.high.1.2":
         from girlframe.discord_adapter.m3_fuel_shortage import open_fuel_shortage
@@ -279,6 +283,16 @@ def effect_form(
         if disguise and state.world
         else {}
     )
+    parties = {}
+    if rule == CADRE_LEAK:
+        parties = {
+            current_ref(state, uid): state.sheets[str(uid)].callsign for uid in state.order
+        } | {
+            ActorRef(kind="npc", entity=npc["id"]): npc["name"]
+            for npc in world["npcs"]
+            if npc["alive"]
+        }
+    parties_by_token = {ref.token: ref for ref in parties}
 
     asset_pins = {}
     asset_labels = {}
@@ -335,7 +349,7 @@ def effect_form(
                     options([x for x in world["gorgons"] if x["alive"]]),
                 )
             )
-        if rule in CIVIC_DIRECTIVES or rule == PILOT_FEARS:
+        if rule in CIVIC_DIRECTIVES or rule in (PILOT_FEARS, CADRE_LEAK):
             fields.append(
                 Field(
                     "civic_director",
@@ -368,6 +382,16 @@ def effect_form(
                         ),
                     )
                 )
+        if rule == CADRE_LEAK:
+            fields.append(
+                Field(
+                    "parties",
+                    "Who actually caused the leak? These choices stay private.",
+                    tuple((ref.token, label) for ref, label in parties.items()) or WAIT,
+                    maximum=min(25, len(parties)) if parties else 1,
+                )
+            )
+            fields.append(Field("leak_report", "What information becomes public?", paragraph=True))
         if rule == VOID_REVELATION:
             fields += [
                 Field("revelation", "Which printed revelation do you make?", REVELATIONS),
@@ -912,10 +936,15 @@ def effect_form(
                 )
         if rule == VOID_SIGNAL:
             payload["target"] = values["signal"][0]
-        if rule in CIVIC_DIRECTIVES or rule == PILOT_FEARS:
+        if rule in CIVIC_DIRECTIVES or rule in (PILOT_FEARS, CADRE_LEAK):
             payload["target"] = values["civic_director"][0]
             if rule == CIVIC_PROTEST:
                 payload["protest_city"] = values["protest_city"][0]
+        if rule == CADRE_LEAK:
+            if any(x not in parties_by_token for x in values["parties"]):
+                raise WorkflowError("Recover the actual original parties of this incident")
+            payload["leak_parties"] = tuple(parties_by_token[x] for x in values["parties"])
+            payload["leak_report"] = values["leak_report"]
         if rule == VOID_REVELATION:
             payload.update(
                 revelation_play=values["revelation"][0],
@@ -1130,6 +1159,8 @@ def effect_form(
             return "The original fictional Director can issue the demand in their private Inbox."
         if rule == HARPY_RAID:
             return "The original Harpy's controller can confirm the real attack in the Inbox."
+        if rule == CADRE_LEAK:
+            return "The original incident is pending. Reopen its private review."
         return "Event effects committed once. Reopen Off-Duty for remaining work."
 
     instructions = (

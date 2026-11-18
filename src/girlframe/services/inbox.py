@@ -2926,6 +2926,7 @@ class InboxService:
                         task="m3_handler_notice",
                     )
                 )
+            from girlframe.engine.m3_cadre_leak import leaks as cadre_leaks
             from girlframe.engine.m3_civic_directive import cases as civic_directives
             from girlframe.engine.m3_doppelganger_reveal import reveals as disguise_reveals
             from girlframe.engine.m3_harpy_raid import raids as harpy_raids
@@ -2982,6 +2983,64 @@ class InboxService:
                         task="m3_civic_directive",
                     )
                 )
+
+            for leak in cadre_leaks(canon)[-25:]:
+                items.append(
+                    InboxItem(
+                        "cadre-report:" + leak.id,
+                        "cadre_report",
+                        leak.id,
+                        canon.revision,
+                        "off_duty",
+                        "Public report on Cadre treatment",
+                        "Campaign bulletin",
+                        "resolved",
+                        False,
+                        False,
+                        "Read the public account of the leak.",
+                        "",
+                        "Read report",
+                        task="m3_cadre_report",
+                    )
+                )
+                if viewer.user_id in (int(leak.handler.entity), leak.controller):
+                    items.append(
+                        InboxItem(
+                            "cadre-leak:" + leak.id,
+                            "cadre_leak",
+                            leak.id,
+                            canon.revision,
+                            "off_duty",
+                            "Private leaked incident",
+                            "Original Handler and Director",
+                            "resolved" if leak.outcome_event else "pending",
+                            not leak.outcome_event,
+                            False,
+                            "Review the original follow-up.",
+                            "",
+                            "Review incident",
+                            task="m3_cadre_leak",
+                        )
+                    )
+                if leak.apology and leak.outcome_event:
+                    items.append(
+                        InboxItem(
+                            "cadre-apology:" + leak.id,
+                            "cadre_apology",
+                            leak.id,
+                            canon.revision,
+                            "off_duty",
+                            "Public apology",
+                            "Campaign bulletin",
+                            "resolved",
+                            False,
+                            False,
+                            "Read the Handler's published statement.",
+                            "",
+                            "Read statement",
+                            task="m3_cadre_apology",
+                        )
+                    )
 
             for raid in harpy_raids(canon):
                 if raid.controller == viewer.user_id:

@@ -7,8 +7,10 @@ from pydantic import Field
 
 from girlframe.engine import m3_world as world_rules
 from girlframe.engine.m2 import GameState, Model, TagState, pair_key
+from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_budget_anarchy import REBELLION as REBEL_PROTEST
 from girlframe.engine.m3_budget_sabotage import Pin
+from girlframe.engine.m3_cadre_leak import RULE as CADRE_LEAK
 from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_contraband_state import ContrabandFind
 from girlframe.engine.m3_doppelganger_reveal import RULE as DOPPELGANGER_REVEAL
@@ -50,6 +52,7 @@ SUPPORTED = frozenset(
         PILOT_FEARS,
         DOPPELGANGER_REVEAL,
         HARPY_RAID,
+        CADRE_LEAK,
         "strain.rebellion.low.1.1",
         "strain.rebellion.low.1.2",
         "strain.rebellion.low.2.2",
@@ -121,6 +124,8 @@ class Choice(Model):
     protest_city: str | None = Field(default=None, exclude_if=lambda x: x is None)
     raid_base: str | None = Field(default=None, exclude_if=lambda x: x is None)
     new_raid_harpy: AdversaryPilot | None = Field(default=None, exclude_if=lambda x: x is None)
+    leak_parties: tuple[ActorRef, ...] = Field(default=(), exclude_if=lambda x: not x)
+    leak_report: str | None = Field(default=None, max_length=1200, exclude_if=lambda x: x is None)
 
 
 def fields(choice: Choice, allowed: set[str]) -> None:
@@ -222,6 +227,10 @@ def apply(
             or int(choice.victim) not in state.order
         ):
             raise ValueError("Choose the original Harpy, occupied base and obsession")
+    elif rule == CADRE_LEAK:
+        fields(choice, {"target", "leak_parties", "leak_report"})
+        if not choice.target or not choice.leak_parties or not (choice.leak_report or "").strip():
+            raise ValueError("Bind the actual incident, original parties and fictional Director")
     elif rule in CIVIC_DIRECTIVES:
         from girlframe.engine.m3_civic_directive import create as create_civic_directive
 
@@ -536,7 +545,6 @@ def apply(
             if victim is None:
                 raise ValueError("Choose an actual living NPC at the event's location")
             if rule == "strain.void.low.4.1":
-                from girlframe.engine.m3_actor_state import ActorRef
                 from girlframe.engine.m3_battle import category, end_actor_casts
                 from girlframe.engine.m3_enforcer import end_grasps
                 from girlframe.engine.m3_physical import interrupt_journeys
@@ -744,7 +752,6 @@ def apply(
         fields(choice, {"target", "npc_jobs"})
         from girlframe.engine.m3_actor_bonds import current_ref
         from girlframe.engine.m3_actor_bonds import depth as bond_depth
-        from girlframe.engine.m3_actor_state import ActorRef
         from girlframe.engine.m3_handler_consequences import active_handler
 
         people = [
