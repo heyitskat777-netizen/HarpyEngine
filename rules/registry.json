@@ -16934,14 +16934,17 @@
         "heading": "Void high: die 5, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain_void_signal.py::test_high_void_draw_and_original_inbox_gain_resolve_only_after_actual_effect",
+        "tests/rules/test_strain_void_signal.py::test_existing_void_requires_the_gorgon_linked_play_without_using_random_fallback"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

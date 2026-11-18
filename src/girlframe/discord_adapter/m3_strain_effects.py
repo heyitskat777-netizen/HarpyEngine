@@ -21,6 +21,7 @@ from girlframe.engine.m3_scientific_observation import Demand
 from girlframe.engine.m3_strain_effects import Choice, TagChoice
 from girlframe.engine.m3_void_revelation import PLAYS as REVELATIONS
 from girlframe.engine.m3_void_revelation import RULE as VOID_REVELATION
+from girlframe.engine.m3_void_signal import RULE as VOID_SIGNAL
 from girlframe.engine.m3_void_spread import RULE as VOID_SPREAD
 from girlframe.engine.m3_world import CLASS_ASSETS, distance
 from girlframe.engine.m3_world_state import (
@@ -89,6 +90,9 @@ async def open_effect(
         await reply(
             interaction, "The fictional Director's controller has the private order request."
         )
+        return
+    if data["awaiting_void_signal"]:
+        await reply(interaction, "The original recipient's Void consequence is still pending.")
         return
     if data["rule_id"] == "strain.budget.high.1.2":
         from girlframe.discord_adapter.m3_fuel_shortage import open_fuel_shortage
@@ -263,6 +267,14 @@ def effect_form(
 
     def build(values: dict[str, Any]) -> list[Field]:
         fields: list[Field] = []
+        if rule == VOID_SIGNAL:
+            fields.append(
+                Field(
+                    "signal",
+                    "Which original Gorgon reaches out?",
+                    options([x for x in world["gorgons"] if x["alive"]]),
+                )
+            )
         if rule in CIVIC_DIRECTIVES:
             fields.append(
                 Field(
@@ -790,6 +802,8 @@ def effect_form(
 
     def apply(actor: GuildViewer, key: str, values: dict[str, Any]) -> str:
         payload: dict[str, Any] = {"rule_id": rule, "account": values["account"]}
+        if rule == VOID_SIGNAL:
+            payload["target"] = values["signal"][0]
         if rule in CIVIC_DIRECTIVES:
             payload["target"] = values["civic_director"][0]
             if rule == CIVIC_PROTEST:
@@ -995,6 +1009,8 @@ def effect_form(
             return "The private offer is pending with the original rebel controller."
         if rule in CIVIC_DIRECTIVES:
             return "The original Director's order is pending in their private Inbox."
+        if rule == VOID_SIGNAL:
+            return "The original recipient can finish the Void change in their private Inbox."
         return "Event effects committed once. Reopen Off-Duty for remaining work."
 
     instructions = (

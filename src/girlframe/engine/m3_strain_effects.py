@@ -19,6 +19,7 @@ from girlframe.engine.m3_supply_state import SupplyLoss
 from girlframe.engine.m3_void_revelation import RULE as VOID_REVELATION
 from girlframe.engine.m3_void_revelation import Play as RevelationPlay
 from girlframe.engine.m3_void_revelation import Revelation
+from girlframe.engine.m3_void_signal import RULE as VOID_SIGNAL
 from girlframe.engine.m3_world_state import (
     Asset,
     CorePlan,
@@ -41,6 +42,7 @@ SUPPORTED = frozenset(
         VOID_EXAMINATION,
         "strain.void.high.3.1",
         VOID_REVELATION,
+        VOID_SIGNAL,
         "strain.rebellion.low.1.1",
         "strain.rebellion.low.1.2",
         "strain.rebellion.low.2.2",
@@ -171,6 +173,14 @@ def apply(
         fields(choice, set())
         if period_id is None or source_event is None or not state.order:
             raise ValueError("Bind the required exams to the actual period and its Girls")
+    elif rule == VOID_SIGNAL:
+        fields(choice, {"target"})
+        if (
+            period_id is None
+            or source_event is None
+            or not any(x.id == choice.target and x.alive for x in world.gorgons)
+        ):
+            raise ValueError("Bind the original living Gorgon to the preparing period")
     elif rule in CIVIC_DIRECTIVES:
         from girlframe.engine.m3_civic_directive import create as create_civic_directive
 

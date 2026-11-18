@@ -169,6 +169,15 @@ def source(
 
             prove_cleanup(game, c, first, body, actor)
             return current, body, actor
+        if body.get("reason") == "strain_void_signal":
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_off_duty import OffDutyService
+            from girlframe.services.m3_strain import StrainService
+            from girlframe.services.m3_void_signal import SignalService, prove_threshold
+
+            signal = SignalService(StrainService(OffDutyService(MissionService(game.store))))
+            prove_threshold(c, signal, first, body, actor)
+            return current, body, actor
         if body.get("reason") == "janus_storage_replug":
             from girlframe.services.m3_janus_storage import prove_replug
 
@@ -549,6 +558,15 @@ def complete(
             from girlframe.services.m3_budget_cleanup import complete_void as complete_cleanup
 
             complete_cleanup(game, c, identity, event, viewer, key)
+        elif body.get("reason") == "strain_void_signal":
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_off_duty import OffDutyService
+            from girlframe.services.m3_strain import StrainService
+            from girlframe.services.m3_void_signal import SignalService
+            from girlframe.services.m3_void_signal import complete as complete_signal
+
+            signal = SignalService(StrainService(OffDutyService(MissionService(game.store))))
+            complete_signal(c, signal, body["signal"], event)
         elif body.get("reason") == "am_body_adjustment":
             from girlframe.services.m3_am_body_consequences import complete_void_continuation
 

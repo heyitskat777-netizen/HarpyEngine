@@ -2928,6 +2928,7 @@ class InboxService:
                 )
             from girlframe.engine.m3_civic_directive import cases as civic_directives
             from girlframe.engine.m3_void_revelation import revelations
+            from girlframe.engine.m3_void_signal import signals as void_signals
             from girlframe.services.m3_handler_tags import HandlerTagService
             from girlframe.services.m3_rebel_escape_offer import visible as visible_escape_offers
 
@@ -2977,6 +2978,27 @@ class InboxService:
                         task="m3_civic_directive",
                     )
                 )
+
+            for signal in void_signals(canon):
+                if signal.actor.entity == str(viewer.user_id) and signal.gain_event is None:
+                    items.append(
+                        InboxItem(
+                            "strain-void-signal:" + signal.id,
+                            "void_signal",
+                            signal.id,
+                            canon.revision,
+                            "off_duty",
+                            "Void contact",
+                            "Original recipient",
+                            "pending",
+                            True,
+                            False,
+                            "Choose your own Asset and describe how the Void alters it.",
+                            "",
+                            "Review the Void gain",
+                            task="m3_strain_void_signal",
+                        )
+                    )
 
             for escape_offer in visible_escape_offers(canon, viewer.user_id)[-25:]:
                 delivered = escape_offer.delivered_event is not None

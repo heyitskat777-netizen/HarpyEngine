@@ -1,6 +1,11 @@
 # Rulebook audit development
 
 The audit examined `d1d3a5ed114d6f4866d45e745be7292fee023865`.
+The local main reference was
+`c4550ecbd89bbf84363537e7bdf763c2177a998f`. Shadow readiness
+(`3e671cf92fa5967f29c05b4363537e8ba8621409`) and recovery privacy
+(`d75d17a533695ba63f67c73f73daf18415bf79b2`) already feed the
+development base.
 The isolated development worktree starts at
 `6fb633f2ee233c530ef6644866905b45c92bb2ae`, which contains the reconciled
 Girl and Frame packages, the printed JANUS name, reviewed Director shadow
@@ -170,3 +175,21 @@ action. Neither a third player nor the revoked original Director's
 controller can read or replay the private order. The 13 selected
 Strain and map checks passed, including the existing world UI and rift
 projection cases.
+
+## Fourth checkpoint
+
+The base is `9f3aab8b52ca553d6598cc3a59ccf636ad784e99`. High Void
+5.2 now has its ordinary fallback. If none of the original Girls has
+Void Assets, the Handler's saved event binds a living Gorgon and draws
+once from the period's original roster. The chosen Girl makes the
+actual Asset alteration in her private Inbox. A full-family change
+stays pending through the existing Void transformation or resistance
+workflow. Tests cover the ordinary change and a MOCKINGBIRD's real
+Keep Your Head resistance using the saved roll and the owner's choices.
+
+The branch for existing Void Assets still requires the Gorgon-linked
+Dive Deep workflow. Controls preserve the saved 5.2 result in that
+case and never fall back to a random Girl. The implemented gain is an
+ordinary owned Asset rewrite. Equivalent Storage, growth or other
+special source choices need their own provenance and tests.
+[High Void p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) · [Signal tests](../../tests/rules/test_strain_void_signal.py)

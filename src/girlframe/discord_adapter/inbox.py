@@ -1478,6 +1478,17 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_battle import BattleService
 
             await open_battle_context(interaction, BattleService(self.service.store), item.identity)
+        elif item.task == "m3_strain_void_signal":
+            from girlframe.discord_adapter.m3_void_signal import open_signal
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_off_duty import OffDutyService
+            from girlframe.services.m3_strain import StrainService
+            from girlframe.services.m3_void_signal import SignalService
+
+            signal_service = SignalService(
+                StrainService(OffDutyService(MissionService(self.service.store)))
+            )
+            await open_signal(interaction, signal_service, item.identity)
         elif item.task == "m3_civic_directive":
             from girlframe.discord_adapter.m3_civic_directive import open_directive
             from girlframe.services.m3_civic_directive import CivicService

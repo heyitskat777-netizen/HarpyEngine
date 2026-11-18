@@ -17,6 +17,7 @@ from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_supply_state import SupplyLoss
 from girlframe.engine.m3_void_revelation import RULE as VOID_REVELATION
 from girlframe.engine.m3_void_revelation import Revelation, revelations
+from girlframe.engine.m3_void_signal import RULE as VOID_SIGNAL
 from girlframe.engine.m3_void_spread import RULE as VOID_SPREAD
 from girlframe.engine.m3_void_spread import Spread, select
 from girlframe.engine.m3_world_state import Cell
@@ -81,6 +82,8 @@ class EffectService:
                 "awaiting_rebel_offer": bool(body.get("offer_requested"))
                 and row["state"] == "pending",
                 "awaiting_civic_directive": bool(body.get("directive_requested"))
+                and row["state"] == "pending",
+                "awaiting_void_signal": bool(body.get("signal_requested"))
                 and row["state"] == "pending",
                 "supply_outcome": {
                     "recipient": label,
@@ -478,7 +481,21 @@ class EffectService:
                     c, director(updated, choice.target).controller
                 ):
                     raise WorkflowError("Recover the fictional Director's campaign controller")
-            pending = needs_offer or needs_directive
+            needs_signal = choice.rule_id == VOID_SIGNAL
+            if needs_signal:
+                from girlframe.services.m3_void_signal import stage as stage_void_signal
+
+                stage_void_signal(
+                    updated,
+                    self.strain,
+                    c,
+                    row,
+                    choice.target,
+                    event_id,
+                    self.selector,
+                    self.selection_source,
+                )
+            pending = needs_offer or needs_directive or needs_signal
             scientific_period, scientific_events = None, []
             if choice.rule_id == "strain.budget.low.3.1":
                 from girlframe.engine.m3_scientific_observation import materialize
@@ -690,7 +707,8 @@ class EffectService:
                 json.loads(row["body_json"])
                 | {"choice": choice.model_dump(mode="json")}
                 | ({"offer_requested": event} if needs_offer else {})
-                | ({"directive_requested": event} if needs_directive else {}),
+                | ({"directive_requested": event} if needs_directive else {})
+                | ({"signal_requested": event} if needs_signal else {}),
                 resolved=not pending,
             )
             return {
