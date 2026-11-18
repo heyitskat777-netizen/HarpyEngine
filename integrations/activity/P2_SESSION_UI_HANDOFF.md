@@ -653,6 +653,25 @@ sheet and each participant's owned starting requests. `persona-save`,
 `persona-propose`, `persona-answer` and `persona-activate` reuse the native
 appointment, approval and activation workflows. See the [private trial runbook](../../reports/P2_ACTIVITY_TRIAL.md).
 
+## Offline Activity shadow readiness
+
+The isolated readiness fixture uses `--p2-fixture --p2-shadow-readiness`. Its
+campaign opt-in is saved by an administrator. Configure a notice for the current
+scene roster and collect each participant's own consent. The existing manual
+Activity path remains available when observation is unavailable. The fixture
+accepts synthetic inputs only.
+
+The administrator reviews eligible batches in **Private shadow review**. The
+review shows ordered input revisions, Handler RESPOND or WAIT reasons, and the
+authorized facts that would be supplied for a response. The existing native GM
+desk retains ownership of rulings. NPC proposals use the existing private actor
+workflow and the new `npc-review` and `npc-deliver` routes. The actual controller
+chooses exact listeners. `npc-hearing` exposes the current hearing receipt to the
+facilitator. The synthetic timeline renders the dialogue for its approved audience.
+
+See the [readiness report](../../reports/P2_ACTIVITY_SHADOW_READINESS.md) for
+source coverage, privacy behavior and reproduction.
+
 ## Reviewed model adapters in the local Activity lab
 
 The `--p2-routes` overlay adds a private Director work panel to the synthetic

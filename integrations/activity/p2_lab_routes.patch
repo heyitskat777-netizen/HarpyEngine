@@ -47,22 +47,25 @@
      ledger = CampaignLedger(store)
      organizer = GuildViewer(int(binding.handler_id), policy.guild_id, True, True)
      status = ledger.status(organizer)
-@@ -379,7 +396,10 @@
+@@ -379,7 +396,13 @@
      bound_roster=False,
      campaign_registry=None,
      campaign_bot_token=None,
 +    p2_fixture=False,
++    p2_shadow_readiness=False,
  ) -> None:
++    if p2_shadow_readiness and not p2_fixture:
++        raise ValueError("Shadow readiness requires the disposable P2 fixture.")
 +    if p2_fixture and (discord or bound_roster or campaign_registry):
 +        raise ValueError("P2 fixture routes require a disposable offline Activity lab.")
      if bound_roster and not discord:
          raise ValueError("The private roster requires Discord sign-in.")
      if discord and discord.config.tester_role_ids and not bound_roster:
-@@ -446,10 +466,30 @@
+@@ -446,10 +469,34 @@
          )
          if prepare_test_battlefield is not None:
              prepare_test_battlefield(battlefield)
-+    director = local_fixture_director(setup.game) if p2_fixture else None
++    director = local_fixture_director(setup.game, activity_shadow=p2_shadow_readiness) if p2_fixture else None
 +    director_scene = None
 +    if director:
 +        with service.store.engine.connect() as connection:
@@ -72,7 +75,11 @@
 +        if not director or room != "relay":
 +            return False
 +        with service.store.engine.connect() as connection:
-+            return director.session.observer._state(connection, director_scene).policy.mode == "shadow"
++            observer = director.session.observer
++            state = observer._state(connection, director_scene)
++            return state.policy.mode == "shadow" and (
++                not p2_shadow_readiness or observer._consented(connection, observer._scene(connection, director_scene, allow_closed=True), state)
++            )
 +
 +    def campaign_opening(setup, route):
 +        opening = manual_campaign_setup(setup.game, setup.handler.user_id)
@@ -89,11 +96,12 @@
      sessions: dict[str, tuple[str, GuildViewer]] = {}
      sdk = (
          (RUNTIME / "discord-sdk" / "embedded-app.js").read_bytes() if discord else None
-@@ -767,12 +807,37 @@
+@@ -767,12 +814,38 @@
                          "allow_dm": discord.config.allow_dm if discord else False,
                          "battlefield": battlefield is not None,
                          "bound_roster": bound_roster,
 +                        "director_scene": director_scene if director else None,
++                        "activity_shadow": p2_shadow_readiness,
 +                        "campaign_setup": catalog is not None,
                          "campaign_switcher": catalog is not None,
                          "tester_role_gate": bool(
@@ -127,7 +135,7 @@
              elif path == "/api/presence" and bound_roster:
                  try:
                      _, viewer = self.session()
-@@ -874,7 +939,33 @@
+@@ -874,7 +947,34 @@
              elif match := TRANSCRIPT_ROUTE.fullmatch(path):
                  try:
                      _, viewer = self.session()
@@ -146,7 +154,8 @@
 +                        for entry in timeline["entries"]:
 +                            actor = entry["actor"]
 +                            sheet = state.sheets.get(actor["entity"])
-+                            label = "Handler" if actor["kind"] == "handler" else (
++                            names = {npc.id: npc.name for npc in state.world.npcs} if state.world else {}
++                            label = "Handler" if actor["kind"] == "handler" else names.get(actor["entity"], "NPC") if actor["kind"] == "npc" else (
 +                                sheet.callsign if sheet and sheet.character_id == actor["incarnation"] else "Pilot"
 +                            )
 +                            transcript["entries"].append({
@@ -162,7 +171,7 @@
                  except SignInError as error:
                      self.send_json(error.status, {"error": str(error)})
                  except WorkflowError as error:
-@@ -936,6 +1027,33 @@
+@@ -936,6 +1036,33 @@
                  campaign.battlefield,
              )
              handler = setup.handler
@@ -196,7 +205,7 @@
              if match := COMMUNICATION_ROUTE.fullmatch(path):
                  try:
                      key = self.headers.get("Idempotency-Key", "")
-@@ -1062,7 +1180,17 @@
+@@ -1062,7 +1189,17 @@
                          else nullcontext()
                      )
                      with lock:
@@ -215,7 +224,7 @@
                      self.send_json(HTTPStatus.OK, receipt)
                  except (TypeError, ValueError, UnicodeError):
                      self.send_json(
-@@ -1113,9 +1241,11 @@
+@@ -1113,9 +1250,11 @@
      with ThreadingHTTPServer(("127.0.0.1", port), Handler) as server:
          server.origin_host = f"127.0.0.1:{server.server_port}"
          server.origin = f"http://{server.origin_host}"
@@ -227,22 +236,24 @@
                      "origin": server.origin,
                      "pilots": {}
                      if discord
-@@ -1173,7 +1303,10 @@
+@@ -1173,7 +1312,11 @@
      parser.add_argument("--port", type=int, default=8799)
      parser.add_argument("--audit", action="store_true")
      parser.add_argument("--stop-on-input-close", action="store_true")
 +    parser.add_argument("--p2-fixture", action="store_true")
++    parser.add_argument("--p2-shadow-readiness", action="store_true")
      args = parser.parse_args()
 +    if args.p2_fixture and (args.discord or args.audit):
 +        parser.error("--p2-fixture only serves a local synthetic lab.")
      if args.allow_dm and not args.discord:
          parser.error("--allow-dm requires --discord.")
      if args.bound_roster and (not args.discord or args.audit):
-@@ -1204,6 +1337,7 @@
+@@ -1204,6 +1347,8 @@
              args.stop_on_input_close,
              discord,
              bound_roster=args.bound_roster,
 +            p2_fixture=args.p2_fixture,
++            p2_shadow_readiness=args.p2_shadow_readiness,
              campaign_bot_token=os.environ.pop(
                  "GIRLFRAME_ACTIVITY_SETUP_BOT_TOKEN", None
              )
@@ -331,7 +342,7 @@
    else await refresh();
 +  if (config.director_scene || config.campaign_setup) {
 +    const {mountDirectorDesk} = await import("/p2-desk.js");
-+    mountDirectorDesk(document.querySelector(".workbench"), config.director_scene, activityFetch);
++    mountDirectorDesk(document.querySelector(".workbench"), config.director_scene, activityFetch, config.activity_shadow);
 +  }
  }
  start().then(() => {

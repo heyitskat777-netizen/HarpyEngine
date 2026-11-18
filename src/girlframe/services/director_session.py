@@ -67,7 +67,7 @@ class DirectorSessionService:
     def submit(self, viewer: GuildViewer, scene: str, command: AppendSceneInput) -> dict[str, Any]:
         """Retry the same command to resume after a saved input or GM-only success."""
         source = self.observer.append_scene_input(viewer, scene, command)
-        if source.source_id is None:
+        if source.source_id is None or self.observer.activity_shadow:
             return {"input": source.model_dump(mode="json"), "conversation": None}
         if self.knowledge_provider is not None:
             assert self.knowledge_gm is not None
@@ -157,6 +157,9 @@ class DirectorSessionService:
                         "action": entry["action"],
                     }
                 )
+            from girlframe.services.director_npc_delivery import NpcDeliveryService
+
+            entries.extend(NpcDeliveryService(self.context).contributions(c, viewer, scene))
             entries.sort(key=lambda item: (item["sequence"], item["ordinal"]))
             return {
                 "scene_id": scene,

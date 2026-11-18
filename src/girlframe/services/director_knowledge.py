@@ -377,10 +377,18 @@ class DirectorKnowledgeService:
         state = self.observer._state(c, scene)
         if state.policy.mode != "shadow" or not self.observer._consented(c, row, state):
             raise WorkflowError("OBSERVATION_DISABLED: retain current consent.")
-        if actor not in self._actors(c, row):
+        current = {view.ref: view.controller for view in self._actor_views(c, row)}
+        if actor not in current:
             raise WorkflowError("INVALID_RECIPIENT: recover the actual current listener.")
         source = self._source(c, scene, source_id)
         if source.kind != "message" or source.fictional_channel == "private":
+            return ()
+        observation = self.observer._latest_source(c, source_id)
+        if (
+            observation
+            and observation.cast_controllers is not None
+            and observation.cast_controllers.get(actor.token) != current[actor]
+        ):
             return ()
         if source.fictional_channel == "comms":
             return (source.text,)

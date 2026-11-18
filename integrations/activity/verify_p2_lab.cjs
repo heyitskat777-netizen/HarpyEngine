@@ -4,7 +4,8 @@ const { randomUUID } = require("node:crypto");
 const { createInterface } = require("node:readline");
 const path = require("node:path");
 
-const [labPath, pythonPath, chromePath, playwrightPath] = process.argv.slice(2);
+const [labPath, pythonPath, chromePath, playwrightPath, mode] = process.argv.slice(2);
+const shadow = mode === "--shadow-readiness";
 const { chromium } = require(playwrightPath || "playwright");
 const env = Object.fromEntries(
   Object.entries(process.env).filter(([name]) => !/^(GIRLFRAME_|DISCORD_|DiscordBot$|OPENAI_API_KEY$)/.test(name))
@@ -15,7 +16,7 @@ async function verify() {
   const python = path.resolve(pythonPath);
   const child = spawn(python, [
     "mission_lab.py", "--p2-fixture", "--campaign", "p2-browser-" + randomUUID().slice(0, 8),
-    "--port", "0", "--stop-on-input-close",
+    "--port", "0", "--stop-on-input-close", ...(shadow ? ["--p2-shadow-readiness"] : []),
   ], {cwd:lab, env, stdio:["pipe","pipe","inherit"]});
   let browser;
   try {
@@ -73,7 +74,13 @@ async function verify() {
     assert.deepEqual(opening.find(role => role.label === "Handler").facts, ["Technicians filed a delay notice."]);
     assert.equal(opening.filter(role => role.facts.length).length, 1);
     const init = await get(handler, "status");
-    await post(handler, "configure", {revision:init.policy_revision});
+    if (shadow) {
+      assert.equal((await get(handler, "activity-policy")).enabled, false);
+      await handler.getByRole("button", {name:"Enable campaign observation"}).click();
+      await handler.getByRole("button", {name:"Disable campaign observation"}).waitFor();
+    }
+    await post(handler, "configure", {revision:init.policy_revision,
+      ...(shadow ? {policy:{mode:"shadow", quiet_seconds:1, min_interval_seconds:1}} : {})});
     const policy = (await get(handler, "status")).policy_revision;
     await post(handler, "consent", {policy_revision:policy, consent:true});
     await post(pilot, "consent", {policy_revision:policy, consent:true});
@@ -97,6 +104,25 @@ async function verify() {
     assert.equal(timeline.entries.length, 1);
     assert.equal(timeline.entries[0].channel, "comms");
     await get(pilot, "gm-work", 403);
+    if (shadow) {
+      await get(pilot, "activity-review", 403);
+      await handler.getByRole("button", {name:"Refresh Director work"}).click();
+      await handler.getByRole("button", {name:"Review eligible batch"}).waitFor();
+      await handler.waitForTimeout(1100);
+      await handler.getByRole("button", {name:"Review eligible batch"}).click();
+      await handler.getByText("Reviewed through event 1", {exact:true}).click();
+      await handler.getByText(/^RESPOND/).waitFor();
+      const reviewed = await get(handler, "activity-review");
+      assert.equal(reviewed.batches.length, 1);
+      assert.ok(reviewed.batches[0].items[0].facts.some(f => f.text.includes("Technicians filed a delay notice")));
+      assert.equal((await get(handler, "gm-work")).handler_drafts.length, 0);
+      assert.deepEqual((await post(handler, "activity-review-run", {})), {batch:null});
+      await post(pilot, "consent", {policy_revision:policy, consent:false});
+      await get(handler, "activity-review", 403);
+      process.stdout.write(JSON.stringify({campaign_opt_in:true, quiet_batch:true, handler_readiness:true,
+        approved_opening_facts:true, review_denied_to_pilot:true, no_automatic_reply:true, withdrawal:true}) + "\n");
+      return;
+    }
     const draft = (await get(handler, "gm-work")).handler_drafts[0].id;
     await handler.getByRole("button", {name:"Refresh Director work"}).click();
     await handler.getByRole("button", {name:"Review Handler draft"}).click();

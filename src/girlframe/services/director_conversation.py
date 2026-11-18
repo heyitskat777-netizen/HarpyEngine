@@ -801,17 +801,28 @@ class DirectorConversationService:
                     )
                 )
             ]
-            return [
-                {
-                    "id": row["id"],
-                    "source_id": row["source_id"],
-                    "owner_id": row["owner_id"],
-                    "status": "awaiting_gm_review",
-                }
-                for row in records
-                if row.get("record_type") == "handler_reply_draft"
-                and self._saved(c, row["id"] + ":review") is None
-            ]
+            scoped = self.observations._state(c, scene).activity_epoch is not None
+            pending = []
+            for row in records:
+                if row.get("record_type") != "handler_reply_draft" or self._saved(
+                    c, row["id"] + ":review"
+                ):
+                    continue
+                status = "awaiting_gm_review"
+                if scoped:
+                    try:
+                        self._current_handler_draft(c, viewer, scene, row)
+                    except WorkflowError:
+                        status = "stale_reopen_source"
+                pending.append(
+                    {
+                        "id": row["id"],
+                        "source_id": row["source_id"],
+                        "owner_id": row["owner_id"],
+                        "status": status,
+                    }
+                )
+            return pending
 
     def private_handler(self, viewer: GuildViewer, scene: str, identity: str) -> dict[str, Any]:
         """Only the actual administrative GM can inspect a natural-language draft."""
@@ -820,11 +831,14 @@ class DirectorConversationService:
             draft = self._handler_draft(c, scene, identity)
             review = self._saved(c, identity + ":review")
             status = review["decision"] if review else "awaiting_gm_review"
-            if review is None:
+            scoped = self.observations._state(c, scene).activity_epoch is not None
+            if review is None or scoped:
                 try:
                     self._current_handler_draft(c, viewer, scene, draft)
                 except WorkflowError:
                     status = "stale_reopen_source"
+                    if scoped:
+                        return {"id": identity, "status": status, "effects_applied": False}
             return {
                 "id": identity,
                 "request": draft["request"],

@@ -1,3 +1,11 @@
+> Current isolated milestone: synthetic Activity shadow readiness on
+> codex/p2-activity-shadow-readiness, based on the manual candidate 9a0efbc.
+> Campaign opt-in, scene notices and individual consent bind observation.
+> Preserve captured cast identities, owner-only corrections, the native event
+> cursor and atomic private reviews. NPC speech requires an original controller,
+> explicit approved recipients and fresh authority at simulated delivery.
+> See reports/P2_ACTIVITY_SHADOW_READINESS.md.
+>
 > Latest owner direction: carry the managed Activity to its supervised trial.
 > Review & Launch freezes the approved opening and publishes recipient-scoped
 > briefs. Synthetic observation additionally writes source-backed starting

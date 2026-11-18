@@ -3,6 +3,7 @@
 import json
 from typing import Any, cast
 
+from girlframe.ai.director_reactions import ReactionProposal
 from girlframe.ai.gm_outcomes import OutcomeProposal
 from girlframe.ai.gm_protocol import TaskFrame
 from girlframe.ai.model_adapters import (
@@ -16,9 +17,11 @@ from girlframe.ai.model_transport import OpenAIResponses
 from girlframe.ai.observation import AppendSceneInput, ObservationPolicy
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_handler_state import GEAR, HISTORY_LABELS, PLAYBOOKS, Draft
+from girlframe.services.activity_shadow import ActivityShadowReview
 from girlframe.services.campaign_opening import CampaignOpeningService, OpeningDraft
 from girlframe.services.director_context import DirectorContextService
 from girlframe.services.director_conversation import DirectorConversationService
+from girlframe.services.director_npc_delivery import NpcDeliveryService
 from girlframe.services.director_observation import DirectorObservationService
 from girlframe.services.director_session import DirectorSessionService
 from girlframe.services.gm_outcomes import GMOutcomeService, SourceKind
@@ -42,6 +45,8 @@ class P2Scene:
         self.models = models
         self.opening = CampaignOpeningService(session.knowledge, facilitator_id=facilitator_id)
         self.handler_setup = HandlerCreationService(session.store)
+        self.shadow = ActivityShadowReview(session.conversation)
+        self.npc_delivery = NpcDeliveryService(session.context)
 
     @classmethod
     def model_fixture(
@@ -186,6 +191,12 @@ class P2Scene:
     def read(
         self, viewer: GuildViewer, scene: str, route: str, identity: str | None = None
     ) -> dict[str, Any]:
+        if route == "activity-policy":
+            return self.session.observer.activity_policy(viewer)
+        if route == "activity-review":
+            return {"batches": self.shadow.records(viewer, scene)}
+        if route == "npc-hearing" and identity is not None:
+            return self.npc_delivery.hearing(viewer, scene, identity)
         if route == "opening":
             return self.opening.view(viewer, scene)
         if route == "opening-brief":
@@ -247,6 +258,41 @@ class P2Scene:
         route: str,
         data: dict[str, Any],
     ) -> dict[str, Any]:
+        if route == "activity-policy-save" and data.keys() == {"revision", "enabled"}:
+            return self.session.observer.configure_activity(
+                viewer, key, data["revision"], data["enabled"]
+            )
+        if route == "activity-review-run" and not data:
+            return {"batch": self.shadow.process(viewer, scene)}
+        if (
+            route == "npc-deliver"
+            and data.keys() == {"proposal"}
+            and isinstance(data["proposal"], str)
+        ):
+            return self.npc_delivery.deliver(viewer, key, scene, data["proposal"])
+        if route == "npc-review" and data.keys() == {
+            "proposal",
+            "decision",
+            "reason",
+            "recipients",
+        }:
+            if (
+                not self.session.observer.activity_shadow
+                or not isinstance(data["proposal"], str)
+                or not isinstance(data["reason"], str)
+                or not isinstance(data["recipients"], list)
+                or data["decision"] not in ("approve", "reject")
+            ):
+                raise ValueError("Select a reviewed NPC reaction and its actual listeners.")
+            return self.session.reactions.review(
+                viewer,
+                key,
+                scene,
+                data["proposal"],
+                data["decision"],
+                data["reason"],
+                recipients=tuple(ActorRef.model_validate(x) for x in data["recipients"]),
+            )
         if route == "opening-save" and data.keys() == {"revision", "draft"}:
             if type(data["revision"]) is not int:
                 raise ValueError("Supply the last saved opening revision.")
@@ -319,6 +365,20 @@ class P2Scene:
                 raise ValueError("Answer the exact saved relationship proposal.")
             return self.handler_setup.answer(
                 viewer, key, data["id"], data["revision"], data["accept"]
+            )
+        if (
+            route == "configure"
+            and data.keys() == {"revision", "policy"}
+            and self.session.observer.activity_shadow
+        ):
+            if type(data["revision"]) is not int:
+                raise ValueError("Use the current scene notice revision.")
+            return self.session.observer.configure_scene(
+                viewer,
+                key,
+                scene,
+                data["revision"],
+                ObservationPolicy.model_validate(data["policy"]),
             )
         if route == "configure" and data.keys() == {"revision"} and type(data["revision"]) is int:
             return self.session.observer.configure_scene(
@@ -413,6 +473,18 @@ class P2Scene:
                 actor,
                 data["source_id"],
             )
+        if (
+            route == "reaction-propose"
+            and data.keys() == {"request", "proposal"}
+            and self.session.observer.activity_shadow
+        ):
+            return self.session.reactions.propose(
+                viewer,
+                key,
+                scene,
+                data["request"],
+                ReactionProposal.model_validate_json(json.dumps(data["proposal"])),
+            )
         if route == "handler-need-open" and data.keys() == {"source_id"}:
             return self.session.conversation.open_handler_need(
                 viewer, key, scene, data["source_id"]
@@ -455,7 +527,7 @@ def manual_campaign_setup(game: GameService, facilitator: int) -> P2Scene:
     )
 
 
-def local_fixture_director(game: GameService) -> P2Scene:
+def local_fixture_director(game: GameService, *, activity_shadow: bool = False) -> P2Scene:
     """Exercise the real model contracts through a disposable, no-network lab transport."""
     from urllib.request import Request
 
@@ -485,7 +557,9 @@ def local_fixture_director(game: GameService) -> P2Scene:
             }
         ).encode()
 
-    observer = DirectorObservationService(game.store, synthetic=True)
+    observer = DirectorObservationService(
+        game.store, synthetic=True, activity_shadow=activity_shadow
+    )
     observer.game = game
     return P2Scene.model_fixture(
         DirectorContextService(observer),

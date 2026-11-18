@@ -60,6 +60,8 @@ class DirectorReactionService:
         source_id: str,
         request: str,
         run_id: str | None,
+        *,
+        approved_run: bool = False,
     ) -> dict[str, Any]:
         from girlframe.services.director_dossiers import DirectorDossierService
         from girlframe.services.director_fronts import DirectorFrontService
@@ -84,13 +86,17 @@ class DirectorReactionService:
                         runs.c.campaign_id == self.store.campaign_id,
                         runs.c.scene_id == scene,
                         runs.c.run_id == run_id,
-                        runs.c.status == "running",
+                        runs.c.status.in_(
+                            ("running", "reviewed") if approved_run else ("running",)
+                        ),
                     )
                 )
                 .mappings()
                 .first()
             )
-            if not record or record["lease_until"] <= self.store.clock():
+            if not record or (
+                record["status"] == "running" and record["lease_until"] <= self.store.clock()
+            ):
                 raise WorkflowError("STALE_CLAIM: reuse an actual eligible Director batch.")
             batch = ReviewBatch.model_validate_json(record["body_json"])
             if source_id not in {
@@ -162,7 +168,7 @@ class DirectorReactionService:
             self._scope(c, gm, scene)
             return dict(self._get(c, scene, request, "reaction_request")["packet"])
 
-    def _fresh(self, c: Connection, packet: dict[str, Any]) -> None:
+    def _fresh(self, c: Connection, packet: dict[str, Any], *, approved_run: bool = False) -> None:
         current = self._packet(
             c,
             packet["scene_id"],
@@ -170,6 +176,7 @@ class DirectorReactionService:
             packet["source_id"],
             packet["request_id"],
             packet["run_id"],
+            approved_run=approved_run,
         )
         if current != packet:
             raise WorkflowError("STALE_REACTION: refresh actual dossier, sources and context.")
@@ -273,7 +280,12 @@ class DirectorReactionService:
     def private(self, gm: GuildViewer, scene: str, identity: str) -> dict[str, Any]:
         with self.store.engine.connect() as c:
             self._scope(c, gm, scene)
-            return self._get(c, scene, identity, "reaction_proposal")
+            record = self._get(c, scene, identity, "reaction_proposal")
+            if self.observer._state(c, scene).activity_epoch is not None:
+                packet = self._get(c, scene, record["request"], "reaction_request")["packet"]
+                if self._stale_review(c, scene, identity, packet):
+                    return {"id": identity, "status": "stale_reopen_source"}
+            return record
 
     def _owned(
         self,
@@ -290,7 +302,12 @@ class DirectorReactionService:
 
         self.store.guild_member(viewer)
         self.observer._scope()
-        self.observer._scene(c, scene, viewer)
+        row = self.observer._scene(c, scene, viewer)
+        state = self.observer._state(c, scene)
+        if state.activity_epoch is not None and (
+            state.policy.mode != "shadow" or not self.observer._consented(c, row, state)
+        ):
+            raise WorkflowError("OBSERVATION_DISABLED: current scene consent is required.")
         record = self._get(c, scene, identity, "reaction_proposal")
         packet = self._get(c, scene, record["request"], "reaction_request")["packet"]
         actual = resolve(
@@ -309,6 +326,10 @@ class DirectorReactionService:
         """Inspect the actor's proposed reply; private GM reasoning stays excluded."""
         with self.store.engine.connect() as c:
             record, packet = self._owned(c, controller, scene, identity, fresh=False)
+            if self.observer._state(c, scene).activity_epoch is not None and self._stale_review(
+                c, scene, identity, packet
+            ):
+                return {"id": identity, "status": "stale_reopen_source", "effects_applied": False}
             return dict(
                 id=identity,
                 actor=packet["actor"],
@@ -316,6 +337,29 @@ class DirectorReactionService:
                 publication="private_review_only",
                 effects_applied=False,
             )
+
+    def _stale_review(
+        self, c: Connection, scene: str, identity: str, packet: dict[str, Any]
+    ) -> bool:
+        approval = self._review_record(c, scene, identity)
+        try:
+            self._fresh(
+                c, packet, approved_run=bool(approval and approval["decision"] == "approve")
+            )
+        except WorkflowError:
+            return True
+        return False
+
+    def _review_record(self, c: Connection, scene: str, identity: str) -> dict[str, Any] | None:
+        table = t.director_context["shadow"]
+        raw = c.scalar(
+            sa.select(table.c.body_json).where(
+                table.c.campaign_id == self.store.campaign_id,
+                table.c.scene_id == scene,
+                table.c.id == identity + ":review",
+            )
+        )
+        return dict(json.loads(raw)) if raw else None
 
     def _route(
         self, c: Connection, gm: GuildViewer | None, scene: str, p: ReactionProposal
@@ -534,6 +578,8 @@ class DirectorReactionService:
         identity: str,
         decision: Literal["approve", "reject"],
         reason: str,
+        *,
+        recipients: tuple[ActorRef, ...] = (),
     ) -> dict[str, Any]:
         if decision not in ("approve", "reject") or not reason.strip() or len(reason) > 1200:
             raise WorkflowError("REACTION_REVIEW_INVALID: provide bounded decision/reason.")
@@ -544,8 +590,17 @@ class DirectorReactionService:
         def operation(c: Connection) -> dict[str, Any]:
             record = self._get(c, scene, identity, "reaction_proposal")
             packet = self._get(c, scene, record["request"], "reaction_request")["packet"]
+            plan = None
+            if recipients and decision != "approve":
+                raise WorkflowError("NPC_DELIVERY_REVIEW: only approval names listeners.")
             if decision == "approve":
                 self._fresh(c, packet)
+                if recipients:
+                    from girlframe.services.director_npc_delivery import NpcDeliveryService
+
+                    plan = NpcDeliveryService(self.context).plan(
+                        c, scene, packet, record["proposal"], recipients
+                    )
                 self._route(
                     c,
                     None,
@@ -575,7 +630,8 @@ class DirectorReactionService:
                     raise WorkflowError(
                         "REACTION_ADDRESSED: this actor already addressed this episode."
                     )
-                self._save(c, scene, slot, "reaction_episode", reaction_id=identity)
+                if plan is None:
+                    self._save(c, scene, slot, "reaction_episode", reaction_id=identity)
                 if packet["run_id"]:
                     runs = t.director["runs"]
                     token = c.scalar(
@@ -599,13 +655,20 @@ class DirectorReactionService:
                 actor=packet["actor"],
                 source_id=packet["source_id"],
                 reaction_kind=record["proposal"]["kind"],
+                **({"delivery": plan} if plan else {}),
             )
             p = record["proposal"]
             return dict(
                 id=identity,
                 status=decision,
                 kind=p["kind"],
-                text=p["text"] if decision == "approve" and p["kind"] != "WAIT" else "",
+                text=p["text"]
+                if (
+                    decision == "approve"
+                    and p["kind"] != "WAIT"
+                    and self.observer._state(c, scene).activity_epoch is None
+                )
+                else "",
                 route=p["route"],
                 source_work_id=p["source_work_id"],
                 effects_applied=False,
@@ -614,6 +677,8 @@ class DirectorReactionService:
                 if decision == "reject" or p["kind"] == "WAIT"
                 else "native_service_or_scene_invitation"
                 if p["kind"] in ("REQUEST_ACTION", "SCENE_OFFER")
+                else "ready_for_simulated_delivery"
+                if plan
                 else "reviewed_private_reply",
             )
 
@@ -621,7 +686,17 @@ class DirectorReactionService:
             controller,
             key,
             "director.reaction_review",
-            dict(scene=scene, id=identity, decision=decision, reason=reason),
+            dict(
+                scene=scene,
+                id=identity,
+                decision=decision,
+                reason=reason,
+                **(
+                    {"recipients": [x.model_dump(mode="json") for x in recipients]}
+                    if recipients
+                    else {}
+                ),
+            ),
             operation,
             authorize=authorize,
             auto_audit=False,

@@ -85,7 +85,13 @@ def validate_origin(
         context, c, destination_scene, reference
     ):
         raise WorkflowError("STALE_CONTINUITY: preserve the original account relationships.")
-    if original.source_id.startswith("knowledge-acquired:"):
+    if original.source_id.startswith("npc-delivery:"):
+        from girlframe.services.director_npc_delivery import NpcDeliveryService
+
+        NpcDeliveryService(context).validate_reference(
+            c, scene_id or "", original, allow_closed=True
+        )
+    elif original.source_id.startswith("knowledge-acquired:"):
         from girlframe.services.director_knowledge import DirectorKnowledgeService
 
         DirectorKnowledgeService(context).validate_reference(

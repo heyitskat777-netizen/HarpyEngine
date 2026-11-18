@@ -27,7 +27,7 @@ function choiceField(label, choices, value) {
   return [row, control];
 }
 
-export function mountDirectorDesk(parent, scene, activityFetch) {
+export function mountDirectorDesk(parent, scene, activityFetch, activityShadow = false) {
   const details = element("details");
   details.append(element("summary", scene ? "Director work" : "Campaign setup"));
   const body = element("div");
@@ -44,6 +44,47 @@ export function mountDirectorDesk(parent, scene, activityFetch) {
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "Unable to read scene work.");
     return result;
+  }
+
+  function renderShadow(policy, observation, review) {
+    if (!observation) return;
+    const row = card(body, "Private shadow review");
+    row.append(element("p", "Scene observation · " + observation.phase.replaceAll("_", " ")));
+    if (policy) {
+      row.append(button(policy.enabled ? "Disable campaign observation" : "Enable campaign observation", async key => {
+        await write("activity-policy-save", {revision: policy.revision, enabled: !policy.enabled}, key);
+        await refresh();
+      }));
+      if (policy.enabled) row.append(button("Refresh scene consent notice", async key => {
+        await write("configure", {revision: observation.policy_revision}, key);
+        await refresh();
+      }));
+    }
+    if (observation.policy_revision) {
+      for (const [consent, label] of [[true, "Grant my observation consent"], [false, "Withdraw my observation consent"]]) {
+        row.append(button(label, async key => {
+          await write("consent", {policy_revision: observation.policy_revision, consent}, key);
+          await refresh();
+        }));
+      }
+    }
+    if (!review) return;
+    row.append(button("Review eligible batch", async key => {
+      const result = await write("activity-review-run", {}, key);
+      await refresh();
+      if (!result.batch) status.textContent = "No batch is ready.";
+    }));
+    for (const batch of review.batches) {
+      const group = element("details");
+      group.append(element("summary", `Reviewed through event ${batch.frontier}`));
+      for (const item of batch.items) {
+        const description = item.decision ? `${item.decision.action} · ${item.decision.reason.replaceAll("_", " ")}`
+          : item.kind === "completed_play" ? "Completed Play · human GM review" : "Source changed. Review a current batch.";
+        group.append(element("p", description));
+        for (const fact of item.facts ?? []) group.append(element("p", fact.text));
+      }
+      row.append(group);
+    }
   }
 
   async function write(route, data, key) {
@@ -427,8 +468,17 @@ export function mountDirectorDesk(parent, scene, activityFetch) {
     }
     for (const item of gm.handler_drafts) {
       const row = card(queue, "Handler draft");
+      if (item.status === "stale_reopen_source") {
+        row.append(element("p", "Source changed. Review the current message."));
+        continue;
+      }
       row.append(button("Review Handler draft", async () => {
         const draft = await read("handler-draft/" + routeId(item.id));
+        if (draft.status === "stale_reopen_source") {
+          await refresh();
+          status.textContent = "Source changed. Review the current message.";
+          return;
+        }
         const [label, reason] = field("Review reason");
         const approve = button("Approve Handler draft", async key => {
           if (!reason.reportValidity()) return;
@@ -501,11 +551,15 @@ export function mountDirectorDesk(parent, scene, activityFetch) {
   }
 
   async function refresh() {
-    const [work, gm, opening, brief, persona] = await Promise.all([
+    const [work, gm, opening, brief, persona, policy, observation, review] = await Promise.all([
       scene ? read("work", true) : null, scene ? read("gm-work", true) : null,
       read("opening", true), read("opening-brief", true), read("persona-setup", true),
+      activityShadow ? read("activity-policy", true) : null,
+      activityShadow ? read("status", true) : null,
+      activityShadow ? read("activity-review", true) : null,
     ]);
     body.replaceChildren();
+    if (activityShadow) renderShadow(policy, observation, review);
     if (opening) renderOpening(opening);
     if (brief?.launched) renderBrief(brief);
     if (persona) renderPersona(persona);

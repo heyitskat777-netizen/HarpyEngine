@@ -44,6 +44,7 @@ tests/test_ai_assistance.py
 tests/test_database.py
 # Synthetic Activity observation, leased batches, real native Play source and populated upgrade.
 tests/test_director_observation.py
+tests/test_activity_shadow_readiness.py
 # Source-aware knowledge, chronological references and durable synthetic shadow review.
 tests/test_director_shadow.py
 # Actual NPC role/cast/source isolation and private controller-reviewed extractive dialogue.

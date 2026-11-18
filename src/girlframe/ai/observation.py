@@ -52,6 +52,9 @@ class Observation(Contract):
     actor: ActorRef
     audience_ids: tuple[WireSnowflake, ...]
     accepted_at: float
+    cast_controllers: dict[str, int] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     text: str | None = Field(default=None, max_length=1000)
     fictional_channel: Literal["scene", "private", "comms", "mixed", "unclassified"] = Field(
         default="scene", exclude_if=lambda x: x == "scene"
@@ -72,6 +75,10 @@ class SceneObservationState(Contract):
     reviewed_sequence: int = 0
     last_input_at: float | None = None
     last_review_at: float | None = None
+    activity_epoch: int | None = None
+    activity_audience: tuple[int, ...] = ()
+    capture_floor: int = 0
+    native_cursor: int = 0
 
 
 class InputResult(Contract):

@@ -179,6 +179,12 @@ class HandlerDeliveryService:
             raise WorkflowError("HANDLER_DELIVERY_OWNER: the approved Handler must deliver.")
         if plan["consent"] != self.observer._state(c, scene).consent_generation:
             raise WorkflowError("HANDLER_DELIVERY_CONSENT: renew the actual review.")
+        if self.observer._state(
+            c, scene
+        ).activity_epoch is not None and not self.conversation._saved(
+            c, "handler-delivery:" + draft_id
+        ):
+            self.conversation._current_handler_draft(c, controller, scene, draft)
         if plan.get("character_cue") and not self.conversation._saved(
             c, "handler-delivery:" + draft_id
         ):
@@ -326,8 +332,16 @@ class HandlerDeliveryService:
         self, c: Connection, viewer: GuildViewer, scene: str, *, allow_closed: bool = False
     ) -> list[dict[str, Any]]:
         self._scope(c, viewer, scene, allow_closed=allow_closed)
+        scoped = self.observer._state(c, scene).activity_epoch is not None
+        active = (
+            {x.id for x in self.context._current(c, scene, allow_closed=allow_closed)}
+            if scoped
+            else set()
+        )
         result = []
         for row in self._records(c, scene):
+            if scoped and row["reference"] not in active:
+                continue
             audience = tuple(
                 ActorRef.model_validate(x) for x in (row["handler"], *row["recipients"])
             )
@@ -384,6 +398,20 @@ def validate_delivery_reference(
         or record["consent"] != context.observations._state(c, scene).consent_generation
     ):
         raise WorkflowError("STALE_HANDLER_DELIVERY: reconcile the original scoped contribution.")
+    if context.observations._state(c, scene).activity_epoch is not None:
+        draft_id = reference.source_id.removeprefix("handler-delivery:")
+        draft_raw = c.scalar(
+            sa.select(table.c.body_json).where(
+                table.c.campaign_id == context.store.campaign_id,
+                table.c.scene_id == scene,
+                table.c.id == draft_id,
+            )
+        )
+        draft = json.loads(draft_raw) if draft_raw else {}
+        source_id = draft.get("source_id")
+        source = context.observations._latest_source(c, source_id) if source_id else None
+        if source is None or source.source_revision != draft.get("source_revision"):
+            raise WorkflowError("STALE_HANDLER_DELIVERY: the original question changed.")
     state = load_state(c, context.store.campaign_id)
     bound = profiles(c, context.store.campaign_id)
     for ref in record["recipients"]:

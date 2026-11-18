@@ -24,7 +24,11 @@ def next_contribution_ordinal(c: Connection, campaign: str, scene: str) -> int:
             .where(
                 table.c.campaign_id == campaign,
                 table.c.scene_id == scene,
-                sa.or_(table.c.id.like("gm-narration:%"), table.c.id.like("handler-delivery:%")),
+                sa.or_(
+                    table.c.id.like("gm-narration:%"),
+                    table.c.id.like("handler-delivery:%"),
+                    table.c.id.like("npc-delivery:%"),
+                ),
             )
         )
         or 0
@@ -60,49 +64,20 @@ class DirectorContextService:
     def _current(
         self, c: Connection, scene_id: str, *, allow_closed: bool = False
     ) -> tuple[KnowledgeReference, ...]:
-        references = self._active(c, scene_id)
-        for reference in references:
-            if reference.origin_scene is not None:
-                from girlframe.services.director_continuity import validate_origin
-
-                validate_origin(self, c, reference, destination_scene=scene_id)
+        scoped = self.observations._state(c, scene_id).activity_epoch is not None
+        references = []
+        visible: set[str] = set()
+        for reference in self._active(c, scene_id):
+            try:
+                self._prove_reference(c, scene_id, reference, allow_closed=allow_closed)
+            except WorkflowError:
+                if not scoped:
+                    raise
                 continue
-            if reference.source_id.startswith("knowledge-acquired:"):
-                from girlframe.services.director_knowledge import DirectorKnowledgeService
-
-                DirectorKnowledgeService(self).validate_reference(
-                    c, scene_id, reference, allow_closed=allow_closed
-                )
+            if scoped and not set(reference.dependencies) <= visible:
                 continue
-            if reference.source_id.startswith("handler-delivery:"):
-                from girlframe.services.director_handler_delivery import validate_delivery_reference
-
-                validate_delivery_reference(self, c, scene_id, reference)
-                continue
-            if reference.classification == "approved_outcome":
-                record = self._approved_outcome(
-                    c, scene_id, reference.source_id, allow_closed=allow_closed
-                )
-                if reference.source_revision != 1 or reference.text != record["text"]:
-                    raise WorkflowError("STALE_KNOWLEDGE: retain the actual approved outcome.")
-                continue
-            if reference.classification == "established_world":
-                record = self._approved_world(
-                    c, scene_id, reference.source_id, allow_closed=allow_closed
-                )
-                if (
-                    reference.source_revision != record["revision"]
-                    or reference.text != "Established world: " + record["text"]
-                    or not set(reference.known_by)
-                    <= {ActorRef.model_validate(actor).token for actor in record["recipients"]}
-                ):
-                    raise WorkflowError("STALE_KNOWLEDGE: preserve the approved world disclosure.")
-                continue
-            source = self.observations._latest_source(c, reference.source_id)
-            if source is None or source.source_revision != reference.source_revision:
-                raise WorkflowError(
-                    "STALE_KNOWLEDGE: source correction needs explicit reconciliation."
-                )
+            references.append(reference)
+            visible.add(reference.id)
         by_id = {reference.id: reference for reference in references}
         for reference in references:
             for relation in reference.relations:
@@ -113,7 +88,57 @@ class DirectorContextService:
                     or relation.reference_id not in reference.dependencies
                 ):
                     raise WorkflowError("STALE_RELATION: reconcile the related account chronology.")
-        return references
+        return tuple(references)
+
+    def _prove_reference(
+        self, c: Connection, scene_id: str, reference: KnowledgeReference, *, allow_closed: bool
+    ) -> None:
+        if reference.source_id.startswith("npc-delivery:") and reference.origin_scene is None:
+            from girlframe.services.director_npc_delivery import NpcDeliveryService
+
+            NpcDeliveryService(self).validate_reference(
+                c, scene_id, reference, allow_closed=allow_closed
+            )
+            return
+        if reference.origin_scene is not None:
+            from girlframe.services.director_continuity import validate_origin
+
+            validate_origin(self, c, reference, destination_scene=scene_id)
+            return
+        if reference.source_id.startswith("knowledge-acquired:"):
+            from girlframe.services.director_knowledge import DirectorKnowledgeService
+
+            DirectorKnowledgeService(self).validate_reference(
+                c, scene_id, reference, allow_closed=allow_closed
+            )
+            return
+        if reference.source_id.startswith("handler-delivery:"):
+            from girlframe.services.director_handler_delivery import validate_delivery_reference
+
+            validate_delivery_reference(self, c, scene_id, reference)
+            return
+        if reference.classification == "approved_outcome":
+            record = self._approved_outcome(
+                c, scene_id, reference.source_id, allow_closed=allow_closed
+            )
+            if reference.source_revision != 1 or reference.text != record["text"]:
+                raise WorkflowError("STALE_KNOWLEDGE: retain the actual approved outcome.")
+            return
+        if reference.classification == "established_world":
+            record = self._approved_world(
+                c, scene_id, reference.source_id, allow_closed=allow_closed
+            )
+            if (
+                reference.source_revision != record["revision"]
+                or reference.text != "Established world: " + record["text"]
+                or not set(reference.known_by)
+                <= {ActorRef.model_validate(actor).token for actor in record["recipients"]}
+            ):
+                raise WorkflowError("STALE_KNOWLEDGE: preserve the approved world disclosure.")
+            return
+        source = self.observations._latest_source(c, reference.source_id)
+        if source is None or source.source_revision != reference.source_revision:
+            raise WorkflowError("STALE_KNOWLEDGE: source correction needs explicit reconciliation.")
 
     @staticmethod
     def _actor_references(
