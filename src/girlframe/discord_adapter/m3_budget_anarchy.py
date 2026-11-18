@@ -16,8 +16,12 @@ async def open_anarchy(
 ) -> None:
     data = await asyncio.to_thread(service.view, viewer_from_interaction(interaction), identity)
     if data["restored"]:
-        await reply(interaction, "This source's civic order was already restored.")
+        await reply(interaction, "This source's civic outcome was already recorded.")
         return
+    if data["waits_for_mission"]:
+        await reply(interaction, "Reopen after the next mission dispatches.")
+        return
+    engagement = data["address_during_mission"]
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
         await asyncio.to_thread(
@@ -29,16 +33,21 @@ async def open_anarchy(
             values["method"],
             values["result"],
         )
-        return "Actual civic order is restored. Physical damage and other causes remain."
+        return (
+            "The mission's actual response to this protest is recorded."
+            if engagement
+            else "Actual civic order is restored. Physical damage and other causes remain."
+        )
 
     form = NativeForm(
         interaction.user.id,
-        "Restore order: " + data["city"],
-        "After play, describe how order was restored. This clears the city's anarchy "
-        "and preserves its physical damage and any other blockers.",
+        ("Address protest: " if engagement else "Restore order: ") + data["city"],
+        "After play, record the next mission's actual response."
+        if engagement
+        else "After play, describe the established restoration of order.",
         [
-            Field("method", "What actually brought order?", paragraph=True),
-            Field("result", "What established that order was restored?", paragraph=True),
+            Field("method", "What did the Cadre do?", paragraph=True),
+            Field("result", "What happened as a result?", paragraph=True),
         ],
         submit,
     )

@@ -7,6 +7,9 @@ from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_handler_consequences import active_handler, same_handler_body
 from girlframe.engine.m3_world import update
 
+BUDGET = "strain.budget.high.5.1"
+REBELLION = "strain.rebellion.high.1.2"
+
 
 class Anarchy(Model):
     id: str
@@ -17,6 +20,14 @@ class Anarchy(Model):
     method: str | None = None
     result: str | None = None
     restored_event: str | None = None
+    faction: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    mission: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    dispatch_event: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    blockade_event: str | None = Field(default=None, exclude_if=lambda x: x is None)
+
+    @property
+    def rule_id(self) -> str:
+        return REBELLION if self.faction is not None else BUDGET
 
 
 def cases(state: GameState) -> tuple[Anarchy, ...]:
@@ -43,11 +54,63 @@ def put(state: GameState, value: Anarchy) -> None:
     state.facts.append(dict(kind="budget_anarchy", id=value.id, body=value.model_dump_json()))
 
 
-def create(state: GameState, work: str, event: str, city: str, account: str) -> None:
+def create(
+    state: GameState, work: str, event: str, city: str, account: str, *, faction: str | None = None
+) -> None:
     handler = active_handler(state)
     if handler is None or any(x.id == work for x in cases(state)):
         raise ValueError("Record one original Handler and actual new city-anarchy source")
-    put(state, Anarchy(id=work, source_event=event, handler=handler, city=city, account=account))
+    put(
+        state,
+        Anarchy(
+            id=work,
+            source_event=event,
+            handler=handler,
+            city=city,
+            account=account,
+            faction=faction,
+        ),
+    )
+
+
+def dispatch(state: GameState, mission: str, event: str) -> None:
+    for case in cases(state):
+        if case.faction is not None and case.mission is None:
+            put(state, case.model_copy(update={"mission": mission, "dispatch_event": event}))
+
+
+def deadline(state: GameState, mission: str, event: str) -> None:
+    for case in cases(state):
+        if case.mission != mission or case.restored_event or case.blockade_event:
+            continue
+        world = state.world
+        if world is None or not any(site.id == case.city for site in world.locations):
+            raise ValueError("Recover the original city affected by the Rebel protest")
+        state.world = update(
+            world,
+            locations=tuple(
+                site.model_copy(update={"blocked_by": (*site.blocked_by, case.id)})
+                if site.id == case.city and case.id not in site.blocked_by
+                else site
+                for site in world.locations
+            ),
+        )
+        put(state, case.model_copy(update={"blockade_event": event}))
+
+
+def address(state: GameState, value: Anarchy, method: str, result: str, event: str) -> None:
+    if (
+        value.faction is None
+        or value.mission is None
+        or value.blockade_event
+        or value.restored_event
+        or not same_handler_body(state, value.handler)
+    ):
+        raise ValueError("Record the engagement during this actual protest's next mission")
+    put(
+        state,
+        value.model_copy(update={"method": method, "result": result, "restored_event": event}),
+    )
 
 
 def restore(state: GameState, value: Anarchy, method: str, result: str, event: str) -> GameState:

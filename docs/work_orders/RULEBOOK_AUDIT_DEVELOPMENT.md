@@ -1,0 +1,89 @@
+# Rulebook audit development
+
+The audit examined `d1d3a5ed114d6f4866d45e745be7292fee023865`.
+The isolated development worktree starts at
+`6fb633f2ee233c530ef6644866905b45c92bb2ae`, which contains the reconciled
+Girl and Frame packages, the printed JANUS name, reviewed Director shadow
+work and the recovery fixes. Running Ragged, both scoped Stim NPC Order
+directions and Fight/Fawn provenance are already integrated. The local
+manual Activity pin is `9a0efbc31223ad4114680e09ff69ae7b0e8556de`.
+The historical v0.1.4 Discord trial pin is
+`fe47d7ef0b558a1106f5dc48b25c277aff5f875b`. The Activity source handoff
+supports simulated sign-in. The authenticated live checkout and real players
+are separate acceptance gates. [Prior integration](../../reports/GIRL_FRAME_INTEGRATION_HANDOFF.md) · [Manual trial](../../reports/P2_ACTIVITY_TRIAL.md)
+
+## 1. Strain and Off-Duty
+
+The table below keeps both printed choices for each of the nine initially
+blocked faces. A launch or fact is complete only when the printed effect is
+committed, with any later obligation recorded against its original cause.
+Check that the die and chosen column survive retry and restart and that
+Off-Duty resumes only at its genuine completion boundary.
+
+| Printed row | Column 1 acceptance | Column 2 acceptance |
+| --- | --- | --- |
+| Low Void 6 | Create a Directed Gorgon in orbit over a real location, bind the next dispatch, prevent destruction on an actual defeat, or apply destruction once at the deadline. The implemented scope handles defeat and ordinary unprotected sites. Redirection and protection interactions hold for review. | Give each original Girl a private examination. A revealed Void Asset produces Observation, and a revealed concealed Asset creates one real Punishment. Unreported concealment remains private. [Rulebook p. 142](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=144) |
+| High Void 1 | Record an actual Harpy attack at the occupied base and preserve its original obsession target. | Reveal an original NPC Bond as the selected Benevolent or Erratic Doppelgänger, preserving the same source identity and Bond history. [Rulebook p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) |
+| High Void 2 | Save 2d6 once, verify that many distinct connected squares, and resolve the effects on the actual occupants. Clarify whether *touched* means mechanically gaining Void in this row. | Draw an original Girl once. Record the outside-Frame Harpy in that Girl's actual bunk. Handler knowledge requires the printed reveal or a real contact Play. [Rulebook p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) |
+| High Void 4 | Select an eligible Priestess Frame, with fallback only if no Priestess qualifies. Consume once on original activation, apply subsumption, and retain the exact hostile body until defeat. | Record the Directors' demand. Resolve demonstrated action to alleviate the fear, or queue every actual Severe Punishment from a decision of failure. [Rulebook p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) |
+| High Void 5 | Make an explicit Handler-owned revelation through an approved audience-scoped scene. Record which of the two Plays was made and what its recipients actually learned. | Bind the Gorgon as the Frame source of the mandatory Dive for each actual eligible Girl, or draw once and resolve an actual Void gain if none qualifies. [Rulebook p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) |
+| Low Rebellion 3 | Record a protest at a real city and an original fictional Director's binding demand. Prove the protest was addressed through the actual mission or scene. | Preserve the original private leak. Verify elimination of the actual responsible parties or require the higher-ups' public apology and its real delivery. [Rulebook p. 145](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=147) |
+| High Rebellion 1 | Launch the existing Rebel Pilots against the occupied base and original Handler or Ace. Introduce exactly three only when none are present. | Bind a real Rebel protest to the next dispatch. If the mission spends its time elsewhere, block the site until actual liberation without overwriting the physical location record. [Rulebook p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) |
+| High Rebellion 2 | Verify the original unattended base, free actual prisoners, apply losses to original NPC staff, and give the Rebels the linked Vital Frame. | Deliver an offer between the original Rebel Handler controller and the contacted Girl only. Preserve her separate choice and require the actual Escape consumer for an attempt. [Rulebook p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) |
+| High Rebellion 3 | Reveal the original NPC Bond, retain that actor's history, and open an actual attack on the Handler that calls for Cadre intervention. | Have the fictional Director choose an actual Rebel faction and issue the order to demonstrate support. Resolve the actual public show of support without borrowing software Director authority. [Rulebook p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) |
+
+Other tracked table gaps are Low Void 2.2, 3.2, 4.2, 5.2, High Void 3.2,
+6.1, Low Rebellion 2.1, 4.1, 5.1, 6.2, High Rebellion 4.1, 5.1, 6.1,
+and High Budget 2.1, 3.1 and 5.2. Check each actor, outcome and timing
+from its printed column. A cascade already schedules its two actual
+children when eligible. Verify that both children resolve under their own
+saved rolls before closing the originating preparation. Endgames retain
+unique slots and the actual original faction. Still missing Void 1–3 and
+5, Rebellion 3–8, and Budget 1–2. [Strain selectors](../../src/girlframe/engine/m3_strain.py) · [Endgames](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=146)
+
+Custom Events require separate additive, replace-after-roll and replace-a-roll
+checks. Keep the original rolled result immutable and require the actual
+custom event outcome instead of a waived row. The fictional Director's four
+phone actions need their own live actor/controller proof and audit. Change
+severity without rerolling an existing result. Trigger a real event. Replace
+one named slot while retaining its source. Create a real additional track and
+roll it once immediately. [Custom Events p. 141](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=143) · [Director p. 190](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=192)
+
+## Next milestones
+
+| Scope | Acceptance |
+| --- | --- |
+| Handler books and lifecycle | For each of Mistress, Dogrunner, Scientist, Frantic, Insurgent, Trainer and Advocate, cover signature triggers, passives, owned choices, advancement awards, applicable intimate Plays and actual consequences. Exercise one original-owner Last / Resort, learned Handler Play and playbook swap with permitted retention. Connect the extra Girl/Frame prompts only where they produce a printed effect. [Books and advancements pp. 122–158](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=124) |
+| Gorgons, Harpies, Rebels, NPC jobs | Verify each Gorgon class and the seven non-Leviathan type effects plus both intimate Plays, with existing combat and Leviathan regressions. Verify each missing Harpy Play and advancement and actual Rebel Handler/Pilot consequences through mission, custody, conversion or succession. Test job effects individually where the printed result is mechanical. [Rules pp. 159–189](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=161) |
+| Shared, Girl and Frame gaps | Reconcile each missing or unverified matrix outcome with original actor, ownership, cost, receipt and downstream effect. Verify ordinary concealment/discovery and Expanded Status. Princess orders stay in private human adjudication while current Off-Duty upkeep, expiration or refusal ownership lacks a ruling. Test original body, copy, retained and learned-source cases with unchanged ownership. [Girl and Frame audit](../../reports/GIRL_FRAME_PLAY_COVERAGE.md) · [Princess decision](../../reports/GIRL_FRAME_INTEGRATION_HANDOFF.md#princess-conditional-npc-orders) |
+| Situational and Ancillary | Complete the actual consequences of each Lobotomy branch, Escape, Voidspace Invasion, Captured!, Timeskip and Conditioning. Cover all eight optional playbooks with scoped synthetic approval and exercise default denials. Verify the Captured! and Timeskip outcomes that depend on those books. [Rules pp. 93–109 and 193–198](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=95) |
+
+Keep a separate source, owner, consent and durable effect assertion for each
+workflow. Registry entries remain scoped and independently gated. Final
+combined regression, authenticated Activity validation and real-player
+acceptance will each need their own evidence.
+
+## First checkpoint
+
+Reproduced the audit on the newer base using the native Strain and Off-Duty
+services. The two other tracks resolved, both base rules left the orbital
+work pending, and applying Low Void 6.1 returned `UNSUPPORTED_RULE`.
+[Regression cases](../../tests/rules/test_strain_orbital.py)
+
+The first slice implements both Low Void 6 columns and High Rebellion 1.2.
+The next-mission effects bind actual dispatch, preserve the Strain die and
+resolve once through ordinary reward settlement. The private examination
+opens for the original patient, records actually disclosed findings and
+routes real discipline through the existing scene and Punishment workflows.
+The four end-to-end cases cover both protest deadline paths, continued
+Off-Duty, a private medical finding and orbital destruction even when the
+unrelated mission succeeds. Registry entries are scoped `subset`. The
+first 205 affected engine checks passed before adding the Rebel protest.
+Independent review of these mechanics remains open.
+
+Orbital review questions remain for a redirected attacker and interaction
+with quarantine and Armoured protection. Those paths retain the active
+mission and its pending deadline when an automatic strike would bypass
+existing protections or require a judgment about whether the threat was
+dealt with. The authored ordinary threat can be averted by an actual defeat.
+The next checkpoint should add direct interception evidence to this case.

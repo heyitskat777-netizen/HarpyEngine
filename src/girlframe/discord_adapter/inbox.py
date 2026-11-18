@@ -1234,6 +1234,17 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_budget_tags import BudgetTagService
 
             await open_gift(interaction, BudgetTagService(self.service.store), item.identity)
+        elif item.task == "m3_strain_void_exam":
+            from girlframe.discord_adapter.m3_void_examination import open_exam
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_off_duty import OffDutyService
+            from girlframe.services.m3_void_examination import ExaminationService
+
+            await open_exam(
+                interaction,
+                ExaminationService(OffDutyService(MissionService(self.service.store))),
+                item.identity,
+            )
         elif item.task == "m3_strain_effect":
             from girlframe.discord_adapter.m3_strain_effects import open_effect
             from girlframe.services.m3_missions import MissionService

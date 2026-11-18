@@ -11,7 +11,9 @@ from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.m3_world import TYPES, coordinates, squares
 from girlframe.discord_adapter.onboarding import reply
+from girlframe.engine.m3_budget_anarchy import REBELLION as REBEL_PROTEST
 from girlframe.engine.m3_gorgon_catalog import ASSETS
+from girlframe.engine.m3_orbital_threat import RULE as ORBITAL_THREAT
 from girlframe.engine.m3_scientific_observation import Demand
 from girlframe.engine.m3_strain_effects import Choice, TagChoice
 from girlframe.engine.m3_world import CLASS_ASSETS, distance
@@ -163,11 +165,13 @@ def effect_form(
         x["alive"] and "patron" in x["jobs"] for x in world["npcs"]
     ):
         raise WorkflowError("Introduce the actual patron, then reopen this result.")
+    orbital = rule == ORBITAL_THREAT
     spawned = rule in {
         "strain.void.low.1.1",
         "strain.void.low.2.1",
         "strain.void.low.4.1",
         "strain.void.low.5.1",
+        ORBITAL_THREAT,
     }
     gorgons = {x["id"]: x for x in world["gorgons"]}
     past_missions = []
@@ -229,7 +233,7 @@ def effect_form(
         elif spawned:
             classes = (
                 ("directed",)
-                if rule.endswith("1.1")
+                if orbital or rule.endswith("1.1")
                 else ("dormant", "erratic")
                 if rule.endswith("2.1")
                 else ("aggressive",)
@@ -282,12 +286,14 @@ def effect_form(
                 fields.append(
                     Field(
                         "goal",
-                        "Which city is its goal?",
+                        "Which location is below its orbit?"
+                        if orbital
+                        else "Which city is its goal?",
                         options(
                             [
                                 x
                                 for x in world["locations"]
-                                if x["kind"] == "city"
+                                if (orbital or x["kind"] == "city")
                                 and x["condition"] != "destroyed"
                                 and in_responsibility(state, (x["cell"][0], x["cell"][1]))
                             ]
@@ -328,7 +334,8 @@ def effect_form(
                 cells = tuple(x for x in cells if coordinates(x[0]) in cities)
             else:
                 cells = tuple(x for x in cells if list(coordinates(x[0])) in bases)
-            fields.append(Field("cell", "Choose a source-legal map square", cells or WAIT))
+            if not orbital:
+                fields.append(Field("cell", "Choose a source-legal map square", cells or WAIT))
             if selected_class in ("aggressive", "sprite"):
                 selected_cell = values.get("cell", ("",))[0]
                 victims = [
@@ -629,11 +636,13 @@ def effect_form(
                     else (state.handler, *state.order)
                 )
             ]
-        elif rule == "strain.budget.high.5.1":
+        elif rule in ("strain.budget.high.5.1", REBEL_PROTEST):
             fields.append(
                 Field(
                     "target",
-                    "Which surviving city falls into anarchy?",
+                    "Which city does the protest overtake?"
+                    if rule == REBEL_PROTEST
+                    else "Which surviving city falls into anarchy?",
                     options(
                         [
                             x
@@ -645,6 +654,16 @@ def effect_form(
                     ),
                 )
             )
+            if rule == REBEL_PROTEST:
+                fields.append(
+                    Field(
+                        "faction",
+                        "Which active Rebel faction leads the protest?",
+                        options(
+                            [x for x in world["factions"] if x["kind"] == "rebel" and x["active"]]
+                        ),
+                    )
+                )
         fields.append(
             Field("account", "Describe the actual event and consequences", paragraph=True)
         )
@@ -690,7 +709,7 @@ def effect_form(
                 gorgon_class=cast(Any, selected_class),
                 types=cast(Any, types),
                 assets=assets,
-                cell=coordinates(values["cell"][0]),
+                cell=None if orbital else coordinates(values["cell"][0]),
                 core_plan=CorePlan(
                     assets=tuple(asset_ids[x] for x in values["core"]), weakness=values["weakness"]
                 ),
@@ -813,8 +832,10 @@ def effect_form(
                     state.order if rule == "strain.budget.low.1.1" else (handler, *state.order)
                 )
             )
-        elif rule == "strain.budget.high.5.1":
+        elif rule in ("strain.budget.high.5.1", REBEL_PROTEST):
             payload["target"] = values["target"][0]
+            if rule == REBEL_PROTEST:
+                payload["faction_id"] = values["faction"][0]
         service.apply(
             actor,
             key,

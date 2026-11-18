@@ -590,10 +590,14 @@ class MissionService:
         def operation(c: Connection) -> dict[str, Any]:
             updated = self._dispatch_ready(c, viewer, self._mission(c, identity), expected)
             state = load_state(c, self.store.campaign_id)
+            from girlframe.engine.m3_budget_anarchy import dispatch as bind_protests
+            from girlframe.engine.m3_orbital_threat import dispatch as bind_orbital_threats
             from girlframe.engine.m3_repairs import dispatch as bind_shortages
 
             dispatch_event = str(uuid4())
             bound = bind_shortages(state, identity, dispatch_event)
+            bind_orbital_threats(bound, identity, dispatch_event)
+            bind_protests(bound, identity, dispatch_event)
             event = self.game.event(
                 c,
                 viewer.user_id,
@@ -726,6 +730,26 @@ class MissionService:
 
         before = GameState.model_validate_json(state.model_dump_json())
         event_id = str(uuid4())
+        from girlframe.engine.m3_budget_anarchy import deadline as protest_deadline
+        from girlframe.engine.m3_orbital_threat import settle as settle_orbital_threats
+
+        protest_deadline(state, mission.id, event_id)
+        loss = None
+        if settle_orbital_threats(state, mission.id, event_id):
+            from girlframe.engine.m3_collateral import stage_loss
+            from girlframe.engine.m3_handler_consequences import active_handler
+            from girlframe.services.m3_medical import MedicalService
+
+            judge, appointment = MedicalService(self.store)._handler(c)
+            loss = stage_loss(
+                before,
+                state,
+                source="orbital-threat:" + mission.id,
+                event=event_id,
+                judge=judge,
+                appointment=appointment,
+                handler=active_handler(state),
+            )
         plan = rules.end(
             mission,
             viewer.user_id,
@@ -805,6 +829,10 @@ class MissionService:
                     grant.amount,
                 )
         self._save(c, plan.mission, event)
+        if loss is not None:
+            from girlframe.services.m3_quadrant_loss import materialize_loss
+
+            materialize_loss(self.game, c, loss, event)
         synchronize_mission(c, self.store, state, plan.mission, event)
         for work, subject_id, body in staged:
             self._work(

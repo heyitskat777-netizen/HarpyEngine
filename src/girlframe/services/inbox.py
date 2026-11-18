@@ -3711,6 +3711,8 @@ class InboxService:
                     primary, task_name = "Record credit sharing", "m3_off_duty_credit"
                 elif kind in ("observation_choice", "observation_effect"):
                     primary, task_name = "Review Observation", "m3_observation"
+                elif kind == "strain_void_exam":
+                    primary, task_name = "Record your examination", "m3_strain_void_exam"
                 elif kind == "director_presence":
                     primary, task_name = "Review actual presence", "m3_director_review"
                 elif kind in (
@@ -3806,6 +3808,7 @@ class InboxService:
                     "doctor_credit": "DoctorDoctor credit sharing",
                     "observation_choice": "Your Void Observation consequences",
                     "observation_effect": "Required Observation details",
+                    "strain_void_exam": "Required medical examination",
                     "director_presence": "Director presence: Handler rule context",
                     "frame_off_duty_reward": "Frame Off-Duty Permission review",
                     "frame_reward_court": "Resolve actual Queen AM holder",

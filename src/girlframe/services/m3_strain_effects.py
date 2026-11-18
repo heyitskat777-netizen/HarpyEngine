@@ -387,6 +387,10 @@ class EffectService:
                 work_id=identity,
                 rule_id=choice.rule_id,
             )
+            if choice.rule_id == rules.VOID_EXAMINATION:
+                from girlframe.services.m3_void_examination import schedule
+
+                schedule(c, self.strain.periods, row, updated, event)
             if choice.rule_id == "strain.void.low.4.1":
                 from girlframe.services.m3_battle import synchronize_casts
                 from girlframe.services.m3_battle_director import create_replacements

@@ -7,8 +7,10 @@ from pydantic import Field
 
 from girlframe.engine import m3_world as world_rules
 from girlframe.engine.m2 import GameState, Model, TagState, pair_key
+from girlframe.engine.m3_budget_anarchy import REBELLION as REBEL_PROTEST
 from girlframe.engine.m3_budget_sabotage import Pin
 from girlframe.engine.m3_contraband_state import ContrabandFind
+from girlframe.engine.m3_orbital_threat import RULE as ORBITAL_THREAT
 from girlframe.engine.m3_refusal_state import RefusalBonus
 from girlframe.engine.m3_scientific_observation import Demand, require_orders
 from girlframe.engine.m3_supply_state import SupplyLoss
@@ -22,17 +24,22 @@ from girlframe.engine.m3_world_state import (
     NpcRecruitment,
 )
 
+VOID_EXAMINATION = "strain.void.low.6.2"
+
 SUPPORTED = frozenset(
     {
         "strain.void.low.1.1",
         "strain.void.low.2.1",
         "strain.void.low.4.1",
         "strain.void.low.5.1",
+        ORBITAL_THREAT,
+        VOID_EXAMINATION,
         "strain.void.high.3.1",
         "strain.rebellion.low.1.1",
         "strain.rebellion.low.1.2",
         "strain.rebellion.low.2.2",
         "strain.rebellion.low.5.2",
+        REBEL_PROTEST,
         "strain.rebellion.high.4.2",
         "strain.rebellion.high.5.2",
         "strain.rebellion.low.6.1",
@@ -70,6 +77,7 @@ class Choice(Model):
     target: str | None = None
     gorgon: Gorgon | None = None
     faction: Faction | None = None
+    faction_id: str | None = Field(default=None, exclude_if=lambda x: x is None)
     location: Location | None = None
     victim: str | None = None
     new_assets: tuple[Asset, ...] = ()
@@ -126,7 +134,19 @@ def apply(
     from girlframe.engine.m3_promotional_opportunity import in_responsibility, responsibility_edge
 
     rule = choice.rule_id
-    if rule == "strain.rebellion.low.2.2":
+    if rule == ORBITAL_THREAT:
+        from girlframe.engine.m3_orbital_threat import introduce
+
+        fields(choice, {"gorgon"})
+        if choice.gorgon is None or period_id is None or source_event is None:
+            raise ValueError("Supply the actual orbital Gorgon, period and event")
+        introduce(state, choice.gorgon, source_work, period_id, source_event, choice.account)
+        world = state.world
+    elif rule == VOID_EXAMINATION:
+        fields(choice, set())
+        if period_id is None or source_event is None or not state.order:
+            raise ValueError("Bind the required exams to the actual period and its Girls")
+    elif rule == "strain.rebellion.low.2.2":
         fields(choice, {"target"})
         if (
             contraband is None
@@ -748,10 +768,10 @@ def apply(
             factions=world.factions
             + (faction.model_copy(update={"description": choice.account.strip()}),),
         )
-    elif rule == "strain.budget.high.5.1":
+    elif rule in ("strain.budget.high.5.1", REBEL_PROTEST):
         from girlframe.engine.m3_budget_anarchy import create as create_anarchy
 
-        fields(choice, {"target"})
+        fields(choice, {"target", "faction_id"} if rule == REBEL_PROTEST else {"target"})
         city = next(
             (
                 x
@@ -767,16 +787,24 @@ def apply(
             raise ValueError("Choose an actual surviving city to fall into anarchy")
         if source_event is None:
             raise ValueError("Record the actual anarchy source event")
-        create_anarchy(state, source_work, source_event, city.id, choice.account)
-        world = world_rules.update(
-            world,
-            locations=tuple(
-                x.model_copy(update={"blocked_by": x.blocked_by + (source_work,)})
-                if x.id == city.id
-                else x
-                for x in world.locations
-            ),
+        if rule == REBEL_PROTEST and not any(
+            faction.id == choice.faction_id and faction.kind == "rebel" and faction.active
+            for faction in world.factions
+        ):
+            raise ValueError("Choose the actual active Rebel faction leading the protest")
+        create_anarchy(
+            state, source_work, source_event, city.id, choice.account, faction=choice.faction_id
         )
+        if rule != REBEL_PROTEST:
+            world = world_rules.update(
+                world,
+                locations=tuple(
+                    x.model_copy(update={"blocked_by": x.blocked_by + (source_work,)})
+                    if x.id == city.id
+                    else x
+                    for x in world.locations
+                ),
+            )
     else:
         raise ValueError("UNSUPPORTED_RULE: missing Strain effect application")
     state.world = world
