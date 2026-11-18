@@ -6361,6 +6361,8 @@ acceptance records and the current scoped access and safety rules.
 The catalog, native controls, portable sheets and coverage inventories now
 use the printed JANUS name. Older saved selections are translated on read,
 without rewriting historical receipts, player prose, or either trial pin.
+The Activity overlay also translates the archived lab's setup default. Its
+simulated route returns one JANUS entry among nine printed Frames after restart.
 The registry approval recognizes the same reviewed content after the exact
 two description edits. Changes to other registry contents still require their
 own digest and approval.

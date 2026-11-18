@@ -347,3 +347,22 @@
  }
  start().then(() => {
    clearTimeout(startupTimer);
+--- a/player_setup.py
++++ b/player_setup.py
+@@ -19,7 +19,7 @@
+ from girlframe.engine.m2 import PLAY_IDS, ReleaseApproval
+ from girlframe.engine.m2_registry import REGISTRY, registry_digest
+ from girlframe.engine.npc_bonds import NPC_ROLES
+-from girlframe.engine.playbooks import FRAME_TYPES, GIRL_TYPES
++from girlframe.engine.playbooks import FRAME_TYPES, GIRL_TYPES, canonical_frame
+ from girlframe.services.bonds import BondService
+ from girlframe.services.creation import CreationService
+ from girlframe.engine.creation_review import CreationRulings
+@@ -936,6 +936,6 @@
+         options = {
+             "girl": profile["girl_playbook"] if profile else GIRL,
+-            "frame": profile["frame_playbook"] if profile else FRAME,
++            "frame": profile["frame_playbook"] if profile else canonical_frame(FRAME),
+             **(
+                 {"girls": GIRL_TYPES, "frames": FRAME_TYPES}
+                 if self.bound_roster

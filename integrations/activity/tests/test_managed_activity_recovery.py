@@ -118,7 +118,11 @@ def test_managed_activity_recovery_requires_fresh_sessions_and_keeps_campaign_sc
         assert request(host, persona, handler)["sheet"]["draft"]["background"] == PERSONA_CANARY
         assert request(host, persona, pilot)["sheet"] is None
         assert request(host, f"/api/player-setup?campaign={north}", pilot)["callsign"] == "RECOVERY"
-        assert not request(host, f"/api/player-setup?campaign={south}", pilot).get("callsign")
+        untouched = request(host, f"/api/player-setup?campaign={south}", pilot)
+        assert not untouched.get("callsign")
+        assert untouched["options"]["frame"] == "JANUS"
+        assert untouched["options"]["frames"]["JANUS"] == "JANUS"
+        assert len(untouched["options"]["frames"]) == 9
         request(
             host,
             f"/api/campaign-opening/persona-setup?campaign={south}",
