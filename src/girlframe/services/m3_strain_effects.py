@@ -14,6 +14,7 @@ from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_contraband_state import ContrabandFind
 from girlframe.engine.m3_doppelganger_reveal import reveals as disguise_reveals
+from girlframe.engine.m3_harpy_raid import RULE as HARPY_RAID
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_supply_state import SupplyLoss
@@ -88,6 +89,8 @@ class EffectService:
                 "awaiting_void_signal": bool(body.get("signal_requested"))
                 and row["state"] == "pending",
                 "awaiting_pilot_fears": bool(body.get("fear_requested"))
+                and row["state"] == "pending",
+                "awaiting_harpy_raid": bool(body.get("raid_requested"))
                 and row["state"] == "pending",
                 "supply_outcome": {
                     "recipient": label,
@@ -522,7 +525,22 @@ class EffectService:
                 from girlframe.services.m3_pilot_fears import stage as stage_pilot_fears
 
                 stage_pilot_fears(c, self.strain, updated, row, choice.target, event_id)
-            pending = needs_offer or needs_directive or needs_signal or needs_fear
+            needs_raid = choice.rule_id == HARPY_RAID
+            if needs_raid:
+                from girlframe.services.m3_harpy_raid import stage as stage_harpy_raid
+
+                assert choice.target and choice.raid_base and choice.victim
+                stage_harpy_raid(
+                    c,
+                    self.strain,
+                    updated,
+                    row,
+                    event_id,
+                    choice.target,
+                    choice.raid_base,
+                    int(choice.victim),
+                )
+            pending = needs_offer or needs_directive or needs_signal or needs_fear or needs_raid
             scientific_period, scientific_events = None, []
             if choice.rule_id == "strain.budget.low.3.1":
                 from girlframe.engine.m3_scientific_observation import materialize
@@ -736,7 +754,8 @@ class EffectService:
                 | ({"offer_requested": event} if needs_offer else {})
                 | ({"directive_requested": event} if needs_directive else {})
                 | ({"signal_requested": event} if needs_signal else {})
-                | ({"fear_requested": event} if needs_fear else {}),
+                | ({"fear_requested": event} if needs_fear else {})
+                | ({"raid_requested": event} if needs_raid else {}),
                 resolved=not pending,
             )
             return {

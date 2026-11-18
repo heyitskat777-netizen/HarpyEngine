@@ -2928,6 +2928,7 @@ class InboxService:
                 )
             from girlframe.engine.m3_civic_directive import cases as civic_directives
             from girlframe.engine.m3_doppelganger_reveal import reveals as disguise_reveals
+            from girlframe.engine.m3_harpy_raid import raids as harpy_raids
             from girlframe.engine.m3_pilot_fears import cases as public_fears
             from girlframe.engine.m3_void_revelation import revelations
             from girlframe.engine.m3_void_signal import signals as void_signals
@@ -2981,6 +2982,27 @@ class InboxService:
                         task="m3_civic_directive",
                     )
                 )
+
+            for raid in harpy_raids(canon):
+                if raid.controller == viewer.user_id:
+                    items.append(
+                        InboxItem(
+                            "harpy-raid:" + raid.id,
+                            "harpy_raid",
+                            raid.id,
+                            canon.revision,
+                            "off_duty",
+                            "Original Harpy raid",
+                            "Original Harpy controller",
+                            "resolved" if raid.action else "pending",
+                            not raid.action,
+                            False,
+                            "Confirm the actual attack and obsession.",
+                            "",
+                            "Review raid",
+                            task="m3_harpy_raid",
+                        )
+                    )
 
             for disguise in disguise_reveals(canon)[-25:]:
                 if any(r.entity == str(viewer.user_id) for r in disguise.recipients):

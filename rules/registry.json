@@ -16719,14 +16719,16 @@
         "heading": "Void high: die 1, column 1"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain_harpy_raid.py::test_harpy_raid_consumes_real_attack_and_records_original_obsession"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

@@ -16,6 +16,7 @@ from girlframe.engine.m3_civic_directive import PROTEST as CIVIC_PROTEST
 from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_doppelganger_reveal import RULE as DOPPELGANGER_REVEAL
 from girlframe.engine.m3_gorgon_catalog import ASSETS
+from girlframe.engine.m3_harpy_raid import RULE as HARPY_RAID
 from girlframe.engine.m3_orbital_threat import RULE as ORBITAL_THREAT
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
@@ -98,6 +99,9 @@ async def open_effect(
         return
     if data["awaiting_pilot_fears"]:
         await reply(interaction, "The original Director and Cadre have the demand in their Inbox.")
+        return
+    if data["awaiting_harpy_raid"]:
+        await reply(interaction, "The Harpy's completed Assault is required in the original raid.")
         return
     if data["rule_id"] == "strain.budget.high.1.2":
         from girlframe.discord_adapter.m3_fuel_shortage import open_fuel_shortage
@@ -288,6 +292,30 @@ def effect_form(
 
     def build(values: dict[str, Any]) -> list[Field]:
         fields: list[Field] = []
+        if rule == HARPY_RAID:
+            bases = [
+                x
+                for x in regional_locations
+                if x["kind"] == "base"
+                and x["allegiance"] == "foundation"
+                and x["condition"] != "destroyed"
+            ]
+            fields += [
+                Field("raid_base", "Which occupied Foundation base?", options(bases)),
+                Field(
+                    "harpy",
+                    "Which real Harpy attacks?",
+                    options(
+                        [x for x in world["pilots"] if x["kind"] == "harpy" and x["alive"]]
+                        + [dict(id=x.id, name=x.name) for x in state.harpy_states if x.alive]
+                    ),
+                ),
+                Field(
+                    "obsession",
+                    "Which original Girl is the object of the obsession?",
+                    tuple((str(uid), state.sheets[str(uid)].callsign) for uid in state.order),
+                ),
+            ]
         if rule == VOID_SIGNAL:
             fields.append(
                 Field(
@@ -835,6 +863,12 @@ def effect_form(
 
     def apply(actor: GuildViewer, key: str, values: dict[str, Any]) -> str:
         payload: dict[str, Any] = {"rule_id": rule, "account": values["account"]}
+        if rule == HARPY_RAID:
+            payload.update(
+                target=values["harpy"][0],
+                victim=values["obsession"][0],
+                raid_base=values["raid_base"][0],
+            )
         if rule == VOID_SIGNAL:
             payload["target"] = values["signal"][0]
         if rule in CIVIC_DIRECTIVES or rule == PILOT_FEARS:
@@ -1053,6 +1087,8 @@ def effect_form(
             return "The original recipient can finish the Void change in their private Inbox."
         if rule == PILOT_FEARS:
             return "The original fictional Director can issue the demand in their private Inbox."
+        if rule == HARPY_RAID:
+            return "The original Harpy's controller can confirm the real attack in the Inbox."
         return "Event effects committed once. Reopen Off-Duty for remaining work."
 
     instructions = (

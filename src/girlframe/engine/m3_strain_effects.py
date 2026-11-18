@@ -12,6 +12,7 @@ from girlframe.engine.m3_budget_sabotage import Pin
 from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_contraband_state import ContrabandFind
 from girlframe.engine.m3_doppelganger_reveal import RULE as DOPPELGANGER_REVEAL
+from girlframe.engine.m3_harpy_raid import RULE as HARPY_RAID
 from girlframe.engine.m3_orbital_threat import RULE as ORBITAL_THREAT
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
@@ -47,6 +48,7 @@ SUPPORTED = frozenset(
         VOID_SIGNAL,
         PILOT_FEARS,
         DOPPELGANGER_REVEAL,
+        HARPY_RAID,
         "strain.rebellion.low.1.1",
         "strain.rebellion.low.1.2",
         "strain.rebellion.low.2.2",
@@ -116,6 +118,7 @@ class Choice(Model):
     revelation_play: RevelationPlay | None = Field(default=None, exclude_if=lambda x: x is None)
     revelation_channel: int | None = Field(default=None, ge=1, exclude_if=lambda x: x is None)
     protest_city: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    raid_base: str | None = Field(default=None, exclude_if=lambda x: x is None)
 
 
 def fields(choice: Choice, allowed: set[str]) -> None:
@@ -206,6 +209,17 @@ def apply(
         )
         assert state.world is not None
         world = state.world
+    elif rule == HARPY_RAID:
+        fields(choice, {"target", "victim", "raid_base"})
+        if (
+            not choice.target
+            or not choice.raid_base
+            or choice.victim is None
+            or not choice.victim.isascii()
+            or not choice.victim.isdecimal()
+            or int(choice.victim) not in state.order
+        ):
+            raise ValueError("Choose the original Harpy, occupied base and obsession")
     elif rule in CIVIC_DIRECTIVES:
         from girlframe.engine.m3_civic_directive import create as create_civic_directive
 

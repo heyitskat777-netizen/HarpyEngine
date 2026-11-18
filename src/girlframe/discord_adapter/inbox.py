@@ -1478,6 +1478,17 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_battle import BattleService
 
             await open_battle_context(interaction, BattleService(self.service.store), item.identity)
+        elif item.task == "m3_harpy_raid":
+            from girlframe.discord_adapter.m3_harpy_raid import open_raid
+            from girlframe.services.m3_harpy_raid import RaidService
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_off_duty import OffDutyService
+            from girlframe.services.m3_strain import StrainService
+
+            raid_service = RaidService(
+                StrainService(OffDutyService(MissionService(self.service.store)))
+            )
+            await open_raid(interaction, raid_service, item.identity)
         elif item.task == "m3_pilot_fears":
             from girlframe.discord_adapter.m3_pilot_fears import open_fears
             from girlframe.services.m3_missions import MissionService

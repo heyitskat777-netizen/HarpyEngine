@@ -19,12 +19,14 @@ from girlframe.services.m3_battle import BattleService
 from girlframe.services.m3_handler_plays import HandlerPlayService
 
 
-def rolled(store, monkeypatch, faces=(4, 4)):
+def rolled(store, monkeypatch, faces=(4, 4), *, before_attack=None):
     monkeypatch.setattr(m3_plays, "HEAT_IDS", (*m3_plays.HEAT_IDS, "all_out_assault"))
     plays, game, _, actor = ready(store, faces=faces)
     with store.transaction() as c:
         canon = place(state(game), 3)
         game.event(c, 3, "actual-opponent-frame", "synthetic.state", canon)
+    if before_attack:
+        before_attack(game, actor)
     battle = BattleService(store)
     data = battle.preview(PLAYER, 900)
     source = next(x for x in data["actors"] if x["ref"] == actor.model_dump(mode="json"))

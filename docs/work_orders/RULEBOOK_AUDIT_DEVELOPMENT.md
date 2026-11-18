@@ -233,3 +233,21 @@ instead of silently dropping their obligations. This slice covers
 the Strain reveal. Sniff You Out and the ongoing type mechanics still
 belong to the Gorgon milestone.
 [High Void p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) · [Dopplegänger p. 168](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=170) · [Revelation tests](../../tests/rules/test_strain_doppelganger_reveal.py)
+
+## Seventh checkpoint
+
+The base is `892c7bc`. High Void 1.1 binds a living native Harpy and an
+original Girl at an occupied Foundation base. It keeps the obsession
+and eligible defenders private. Off-Duty waits until the Harpy's
+original controller confirms a completed native Assault. The engine
+checks the actual receipt, original participants and historical base
+position after this roll's source, then links that attack once. The
+synthetic check verified the original Girl's Asset damage and Off-Duty
+activation with the same Strain dice and one actual Assault roll.
+
+This slice needs a live Harpy already established in the native world
+and the existing reviewed battle route. Its test uses the same
+candidate-only Assault gate as the established Harpy battle tests.
+A new Harpy introduction specifically tied to this source still
+needs its own provenance.
+[High Void p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) · [Raid test](../../tests/rules/test_strain_harpy_raid.py)
