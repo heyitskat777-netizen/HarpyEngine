@@ -13,6 +13,7 @@ from girlframe.engine import m3_strain_effects as rules
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_contraband_state import ContrabandFind
+from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_supply_state import SupplyLoss
 from girlframe.engine.m3_void_revelation import RULE as VOID_REVELATION
@@ -84,6 +85,8 @@ class EffectService:
                 "awaiting_civic_directive": bool(body.get("directive_requested"))
                 and row["state"] == "pending",
                 "awaiting_void_signal": bool(body.get("signal_requested"))
+                and row["state"] == "pending",
+                "awaiting_pilot_fears": bool(body.get("fear_requested"))
                 and row["state"] == "pending",
                 "supply_outcome": {
                     "recipient": label,
@@ -495,7 +498,12 @@ class EffectService:
                     self.selector,
                     self.selection_source,
                 )
-            pending = needs_offer or needs_directive or needs_signal
+            needs_fear = choice.rule_id == PILOT_FEARS
+            if needs_fear:
+                from girlframe.services.m3_pilot_fears import stage as stage_pilot_fears
+
+                stage_pilot_fears(c, self.strain, updated, row, choice.target, event_id)
+            pending = needs_offer or needs_directive or needs_signal or needs_fear
             scientific_period, scientific_events = None, []
             if choice.rule_id == "strain.budget.low.3.1":
                 from girlframe.engine.m3_scientific_observation import materialize
@@ -708,7 +716,8 @@ class EffectService:
                 | {"choice": choice.model_dump(mode="json")}
                 | ({"offer_requested": event} if needs_offer else {})
                 | ({"directive_requested": event} if needs_directive else {})
-                | ({"signal_requested": event} if needs_signal else {}),
+                | ({"signal_requested": event} if needs_signal else {})
+                | ({"fear_requested": event} if needs_fear else {}),
                 resolved=not pending,
             )
             return {

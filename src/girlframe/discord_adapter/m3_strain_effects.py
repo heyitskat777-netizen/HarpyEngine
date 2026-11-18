@@ -16,6 +16,7 @@ from girlframe.engine.m3_civic_directive import PROTEST as CIVIC_PROTEST
 from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_gorgon_catalog import ASSETS
 from girlframe.engine.m3_orbital_threat import RULE as ORBITAL_THREAT
+from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_scientific_observation import Demand
 from girlframe.engine.m3_strain_effects import Choice, TagChoice
@@ -93,6 +94,9 @@ async def open_effect(
         return
     if data["awaiting_void_signal"]:
         await reply(interaction, "The original recipient's Void consequence is still pending.")
+        return
+    if data["awaiting_pilot_fears"]:
+        await reply(interaction, "The original Director and Cadre have the demand in their Inbox.")
         return
     if data["rule_id"] == "strain.budget.high.1.2":
         from girlframe.discord_adapter.m3_fuel_shortage import open_fuel_shortage
@@ -275,7 +279,7 @@ def effect_form(
                     options([x for x in world["gorgons"] if x["alive"]]),
                 )
             )
-        if rule in CIVIC_DIRECTIVES:
+        if rule in CIVIC_DIRECTIVES or rule == PILOT_FEARS:
             fields.append(
                 Field(
                     "civic_director",
@@ -804,7 +808,7 @@ def effect_form(
         payload: dict[str, Any] = {"rule_id": rule, "account": values["account"]}
         if rule == VOID_SIGNAL:
             payload["target"] = values["signal"][0]
-        if rule in CIVIC_DIRECTIVES:
+        if rule in CIVIC_DIRECTIVES or rule == PILOT_FEARS:
             payload["target"] = values["civic_director"][0]
             if rule == CIVIC_PROTEST:
                 payload["protest_city"] = values["protest_city"][0]
@@ -1011,6 +1015,8 @@ def effect_form(
             return "The original Director's order is pending in their private Inbox."
         if rule == VOID_SIGNAL:
             return "The original recipient can finish the Void change in their private Inbox."
+        if rule == PILOT_FEARS:
+            return "The original fictional Director can issue the demand in their private Inbox."
         return "Event effects committed once. Reopen Off-Duty for remaining work."
 
     instructions = (

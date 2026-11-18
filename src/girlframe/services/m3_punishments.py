@@ -88,6 +88,12 @@ class PunishmentService:
             from girlframe.services.m3_void_examination import prove_discovery
 
             prove_discovery(c, self.store.campaign_id, dict(row))
+        if row["kind"] == "punishment" and json.loads(row["body_json"]).get("reason") == (
+            "strain_pilot_fears"
+        ):
+            from girlframe.services.m3_pilot_fears import proof as prove_collective_call
+
+            prove_collective_call(c, self.store.campaign_id, dict(row))
         from girlframe.services.m3_intracadre_marriage import prove_allocation
 
         prove_allocation(self.game, c, load_state(c, self.store.campaign_id), dict(row))
@@ -290,6 +296,7 @@ class PunishmentService:
                 "strain_event",
                 "void_observation",
                 "void_examination_discovery",
+                "strain_pilot_fears",
             ):
                 raise WorkflowError("This Off-Duty cause needs its source-specific resolver.")
             return [row]

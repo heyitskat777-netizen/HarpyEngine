@@ -193,3 +193,22 @@ case and never fall back to a random Girl. The implemented gain is an
 ordinary owned Asset rewrite. Equivalent Storage, growth or other
 special source choices need their own provenance and tests.
 [High Void p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) · [Signal tests](../../tests/rules/test_strain_void_signal.py)
+
+## Fifth checkpoint
+
+The base is `1051ba25a4fa8a66e4120497520b21eeeac7e329`.
+High Void 4.2 preserves the original Cadre and routes the fear demand
+through a separately controlled fictional Director. A Girl records
+her own performed action from a scene she actually joined and the
+original Director records whether it answered the demand. The Director
+receives the private submission for that review. The Handler sees the
+demand and decision without inheriting the Girl's private account.
+
+The other branch creates a distinct required Severe Punishment for
+each original Girl. The Handler uses existing discipline and
+on-screen attendance. The cases apply existing consequences and
+retain related follow-up work. Neither issuing the demand nor staging
+the Punishments clears the Off-Duty start gate. Both native outcomes
+passed, including actual Link Surgery Reversal in the discipline case,
+stale and paused forms, scope checks and retry.
+[High Void p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) · [Demand tests](../../tests/rules/test_strain_pilot_fears.py)

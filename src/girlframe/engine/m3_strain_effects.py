@@ -12,6 +12,7 @@ from girlframe.engine.m3_budget_sabotage import Pin
 from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_contraband_state import ContrabandFind
 from girlframe.engine.m3_orbital_threat import RULE as ORBITAL_THREAT
+from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_refusal_state import RefusalBonus
 from girlframe.engine.m3_scientific_observation import Demand, require_orders
@@ -43,6 +44,7 @@ SUPPORTED = frozenset(
         "strain.void.high.3.1",
         VOID_REVELATION,
         VOID_SIGNAL,
+        PILOT_FEARS,
         "strain.rebellion.low.1.1",
         "strain.rebellion.low.1.2",
         "strain.rebellion.low.2.2",
@@ -181,6 +183,11 @@ def apply(
             or not any(x.id == choice.target and x.alive for x in world.gorgons)
         ):
             raise ValueError("Bind the original living Gorgon to the preparing period")
+    elif rule == PILOT_FEARS:
+        from girlframe.engine.m3_civic_directive import director
+
+        fields(choice, {"target"})
+        director(state, choice.target)
     elif rule in CIVIC_DIRECTIVES:
         from girlframe.engine.m3_civic_directive import create as create_civic_directive
 

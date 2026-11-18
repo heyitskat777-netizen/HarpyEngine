@@ -16886,14 +16886,16 @@
         "heading": "Void high: die 4, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain_pilot_fears.py::test_directors_demand_resolves_through_actual_contribution_or_actual_punishments"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

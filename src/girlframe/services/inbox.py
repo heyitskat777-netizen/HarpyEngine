@@ -2927,9 +2927,11 @@ class InboxService:
                     )
                 )
             from girlframe.engine.m3_civic_directive import cases as civic_directives
+            from girlframe.engine.m3_pilot_fears import cases as public_fears
             from girlframe.engine.m3_void_revelation import revelations
             from girlframe.engine.m3_void_signal import signals as void_signals
             from girlframe.services.m3_handler_tags import HandlerTagService
+            from girlframe.services.m3_pilot_fears import access as fear_access
             from girlframe.services.m3_rebel_escape_offer import visible as visible_escape_offers
 
             for revelation in revelations(canon)[-25:]:
@@ -2976,6 +2978,30 @@ class InboxService:
                         "",
                         "Review directive",
                         task="m3_civic_directive",
+                    )
+                )
+
+            for fear in public_fears(canon):
+                is_director, is_cadre, is_handler = fear_access(fear, viewer.user_id)
+                if not is_director and (not (is_cadre or is_handler) or not fear.demand_event):
+                    continue
+                actionable = not fear.result and (is_director or is_cadre)
+                items.append(
+                    InboxItem(
+                        "pilot-fears:" + fear.id,
+                        "pilot_fears",
+                        fear.id,
+                        canon.revision,
+                        "off_duty",
+                        "Directors' public-fear demand",
+                        "Original participants",
+                        "pending" if not fear.result else "resolved",
+                        actionable,
+                        False,
+                        "Review the original demand.",
+                        "",
+                        "Open demand",
+                        task="m3_pilot_fears",
                     )
                 )
 
