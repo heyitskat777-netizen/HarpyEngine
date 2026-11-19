@@ -222,6 +222,7 @@ class CastService:
                     ):
                         from girlframe.engine.m3_harpy_advancements import (
                             EAGLE,
+                            MANIC_PIXIE,
                             ONLY_SHE_MATTERS,
                             SONG_OF_LOVE_LOST,
                         )
@@ -231,6 +232,7 @@ class CastService:
                             ("only_she_matters", ONLY_SHE_MATTERS),
                             ("harpy_song", SONG_OF_LOVE_LOST),
                             ("harpy_eagle", EAGLE),
+                            ("harpy_gaze", MANIC_PIXIE),
                         ):
                             try:
                                 scene_harpy(

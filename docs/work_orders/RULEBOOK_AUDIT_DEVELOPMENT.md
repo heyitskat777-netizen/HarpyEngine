@@ -2438,6 +2438,22 @@ failed entry while the cockpit was missing and actual entry
 after the human GM reinstalled it.
 [Harpy advancements p. 181](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=183) · [Native case](../../tests/rules/test_harpy_advancements.py)
 
+### Manic Pixie Dream Monster, original promise and resulting Tag
+
+Base `43372ed03fc2335a988dfa52370daefec5155223`. The original
+Harpy’s actual gaze opens a private choice for the original
+Girl. She chooses exactly two supported responses and supplies
+her own promise if she chooses it. Her actual withdrawal is
+recorded against the original promise. Only then may the
+original Harpy issue one Tag, visible to the original roles.
+
+**One focused native case passed in 5.35 seconds**, including
+the owned choice and promise, restart, access before
+withdrawal, and the actual private Tag. The Keep Your Head and
+Void branch, third-party evidence of broken promises and
+other recipient types remain open.
+[Harpy advancements p. 183](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=185) · [Native case](../../tests/rules/test_harpy_advancements.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

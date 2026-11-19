@@ -873,3 +873,81 @@ def test_eagle_cracks_the_actual_exposed_cockpit_and_holds_the_original_girl(led
     assert next(x for x in state(game).placements if x.actor == target).mode == "inside_frame"
 
     assert game.dice.calls == 0
+
+
+def test_harpy_gaze_records_owned_promise_and_only_then_the_actual_tag(ledger):
+    from test_physical_operations import place
+
+    from girlframe.discord_adapter.m3_harpy_gaze import open_gaze_response
+    from girlframe.engine.m3_harpy_advancements import MANIC_PIXIE
+    from girlframe.services.m3_harpy_gaze import GazeService, records
+
+    _, game, _, harpy = ready(ledger)
+    policy = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update=dict(
+            m3_approval=policy.model_copy(
+                update=dict(
+                    activity_specialist_rules=policy.activity_specialist_rules | {MANIC_PIXIE},
+                )
+            ),
+        )
+    )
+    HarpyAdvancementService(ledger).select(
+        PLAYER,
+        "learn-gaze",
+        harpy.entity,
+        state(game).revision,
+        MANIC_PIXIE,
+    )
+    with ledger.transaction() as c:
+        canon = place(state(game), OTHER.user_id, mode="outside_frame")
+        game.event(c, ADMIN.user_id, "synthetic-gaze-placement", "synthetic.position", canon)
+    recipient = current_ref(state(game), OTHER.user_id)
+    service = GazeService(game)
+    options = service.targets(PLAYER, 900, harpy)
+    identity = service.start(
+        PLAYER,
+        "original-gaze",
+        900,
+        harpy,
+        options["revision"],
+        recipient.token,
+        "The Harpy meets the original Girl’s eyes.",
+    )["id"]
+    inbox = InboxService(ledger)
+    assert [x.identity for x in inbox.items(OTHER) if x.task == "m3_harpy_gaze"] == [identity]
+    assert not [x for x in inbox.items(ADMIN) if x.task == "m3_harpy_gaze"]
+
+    async def choose():
+        interaction = current(OTHER.user_id, 89900)
+        await interaction.response.defer(ephemeral=True)
+        await open_gaze_response(interaction, service, identity)
+        form = interaction.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            choices=("hands", "promise"),
+            account="I take her hands and make a promise.",
+            promise="I will bring back the recording.",
+        )
+        await form.confirm.callback(current(OTHER.user_id, 89901))
+        assert form.completed
+
+    asyncio.run(choose())
+    assert records(state(game))[0].promise == "I will bring back the recording."
+    with pytest.raises(WorkflowError, match="unavailable"):
+        service.get(PLAYER, identity)
+    ledger.engine.dispose()
+    course = service.get(OTHER, identity)
+    service.respond(OTHER, "withdraw-harpy-promise", identity, course["revision"], "break")
+    allowed = service.get(PLAYER, identity)
+    service.respond(
+        PLAYER,
+        "name-broken-original-promise",
+        identity,
+        allowed["revision"],
+        "tag",
+        account="Promise broken",
+    )
+    tags = [x for x in state(game).sheets["3"].tags if x.id == "gaze:" + identity]
+    assert len(tags) == 1 and tags[0].giver_actor == harpy
+    assert set(tags[0].observers) == {PLAYER.user_id, OTHER.user_id}

@@ -2076,6 +2076,16 @@ class InboxView(discord.ui.View):
             await open_enforcer_task(
                 interaction, EnforcerService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_harpy_gaze":
+            from girlframe.discord_adapter.m3_harpy_gaze import open_gaze_response
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_harpy_gaze import GazeService
+
+            await open_gaze_response(
+                interaction,
+                GazeService(GameService(self.service.store)),
+                item.identity,
+            )
         elif item.task == "m3_eagle_restore":
             from girlframe.discord_adapter.m3_harpy_eagle import open_restore
             from girlframe.services.m2_game import GameService

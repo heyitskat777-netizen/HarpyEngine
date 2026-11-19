@@ -4115,7 +4115,32 @@ class InboxService:
                 )
             from girlframe.services.m2_game import GameService
             from girlframe.services.m3_harpy_eagle import EagleService
+            from girlframe.services.m3_harpy_gaze import GazeService
             from girlframe.services.m3_harpy_song import HarpySongService
+
+            for gaze, step in GazeService(GameService(self.store)).tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "harpy-gaze:" + gaze.event,
+                        "harpy_gaze",
+                        gaze.event,
+                        canon.revision,
+                        "plays",
+                        "Manic Pixie Dream Monster",
+                        "Original Harpy encounter",
+                        "pending",
+                        True,
+                        False,
+                        {
+                            "choose": "Choose two actual responses to the original gaze.",
+                            "break": "Review your original promise and withdraw if you back down.",
+                            "tag": "Give a Tag for the original promise that was withdrawn.",
+                        }[step],
+                        "This decision is private to its original role.",
+                        "Open your choice",
+                        task="m3_harpy_gaze",
+                    )
+                )
 
             eagle = EagleService(GameService(self.store))
             for cockpit in eagle.restoration_tasks(connection, canon, viewer):
