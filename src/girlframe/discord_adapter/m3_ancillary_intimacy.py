@@ -265,6 +265,18 @@ async def open_ancillary_intimacy_choice(
             "Verify the actual follow-through or record that it was unfulfilled.",
             (("yes", "Verify"), ("no", "Unfulfilled")),
         ),
+        "abyssal_void_choice": (
+            "Choose an original Void outcome.",
+            (
+                ("gain", "Make the Acolyte gain Void"),
+                *((asset, "Take " + label) for asset, label in data.get("void_assets", {}).items()),
+                ("review", "Hold a different transfer for the table"),
+            ),
+        ),
+        "abyssal_gain": (
+            "Choose how your original uncorrupted Girl Asset changes.",
+            (*tuple(data.get("void_choices", {}).items()), ("review", "Hold for the table")),
+        ),
         "abyssal_damage": (
             "Choose how many of the reachable Girl Assets to damage, from zero to all.",
             (("damage", "Apply damage to the selection"),),
@@ -411,6 +423,8 @@ async def open_ancillary_intimacy_choice(
                 required=step not in ("mercenary_request", "mercenary_reply"),
             )
         )
+    if step == "abyssal_gain" and data["void_choices"]:
+        fields.append(Field("account", "Rewrite the chosen Asset", paragraph=True, required=False))
     if step == "prodigy_low" and data["can_change_status"]:
         fields.append(Field("account", "New Tag if choosing the effect", required=False))
     if step in ("prodigy_choose", "prodigy_jealous"):

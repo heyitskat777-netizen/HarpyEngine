@@ -9,7 +9,7 @@ from sqlalchemy import Connection
 from girlframe.engine import m3_actor_plays as actor_plays
 from girlframe.engine import m3_ancillary as ancillary
 from girlframe.engine import m3_ancillary_cadre as cadre_rank
-from girlframe.engine.m2 import GameState, IdentityState, tier
+from girlframe.engine.m2 import AssetState, GameState, IdentityState, PilotSheet, tier
 from girlframe.engine.m3_actor_bonds import change, current_ref, depth, make_helpless
 from girlframe.engine.m3_actor_resources import Commitment, commit
 from girlframe.engine.m3_actor_state import (
@@ -24,9 +24,11 @@ from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_battle import damage
 from girlframe.engine.m3_cast import validate_role
 from girlframe.engine.m3_chained_darling import EXEMPTION
+from girlframe.engine.m3_core import install, void_followups
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_harpy_defeat import give_tag
 from girlframe.engine.m3_world import update as update_world
+from girlframe.engine.m3_world_state import AdversaryPilot, Asset
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
@@ -78,7 +80,7 @@ RESULTS = {
         "high": "mercenary_high_hold",
     },
     "ABYSSAL ACOLYTE": {
-        "low": "abyssal_void_hold",
+        "low": "abyssal_void_choice",
         "mid": "abyssal_erase_tag",
         "high": "abyssal_ask",
     },
@@ -149,6 +151,8 @@ class Encounter(Model):
         "mercenary_verify",
         "mercenary_give_tag",
         "abyssal_void_hold",
+        "abyssal_void_choice",
+        "abyssal_gain",
         "abyssal_erase_tag",
         "abyssal_leave",
         "abyssal_ask",
@@ -492,6 +496,7 @@ class AncillaryIntimacyService:
             "prodigy_low",
             "mercenary_reply",
             "abyssal_reply",
+            "abyssal_void_choice",
         ):
             return case.partner.controller
         if case.step in (
@@ -516,6 +521,7 @@ class AncillaryIntimacyService:
             "abyssal_leave",
             "abyssal_ask",
             "abyssal_damage",
+            "abyssal_gain",
             "soldier_mid",
             "soldier_place",
             "soldier_high",
@@ -717,6 +723,17 @@ class AncillaryIntimacyService:
                 if case.step in ("revolutionary_erase", "revolutionary_erase_two")
                 else _abyssal_identities(state, counterpart.ref)
                 if case.step == "abyssal_erase_tag"
+                else {},
+                void_choices={x.id: x.name for x in _abyssal_gains(state, actual.ref)}
+                if case.step == "abyssal_gain"
+                else {},
+                void_assets={
+                    key: asset.name
+                    for key, (asset, _) in _abyssal_transfers(
+                        state, actual.ref, counterpart.ref
+                    ).items()
+                }
+                if case.step == "abyssal_void_choice"
                 else {},
             )
 
@@ -1374,6 +1391,64 @@ def _abyssal_assets(partner: ActorView) -> dict[str, str]:
     )
 
 
+def _abyssal_body(state: GameState, actor: ActorRef) -> AdversaryPilot | None:
+    if state.world is None:
+        return None
+    return next((x for x in state.world.pilots if x.id == actor.entity and x.alive), None)
+
+
+def _abyssal_gains(state: GameState, actor: ActorRef) -> tuple[Asset, ...]:
+    body = _abyssal_body(state, actor)
+    assets = tuple(x for x in body.assets if x.family == "girl" and not x.void) if body else ()
+    return tuple(x for x in assets if x.battery_asset is None) if len(assets) >= 2 else ()
+
+
+def _abyssal_transfers(
+    state: GameState, actor: ActorRef, other: ActorRef
+) -> dict[str, tuple[Asset, PilotSheet]]:
+    body = _abyssal_body(state, actor)
+    sheet = state.sheets[other.entity]
+    if body is None or sum(x.family == "girl" for x in body.assets) < 2:
+        return {}
+    from girlframe.engine.m3_janus_storage import active
+
+    stored = frozenset(x.asset for x in active(state, other))
+    supported = {}
+    for asset in body.assets:
+        if (
+            asset.family != "girl"
+            or not asset.void
+            or asset.battery_asset is not None
+            or asset.classification_event is not None
+            or not any(x.id != asset.id and x.family == "girl" and not x.void for x in body.assets)
+        ):
+            continue
+        try:
+            candidate = install(
+                sheet,
+                AssetState.model_validate_json(asset.model_dump_json()),
+                effective_void=stored,
+                state=state,
+            ).sheet
+            if not void_followups(candidate, piloting=False, effective_void=stored):
+                supported[asset.id] = (asset, candidate)
+        except ValueError:
+            continue
+    return supported
+
+
+def _set_abyssal_assets(state: GameState, actor: ActorRef, assets: tuple[Asset, ...]) -> None:
+    if state.world is None:
+        raise WorkflowError("Recover the actual original Acolyte's Assets.")
+    state.world = update_world(
+        state.world,
+        pilots=tuple(
+            x.model_copy(update=dict(assets=assets)) if x.id == actor.entity else x
+            for x in state.world.pilots
+        ),
+    )
+
+
 def _abyssal(
     state: GameState,
     case: Encounter,
@@ -1386,6 +1461,57 @@ def _abyssal(
     event: str,
 ) -> tuple[GameState, dict[str, Any]]:
     actor, other = case.actor.actor, case.partner.actor
+    if case.step == "abyssal_void_choice" and not account:
+        if choice == "gain":
+            return state, dict(
+                step="abyssal_gain" if _abyssal_gains(state, actor) else "abyssal_void_hold",
+                disposition="original_gain_chosen",
+            )
+        if choice == "review":
+            return state, dict(step="abyssal_void_hold", disposition="original_transfer_pending")
+        selected = _abyssal_transfers(state, actor, other).get(choice)
+        body = _abyssal_body(state, actor)
+        if selected is not None and body is not None:
+            asset, sheet = selected
+            state.sheets[other.entity] = sheet
+            _set_abyssal_assets(state, actor, tuple(x for x in body.assets if x.id != asset.id))
+            state.facts.append(
+                dict(
+                    kind="abyssal_void_transfer",
+                    encounter=case.id,
+                    asset=asset.id,
+                    from_actor=actor.token,
+                    to_actor=other.token,
+                    event=event,
+                )
+            )
+            return state, dict(step="closed", disposition="abyssal_void_transferred")
+    if case.step == "abyssal_gain" and choice == "review" and not account:
+        return state, dict(step="abyssal_void_hold", disposition="original_gain_pending")
+    if case.step == "abyssal_gain" and account:
+        rewritable = next((x for x in _abyssal_gains(state, actor) if x.id == choice), None)
+        body = _abyssal_body(state, actor)
+        if rewritable is not None and body is not None:
+            _set_abyssal_assets(
+                state,
+                actor,
+                tuple(
+                    x.model_copy(update=dict(void=True, description=account))
+                    if x.id == rewritable.id
+                    else x
+                    for x in body.assets
+                ),
+            )
+            state.facts.append(
+                dict(
+                    kind="abyssal_void_gain",
+                    encounter=case.id,
+                    asset=rewritable.id,
+                    actor=actor.token,
+                    event=event,
+                )
+            )
+            return state, dict(step="closed", disposition="abyssal_void_gained")
     if case.step == "abyssal_ask" and choice == "ask" and account:
         return state, dict(step="abyssal_reply", account=account)
     if case.step == "abyssal_reply":

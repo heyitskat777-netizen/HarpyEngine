@@ -1,5 +1,6 @@
-"""Abyssal refusal damage uses the original eligible Girl Assets and Helplessness."""
+"""Abyssal outcomes apply to the original Girl Assets and actual counterpart."""
 
+import pytest
 from test_ancillary_creation import HARPY, enable, scenario
 from test_cast_service import change
 from test_ledger import ADMIN, OTHER, PLAYER
@@ -22,9 +23,11 @@ from girlframe.services.m3_chained_darling import ChainedPlacementService
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_movement import MovementService
 from girlframe.services.m3_physical import PhysicalService
+from girlframe.services.onboarding import WorkflowError
 
 
-def test_abyssal_high_refusal_applies_reachable_asset_damage(ledger, tmp_path, monkeypatch):
+@pytest.mark.parametrize("tier", ("high", "low"), ids=("original-high", "actual-void"))
+def test_abyssal_native_asset_outcomes(ledger, tmp_path, monkeypatch, tier):
     game = scenario(ledger)
     enable(ledger, game, tmp_path, monkeypatch, extra=(ABYSSAL,))
     missions = MissionService(ledger)
@@ -98,6 +101,51 @@ def test_abyssal_high_refusal_applies_reachable_asset_damage(ledger, tmp_path, m
         channel=900,
     )
     service = AncillaryIntimacyService(game)
+    if tier == "low":
+        game.dice = Dice((2, 3))
+
+        def low(label):
+            source = service.offer(PLAYER, label, 900, actor, state(game).revision, victim.token)[
+                "id"
+            ]
+            for viewer, choice in ((OTHER, "yes"), (ADMIN, "yes"), (PLAYER, "roll")):
+                service.act(
+                    viewer,
+                    label + choice + str(viewer.user_id),
+                    source,
+                    state(game).revision,
+                    choice,
+                )
+            return source
+
+        gained = low("first-low")
+        assert not service.get(OTHER, gained)["void_assets"]
+        service.act(OTHER, "choose-gain", gained, state(game).revision, "gain")
+        with pytest.raises(WorkflowError, match="unavailable"):
+            service.get(OTHER, gained)
+        asset = next(iter(service.get(PLAYER, gained)["void_choices"]))
+        rewrite = "Its lens shows a second horizon."
+        service.act(
+            PLAYER, "original-rewrite", gained, state(game).revision, asset, account=rewrite
+        )
+        original = next(x for x in state(game).world.pilots if x.id == actor.entity)
+        changed = next(x for x in original.assets if x.id == asset)
+        assert changed.void and changed.description == rewrite
+
+        transferred = low("second-low")
+        assert service.get(OTHER, transferred)["void_assets"] == {asset: changed.name}
+        service.act(OTHER, "take-original-asset", transferred, state(game).revision, asset)
+        final = state(game)
+        source = next(x for x in final.world.pilots if x.id == actor.entity)
+        assert all(x.id != asset for x in source.assets)
+        result = next(x for x in final.sheets[victim.entity].assets if x.id == asset)
+        assert result.description == rewrite and result.void
+        assert {x.disposition for x in records(final)} == {
+            "abyssal_void_gained",
+            "abyssal_void_transferred",
+        }
+        assert game.dice.calls == 2
+        return
     actual = service.offer(
         PLAYER,
         "abyssal-private",

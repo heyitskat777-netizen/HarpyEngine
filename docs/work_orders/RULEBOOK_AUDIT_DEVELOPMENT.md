@@ -3797,6 +3797,22 @@ when the original Wife Identity is removed even if a different
 Identity uses the same label. Appearance remains a table judgment.
 [Made For Service p. 102](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=104) · [Native case](../../tests/rules/test_ancillary_npc_orders.py)
 
+### Abyssal Acolyte’s low Void choices
+
+Base `83ea5cf4f84cd1d86fbc9d1e122730d4a995a552`. An original
+counterpart on a low result can choose a Void gain or take an
+eligible Voided Girl Asset. The Acolyte writes her own Asset
+change. The transfer preserves the Asset’s ID and description,
+uses the standard installation limit, and removes it from the
+original inventory in the same transaction.
+
+One focused case passed in 5.72 seconds. It saved two low
+rolls and verified the original Acolyte’s actual rewrite before
+moving that same Asset to the original counterpart. The existing
+high case was deselected. Terminal gain, transfers at capacity
+and Frame Assets remain pending for their own consequences.
+[Abyssal Acolyte p. 109](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=111) · [Native case](../../tests/rules/test_abyssal_private_play.py)
+
 ### Void-Drunk shadow emergence
 
 Base `c0b2cdc08affdedcad9e009b63495b8b4b00da9a`. A nearby
