@@ -523,17 +523,22 @@ def tier(total: int) -> Literal["low", "mid", "high"]:
 
 
 def shift_status(state: GameState, owner: int, delta: int) -> None:
+    from girlframe.engine.m3_dogrunner import after_rank_change
+    from girlframe.engine.m3_dogrunner import owners as dogrunner_owners
     from girlframe.engine.m3_intracadre_marriage import status_groups
 
     groups = list(status_groups(state))
     if owner not in state.order or delta not in (-1, 1):
         raise ValueError("Invalid Status shift")
     before = groups[-1]
+    dogs = dogrunner_owners(state)
     old = next(i for i, group in enumerate(groups) if owner in group)
     new = min(max(old - delta, 0), len(groups) - 1)
     groups[old], groups[new] = groups[new], groups[old]
     state.order = tuple(member for group in groups for member in group)
-    if before != groups[-1]:
+    if dogs is not None:
+        after_rank_change(state, dogs, before)
+    elif before != groups[-1]:
         for member in before:
             if str(member) in state.sheets:
                 from girlframe.engine.m3_learned_play_state import clear_hound_status

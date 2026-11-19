@@ -809,6 +809,10 @@ class PunishmentService:
                         reason="punishment",
                     )
                     feedback = True
+            from girlframe.engine.m3_dogrunner import after_punishment
+
+            if details.kind != "passing_responsibility":
+                after_punishment(result.state, int(row["subject_id"]))
             event = self.game.event(
                 c,
                 viewer.user_id,

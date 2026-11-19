@@ -791,6 +791,8 @@ class MissionService:
                 appointment=appointment,
                 handler=active_handler(state),
             )
+        from girlframe.engine.m3_dogrunner import owners as dogrunner_owners
+
         plan = rules.end(
             mission,
             viewer.user_id,
@@ -801,6 +803,7 @@ class MissionService:
             ace_policy=rulings.ace_bonus,
             ended_participants=self._departed(c, mission, state),
             grouped_status=marriage.status_groups(state),
+            dog_owners=dogrunner_owners(state),
         )
         changed = set()
         for grant in plan.grants:

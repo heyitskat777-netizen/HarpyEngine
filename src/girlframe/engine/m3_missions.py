@@ -142,6 +142,7 @@ def end(
     ace_policy: AcePolicy | None,
     ended_participants: dict[str, str] | None = None,
     grouped_status: tuple[tuple[Snowflake, ...], ...] | None = None,
+    dog_owners: tuple[Snowflake, ...] | None = None,
 ) -> EndPlan:
     revision(mission, expected)
     handler(mission, actor, current_handler)
@@ -171,7 +172,9 @@ def end(
         raise ValueError("Use the actual complete partition of current Status groups")
     ace_group, dog_group = (groups[0], groups[-1]) if groups else ((), ())
     ace = next((uid for uid in ace_group if uid in living), ace_group[0] if ace_group else None)
-    dog = dog_group[0] if dog_group else None
+    dogs = dog_owners if dog_owners is not None else dog_group[:1]
+    if len(set(dogs)) != len(dogs) or not set(dogs) <= set(status_order):
+        raise ValueError("Use the actual current Dogs for mission consequences")
     if ace is not None and ace_policy is None and not set(ace_group) & set(living):
         raise ValueError("UNRESOLVED_RULING: absent Ace bonus policy is required")
     grants = [PermissionGrant(owner=uid, amount=1, reason="mission_completed") for uid in living]
@@ -191,10 +194,10 @@ def end(
         if not success
         else []
     )
-    if dog is not None:
+    for dog in dogs:
         consequences.append(
             Consequence(
-                id=mission.id + ":dog",
+                id=mission.id + ":dog" + (":" + str(dog) if len(dogs) > 1 else ""),
                 owner=dog,
                 decision_owner=current_handler,
                 reason="dog_mission_end",

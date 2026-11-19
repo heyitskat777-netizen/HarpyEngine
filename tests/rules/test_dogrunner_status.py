@@ -1,0 +1,127 @@
+"""Dogrunner rank changes and native mission discipline use the original Dogs."""
+
+import pytest
+from m3_policy_scenario import configure_m3_fixture
+from test_handler_creation import complete, save
+from test_intracadre_marriage import FOUR, setup_three
+from test_ledger import ADMIN, OTHER, PLAYER
+from test_ledger import ledger as ledger
+from test_m2_game import answer, pass_tags, state, tick
+from test_mission_service import launched
+from test_punishment_service import submit
+
+from girlframe.engine.m2 import PlayInput, shift_status
+from girlframe.engine.m3_actor_bonds import current_ref
+from girlframe.engine.m3_dogrunner import owners
+from girlframe.engine.m3_intracadre_marriage import is_dog
+from girlframe.engine.m3_punishments import Details
+from girlframe.services.inbox import InboxService
+from girlframe.services.m3_handler_creation import HandlerCreationService
+from girlframe.services.m3_missions import MissionService
+from girlframe.services.m3_punishments import PunishmentService
+from girlframe.services.onboarding import WorkflowError
+
+
+def test_dogrunner_keeps_raised_dogs_and_mission_punishes_each_original_once(ledger):
+    game, worker, gateway, _ = setup_three(ledger)
+    registry = configure_m3_fixture(ledger)
+    approval, rulings = ledger.policy.m3_approval, ledger.policy.owner_m3_rulings
+    ledger.policy = ledger.policy.model_copy(
+        update=dict(
+            m3_approval=approval.model_copy(
+                update=dict(subsystems=approval.subsystems | {"playbooks"})
+            ),
+            owner_m3_rulings=rulings.model_copy(
+                update=dict(handler_creation="owned_shared_choices_preserve_existing"),
+            ),
+        )
+    )
+    creation = HandlerCreationService(ledger)
+    draft = complete(creation, "Dogrunner")
+    dog = draft.starting[1].model_copy(update=dict(pilot=current_ref(state(game), 4)))
+    save(creation, draft.model_copy(update=dict(starting=(draft.starting[0], dog))))
+    invitations = creation.propose(ADMIN, "dogrunner-propose", creation.view(ADMIN)["revision"])
+    for identity, viewer in zip(invitations["ids"], (PLAYER, FOUR), strict=True):
+        data = creation.get_agreement(viewer, identity)
+        creation.answer(viewer, "dogrunner-accept:" + identity, identity, data["revision"], True)
+    preview = creation.view(ADMIN)
+    creation.activate(
+        ADMIN, "dogrunner-activate", preview["revision"], preview["game_revision"], True
+    )
+    assert state(game).order == (2, 3, 4)
+    assert owners(state(game)) == (4,)
+
+    order = game.issue_order(ADMIN, "dogrunner-actual-order", 900, 3, "Stay by the entrance.")
+    tick(worker, gateway, 3)
+    answer(game, OTHER, "order_response", options=("disobey",))
+    refusal = game.begin(
+        OTHER,
+        "dogrunner-witnessed-refusal",
+        900,
+        state(game).sheets["3"].revision,
+        PlayInput(
+            play="disobey_orders",
+            context="I ignore the order in front of the other Girls.",
+            trigger_confirmed=True,
+            heat=0,
+            order_id=order["order_id"],
+            parent=order["action_id"],
+            witnessed=True,
+        ),
+    )["action_id"]
+    tick(worker, gateway, 4)
+    pass_tags(game)
+    answer(game, FOUR, "tag_window", options=("pass",))
+    answer(game, OTHER, "actor_disobey", options=("tag_heat",), number=2, text="Defiant")
+    answer(game, ADMIN, "handler_disobey", flag=False)
+    assert game.inspect(OTHER, refusal)["result"]["can_disobey"]
+    tick(worker, gateway, 4)
+    assert state(game).order == (2, 4, 3)
+    assert owners(state(game)) == (4, 3)
+    assert is_dog(state(game), 4) and is_dog(state(game), 3)
+    ascended = state(game)
+    shift_status(ascended, 4, 1)
+    assert ascended.order == (4, 2, 3) and owners(ascended) == (3,)
+
+    missions = MissionService(ledger, registry)
+    mission, revision = launched(missions)
+    ended = missions.end(ADMIN, "mission-end-two-dogs", mission, revision, True)
+    original = {row["subject"]: row["id"] for row in missions.get(ADMIN, mission)["work"]}
+    assert set(original) == {3, 4}
+    other_inbox = {row.identity for row in InboxService(ledger).items(OTHER)}
+    assert {original[3], original[4]} & other_inbox == {original[3]}
+    assert original[4] in {row.identity for row in InboxService(ledger).items(FOUR)}
+    ledger.engine.dispose()
+    assert owners(state(game)) == (4, 3)
+    assert (
+        MissionService(ledger, registry).end(ADMIN, "mission-end-two-dogs", mission, revision, True)
+        == ended
+    )
+
+    discipline = PunishmentService(ledger, registry)
+    drug = Details(kind="stimulant_injection")
+    with pytest.raises(WorkflowError, match="decision owner"):
+        submit(discipline, FOUR, original[4], drug, "dog-punishes-self")
+    ledger.safety(OTHER, "dogrunner-table-pause", ledger.status(OTHER)["revision"], pause=True)
+    with pytest.raises(WorkflowError, match="SAFETY_PAUSED"):
+        submit(discipline, ADMIN, original[4], drug, "dog-punishment-paused")
+    ledger.safety(OTHER, "dogrunner-table-resume", ledger.status(OTHER)["revision"], pause=False)
+    assert owners(state(game)) == (4, 3)
+    old = discipline.get(ADMIN, original[4])
+    result = submit(discipline, ADMIN, original[4], drug, "dog-four-punishment")
+    assert (
+        discipline.apply(
+            ADMIN, "dog-four-punishment", original[4], old["revision"], old["game_revision"], drug
+        )
+        == result
+    )
+    assert owners(state(game)) == (3,)
+    assert state(game).sheets["4"].heat == 7
+    assert missions.get(ADMIN, mission)["pending_count"] == 1
+    submit(discipline, ADMIN, original[3], drug, "dog-three-punishment")
+    assert owners(state(game)) == ()
+    assert not is_dog(state(game), 3)
+    assert (
+        missions.complete(ADMIN, "all-current-dogs-resolved", mission, ended["revision"])["phase"]
+        == "complete"
+    )

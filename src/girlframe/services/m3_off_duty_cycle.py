@@ -1004,12 +1004,19 @@ class CycleService:
                 positions = sorted(order.index(uid) for uid in group)
                 if positions != list(range(positions[0], positions[0] + len(group))):
                     raise WorkflowError("Review each actual married Status group together")
+            from girlframe.engine.m3_dogrunner import after_rank_change
+            from girlframe.engine.m3_dogrunner import owners as dogrunner_owners
+
+            designated_dogs = dogrunner_owners(state)
             former_dogs = set(groups[-1]) if groups else set()
             state.order = order
-            current_dogs = set(status_groups(state)[-1]) if state.order else set()
-            for former_dog in former_dogs - current_dogs:
-                # Hound's actual mark ends when this Girl is no longer The Dog.
-                state.sheets[str(former_dog)].status_marked = False
+            if designated_dogs is not None:
+                after_rank_change(state, designated_dogs, groups[-1] if groups else ())
+            else:
+                current_dogs = set(status_groups(state)[-1]) if state.order else set()
+                for former_dog in former_dogs - current_dogs:
+                    # Hound's actual mark ends when this Girl is no longer The Dog.
+                    state.sheets[str(former_dog)].status_marked = False
             return (
                 updated,
                 state,

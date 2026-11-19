@@ -1230,3 +1230,21 @@ The two focused cases passed, including a wrong owner, restart, retry and
 separate discovered and undiscovered refusals. The selected Handler, order,
 NPC, ritual and Inbox regression passed **131 tests in 83.28 seconds**.
 [Rulebook p. 138](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=140) · [Tests](../../tests/rules/test_advocate_empathy.py)
+
+### Dogrunner designation and mission consequences
+
+Base `aa2c11e506922ca9a23df415694e8c77311b6cdc`. No Rest For Hounds now
+keeps an original Dog when another Girl falls below her, except when the
+original becomes the Ace or receives actual Punishment. The status shift
+and Off-Duty rank review share the same logic. A mission creates one real
+private Punishment obligation per current Dog, even for Dogs who did not
+join that mission. Passing Responsibility retains the designation until
+the actual punishment is applied. Roster replacement, playbook changes and
+other status-group transitions still need direct acceptance coverage.
+
+The focused three-player case used a witnessed native refusal to change
+relative Status, then an actual mission and discipline. It checked private
+Inbox isolation, restart, retry, wrong owner and pause. The selected Handler,
+Status, marriage, mission, discipline, Off-Duty, reward and Inbox regression
+passed **163 tests in 104.45 seconds**.
+[Rulebook p. 125](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=127) · [Tests](../../tests/rules/test_dogrunner_status.py)
