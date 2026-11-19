@@ -26,6 +26,9 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
             interaction, GorgonDormantService(game.store, game), detail["work_id"]
         )
         return
+    if kind.startswith("hazard_"):
+        await open_hazard(interaction, game, data)
+        return
     if kind.startswith("infection_"):
         await open_infection(interaction, game, data)
         return
@@ -712,4 +715,46 @@ async def open_excision(
         )
 
     form = NativeForm(interaction.user.id, "Experimental Parasite Excision", text, fields, submit)
+    await reply(interaction, form.text(), form)
+
+
+async def open_hazard(
+    interaction: discord.Interaction,
+    game: GameService,
+    data: dict[str, Any],
+) -> None:
+    detail = data["detail"]
+    kind = detail["kind"]
+    if kind == "hazard_heat":
+        text = f"You have {detail['heat']} available Heat. Choose how much to spend."
+        fields = [Field("heat", "Your Heat spend")]
+    elif kind == "hazard_eject":
+        text = "Your low roll is saved. You can eject your Girl from her actual Vital Frame now."
+        fields = [Field("account", "Describe your immediate ejection", paragraph=True)]
+    else:
+        await reply(
+            interaction,
+            "The Hazard roll is saved. Its original consequence needs private review.",
+        )
+        return
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        heat = values.get("heat", "").strip()
+        if kind == "hazard_heat" and (not heat.isascii() or not heat.isdecimal() or len(heat) > 9):
+            return "Enter a whole amount of your actual Heat."
+        answer = ChoiceAnswer(
+            number=int(heat) if kind == "hazard_heat" else None,
+            text=values.get("account", ""),
+        )
+        await asyncio.to_thread(
+            game.respond,
+            viewer_from_interaction(current),
+            str(current.id),
+            data["id"],
+            data["revision"],
+            answer,
+        )
+        return "Your Memetic Hazard response is saved."
+
+    form = NativeForm(interaction.user.id, "Memetic Hazard", text, fields, submit)
     await reply(interaction, form.text(), form)

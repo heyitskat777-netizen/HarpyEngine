@@ -15,6 +15,7 @@ from girlframe.engine import m3_growth as growth
 from girlframe.engine import m3_hallucinations as hallucinations
 from girlframe.engine import m3_incubus_conditioning as incubus
 from girlframe.engine import m3_jackdaw as jackdaw
+from girlframe.engine import m3_mother_hazard as hazard
 from girlframe.engine import m3_mother_sprite as mother_sprite
 from girlframe.engine import m3_parasite as parasite
 from girlframe.engine import m3_parasite_infection as infection
@@ -50,6 +51,7 @@ RULES: dict[str, str] = {
     "corrupt": corrupt_rule,
     shell.PLAY: shell.RULE,
     incubus.PLAY: incubus.RULE,
+    hazard.PLAY: hazard.RULE,
     shell.RELEASE: shell.RULE,
     unreal.PLAY: unreal.RULE,
     infection.PLAY: infection.RULE,
@@ -64,7 +66,7 @@ RULES: dict[str, str] = {
 }
 
 
-PRIVATE_PLAYS = (*contact_plays, incubus.PLAY, infection.PLAY)
+PRIVATE_PLAYS = (*contact_plays, incubus.PLAY, infection.PLAY, hazard.PLAY)
 
 
 class GorgonPlayService:
@@ -172,6 +174,7 @@ class GorgonPlayService:
             exposure_days: dict[str, dict[str, int]] = {}
             conditioning_tags: dict[str, dict[str, list[tuple[str, str]]]] = {}
             shed_assets: dict[str, tuple[str, ...]] = {}
+            hazard_tags: dict[str, dict[str, list[tuple[str, str]]]] = {}
             if state.world is not None:
                 for actor in state.world.gorgons:
                     token = ActorRef(kind="gorgon", entity=actor.id).token
@@ -254,6 +257,14 @@ class GorgonPlayService:
                         }
                         conditioning_tags[token] = known
                         options[incubus.PLAY] = list(known)
+                    if actor.alive and "mother" in actor.types:
+                        exposures = {
+                            girl.ref.token: [(x.id, x.label) for x in tags]
+                            for girl in visible.values()
+                            if (tags := hazard.available(state, caster, girl))
+                        }
+                        hazard_tags[token] = exposures
+                        options[hazard.PLAY] = list(exposures)
                     if actor.alive and "growth" in actor.types and unreal.available_assets(actor):
                         shed_assets[token] = unreal.available_assets(actor)
                         options[unreal.PLAY] = [
@@ -282,7 +293,14 @@ class GorgonPlayService:
                     or kind in hallucinations.PLAYS
                     or kind in contact_plays
                     or kind
-                    in (shell.PLAY, shell.RELEASE, incubus.PLAY, unreal.PLAY, infection.PLAY)
+                    in (
+                        shell.PLAY,
+                        shell.RELEASE,
+                        incubus.PLAY,
+                        unreal.PLAY,
+                        infection.PLAY,
+                        hazard.PLAY,
+                    )
                 ) and not any(kind in x for x in typed_targets.values()):
                     continue
                 if kind in parasite.PLAYS and not any(kind in x for x in parasite_choices.values()):
@@ -311,6 +329,7 @@ class GorgonPlayService:
                 parasite=parasite_choices,
                 exposure_days=exposure_days,
                 conditioning_tags=conditioning_tags,
+                hazard_tags=hazard_tags,
                 shed_assets=shed_assets,
             )
 
@@ -440,6 +459,10 @@ class GorgonPlayService:
                     "parasite" not in gorgon.types or not infection.reachable(state, actual, target)
                 ):
                     raise WorkflowError("Use the actual local Parasite and original Girl")
+                if declaration.kind == hazard.PLAY and not any(
+                    x.id == declaration.tag for x in hazard.available(state, actual, target)
+                ):
+                    raise WorkflowError("Choose one actual unmarked Tag known to this Mother")
                 if declaration.kind == incubus.PLAY and not any(
                     x.id == declaration.tag for x in incubus.available(state, actual, target)
                 ):

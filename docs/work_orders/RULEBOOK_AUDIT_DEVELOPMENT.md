@@ -2217,6 +2217,23 @@ membership. **Three focused cases passed in 6.59 seconds**, including
 the failing foreign-role case and both private Gorgon ending cases.
 [Parasite p. 174](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=176) · [Native cases](../../tests/rules/test_gorgon_runtime.py) · [Career regression](../../tests/rules/test_career_foreign_roles.py)
 
+### Mother marks a source Tag and the Girl may eject
+
+Base `14e749cb3db98b6fc2d9833220130473b8fd28e5`. The same-square
+Memetic Hazard verifies Mother's actual known Tag, marks it and
+hands the Heat roll to the original Girl. A low result allows
+that Girl to perform an immediate ejection from her original
+occupied Frame. The canonical cockpit transition leaves her
+actual Frame in the same square and preserves the original
+roll. The other outcomes remain pending for their actual
+consequences. Report-based exposure also remains open.
+
+**One focused native case passed in 5.68 seconds**. The test
+used an actual separate Mother mutation as the Tag source,
+then checked private access, restart and the original
+Frame's location after the immediate ejection.
+[Mother p. 170](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=172) · [Native case](../../tests/rules/test_gorgon_runtime.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

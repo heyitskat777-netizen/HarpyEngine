@@ -22170,14 +22170,41 @@
         "heading": "Memetic Hazard"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Mother marks an actual unmarked Tag she gave to a Girl now in her physical presence.",
+        "actor_type": "Actual Mother Gorgon and original affected Girl",
+        "pre_roll_sources": [
+          "Known original source Tag and actual same-square cast"
+        ],
+        "roll_kind": "2d6",
+        "allowed_modifiers": [
+          "Owned Heat"
+        ],
+        "tier_options": {
+          "low": [
+            "The original Girl may immediately eject from her own Frame."
+          ]
+        },
+        "choice_ownership": "Mother selects an actual known Tag. The Girl owns actual Heat spend and immediate ejection.",
+        "target_policy": "Original living Girl physically present in the Mother Gorgon's exact scene and square.",
+        "post_roll_effects": [
+          "Apply actual ejection of the original Girl from her still-occupied Frame."
+        ],
+        "mandatory_followups": [
+          "Preserve rolls for unsupported consequences. Do not release the effect based on acknowledgement."
+        ],
+        "handler_or_gm_intervention": "Original human GM retains the private review of unsupported consequences. Report-based exposure and further outcome paths remain open.",
+        "test_fixture_ids": [
+          "tests/rules/test_gorgon_runtime.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_gorgon_runtime.py::test_mother_local_hazard_preserves_the_actual_frame_through_owned_ejection"],
       "m2_play_id": null,
       "module": "core"
     },

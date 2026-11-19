@@ -22,6 +22,7 @@ from girlframe.engine.m3_gorgon_play_state import Declaration
 from girlframe.engine.m3_grow_unreal import PLAY as unreal_play
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_incubus_conditioning import PLAY as incubus_play
+from girlframe.engine.m3_mother_hazard import PLAY as hazard_play
 from girlframe.engine.m3_parasite_infection import PLAY as infection_play
 from girlframe.engine.m3_world_state import Asset
 from girlframe.services import m3_gorgon_contact as contact
@@ -144,6 +145,11 @@ def start(game: Any, c: Connection, state: GameState, action: dict[str, Any]) ->
             victims=people,
         )
         action["data"]["result"]["catatonia" if people else "audible_communication_blocked"] = True
+        return
+    if meta["kind"] == hazard_play:
+        from girlframe.services.m3_mother_hazard import start as hazard
+
+        hazard(game, c, state, action)
         return
     if meta["kind"] == infection_play:
         from girlframe.services.m3_parasite_infection import start as infect
@@ -462,6 +468,11 @@ def apply(
     meta, event = _meta(action), _event(action)
     body = json.loads(row["body_json"])
     kind = row["kind"].removeprefix("gorgon_")
+    if kind.startswith("hazard_"):
+        from girlframe.services.m3_mother_hazard import apply as apply_hazard
+
+        apply_hazard(game, c, state, action, row, answer)
+        return
     if kind.startswith("infection_"):
         from girlframe.services.m3_parasite_infection import apply as apply_infection
 
@@ -824,6 +835,10 @@ def projection(
     body = json.loads(row["body_json"])
     kind = row["kind"].removeprefix("gorgon_")
     result: dict[str, Any] = dict(kind=kind, account=action["data"].get("context", ""))
+    if kind.startswith("hazard_"):
+        from girlframe.services.m3_mother_hazard import project as project_hazard
+
+        return project_hazard(game, c, state, action, row)
     if kind.startswith("infection_"):
         from girlframe.services.m3_parasite_infection import project as project_infection
 

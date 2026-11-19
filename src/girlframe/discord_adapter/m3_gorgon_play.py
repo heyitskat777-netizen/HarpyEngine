@@ -19,6 +19,7 @@ from girlframe.engine.m3_hallucinations import PLAYS as HALLUCINATIONS_PLAYS
 from girlframe.engine.m3_incubus_conditioning import PLAY as incubus_play
 from girlframe.engine.m3_jackdaw import EFFECTS as JACKDAW_EFFECTS
 from girlframe.engine.m3_jackdaw import Range as JackdawRange
+from girlframe.engine.m3_mother_hazard import PLAY as hazard_play
 from girlframe.engine.m3_mother_sprite import BirthPlan
 from girlframe.engine.m3_parasite import PLAYS as PARASITE_PLAYS
 from girlframe.engine.m3_parasite_infection import PLAY as infection_play
@@ -91,8 +92,10 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
             return "Join the actual eligible target to the scene before declaring this Play."
         if kind in ("attack", "collateral") and not actor["assets"]:
             return "Declare actual owned Gorgon Assets for this Play."
-        conditioning = kind == incubus_play
-        known = data["conditioning_tags"].get(actor["token"], {})
+        chooses_known_tag = kind in (incubus_play, hazard_play)
+        known = data["hazard_tags" if kind == hazard_play else "conditioning_tags"].get(
+            actor["token"], {}
+        )
         tag_choices = (
             {
                 str(i): (girl, tag, label)
@@ -102,13 +105,13 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
                     for tag, label in known.get(girl["token"], ())
                 )
             }
-            if conditioning
+            if chooses_known_tag
             else {}
         )
-        if conditioning and not tag_choices:
-            return "This actual Incubus has no known unmarked Tag to choose."
+        if chooses_known_tag and not tag_choices:
+            return "This actual Gorgon has no known unmarked Tag to choose."
         fields: list[Field] = []
-        if conditioning:
+        if chooses_known_tag:
             fields.append(
                 Field(
                     "known_tag",
@@ -200,7 +203,7 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
         )
 
         async def declare(next_interaction: discord.Interaction, details: dict[str, Any]) -> str:
-            selected_tag = tag_choices[details["known_tag"][0]] if conditioning else None
+            selected_tag = tag_choices[details["known_tag"][0]] if chooses_known_tag else None
             target = (
                 selected_tag[0]
                 if selected_tag

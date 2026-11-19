@@ -40,6 +40,7 @@ def candidate_source_gate(monkeypatch):
             "gorgon-type.incubus.incubus-type",
             "gorgon-type.incubus.emotional-conditioning",
             "gorgon-type.mother.mother-type",
+            "gorgon-type.mother.memetic-hazard",
             "gorgon-type.growth.growth-type",
             "gorgon-type.growth.grow-unreal",
             "gorgon-type.doppleganger.doppleganger-type",
@@ -3851,3 +3852,121 @@ def test_parasite_infect_damages_an_actual_voided_asset_before_the_owned_roll(le
         assert saved.doctor.entity == "actual-ward-doctor" and saved.performed_event
         assert surgery_items(PLAYER) == surgery_items(ADMIN) == []
         assert next(x for x in final.sheets["2"].assets if x.id == selected).void
+
+
+def test_mother_local_hazard_preserves_the_actual_frame_through_owned_ejection(ledger):
+    import asyncio
+
+    from test_ledger import OTHER
+    from test_m2_game import Dice
+    from test_mission_ui import current
+    from test_privacy_game_delivery import PrivateGateway
+
+    from girlframe.discord_adapter.m2_ui import open_choice
+    from girlframe.engine.m3_actors import resolve
+    from girlframe.engine.m3_mother_hazard import get
+    from girlframe.engine.m3_physical_state import CockpitAction
+    from girlframe.services.m3_actors import profiles
+    from girlframe.services.m3_mother_hazard import EJECT, HEAT
+    from girlframe.services.m3_physical import PhysicalService
+    from girlframe.services.onboarding import WorkflowError
+
+    game, worker, _, _, mutation = gorgon_source(
+        ledger,
+        kind="mother_mutation",
+        types=("mother",),
+        tag="branch",
+        begin=False,
+    )
+    gateway = PrivateGateway()
+
+    def actor():
+        with ledger.engine.connect() as c:
+            return resolve(state(game), mutation.target, profiles(c, ledger.campaign_id))
+
+    def operate(operation, key):
+        PhysicalService(ledger).operate(
+            PLAYER,
+            key,
+            state(game).revision,
+            CockpitAction(
+                actor=mutation.target,
+                operation=operation,
+                expected_position=actor().position_sha256,
+                account="I change cockpit occupancy in the actual same square.",
+                confirmed=True,
+            ),
+            channel=900,
+        )
+
+    service = GorgonPlayService(game)
+    operate("exit", "exit-before-mother-mutation")
+    view = service.preview(ADMIN, 900)
+    people = {x["token"]: x for x in view["actors"]}
+    marked_source = service.begin(
+        ADMIN,
+        "mother-mutation-before-hazard",
+        900,
+        view["revision"],
+        mutation.model_copy(
+            update=dict(
+                actor_sha256=people[mutation.actor.token]["source_sha256"],
+                target_sha256=people[mutation.target.token]["source_sha256"],
+            )
+        ),
+    )["action_id"]
+    tick(worker, gateway, 5)
+    if game.inspect(ADMIN, marked_source)["state"] != "complete":
+        game.roll(ADMIN, "advance-mutation-before-hazard", marked_source)
+        tick(worker, gateway, 5)
+    tagged = next(x for x in state(game).sheets["2"].tags if x.giver_actor == mutation.actor)
+    assert not tagged.marked
+    operate("pilot", "enter-before-hazard")
+    frame = actor().occupied_frame_instance
+    assert frame and actor().piloting
+    game.dice = Dice((1, 2))
+    view = service.preview(ADMIN, 900)
+    people = {x["token"]: x for x in view["actors"]}
+    assert view["hazard_tags"][mutation.actor.token] == {
+        mutation.target.token: [(tagged.id, tagged.label)]
+    }
+    hazard = Declaration(
+        kind="mother_hazard",
+        actor=mutation.actor,
+        target=mutation.target,
+        tag=tagged.id,
+        actor_sha256=people[mutation.actor.token]["source_sha256"],
+        target_sha256=people[mutation.target.token]["source_sha256"],
+        reach_confirmed=True,
+        account="The original Mother reaches the Girl in the cockpit.",
+    )
+    parent = service.begin(ADMIN, "actual-memetic-hazard", 900, view["revision"], hazard)[
+        "action_id"
+    ]
+    tick(worker, gateway, 5)
+    if not any(x["kind"] == HEAT for x in game.choices(PLAYER)):
+        game.roll(ADMIN, "advance-memetic-hazard", parent)
+    assert next(x for x in state(game).sheets["2"].tags if x.id == tagged.id).marked
+    assert game.dice.calls == 0
+    answer(game, PLAYER, HEAT, number=0)
+    choice = next(x for x in game.choices(PLAYER) if x["kind"] == EJECT)
+    with pytest.raises(WorkflowError):
+        game.decision(OTHER, choice["id"])
+    ledger.engine.dispose()
+
+    async def eject():
+        interaction = current(PLAYER.user_id, 88100)
+        await interaction.response.defer(ephemeral=True)
+        await open_choice(interaction, game, choice["id"])
+        form = interaction.edit_original_response.call_args.kwargs["view"]
+        form.values["account"] = "I eject immediately, leaving the Frame in place."
+        await form.confirm.callback(current(PLAYER.user_id, 88101))
+        assert form.completed
+
+    asyncio.run(eject())
+    original = actor()
+    case = get(state(game), parent)
+    assert original.inside_frame is False and original.frame_instance == frame
+    assert original.frame_cell == original.cell
+    assert case.frame == frame and case.ejected and case.completed == case.ejected
+    assert game.inspect(PLAYER, parent)["state"] == "complete" and game.dice.calls == 1
