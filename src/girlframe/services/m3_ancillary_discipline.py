@@ -30,6 +30,7 @@ EARNED = "ancillary.prodigy.earned-confidence"
 FAVOURITE = "ancillary.prodigy.the-favourite"
 KIND = "prodigy_confidence"
 SCOPE = "ancillary_punishment_source"
+ROLL_CHOICE = "prodigy_confidence_roll"
 
 
 def _approved(game: GameService, rule: str) -> bool:
@@ -51,6 +52,51 @@ def immune(game: GameService, state: GameState, cadre: rank.Cadre, subject: Acto
         and _is_prodigy(state, subject)
         and rank.actual_members(state, cadre)[0] == subject
     )
+
+
+def _notches(
+    game: GameService, state: GameState, actor: ActorRef, owner: int, *, ace: bool
+) -> tuple[str, ...]:
+    body = find(state, actor)
+    cadre = rank.current(state, actor)
+    if (
+        body is None
+        or cadre is None
+        or body.controller != owner
+        or body.draft.book != "PRODIGY"
+        or (rank.actual_members(state, cadre)[0] == actor) != ace
+        or not _approved(game, EARNED)
+    ):
+        return ()
+    return tuple(
+        x["id"]
+        for x in state.facts
+        if x.get("kind") == KIND
+        and x.get("actor") == actor.token
+        and x.get("cadre") == cadre.id
+        and not x.get("spent")
+    )
+
+
+def roll_notches(
+    game: GameService, state: GameState, actor: ActorRef, owner: int
+) -> tuple[str, ...]:
+    return _notches(game, state, actor, owner, ace=True)
+
+
+def spend_roll_notch(
+    game: GameService,
+    state: GameState,
+    actor: ActorRef,
+    owner: int,
+    identity: str,
+    action: str,
+    event: str,
+) -> None:
+    if identity not in roll_notches(game, state, actor, owner):
+        raise WorkflowError("Choose your original unspent notch while you are the current Ace.")
+    notch = next(x for x in state.facts if x.get("kind") == KIND and x.get("id") == identity)
+    notch.update(spent=event, roll=action)
 
 
 def _authority(
@@ -240,27 +286,7 @@ class AncillaryDisciplineService:
         actor: ActorRef,
     ) -> tuple[str, ...]:
         self._gate(c, viewer)
-        body = find(state, actor)
-        cadre = rank.current(state, actor)
-        if (
-            body is None
-            or cadre is None
-            or body.controller != viewer.user_id
-            or not _is_prodigy(state, actor)
-            or not _approved(self.game, EARNED)
-        ):
-            return ()
-        members = rank.actual_members(state, cadre)
-        if members[0] == actor:
-            return ()
-        return tuple(
-            x["id"]
-            for x in state.facts
-            if x.get("kind") == KIND
-            and x.get("actor") == actor.token
-            and x.get("cadre") == cadre.id
-            and not x.get("spent")
-        )
+        return _notches(self.game, state, actor, viewer.user_id, ace=False)
 
     def confidence_menu(self, viewer: GuildViewer, actor: ActorRef) -> dict[str, Any]:
         with self.store.engine.connect() as c:

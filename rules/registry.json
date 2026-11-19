@@ -15006,16 +15006,17 @@
         "tier_options": {
           "notch": [
             "Record one notch per actual other-member Punishment",
-            "Spend one unspent original notch to advance current optional Status"
+            "Spend one unspent original notch to advance current optional Status",
+            "As the current Ace, spend one unspent original notch to set your saved native Keep to 8–10"
           ]
         },
         "choice_ownership": "The actual Prodigy owns spending that original notch.",
         "target_policy": "Actual active scope only and never a notch for your own punishment.",
         "post_roll_effects": [
-          "Commit source-bound notch and actual actor-level Status change."
+          "Commit the source-bound notch and actual actor-level Status change or middle Keep result. Preserve the original dice, Heat, and ordinary Tag history."
         ],
         "mandatory_followups": [
-          "The Ace roll override, NPC reaction, other punishment producers and mixed Cadres remain open."
+          "NPC reaction, other roll paths and punishment producers, and mixed Cadres remain open."
         ],
         "handler_or_gm_intervention": "The original Handler executes the native real social consequence.",
         "test_fixture_ids": [

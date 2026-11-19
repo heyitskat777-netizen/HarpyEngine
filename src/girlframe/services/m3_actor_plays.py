@@ -1147,14 +1147,31 @@ class ActorPlayService:
     def results(
         self, c: Connection, action: dict[str, Any], *, state: GameState | None = None
     ) -> None:
+        from girlframe.services.m3_ancillary_discipline import ROLL_CHOICE, roll_notches
+
         total = action["data"]["receipt"]["pre_total"] + sum(
             x["amount"] for x in action["data"]["modifiers"]
         )
+        state = state or load_state(c, self.store.campaign_id)
+        actor = ActorRef.model_validate(action["data"]["actor_basic"]["ref"])
+        owner = int(action["actor_id"])
+        confidence = action["data"].get(ROLL_CHOICE)
+        if (
+            confidence is None
+            and action["data"]["play"] == "keep_your_head"
+            and tier(total) != "mid"
+            and roll_notches(self.game, state, actor, owner)
+        ):
+            action["state"] = "awaiting_choices"
+            self.game.request(c, action, owner, ROLL_CHOICE, dict(original_total=total))
+            return
+        elif confidence and confidence.get("notch"):
+            action["data"]["result"]["before_earned_confidence"] = total
+            total = 9
         action["data"]["result"].update(total=total, tier=tier(total))
         action["state"] = "awaiting_choices"
         from girlframe.services.m3_mockingbird import intercept_results
 
-        state = state or load_state(c, self.store.campaign_id)
         if intercept_results(self.game, c, state, action):
             return
         if action["data"].get("harpy_beneath"):
@@ -1298,6 +1315,8 @@ class ActorPlayService:
         *,
         viewer: GuildViewer | None = None,
     ) -> None:
+        from girlframe.services.m3_ancillary_discipline import ROLL_CHOICE, spend_roll_notch
+
         actor = self.validate(c, state, action)
         owner, kind = int(row["actor_id"]), row["kind"]
         body, meta = json.loads(row["body_json"]), action["data"]["actor_basic"]
@@ -1551,6 +1570,24 @@ class ActorPlayService:
                 raise ValueError("The actual adjudicator answers every question honestly")
             action["data"]["result"].update(answers=answer.text, honest_attested=True)
             self.finish(c, state, action)
+        elif kind == ROLL_CHOICE and owner == actor.controller:
+            if (
+                action["data"].get(ROLL_CHOICE) is not None
+                or action["data"]["play"] != "keep_your_head"
+                or len(answer.options) != 1
+                or answer.denied or answer.text or answer.fields or answer.number is not None
+                or answer.flag is not None or answer.member is not None
+            ):
+                raise WorkflowError("Pass or spend one original notch on this saved roll.")
+            choice = answer.options[0]
+            event = action["data"]["response_event"]
+            if choice != "pass":
+                spend_roll_notch(self.game, state, actor.ref, owner, choice, action["id"], event)
+            action["data"][ROLL_CHOICE] = dict(
+                notch=None if choice == "pass" else choice,
+                event=event,
+            )
+            self.results(c, action, state=state)
         elif kind == "actor_keep" and owner == actor.controller:
             from girlframe.services.m3_enforcer_requisitions import keep_extras
             from girlframe.services.m3_harpy_advancements import choose_sparrows
@@ -1633,6 +1670,7 @@ class ActorPlayService:
         self, c: Connection, viewer: GuildViewer, action: dict[str, Any], row: dict[str, Any]
     ) -> dict[str, Any]:
         from girlframe.engine.m3_harpy_defeat import harpy
+        from girlframe.services.m3_ancillary_discipline import ROLL_CHOICE, roll_notches
         from girlframe.services.m3_tag_markers import current as current_markers
 
         state = load_state(c, self.store.campaign_id)
@@ -1705,6 +1743,8 @@ class ActorPlayService:
             "channel": int(action["channel_id"]),
             "context": action["data"]["prepared"]["context"],
         }
+        if row["kind"] == ROLL_CHOICE and own:
+            result[ROLL_CHOICE] = roll_notches(self.game, state, actor.ref, viewer.user_id)
         if action["data"].get("harpy_beneath") and row["kind"].startswith("harpy_beneath_"):
             from girlframe.services.m3_harpy_beneath import projection as harpy_beneath_projection
 

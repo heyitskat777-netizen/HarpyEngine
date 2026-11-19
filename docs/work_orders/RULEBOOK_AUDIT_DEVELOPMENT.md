@@ -3719,7 +3719,7 @@ original Handler from starting a Punishment against their Ace.
 original native Punishment workflows, confirmed there was
 no notch for the Prodigy’s own Punishment, spent the exact
 other-member notch, and exercised the resulting Ace protection.
-The Ace’s roll override, the NPC reaction spend, other
+The Ace’s roll override landed in the next change. The NPC reaction spend, other
 Punishment producers and earlier facing moments remain open.
 [Prodigy pp. 98–99](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=100) · [Native case](../../tests/rules/test_prodigy_discipline.py)
 
@@ -3751,9 +3751,25 @@ roll. A Wife with her current Wife Identity cannot choose
 Disobey the Handler against her actual spouse. No dice or
 Heat are spent for that unavailable response.
 
-The focused native case verifies the original issuer and
+One focused native case passed in 4.91 seconds. It verified the original issuer and
 recipient, the actual marked Tag and adjusted total, and the
 Wife's original-owner response. Direct former-custody and
 other refusal effects and the spouse's pronoun directives
 remain open.
 [Illegal Girl p. 101](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=103) · [Made For Service p. 102](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=104) · [Native case](../../tests/rules/test_ancillary_npc_orders.py)
+
+### Prodigy’s Ace roll override
+
+Base `936168776407305eb9d16c27d70703953b843dfc`. The
+original Prodigy can spend an unspent confidence notch after
+the native Keep Your Head Tag window when she is the current
+Ace. HarpyEngine stores 9 as the middle result, keeps the
+pre-override total and original dice receipt, and still requires
+the human adjudicator's ordinary ruling.
+
+One focused native case passed in 10.17 seconds. It earned the
+notch from a real Punishment, denied another owner, reopened
+the Inbox after database reconnect, and completed the middle
+Keep with one saved roll and one consumed notch. Other roll
+entry points and the swoon option remain open.
+[Earned Confidence p. 98](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=100) · [Native case](../../tests/rules/test_prodigy_discipline.py)

@@ -1,19 +1,26 @@
 """Prodigy notches and Ace protection come from actual Cadre Punishments."""
 
+import asyncio
+
 import pytest
-from test_ancillary_creation import enable, scenario
+from test_ancillary_creation import current, enable, scenario
 from test_cast_service import change
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger
-from test_m2_game import state
+from test_m2_game import Dice, Gateway, answer, pass_tags, state, tick
 
+from girlframe.delivery.m2_worker import GameWorker
+from girlframe.discord_adapter.inbox import InboxView
 from girlframe.engine import m3_ancillary as ancillary
 from girlframe.engine import m3_ancillary_cadre as cadre
+from girlframe.engine.m2 import PlayInput
 from girlframe.engine.m3_actor_bonds import current_ref, is_helpless
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_punishments import Details
 from girlframe.engine.m3_role_punishment_state import Instruction
+from girlframe.services.inbox import InboxService
+from girlframe.services.m3_actor_plays import ActorPlayService
 from girlframe.services.m3_actors import ActorService
 from girlframe.services.m3_ancillary import AncillaryService
 from girlframe.services.m3_ancillary_cadre import AncillaryCadreService
@@ -132,3 +139,62 @@ def test_prodigy_confidence_and_favourite_follow_real_punishments(
     )
     with pytest.raises(WorkflowError, match="eligible"):
         discipline.start(ADMIN, "cannot-punish-ace", 900, final.revision, prodigy.token)
+
+    enact(soldier, PLAYER, "Punishment while Prodigy is Ace")
+    (ace_notch,) = [
+        x["id"] for x in state(game).facts if x.get("kind") == KIND and not x.get("spent")
+    ]
+    plays = ActorPlayService(game)
+    game.dice = Dice((2, 3))
+    preview = plays.preview(OTHER, 900, prodigy)
+    action = plays.begin(
+        OTHER,
+        "ace-keep",
+        900,
+        prodigy,
+        preview["actor"]["source_sha256"],
+        None,
+        preview["cast_revision"],
+        PlayInput(
+            play="keep_your_head",
+            context="I try to finish the report while the alarms continue.",
+            trigger_confirmed=True,
+            heat=0,
+        ),
+    )["action_id"]
+    worker, gateway = GameWorker(game), Gateway()
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    (pending,) = [x for x in game.choices(OTHER) if x["kind"] == "prodigy_confidence_roll"]
+    with pytest.raises(WorkflowError):
+        game.decision(PLAYER, pending["id"])
+    ledger.engine.dispose()
+
+    async def spend_from_inbox():
+        inbox = InboxService(ledger)
+        item = next(x for x in inbox.items(OTHER) if x.identity == pending["id"])
+        click = current(OTHER.user_id, 51230)
+        await click.response.defer(ephemeral=True)
+        await InboxView(inbox, OTHER.user_id).route(click, item)
+        form = click.edit_original_response.call_args.kwargs["view"]
+        form.values["options"] = (ace_notch,)
+        sent = current(OTHER.user_id, 51231)
+        await form.confirm.callback(sent)
+        assert form.completed, sent.followup.send.call_args
+
+    asyncio.run(spend_from_inbox())
+    answer(game, OTHER, "actor_keep", options=("tough", "in_control"), denied=("vicious",))
+    answer(game, ADMIN, "handler_keep", flag=True, text="The report is finished.")
+    tick(worker, gateway, 5)
+    with ledger.engine.connect() as c:
+        saved = game.action(c, action)
+    assert saved["state"] == "complete"
+    assert saved["data"]["receipt"]["faces"] == [2, 3]
+    assert saved["data"]["result"]["before_earned_confidence"] == 5
+    assert saved["data"]["result"]["total"] == 9
+    assert saved["data"]["result"]["tier"] == "mid"
+    assert game.dice.calls == 1
+    assert any(
+        x.get("kind") == KIND and x.get("id") == ace_notch and x.get("roll") == action
+        for x in state(game).facts
+    )

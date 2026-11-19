@@ -588,6 +588,17 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
         ]
     elif kind == "actor_tag_agreement":
         fields = [flags("Do you agree to this saved Tag proposal?")]
+    elif kind == "prodigy_confidence_roll":
+        fields = [
+            Field(
+                "options",
+                "Keep the saved result or spend a notch for an 8–10",
+                (("pass", "Keep the saved result"),) + tuple(
+                    (notch, f"Spend confidence notch {index}")
+                    for index, notch in enumerate(decision[kind], start=1)
+                ),
+            )
+        ]
     if decision.get("actor_basic") and kind == "tag_window":
         fields.append(
             Field(
@@ -1128,6 +1139,8 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
             instructions += "\nMatching Tag " + clean(reward["tag"])
     if decision["kind"] in ("trainer_speak_answer", "trainer_speak_heard"):
         instructions += "\n" + clean(decision["conditioning_text"])
+    if decision["kind"] == "prodigy_confidence_roll":
+        instructions += f"\nSaved total after Tags: {decision['body']['original_total']}."
     if decision["kind"] == "tag_window" and decision.get("gender_man_tags"):
         instructions += (
             "\nThe partner-Tag option uses this roll's one Tag proposal "
