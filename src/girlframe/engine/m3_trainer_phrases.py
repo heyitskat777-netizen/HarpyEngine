@@ -7,8 +7,12 @@ from girlframe.engine.m3_actor_state import ActorRef, Model
 if TYPE_CHECKING:
     from girlframe.engine.m2 import GameState
 
-Phrase = Literal["speak", "sit"]
-PHRASES: tuple[tuple[Phrase, str], ...] = (("speak", "Speak"), ("sit", "Sit"))
+Phrase = Literal["speak", "sit", "play_gentle"]
+PHRASES: tuple[tuple[Phrase, str], ...] = (
+    ("speak", "Speak"),
+    ("sit", "Sit"),
+    ("play_gentle", "Play Gentle"),
+)
 PHRASE_LABELS: dict[str, str] = dict(PHRASES)
 
 

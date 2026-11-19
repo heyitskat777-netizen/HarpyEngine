@@ -2423,6 +2423,7 @@ class GameService:
                                 "escape_play",
                                 "secretary_response_play",
                                 "order_disobey",
+                                "trainer_flirt_play",
                                 "am_prepare",
                                 "am_code_prepare",
                                 "beneath_response_play",
@@ -2611,6 +2612,10 @@ class GameService:
                     raise WorkflowError(
                         "Receive Orders requires the actual Disobey Orders response."
                     )
+                if required["kind"] == "trainer_flirt_play":
+                    from girlframe.services.m3_trainer_phrases import validate_gentle
+
+                    validate_gentle(self, c, state, parent, required, prepared)
                 actions = t.m2["m2_actions"]
                 if c.execute(
                     sa.select(actions.c.id).where(
@@ -6141,11 +6146,14 @@ class GameService:
         *,
         dose_up: bool = False,
         conditioning_phrase: str | None = None,
+        phrase_target: int | None = None,
         advocate_conversation: tuple[str, int, str] | None = None,
         dress_order: tuple[str, int, "Effect"] | None = None,
     ) -> dict[str, Any]:
         if not text.strip() or len(text) > 1200:
             raise WorkflowError("Provide a direct order in 1–1200 characters.")
+        if phrase_target is not None and conditioning_phrase != "play_gentle":
+            raise WorkflowError("Only Play Gentle uses a separate nominated Girl")
         if advocate_conversation is not None and (dose_up or conditioning_phrase is not None):
             raise WorkflowError("Choose one source for this direct order")
         if dress_order is not None and (dose_up or conditioning_phrase or advocate_conversation):
@@ -6244,6 +6252,7 @@ class GameService:
                 )
             conditioning = None
             if conditioning_phrase is not None:
+                from girlframe.engine.m3_trainer_phrases import PHRASE_LABELS
                 from girlframe.services.m3_trainer_phrases import stage as stage_phrase
 
                 order_event = str(uuid4())
@@ -6256,7 +6265,12 @@ class GameService:
                     conditioning_phrase,
                     order_id,
                     order_event,
+                    scene=scene,
+                    counterpart=phrase_target,
                 )
+                text_for_target = PHRASE_LABELS[conditioning_phrase] + ". " + text
+            else:
+                text_for_target = text
             if advocate_conversation is not None:
                 from girlframe.services.m3_advocate_alone import stage_order as stage_advocate_order
 
@@ -6302,9 +6316,7 @@ class GameService:
                     if str(uid) in state.sheets
                 },
                 "order_id": order_id,
-                "order_text": (
-                    conditioning["phrase"].capitalize() + ". " + text if conditioning else text
-                ),
+                "order_text": text_for_target,
                 "participants": scene["participants"],
                 "handler": state.handler,
                 "depth": 0,
@@ -6402,6 +6414,7 @@ class GameService:
                 {"channel": channel, "target": target, "text": text}
                 | ({"dose_up": True} if dose_up else {})
                 | ({"conditioning_phrase": conditioning_phrase} if conditioning_phrase else {})
+                | ({"phrase_target": phrase_target} if phrase_target is not None else {})
                 | (
                     {"advocate_conversation": advocate_conversation}
                     if advocate_conversation
@@ -7062,6 +7075,10 @@ class GameService:
 
                 return SpriteService(self.store).decision(viewer, choice_id)
             action = self.action(c, row["action_id"])
+            if row["kind"] == "trainer_flirt_play":
+                from girlframe.services.m3_trainer_phrases import prove_gentle
+
+                prove_gentle(self, c, load_state(c, self.store.campaign_id), action, dict(row))
             if row["kind"] in ("trainer_speak_answer", "trainer_speak_heard", "trainer_sit"):
                 from girlframe.services.m3_trainer_phrases import display as display_phrase
 

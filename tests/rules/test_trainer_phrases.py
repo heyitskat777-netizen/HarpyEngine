@@ -363,3 +363,82 @@ def test_actual_off_duty_speak_installation_needs_both_originals_and_can_trigger
             OTHER, "after-leave", state(game).revision, 900, girl, (1, 0), account="I move."
         )["destination"] == [1, 0]
     assert game.inspect(OTHER, issued["action_id"])["state"] == "complete"
+
+
+def test_play_gentle_requires_the_original_girls_flirt_with_the_issued_target(ledger):
+    from girlframe.services.m3_trainer_phrases import FLIRT
+
+    _, game = ready(ledger)
+    create_trainer(ledger, start_with_speak=True)
+    worker, gateway = GameWorker(game), Gateway()
+    issued = game.issue_order(
+        ADMIN,
+        "gentle",
+        900,
+        3,
+        "Approach the nominated Girl.",
+        conditioning_phrase="play_gentle",
+        phrase_target=2,
+    )
+    parent = issued["action_id"]
+    tick(worker, gateway, 3)
+    answer(game, OTHER, "order_response", options=("obedient",))
+    (choice,) = (x for x in game.choices(OTHER) if x["kind"] == FLIRT)
+    with pytest.raises(WorkflowError):
+        game.decision(PLAYER, choice["id"])
+    with pytest.raises(WorkflowError, match="original Play Gentle Flirt"):
+        game.begin(
+            OTHER,
+            "replacement-play",
+            900,
+            state(game).sheets["3"].revision,
+            PlayInput(
+                play="keep_your_head",
+                context="I try something else.",
+                trigger_confirmed=True,
+                heat=0,
+                parent=parent,
+            ),
+        )
+    assert game.inspect(OTHER, parent)["state"] != "complete" and game.dice.calls == 0
+    ledger.engine.dispose()
+
+    async def start_from_inbox():
+        click = current(3, 47340)
+        click.channel_id = 900
+        await click.response.defer(ephemeral=True)
+        inbox = InboxService(ledger)
+        item = next(x for x in inbox.items(OTHER) if x.identity == choice["id"])
+        await InboxView(inbox, 3).route(click, item)
+        form = click.edit_original_response.call_args.kwargs["view"]
+        fields = {x.key: x for x in form.fields}
+        assert tuple(key for key, _ in fields["play"].options) == ("flirt",)
+        assert tuple(key for key, _ in fields["target"].options) == ("2",)
+        form.values.update(
+            play=("flirt",),
+            gain=("0",),
+            pair_share=("0",),
+            heat=("0",),
+            piloting=("no",),
+            trigger=("yes",),
+            context="I actually Flirt.",
+        )
+        sent = current(3, 47341)
+        await form.confirm.callback(sent)
+        assert form.completed, (
+            sent.response.send_message.call_args,
+            sent.followup.send.call_args,
+            sent.edit_original_response.call_args,
+        )
+
+    asyncio.run(start_from_inbox())
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    answer(game, OTHER, "actor_flirt", options=("name",))
+    assert game.inspect(OTHER, parent)["state"] != "complete"
+    answer(game, PLAYER, "target_flirt", text="My actual reply.")
+    assert game.inspect(OTHER, parent)["state"] == "complete" and game.dice.calls == 1
+    assert any(
+        x.kind == "flirt_followthrough" and x.owner == 3 and x.target == 2
+        for x in state(game).obligations
+    )

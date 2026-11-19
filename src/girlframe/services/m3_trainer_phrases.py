@@ -8,7 +8,7 @@ import sqlalchemy as sa
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
-from girlframe.engine.m2 import ChoiceAnswer, GameState, higher, shift_status
+from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput, higher, shift_status
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_handler_state import Conditioning
@@ -29,6 +29,7 @@ RULE = "handler-playbook.trainer.conditioning-phrases"
 SPEAK = "trainer_speak_answer"
 HEAR = "trainer_speak_heard"
 SIT = "trainer_sit"
+FLIRT = "trainer_flirt_play"
 
 
 def _installation(
@@ -171,6 +172,9 @@ def stage(
     phrase: str,
     order: str,
     event: str,
+    *,
+    scene: dict[str, Any],
+    counterpart: int | None = None,
 ) -> dict[str, Any]:
     girl = current_ref(state, target)
     installation = _installation(game, c, state, girl, phrase)
@@ -179,6 +183,19 @@ def stage(
         raise WorkflowError(f"Use an installed {label} phrase and its actual higher-Status issuer")
     if phrase == "sit":
         _seat_body(state, girl)
+    if (counterpart is not None) != (phrase == "play_gentle"):
+        raise WorkflowError("Choose another actual Girl for the Play Gentle phrase")
+    nominated = None
+    if counterpart is not None:
+        if (
+            counterpart == target
+            or counterpart not in scene["participants"]
+            or str(counterpart) not in state.sheets
+            or counterpart not in state.order
+        ):
+            raise WorkflowError("Choose another original Girl currently in this actual scene")
+        game.pilot_cast(c, state, scene, owners=(issuer, target, counterpart))
+        nominated = current_ref(state, counterpart).model_dump(mode="json")
     return dict(
         phrase=phrase,
         order=order,
@@ -186,7 +203,7 @@ def stage(
         installation=installation,
         target=girl.model_dump(mode="json"),
         issuer=current_ref(state, issuer).model_dump(mode="json"),
-    )
+    ) | ({"counterpart": nominated} if nominated is not None else {})
 
 
 def _original(
@@ -268,6 +285,12 @@ def offer_phrase(
     if original is None:
         return False
     _, saved = original
+    if saved["phrase"] == "play_gentle":
+        target = int(saved["counterpart"]["entity"])
+        game.request(
+            c, action, int(saved["target"]["entity"]), FLIRT, dict(source=saved, target=target)
+        )
+        return True
     game.request(
         c,
         action,
@@ -276,6 +299,51 @@ def offer_phrase(
         dict(source=saved),
     )
     return True
+
+
+def prove_gentle(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    parent: dict[str, Any],
+    request: dict[str, Any],
+) -> int:
+    original = _original(game, c, state, parent)
+    body = json.loads(request["body_json"])
+    if original is None or original[1] != body.get("source"):
+        raise WorkflowError("Recover the original Play Gentle order")
+    _, saved = original
+    if saved["phrase"] != "play_gentle" or request["actor_id"] != saved["target"]["entity"]:
+        raise WorkflowError("Only the original Girl can make this required Flirt")
+    other = ActorRef.model_validate(saved["counterpart"])
+    target = int(other.entity)
+    scene = game.scene(c, parent["channel_id"])
+    if (
+        target != body["target"]
+        or target not in scene["participants"]
+        or target not in state.order
+        or current_ref(state, target) != other
+        or not HandlerService(game.store)._member(c, target)
+    ):
+        raise WorkflowError("Recover the exact original Play Gentle counterpart")
+    game.pilot_cast(c, state, scene, owners=(target,))
+    return target
+
+
+def validate_gentle(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    parent: dict[str, Any],
+    request: dict[str, Any],
+    prepared: PlayInput,
+) -> None:
+    if (
+        prepared.play != "flirt"
+        or prepared.target != prove_gentle(game, c, state, parent, request)
+        or prepared.target_actor is not None
+    ):
+        raise WorkflowError("Make the original Play Gentle Flirt with its exact counterpart")
 
 
 def choose(

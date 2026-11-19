@@ -289,13 +289,22 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
     elif kind == "gender_animal_tag":
         fields = [text("text", "Give the non-Animal partner an ordinary Tag")]
     elif kind == "tag_resolution" and "revolutionary_replacement" in decision:
-        fields = [menu("options", "Choose what the Revolutionary does with that Tag",
-                       ("embrace", "reject"))]
+        fields = [
+            menu(
+                "options", "Choose what the Revolutionary does with that Tag", ("embrace", "reject")
+            )
+        ]
         if decision["revolutionary_replacement"]:
-            fields.append(entities(
-                "denied", "Original Identity to replace if embracing",
-                decision["revolutionary_replacement"], 0, 1, False,
-            ))
+            fields.append(
+                entities(
+                    "denied",
+                    "Original Identity to replace if embracing",
+                    decision["revolutionary_replacement"],
+                    0,
+                    1,
+                    False,
+                )
+            )
     elif kind == "tag_resolution":
         fields = [
             menu("options", "Resolve the repeated marked Tag", ("embrace", "reject")),
@@ -595,7 +604,8 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
             Field(
                 "options",
                 "Keep the saved result or spend a notch for an 8–10",
-                (("pass", "Keep the saved result"),) + tuple(
+                (("pass", "Keep the saved result"),)
+                + tuple(
                     (notch, f"Spend confidence notch {index}")
                     for index, notch in enumerate(decision[kind], start=1)
                 ),
@@ -1089,7 +1099,12 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
             interaction, PunishmentService(game.store), decision["body"]["work_id"]
         )
         return
-    if decision["kind"] in ("escape_play", "order_disobey", "beneath_response_play"):
+    if decision["kind"] in (
+        "escape_play",
+        "order_disobey",
+        "beneath_response_play",
+        "trainer_flirt_play",
+    ):
         await open_play(interaction, game, parent=decision)
         return
     fields = choice_fields(decision)
@@ -1551,16 +1566,24 @@ async def open_play(
                 )
 
         sleeping_doll_targets = {x["id"]: x for x in await threaded(actual_doll_observers)}
+    gentle_target = (
+        parent["body"]["target"] if parent and parent["kind"] == "trainer_flirt_play" else None
+    )
+    social_targets = tuple(
+        (str(x), scene["labels"][str(x)]) for x in scene["pilots"] if x != viewer.user_id
+    ) + tuple(
+        (key, ("Harpy: " if key.startswith("harpy:") else "NPC: ") + row["label"])
+        for key, row in npc_flirt_targets.items()
+    )
+    if gentle_target is not None:
+        plays = ("flirt",)
+        social_targets = ((str(gentle_target), scene["labels"][str(gentle_target)]),)
     fields = [
         menu("play", "Choose a Play", plays),
         Field(
             "target",
             "Target for Flirt or Put Someone Beneath You",
-            tuple((str(x), scene["labels"][str(x)]) for x in scene["pilots"] if x != viewer.user_id)
-            + tuple(
-                (key, ("Harpy: " if key.startswith("harpy:") else "NPC: ") + row["label"])
-                for key, row in npc_flirt_targets.items()
-            ),
+            social_targets,
             0,
             1,
             required=False,
@@ -1909,7 +1932,9 @@ async def open_play(
             gain=int(one(values, "gain") or "0"),
             pair_share=int(one(values, "pair_share") or "0"),
             disposable_heat=cast(Literal[0, 3, 4], int(one(values, "disposable_heat") or "0")),
-            target=(parent["body"].get("target") if play == "flirt" else None)
+            target=gentle_target
+            if gentle_target is not None
+            else (parent["body"].get("target") if play == "flirt" else None)
             if parent and parent["kind"] == "bonded_rejection_child"
             else int(parent["body"]["target"]["entity"])
             if parent
@@ -2931,6 +2956,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
             app_commands.Choice(name="Dose Up (typed cocktail order)", value="dose_up"),
             app_commands.Choice(name="Conditioning Phrase (Speak)", value="trainer_speak"),
             app_commands.Choice(name="Conditioning Phrase (Sit)", value="trainer_sit"),
+            app_commands.Choice(name="Conditioning Phrase (Play Gentle)", value="trainer_gentle"),
             app_commands.Choice(name="Grant leave after Sit", value="trainer_leave"),
             app_commands.Choice(name="Echoes of Old Command", value="harpy_echoes"),
         ]
@@ -2941,10 +2967,15 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         instruction: str,
         as_npc: bool = False,
         purpose: app_commands.Choice[str] | None = None,
+        phrase_target: discord.Member | None = None,
     ) -> None:
         typed_dose = purpose is not None and purpose.value == "dose_up"
         use = purpose.value if purpose is not None else "ordinary"
-        phrase = {"trainer_speak": "speak", "trainer_sit": "sit"}.get(use)
+        phrase = {
+            "trainer_speak": "speak",
+            "trainer_sit": "sit",
+            "trainer_gentle": "play_gentle",
+        }.get(use)
         echoes = purpose is not None and purpose.value == "harpy_echoes"
         if as_npc and (typed_dose or phrase or use == "trainer_leave"):
             await reply(
@@ -2995,6 +3026,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
                     instruction,
                     dose_up=typed_dose,
                     conditioning_phrase=phrase,
+                    phrase_target=phrase_target.id if phrase_target is not None else None,
                 )["action_id"]
                 + "`."
             ),

@@ -1386,9 +1386,19 @@ authority needs human review. Both original participants can install Sit
 through Off-Duty. One focused case passed in 6.08 seconds with
 `python -m pytest -q --tb=short tests/rules/test_trainer_phrases.py -k 'installation and sit'`
 and `PYTHONPATH="$PWD/src"`. It covered native controls, reopening,
-wrong issuer and actual movement after release. Punishment-time
-installation and the other five phrases stay open.
+wrong issuer and actual movement after release.
 [Sit case](../../tests/rules/test_trainer_phrases.py)
+
+Play Gentle, based on `9776126ba2d06342c1f06217a9f115702015e3b0`, binds
+the issuer's chosen original Girl in the shared scene. Compliance opens
+the affected Girl's ordinary Flirt in her Inbox and holds the original
+Order until that Play resolves. The counterpart answers for herself.
+One focused case passed in 4.52 seconds using
+`python -m pytest -q --tb=short tests/rules/test_trainer_phrases.py -k play_gentle`
+with `PYTHONPATH="$PWD/src"`. It exercised a reopened Inbox, wrong owner,
+the fixed Play and target, one saved roll and ordinary follow-through.
+Other counterpart types and Punishment-time installation remain open.
+[Play Gentle case](../../tests/rules/test_trainer_phrases.py)
 
 ### Scientist's initial laboratory Project step
 
