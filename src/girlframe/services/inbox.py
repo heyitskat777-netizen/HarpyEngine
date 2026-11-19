@@ -2967,6 +2967,8 @@ class InboxService:
             from girlframe.services.m3_berserk_frame import visible as visible_berserk
             from girlframe.services.m3_budget_hearing import options as hearing_options
             from girlframe.services.m3_budget_hearing import visible as visible_hearings
+            from girlframe.services.m3_budget_trial import options as trial_options
+            from girlframe.services.m3_budget_trial import visible as visible_trials
             from girlframe.services.m3_bunk_harpy import options as bunk_options
             from girlframe.services.m3_bunk_harpy import visible as visible_bunks
             from girlframe.services.m3_foundation_attack import (
@@ -2983,6 +2985,26 @@ class InboxService:
             from girlframe.services.m3_rebel_frame_theft import visible as visible_thefts
 
             journalism = JournalistService(GameService(self.store))
+            for trial in visible_trials(canon, viewer):
+                trial_pending = trial.phase not in ("saved", "executed")
+                items.append(
+                    InboxItem(
+                        "budget-trial:" + trial.id,
+                        "work",
+                        trial.id,
+                        canon.revision,
+                        "off_duty",
+                        "Private Budget trial",
+                        "Original court participants",
+                        "pending" if trial_pending else "resolved",
+                        bool(trial_options(trial, viewer.user_id)),
+                        False,
+                        "Review the original court record.",
+                        "",
+                        "Open trial",
+                        task="m3_budget_trial",
+                    )
+                )
             for base_attack in visible_foundation_attacks(canon, viewer):
                 attack_pending = base_attack.resolution is None
                 items.append(
@@ -4431,6 +4453,13 @@ class InboxService:
                     primary, task_name = "Review Frame bonus", "m3_frame_reward"
                 elif kind in ("off_duty_handler_scene", "off_duty_status_review"):
                     primary, task_name = "Review Off-Duty", "m3_off_duty"
+                elif (
+                    kind == "strain_endgame_effect"
+                    and json.loads(work["body_json"]).get("rule_id") == "strain.budget.endgame.1"
+                ):
+                    if any(x.identity == work["id"] and x.task == "m3_budget_trial" for x in items):
+                        continue
+                    primary, task_name = "Open the Budget trial", "m3_budget_trial"
                 elif (
                     kind == "strain_endgame_effect"
                     and json.loads(work["body_json"]).get("rule_id") == "strain.budget.endgame.6"

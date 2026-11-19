@@ -6393,3 +6393,10 @@ passes and three failures. The failed expectations were two stale Stim
 NPC tests and a stale historical registry hash assertion. The corrected
 cases passed their selected tests on newer code. The checkout under
 full regression did not contain those corrections.
+
+Subsequent offline work exercised the original Rebel Frame theft and
+recovery (70 selected checks), occupied-base siege (22), attempted
+Foundation base destruction and Cadre interception (41), and the Budget
+trial's rescue and terminal sentence (52). The work order links the
+focused tests and printed sources. The selections share some
+tests. Authenticated Activity and real-player acceptance remain pending.

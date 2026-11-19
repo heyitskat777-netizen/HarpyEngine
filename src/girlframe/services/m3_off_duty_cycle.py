@@ -339,11 +339,15 @@ class CycleService:
                 )
             work = self.periods._pending(c, identity)
             start = [x for x in work if x["kind"] == "off_duty_strain_start"]
+            from girlframe.services.m3_budget_trial import due as due_trial
+
+            execution = due_trial(c, StrainService(self.periods), state, identity)
             blockers = frozenset(
                 x["id"]
                 for x in work
                 if x["kind"]
                 not in ("off_duty_strain_start", "off_duty_handler_scene", "off_duty_status_review")
+                and (execution is None or x["id"] != execution[1].id)
                 and not (
                     x["kind"] == "punishment"
                     and json.loads(x["body_json"]).get("due_stage") == "active"
@@ -949,7 +953,15 @@ class CycleService:
         def change(c: Connection, period: rules.Period, state: GameState, event_id: str) -> Outcome:
             self.missions._handler(c, viewer)
             rules.current(period, expected)
-            pending = self.periods._pending(c, identity)
+            from girlframe.services.m3_budget_trial import due as due_trial
+            from girlframe.services.m3_strain import StrainService
+
+            execution = due_trial(c, StrainService(self.periods), state, identity)
+            pending = [
+                x
+                for x in self.periods._pending(c, identity)
+                if execution is None or x["id"] != execution[1].id
+            ]
             review = [x for x in pending if x["kind"] == "off_duty_status_review"]
             if (
                 (period.status_review is None and len(review) != 1)
@@ -1163,7 +1175,16 @@ class CycleService:
                     require_prince_off_duty(
                         self.game, c, state, identity, prince_ref(state, prince_owner)
                     )
-            pending = frozenset(x["id"] for x in self.periods._pending(c, identity))
+            from girlframe.services.m3_budget_trial import due as due_trial
+            from girlframe.services.m3_strain import StrainService
+
+            strain_service = StrainService(self.periods)
+            execution = due_trial(c, strain_service, state, identity)
+            pending = frozenset(
+                x["id"]
+                for x in self.periods._pending(c, identity)
+                if execution is None or x["id"] != execution[1].id
+            )
             # Prove actual completion before advancing any world entity.
             finished, updated = rules.finish(
                 period,
@@ -1235,6 +1256,7 @@ class CycleService:
                 updated.strain = updated.strain.model_copy(
                     update={"triggers": updated.strain.triggers + additions}
                 )
+            settled_trial = None
             if not severe:
                 from girlframe.engine.m3_handler_retirement import finish as retire_handler
                 from girlframe.engine.m3_rebel_defection import settle as settle_defections
@@ -1257,6 +1279,19 @@ class CycleService:
                 if loss_episode is None:
                     finish_leave(updated, identity, event)
                     updated = retire_handler(updated, identity, event, appointment)
+                if execution is not None:
+                    from girlframe.engine.m3_budget_trial import execute
+                    from girlframe.engine.m3_void_leave import leaves
+
+                    if loss_episode is not None or any(
+                        x.period == identity for x in leaves(updated)
+                    ):
+                        raise WorkflowError(
+                            "Review overlapping leave or quadrant loss before the court sentence"
+                        )
+                    row, trial = execution
+                    updated = execute(updated, trial, event, appointment)
+                    settled_trial = row
             self.game.event(
                 c,
                 viewer.user_id,
@@ -1267,21 +1302,25 @@ class CycleService:
                 period_id=identity,
                 completed=not severe,
             )
+            if settled_trial is not None:
+                strain_service._save(
+                    c, settled_trial, event, json.loads(settled_trial["body_json"]), resolved=True
+                )
             self.periods._save(c, finished, event)
-            retired = next(
+            departed = next(
                 (
                     x
                     for x in updated.handler_archives
-                    if x.source_event == event and x.ending == "retired"
+                    if x.source_event == event and x.ending in ("retired", "death")
                 ),
                 None,
             )
-            if retired is not None:
+            if departed is not None:
                 from girlframe.services.m3_battle import synchronize_casts
                 from girlframe.services.m3_handler_consequences import end_body_reviews
 
                 synchronize_casts(self.game, c, event)
-                end_body_reviews(self.game, c, retired)
+                end_body_reviews(self.game, c, departed)
             if loss_episode is not None:
                 from girlframe.services.m3_quadrant_loss import materialize_loss
 

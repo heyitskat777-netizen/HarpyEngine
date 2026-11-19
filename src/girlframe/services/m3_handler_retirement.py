@@ -22,7 +22,11 @@ EVENT = "m3.handler_retirement_awarded"
 
 
 def require_successor(state: GameState) -> None:
-    if any(x.retired for x in rules.awards(state)) and active_handler(state) is None:
+    from girlframe.engine.m3_budget_trial import trials
+
+    if active_handler(state) is None and (
+        any(x.retired for x in rules.awards(state)) or any(x.executed for x in trials(state))
+    ):
         raise WorkflowError(
             "Activate an actual successor Handler before starting the next campaign phase"
         )

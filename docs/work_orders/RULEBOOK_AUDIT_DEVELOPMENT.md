@@ -39,8 +39,8 @@ Off-Duty resumes only at its genuine completion boundary.
 
 The registry tracks each source's current scope and its acceptance tests.
 Every ordinary core Strain column has an effect path. Several have incomplete
-branches. Rebellion Endgames 3–8 and Budget
-Endgames 1–2 have no effect resolver. Current subset limitations include
+branches. Rebellion Endgames 3–8 and Budget Endgame 2 are still awaiting
+their complete effect routes. Current subset limitations include
 the High Budget hearing's Severe finding and the High Void bunk's separate
 contact Play. The individual receipts below retain the rest of the source
 questions and missing variants. A cascade retains both child dice and
@@ -1058,3 +1058,26 @@ reopening the database, and activation after resolution. Static typing
 passed on ten source files. Attacks on the Handler or a Girl, an
 unrevealed attacker and protected-base variants remain open.
 [High Budget p. 149](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=151) · [Base attack test](../../tests/rules/test_foundation_attack.py)
+
+## Budget Endgame warcrime trial
+
+The base is `14f108ac2a73f895383bc3c5b219041108d1f8cd`. An original,
+independently controlled fictional Director serves the charge and records
+the court's finding. The original Handler can answer and each original
+Cadre member can act or pass. Participants read their own statements and
+the court can read testimony through the private history. A finding that
+the Cadre saved the Handler requires actual Cadre action. A conviction
+leaves genuine future work. At the original Off-Duty close, the engine
+ends the exact Handler body, resolves the court work and requires a real
+successor before the next campaign phase. The original signed sentence
+and its actual consequence have distinct event sources.
+
+The 52 selected tests passed in 96.81 seconds. Both findings ran from a
+saved recursive Budget roll through the actual Off-Duty transition. The
+tests verified private read access, original decision ownership, pause,
+staleness, idempotency, database reopening, final archive and succession
+gate. Static typing passed on eight source files. The printed sentence
+sets no execution time. This implementation carries it out at the close
+of the original Off-Duty period. Conflicting leave, retirement, or
+Quadrant loss and other permissible court arrangements remain open.
+[Budget Endgame p. 150](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=152) · [Trial test](../../tests/rules/test_budget_trial.py)

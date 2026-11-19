@@ -20,7 +20,7 @@ from girlframe.services.m3_handler_tags import HandlerTagService
 from girlframe.services.onboarding import WorkflowError
 
 
-def source(store, *, option=5):
+def source(store, *, option=5, without_void=False):
     strain, game = ready(store, face=6)
     approval = store.policy.m3_approval
     store.policy = store.policy.model_copy(
@@ -30,6 +30,13 @@ def source(store, *, option=5):
             )
         }
     )
+    if without_void:
+        with store.transaction() as c:
+            canon = state(game)
+            for sheet in canon.sheets.values():
+                for asset in sheet.assets:
+                    asset.void = False
+            game.event(c, 1, "budget-no-void-fixture", "synthetic.no_void_assets", canon)
     period = prepared(strain, game, high=frozenset({"budget"}))
     while True:
         request = next(
