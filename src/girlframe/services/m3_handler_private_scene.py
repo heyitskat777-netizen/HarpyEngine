@@ -81,7 +81,7 @@ class HandlerPrivateSceneService:
     def _pending(self, c: Connection, state: GameState, value: rules.PrivateScene) -> bool:
         if value.phase in rules.DISCIPLINE_PHASES:
             return rules.pending_discipline(state, value)
-        if value.phase == "advocate_followup":
+        if value.phase in ("advocate_followup", "scientist_followup"):
             from girlframe.services.m3_advocate_private_scene import pending
 
             return pending(self.game, c, value)
@@ -191,9 +191,11 @@ class HandlerPrivateSceneService:
         if value.phase == "insurgent_suspicion" and actor == value.handler:
             return ("insurgent_leave_suspicions",)
         if value.phase == "scientist_proposal" and actor == value.handler:
-            return ("scientist_plan_exchange",)
+            return ("scientist_plan_exchange", "scientist_cause_void", "withdraw")
         if value.phase == "scientist_asset" and actor == value.girl:
             return ("scientist_exchange", "scientist_decline")
+        if value.phase == "scientist_void" and actor == value.girl:
+            return ("scientist_gain_void", "scientist_decline")
         if value.phase == "advocate_choice" and actor == value.handler:
             return ("advocate_lower", "advocate_raise")
         frantic_choices = {
@@ -264,6 +266,7 @@ class HandlerPrivateSceneService:
         effects: tuple[str, ...] = (),
         tag: str = "",
         exchange: rules.LabExchange | None = None,
+        asset: str = "",
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             canon = load_state(c, self.store.campaign_id)
@@ -338,24 +341,13 @@ class HandlerPrivateSceneService:
                         }[step]
                     )
             elif value.playbook == "Scientist":
-                if step == "scientist_plan_exchange" and exchange is not None:
-                    if not exchange.name.strip() or not exchange.description.strip():
-                        raise WorkflowError("Name and describe the proposed replacement Asset")
-                    update.update(phase="scientist_asset", exchange=exchange)
-                elif step == "scientist_exchange" and value.exchange is not None:
-                    from girlframe.services.m3_scientist_private_scene import excise
+                from girlframe.services.m3_scientist_private_scene import (
+                    respond as respond_scientist,
+                )
 
-                    replacement = excise(canon, value.girl, text, value.exchange, event)
-                    update.update(
-                        phase="complete",
-                        outcome="scientist_exchanged",
-                        removed_asset=text,
-                        installed_asset=replacement,
-                    )
-                elif step == "scientist_decline":
-                    update.update(phase="complete", outcome="declined")
-                else:
-                    raise WorkflowError("Recover the original proposed Asset exchange")
+                update.update(
+                    respond_scientist(canon, value, event, step, text, asset, exchange, effects)
+                )
             elif value.playbook == "Frantic":
                 from girlframe.services.m3_frantic_private_scene import respond as respond_frantic
 
@@ -410,6 +402,10 @@ class HandlerPrivateSceneService:
                 from girlframe.services.m3_battle import synchronize_damage
 
                 synchronize_damage(self.game, c, event)
+            if value.phase == "scientist_followup":
+                from girlframe.services.m3_scientist_private_scene import materialize
+
+                materialize(self.game, c, value)
             return dict(id=identity, phase=value.phase, revision=canon.revision)
 
         return self._write(
@@ -417,7 +413,8 @@ class HandlerPrivateSceneService:
             key,
             dict(id=identity, expected=expected, step=step, text=text, action=action)
             | (dict(effects=effects, tag=tag) if effects or tag else {})
-            | (dict(exchange=exchange.model_dump(mode="json")) if exchange is not None else {}),
+            | (dict(exchange=exchange.model_dump(mode="json")) if exchange is not None else {})
+            | (dict(asset=asset) if asset else {}),
             operation,
         )
 
@@ -466,6 +463,10 @@ class HandlerPrivateSceneService:
                 from girlframe.services.m3_scientist_private_scene import eligible
 
                 assets = eligible(canon, value.girl)
+            if value.phase == "scientist_void" and actor == value.girl:
+                from girlframe.services.m3_scientist_private_scene import uncorrupted
+
+                assets = uncorrupted(canon, value.girl)
             if value.phase == "advocate_choice" and actor == value.handler:
                 from girlframe.services.m3_advocate_private_scene import eligible as advocate_assets
 

@@ -16149,14 +16149,40 @@
       },
       "required": true,
       "implementation": "subset",
-      "source_audit": "inventoried",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original Scientist and Girl independently attest to their consented one-on-one scene at an actual operational Base laboratory.",
+        "actor_type": "The active Scientist and the same original Girl outside her Frame.",
+        "pre_roll_sources": [
+          "Both actual scene roles, independent consent and attestations, repeat- and pause-safe source revision, current original laboratory and actual owned Assets."
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "diceless": [
+            "Choose an actual Void-touched ordinary Girl Asset exchange, ordinary Void gain, or both in that order."
+          ]
+        },
+        "choice_ownership": "The Scientist selects the experiments. The Girl selects and describes her own actual Assets and can decline each pending effect.",
+        "target_policy": "Only the original Girl's current sheet and the actual scene; keep private choices and concealed resources scoped to their owners.",
+        "post_roll_effects": [
+          "Exchange one actual Asset while preserving the other resources. Apply ordinary Void gain and preserve the original source and any real threshold continuation."
+        ],
+        "mandatory_followups": [
+          "Complete a materialized Void threshold through the existing owned workflow. Memory removal and the situation-triggered forced Play need distinct original-evidence ports."
+        ],
+        "handler_or_gm_intervention": "The original Scientist initiates the experiments. Use the existing Void consequence authority for any subsequent controlled fact.",
+        "test_fixture_ids": [
+          "tests/rules/test_scientist_lab.py"
+        ]
+      },
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_scientist_lab.py::test_private_scientist_exchange_changes_one_actual_owned_void_asset"
+        "tests/rules/test_scientist_lab.py::test_private_scientist_exchange_changes_one_actual_owned_void_asset",
+        "tests/rules/test_scientist_lab.py::test_scientist_owned_native_void_gain_and_actual_threshold_followup"
       ],
       "m2_play_id": null,
       "module": "core"

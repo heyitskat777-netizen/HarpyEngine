@@ -1688,3 +1688,23 @@ passed for eight source files. Remaining Sentinel work includes
 communication boundaries, the terrain Tag, fouled footing, and the
 Shell's owned Heat roll and consequences.
 [Sentinel p. 171](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=173)
+
+### Scientist laboratory Void gain
+
+Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab
+scene has independently recorded both participants' consent and
+attestations, the Scientist can select ordinary Void gain alone or
+after an Asset exchange. The Girl alone supplies her Asset and its
+alteration. Ordinary resistance and stored Void apply. When the
+last clean Frame Asset is altered, the owned threshold stays pending
+in the original scene until the standard Void workflow resolves it.
+For an actually outside Girl, the Handler can resolve the affected
+Frame's abandonment without moving the Girl or inventing escape costs.
+
+**53 selected tests passed in 172.49 seconds**, including the original
+exchange, both native experiment paths, unauthorized access, stale
+and repeated submission, safety pause, database connection restart,
+private Inbox ownership, and the real abandoned Frame transformation.
+The remaining experiments require a personal memory with a provable
+linked Tag or Bond, and a later situation that triggers an actual Play.
+[Scientist p. 129](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=131) · [Void p. 17](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=19)

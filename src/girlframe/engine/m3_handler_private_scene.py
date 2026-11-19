@@ -39,6 +39,8 @@ Phase = Literal[
     "insurgent_suspicion",
     "scientist_proposal",
     "scientist_asset",
+    "scientist_void",
+    "scientist_followup",
     "frantic_roll",
     "frantic_comfort",
     "frantic_girl_tag",
@@ -93,6 +95,8 @@ class PrivateScene(Model):
             "insurgent_resolved",
             "insurgent_left_suspicions",
             "scientist_exchanged",
+            "scientist_void_gained",
+            "scientist_void_resisted",
             "frantic_comforted",
             "frantic_mutual_tags",
             "frantic_bond",
@@ -110,6 +114,7 @@ class PrivateScene(Model):
     exchange: LabExchange | None = Field(default=None, exclude_if=lambda value: value is None)
     removed_asset: str | None = Field(default=None, exclude_if=lambda value: value is None)
     installed_asset: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    void_asset: str | None = Field(default=None, exclude_if=lambda value: value is None)
     roll: FranticRoll | None = Field(default=None, exclude_if=lambda value: value is None)
     handler_tag: str | None = Field(default=None, exclude_if=lambda value: value is None)
     damaged_asset: str | None = Field(default=None, exclude_if=lambda value: value is None)

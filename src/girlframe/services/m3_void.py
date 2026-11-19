@@ -164,6 +164,13 @@ def source(
 
             prove_temptation(game, c, first, body, actor)
             return current, body, actor
+        if body.get("reason") == "scientist_private_void":
+            from girlframe.services.m3_scientist_private_scene import (
+                prove_threshold as prove_scientist_threshold,
+            )
+
+            prove_scientist_threshold(game, c, first, body, actor)
+            return current, body, actor
         if body.get("reason") == "budget_cleanup":
             from girlframe.services.m3_budget_cleanup import prove_void_source as prove_cleanup
 
@@ -539,9 +546,9 @@ def complete(
             "budget_removal",
             "doctor_wings",
             "doctor_wings_return",
+            "scientist_private_void",
         ):
-            # These actual loss sources have no synthetic parent Play; source-scoped
-            # required work was resolved above by the real owned Void outcome.
+            # These sources have no parent Play to resume after the owned outcome.
             continue
         elif body.get("reason") in ("ankou_feedback_sequence", "ankou_processor_unlink"):
             from girlframe.services.m3_ankou import synchronize_events as sync_ankou_effects
@@ -659,6 +666,14 @@ class VoidService:
             handler = True
         except WorkflowError:
             pass
+        if handler and body.get("reason") == "scientist_private_void":
+            from girlframe.engine.m3_handler_consequences import active_handler
+            from girlframe.engine.m3_handler_private_scene import records as private_scenes
+
+            handler = any(
+                x.id == body["case"] and x.handler == active_handler(state)
+                for x in private_scenes(state)
+            )
         guardian = value.guardian or (
             ActorRef.model_validate_json(json.dumps(pending["guardian"]))
             if pending.get("guardian")
@@ -915,6 +930,10 @@ class VoidService:
                 "confirm_approach",
             ):
                 self._handler(c, viewer)
+                if not view["handler"]:
+                    raise WorkflowError(
+                        "Only the actual authorized Handler owns this factual choice."
+                    )
             elif operation in ("accept_protection", "release_protection"):
                 if not view["guardian_owned"]:
                     raise WorkflowError(

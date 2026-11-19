@@ -39,6 +39,8 @@ CHOICES = {
     "insurgent_leave_suspicions": "Leave her suspicions alone",
     "scientist_plan_exchange": "Propose a replacement for a Void-touched Asset",
     "scientist_exchange": "Choose your original Void-touched Asset for the exchange",
+    "scientist_cause_void": "Cause ordinary Void gain",
+    "scientist_gain_void": "Choose and describe how Void changes your Asset",
     "scientist_decline": "Decline the exchange",
     "frantic_roll": "Roll with her current Status",
     "frantic_comfort": "Offer comfort",
@@ -93,6 +95,7 @@ async def open_favor(
         return
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        choice = values["choice"][0]
         text = (
             (values.get("identity") or ("",))[0]
             if data["phase"] == "trainer_answer"
@@ -101,8 +104,10 @@ async def open_favor(
         if data["phase"] in ("scientist_asset", "advocate_choice"):
             text = (values.get("asset") or ("",))[0]
         exchange = (
-            LabExchange(name=values["asset_name"], description=values["asset_description"])
-            if (data["phase"] == "scientist_proposal")
+            LabExchange(
+                name=values.get("asset_name", ""), description=values.get("asset_description", "")
+            )
+            if choice == "scientist_plan_exchange"
             else None
         )
         await asyncio.to_thread(
@@ -111,7 +116,7 @@ async def open_favor(
             str(current.id),
             identity,
             data["revision"],
-            values["choice"][0],
+            choice,
             text=text,
             action=values.get("action", ""),
             effects=tuple(values.get("effects", ())),
@@ -119,6 +124,7 @@ async def open_favor(
             if data["phase"] == "advocate_choice"
             else (values.get("tag") or ("",))[0],
             exchange=exchange,
+            asset=(values.get("asset") or ("",))[0] if choice == "scientist_gain_void" else "",
         )
         return "Your private choice is recorded."
 
@@ -188,8 +194,22 @@ async def open_favor(
     if data["phase"] == "scientist_proposal":
         fields.extend(
             (
-                Field("asset_name", "Name of the replacement Asset"),
-                Field("asset_description", "Description of the replacement Asset", paragraph=True),
+                Field(
+                    "asset_name", "Name of the replacement Asset (exchange only)", required=False
+                ),
+                Field(
+                    "asset_description",
+                    "Description of the replacement Asset (exchange only)",
+                    paragraph=True,
+                    required=False,
+                ),
+                Field(
+                    "effects",
+                    "Optional second experiment after an exchange",
+                    (("gain_void", "Cause ordinary Void gain"),),
+                    minimum=0,
+                    required=False,
+                ),
             )
         )
     if data["phase"] == "scientist_asset" and data["assets"]:
@@ -201,6 +221,14 @@ async def open_favor(
                 minimum=0,
                 required=False,
             )
+        )
+    if data["phase"] == "scientist_void":
+        if data["assets"]:
+            fields.append(
+                Field("asset", "Your uncorrupted Asset", data["assets"], minimum=0, required=False)
+            )
+        fields.append(
+            Field("account", "Describe the Void alteration", paragraph=True, required=False)
         )
     if data["phase"] == "advocate_choice":
         if not data["assets"]:

@@ -44,6 +44,18 @@ def create_scientist(ledger):
     creation.activate(ADMIN, "lab-scientist", preview["revision"], preview["game_revision"], True)
 
 
+async def submit_private(inbox, identity, viewer, sequence, decision, **values):
+    click = current(viewer.user_id, sequence)
+    await click.response.defer(ephemeral=True)
+    item = next(x for x in inbox.items(viewer) if x.identity == identity)
+    await InboxView(inbox, viewer.user_id).route(click, item)
+    form = click.edit_original_response.call_args.kwargs["view"]
+    form.values.update(choice=(decision,), **values)
+    sent = current(viewer.user_id, sequence + 1)
+    await form.confirm.callback(sent)
+    assert form.completed, sent.followup.send.call_args
+
+
 def test_owned_scientist_lab_installs_and_clears_actual_original_assets(ledger):
     cycle, game, period = prepared(ledger, before_period=lambda _: create_scientist(ledger))
     with ledger.transaction() as c:
@@ -162,15 +174,7 @@ def test_private_scientist_exchange_changes_one_actual_owned_void_asset(ledger):
     assert value.lab == "base0" and not any(x.identity == value.id for x in inbox.items(PLAYER))
 
     async def submit(viewer, sequence, decision, **values):
-        click = current(viewer.user_id, sequence)
-        await click.response.defer(ephemeral=True)
-        item = next(x for x in inbox.items(viewer) if x.identity == value.id)
-        await InboxView(inbox, viewer.user_id).route(click, item)
-        form = click.edit_original_response.call_args.kwargs["view"]
-        form.values.update(choice=(decision,), **values)
-        sent = current(viewer.user_id, sequence + 1)
-        await form.confirm.callback(sent)
-        assert form.completed, sent.followup.send.call_args
+        await submit_private(inbox, value.id, viewer, sequence, decision, **values)
 
     asyncio.run(submit(OTHER, 49610, "consent"))
     asyncio.run(submit(ADMIN, 49612, "attest"))
@@ -228,3 +232,134 @@ def test_private_scientist_exchange_changes_one_actual_owned_void_asset(ledger):
     inserted = new.pop(exchanged.installed_asset)
     assert new == old and inserted.name == replacement and not inserted.void
     assert not steps(after, current_ref(after, 1))
+
+
+@pytest.mark.parametrize("combined", [False, True])
+def test_scientist_owned_native_void_gain_and_actual_threshold_followup(ledger, combined):
+    from test_void_service import respond as resolve_void
+
+    from girlframe.engine.m3_world_state import Asset, CorePlan, Gorgon
+    from girlframe.services.m3_void import VoidService
+
+    _, game, _ = prepared(ledger, before_period=lambda _: create_scientist(ledger))
+    game.leave_scene(PLAYER, "private-void-lab", 900)
+    with ledger.transaction() as connection:
+        canon = place(state(game), 3, mode="outside_frame")
+        sheet = canon.sheets["3"]
+        target = next(x for x in sheet.assets if x.family == "frame")
+        removable = next(x for x in sheet.assets if x.family == "girl")
+        if combined:
+            removable.void = True
+            for resource in sheet.assets:
+                if resource.family == "frame" and resource.id != target.id:
+                    resource.void = True
+        game.event(connection, 3, "lab-assets", "synthetic.private_lab_assets", canon)
+    private = HandlerPrivateSceneService(ledger, game)
+    inbox = InboxService(ledger)
+    identity = private.invite(
+        ADMIN, "consensual-void", state(game).revision, 900, playbook="Scientist"
+    )["id"]
+
+    async def prepare_experiment():
+        await submit_private(inbox, identity, OTHER, 49700, "consent")
+        await submit_private(inbox, identity, ADMIN, 49702, "attest")
+        await submit_private(inbox, identity, OTHER, 49704, "attest")
+        if combined:
+            await submit_private(
+                inbox,
+                identity,
+                ADMIN,
+                49706,
+                "scientist_plan_exchange",
+                asset_name="Clinical replacement",
+                asset_description="Original owned replacement",
+                effects=("gain_void",),
+            )
+            await submit_private(
+                inbox, identity, OTHER, 49708, "scientist_exchange", asset=(removable.id,)
+            )
+        else:
+            await submit_private(inbox, identity, ADMIN, 49706, "scientist_cause_void")
+
+    asyncio.run(prepare_experiment())
+    assert not private.menu(ADMIN, identity)["assets"]
+    assert target.id in dict(private.menu(OTHER, identity)["assets"])
+    assert not any(x.identity == identity for x in inbox.items(PLAYER))
+    before = state(game)
+    change = dict(asset=target.id, text="PRIVATE_SYNTHETIC_LAB_CHANGE")
+    with pytest.raises(WorkflowError, match="your own"):
+        private.respond(
+            ADMIN, "wrong-owner", identity, before.revision, "scientist_gain_void", **change
+        )
+    with pytest.raises(WorkflowError, match="your own"):
+        private.respond(
+            OTHER, "stale", identity, before.revision - 1, "scientist_gain_void", **change
+        )
+    ledger.safety(PLAYER, "hold-lab-experiment", ledger.status(PLAYER)["revision"], pause=True)
+    with pytest.raises(WorkflowError, match="pause"):
+        private.respond(OTHER, "paused", identity, before.revision, "scientist_gain_void", **change)
+    assert state(game).sheets["3"] == before.sheets["3"]
+    ledger.safety(PLAYER, "resume-lab-experiment", ledger.status(PLAYER)["revision"], pause=False)
+    ledger.engine.dispose()
+    asyncio.run(
+        submit_private(
+            inbox,
+            identity,
+            OTHER,
+            49710,
+            "scientist_gain_void",
+            asset=(target.id,),
+            account=change["text"],
+        )
+    )
+    after = state(game)
+    result = private.respond(
+        OTHER, "49711", identity, before.revision, "scientist_gain_void", **change
+    )
+    assert result["revision"] == after.revision == state(game).revision
+    (source,) = records(after)
+    assert source.void_asset == target.id and source.outcome == "scientist_void_gained"
+    assert bool(source.installed_asset) == combined
+    corrupted = next(x for x in after.sheets["3"].assets if x.id == target.id)
+    assert corrupted.void and corrupted.description == change["text"]
+    if not combined:
+        assert not source.required_work
+        assert private.menu(OTHER, identity)["phase"] == "complete"
+        return
+    (work,) = source.required_work
+    assert private.menu(OTHER, identity)["phase"] == "scientist_followup"
+    assert any(x.identity == work for x in inbox.items(OTHER))
+    assert not any(x.identity == work for x in inbox.items(PLAYER))
+    void = VoidService(ledger)
+    assert void.get(OTHER, work)["stage"] == "abandoned"
+    targets = tuple(x for x in after.sheets["3"].assets if x.family == "frame")
+    transformed = Gorgon(
+        id="actual-lab-frame-gorgon",
+        name="The abandoned Frame",
+        gorgon_class="benevolent",
+        types=("incubus",),
+        cell=(0, 0),
+        core_plan=CorePlan(assets=(targets[0].id,), weakness="Open access"),
+        assets=tuple(
+            Asset(
+                id=x.id,
+                name=x.name,
+                description=x.description,
+                family="gorgon",
+                damaged=x.damaged,
+                void=x.void,
+            )
+            for x in targets
+        ),
+    )
+    resolve_void(
+        void,
+        work,
+        "abandoned",
+        dict(gorgon=transformed.model_dump(mode="json"), account="Actual original abandoned Frame"),
+        viewer=ADMIN,
+    )
+    settled = state(game)
+    assert settled.sheets["3"].frame_scrapped
+    assert any(x.id == transformed.id for x in settled.world.gorgons)
+    assert private.menu(OTHER, identity)["phase"] == "complete"
