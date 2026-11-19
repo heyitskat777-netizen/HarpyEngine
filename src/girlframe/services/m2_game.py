@@ -7735,6 +7735,14 @@ class GameService:
                 ):
                     eligible_reign.append(item)
             tags += [item.model_dump(mode="json") for item in eligible_reign]
+            if row["kind"] == "tag_window":
+                from girlframe.services.m3_sentinel import TAG_LABEL, TERRAIN_TAG, terrain_tag
+
+                terrain = terrain_tag(self, c, state, action, decision_owner)
+                if terrain is not None:
+                    tags.append(
+                        dict(id=TERRAIN_TAG + terrain.event, label=TAG_LABEL, name=TAG_LABEL)
+                    )
             result = dict(row) | {
                 "body": body,
                 "play": action["data"]["play"],

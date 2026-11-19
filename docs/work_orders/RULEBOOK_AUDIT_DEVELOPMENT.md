@@ -1768,6 +1768,24 @@ Apometanoia and standard Harpy Order exemption. The separate
 A Human Mask branch remains open.
 [Harpy pp. 177–181](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=179) · [Advancement tests](../../tests/rules/test_harpy_advancements.py)
 
+### Corrupted terrain as a Tag
+
+Base `579b1e33f322f9a5916c8270975c65055eb6d783`. During a Pilot's
+normal Tag window, an original participant who is physically in
+the same Corrupted square can propose the terrain as a plus or
+minus one. It competes in the existing Tag selection and table
+discussion. The source square can be used once in that scene.
+The original Sentinel Play and scene are retained in the mark.
+The terrain does not become a permanent Tag on the Girl sheet.
+Characters outside the square receive no terrain selector.
+
+**Both focused cases passed in 8.61 seconds**. The native case
+changed an 8 to a 7 and blocked reuse after restart. The other
+case used actual movement before the Play, kept the original
+roll and denied the now-remote proposal. Other actor-specific Tag
+windows and Withdraw Into Your Shell remain open.
+[Sentinel p. 171](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=173) · [Tag cases](../../tests/rules/test_gorgon_runtime.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

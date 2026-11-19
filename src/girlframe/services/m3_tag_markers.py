@@ -339,14 +339,23 @@ def begin_discussion(
 def discussion_projection(
     game: "GameService", c: Connection, state: GameState, action: dict[str, Any], owner: int
 ) -> dict[str, Any]:
+    from girlframe.services.m3_sentinel import TAG_LABEL, TERRAIN_TAG, terrain_tag
+
     discussion = action["data"]["tag_marker_discussion"]
     subject = roller(state, action)
     sheet = state.sheets[subject.entity]
     items = []
     for index, item in enumerate(discussion["proposals"]):
         marker = rules.Marker.model_validate_json(json.dumps(item["marker"]))
-        tag = next((x for x in sheet.tags if x.id == item["answer"]["denied"][0]), None)
+        selected = next(iter(item["answer"]["denied"]), "")
+        terrain = selected.startswith(TERRAIN_TAG)
+        tag = next((x for x in sheet.tags if x.id == selected), None)
         observed = tag is not None and (owner == int(subject.entity) or owner in tag.observers)
+        if terrain:
+            observed = (
+                owner == int(subject.entity)
+                or terrain_tag(game, c, state, action, owner) is not None
+            )
         visible = (
             marker.actor is None
             or marker.actor.kind in ("pilot", "handler")
@@ -355,12 +364,14 @@ def discussion_projection(
         if state.world and marker.actor is not None and marker.actor.kind == "npc":
             visible |= any(x.id == marker.actor.entity and x.revealed for x in state.world.npcs)
         label = marker.label if visible else "Original private role"
-        amount = marker.bonus * (1 if item["answer"]["number"] == 1 else -1)
+        amount = (1 if terrain else marker.bonus) * (1 if item["answer"]["number"] == 1 else -1)
         items.append(
             dict(
                 id=item["id"],
                 label=f"Proposal{index + 1}: {label} ({amount:+d})",
-                tag=tag.label if observed and tag else "Private observed Tag",
+                tag=(TAG_LABEL if terrain else tag.label if tag else "")
+                if observed
+                else "Private observed Tag",
                 account=item["answer"]["text"]
                 if observed
                 else "Relevance remains private to its actual witnesses.",

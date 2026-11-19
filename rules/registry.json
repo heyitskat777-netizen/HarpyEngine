@@ -21761,15 +21761,17 @@
         "target_policy": "The original living Sentinel's currently occupied square. No arbitrary or already Corrupted cell.",
         "post_roll_effects": [
           "Persist a Corrupted cell with its original source action, scene and event. Ordinary Girls occupying it cannot declare or roll Check Your Sensors.",
-          "Reject cross-boundary native direct Orders and reviewed simulated NPC or Handler delivery when a current endpoint is in a Corrupted square."
+          "Reject cross-boundary native direct Orders and reviewed simulated NPC or Handler delivery when a current endpoint is in a Corrupted square.",
+          "During a Pilot's usual Tag window, an original authorized witness can propose the Corrupted terrain as the single plus or minus one Tag. The scene remembers the use and the Girl's sheet remains unchanged."
         ],
         "mandatory_followups": [
-          "Fouling footing, the terrain Tag, unsupported communication sources and Withdraw Into Your Shell require additional ports."
+          "Other role Tag windows, separate footing effects, unsupported communication sources and Withdraw Into Your Shell require additional ports."
         ],
         "handler_or_gm_intervention": "The direct terrain effect requires the original Gorgon controller. General Handler or public map viewing does not reveal hidden provenance.",
         "test_fixture_ids": [
           "tests/rules/test_gorgon_runtime.py::test_sentinel_native_corruption_preserves_position_owner_privacy_and_restart",
           "tests/rules/test_gorgon_runtime.py::test_sentinel_prevents_orders_across_corrupted_square_boundary",
+          "tests/rules/test_gorgon_runtime.py::test_sentinel_terrain_is_one_real_native_tag_without_character_sheet_mutation",
           "tests/test_activity_shadow_readiness.py::test_simulated_npc_delivery_binds_controller_and_hearing"
         ]
       },
@@ -21777,6 +21779,7 @@
       "test_evidence": [
         "tests/rules/test_gorgon_runtime.py::test_sentinel_native_corruption_preserves_position_owner_privacy_and_restart",
         "tests/rules/test_gorgon_runtime.py::test_sentinel_prevents_orders_across_corrupted_square_boundary",
+        "tests/rules/test_gorgon_runtime.py::test_sentinel_terrain_is_one_real_native_tag_without_character_sheet_mutation",
         "tests/test_activity_shadow_readiness.py::test_simulated_npc_delivery_binds_controller_and_hearing"
       ],
       "m2_play_id": null,

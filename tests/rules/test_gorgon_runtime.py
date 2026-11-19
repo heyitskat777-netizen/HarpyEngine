@@ -358,6 +358,130 @@ def test_sentinel_native_corruption_preserves_position_owner_privacy_and_restart
     assert unaffected["action_id"] != action and game.dice.calls == 0
 
 
+@pytest.mark.parametrize("leave_range", (False, True))
+def test_sentinel_terrain_is_one_real_native_tag_without_character_sheet_mutation(
+    ledger, leave_range
+):
+    import asyncio
+
+    from test_ledger import OTHER
+    from test_mission_ui import current
+
+    from girlframe.discord_adapter.m2_ui import open_choice
+    from girlframe.engine.m2 import ChoiceAnswer, PlayInput
+    from girlframe.engine.m3_actor_bonds import current_ref
+    from girlframe.services.m2_game import GameService
+    from girlframe.services.m3_movement import MovementService
+    from girlframe.services.m3_sentinel import TERRAIN_TAG
+    from girlframe.services.onboarding import WorkflowError
+
+    game, worker, gateway, source, declaration = gorgon_source(
+        ledger, kind="corrupt", types=("sentinel",)
+    )
+    tick(worker, gateway, 5)
+    assert game.inspect(ADMIN, source)["state"] == "complete"
+    terrain = state(game).world.corrupted_cells[0]
+    change(CastService(ActorService(MissionService(ledger))), ADMIN, "withdraw", declaration.actor)
+    if leave_range:
+        canon = state(game)
+        MovementService(game).move(
+            OTHER,
+            "leave-actual-square",
+            canon.revision,
+            900,
+            current_ref(canon, OTHER.user_id),
+            (1, 0),
+            frame=True,
+            account="I pilot my own Frame out of the changed square.",
+        )
+    game.dice.faces = (4, 4)
+    request = PlayInput(
+        play="keep_your_head",
+        context="I hold steady in the changed terrain",
+        trigger_confirmed=True,
+        heat=0,
+    )
+    original = state(game).sheets["2"].tags
+    action = game.begin(PLAYER, "terrain-keep", 900, state(game).sheets["2"].revision, request)[
+        "action_id"
+    ]
+    tick(worker, gateway, 3)
+    mark = next(x for x in game.choices(OTHER) if x["kind"] == "tag_window")
+    tag = TERRAIN_TAG + terrain.event
+    assert (tag in {x["id"] for x in game.decision(OTHER, mark["id"])["tags"]}) != leave_range
+    own = next(x for x in game.choices(PLAYER) if x["kind"] == "tag_window")
+    assert tag not in {x["id"] for x in game.decision(PLAYER, own["id"])["tags"]}
+    gm_choice = next(x for x in game.choices(ADMIN) if x["kind"] == "tag_window")
+    assert tag not in {x["id"] for x in game.decision(ADMIN, gm_choice["id"])["tags"]}
+    invalid = ChoiceAnswer(
+        options=("tag",),
+        denied=(TERRAIN_TAG + "forged",),
+        number=-1,
+        text="The ground is unstable.",
+    )
+    with pytest.raises(WorkflowError, match="actual witnessed Corrupted terrain"):
+        game.respond(OTHER, "fake-terrain", mark["id"], mark["revision"], invalid)
+    if leave_range:
+        before = game.inspect(PLAYER, action)["receipt"]
+        with pytest.raises(WorkflowError, match="actual witnessed Corrupted terrain"):
+            game.respond(
+                OTHER,
+                "remote-terrain-proposal",
+                mark["id"],
+                mark["revision"],
+                invalid.model_copy(update={"denied": (tag,)}),
+            )
+        answer(game, ADMIN, "tag_window", options=("pass",))
+        answer(game, PLAYER, "tag_window", options=("pass",))
+        answer(game, OTHER, "tag_window", options=("pass",))
+        keeping = next(x for x in game.choices(PLAYER) if x["kind"] == "actor_keep")
+        assert game.decision(PLAYER, keeping["id"])["result"]["tier"] == "mid"
+        assert game.inspect(PLAYER, action)["receipt"] == before and game.dice.calls == 1
+        assert not any(x["kind"] == "sentinel_terrain_mark" for x in state(game).facts)
+        return
+    answer(game, ADMIN, "tag_window", options=("pass",))
+    answer(game, PLAYER, "tag_window", options=("pass",))
+
+    async def submit():
+        click = current(OTHER.user_id, 78880)
+        click.channel_id = 900
+        await click.response.defer(ephemeral=True)
+        await open_choice(click, game, mark["id"])
+        form = click.edit_original_response.call_args.kwargs["view"]
+        assert not await form.interaction_check(current(PLAYER.user_id))
+        form.values.update(
+            options=("tag",), denied=(tag,), number=("-1",), text="The ground is unstable."
+        )
+        sent = current(OTHER.user_id, 78881)
+        await form.confirm.callback(sent)
+        assert form.completed, sent.followup.send.call_args
+
+    asyncio.run(submit())
+    keeping = next(x for x in game.choices(PLAYER) if x["kind"] == "actor_keep")
+    result = game.decision(PLAYER, keeping["id"])["result"]
+    assert result["tier"] == "low"
+    assert state(game).sheets["2"].tags == original
+    assert len([x for x in state(game).facts if x["kind"] == "sentinel_terrain_mark"]) == 1
+    answer(game, PLAYER, "actor_keep", options=("in_control",))
+    answer(game, ADMIN, "handler_keep", flag=True, text="The actual GM rules the outcome.")
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+    tick(worker, gateway, 5)
+    ledger.engine.dispose()
+    restarted = GameService(ledger, dice=game.dice)
+    restarted.begin(PLAYER, "repeat-terrain-keep", 900, state(game).sheets["2"].revision, request)
+    tick(type(worker)(restarted), gateway, 3)
+    mark = next(x for x in restarted.choices(OTHER) if x["kind"] == "tag_window")
+    assert tag not in {x["id"] for x in restarted.decision(OTHER, mark["id"])["tags"]}
+    with pytest.raises(WorkflowError, match="actual witnessed Corrupted terrain"):
+        restarted.respond(
+            OTHER,
+            "repeat-terrain",
+            mark["id"],
+            mark["revision"],
+            invalid.model_copy(update={"denied": (tag,)}),
+        )
+
+
 def test_sentinel_prevents_orders_across_corrupted_square_boundary(ledger):
     import json
 

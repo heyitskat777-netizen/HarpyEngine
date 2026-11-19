@@ -1292,6 +1292,7 @@ class ChoiceEngine:
         from girlframe.services.m3_dose_up import self_tag as drug_self_tag
         from girlframe.services.m3_kicked_puppy import self_tag as kicked_self_tag
         from girlframe.services.m3_malleable_self_tag import self_tag as malleable_self_tag
+        from girlframe.services.m3_sentinel import TERRAIN_TAG, terrain_tag
         from girlframe.services.m3_stim_sex import self_tag as stim_self_tag
 
         actor = int(action["actor_id"])
@@ -1341,6 +1342,15 @@ class ChoiceEngine:
             from girlframe.services.m3_gender_designation import propose_man_tag
 
             propose_man_tag(self.game, c, state, action, owner, answer)
+        elif len(answer.denied) == 1 and answer.denied[0].startswith(TERRAIN_TAG):
+            terrain = terrain_tag(self.game, c, state, action, owner, marker)
+            require(
+                terrain is not None
+                and answer.denied[0] == TERRAIN_TAG + terrain.event
+                and answer.number in (-1, 1)
+                and bool(answer.text.strip()),
+                "Choose the actual witnessed Corrupted terrain and explain its relevance",
+            )
         else:
             picks(
                 answer.denied,
@@ -1448,6 +1458,7 @@ class ChoiceEngine:
     ) -> None:
         from girlframe.engine.m3_tag_markers import modifier
         from girlframe.services import m3_tag_markers as markers
+        from girlframe.services.m3_sentinel import TERRAIN_TAG, mark_terrain, terrain_tag
 
         actor = int(action["actor_id"])
         sheet = state.sheets[str(actor)]
@@ -1460,6 +1471,11 @@ class ChoiceEngine:
                 except WorkflowError:
                     markers.reopen(self.game, c, action, person)
                     return
+                if answer.options == ("tag",) and answer.denied[0].startswith(TERRAIN_TAG):
+                    terrain = terrain_tag(self.game, c, state, action, person, marker)
+                    if terrain is None or TERRAIN_TAG + terrain.event != answer.denied[0]:
+                        markers.reopen(self.game, c, action, person)
+                        return
                 proposals.append((person, answer, marker))
         selected = None
         discussion = action["data"].get("tag_marker_discussion")
@@ -1532,6 +1548,12 @@ class ChoiceEngine:
                 )
                 if not self.game.pending(c, action["id"]):
                     self.results(c, state, action)
+                return
+            if answer.denied[0].startswith(TERRAIN_TAG):
+                selected_terrain = terrain_tag(self.game, c, state, action, person, marker)
+                assert selected_terrain is not None and answer.number in (-1, 1)
+                mark_terrain(state, action, selected_terrain, marker, answer.number)
+                self.results(c, state, action)
                 return
             from girlframe.services.m3_reign_terror import mark as mark_reign
 
