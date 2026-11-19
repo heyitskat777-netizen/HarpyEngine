@@ -21299,14 +21299,39 @@
         "heading": "Gorgons Fucking Girls"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Actual original out-of-Frame intimate contact agreed by its original owners and verified in the physical source scene.",
+        "actor_type": "Actual Gorgon controller, original Girl controller and human GM",
+        "pre_roll_sources": [
+          "Actual original out-of-Frame physical contact",
+          "Original Girl's private consent and verified current physical freedom"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "direct": [
+            "Gorgon may give one Tag. Expose its Core and end the original Girl's career once both sources and final consent are verified."
+          ]
+        },
+        "choice_ownership": "The Girl consents initially and can withdraw at the final step. The human GM verifies the actual trigger. The Gorgon decides whether to leave a Tag.",
+        "target_policy": "Actual original physically present Pilot outside the Frame. Scope excludes unpierced Leviathan layers and Benevolent or Dormant source conflicts.",
+        "post_roll_effects": [
+          "Record the actual original Core exposure and archive the original Girl's career",
+          "Retain the original rights of all other scene roles"
+        ],
+        "mandatory_followups": [],
+        "handler_or_gm_intervention": "Independent human-GM factual review and authorized original Girl confirmation are required before any canonical effect.",
+        "test_fixture_ids": [
+          "tests/rules/test_gorgon_runtime.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_gorgon_runtime.py::test_private_gorgon_contact_can_be_withdrawn_before_the_original_career_ends"],
       "m2_play_id": null,
       "module": "core"
     },

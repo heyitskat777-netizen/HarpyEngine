@@ -20,6 +20,7 @@ from girlframe.engine.m3_collateral import Selection, Source, perform
 from girlframe.engine.m3_gorgon_play_state import Declaration
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_world_state import Asset
+from girlframe.services import m3_gorgon_contact as contact
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_actors import profiles
 from girlframe.services.onboarding import WorkflowError
@@ -138,6 +139,9 @@ def start(game: Any, c: Connection, state: GameState, action: dict[str, Any]) ->
             victims=people,
         )
         action["data"]["result"]["catatonia" if people else "audible_communication_blocked"] = True
+        return
+    if meta["kind"] == contact.PLAY:
+        contact.start(game, c, state, action)
         return
     if meta["kind"] in hallucinations.PLAYS:
         from girlframe.services.m3_hallucinations import start as inflict
@@ -427,6 +431,9 @@ def apply(
     meta, event = _meta(action), _event(action)
     body = json.loads(row["body_json"])
     kind = row["kind"].removeprefix("gorgon_")
+    if kind.startswith("contact_"):
+        contact.apply(game, c, state, action, row, answer)
+        return
     if kind.startswith("hallucinations_"):
         from girlframe.services.m3_hallucinations import apply as resolve_hallucinations
 
@@ -973,6 +980,8 @@ def synchronize(
     materialize_dormant(game, c, action, event)
     synchronize_damage(game, c, event)
     state = load_state(c, game.store.campaign_id)
+    if meta["kind"] == contact.PLAY:
+        contact.synchronize(game, c, state, action, event)
     if meta["kind"] in hallucinations.PLAYS:
         from girlframe.services.m3_hallucinations import materialize
 

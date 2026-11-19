@@ -2009,6 +2009,36 @@ Carrying a still-active exposure across a scene close needs a
 verified transfer source.
 [Hallucinations p. 169](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=171) · [Native verification](../../tests/rules/test_gorgon_runtime.py)
 
+### Private out-of-Frame Gorgon Play
+
+Base `28c002705440222732bca37832862e9b67b9c0c1`. The native
+Gorgon declaration now binds an actual original, eligible Girl
+outside her Frame. Only the original participant can consent,
+the human GM verifies the trigger and the Gorgon can choose one
+optional Tag. The original Girl confirms the irreversible outcome
+or withdraws at the final step. Until that choice, the action
+makes no change to either original character. A confirmed outcome
+exposes the original Core and ends the Girl's actual career through
+the existing archive and work cleanup, with the optional Tag kept
+in that private original archive.
+
+The two native cases and the four Hallucinations cases passed
+**6 tests in 27.96 seconds**. They cover private access, the actual
+cockpit exit, separate role ownership, accepted and withdrawn
+outcomes, retry, restart and no change to a bystander's sheet or
+NPC ownership. Career cleanup projects only actual Pilot and
+facilitator roles into the legacy scene membership, preserving
+NPC-only controllers in the typed cast. The current source scope
+keeps existing protections for unpierced Leviathan layers and
+Benevolent or Dormant actors. The in-Frame Play remains separate.
+[Rulebook p. 160](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=162) · [Native cases](../../tests/rules/test_gorgon_runtime.py)
+
+The exact older regression at `953a275e7c941b288225902b621d8ff1c457cd7c`
+finished with **3,813 passes and one failure**. The longest shard ran
+**2,953.63 seconds**. The failed Director inventory check predates the
+shared native catalog fix. Its focused rerun passed on newer code.
+Logs are under `var/rulebook-full-953a275/`.
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

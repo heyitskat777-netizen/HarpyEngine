@@ -25,6 +25,9 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
             interaction, GorgonDormantService(game.store, game), detail["work_id"]
         )
         return
+    if kind.startswith("contact_"):
+        await open_contact(interaction, game, data)
+        return
     if kind == "hallucinations_void":
         from girlframe.discord_adapter.m3_void import open_void
         from girlframe.services.m3_void import VoidService
@@ -246,4 +249,37 @@ async def open_hallucinations(
         return "Your choice is saved. Open the private Inbox to recover any next step."
 
     form = NativeForm(interaction.user.id, "Hallucinations", description, fields, submit)
+    await reply(interaction, form.text(), form)
+
+
+async def open_contact(
+    interaction: discord.Interaction, game: GameService, data: dict[str, Any]
+) -> None:
+    kind = data["detail"]["kind"]
+    prompts = {
+        "contact_consent": "The printed out-of-Frame effect ends the Girl's original career. "
+        "Choose whether to allow the private scene to proceed. You make a final choice later.",
+        "contact_review": "Verify the original consensual contact and its actual physical context.",
+        "contact_conclusion": "Choose whether the original Gorgon leaves one optional Tag.",
+        "contact_final": "Confirm the described scene and its printed outcome. "
+        "Confirming exposes the Core and ends your original Girl's career. You may withdraw.",
+    }
+    fields = [Field("choice", "Your decision", (("yes", "Confirm"), ("no", "Decline")))]
+    if kind == "contact_review":
+        fields.append(Field("account", "State the verified context", paragraph=True))
+    if kind == "contact_conclusion":
+        fields.append(Field("account", "Your optional Tag", required=False))
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        await asyncio.to_thread(
+            game.respond,
+            viewer_from_interaction(current),
+            str(current.id),
+            data["id"],
+            data["revision"],
+            ChoiceAnswer(flag=values["choice"][0] == "yes", text=values.get("account", "")),
+        )
+        return "Your private choice is saved. Recover any remaining step in your Inbox."
+
+    form = NativeForm(interaction.user.id, "Private Gorgon contact", prompts[kind], fields, submit)
     await reply(interaction, form.text(), form)

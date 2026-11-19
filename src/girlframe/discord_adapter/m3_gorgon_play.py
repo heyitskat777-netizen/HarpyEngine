@@ -21,6 +21,7 @@ from girlframe.engine.m3_mother_sprite import BirthPlan
 from girlframe.engine.m3_parasite import PLAYS as PARASITE_PLAYS
 from girlframe.engine.m3_world_state import Cell, CorePlan
 from girlframe.services.m2_game import GameService
+from girlframe.services.m3_gorgon_contact import PLAY as contact_play
 from girlframe.services.m3_gorgon_play import GorgonPlayService
 
 
@@ -57,10 +58,12 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
             if kind not in riding_choices:
                 return "Use the actual Parasite whose host state permits this Play."
             targets = [x for x in targets if x["token"] in riding_choices[kind]]
-        if type_tag or kind in HALLUCINATIONS_PLAYS:
+        if type_tag or kind in HALLUCINATIONS_PLAYS or kind == contact_play:
             eligible = data["typed_targets"].get(actor["token"], {}).get(kind, ())
             targets = [x for x in targets if x["token"] in eligible]
-        targeted = kind in ("attack", "parasite_hitch", *HALLUCINATIONS_PLAYS) or type_tag
+        targeted = (
+            kind in ("attack", "parasite_hitch", contact_play, *HALLUCINATIONS_PLAYS) or type_tag
+        )
         if targeted and not targets:
             return "Join the actual eligible target to the scene before declaring this Play."
         if kind in ("attack", "collateral") and not actor["assets"]:

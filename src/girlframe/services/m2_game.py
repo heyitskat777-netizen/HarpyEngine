@@ -6412,8 +6412,15 @@ class GameService:
                 from girlframe.services.m3_leviathan_obsession import ObsessionService
 
                 return ObsessionService(self).inspect(viewer, identity)
+            from girlframe.services.m3_gorgon_contact import PLAY as private_gorgon_contact
+
             snoop = action["data"].get("snoop")
             allowed = set(action["data"]["participants"])
+            if (action["data"].get("gorgon_play") or {}).get("kind") == private_gorgon_contact:
+                from girlframe.services.m3_gorgon_play import GorgonPlayService
+
+                GorgonPlayService(self).authorize(c, viewer, action)
+                allowed = set(action["data"]["private_audience"])
             if snoop:
                 allowed.update((snoop["target_controller"], snoop["procedural_gm"]))
             if viewer.user_id not in allowed:

@@ -146,6 +146,19 @@ def synchronize_end(
         raise WorkflowError(
             "SOURCE_CAREER_MISSING: commit the actual ending before synchronization."
         )
+    history = t.m2["m2_state_history"]
+    earlier = c.scalar(
+        sa.select(history.c.body_json)
+        .where(
+            history.c.campaign_id == game.store.campaign_id,
+            history.c.revision < proof.revision,
+        )
+        .order_by(history.c.revision.desc())
+        .limit(1)
+    )
+    previous = (
+        {x.id: x for x in GameState.model_validate_json(earlier).scene_casts} if earlier else {}
+    )
     scenes = t.m2["m2_scenes"]
     for row in c.execute(
         sa.select(scenes).where(
@@ -156,9 +169,11 @@ def synchronize_end(
         people = json.loads(row["participants_json"])
         owner = int(archive.actor.entity)
         cast = next((x for x in proof.scene_casts if x.id == row["id"] and x.open), None)
+        if cast is not None and previous.get(cast.id) == cast and owner not in people:
+            continue
         actual = (
             sorted(
-                {x.controller for x in cast.roles}
+                {x.controller for x in cast.roles if x.actor.kind == "pilot"}
                 | ({cast.facilitator} if cast.facilitator else set())
             )
             if cast

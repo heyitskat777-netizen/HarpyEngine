@@ -28,12 +28,16 @@ from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
+from girlframe.services.m3_gorgon_contact import PLAY as contact_play
+from girlframe.services.m3_gorgon_contact import RULE as contact_rule
+from girlframe.services.m3_gorgon_contact import eligible as contact_eligible
 from girlframe.services.m3_medical import MedicalService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
 RULES: dict[str, str] = {
     "attack": "gorgon.gorgon.attack",
+    contact_play: contact_rule,
     "collateral": "gorgon.gorgon.collateral-damage",
     "warp": "gorgon.gorgon.warp",
     "corrupt": corrupt_rule,
@@ -63,7 +67,9 @@ class GorgonPlayService:
             assert approval is not None
             if action["data"]["gorgon_play"]["registry"] != approval.registry_sha256:
                 raise WorkflowError("M3_POLICY_CHANGED: recover the original Gorgon Play approval")
-            if viewer.user_id not in action["data"]["participants"]:
+            if viewer.user_id not in (
+                action["data"].get("private_audience") or action["data"]["participants"]
+            ):
                 raise WorkflowError("Only an original source-table human owns this response")
             gm, appointment = MedicalService(self.store)._handler(c)
             meta = action["data"]["gorgon_play"]
@@ -189,6 +195,11 @@ class GorgonPlayService:
                         }
                         exposure_days[token] = days
                         options["jackdaw_hallucinations_day"] = list(days)
+                    options[contact_play] = [
+                        girl.ref.token
+                        for girl in visible.values()
+                        if contact_eligible(state, caster, girl)
+                    ]
                     typed_targets[token] = {
                         kind: targets for kind, targets in options.items() if targets
                     }
@@ -198,9 +209,9 @@ class GorgonPlayService:
             for kind, identity in RULES.items():
                 if kind == "corrupt" and not can_corrupt:
                     continue
-                if (kind in TAG_TYPES or kind in hallucinations.PLAYS) and not any(
-                    kind in x for x in typed_targets.values()
-                ):
+                if (
+                    kind in TAG_TYPES or kind in hallucinations.PLAYS or kind == contact_play
+                ) and not any(kind in x for x in typed_targets.values()):
                     continue
                 if kind in parasite.PLAYS and not any(kind in x for x in parasite_choices.values()):
                     continue
@@ -341,6 +352,8 @@ class GorgonPlayService:
                         raise WorkflowError(
                             "Use the next fictional day with the original Girl still in range"
                         )
+                if declaration.kind == contact_play and not contact_eligible(state, actual, target):
+                    raise WorkflowError("Use the original free present Girl outside her Frame")
                 if declaration.kind == "parasite_hitch" and (
                     not _visible(state, target.ref, viewer.user_id)
                     or not parasite.present(state, actual, target)
@@ -425,7 +438,7 @@ class GorgonPlayService:
                 or declaration.interference is not None
                 and len(declaration.interference.cells) > 1
             )
-            meta = dict(
+            meta: dict[str, Any] = dict(
                 declaration=declaration.model_dump(mode="json"),
                 actor=declaration.actor.model_dump(mode="json"),
                 target=declaration.target.model_dump(mode="json") if declaration.target else None,
@@ -478,6 +491,9 @@ class GorgonPlayService:
                     cast_sha256=meta["cast_sha256"],
                 ),
             )
+            if declaration.kind == contact_play and target_view is not None:
+                audience = sorted({viewer.user_id, target_view.controller, gm})
+                meta["private_audience"] = data["private_audience"] = audience
             state.facts.append(
                 dict(
                     kind="gorgon_play_intent",
@@ -606,6 +622,7 @@ class GorgonPlayService:
             "source_event",
             "capability_required",
             "reach_required",
+            "private_audience",
         )
         if (
             not isinstance(original, dict)
@@ -628,6 +645,7 @@ class GorgonPlayService:
             or int(action["channel_id"]) != source_cast.channel
             or action["actor_id"] != str(original["controller"])
             or action["data"]["participants"] != source_table
+            or action["data"].get("private_audience") != original.get("private_audience")
             or action["data"]["character_ids"]
             != {
                 role.actor.entity: role.actor.incarnation

@@ -31,6 +31,7 @@ def candidate_source_gate(monkeypatch):
             "gorgon.gorgon.attack",
             "gorgon.gorgon.collateral-damage",
             "gorgon.gorgon.warp",
+            "gorgon.gorgon.gorgons-fucking-girls",
             "gorgon-type.sentinel.sentinel-type",
             "gorgon-type.jackdaw.jackdaw-type",
             "gorgon-type.jackdaw.hallucinations",
@@ -245,6 +246,7 @@ def gorgon_source(
         "mother_mutation",
         "doppleganger_bond",
         "parasite_hitch",
+        "intimate_contact",
     )
     declaration = Declaration(
         kind=kind,
@@ -2365,3 +2367,141 @@ def test_jackdaw_hallucinations_has_owned_heat_roll_and_printed_consequence(
         )
         preview = gorgon_service.preview(ADMIN, 900)
         assert "jackdaw_hallucinations_day" not in preview["plays"]
+
+
+@pytest.mark.parametrize("finalize", [False, True])
+def test_private_gorgon_contact_can_be_withdrawn_before_the_original_career_ends(ledger, finalize):
+    import asyncio
+
+    from test_ledger import OTHER
+    from test_mission_ui import current
+
+    from girlframe.discord_adapter.m3_gorgon_play import open_gorgon_play
+    from girlframe.discord_adapter.m3_gorgon_runtime import open_choice
+    from girlframe.engine.m2 import ChoiceAnswer, PilotSheet
+    from girlframe.engine.m3_actor_bonds import current_ref
+    from girlframe.engine.m3_actors import resolve
+    from girlframe.engine.m3_physical_state import CockpitAction
+    from girlframe.services.m3_actors import profiles
+    from girlframe.services.m3_gorgon_contact import CONCLUSION, CONSENT, FINAL, REVIEW
+    from girlframe.services.m3_physical import PhysicalService
+    from girlframe.services.onboarding import WorkflowError
+
+    game, worker, gateway, _, original = gorgon_source(
+        ledger,
+        kind="intimate_contact",
+        npc=True,
+        begin=False,
+    )
+    pilot = current_ref(state(game), PLAYER.user_id)
+    outsider = current_ref(state(game), OTHER.user_id)
+    source = original.actor
+    service = GorgonPlayService(game)
+    assert "intimate_contact" not in service.preview(ADMIN, 900)["plays"]
+    current_state = state(game)
+    with ledger.engine.connect() as c:
+        actual = resolve(current_state, pilot, profiles(c, ledger.campaign_id))
+    PhysicalService(ledger).operate(
+        PLAYER,
+        "leave-cockpit-before-contact",
+        current_state.revision,
+        CockpitAction(
+            actor=pilot,
+            operation="exit",
+            expected_position=actual.position_sha256,
+            account="I exit my parked Frame.",
+            confirmed=True,
+        ),
+        channel=900,
+    )
+    cast = CastService(ActorService(MissionService(ledger)))
+    change(cast, OTHER, "withdraw", outsider)
+    before = state(game)
+    known = service.preview(ADMIN, 900)
+    assert known["typed_targets"][source.token]["intimate_contact"] == [pilot.token]
+    subject = next(x for x in known["actors"] if x["token"] == pilot.token)
+    declaration = original.model_copy(update=dict(target_sha256=subject["source_sha256"]))
+
+    async def native_declaration():
+        home = current(ADMIN.user_id, 87400)
+        home.channel_id = 900
+        await home.response.defer(ephemeral=True)
+        await open_gorgon_play(home, game)
+        form = home.edit_original_response.call_args.kwargs["view"]
+        form.values.update(actor=(source.token,), play=("intimate_contact",))
+        entered = current(ADMIN.user_id, 87401)
+        await entered.response.defer(ephemeral=True)
+        await form.confirm.callback(entered)
+        details = entered.edit_original_response.call_args.kwargs["view"]
+        details.values.update(
+            target=(pilot.token,), account=declaration.account, reach=("confirmed",)
+        )
+        await details.confirm.callback(current(ADMIN.user_id, 87402))
+        assert details.completed
+
+    asyncio.run(native_declaration())
+    action = service.begin(ADMIN, "87402", 900, before.revision, declaration)["action_id"]
+    tick(worker, gateway, 5)
+    if not any(x["kind"] == CONSENT for x in game.choices(PLAYER)):
+        game.roll(ADMIN, "advance-contact", action)
+    invite = next(x for x in game.choices(PLAYER) if x["kind"] == CONSENT)
+    with pytest.raises(WorkflowError, match="no longer available"):
+        game.decision(OTHER, invite["id"])
+    with pytest.raises(WorkflowError, match="original source-table"):
+        game.inspect(OTHER, action)
+    assert state(game).sheets == before.sheets
+    answer(game, PLAYER, CONSENT, flag=True)
+    answer(
+        game,
+        ADMIN,
+        REVIEW,
+        flag=True,
+        text="The original adult participants and reach were confirmed.",
+    )
+    answer(game, ADMIN, CONCLUSION, flag=True, text="Echoes in the rain")
+    assert state(game).sheets == before.sheets and not state(game).career_archives
+    decision = next(x for x in game.choices(PLAYER) if x["kind"] == FINAL)
+    with pytest.raises(WorkflowError, match="another player"):
+        game.respond(
+            ADMIN, "not-owner-final", decision["id"], decision["revision"], ChoiceAnswer(flag=True)
+        )
+    ledger.engine.dispose()
+
+    async def native_final():
+        handoff = current(PLAYER.user_id, 87403)
+        await handoff.response.defer(ephemeral=True)
+        await open_choice(handoff, game, decision["id"])
+        form = handoff.edit_original_response.call_args.kwargs["view"]
+        form.values["choice"] = ("yes" if finalize else "no",)
+        await form.confirm.callback(current(PLAYER.user_id, 87404))
+        assert form.completed
+
+    asyncio.run(native_final())
+    outcome = game.respond(
+        PLAYER,
+        "87404",
+        decision["id"],
+        decision["revision"],
+        ChoiceAnswer(flag=finalize),
+    )
+    assert game.inspect(ADMIN, action)["state"] == "complete"
+    assert outcome["action_id"] == action and game.dice.calls == 0
+    after = state(game)
+    body = next(x for x in after.world.gorgons if x.id == source.entity)
+    assert body.exposed is finalize
+    assert after.sheets[outsider.entity] == before.sheets[outsider.entity]
+    with ledger.engine.connect() as c:
+        assert OTHER.user_id not in game.scene(c, 900)["participants"]
+    npc = ActorRef(kind="npc", entity="actual-guard")
+    assert any(
+        role.actor == npc for role in next(x for x in after.scene_casts if x.channel == 900).roles
+    )
+    if finalize:
+        assert pilot.entity not in after.sheets
+        (archive,) = after.career_archives
+        assert archive.actor == pilot and archive.ending == "death"
+        archived = PilotSheet.model_validate_json(archive.sheet_json)
+        tag = next(x for x in archived.tags if x.label == "Echoes in the rain")
+        assert tag.giver_actor == source and OTHER.user_id not in tag.observers
+    else:
+        assert after.sheets == before.sheets and not after.career_archives
