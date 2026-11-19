@@ -38,6 +38,7 @@ SUPPORTED = (
     "PRODIGY",
     "MERCENARY",
     "ABYSSAL ACOLYTE",
+    "SOLDIER",
 )
 
 

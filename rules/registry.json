@@ -14775,14 +14775,50 @@
         "heading": "Sex Play"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original Soldier shares a verified and independently consented private encounter with a standard Pilot.",
+        "actor_type": "Original Soldier, standard Pilot and original human facilitator",
+        "pre_roll_sources": [
+          "Actual optional Play release",
+          "Original roles and verified consent",
+          "Owned Heat",
+          "Original confirmed Cadre for Status changes"
+        ],
+        "roll_kind": "2d6",
+        "allowed_modifiers": [
+          "Owned Heat"
+        ],
+        "tier_options": {
+          "low": [
+            "Keep the result pending for the original relative Status and Good Soldier effect"
+          ],
+          "mid": [
+            "Raise actual Status and optionally deepen or weaken the original Bond"
+          ],
+          "high": [
+            "Lower actual Status and optionally mark a real Tag or Identity to repair a damaged Asset after human verification of a moment alone"
+          ]
+        },
+        "choice_ownership": "The Soldier owns the optional Bond and original repair selections. The facilitator verifies that the actual moment alone occurred.",
+        "target_policy": "Exact original roles, approved independent Cadre Status and owned actual resources.",
+        "post_roll_effects": [
+          "Apply actual Status and Bond or original resource mark and Asset repair."
+        ],
+        "mandatory_followups": [
+          "Low relative Status and Good Soldier, ordinary modifiers, other counterpart kinds and direct high verification remain open."
+        ],
+        "handler_or_gm_intervention": "Actual facilitator verifies the encounter and separate moment alone.",
+        "test_fixture_ids": [
+          "tests/rules/test_soldier_private_play.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_soldier_private_play.py"],
       "m2_play_id": null,
       "module": "ancillary"
     },

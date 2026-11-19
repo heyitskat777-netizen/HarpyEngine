@@ -3634,3 +3634,20 @@ Prodigy raise and optional low reduction. Those two branches,
 mixed Cadres and the Prodigy’s Ace and Handler alternatives
 remain unverified or outside this slice.
 [Warboy p. 106](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=108) · [Prodigy p. 99](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=101) · [Native case](../../tests/rules/test_ancillary_cadre.py)
+
+### Soldier’s private Play and actual Status
+
+Base `1b48274`. The middle result raises the original Soldier’s
+Status in her approved Ancillary Cadre and can change her
+actual Bond. The high result lowers Status and offers an owned
+repair. That repair marks one actual unmarked Tag or Identity
+and repairs one actual damaged Asset only after the original
+facilitator verifies the moment alone. Low relative Status and
+Good Soldier remain pending.
+
+**One focused case passed in 5.43 seconds.** It used an
+independently approved Cadre, verified private consent and
+the actual roll, then observed the original Soldier advance
+from second to first and deepen a real Personal Bond to Intense.
+Direct high verification and the low result remain open.
+[Soldier p. 95](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=97) · [Native case](../../tests/rules/test_soldier_private_play.py)

@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from sqlalchemy import Connection
 
+from girlframe.engine import m3_actor_plays as actor_plays
 from girlframe.engine import m3_ancillary as ancillary
 from girlframe.engine import m3_ancillary_cadre as cadre_rank
 from girlframe.engine.m2 import GameState, IdentityState, tier
@@ -25,6 +26,7 @@ from girlframe.engine.m3_cast import validate_role
 from girlframe.engine.m3_chained_darling import EXEMPTION
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_harpy_defeat import give_tag
+from girlframe.engine.m3_world import update as update_world
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
@@ -47,6 +49,7 @@ REVOLUTIONARY = "ancillary.revolutionary-idealist.sex-play"
 PRODIGY = "ancillary.prodigy.sex-play"
 MERCENARY = "ancillary.mercenary.sex-play"
 ABYSSAL = "ancillary.abyssal-acolyte.sex-play"
+SOLDIER = "ancillary.soldier.sex-play"
 REVOLUTIONARY_OPTIONS = ("erase", "tag", "remain")
 RULES: dict[ancillary.Book, str] = {
     "CHAINED DARLING": CHAINED,
@@ -56,6 +59,7 @@ RULES: dict[ancillary.Book, str] = {
     "PRODIGY": PRODIGY,
     "MERCENARY": MERCENARY,
     "ABYSSAL ACOLYTE": ABYSSAL,
+    "SOLDIER": SOLDIER,
 }
 WARBOY_REFUSAL = "warboy_private_refusal"
 RESULTS = {
@@ -78,6 +82,7 @@ RESULTS = {
         "mid": "abyssal_erase_tag",
         "high": "abyssal_ask",
     },
+    "SOLDIER": {"low": "soldier_rank_low", "mid": "soldier_mid", "high": "soldier_high"},
 }
 KIND = "ancillary_private_play"
 
@@ -149,6 +154,11 @@ class Encounter(Model):
         "abyssal_reply",
         "abyssal_verify",
         "abyssal_damage",
+        "soldier_rank_low",
+        "soldier_mid",
+        "soldier_high",
+        "soldier_repair",
+        "soldier_alone",
     ]
     consent: str | None = None
     confirmed: str | None = None
@@ -163,6 +173,8 @@ class Encounter(Model):
     picks: tuple[str, ...] = ()
     reaction_actor: ActorRef | None = None
     reaction_owner: int | None = None
+    repair_asset: str | None = None
+    repair_resource: str | None = None
 
 
 def records(state: GameState) -> tuple[Encounter, ...]:
@@ -437,6 +449,9 @@ class AncillaryIntimacyService:
             "abyssal_leave",
             "abyssal_ask",
             "abyssal_damage",
+            "soldier_mid",
+            "soldier_high",
+            "soldier_repair",
         ):
             return case.actor.controller
         if case.step == "prodigy_jealous":
@@ -452,6 +467,8 @@ class AncillaryIntimacyService:
                 "mercenary_high_hold",
                 "abyssal_void_hold",
                 "abyssal_verify",
+                "soldier_rank_low",
+                "soldier_alone",
             )
             else None
         )
@@ -471,7 +488,14 @@ class AncillaryIntimacyService:
                 case.gm,
                 case.appointment,
             )
-            or case.step not in ("angel_space", "revolutionary_escape", "abyssal_leave")
+            or case.step
+            not in (
+                "angel_space",
+                "revolutionary_escape",
+                "abyssal_leave",
+                "soldier_repair",
+                "soldier_alone",
+            )
             and not self._together(actual, partner)
             or partner.rules != "girl_frame"
         ):
@@ -595,8 +619,23 @@ class AncillaryIntimacyService:
                     or case.step in ("revolutionary_escape", "abyssal_leave")
                     and self._separated(counterpart, actual, case)
                 ),
-                can_change_status=case.step in ("prodigy_rank", "prodigy_low")
+                can_change_status=case.step
+                in (
+                    "prodigy_rank",
+                    "prodigy_low",
+                    "soldier_mid",
+                    "soldier_high",
+                )
                 and cadre_rank.current(state, actual.ref) is not None,
+                soldier_bond=depth(state, actual.ref, counterpart.ref)
+                if case.step == "soldier_mid"
+                else None,
+                own_damaged={x.id: x.name for x in actual.assets if x.damaged and not x.concealed}
+                if case.step == "soldier_repair"
+                else {},
+                repair_choices=_soldier_resources(state, actual.ref, case.scene)
+                if case.step == "soldier_repair"
+                else {},
                 npc_bonds={
                     key: label for key, (_, _, label) in _prodigy_people(state, actual.ref).items()
                 }
@@ -665,6 +704,7 @@ class AncillaryIntimacyService:
                     "revolutionary_erase",
                     "revolutionary_erase_two",
                     "abyssal_damage",
+                    "soldier_repair",
                 )
             ):
                 raise WorkflowError(
@@ -796,6 +836,16 @@ class AncillaryIntimacyService:
                         picks,
                         event,
                     )
+            elif case.book == "SOLDIER" and case.step.startswith("soldier_"):
+                state, update = _soldier(
+                    state,
+                    case,
+                    actual,
+                    choice,
+                    account.strip(),
+                    picks,
+                    event,
+                )
             else:
                 raise WorkflowError("Choose the original owner's supported private response.")
             return self._save(c, state, viewer, key, case.model_copy(update=update), event)
@@ -1141,7 +1191,12 @@ def _prodigy(
             cadre_rank.shift(state, actor, 1, event)
             tag = str(uuid4())
             state = give_tag(
-                state, actor, partner, account, event, tag,
+                state,
+                actor,
+                partner,
+                account,
+                event,
+                tag,
                 (case.actor.controller, case.partner.controller),
             )
             return state, dict(step="closed", disposition="status_applied", tag=tag)
@@ -1292,3 +1347,97 @@ def _abyssal(
             partner_cell=actual.cell,
         )
     raise WorkflowError("The original Abyssal result awaits its actual supported consequence.")
+
+
+def _soldier_resources(state: GameState, actor: ActorRef, scene: str) -> dict[str, str]:
+    owner = ancillary.find(state, actor)
+    if owner is None:
+        return {}
+    return {
+        x.id: x.name
+        for x in owner.identities
+        if not x.marked and not x.obsession_sources and not x.am_limiter
+    } | {x.id: x.label for x in owner.tags if not x.marked and x.scene_used != scene}
+
+
+def _soldier(
+    state: GameState,
+    case: Encounter,
+    actual: ActorView,
+    choice: str,
+    account: str,
+    picks: tuple[str, ...],
+    event: str,
+) -> tuple[GameState, dict[str, Any]]:
+    actor, other = case.actor.actor, case.partner.actor
+    if case.step == "soldier_mid" and choice in ("pass", "deepen", "weaken") and not account:
+        cadre_rank.shift(state, actor, -1, event)
+        if choice in ("deepen", "weaken"):
+            state = change(state, actor, other, 1 if choice == "deepen" else -1, event)
+        return state, dict(step="closed", disposition="soldier_advanced")
+    if case.step == "soldier_high" and choice == "apply" and not account:
+        cadre_rank.shift(state, actor, 1, event)
+        return state, dict(step="soldier_repair")
+    if case.step == "soldier_repair":
+        if choice == "pass" and not picks and not account:
+            return state, dict(step="closed", disposition="soldier_lowered")
+        resources = _soldier_resources(state, actor, case.scene)
+        if (
+            len(picks) == 1
+            and picks[0] in resources
+            and account
+            and any(x.id == choice and x.damaged and not x.concealed for x in actual.assets)
+        ):
+            return state, dict(
+                step="soldier_alone",
+                account=account,
+                repair_asset=choice,
+                repair_resource=picks[0],
+            )
+    if case.step == "soldier_alone":
+        if choice == "no" and not account:
+            return state, dict(step="soldier_repair", repair_asset=None, repair_resource=None)
+        if choice == "yes" and not account:
+            original = ancillary.find(state, actor)
+            assets = _soldier_resources(state, actor, case.scene)
+            if (
+                original is None
+                or case.repair_resource is None
+                or case.repair_resource not in assets
+                or state.world is None
+                or not any(x.id == case.repair_asset and x.damaged for x in actual.assets)
+            ):
+                raise WorkflowError(
+                    "Recover the actual original unmarked resource and damaged Asset."
+                )
+            body = next(x for x in state.world.pilots if x.id == actor.entity)
+            if any(x.id == case.repair_resource for x in original.tags):
+                actor_plays.mark(state, actor, case.repair_resource, case.scene)
+            else:
+                ancillary.put(
+                    state,
+                    original.model_copy(
+                        update=dict(
+                            identities=tuple(
+                                x.model_copy(update=dict(marked=True))
+                                if x.id == case.repair_resource
+                                else x
+                                for x in original.identities
+                            ),
+                        )
+                    ),
+                )
+            changed = body.model_copy(
+                update=dict(
+                    assets=tuple(
+                        x.model_copy(update=dict(damaged=False)) if x.id == case.repair_asset else x
+                        for x in body.assets
+                    ),
+                )
+            )
+            state.world = update_world(
+                state.world,
+                pilots=tuple(changed if x.id == actor.entity else x for x in state.world.pilots),
+            )
+            return state, dict(step="closed", disposition="soldier_repaired")
+    raise WorkflowError("The original Soldier result needs its actual Status or repair source.")

@@ -88,6 +88,11 @@ async def open_ancillary_intimacy_choice(
 
     data = await asyncio.to_thread(service.get, viewer, identity)
     step = data["step"]
+    if step == "soldier_rank_low" or (
+        step in ("soldier_mid", "soldier_high") and not data["can_change_status"]
+    ):
+        await reply(interaction, "The original result awaits its actual Cadre Status authority.")
+        return
     if step == "abyssal_void_hold":
         await reply(interaction, "The actual Void gain or Void Asset exchange remains pending.")
         return
@@ -219,7 +224,8 @@ async def open_ancillary_intimacy_choice(
         "prodigy_low": (
             "You may decline the optional Tag and Status consequence.",
             (("pass", "Decline both"), ("apply", "Lower Status and apply a Tag"))
-            if data.get("can_change_status") else (("pass", "Decline both"),),
+            if data.get("can_change_status")
+            else (("pass", "Decline both"),),
         ),
         "mercenary_request": (
             "Ask for a small favour within the scene, or pass.",
@@ -260,6 +266,32 @@ async def open_ancillary_intimacy_choice(
         "abyssal_damage": (
             "Choose how many of the reachable Girl Assets to damage, from zero to all.",
             (("damage", "Apply damage to the selection"),),
+        ),
+        "soldier_mid": (
+            "Raise Status, then choose whether to change the original Bond.",
+            (
+                ("pass", "Raise Status without changing the Bond"),
+                ("deepen", "Raise Status and deepen the Bond"),
+                *(
+                    ((("weaken", "Raise Status and weaken the Bond"),))
+                    if data.get("soldier_bond")
+                    else ()
+                ),
+            ),
+        ),
+        "soldier_high": (
+            "Apply the original Status loss, then choose whether to request a repair.",
+            (("apply", "Apply the Status loss"),),
+        ),
+        "soldier_repair": (
+            "Select an actual damaged Asset and unmarked resource, or pass.",
+            (("pass", "Pass"), *tuple(data.get("own_damaged", {}).items()))
+            if data.get("repair_choices")
+            else (("pass", "Pass"),),
+        ),
+        "soldier_alone": (
+            "Verify that this original Soldier actually has a moment to herself for this repair.",
+            (("yes", "Verify the moment alone"), ("no", "Return the choice")),
         ),
     }[step]
     if (
@@ -318,6 +350,22 @@ async def open_ancillary_intimacy_choice(
                 tuple(data["identities"].items()),
                 count,
                 count,
+            )
+        )
+    if step == "soldier_alone":
+        instructions += "\nOriginal account — " + clean(data["account"])
+    if step == "soldier_repair" and data["repair_choices"] and data["own_damaged"]:
+        fields.extend(
+            (
+                Field(
+                    "picks",
+                    "Actual resource to mark",
+                    tuple(data["repair_choices"].items()),
+                    0,
+                    1,
+                    required=False,
+                ),
+                Field("account", "Describe your moment alone", paragraph=True, required=False),
             )
         )
     if step in ("abyssal_reply", "abyssal_verify"):
