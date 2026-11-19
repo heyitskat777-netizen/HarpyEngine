@@ -30,7 +30,7 @@ class Declaration(Model):
     target_sha256: str | None = Field(default=None, min_length=64, max_length=64)
     account: str = Field(min_length=1, max_length=1200)
     reach_confirmed: Literal[True]
-    tag: str | None = Field(default=None, max_length=40, exclude_if=lambda value: value is None)
+    tag: str | None = Field(default=None, max_length=120, exclude_if=lambda value: value is None)
     adaptation: Adaptation | None = Field(default=None, exclude_if=lambda value: value is None)
     regrowth: Regrowth | None = Field(default=None, exclude_if=lambda value: value is None)
     birth: BirthPlan | None = Field(default=None, exclude_if=lambda value: value is None)
@@ -43,7 +43,7 @@ class Declaration(Model):
             raise ValueError("State the actual physical attack/destruction and source capabilities")
         if bool(self.assets) != (self.kind in ("attack", "collateral")):
             raise ValueError("Attack and Collateral require actual owned Assets")
-        if self.kind in ("attack", "incubus_inflict", "mother_mutation"):
+        if self.kind in ("attack", "incubus_inflict", "mother_mutation", "doppleganger_bond"):
             if self.target is None or self.target_sha256 is None or self.target == self.actor:
                 raise ValueError("This Play needs its actual distinct target body and source")
         elif self.target is not None or self.target_sha256 is not None:
@@ -51,6 +51,9 @@ class Declaration(Model):
         if self.kind in ("incubus_inflict", "mother_mutation"):
             if self.tag not in dict(LABELS[self.kind]):
                 raise ValueError("Choose a printed Tag for this Gorgon effect")
+        elif self.kind == "doppleganger_bond":
+            if not self.tag or not self.tag.strip():
+                raise ValueError("Describe the Tag from this actual Dopplegänger interaction")
         elif self.tag is not None:
             raise ValueError("This Gorgon Play has no direct Tag choice")
         if (self.adaptation is not None) != (self.kind == "growth_adapt") or (

@@ -81,6 +81,10 @@ NATIVE_RULES = {
     "gorgon_corrupt": "gorgon-type.sentinel.sentinel-type",
     "gorgon_incubus_inflict": "gorgon-type.incubus.incubus-type",
     "gorgon_mother_mutation": "gorgon-type.mother.mother-type",
+    "gorgon_mother_sprite": "gorgon-type.mother.mother-type",
+    "gorgon_growth_adapt": "gorgon-type.growth.growth-type",
+    "gorgon_growth_regrow": "gorgon-type.growth.growth-type",
+    "gorgon_doppleganger_bond": "gorgon-type.doppleganger.doppleganger-type",
 }
 
 

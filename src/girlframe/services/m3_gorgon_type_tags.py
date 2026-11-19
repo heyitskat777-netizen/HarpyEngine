@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy import Connection
 
 from girlframe.engine.m2 import GameState
+from girlframe.engine.m3_actor_bonds import depth, set_depth
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_gorgon_play_state import Declaration
 from girlframe.engine.m3_gorgon_type_tags import LABELS, TYPES, present
@@ -25,7 +26,7 @@ def apply(game: "GameService", c: Connection, state: GameState, action: dict[str
     meta = action["data"]["gorgon_play"]
     intent = Declaration.model_validate_json(json.dumps(meta["declaration"]))
     if (
-        intent.kind not in ("incubus_inflict", "mother_mutation")
+        intent.kind not in ("incubus_inflict", "mother_mutation", "doppleganger_bond")
         or intent.tag is None
         or intent.target is None
         or state.world is None
@@ -39,9 +40,15 @@ def apply(game: "GameService", c: Connection, state: GameState, action: dict[str
         source is None
         or TYPES[intent.kind] not in source.types
         or not present(intent.kind, actor, target)
+        or intent.kind == "doppleganger_bond"
+        and not source.revealed
     ):
         raise WorkflowError("Recover the living original Gorgon and body in actual local reach")
-    label = dict(LABELS[intent.kind])[intent.tag]
+    label = (
+        intent.tag.strip()
+        if intent.kind == "doppleganger_bond"
+        else dict(LABELS[intent.kind])[intent.tag]
+    )
     if target.ref.kind == "pilot":
         observers = tuple(dict.fromkeys((target.controller, actor.controller)))
         tag = ChoiceEngine(game).add_tag(
@@ -62,3 +69,14 @@ def apply(game: "GameService", c: Connection, state: GameState, action: dict[str
             ),
         )
     action["data"]["result"].update(tag=identity, tag_label=label)
+    if intent.kind == "doppleganger_bond":
+        old = depth(state, actor.ref, target.ref)
+        if old == 0:
+            event = action["data"]["response_event"]
+            changed = set_depth(state, actor.ref, target.ref, 1, event)
+            state.actor_bonds, state.bonds, state.world = (
+                changed.actor_bonds,
+                changed.bonds,
+                changed.world,
+            )
+        action["data"]["result"]["bond"] = max(1, old)

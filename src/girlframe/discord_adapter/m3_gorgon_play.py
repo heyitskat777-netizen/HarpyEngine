@@ -11,6 +11,7 @@ from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_gorgon_play_state import Declaration
 from girlframe.engine.m3_gorgon_type_tags import LABELS as TYPE_TAG_LABELS
+from girlframe.engine.m3_gorgon_type_tags import TYPES as TAG_TYPES
 from girlframe.engine.m3_growth import KINDS as GROWTH_KINDS
 from girlframe.engine.m3_growth import Adaptation, Regrowth
 from girlframe.engine.m3_mother_sprite import BirthPlan
@@ -36,7 +37,7 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
         if kind == "mother_sprite" and actor["token"] not in data["sprite_birth"]:
             return "Choose the original Mother with an intact Asset."
         targets = [x for x in data["actors"] if x["ref"] != actor["ref"]]
-        type_tag = kind in TYPE_TAG_LABELS
+        type_tag = kind in TAG_TYPES
         if type_tag:
             eligible = data["typed_targets"].get(actor["token"], {}).get(kind, ())
             targets = [x for x in targets if x["token"] in eligible]
@@ -54,8 +55,10 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
                     tuple((x["token"], x["label"]) for x in targets),
                 )
             )
-        if type_tag:
+        if kind in TYPE_TAG_LABELS:
             fields.append(Field("tag", "Choose the printed effect", TYPE_TAG_LABELS[kind]))
+        if kind == "doppleganger_bond":
+            fields.append(Field("bond_tag", "Tag from the actual interaction"))
         if kind == "growth_adapt":
             guards = tuple((x["id"], x["name"]) for x in actor["assets"])
             fields.extend(
@@ -126,7 +129,9 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
                     target_sha256=target["source_sha256"] if target else None,
                     account=details["account"],
                     reach_confirmed=True,
-                    tag=(details.get("tag") or (None,))[0],
+                    tag=details.get("bond_tag")
+                    if kind == "doppleganger_bond"
+                    else (details.get("tag") or (None,))[0],
                     adaptation=Adaptation(
                         guards=CorePlan(assets=details["guards"], weakness=details["weakness"]),
                         tag=details["growth_tag"],

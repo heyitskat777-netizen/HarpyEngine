@@ -17,6 +17,7 @@ from girlframe.engine.m3_plays import ASSET_IDS, FIXED_IDS, HEAT_IDS, JANUS_ROLL
 from girlframe.services.director_conversation import DirectorConversationService
 from girlframe.services.director_play_catalog import NATIVE_RULES, PlayCatalog
 from girlframe.services.director_play_review import DirectorPlayReviewService
+from girlframe.services.m3_gorgon_play import RULES as GORGON_RULES
 from girlframe.services.onboarding import WorkflowError
 
 
@@ -27,14 +28,9 @@ def test_entire_inventory_and_every_native_identifier_have_explicit_review_route
     assert (
         rolled
         | handlers
+        | {"gorgon_" + key for key in GORGON_RULES}
         | {
             "receive_orders",
-            "gorgon_attack",
-            "gorgon_collateral",
-            "gorgon_warp",
-            "gorgon_corrupt",
-            "gorgon_incubus_inflict",
-            "gorgon_mother_mutation",
             "handler_advocate_alone",
             "handler_frantic_breakdown",
             "handler_casualty_parts",

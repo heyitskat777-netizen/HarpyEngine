@@ -35,6 +35,7 @@ def candidate_source_gate(monkeypatch):
             "gorgon-type.incubus.incubus-type",
             "gorgon-type.mother.mother-type",
             "gorgon-type.growth.growth-type",
+            "gorgon-type.doppleganger.doppleganger-type",
         }:
             return next(x for x in registry.entries if x.id == identity)
         return actual(registry, identity)
@@ -65,6 +66,7 @@ def gorgon_source(
     begin=True,
     other_cell=(0, 0),
     tag=None,
+    revealed=True,
 ):
     game, worker, gateway, _, _, _ = prepared(store, other_cell=other_cell)
     approval = store.policy.m3_approval
@@ -75,7 +77,7 @@ def gorgon_source(
     )
     with store.transaction() as c:
         canon = state(game)
-        actual = gorgon(gorgon_class, "source-gorgon", revealed=True, types=types)
+        actual = gorgon(gorgon_class, "source-gorgon", revealed=revealed, types=types)
         if damaged:
             actual = actual.model_copy(
                 update={
@@ -233,7 +235,7 @@ def gorgon_source(
     data = svc.preview(ADMIN, 900)
     actual = next(x for x in data["actors"] if x["ref"] == actor.model_dump(mode="json"))
     victim = next(x for x in data["actors"] if x["ref"]["entity"] == (target or "2"))
-    targeted = kind in ("attack", "incubus_inflict", "mother_mutation")
+    targeted = kind in ("attack", "incubus_inflict", "mother_mutation", "doppleganger_bond")
     declaration = Declaration(
         kind=kind,
         actor=actor,
@@ -361,6 +363,8 @@ def test_sentinel_native_corruption_preserves_position_owner_privacy_and_restart
     [
         ("incubus_inflict", "incubus", "dysphoria", "Dysphoric", False),
         ("mother_mutation", "mother", "branch", "Branching flesh", True),
+        ("doppleganger_bond", "doppleganger", "Familiar voice", "Familiar voice", False),
+        ("doppleganger_bond", "doppleganger", "Uncannily kind", "Uncannily kind", True),
     ],
 )
 def test_native_gorgon_type_tags_create_only_the_actual_scoped_effect(
@@ -406,6 +410,24 @@ def test_native_gorgon_type_tags_create_only_the_actual_scoped_effect(
     with pytest.raises(WorkflowError, match="actual owned"):
         service.begin(PLAYER, "wrong-controller", 900, preview["revision"], declaration)
 
+    if kind == "doppleganger_bond" and npc:
+        from girlframe.engine.m3_actor_bonds import set_depth
+
+        with ledger.transaction() as connection:
+            canon = set_depth(
+                state(game), declaration.actor, declaration.target, 2, "original-bond"
+            )
+            game.event(connection, 1, "seed-intense", "synthetic.prior_bond", canon)
+        preview = service.preview(ADMIN, 900)
+        actor_data = next(x for x in preview["actors"] if x["token"] == caster)
+        target_data = next(x for x in preview["actors"] if x["token"] == target.token)
+        declaration = declaration.model_copy(
+            update=dict(
+                actor_sha256=actor_data["source_sha256"],
+                target_sha256=target_data["source_sha256"],
+            )
+        )
+
     async def declare():
         owner = current(1)
         owner.channel_id = 900
@@ -422,10 +444,13 @@ def test_native_gorgon_type_tags_create_only_the_actual_scoped_effect(
         assert remote["token"] not in dict(confirm.fields[0].options)
         confirm.values.update(
             target=(target.token,),
-            tag=(selection,),
             account=declaration.account,
             reach=("confirmed",),
         )
+        if kind == "doppleganger_bond":
+            confirm.values["bond_tag"] = selection
+        else:
+            confirm.values["tag"] = (selection,)
         await confirm.confirm.callback(current(1, 999401))
         assert confirm.completed
 
@@ -441,6 +466,13 @@ def test_native_gorgon_type_tags_create_only_the_actual_scoped_effect(
     received = restarted.inspect(OTHER if npc else PLAYER, action)["result"]
     assert received["tag_label"] == label
     assert label not in str(restarted.inspect(PLAYER if npc else OTHER, action)["result"])
+    if kind == "doppleganger_bond":
+        from girlframe.engine.m3_actor_bonds import depth
+
+        level = 2 if npc else 1
+        assert received["bond"] == level
+        assert depth(after, declaration.actor, target) == level
+        assert "bond" not in restarted.inspect(PLAYER if npc else OTHER, action)["result"]
     if npc:
         (person,) = after.world.npcs
         assert [(x.id, x.label) for x in person.tags] == [(received["tag"], label)]
@@ -451,6 +483,25 @@ def test_native_gorgon_type_tags_create_only_the_actual_scoped_effect(
         assert tag.giver_actor == declaration.actor and set(tag.observers) == {1, 2}
         assert after.sheets["3"] == before.sheets["3"]
     assert game.dice.calls == 0
+
+
+def test_doppleganger_cannot_declare_its_known_form_from_a_concealed_source(ledger):
+    from girlframe.services.onboarding import WorkflowError
+
+    game, _, _, _, intent = gorgon_source(
+        ledger,
+        kind="doppleganger_bond",
+        types=("doppleganger",),
+        revealed=False,
+        tag="Hidden relationship",
+        begin=False,
+    )
+    service = GorgonPlayService(game)
+    preview = service.preview(ADMIN, 900)
+    assert "doppleganger_bond" not in preview["plays"]
+    with pytest.raises(WorkflowError, match="actual local reach"):
+        service.begin(ADMIN, "unrevealed-tag-bond", 900, preview["revision"], intent)
+    assert not state(game).sheets["2"].tags and game.dice.calls == 0
 
 
 def test_actual_gorgon_attack_owned_damage_no_dice_and_real_replay(ledger):

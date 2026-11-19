@@ -1,16 +1,21 @@
-"""The printed direct Tag effects of an Incubus or Mother in the same scene."""
+"""Printed direct Tag effects of Gorgons in the same scene."""
 
 from typing import Literal
 
 from girlframe.engine.m3_actor_state import ActorView
 
-TypeTag = Literal["incubus_inflict", "mother_mutation"]
-TYPES: dict[TypeTag, str] = {"incubus_inflict": "incubus", "mother_mutation": "mother"}
+TypeTag = Literal["incubus_inflict", "mother_mutation", "doppleganger_bond"]
+TYPES: dict[TypeTag, str] = {
+    "incubus_inflict": "incubus",
+    "mother_mutation": "mother",
+    "doppleganger_bond": "doppleganger",
+}
 RULES: dict[TypeTag, str] = {
     "incubus_inflict": "gorgon-type.incubus.incubus-type",
     "mother_mutation": "gorgon-type.mother.mother-type",
+    "doppleganger_bond": "gorgon-type.doppleganger.doppleganger-type",
 }
-LABELS: dict[TypeTag, tuple[tuple[str, str], ...]] = {
+LABELS: dict[str, tuple[tuple[str, str], ...]] = {
     "incubus_inflict": (
         ("bliss", "Blissed out"),
         ("touch", "Craving touch"),

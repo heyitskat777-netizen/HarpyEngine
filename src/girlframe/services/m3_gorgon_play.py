@@ -144,6 +144,7 @@ class GorgonPlayService:
                         ]
                         for kind, gorgon_type in TAG_TYPES.items()
                         if gorgon_type in actor.types
+                        and (kind != "doppleganger_bond" or actor.revealed)
                     }
                     typed_targets[token] = {
                         kind: targets for kind, targets in options.items() if targets
@@ -259,11 +260,19 @@ class GorgonPlayService:
                     raise WorkflowError(
                         "Use the actual present original target and source resources"
                     )
-                if declaration.kind in ("incubus_inflict", "mother_mutation") and (
+                if declaration.kind in (
+                    "incubus_inflict",
+                    "mother_mutation",
+                    "doppleganger_bond",
+                ) and (
                     TAG_TYPES[declaration.kind] not in gorgon.types
                     or not tag_target_present(declaration.kind, actual, target)
+                    or declaration.kind == "doppleganger_bond"
+                    and not gorgon.revealed
                 ):
-                    raise WorkflowError("Use a real body in this type's actual local reach")
+                    raise WorkflowError(
+                        "Use a real body in this revealed type's actual local reach"
+                    )
             if declaration.kind == "attack" and target_view is not None:
                 target = target_view
                 if target.ref.kind == "external_pilot":

@@ -2002,3 +2002,32 @@ ownership, and checks that the same controls and forged submissions
 are blocked on an approved Soldier when this effect lacks approval.
 Externally given Tags need their own setter route.
 [Soldier pp. 94–95](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=96)
+
+### Revealed Dopplegänger Tag and Bond
+
+Base `bdafbc6d61fabd60e8f2ae5792373e50c6236d9e`. A revealed
+Dopplegänger can use its own native role to Tag a living Girl or
+ordinary NPC in the same square and establish a Personal Bond.
+If the original pair already has an Intense Bond, that depth is
+preserved. The result is visible to the actual giver and recipient.
+The concealed version stays unavailable through this control, and
+Sniff You Out and the other printed plays remain separate.
+
+**5 direct-effect tests passed in 23.46 seconds**. The broader
+Gorgon and Director selection had 58 passes and one catalog
+inventory failure. The exact inventory assertion now derives the
+native identifiers from the actual Gorgon service. The updated
+Director suite passed **11 tests in 23.28 seconds**. Growth and
+Mother Sprite also have their own review routes.
+[Dopplegänger p. 168](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=170)
+
+### Full regression before the recovery fixes
+
+Exact revision `e758bc96bb53ac0ec0bf3382b7c85494ee25e40f` ran
+3,781 tests in four detached partitions. **3,769 passed and 12
+failed**. The longest partition ran **2,940.63 seconds**. Ten
+failures occurred in optional Ancillary authorization. Two P2
+tests reached their final assertions before failing to write to
+a missing ignored evidence directory. The registry serialization
+and evidence fixes are documented above. The exact historical logs
+are under `var/rulebook-full-e758bc9/`.

@@ -6389,7 +6389,9 @@ class GameService:
             result = action["data"]["result"] if action["state"] == "complete" else None
             parties = {int(action["actor_id"]), action["data"].get("prepared", {}).get("target")}
             gorgon = action["data"].get("gorgon_play")
-            if gorgon and gorgon["kind"] in ("incubus_inflict", "mother_mutation"):
+            from girlframe.engine.m3_gorgon_type_tags import TYPES as direct_gorgon_tags
+
+            if gorgon and gorgon["kind"] in direct_gorgon_tags:
                 parties.update(
                     x["controller"]
                     for x in gorgon["cast"]["roles"]

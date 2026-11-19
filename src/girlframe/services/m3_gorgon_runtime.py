@@ -93,7 +93,7 @@ def start(game: Any, c: Connection, state: GameState, action: dict[str, Any]) ->
     from girlframe.services.m3_gorgon_dormant import record_own_wake
 
     record_own_wake(game, c, state, action)
-    if meta["kind"] in ("incubus_inflict", "mother_mutation"):
+    if meta["kind"] in ("incubus_inflict", "mother_mutation", "doppleganger_bond"):
         from girlframe.services.m3_gorgon_type_tags import apply as apply_type_tag
 
         apply_type_tag(game, c, state, action)
