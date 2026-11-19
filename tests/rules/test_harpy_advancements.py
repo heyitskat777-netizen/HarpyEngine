@@ -664,3 +664,82 @@ def test_song_of_love_lost_only_the_actual_handler_can_answer(ledger):
     )
     response = records(state(game))[0]
     assert response.recipient == role and response.reaction and not response.moved
+
+
+def test_song_of_love_lost_crowd_adds_only_the_actual_local_npcs(ledger):
+    from girlframe.discord_adapter.m3_harpy_song import open_song_response
+    from girlframe.engine.m3_harpy_advancements import SONG_OF_LOVE_LOST
+    from girlframe.engine.m3_world import update
+    from girlframe.engine.m3_world_state import Npc
+    from girlframe.services.m3_harpy_song import HarpySongService, crowds
+
+    _, game, _, harpy = ready(ledger)
+    policy = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update=dict(
+            m3_approval=policy.model_copy(
+                update=dict(
+                    activity_specialist_rules=policy.activity_specialist_rules
+                    | {SONG_OF_LOVE_LOST},
+                )
+            ),
+        )
+    )
+    HarpyAdvancementService(ledger).select(
+        PLAYER,
+        "learn-song-crowd",
+        harpy.entity,
+        state(game).revision,
+        SONG_OF_LOVE_LOST,
+    )
+    with ledger.transaction() as c:
+        canon = state(game)
+        canon.world = update(
+            canon.world,
+            npcs=tuple(
+                Npc(
+                    id=name,
+                    name=name,
+                    detail="Actual ordinary NPC",
+                    jobs=("civilian",),
+                    cell=cell,
+                    controller=ADMIN.user_id,
+                    revealed=True,
+                )
+                for name, cell in (("Broker", (0, 0)), ("Cook", (0, 0)), ("Remote", (1, 0)))
+            ),
+        )
+        game.event(c, ADMIN.user_id, "synthetic-song-crowd", "synthetic.npcs", canon)
+    service = HarpySongService(game)
+    options = service.options(PLAYER, 900, harpy)
+    assert options["crowd"] is True
+    offered = service.act(
+        PLAYER,
+        "song-to-actual-crowd",
+        900,
+        harpy,
+        options["revision"],
+        "crowd",
+        "The original Harpy sings across the square.",
+    )
+    task = offered["id"]
+    inbox = InboxService(ledger)
+    assert [x.identity for x in inbox.items(ADMIN) if x.task == "m3_harpy_song"] == [task]
+    assert not [x for x in inbox.items(OTHER) if x.task == "m3_harpy_song"]
+
+    async def review():
+        interaction = current(ADMIN.user_id, 89700)
+        await interaction.response.defer(ephemeral=True)
+        await open_song_response(interaction, service, task)
+        form = interaction.edit_original_response.call_args.kwargs["view"]
+        key = next(field for field in form.fields if field.key == "choice").options[0][0]
+        form.values.update(choice=(key,), account="The Broker and Cook run up to the Harpy.")
+        await form.confirm.callback(current(ADMIN.user_id, 89701))
+        assert form.completed
+
+    asyncio.run(review())
+    updated = state(game)
+    result = crowds(updated)[0]
+    assert result.reaction and {x.entity for x in result.audience} == {"Broker", "Cook"}
+    scene = next(x for x in updated.scene_casts if x.id == result.scene)
+    assert {x.actor.entity for x in scene.roles if x.actor.kind == "npc"} == {"Broker", "Cook"}

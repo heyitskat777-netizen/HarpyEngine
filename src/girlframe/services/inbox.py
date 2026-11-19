@@ -4129,12 +4129,16 @@ class InboxService:
                         "pending",
                         True,
                         False,
-                        "Record your Handler’s reaction."
-                        if song.option == "handler"
-                        else "Choose whether to step toward the actual Harpy.",
-                        "Only the actual Handler owns this response."
-                        if song.option == "handler"
-                        else "Your body moves and the Bond deepens only after your choice.",
+                        {
+                            "crowd": "Verify the actual local NPCs approached the Harpy.",
+                            "handler": "Record your Handler’s reaction.",
+                            "girl": "Choose whether to step toward the actual Harpy.",
+                        }[song.option],
+                        {
+                            "crowd": "This decision uses the human GM role.",
+                            "handler": "Only the actual Handler owns this response.",
+                            "girl": "Your body moves and the Bond deepens only after your choice.",
+                        }[song.option],
                         "Review the song",
                         task="m3_harpy_song",
                     )

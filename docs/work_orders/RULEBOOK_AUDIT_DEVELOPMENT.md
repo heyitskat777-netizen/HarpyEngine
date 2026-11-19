@@ -2390,6 +2390,22 @@ new Handler response and the existing original Girl path
 through the shared form. The NPC crowd outcome remains open.
 [Harpy advancements p. 182](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=184) · [Native cases](../../tests/rules/test_harpy_advancements.py)
 
+### A Song of Love Lost draws the actual NPC crowd into the scene
+
+Base `26f0e09f87ddbdcc4aaa589dfb3b8c118c3a717a`. The song
+freezes the complete audible NPC audience in the original
+square. The human GM gets the private crowd decision. An
+accepted outcome joins the actual local NPCs to the original
+cast and keeps distant NPCs out. This scope requires the
+original GM to control the complete crowd. Held, offstage
+and independently controlled roles need their own adapter.
+
+**Two focused cases passed in 6.42 seconds**, checking the
+actual local cast changes and the original Girl flow through
+the shared response form. The selectable acceptance value is
+now the same value the form submits.
+[Harpy advancements p. 182](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=184) · [Native cases](../../tests/rules/test_harpy_advancements.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

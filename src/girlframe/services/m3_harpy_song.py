@@ -12,6 +12,7 @@ from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import change, depth
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, Model, SceneCast
 from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_cast import join
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_harpy_advancements import SONG_OF_LOVE_LOST
 from girlframe.engine.m3_world_state import Cell
@@ -19,15 +20,17 @@ from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
-from girlframe.services.m3_battle import _cast
+from girlframe.services.m3_battle import _cast, synchronize_casts
 from girlframe.services.m3_harpy_advancements import scene_harpy
 from girlframe.services.m3_jackdaw import require_audible
+from girlframe.services.m3_medical import MedicalService
 from girlframe.services.m3_movement import apply_reviewed_movement, proposal_context
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.p1_facilitator import require_scene_clear
 from girlframe.services.read_only_bot import GuildViewer
 
 KIND = "harpy_song"
+CROWD = "harpy_song_crowd"
 
 
 class Song(Model):
@@ -44,6 +47,29 @@ class Song(Model):
     response: str | None = None
     reaction: str | None = None
     moved: bool = False
+
+
+class Crowd(Model):
+    id: str
+    scene: str
+    channel: int
+    source: ActorRef
+    controller: int
+    location: Cell
+    advancement: str
+    gm: int
+    appointment: str
+    audience: tuple[ActorRef, ...]
+    account: str
+    option: Literal["crowd"] = "crowd"
+    response: str | None = None
+    reaction: str | None = None
+
+
+def crowds(state: GameState) -> tuple[Crowd, ...]:
+    return tuple(
+        Crowd.model_validate_json(x["body"]) for x in state.facts if x.get("kind") == CROWD
+    )
 
 
 def records(state: GameState) -> tuple[Song, ...]:
@@ -121,6 +147,49 @@ class HarpySongService:
             return None
         return actual
 
+    def _crowd(
+        self,
+        c: Connection,
+        state: GameState,
+        cast: SceneCast,
+        source: ActorView,
+    ) -> tuple[tuple[ActorView, ...], int, str] | None:
+        if state.world is None or source.cell is None:
+            return None
+        try:
+            gm, appointment = MedicalService(self.store)._handler(c)
+        except WorkflowError:
+            return None
+        if cast.facilitator != gm:
+            return None
+        bound = profiles(c, self.store.campaign_id)
+        roles = tuple(
+            resolve(
+                state, ActorRef(kind="npc", entity=person.id), bound, require_current_profile=False
+            )
+            for person in state.world.npcs
+            if person.alive and person.cell == source.cell
+        )
+        if not roles or any(
+            person.controller != gm
+            or person.offstage_source
+            or person.custody
+            or "director" in person.jobs
+            or any(
+                other.open
+                and other.id != cast.id
+                and any(y.actor == person.ref for y in other.roles)
+                for other in state.scene_casts
+            )
+            for person in roles
+        ):
+            return None
+        try:
+            require_audible(c, self.store.campaign_id, state, (source, *roles))
+        except WorkflowError:
+            return None
+        return roles, gm, appointment
+
     @staticmethod
     def _original_recipient(state: GameState, case: Song) -> bool:
         if case.option == "handler":
@@ -143,6 +212,7 @@ class HarpySongService:
                     key: view.label for key, view in self._targets(c, state, cast, source).items()
                 },
                 handler=handler.label if handler else None,
+                crowd=self._crowd(c, state, cast, source) is not None,
             )
 
     def act(
@@ -168,6 +238,8 @@ class HarpySongService:
             source, advancement = scene_harpy(
                 self.game, c, state, viewer.user_id, cast, actor, SONG_OF_LOVE_LOST
             )
+            if target == "crowd":
+                return self._offer_crowd(c, state, viewer, cast, source, advancement, account, key)
             handler_route = target == "handler"
             actual = (
                 self._handler(c, state, cast, source)
@@ -224,6 +296,79 @@ class HarpySongService:
             auto_audit=False,
         )
 
+    def _offer_crowd(
+        self,
+        c: Connection,
+        state: GameState,
+        viewer: GuildViewer,
+        cast: SceneCast,
+        source: ActorView,
+        advancement: str,
+        account: str,
+        key: str,
+    ) -> dict[str, Any]:
+        available = self._crowd(c, state, cast, source)
+        if available is None or source.cell is None or not 0 < len(account.strip()) <= 1200:
+            raise WorkflowError("Recover the actual complete local NPC audience")
+        if any(
+            x.source == source.ref and x.scene == cast.id and not x.response for x in crowds(state)
+        ):
+            raise WorkflowError("Recover the original outstanding NPC crowd reaction")
+        members, gm, appointment = available
+        value = Crowd(
+            id=str(uuid4()),
+            scene=cast.id,
+            channel=cast.channel,
+            source=source.ref,
+            controller=source.controller,
+            location=source.cell,
+            advancement=advancement,
+            gm=gm,
+            appointment=appointment,
+            audience=tuple(x.ref for x in members),
+            account=account.strip(),
+        )
+        state.facts.append(dict(kind=CROWD, id=value.id, body=value.model_dump_json()))
+        self.game.event(
+            c,
+            viewer.user_id,
+            key,
+            "m3.harpy_song_crowd_offered",
+            state,
+            event_id=value.id,
+            scene=cast.id,
+        )
+        return dict(id=value.id, state="awaiting_gm")
+
+    def _crowd_case(
+        self,
+        c: Connection,
+        state: GameState,
+        viewer: GuildViewer,
+        value: Crowd,
+    ) -> Crowd:
+        if (
+            viewer.user_id != value.gm
+            or value.response
+            or MedicalService(self.store)._handler(c) != (value.gm, value.appointment)
+        ):
+            raise WorkflowError("This private NPC crowd reaction is unavailable")
+        history = t.m2["m2_state_history"]
+        raw = c.scalar(
+            sa.select(history.c.body_json)
+            .join(t.events, t.events.c.id == history.c.event_id)
+            .where(
+                history.c.campaign_id == self.store.campaign_id,
+                t.events.c.id == value.id,
+                t.events.c.campaign_id == self.store.campaign_id,
+                t.events.c.kind == "m3.harpy_song_crowd_offered",
+                t.events.c.actor_id == str(value.controller),
+            )
+        )
+        if raw is None or value not in crowds(GameState.model_validate_json(raw)):
+            raise WorkflowError("Recover the original actual NPC crowd source")
+        return value
+
     def _owned(self, c: Connection, state: GameState, viewer: GuildViewer, identity: str) -> Song:
         case = next((x for x in records(state) if x.id == identity), None)
         if (
@@ -250,14 +395,26 @@ class HarpySongService:
             raise WorkflowError("Recover the actual source Harpy and original broadcast")
         return case
 
-    def tasks(self, c: Connection, state: GameState, viewer: GuildViewer) -> tuple[Song, ...]:
-        cases = tuple(
+    def tasks(
+        self, c: Connection, state: GameState, viewer: GuildViewer
+    ) -> tuple[Song | Crowd, ...]:
+        cases: tuple[Song | Crowd, ...] = tuple(
             x
             for x in records(state)
             if x.recipient.entity == str(viewer.user_id)
             and not x.response
             and self._original_recipient(state, x)
         )
+        pending_crowds = tuple(
+            x for x in crowds(state) if x.gm == viewer.user_id and not x.response
+        )
+        if pending_crowds:
+            try:
+                appointment = MedicalService(self.store)._handler(c)
+            except WorkflowError:
+                pass
+            else:
+                cases += tuple(x for x in pending_crowds if (x.gm, x.appointment) == appointment)
         if cases:
             try:
                 self._gate(c, viewer)
@@ -269,8 +426,12 @@ class HarpySongService:
         with self.store.engine.connect() as c:
             self._gate(c, viewer)
             state = load_state(c, self.store.campaign_id)
-            case = self._owned(c, state, viewer, identity)
-            return dict(revision=state.revision, account=case.account, option=case.option)
+            crowd = next((x for x in crowds(state) if x.id == identity), None)
+            if crowd:
+                case = self._crowd_case(c, state, viewer, crowd)
+                return dict(revision=state.revision, account=case.account, option=case.option)
+            song = self._owned(c, state, viewer, identity)
+            return dict(revision=state.revision, account=song.account, option=song.option)
 
     def respond(
         self,
@@ -285,10 +446,14 @@ class HarpySongService:
         def operation(c: Connection) -> dict[str, Any]:
             self.game.unpaused(c)
             state = load_state(c, self.store.campaign_id)
-            case = self._owned(c, state, viewer, identity)
             if state.revision != revision or (type(accept) is not bool):
                 raise WorkflowError("STALE_HARPY_SONG: reopen your original decision")
             event = str(uuid4())
+            crowd = next((x for x in crowds(state) if x.id == identity), None)
+            if crowd:
+                self._crowd_case(c, state, viewer, crowd)
+                return self._finish_crowd(c, state, viewer, crowd, accept, account, key, event)
+            case = self._owned(c, state, viewer, identity)
             if accept:
                 cast = _cast(self.game, c, state, case.channel)
                 source, receipt = scene_harpy(
@@ -362,3 +527,67 @@ class HarpySongService:
             authorize=lambda c: self._gate(c, viewer),
             auto_audit=False,
         )
+
+    def _finish_crowd(
+        self,
+        c: Connection,
+        state: GameState,
+        viewer: GuildViewer,
+        value: Crowd,
+        accept: bool,
+        account: str,
+        key: str,
+        event: str,
+    ) -> dict[str, Any]:
+        if accept:
+            if not 0 < len(account.strip()) <= 1200:
+                raise WorkflowError("Describe the actual original crowd approach")
+            require_scene_clear(self.game, c, value.channel)
+            lock = self.game.lock(c, value.channel)
+            if lock and lock["state"] != "released":
+                raise WorkflowError("Finish the actual held Play before the crowd enters")
+            cast = _cast(self.game, c, state, value.channel)
+            source, advancement = scene_harpy(
+                self.game,
+                c,
+                state,
+                value.controller,
+                cast,
+                value.source,
+                SONG_OF_LOVE_LOST,
+            )
+            actual = self._crowd(c, state, cast, source)
+            if (
+                actual is None
+                or cast.id != value.scene
+                or source.cell != value.location
+                or advancement != value.advancement
+                or actual[1:] != (value.gm, value.appointment)
+                or tuple(x.ref for x in actual[0]) != value.audience
+            ):
+                raise WorkflowError("Recover the actual original local NPC audience")
+            for person in actual[0]:
+                if not any(x.actor == person.ref for x in cast.roles):
+                    cast = join(state.scene_casts, cast.id, person, viewer.user_id, event)
+                    state.scene_casts = [cast if x.id == cast.id else x for x in state.scene_casts]
+        saved = value.model_copy(
+            update=dict(
+                response=event,
+                reaction=account.strip() if accept else None,
+            )
+        )
+        state.facts = [x for x in state.facts if (x.get("kind"), x.get("id")) != (CROWD, value.id)]
+        state.facts.append(dict(kind=CROWD, id=value.id, body=saved.model_dump_json()))
+        self.game.event(
+            c,
+            viewer.user_id,
+            key,
+            "m3.harpy_song_crowd_responded",
+            state,
+            event_id=event,
+            source=value.id,
+            accepted=accept,
+        )
+        if accept:
+            synchronize_casts(self.game, c, event)
+        return dict(event=event, accepted=accept)

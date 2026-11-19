@@ -26,6 +26,8 @@ async def open_song(
     targets = dict(data["targets"])
     if data["handler"]:
         targets["handler"] = "Make the Handler flinch"
+    if data["crowd"]:
+        targets["crowd"] = "Draw the local NPCs toward you"
     if not targets:
         await reply(interaction, "No supported recipient is in audible reach for this move.")
         return
@@ -72,11 +74,14 @@ async def open_song_response(
         )
         return "Your original response is saved."
 
+    label = {
+        "handler": "Flinch",
+        "girl": "Step toward the Harpy",
+        "crowd": "Verify the crowd’s approach",
+    }[data["option"]]
     fields = [
-        Field(
-            "choice", "Your response", (("step", "Step toward the Harpy"), ("decline", "Decline"))
-        ),
-        Field("account", "Describe what your Girl does", paragraph=True),
+        Field("choice", "Your response", (("accept", label), ("decline", "Decline"))),
+        Field("account", "Describe the actual response", paragraph=True),
     ]
     form = NativeForm(interaction.user.id, TITLE, data["account"], fields, submit)
     await reply(interaction, form.text(), form)
