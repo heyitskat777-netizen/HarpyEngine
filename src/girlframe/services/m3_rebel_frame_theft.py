@@ -12,12 +12,12 @@ from girlframe.engine import m3_rebel_frame_theft as rules
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, SceneCast
 from girlframe.engine.m3_actors import resolve
-from girlframe.engine.m3_engage import Maneuver
 from girlframe.engine.m3_handler_consequences import active_handler, same_handler_body
 from girlframe.engine.rolls import IndexSource
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_actors import profiles
+from girlframe.services.m3_engage import completed_interception
 from girlframe.services.m3_rebel_ambush import _cast
 from girlframe.services.m3_strain import StrainService
 from girlframe.services.onboarding import WorkflowError
@@ -159,45 +159,19 @@ class TheftService:
     def _interception(
         self, c: Connection, state: GameState, owner: int, case: rules.Theft, action: dict[str, Any]
     ) -> str | None:
-        if case.cast is None or action["state"] != "complete" or action["scene_id"] != case.cast.id:
+        original = next((x for x in case.defenders if x.entity == str(owner)), None)
+        if case.cast is None or original is None:
             return None
-        data = action["data"]
-        if action["actor_id"] != str(owner) or data.get("play") != "engage":
-            return None
-        original = next((x for x in case.defenders if x.entity == action["actor_id"]), None)
-        effect = data.get("engage") or {}
-        if (
-            original is None
-            or not effect.get("applied")
-            or effect.get("target") != case.thief.model_dump(mode="json")
-        ):
-            return None
-        start = c.scalar(
-            sa.select(t.events.c.seq).where(
-                t.events.c.campaign_id == self.store.campaign_id, t.events.c.id == case.attempt
-            )
+        return completed_interception(
+            self.game,
+            c,
+            state,
+            action,
+            defender=original,
+            opponent=case.thief,
+            scene=case.cast.id,
+            after=case.attempt,
         )
-        for raw in state.facts:
-            if raw.get("kind") != "engage_maneuver":
-                continue
-            maneuver = Maneuver.model_validate_json(raw["body"])
-            if (
-                maneuver.source_action != action["id"]
-                or maneuver.actor != original
-                or maneuver.opponent != case.thief
-                or maneuver.kind not in ("pin", "drive_back")
-                or maneuver.scene != case.cast.id
-            ):
-                continue
-            achieved = c.scalar(
-                sa.select(t.events.c.seq).where(
-                    t.events.c.campaign_id == self.store.campaign_id,
-                    t.events.c.id == maneuver.source_event,
-                )
-            )
-            if start is not None and achieved is not None and achieved > start:
-                return maneuver.source_event
-        return None
 
     def _stops(
         self, c: Connection, state: GameState, case: rules.Theft, owner: int

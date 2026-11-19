@@ -38,8 +38,8 @@ Off-Duty resumes only at its genuine completion boundary.
 | High Rebellion 3 | Reveal the original NPC Bond, retain that actor's history, and open an actual attack on the Handler that calls for Cadre intervention. | Have the fictional Director choose an actual Rebel faction and issue the order to demonstrate support. Resolve the actual public show of support without borrowing software Director authority. [Rulebook p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) |
 
 The registry tracks each source's current scope and its acceptance tests.
-The core table column still awaiting any effect is High Budget 5.2.
-Rebellion Endgames 3–8 and Budget
+Every ordinary core Strain column has an effect path. Several have incomplete
+branches. Rebellion Endgames 3–8 and Budget
 Endgames 1–2 have no effect resolver. Current subset limitations include
 the High Budget hearing's Severe finding and the High Void bunk's separate
 contact Play. The individual receipts below retain the rest of the source
@@ -1039,3 +1039,22 @@ mypy passed for the changed source. Attacking the Handler, introducing
 three Rebels when none exist, and external Pilot variants without a
 supported inventory still need their own implementation.
 [Status p. 12](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=14) · [High Rebellion p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) · [Siege test](../../tests/rules/test_rebel_ambush.py)
+
+## High Budget attack on a Foundation base
+
+The base is `90d489b8a9ecb27f6bbc295ab2128acb879ea2be`. An independently
+controlled original Foundation Pilot makes the attack from an operating
+Frame at the original base. The original participants in the scene can
+read the attempt. The human referee can confirm actual destruction or
+verify the Cadre's completed native interception. Destruction updates
+the canonical map, adds the Budget trigger and invokes the existing
+quadrant-loss procedure if the last base falls. A genuine interception
+requires the original participant's native Engage in the original scene
+after the attack. It prevents the destruction and preserves Off-Duty.
+
+All 41 selected tests passed in 62.88 seconds, with both outcomes,
+private recusal, safety pause, wrong scene and owner, stale and replay,
+reopening the database, and activation after resolution. Static typing
+passed on ten source files. Attacks on the Handler or a Girl, an
+unrevealed attacker and protected-base variants remain open.
+[High Budget p. 149](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=151) · [Base attack test](../../tests/rules/test_foundation_attack.py)

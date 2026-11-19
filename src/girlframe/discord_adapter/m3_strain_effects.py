@@ -23,6 +23,7 @@ from girlframe.engine.m3_civic_directive import PROTEST as CIVIC_PROTEST
 from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_cult_occupation import RULE as CULT_OCCUPATION
 from girlframe.engine.m3_doppelganger_reveal import RULE as DOPPELGANGER_REVEAL
+from girlframe.engine.m3_foundation_attack import RULE as FOUNDATION_ATTACK
 from girlframe.engine.m3_gorgon_catalog import ASSETS
 from girlframe.engine.m3_harpy_raid import RULE as HARPY_RAID
 from girlframe.engine.m3_npc_interest import RULE as NPC_INTEREST
@@ -134,6 +135,9 @@ async def open_effect(
         from girlframe.services.m3_rebel_ambush import SiegeService
 
         await open_siege(interaction, SiegeService(service.strain), identity)
+        return
+    if data.get("awaiting_foundation_attack"):
+        await reply(interaction, "Review the original attack in your private Inbox.")
         return
     if data.get("awaiting_frame_theft"):
         await reply(interaction, "The original Frame theft is pending in the private Inbox.")
@@ -382,13 +386,24 @@ def effect_form(
     from girlframe.engine.m3_rebel_frame_theft import thief as theft_actor
 
     theft_bases = {}
-    if rule in (REBEL_FRAME_THEFT, REBEL_SIEGE):
+    if rule in (REBEL_FRAME_THEFT, REBEL_SIEGE, FOUNDATION_ATTACK):
         for location in regional_locations:
             try:
                 eligible_base = theft_base(state, location["id"])
             except ValueError:
                 continue
             theft_bases[eligible_base.id] = eligible_base
+
+    foundation_pilots = []
+    if rule == FOUNDATION_ATTACK:
+        from girlframe.engine.m3_foundation_attack import pilot as foundation_actor
+
+        for candidate in world["pilots"]:
+            try:
+                attacker = foundation_actor(state, candidate["id"])
+            except ValueError:
+                continue
+            foundation_pilots.append((attacker.id, attacker.name))
 
     masks = (
         {
@@ -771,6 +786,21 @@ def effect_form(
                     "siege_base",
                     "Which operational base is the Cadre occupying?",
                     tuple((site.id, site.name) for site in theft_bases.values()) or WAIT,
+                )
+            )
+        if rule == FOUNDATION_ATTACK:
+            fields.extend(
+                (
+                    Field(
+                        "attacked_base",
+                        "Which operational base is targeted?",
+                        tuple((site.id, site.name) for site in theft_bases.values()) or WAIT,
+                    ),
+                    Field(
+                        "foundation_pilot",
+                        "Which original Foundation Pilot is sent?",
+                        tuple(foundation_pilots) or WAIT,
+                    ),
                 )
             )
         if rule == REBEL_FRAME_THEFT:
@@ -1529,6 +1559,8 @@ def effect_form(
             )
         if rule == REBEL_SIEGE:
             payload["target"] = values["siege_base"][0]
+        if rule == FOUNDATION_ATTACK:
+            payload.update(target=values["attacked_base"][0], victim=values["foundation_pilot"][0])
         if rule == REBEL_FRAME_THEFT:
             payload.update(target=values["theft_base"][0], victim=values["frame_thief"][0])
         if rule == REBEL_BOND_ATTACK:
@@ -1793,6 +1825,8 @@ def effect_form(
             return "The original Rebel will pursue this Girl on future missions."
         if rule == REBEL_SIEGE:
             return "Each original Rebel can open their attack from their private Inbox."
+        if rule == FOUNDATION_ATTACK:
+            return "The original Foundation Pilot can make the attack from their private Inbox."
         if rule == REBEL_BASE_CAPTURE:
             return "The base fell. Prisoners are free and the parked Frame is in Rebel custody."
         if rule == REBEL_BOND_ATTACK:

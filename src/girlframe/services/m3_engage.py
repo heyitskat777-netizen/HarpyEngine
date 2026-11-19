@@ -4,8 +4,10 @@ import hashlib
 import json
 from typing import TYPE_CHECKING, Any
 
+import sqlalchemy as sa
 from sqlalchemy import Connection
 
+from girlframe.database import tables as t
 from girlframe.engine import m3_engage as rules
 from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput
 from girlframe.engine.m3_actor_state import ActorRef, SceneCast
@@ -17,6 +19,50 @@ from girlframe.services.read_only_bot import GuildViewer
 
 if TYPE_CHECKING:
     from girlframe.services.m2_game import GameService
+
+
+def completed_interception(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    *,
+    defender: ActorRef,
+    opponent: ActorRef,
+    scene: str,
+    after: str | None,
+) -> str | None:
+    effect = action["data"].get("engage") or {}
+    if (
+        action["state"] != "complete"
+        or action["scene_id"] != scene
+        or action["actor_id"] != defender.entity
+        or action["data"].get("play") != "engage"
+        or not effect.get("applied")
+        or effect.get("target") != opponent.model_dump(mode="json")
+        or after is None
+    ):
+        return None
+    events = t.events
+    source = sa.select(events.c.seq).where(events.c.campaign_id == game.store.campaign_id)
+    start = c.scalar(source.where(events.c.id == after))
+    if start is None:
+        return None
+    for raw in state.facts:
+        if raw.get("kind") != "engage_maneuver":
+            continue
+        proof = rules.Maneuver.model_validate_json(raw["body"])
+        if (
+            proof.source_action == action["id"]
+            and proof.actor == defender
+            and proof.opponent == opponent
+            and proof.kind in ("pin", "drive_back")
+            and proof.scene == scene
+            and c.scalar(source.where(events.c.id == proof.source_event, events.c.seq > start))
+            is not None
+        ):
+            return proof.source_event
+    return None
 
 
 def prepare(

@@ -19,6 +19,7 @@ from girlframe.engine.m3_cadre_leak import RULE as CADRE_LEAK
 from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_contraband_state import ContrabandFind
 from girlframe.engine.m3_doppelganger_reveal import reveals as disguise_reveals
+from girlframe.engine.m3_foundation_attack import RULE as FOUNDATION_ATTACK
 from girlframe.engine.m3_harpy_raid import RULE as HARPY_RAID
 from girlframe.engine.m3_npc_interest import RULE as NPC_INTEREST
 from girlframe.engine.m3_pilot_fears import APPEARANCE as PUBLIC_APPEARANCE
@@ -155,6 +156,8 @@ class EffectService:
                 "awaiting_rebel_bond": bool(body.get("bond_attack_requested"))
                 and row["state"] == "pending",
                 "awaiting_rebel_siege": bool(body.get("siege_requested"))
+                and row["state"] == "pending",
+                "awaiting_foundation_attack": bool(body.get("foundation_attack_requested"))
                 and row["state"] == "pending",
                 "awaiting_frame_theft": bool(body.get("theft_requested"))
                 and row["state"] == "pending",
@@ -679,6 +682,14 @@ class EffectService:
                 stage_siege(
                     c, self.strain, updated, row, event_id, choice.target, choice.account.strip()
                 )
+            needs_foundation_attack = choice.rule_id == FOUNDATION_ATTACK
+            if needs_foundation_attack:
+                from girlframe.services.m3_foundation_attack import stage as stage_foundation_attack
+
+                assert choice.target and choice.victim
+                stage_foundation_attack(
+                    c, self.strain, updated, row, event_id, choice.target, choice.victim
+                )
             needs_theft = choice.rule_id == REBEL_FRAME_THEFT
             if needs_theft:
                 from girlframe.services.m3_rebel_frame_theft import stage as stage_theft
@@ -851,6 +862,7 @@ class EffectService:
                 or needs_bond_attack
                 or needs_theft
                 or needs_siege
+                or needs_foundation_attack
             )
             scientific_period, scientific_events = None, []
             if choice.rule_id == "strain.budget.low.3.1":
@@ -1080,7 +1092,8 @@ class EffectService:
                 | ({"bunk_requested": event} if needs_bunk else {})
                 | ({"bond_attack_requested": event} if needs_bond_attack else {})
                 | ({"theft_requested": event} if needs_theft else {})
-                | ({"siege_requested": event} if needs_siege else {}),
+                | ({"siege_requested": event} if needs_siege else {})
+                | ({"foundation_attack_requested": event} if needs_foundation_attack else {}),
                 resolved=not pending,
             )
             return {

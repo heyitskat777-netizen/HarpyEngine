@@ -22,6 +22,7 @@ from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_contraband_state import ContrabandFind
 from girlframe.engine.m3_cult_occupation import RULE as CULT_OCCUPATION
 from girlframe.engine.m3_doppelganger_reveal import RULE as DOPPELGANGER_REVEAL
+from girlframe.engine.m3_foundation_attack import RULE as FOUNDATION_ATTACK
 from girlframe.engine.m3_harpy_raid import RULE as HARPY_RAID
 from girlframe.engine.m3_npc_interest import RULE as NPC_INTEREST
 from girlframe.engine.m3_npc_interest import Timing as InterestTiming
@@ -126,6 +127,7 @@ SUPPORTED = frozenset(
         "strain.budget.high.4.1",
         "strain.budget.high.3.2",
         "strain.budget.high.5.1",
+        FOUNDATION_ATTACK,
         "strain.budget.high.6.1",
     }
 )
@@ -270,6 +272,10 @@ def apply(
             choice.victim,
             choice.account.strip(),
         )
+    elif rule == FOUNDATION_ATTACK:
+        fields(choice, {"target", "victim"})
+        if not choice.target or not choice.victim:
+            raise ValueError("Choose the original base and actual Foundation Pilot")
     elif rule == REBEL_SIEGE:
         fields(choice, {"target"})
         if not choice.target:

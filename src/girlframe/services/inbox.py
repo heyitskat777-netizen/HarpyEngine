@@ -2969,6 +2969,9 @@ class InboxService:
             from girlframe.services.m3_budget_hearing import visible as visible_hearings
             from girlframe.services.m3_bunk_harpy import options as bunk_options
             from girlframe.services.m3_bunk_harpy import visible as visible_bunks
+            from girlframe.services.m3_foundation_attack import (
+                visible as visible_foundation_attacks,
+            )
             from girlframe.services.m3_handler_tags import HandlerTagService
             from girlframe.services.m3_journalist import JournalistService
             from girlframe.services.m3_pilot_fears import access as fear_access
@@ -2980,6 +2983,32 @@ class InboxService:
             from girlframe.services.m3_rebel_frame_theft import visible as visible_thefts
 
             journalism = JournalistService(GameService(self.store))
+            for base_attack in visible_foundation_attacks(canon, viewer):
+                attack_pending = base_attack.resolution is None
+                items.append(
+                    InboxItem(
+                        "foundation-attack:" + base_attack.id,
+                        "work",
+                        base_attack.id,
+                        canon.revision,
+                        "off_duty",
+                        "Foundation attack on the base",
+                        "Original participants and referee",
+                        "pending" if attack_pending else "resolved",
+                        attack_pending
+                        and (
+                            not base_attack.attempt
+                            and viewer.user_id == base_attack.controller
+                            or bool(base_attack.attempt)
+                            and user == base_attack.handler.entity
+                        ),
+                        False,
+                        "Review the original attack.",
+                        "",
+                        "Open attack",
+                        task="m3_foundation_attack",
+                    )
+                )
             for frame_theft in visible_thefts(canon, viewer):
                 can_act = bool(theft_choices(frame_theft, viewer))
                 items.append(
