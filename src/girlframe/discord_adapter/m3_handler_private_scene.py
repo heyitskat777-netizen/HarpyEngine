@@ -10,6 +10,7 @@ from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_handler_private_scene import Book, LabExchange
+from girlframe.engine.m3_trainer_phrases import PHRASES
 from girlframe.services.m3_handler_private_scene import HandlerPrivateSceneService
 
 CHOICES = {
@@ -26,7 +27,7 @@ CHOICES = {
     "trainer_ask": "Ask how she understands the private scene",
     "trainer_yes": "I understood the scene as intimacy",
     "trainer_understands": "I understood it as conditioning",
-    "install_speak": "Install Speak",
+    **{f"install_{key}": f"Install {label}" for key, label in PHRASES},
     "pass_phrase": "Leave without installing a phrase",
     "dogrunner_ask": "Ask whether she thinks she did well",
     "dogrunner_answer": "Answer in your own words",

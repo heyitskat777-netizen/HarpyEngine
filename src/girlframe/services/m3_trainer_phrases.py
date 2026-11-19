@@ -19,9 +19,12 @@ from girlframe.engine.m3_trainer_phrases import (
     PHRASE_LABELS,
     TARGETED,
     Heel,
+    Protection,
     Seated,
     pending_heel,
+    protections,
     save_heel,
+    save_protection,
     save_sitting,
     sitting,
 )
@@ -43,11 +46,12 @@ SIT = "trainer_sit"
 HEEL = "trainer_heel_response"
 FLIRT = "trainer_flirt_play"
 HUNT = "trainer_hunt_play"
+PROTECT = "trainer_protect_response"
 ROUGH_OFFER = "trainer_rough_offer"
 ROUGH_REPLY = "trainer_rough_reply"
 ROUGH_HEARD = "trainer_rough_heard"
 ROUGH_CHOICES = (ROUGH_OFFER, ROUGH_REPLY, ROUGH_HEARD)
-RESPONSE_CHOICES = (SPEAK, HEAR, SIT, HEEL, *ROUGH_CHOICES)
+RESPONSE_CHOICES = (SPEAK, HEAR, SIT, HEEL, PROTECT, *ROUGH_CHOICES)
 
 
 def _installation(
@@ -84,7 +88,7 @@ def _installation(
                 if x.event == saved.source_event
                 and x.playbook == "Trainer"
                 and x.phase == "complete"
-                and x.outcome == "speak_installed"
+                and x.outcome == ("speak_installed" if phrase == "speak" else "phrase_installed")
             ),
             None,
         )
@@ -92,8 +96,7 @@ def _installation(
             return (
                 saved.source_event
                 if (
-                    phrase == "speak"
-                    and record.girl == target
+                    record.girl == target
                     and record.handler.entity == str(original.owner)
                     and record.handler.incarnation == original.id
                     and set(record.attestations) == {record.handler, target}
@@ -104,7 +107,7 @@ def _installation(
                             t.events.c.kind == TRAINER_EVENT,
                             t.events.c.actor_id == str(original.owner),
                             sa.func.json_extract(t.events.c.payload_json, "$.step")
-                            == "install_speak",
+                            == f"install_{phrase}",
                         )
                     )
                 )
@@ -217,12 +220,17 @@ def stage(
             raise WorkflowError("Choose another original Girl currently in this actual scene")
         game.pilot_cast(c, state, scene, owners=(issuer, target, counterpart))
         nominated = current_ref(state, counterpart).model_dump(mode="json")
-    if (actor_token is not None) != (phrase == "hunt"):
-        raise WorkflowError("Hunt requires one actual target in this scene")
-    if actor_token is not None:
+    if (actor_token is not None) != (phrase in ("hunt", "protect")):
+        raise WorkflowError("Choose an actual target for Hunt or Protect")
+    if actor_token is not None and phrase == "hunt":
         nominated = _hunt_target(game, c, state, scene, girl, issuer, actor_token).model_dump(
             mode="json"
         )
+    if actor_token is not None and phrase == "protect":
+        other = _protected_target(game, c, state, scene, girl, issuer, actor_token)
+        if other is None:
+            raise WorkflowError("Protect a known person or Girl at the original Girl's side")
+        nominated = other.model_dump(mode="json")
     return dict(
         phrase=phrase,
         order=order,
@@ -335,7 +343,7 @@ def offer_phrase(
         c,
         action,
         int(saved["target"]["entity"]),
-        {"sit": SIT, "heel": HEEL}.get(saved["phrase"], SPEAK),
+        {"sit": SIT, "heel": HEEL, "protect": PROTECT}.get(saved["phrase"], SPEAK),
         dict(source=saved),
     )
     return True
@@ -371,6 +379,65 @@ def _hunt_target(
             ):
                 return other
     raise WorkflowError("Choose an actual visible opposing body with an intact Asset for Hunt")
+
+
+def _protected_target(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    scene: dict[str, Any],
+    girl: ActorRef,
+    issuer: int,
+    token: str,
+) -> ActorRef | None:
+    from girlframe.services.m3_battle import _cast, _visible
+
+    cast = _cast(game, c, state, int(scene["channel_id"]))
+    for role in cast.roles:
+        other = role.actor
+        if (
+            other != girl
+            and other.token == token
+            and other.kind in ("pilot", "npc", "handler", "external_pilot")
+            and all(_visible(state, other, human) for human in (issuer, int(girl.entity)))
+        ):
+            pair = protected_pair(game, c, state, girl, other, int(scene["channel_id"]), cast.id)
+            if pair and pair[0].cell == pair[1].cell:
+                return other
+    return None
+
+
+def protected_pair(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    girl: ActorRef,
+    other: ActorRef,
+    channel: int,
+    scene: str,
+) -> tuple[ActorView, ActorView] | None:
+    from girlframe.services.m3_battle import _cast
+
+    cast = _cast(game, c, state, channel)
+    if cast.id != scene or not cast.open or not {girl, other} <= {x.actor for x in cast.roles}:
+        return None
+    bound = profiles(c, game.store.campaign_id)
+    try:
+        protector = resolve(state, girl, bound, require_current_profile=False)
+        protected = resolve(state, other, bound, require_current_profile=False)
+    except ValueError:
+        return None
+    if (
+        protector.cell is None
+        or protected.cell is None
+        or protector.offstage_source
+        or protected.offstage_source
+        or protector.custody not in (None, "free")
+        or not {(girl, protector.controller), (other, protected.controller)}
+        <= {(x.actor, x.controller) for x in cast.roles}
+    ):
+        return None
+    return protector, protected
 
 
 def prove_hunt(
@@ -495,6 +562,30 @@ def choose(
             ),
         )
         return
+    if request["kind"] == PROTECT:
+        if saved["phrase"] != "protect" or not answer.text.strip() or answer.flag is not None:
+            raise WorkflowError("Describe how the original Girl takes her position for Protect")
+        girl = ActorRef.model_validate(saved["target"])
+        other = ActorRef.model_validate(saved["counterpart"])
+        pair = protected_pair(
+            game, c, state, girl, other, int(action["channel_id"]), action["scene_id"]
+        )
+        if pair is None or pair[0].cell != pair[1].cell or girl in protections(state):
+            raise WorkflowError(
+                "Take position beside one actual person without another active Protect"
+            )
+        save_protection(
+            state,
+            Protection(
+                girl=girl,
+                protected=other,
+                order=saved["order"],
+                choice=request["id"],
+                scene=action["scene_id"],
+                event=action["data"]["response_event"],
+            ),
+        )
+        return
     if request["kind"] == HEEL:
         if saved["phrase"] != "heel" or not answer.text.strip() or answer.flag is not None:
             raise WorkflowError("Describe how the original Girl actually answers Heel")
@@ -505,6 +596,9 @@ def choose(
         seated = sitting(state, girl)
         if seated is not None:
             save_sitting(state, seated.model_copy(update=dict(released=event)))
+        protecting = protections(state).get(girl)
+        if protecting is not None:
+            save_protection(state, protecting.model_copy(update=dict(ended=event)))
         save_heel(
             state,
             Heel(
@@ -589,7 +683,7 @@ def display(
                 return "Your counterpart accepted. Use the usual scene controls if you continue."
             return "Your counterpart declined the invitation."
         raise WorkflowError("Recover the original invitation and its actual response")
-    if request["kind"] in (SPEAK, SIT, HEEL):
+    if request["kind"] in (SPEAK, SIT, HEEL, PROTECT):
         return str(root["data"]["order_text"])
     spoken = action["data"].get("trainer_spoken", {})
     if spoken.get("source") != saved:

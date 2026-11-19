@@ -944,6 +944,12 @@ def projection(
     action: dict[str, Any],
     request: dict[str, Any],
 ) -> dict[str, Any]:
+    from girlframe.services.m3_trainer_protect import CHOICE as PROTECT_CHOICE
+
+    if request["kind"] == PROTECT_CHOICE:
+        from girlframe.services.m3_trainer_protect import projection as protect_projection
+
+        return protect_projection(game, c, state, action, request)
     if request["kind"] in ("battle_collateral", "battle_quadrant_loss", "battle_aggressive_damage"):
         return damage_projection(game, c, state, action, request)
     meta = action["data"]["battle"]
@@ -1062,12 +1068,18 @@ def apply(
     answer: ChoiceAnswer,
 ) -> None:
     from girlframe.engine.m3_actor_bonds import make_helpless
+    from girlframe.services.m3_trainer_protect import CHOICE as PROTECT_CHOICE
 
     meta = action["data"]["battle"]
     actor, target = _refs(action)
     kind = request["kind"]
     event = action["data"]["response_event"]
     level = action["data"]["result"]["tier"]
+    if kind == PROTECT_CHOICE:
+        from girlframe.services.m3_trainer_protect import apply as apply_protect
+
+        apply_protect(game, c, state, action, request, answer)
+        return
     if kind == "battle_assault_table":
         _strict(answer, {"flag", "text"})
         if answer.flag is None or not answer.text.strip():
@@ -2056,6 +2068,32 @@ def damage_actor(
             )
             if interceptions:
                 return deferred, interceptions
+            foe = opponent or actor
+            if (
+                source_action
+                and not source_work
+                and asset_id is not None
+                and foe is not None
+                and foe != target
+                and action["data"].get("battle")
+            ):
+                from girlframe.services.m3_trainer_protect import defer as defer_protect
+
+                if defer_protect(
+                    game,
+                    c,
+                    state,
+                    action,
+                    target=target,
+                    asset=asset_id,
+                    foe=foe,
+                    chooser=chooser_controller,
+                    occurrence=occurrence,
+                    event=event,
+                    stamp=stamp,
+                    indirect=indirect,
+                ):
+                    return state, ()
     source_inside = None
     if source_action:
         source_data = game.action(c, source_action)["data"]

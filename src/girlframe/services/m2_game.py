@@ -6162,8 +6162,8 @@ class GameService:
 
         if phrase_target is not None and conditioning_phrase not in TARGETED:
             raise WorkflowError("Only a targeted Conditioning Phrase nominates another Girl")
-        if phrase_actor is not None and conditioning_phrase != "hunt":
-            raise WorkflowError("Only Hunt uses an opposing battlefield target")
+        if phrase_actor is not None and conditioning_phrase not in ("hunt", "protect"):
+            raise WorkflowError("Only Hunt and Protect use a battlefield actor target")
         if advocate_conversation is not None and (dose_up or conditioning_phrase is not None):
             raise WorkflowError("Choose one source for this direct order")
         if dress_order is not None and (dose_up or conditioning_phrase or advocate_conversation):

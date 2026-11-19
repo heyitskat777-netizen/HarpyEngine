@@ -105,13 +105,28 @@ def _physical_context(
     external_pose = next((x for x in state.external_poses if x.actor == actor), None)
     if actor.kind == "pilot":
         from girlframe.engine.m3_sentinel_shell import holds
-        from girlframe.engine.m3_trainer_phrases import require_can_leave_seat
+        from girlframe.engine.m3_trainer_phrases import protections, require_can_leave_seat
 
         if destination != actual.cell:
             try:
                 require_can_leave_seat(state, actor)
             except ValueError as error:
                 raise WorkflowError(str(error)) from None
+            protection = protections(state).get(actor)
+            if protection and protection.scene == scene["id"]:
+                from girlframe.services.m3_trainer_phrases import protected_pair
+
+                pair = protected_pair(
+                    game,
+                    c,
+                    state,
+                    actor,
+                    protection.protected,
+                    int(scene["channel_id"]),
+                    protection.scene,
+                )
+                if pair is None or destination != pair[1].cell:
+                    raise WorkflowError("The original Protect order requires staying at their side")
         if holds(state, actor, "trapped"):
             raise WorkflowError("The actual trapped Girl needs assistance before leaving")
         if (

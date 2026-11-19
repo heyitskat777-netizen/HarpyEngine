@@ -1451,6 +1451,21 @@ with `PYTHONPATH="$PWD/src"`, covering a native Pilot target, restart,
 the card's fixed choices, one roll, one maneuver and actual Asset damage.
 [Hunt case](../../tests/rules/test_trainer_phrases.py)
 
+Protect and the Trainer's private installation choice, based on `bfc6880`,
+use the seven printed phrases. A Girl in the original scene can take
+position beside a named, visible person. Ordinary movement checks that
+position. A qualifying incoming battlefield hit to the protected person's
+Asset opens a private choice for the original protector's own Asset and
+keeps the battle pending. Heel ends the earlier Protect. The combined
+check ran three cases in 15.14 seconds using
+`python -m pytest -q --tb=short tests/rules/test_trainer_phrases.py -k 'protect_keeps or private_trainer_source'`
+with `PYTHONPATH="$PWD/src"`. It verified the new private choice, prior
+Speak and Identity branches, actual redirected damage with a third Pilot,
+wrong owner, invalid Asset, and restart. Remotely separated bodies,
+competing protections, damage without an Asset, and damage outside this
+battle service have separate adjudication needs.
+[Protect and private installation cases](../../tests/rules/test_trainer_phrases.py)
+
 ### Scientist's initial laboratory Project step
 
 Base `06aa08cbeb9592c1d3d1a86dbd081f710098d371`. Head to the Lab can

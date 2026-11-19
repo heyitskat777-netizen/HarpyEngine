@@ -244,6 +244,8 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
         fields = [text("text", "Describe your character sitting")]
     elif kind == "trainer_heel_response":
         fields = [text("text", "Describe your response to Heel")]
+    elif kind == "trainer_protect_response":
+        fields = [text("text", "Describe taking position beside the original person")]
     elif kind == "trainer_speak_heard":
         fields = [Field("flag", "Confirm you heard this answer", (("yes", "I heard it"),))]
     elif kind == "trainer_rough_offer":
@@ -2974,6 +2976,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
             app_commands.Choice(name="Conditioning Phrase (Sit)", value="trainer_sit"),
             app_commands.Choice(name="Conditioning Phrase (Heel)", value="trainer_heel"),
             app_commands.Choice(name="Conditioning Phrase (Hunt)", value="trainer_hunt"),
+            app_commands.Choice(name="Conditioning Phrase (Protect)", value="trainer_protect"),
             app_commands.Choice(name="Conditioning Phrase (Play Gentle)", value="trainer_gentle"),
             app_commands.Choice(name="Conditioning Phrase (Play Rough)", value="trainer_rough"),
             app_commands.Choice(name="Grant leave after Sit", value="trainer_leave"),
@@ -2995,6 +2998,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
             "trainer_sit": "sit",
             "trainer_heel": "heel",
             "trainer_hunt": "hunt",
+            "trainer_protect": "protect",
             "trainer_gentle": "play_gentle",
             "trainer_rough": "play_rough",
         }.get(use)
@@ -3036,7 +3040,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
             except WorkflowError as error:
                 await reply(interaction, str(error))
             return
-        if phrase == "hunt":
+        if phrase in ("hunt", "protect"):
             from girlframe.services.m3_battle import BattleService
 
             channel = interaction.channel_id or 0
@@ -3050,15 +3054,23 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
             except WorkflowError as error:
                 await reply(interaction, str(error))
                 return
+            hunt = phrase == "hunt"
+            target_kinds = (
+                ("pilot", "gorgon", "external_pilot")
+                if hunt
+                else ("pilot", "npc", "handler", "external_pilot")
+            )
             targets = tuple(
                 (actor["token"], actor["name"])
                 for actor in preview["actors"]
-                if actor["ref"]["kind"] in ("pilot", "gorgon", "external_pilot")
-                and actor["ref"]["entity"] != str(member.id)
-                and actor["assets"]
+                if actor["ref"]["kind"] in target_kinds
+                and not (
+                    actor["ref"]["kind"] == "pilot" and actor["ref"]["entity"] == str(member.id)
+                )
+                and (not hunt or actor["assets"])
             )
             if not targets:
-                await reply(interaction, "Join an actual visible Hunt target with an intact Asset.")
+                await reply(interaction, "Join a visible target for this Conditioning Phrase.")
                 return
 
             async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
@@ -3069,17 +3081,17 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
                         channel,
                         member.id,
                         instruction,
-                        conditioning_phrase="hunt",
+                        conditioning_phrase=phrase,
                         phrase_actor=values["target"][0],
                     )
                 )
-                return "Hunt order recorded for the original Girl."
+                return f"{phrase.title()} order recorded for the original Girl."
 
             form = NativeForm(
                 interaction.user.id,
-                "Issue Hunt",
-                "Choose the original battlefield target.",
-                [Field("target", "Actual opposing actor", targets)],
+                f"Issue {phrase.title()}",
+                "Choose the original scene actor.",
+                [Field("target", "Actual actor", targets)],
                 submit,
             )
             await reply(interaction, form.text(), form)

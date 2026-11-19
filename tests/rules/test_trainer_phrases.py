@@ -671,3 +671,157 @@ def test_hunt_requires_its_exact_assault_and_earns_one_engage_maneuver(ledger):
     assert sum(x.get("kind") == "engage_maneuver" for x in actual.facts) == 1
     assert game.inspect(OTHER, parent)["state"] == game.inspect(OTHER, child)["state"] == "complete"
     assert game.dice.calls == 1
+
+
+def test_protect_keeps_its_position_and_redirects_actual_damage_to_its_owners_asset(
+    ledger, monkeypatch
+):
+    import test_mission_service
+    from test_harpy_flirt import submit_form
+    from test_intracadre_marriage import FOUR, setup_three
+    from test_physical_operations import place
+
+    from girlframe.engine.m3_actor_bonds import current_ref
+    from girlframe.engine.m3_battle_state import Declaration
+    from girlframe.services.m3_battle import BattleService
+    from girlframe.services.m3_movement import MovementService
+    from girlframe.services.m3_trainer_phrases import PROTECT
+    from girlframe.services.m3_trainer_protect import CHOICE
+
+    monkeypatch.setattr(test_mission_service, "setup_game", setup_three)
+    _, game = ready(ledger)
+    create_trainer(ledger, start_with_speak=False)
+    approval = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update=dict(
+            m3_approval=approval.model_copy(update=dict(subsystems=approval.subsystems | {"world"}))
+        )
+    )
+    game.leave_scene(PLAYER, "private-protect-scene-primary", 900)
+    game.leave_scene(FOUR, "private-protect-scene-fourth", 900)
+    private = HandlerPrivateSceneService(ledger, game)
+    case = private.invite(
+        ADMIN, "invite-protect-install", state(game).revision, 900, playbook="Trainer"
+    )["id"]
+    for owner, step in (
+        (OTHER, "consent"),
+        (ADMIN, "attest"),
+        (OTHER, "attest"),
+        (ADMIN, "trainer_ask"),
+        (OTHER, "trainer_yes"),
+    ):
+        private.respond(
+            owner, "protect-training-" + step + str(owner.user_id), case, state(game).revision, step
+        )
+
+    inbox = InboxService(ledger)
+
+    async def install(click):
+        item = next(x for x in inbox.items(ADMIN) if x.identity == case)
+        await InboxView(inbox, 1).route(click, item)
+
+    asyncio.run(submit_form(ADMIN, install, dict(choice=("install_protect",)), 47400))
+    for owner in (PLAYER, FOUR):
+        game.join_scene(owner, "join-protect-cast-" + str(owner.user_id), 900)
+    with ledger.transaction() as c:
+        positioned = place(place(place(state(game), 2), 3, mode="outside_frame"), 4)
+        game.event(c, 1, "protect-positions", "synthetic.placement", positioned)
+    girl, target, attacker = (current_ref(state(game), owner) for owner in (3, 2, 4))
+
+    class FourPersonGateway(Gateway):
+        async def actor(self, identity):
+            return FOUR if identity == 4 else await super().actor(identity)
+
+    worker, gateway = GameWorker(game), FourPersonGateway()
+    game.issue_order(
+        ADMIN,
+        "protect-order",
+        900,
+        3,
+        "Stay beside your counterpart.",
+        conditioning_phrase="protect",
+        phrase_actor=target.token,
+    )
+    tick(worker, gateway, 3)
+    answer(game, OTHER, "order_response", options=("obedient",))
+    answer(game, OTHER, PROTECT, text="I take position at her side.")
+    tick(worker, gateway, 4)
+    with pytest.raises(WorkflowError, match="staying at their side"):
+        MovementService(game).move(
+            OTHER,
+            "leave-protected-actor",
+            state(game).revision,
+            900,
+            girl,
+            (1, 0),
+            account="I leave her square.",
+        )
+
+    battle = BattleService(ledger)
+    data = battle.preview(FOUR, 900)
+    by_entity = {x["ref"]["entity"]: x for x in data["actors"]}
+    own, opponent = by_entity["4"], by_entity["2"]
+    declaration = Declaration(
+        play="all_out_assault",
+        actor=attacker,
+        target=target,
+        attacking_asset=own["assets"][0]["id"],
+        target_asset=opponent["assets"][0]["id"],
+        actor_sha256=own["sha256"],
+        target_sha256=opponent["sha256"],
+        account="An actual strike is incoming.",
+    )
+    context = battle.propose(FOUR, "strike-protected", data["revision"], 900, declaration)["id"]
+    battle.confirm(
+        ADMIN,
+        "strike-reach",
+        state(game).revision,
+        context,
+        opening=True,
+        reach=True,
+        outside_permission=False,
+        indirect=False,
+        evidence="Actual reach and opening.",
+    )
+    assault = game.begin(
+        FOUR,
+        "strike-roll",
+        900,
+        state(game).sheets["4"].revision,
+        PlayInput(
+            play="all_out_assault",
+            heat=0,
+            target_actor=target,
+            attacking_asset=declaration.attacking_asset,
+            target_asset=declaration.target_asset,
+            battle_context=context,
+            context=declaration.account,
+            trigger_confirmed=True,
+            piloting=True,
+        ),
+    )["action_id"]
+    tick(worker, gateway, 4)
+    for owner in (ADMIN, PLAYER, OTHER, FOUR):
+        answer(game, owner, "tag_window", options=("pass",))
+    for owner in (ADMIN, PLAYER, OTHER, FOUR):
+        answer(game, owner, "battle_assault_table", flag=False, text="The hit connects.")
+    pending = state(game)
+    choice = next(x for x in game.choices(OTHER) if x["kind"] == CHOICE)
+    with pytest.raises(WorkflowError):
+        game.decision(PLAYER, choice["id"])
+    assert game.inspect(FOUR, assault)["state"] != "complete"
+    with pytest.raises(WorkflowError):
+        answer(game, OTHER, CHOICE, fields={"asset": "not-owned-by-this-protector"})
+
+    ledger.engine.dispose()
+    payment = next(x.id for x in pending.sheets["3"].assets if x.family == "girl" and not x.damaged)
+
+    async def intercept(click):
+        item = next(x for x in inbox.items(OTHER) if x.identity == choice["id"])
+        await InboxView(inbox, 3).route(click, item)
+
+    asyncio.run(submit_form(OTHER, intercept, dict(asset=(payment,)), 47410))
+    actual = state(game)
+    assert actual.sheets["2"].assets == pending.sheets["2"].assets
+    assert next(x for x in actual.sheets["3"].assets if x.id == payment).damaged
+    assert game.inspect(FOUR, assault)["state"] == "complete" and game.dice.calls == 1

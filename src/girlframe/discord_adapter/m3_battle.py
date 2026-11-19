@@ -614,11 +614,18 @@ async def open_battle(interaction: discord.Interaction, game: GameService, ident
                 maximum=detail["maximum"],
             )
         ]
-    elif kind in ("battle_low_damage", "battle_actor_damage", "battle_target_damage"):
+    elif kind in (
+        "battle_low_damage",
+        "battle_actor_damage",
+        "battle_target_damage",
+        "battle_trainer_protect",
+    ):
         fields = [
             Field(
                 "asset",
-                "Actual undamaged Asset",
+                "Your Asset taking the intercepted blow"
+                if kind == "battle_trainer_protect"
+                else "Actual undamaged Asset",
                 tuple((x["id"], x["name"]) for x in detail["assets"]),
             )
         ]

@@ -15,6 +15,7 @@ from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_handler_state import Conditioning
+from girlframe.engine.m3_trainer_phrases import PHRASE_LABELS, PHRASES
 from girlframe.services.m2_choices import ChoiceEngine
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
@@ -165,7 +166,9 @@ class HandlerPrivateSceneService:
             raise WorkflowError("Recover the original committed private choice")
         return value, value.handler if value.handler.entity == str(viewer.user_id) else value.girl
 
-    def _options(self, value: rules.PrivateScene, actor: ActorRef) -> tuple[str, ...]:
+    def _options(
+        self, state: GameState, value: rules.PrivateScene, actor: ActorRef
+    ) -> tuple[str, ...]:
         if value.phase == "invite":
             return ("consent", "withdraw") if actor == value.girl else ("withdraw",)
         if value.phase == "scene":
@@ -175,7 +178,16 @@ class HandlerPrivateSceneService:
         if value.phase == "trainer_answer" and actor == value.girl:
             return ("trainer_yes", "trainer_understands")
         if value.phase == "trainer_install" and actor == value.handler:
-            return ("install_speak", "pass_phrase")
+            installed = {
+                phrase
+                for entry in (state.handler_persona.conditioning if state.handler_persona else ())
+                if entry.pilot == value.girl
+                for phrase in entry.phrases
+            }
+            return (
+                *(f"install_{key}" for key, _ in PHRASES if key not in installed),
+                "pass_phrase",
+            )
         if value.phase == "dogrunner_question" and actor == value.handler:
             return ("dogrunner_ask",)
         if value.phase == "dogrunner_answer" and actor == value.girl:
@@ -271,7 +283,7 @@ class HandlerPrivateSceneService:
         def operation(c: Connection) -> dict[str, Any]:
             canon = load_state(c, self.store.campaign_id)
             value, actor = self._case(c, canon, viewer, identity)
-            if canon.revision != expected or step not in self._options(value, actor):
+            if canon.revision != expected or step not in self._options(canon, value, actor):
                 raise WorkflowError("Reopen your own current private choice")
             event = str(uuid4())
             owned = active_book(
@@ -491,7 +503,7 @@ class HandlerPrivateSceneService:
                 if value.phase != "withdrawn" and not self._pending(c, canon, value)
                 else value.phase,
                 playbook=value.playbook,
-                options=self._options(value, actor),
+                options=self._options(canon, value, actor),
                 favor=value.favor,
                 outcome=value.outcome,
                 action=value.action,
@@ -524,7 +536,9 @@ class HandlerPrivateSceneService:
             (x.id, x.playbook)
             for x in rules.records(state)
             if str(viewer.user_id) in (x.handler.entity, x.girl.entity)
-            and self._options(x, x.handler if x.handler.entity == str(viewer.user_id) else x.girl)
+            and self._options(
+                state, x, x.handler if x.handler.entity == str(viewer.user_id) else x.girl
+            )
         ]
 
 
@@ -582,14 +596,18 @@ def _training(
     if step == "pass_phrase":
         return dict(phase="complete", outcome="identity_erased" if value.identity else "declined")
     persona = state.handler_persona
+    phrase = step.removeprefix("install_")
     if (
-        step != "install_speak"
+        not step.startswith("install_")
+        or phrase not in PHRASE_LABELS
         or persona is None
-        or any(x.pilot == value.girl and "speak" in x.phrases for x in persona.conditioning)
+        or any(x.pilot == value.girl and phrase in x.phrases for x in persona.conditioning)
     ):
         raise WorkflowError("Choose a supported conditioning phrase that is not already installed")
-    installation = Conditioning(pilot=value.girl, phrases=("speak",), source_event=event)
+    installation = Conditioning(pilot=value.girl, phrases=(phrase,), source_event=event)
     state.handler_persona = persona.model_copy(
         update=dict(conditioning=(*persona.conditioning, installation))
     )
-    return dict(phase="complete", outcome="speak_installed")
+    return dict(
+        phase="complete", outcome="speak_installed" if phrase == "speak" else "phrase_installed"
+    )

@@ -7,7 +7,7 @@ from girlframe.engine.m3_actor_state import ActorRef, Model
 if TYPE_CHECKING:
     from girlframe.engine.m2 import GameState
 
-Phrase = Literal["speak", "sit", "play_gentle", "play_rough", "heel", "hunt"]
+Phrase = Literal["speak", "sit", "play_gentle", "play_rough", "heel", "hunt", "protect"]
 PHRASES: tuple[tuple[Phrase, str], ...] = (
     ("speak", "Speak"),
     ("sit", "Sit"),
@@ -15,6 +15,7 @@ PHRASES: tuple[tuple[Phrase, str], ...] = (
     ("play_rough", "Play Rough"),
     ("heel", "Heel"),
     ("hunt", "Hunt"),
+    ("protect", "Protect"),
 )
 PHRASE_LABELS: dict[str, str] = dict(PHRASES)
 TARGETED = frozenset(("play_gentle", "play_rough"))
@@ -37,6 +38,32 @@ class Heel(Model):
     scene: str
     channel: int
     reached: str | None = None
+
+
+class Protection(Model):
+    girl: ActorRef
+    protected: ActorRef
+    order: str
+    choice: str
+    event: str
+    scene: str
+    ended: str | None = None
+
+
+def protections(state: "GameState") -> dict[ActorRef, Protection]:
+    current: dict[ActorRef, Protection] = {}
+    for fact in state.facts:
+        if fact.get("kind") == "trainer_protection":
+            record = Protection.model_validate_json(fact["body"])
+            if record.ended is None:
+                current[record.girl] = record
+            else:
+                current.pop(record.girl, None)
+    return current
+
+
+def save_protection(state: "GameState", record: Protection) -> None:
+    state.facts.append(dict(kind="trainer_protection", body=record.model_dump_json()))
 
 
 def pending_heel(state: "GameState", target: ActorRef) -> Heel | None:

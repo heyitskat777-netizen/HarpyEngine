@@ -90,6 +90,7 @@ class PrivateScene(Model):
             "declined",
             "identity_erased",
             "speak_installed",
+            "phrase_installed",
             "dogrunner_rewarded",
             "dogrunner_punishment",
             "insurgent_resolved",
