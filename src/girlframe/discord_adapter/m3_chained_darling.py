@@ -12,7 +12,7 @@ from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.services.m3_chained_darling import ChainedPlacementService
 
-TITLE = "Chained Darling placement"
+TITLE = "Ancillary placement"
 LABELS = {
     "piloting": "Piloting my actual Frame",
     "inside_frame": "Inside my Frame without piloting",

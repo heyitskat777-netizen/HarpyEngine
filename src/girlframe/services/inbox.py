@@ -4169,7 +4169,7 @@ class InboxService:
                         placement_id,
                         canon.revision,
                         "world",
-                        "Chained Darling placement",
+                        "Ancillary placement",
                         "Original helper" if placement_step == "assist" else "Original facilitator",
                         "pending",
                         True,

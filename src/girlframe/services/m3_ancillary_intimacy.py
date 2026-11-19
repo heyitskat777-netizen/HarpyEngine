@@ -7,13 +7,14 @@ from uuid import uuid4
 from sqlalchemy import Connection
 
 from girlframe.engine import m3_ancillary as ancillary
-from girlframe.engine.m2 import GameState, tier
-from girlframe.engine.m3_actor_bonds import make_helpless
+from girlframe.engine.m2 import GameState, IdentityState, tier
+from girlframe.engine.m3_actor_bonds import change, current_ref, depth, make_helpless
 from girlframe.engine.m3_actor_resources import Commitment, commit
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, CastRole, Model, SceneCast
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_cast import validate_role
 from girlframe.engine.m3_chained_darling import EXEMPTION
+from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_harpy_defeat import give_tag
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
@@ -30,7 +31,13 @@ from girlframe.services.p1_source_pause import require_clear
 from girlframe.services.read_only_bot import GuildViewer
 
 CHAINED = "ancillary.chained-darling.sex-play"
-RULES: dict[ancillary.Book, str] = {"CHAINED DARLING": CHAINED}
+WARBOY = "ancillary.warboy.sex-play"
+RULES: dict[ancillary.Book, str] = {"CHAINED DARLING": CHAINED, "WARBOY": WARBOY}
+WARBOY_REFUSAL = "warboy_private_refusal"
+RESULTS = {
+    "CHAINED DARLING": {"low": "ask", "mid": "middle", "high": "tag"},
+    "WARBOY": {"low": "warboy_bond", "mid": "warboy_weaken", "high": "warboy_strong"},
+}
 KIND = "ancillary_private_play"
 
 
@@ -55,7 +62,21 @@ class Encounter(Model):
     gm: int
     appointment: str
     step: Literal[
-        "consent", "verify", "roll", "middle", "tag", "reaffirm", "ask", "answer", "closed"
+        "consent",
+        "verify",
+        "roll",
+        "middle",
+        "tag",
+        "reaffirm",
+        "ask",
+        "answer",
+        "closed",
+        "warboy_bond",
+        "warboy_weaken",
+        "warboy_strong",
+        "warboy_partner_tag",
+        "warboy_identity",
+        "warboy_replace",
     ]
     consent: str | None = None
     confirmed: str | None = None
@@ -64,11 +85,38 @@ class Encounter(Model):
     account: str | None = None
     answer: str | None = None
     disposition: str | None = None
+    identity: str | None = None
 
 
 def records(state: GameState) -> tuple[Encounter, ...]:
     return tuple(
         Encounter.model_validate_json(x["body"]) for x in state.facts if x.get("kind") == KIND
+    )
+
+
+def _related(state: GameState, actor: ActorRef) -> set[ActorRef]:
+    people = {
+        edge.second if edge.first == actor else edge.first
+        for edge in state.actor_bonds
+        if actor in (edge.first, edge.second)
+    }
+    handler = active_handler(state)
+    if handler:
+        people.add(handler)
+    people.update(
+        current_ref(state, int(key)) for key in state.sheets if state.sheets[key].character_id
+    )
+    if state.world:
+        people.update(ActorRef(kind="npc", entity=x.id) for x in state.world.npcs if x.alive)
+    return {person for person in people if person != actor and depth(state, actor, person) > 0}
+
+
+def _replaceable(state: GameState, actor: ActorRef) -> dict[str, str]:
+    original = ancillary.find(state, actor)
+    return (
+        {x.id: x.name for x in original.identities if not x.protected and not x.paired}
+        if (original and len(original.identities) >= 4)
+        else {}
     )
 
 
@@ -261,9 +309,18 @@ class AncillaryIntimacyService:
         )
 
     def _recipient(self, case: Encounter) -> int | None:
-        if case.step in ("consent", "tag", "answer"):
+        if case.step in ("consent", "tag", "answer", "warboy_partner_tag", "warboy_identity"):
             return case.partner.controller
-        if case.step in ("roll", "middle", "reaffirm", "ask"):
+        if case.step in (
+            "roll",
+            "middle",
+            "reaffirm",
+            "ask",
+            "warboy_bond",
+            "warboy_weaken",
+            "warboy_strong",
+            "warboy_replace",
+        ):
             return case.actor.controller
         return case.gm if case.step == "verify" else None
 
@@ -372,6 +429,8 @@ class AncillaryIntimacyService:
                 participants=(actual.label, counterpart.label),
                 tier=case.roll.result if case.roll else None,
                 tag=label,
+                identity=case.identity if case.step == "warboy_replace" else None,
+                replace=_replaceable(state, actual.ref) if case.step == "warboy_replace" else {},
             )
 
     def withdraw(
@@ -424,6 +483,7 @@ class AncillaryIntimacyService:
                     "Reopen the original choice and use only its allowed resources."
                 )
             event = str(uuid4())
+            update: dict[str, Any]
             if case.step == "consent" and choice in ("yes", "no") and not account:
                 update = (
                     dict(step="verify", consent=event)
@@ -448,9 +508,7 @@ class AncillaryIntimacyService:
                 if len(faces) != 2 or any(type(x) is not int or not 1 <= x <= 6 for x in faces):
                     raise ValueError("Dice source returned invalid faces.")
                 dice = Dice(faces=faces, heat=heat, source=event, rng=self.game.rng_source)
-                update = dict(
-                    roll=dice, step={"low": "ask", "mid": "middle", "high": "tag"}[dice.result]
-                )
+                update = dict(roll=dice, step=RESULTS[case.book][dice.result])
             elif case.step == "middle" and choice == "apply" and not account:
                 state = make_helpless(state, case.partner.actor, case.actor.actor, event)
                 state.facts.append(
@@ -484,6 +542,8 @@ class AncillaryIntimacyService:
                 update = dict(step="answer", account=account.strip())
             elif case.step == "answer" and choice == "answer" and account.strip():
                 update = dict(step="closed", answer=account.strip(), disposition="answered")
+            elif case.book == "WARBOY" and case.step.startswith("warboy_"):
+                state, update = _warboy(state, case, choice, account.strip(), event)
             else:
                 raise WorkflowError("Choose the original owner's supported private response.")
             return self._save(c, state, viewer, key, case.model_copy(update=update), event)
@@ -500,3 +560,70 @@ class AncillaryIntimacyService:
             ),
             operation,
         )
+
+
+def _warboy(
+    state: GameState,
+    case: Encounter,
+    choice: str,
+    account: str,
+    event: str,
+) -> tuple[GameState, dict[str, Any]]:
+    actor, other = case.actor.actor, case.partner.actor
+    audience = (case.actor.controller, case.partner.controller)
+    if case.step == "warboy_weaken" and choice == "apply" and not account:
+        if depth(state, actor, other):
+            state = change(state, actor, other, -1, event)
+        return state, dict(step="warboy_partner_tag")
+    if case.step == "warboy_partner_tag" and choice == "pass" and not account:
+        return state, dict(step="closed", disposition="weakened")
+    if case.step == "warboy_partner_tag" and choice == "tag" and 0 < len(account) <= 120:
+        tag = str(uuid4())
+        state = give_tag(state, actor, other, account, event, tag, audience)
+        return state, dict(step="closed", tag=tag, disposition="weakened")
+    if case.step == "warboy_strong" and choice == "tag" and 0 < len(account) <= 120:
+        people = sorted(_related(state, other), key=lambda x: x.token)
+        for person in people:
+            state = change(state, other, person, -1, event)
+        tag = str(uuid4())
+        state = give_tag(state, other, actor, account, event, tag, audience)
+        return state, dict(step="closed", tag=tag, disposition="counterpart_bonds_weakened")
+    if case.step == "warboy_bond" and choice == "apply" and not account:
+        state = change(state, actor, other, 1, event)
+        state.facts.append(
+            dict(
+                kind=WARBOY_REFUSAL,
+                actor=actor.token,
+                issuer=other.token,
+                event=event,
+                encounter=case.id,
+            )
+        )
+        return state, dict(step="warboy_identity")
+    if case.step == "warboy_identity":
+        if choice == "pass" and not account:
+            return state, dict(step="closed", disposition="bonded")
+        if choice == "offer" and 0 < len(account) <= 120:
+            return state, dict(step="warboy_replace", identity=account)
+    if case.step == "warboy_replace" and not account and case.identity:
+        original = ancillary.find(state, actor)
+        if original is None:
+            raise WorkflowError("Recover the original Warboy and Identity slots.")
+        identities = original.identities
+        replace = _replaceable(state, actor)
+        if len(identities) >= 4:
+            if choice not in replace:
+                raise WorkflowError("Choose a current original replaceable Identity.")
+            from girlframe.engine.m3_leviathan_obsession import require_identity_change
+
+            require_identity_change(state, actor, (choice,))
+            slot = next(x.slot for x in identities if x.id == choice)
+            identities = tuple(x for x in identities if x.id != choice)
+        else:
+            if choice != "accept":
+                raise WorkflowError("Confirm the actual new Identity in an unoccupied slot.")
+            slot = next(i for i in range(4) if all(x.slot != i for x in identities))
+        item = IdentityState(id=str(uuid4()), name=case.identity, slot=slot)
+        ancillary.put(state, original.model_copy(update=dict(identities=(*identities, item))))
+        return state, dict(step="closed", disposition="bonded")
+    raise WorkflowError("Choose the original player's printed Warboy result.")

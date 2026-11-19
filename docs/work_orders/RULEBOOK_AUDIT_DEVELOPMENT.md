@@ -3506,3 +3506,23 @@ roll and effect, and expiration on real scene close. The high and
 low routes still need direct verification. Other counterpart
 kinds and ordinary Tag modifiers remain open.
 [Chained Darling p. 105](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=107) · [Native case](../../tests/rules/test_chained_private_play.py)
+
+### Warboy’s private Play
+
+Base `f26f5ff`. The original Warboy uses the same reviewed
+physical setup and private consent path. A middle result weakens
+the original Bond and lets the counterpart give a Tag. A high
+result weakens every actual Bond of the counterpart and applies
+the Warboy’s chosen Tag. A low result deepens the original Bond,
+opens the counterpart’s Identity offer and the Warboy’s owned
+slot choice, and records the printed future refusal condition.
+
+**Two focused cases passed in 9.89 seconds.** The new high-tier
+case used the real placement and Heat/roll services, changed
+three original Bonds, preserved an unrelated Bond and filed its
+Tag with the original audience. The existing Chained Darling
+middle-tier closeout also passed. The future automatic-low
+effect still needs a native Warboy Order resolver. Middle and
+low direct evidence, ordinary optional Tag modifiers and other
+counterpart kinds remain open.
+[Warboy p. 107](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=109) · [Native service case](../../tests/rules/test_warboy_private_play.py)

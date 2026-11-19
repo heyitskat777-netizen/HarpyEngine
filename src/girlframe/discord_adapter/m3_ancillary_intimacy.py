@@ -101,6 +101,30 @@ async def open_ancillary_intimacy_choice(
         "reaffirm": ("Describe your own immediate action to reaffirm the Tag.", (("act", "Act"),)),
         "ask": ("Ask about their experience, keeping the encounter private.", (("ask", "Ask"),)),
         "answer": ("Answer the original question in your own words.", (("answer", "Answer"),)),
+        "warboy_weaken": (
+            "Weaken your original Bond. They can decide whether to give you a Tag.",
+            (("apply", "Apply"),),
+        ),
+        "warboy_strong": (
+            "Give the other participant a Tag and weaken each of their existing Bonds.",
+            (("tag", "Give a Tag"),),
+        ),
+        "warboy_partner_tag": (
+            "You can give the original Warboy a Tag.",
+            (("tag", "Give a Tag"), ("pass", "Pass")),
+        ),
+        "warboy_bond": (
+            "Deepen your Bond with the other participant and open their Identity choice.",
+            (("apply", "Apply"),),
+        ),
+        "warboy_identity": (
+            "You may propose a new Identity for the original Warboy.",
+            (("offer", "Offer an Identity"), ("pass", "Pass")),
+        ),
+        "warboy_replace": (
+            "Confirm the original Identity and choose a slot if needed.",
+            tuple(data["replace"].items()) or (("accept", "Accept the Identity"),),
+        ),
     }[step]
     first, second = data["participants"]
     instructions += "\nOriginal participants — " + clean(first) + " and " + clean(second)
@@ -108,8 +132,25 @@ async def open_ancillary_intimacy_choice(
     if step == "roll":
         instructions += f" You have {data['heat']} Heat."
         fields.append(Field("heat", "Actual Heat to spend"))
-    if step in ("tag", "reaffirm", "ask", "answer"):
-        fields.append(Field("account", "Your original response", paragraph=step != "tag"))
+    if step in (
+        "tag",
+        "reaffirm",
+        "ask",
+        "answer",
+        "warboy_strong",
+        "warboy_partner_tag",
+        "warboy_identity",
+    ):
+        fields.append(
+            Field(
+                "account",
+                "Your original response",
+                paragraph=step in ("reaffirm", "ask", "answer"),
+                required=step not in ("warboy_partner_tag", "warboy_identity"),
+            )
+        )
+    if step == "warboy_replace":
+        instructions += "\n" + clean(data["identity"])
     if step == "answer":
         instructions += "\n" + clean(data["account"])
     if step == "reaffirm" and data["tag"]:

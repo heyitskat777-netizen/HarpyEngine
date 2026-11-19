@@ -1,4 +1,4 @@
-"""Verified physical placement and cockpit exit for the original Chained Darling."""
+"""Verified placement for approved Ancillary roles and actual cockpit operations."""
 
 from collections.abc import Callable
 from typing import Any, Literal
@@ -30,6 +30,7 @@ from girlframe.services.read_only_bot import GuildViewer
 
 KIND = "chained_pose_review"
 Mode = Literal["piloting", "inside_frame", "outside_frame"]
+SUPPORTED = ("CHAINED DARLING", "WARBOY")
 
 
 class Placement(Model):
@@ -58,12 +59,20 @@ class ChainedPlacementService:
     def __init__(self, game: GameService):
         self.game, self.store = game, game.store
 
-    def _gate(self, c: Connection, viewer: GuildViewer) -> None:
+    def _gate(self, c: Connection, viewer: GuildViewer, book: ancillary.Book | None = None) -> None:
         AncillaryService(MissionService(self.store))._access(c, viewer)
-        gate = Access(self.store)
-        gate.require_specialist_rule(rules.RULE)
-        assert gate.registry is not None
-        gate.registry.require_available(ancillary.STARTERS["CHAINED DARLING"].rule)
+        if book is not None:
+            gate = Access(self.store)
+            if book == "CHAINED DARLING":
+                gate.require_specialist_rule(rules.RULE)
+            assert gate.registry is not None
+            gate.registry.require_available(ancillary.STARTERS[book].rule)
+
+    def _book(self, state: GameState, actor: ActorRef) -> ancillary.Book:
+        original = ancillary.find(state, actor)
+        if original is None or original.draft.book not in SUPPORTED:
+            raise WorkflowError("This Ancillary role needs its own approved physical workflow.")
+        return original.draft.book
 
     def _scene(
         self,
@@ -73,21 +82,19 @@ class ChainedPlacementService:
         actor: ActorRef,
     ) -> tuple[CastRole, ActorView, int, str, str]:
         actual = resolve(state, actor, profiles(c, self.store.campaign_id))
-        original = ancillary.find(state, actor)
+        self._book(state, actor)
         cast = _cast(self.game, c, state, channel)
         gm, appointment = MedicalService(self.store)._handler(c)
         role = validate_role(cast, actual)
         if (
-            original is None
-            or original.draft.book != "CHAINED DARLING"
-            or actual.rules != "ancillary"
+            actual.rules != "ancillary"
             or actual.cell is None
             or actual.offstage_source
             or actual.custody not in (None, "free", "converted")
             or actual.controller == gm
             or cast.facilitator != gm
         ):
-            raise WorkflowError("Use the original Chained Darling with the current facilitator.")
+            raise WorkflowError("Use the original Ancillary role with the current facilitator.")
         return role, actual, gm, appointment, cast.id
 
     def _choices(self, state: GameState, actor: ActorRef) -> tuple[Mode, ...]:
@@ -141,7 +148,7 @@ class ChainedPlacementService:
 
     def _assisted(self, state: GameState, actor: ActorRef) -> bool:
         pose = external_pose(state, actor)
-        return bool(pose and pose.mode == "outside_frame")
+        return bool(pose and pose.mode == "outside_frame" and is_helpless(state, actor))
 
     def available(
         self,
@@ -151,7 +158,7 @@ class ChainedPlacementService:
         channel: int,
         actor: ActorRef,
     ) -> tuple[Mode, ...]:
-        self._gate(c, viewer)
+        self._gate(c, viewer, self._book(state, actor))
         role, actual, gm, appointment, scene = self._scene(c, state, channel, actor)
         if role.controller != viewer.user_id:
             raise WorkflowError("Only the original owner can propose this physical action.")
@@ -331,6 +338,7 @@ class ChainedPlacementService:
         if value is None:
             raise WorkflowError("This original physical review is unavailable.")
         actor = value.role.actor
+        self._gate(c, viewer, self._book(state, actor))
         role, actual, gm, appointment, scene = self._scene(c, state, value.channel, actor)
         if not self._consistent(c, state, value, role, actual, gm, appointment, scene):
             raise WorkflowError("STALE_CHAINED_POSE: recover the original body and scene.")
@@ -438,7 +446,8 @@ class ChainedPlacementService:
                     owner=actual.controller,
                     judge=viewer.user_id,
                 )
-                state.facts.append(dict(kind=rules.KIND, actor=actor.token, source=event))
+                if self._book(state, actor) == "CHAINED DARLING":
+                    state.facts.append(dict(kind=rules.KIND, actor=actor.token, source=event))
             elif accepted and pose is not None:
                 changed = pose.model_copy(
                     update=dict(mode=value.mode, position_event=event, account=value.account)
@@ -446,7 +455,7 @@ class ChainedPlacementService:
                 state.external_poses = [
                     changed if x.actor == actor else x for x in state.external_poses
                 ]
-                if not any(
+                if self._book(state, actor) == "CHAINED DARLING" and not any(
                     x.get("kind") == rules.KIND
                     and x.get("actor") == actor.token
                     and x.get("source") == pose.source_event
