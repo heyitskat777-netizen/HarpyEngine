@@ -14966,14 +14966,50 @@
         "heading": "Sex Play"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original Prodigy shares a verified private encounter with a willing original local standard Pilot.",
+        "actor_type": "Original Prodigy, original Pilot, original human facilitator and the selected living NPC controller",
+        "pre_roll_sources": [
+          "Actual original consent and co-presence",
+          "Approved original optional playbook and Play",
+          "Owned Heat",
+          "Eligible real NPC Bond for the high result"
+        ],
+        "roll_kind": "2d6",
+        "allowed_modifiers": [
+          "Owned Heat"
+        ],
+        "tier_options": {
+          "low": [
+            "The other participant can decline the optional Status and Tag consequence"
+          ],
+          "mid": [
+            "The original ruling remains pending for Cadre authority"
+          ],
+          "high": [
+            "Give the original participant a real scoped Tag, then record an actual reaction from the selected original NPC Bond"
+          ]
+        },
+        "choice_ownership": "The original Prodigy chooses a Tag and actual NPC Bond. That NPC controller owns their original reaction.",
+        "target_policy": "Exact original bodies and private recipient checks. The NPC task shares the person they already have a Bond with and does not reveal the encounter.",
+        "post_roll_effects": [
+          "Apply the real scoped Tag and record the actual authorised NPC reaction."
+        ],
+        "mandatory_followups": [
+          "Ace and other Status changes, the low Tag where the consequence is accepted, other counterpart kinds and ordinary modifiers remain open."
+        ],
+        "handler_or_gm_intervention": "The original facilitator confirms the source; unsupported Status changes remain pending.",
+        "test_fixture_ids": [
+          "tests/rules/test_prodigy_private_play.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_prodigy_private_play.py"],
       "m2_play_id": null,
       "module": "ancillary"
     },

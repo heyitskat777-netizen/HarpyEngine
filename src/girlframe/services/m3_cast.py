@@ -367,11 +367,8 @@ class CastService:
                         except (ValueError, WorkflowError):
                             pass
                     can_chained_placement = False
-                    if (
-                        actor.controller == role.controller == viewer.user_id
-                        and actor.rules == "ancillary"
-                        and actor.girl
-                        in ("CHAINED DARLING", "WARBOY", "ANGEL-WIFE", "REVOLUTIONARY IDEALIST")
+                    if actor.controller == role.controller == viewer.user_id and (
+                        actor.rules == "ancillary"
                     ):
                         from girlframe.services.m3_chained_darling import ChainedPlacementService
 

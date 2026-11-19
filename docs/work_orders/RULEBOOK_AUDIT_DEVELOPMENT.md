@@ -3564,3 +3564,20 @@ permission was pending, and real movement after the counterpart
 granted it. Other movement producers, optional counterpart kinds,
 modifiers and direct middle and low evidence remain open.
 [Revolutionary Idealist p. 101](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=103) · [Native case](../../tests/rules/test_revolutionary_private_play.py)
+
+### Prodigy’s private Play
+
+Base `23712be`. The supported high result applies an actual
+Tag and opens a separately owned reaction for the selected current
+NPC Bond. That private task identifies the Prodigy already known
+to the NPC and omits the encounter and counterpart. It remains
+pending until the original NPC controller records their reaction.
+
+**One focused case passed in 5.73 seconds.** It verified the
+original high roll, eligible existing Bond, real scoped Tag,
+limited reaction packet, denial of the other participant and
+the current NPC controller’s saved reaction. Ace and other
+Status consequences remain pending, as does the accepted low
+consequence. The original counterpart can already decline both
+low effects.
+[Prodigy p. 99](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=101) · [Native case](../../tests/rules/test_prodigy_private_play.py)

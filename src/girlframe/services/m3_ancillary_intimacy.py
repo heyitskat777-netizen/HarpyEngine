@@ -43,12 +43,14 @@ WARBOY = "ancillary.warboy.sex-play"
 ANGEL = "ancillary.angel-wife.sex-play"
 CHASTE = "ancillary.angel-wife.chaste"
 REVOLUTIONARY = "ancillary.revolutionary-idealist.sex-play"
+PRODIGY = "ancillary.prodigy.sex-play"
 REVOLUTIONARY_OPTIONS = ("erase", "tag", "remain")
 RULES: dict[ancillary.Book, str] = {
     "CHAINED DARLING": CHAINED,
     "WARBOY": WARBOY,
     "ANGEL-WIFE": ANGEL,
     "REVOLUTIONARY IDEALIST": REVOLUTIONARY,
+    "PRODIGY": PRODIGY,
 }
 WARBOY_REFUSAL = "warboy_private_refusal"
 RESULTS = {
@@ -60,6 +62,7 @@ RESULTS = {
         "mid": "revolutionary_clear",
         "high": "revolutionary_offer",
     },
+    "PRODIGY": {"low": "prodigy_low", "mid": "prodigy_rank", "high": "prodigy_choose"},
 }
 KIND = "ancillary_private_play"
 
@@ -114,6 +117,10 @@ class Encounter(Model):
         "revolutionary_tag",
         "revolutionary_release",
         "revolutionary_escape",
+        "prodigy_low",
+        "prodigy_rank",
+        "prodigy_choose",
+        "prodigy_jealous",
     ]
     consent: str | None = None
     confirmed: str | None = None
@@ -126,6 +133,8 @@ class Encounter(Model):
     partner_pose: str | None = None
     partner_cell: tuple[int, int] | None = None
     picks: tuple[str, ...] = ()
+    reaction_actor: ActorRef | None = None
+    reaction_owner: int | None = None
 
 
 def records(state: GameState) -> tuple[Encounter, ...]:
@@ -373,6 +382,7 @@ class AncillaryIntimacyService:
             "revolutionary_erase",
             "revolutionary_tag",
             "revolutionary_release",
+            "prodigy_low",
         ):
             return case.partner.controller
         if case.step in (
@@ -390,9 +400,12 @@ class AncillaryIntimacyService:
             "revolutionary_clear",
             "revolutionary_offer",
             "revolutionary_escape",
+            "prodigy_choose",
         ):
             return case.actor.controller
-        return case.gm if case.step == "verify" else None
+        if case.step == "prodigy_jealous":
+            return case.reaction_owner
+        return case.gm if case.step in ("verify", "prodigy_rank") else None
 
     def _source(self, c: Connection, state: GameState, case: Encounter) -> ActorView:
         cast, actor, actual, book, gm, appointment = self._scene(
@@ -416,6 +429,15 @@ class AncillaryIntimacyService:
             raise WorkflowError("Recover the original private encounter and both present actors.")
         return actual
 
+    def _revalidate_reaction(self, state: GameState, case: Encounter) -> None:
+        if case.step != "prodigy_jealous":
+            return
+        if not any(
+            person == case.reaction_actor and owner == case.reaction_owner
+            for person, owner, _ in _prodigy_people(state, case.actor.actor).values()
+        ):
+            raise WorkflowError("Recover the original living NPC Bond and its actual controller.")
+
     def _get(
         self,
         c: Connection,
@@ -427,6 +449,7 @@ class AncillaryIntimacyService:
         if case is None or self._recipient(case) != viewer.user_id:
             raise WorkflowError("This original private encounter is unavailable.")
         self._gate(c, viewer, case.book)
+        self._revalidate_reaction(state, case)
         return case, self._source(c, state, case)
 
     def tasks(
@@ -447,6 +470,7 @@ class AncillaryIntimacyService:
             if recipient == viewer.user_id:
                 try:
                     self._source(c, state, case)
+                    self._revalidate_reaction(state, case)
                 except (ValueError, WorkflowError):
                     continue
                 ready.append((case.id, case.step))
@@ -492,6 +516,8 @@ class AncillaryIntimacyService:
                 if case.step == "reaffirm" and role is not None
                 else None
             )
+            if case.step == "prodigy_jealous":
+                return dict(revision=state.revision, step=case.step, known=actual.label)
             return dict(
                 revision=state.revision,
                 step=case.step,
@@ -513,6 +539,11 @@ class AncillaryIntimacyService:
                     or case.step == "revolutionary_escape"
                     and self._separated(counterpart, actual, case)
                 ),
+                npc_bonds={
+                    key: label for key, (_, _, label) in _prodigy_people(state, actual.ref).items()
+                }
+                if case.step == "prodigy_choose"
+                else {},
                 offered=case.picks if case.step == "revolutionary_choice" else (),
                 identities=_revolutionary_identities(state, actual.ref)
                 if case.step in ("revolutionary_erase", "revolutionary_erase_two")
@@ -681,6 +712,8 @@ class AncillaryIntimacyService:
                         picks,
                         event,
                     )
+            elif case.book == "PRODIGY" and case.step.startswith("prodigy_"):
+                state, update = _prodigy(state, case, choice, account.strip(), event)
             else:
                 raise WorkflowError("Choose the original owner's supported private response.")
             return self._save(c, state, viewer, key, case.model_copy(update=update), event)
@@ -953,3 +986,69 @@ def _revolutionary(
     if case.step == "revolutionary_release" and choice == "release" and not account:
         return state, dict(step="closed", disposition="released")
     raise WorkflowError("Choose the original player's printed Revolutionary result.")
+
+
+def _prodigy_people(
+    state: GameState,
+    actor: ActorRef,
+) -> dict[str, tuple[ActorRef, int, str]]:
+    if state.world is None:
+        return {}
+    people = {}
+    for npc in state.world.npcs:
+        ref = ActorRef(kind="npc", entity=npc.id)
+        if (
+            npc.alive
+            and "director" not in npc.jobs
+            and knowledge_allowed(state, ref)
+            and (depth(state, actor, ref) > 0)
+        ):
+            people[ref.token] = (ref, npc.controller, npc.name)
+    return people
+
+
+def _prodigy(
+    state: GameState,
+    case: Encounter,
+    choice: str,
+    account: str,
+    event: str,
+) -> tuple[GameState, dict[str, Any]]:
+    actor, partner = case.actor.actor, case.partner.actor
+    if case.step == "prodigy_choose" and 0 < len(account) <= 120:
+        subject = _prodigy_people(state, actor).get(choice)
+        if subject is None:
+            raise WorkflowError("Choose the original actual NPC who has a current Bond with you.")
+        tag = str(uuid4())
+        state = give_tag(
+            state,
+            partner,
+            actor,
+            account,
+            event,
+            tag,
+            (case.actor.controller, case.partner.controller),
+        )
+        return state, dict(
+            step="prodigy_jealous",
+            tag=tag,
+            reaction_actor=subject[0],
+            reaction_owner=subject[1],
+        )
+    if case.step == "prodigy_jealous" and choice == "confirm" and account:
+        assert case.reaction_actor is not None
+        state.facts.append(
+            dict(
+                kind="prodigy_jealous_bond",
+                event=event,
+                encounter=case.id,
+                npc=case.reaction_actor.token,
+                prodigy=actor.token,
+                counterpart=partner.token,
+                account=account,
+            )
+        )
+        return state, dict(step="closed", disposition="actual_npc_reaction")
+    if case.step == "prodigy_low" and choice == "pass" and not account:
+        return state, dict(step="closed", disposition="declined_status_and_tag")
+    raise WorkflowError("The original Status or outstanding reaction requires human review.")

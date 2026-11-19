@@ -88,6 +88,15 @@ async def open_ancillary_intimacy_choice(
 
     data = await asyncio.to_thread(service.get, viewer, identity)
     step = data["step"]
+    if step == "prodigy_rank":
+        await reply(
+            interaction,
+            "The original Status outcome remains pending for the actual Cadre authority.",
+        )
+        return
+    if step == "prodigy_choose" and not data["npc_bonds"]:
+        await reply(interaction, "There is no current NPC Bond eligible for the original choice.")
+        return
     instructions, options = {
         "consent": (
             "Accept the original private encounter and printed choices only if you want to.",
@@ -128,7 +137,7 @@ async def open_ancillary_intimacy_choice(
         ),
         "warboy_replace": (
             "Confirm the original Identity and choose a slot if needed.",
-            tuple(data["replace"].items()) or (("accept", "Accept the Identity"),),
+            tuple(data.get("replace", {}).items()) or (("accept", "Accept the Identity"),),
         ),
         "chaste": (
             "Choose your own character’s private belief about the other participant.",
@@ -145,7 +154,7 @@ async def open_ancillary_intimacy_choice(
         ),
         "angel_replace": (
             "You may replace one eligible original Identity with a new one.",
-            (("pass", "Pass"), *tuple(data["replace"].items())),
+            (("pass", "Pass"), *tuple(data.get("replace", {}).items())),
         ),
         "angel_helpless": (
             "Choose whether the original character becomes Helpless against yours.",
@@ -153,7 +162,7 @@ async def open_ancillary_intimacy_choice(
         ),
         "angel_damage": (
             "Damage one actual reachable Asset of the original other character.",
-            tuple(data["assets"].items()),
+            tuple(data.get("assets", {}).items()),
         ),
         "revolutionary_clear": (
             "Unmark your eligible Identities. You can then use your movement controls to leave.",
@@ -169,7 +178,7 @@ async def open_ancillary_intimacy_choice(
         ),
         "revolutionary_choice": (
             "Choose one of the offered consequences.",
-            tuple((x, REVOLUTIONARY_LABELS[x]) for x in data["offered"]),
+            tuple((x, REVOLUTIONARY_LABELS[x]) for x in data.get("offered", ())),
         ),
         "revolutionary_erase": (
             "Erase one eligible Identity from the original character.",
@@ -187,6 +196,20 @@ async def open_ancillary_intimacy_choice(
             "Your counterpart remains until you use this choice to let them leave.",
             (("release", "Let them leave"),),
         ),
+        "prodigy_choose": (
+            "Give the other participant a Tag and select a current NPC Bond.",
+            tuple(data.get("npc_bonds", {}).items()),
+        ),
+        "prodigy_jealous": (
+            "Record your original NPC’s jealous reaction toward "
+            + clean(data.get("known", ""))
+            + ".",
+            (("confirm", "Record the actual reaction"),),
+        ),
+        "prodigy_low": (
+            "You may decline the optional Tag and Status consequence.",
+            (("pass", "Decline both"),),
+        ),
     }[step]
     if step in ("angel_space", "revolutionary_escape") and not data["stepped_away"]:
         await reply(interaction, instructions)
@@ -194,8 +217,9 @@ async def open_ancillary_intimacy_choice(
     if step == "angel_damage" and not options:
         await reply(interaction, "No supported Asset is reachable. The original effect is pending.")
         return
-    first, second = data["participants"]
-    instructions += "\nOriginal participants — " + clean(first) + " and " + clean(second)
+    if step != "prodigy_jealous":
+        first, second = data["participants"]
+        instructions += "\nOriginal participants — " + clean(first) + " and " + clean(second)
     fields = [Field("choice", "Your decision", options)]
     if step == "roll":
         instructions += f" You have {data['heat']} Heat."
@@ -237,6 +261,9 @@ async def open_ancillary_intimacy_choice(
                 count,
             )
         )
+    if step in ("prodigy_choose", "prodigy_jealous"):
+        field_label = "Actual new Tag" if step == "prodigy_choose" else "Actual NPC reaction"
+        fields.append(Field("account", field_label, paragraph=step == "prodigy_jealous"))
     if step == "revolutionary_tag":
         fields.append(Field("account", "Actual new Tag"))
     if step == "warboy_replace":
