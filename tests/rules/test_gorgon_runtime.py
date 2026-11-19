@@ -2102,11 +2102,12 @@ def test_jackdaw_hallucinations_has_owned_heat_roll_and_printed_consequence(
     from girlframe.engine.m3_actor_bonds import current_ref
     from girlframe.engine.m3_actors import resolve
     from girlframe.engine.m3_beneath import rejection_blocked
-    from girlframe.engine.m3_hallucinations import records
+    from girlframe.engine.m3_hallucinations import days, records
     from girlframe.engine.m3_jackdaw import Range
     from girlframe.services.m3_actors import profiles
-    from girlframe.services.m3_hallucinations import HEAT, OUTCOME
+    from girlframe.services.m3_hallucinations import DAY_GAIN, DAY_REVIEW, HEAT, OUTCOME
     from girlframe.services.m3_jackdaw import catatonic, isolation
+    from girlframe.services.m3_movement import MovementService
     from girlframe.services.m3_sentinel import require_communication
     from girlframe.services.m3_void import VoidService
     from girlframe.services.onboarding import WorkflowError
@@ -2286,3 +2287,81 @@ def test_jackdaw_hallucinations_has_owned_heat_roll_and_printed_consequence(
         assert game.inspect(PLAYER, child)["state"] == "complete"
         assert game.inspect(ADMIN, action)["state"] == "complete"
         assert service.get(PLAYER, work)["stage"] == "prevented"
+
+    if result == "low" and not threshold:
+        tick(worker, gateway, 5)
+        gorgon_service = GorgonPlayService(game)
+        preview = gorgon_service.preview(ADMIN, 900)
+        assert preview["exposure_days"][effect.source.token] == {girl.token: 1}
+        rows = {x["token"]: x for x in preview["actors"]}
+        day = Declaration(
+            kind="jackdaw_hallucinations_day",
+            day=1,
+            actor=effect.source,
+            target=girl,
+            actor_sha256=rows[effect.source.token]["source_sha256"],
+            target_sha256=rows[girl.token]["source_sha256"],
+            account="The next fictional day ended while the same Jackdaw remained in range.",
+            reach_confirmed=True,
+        )
+        with pytest.raises(WorkflowError, match="next fictional day"):
+            gorgon_service.begin(
+                ADMIN, "skip-day", 900, preview["revision"], day.model_copy(update=dict(day=2))
+            )
+        started = gorgon_service.begin(ADMIN, "elapsed-day", 900, preview["revision"], day)
+        tick(worker, gateway, 5)
+        if not any(x["kind"] == DAY_REVIEW for x in game.choices(ADMIN)):
+            game.roll(ADMIN, "advance-day", started["action_id"])
+        review = next(x for x in game.choices(ADMIN) if x["kind"] == DAY_REVIEW)
+        assert not days(state(game))
+        assert not any(x["kind"] in (DAY_REVIEW, DAY_GAIN) for x in game.choices(PLAYER))
+        with pytest.raises(WorkflowError, match="another player"):
+            game.respond(
+                PLAYER,
+                "not-gm-day",
+                review["id"],
+                review["revision"],
+                ChoiceAnswer(flag=True, text="The day ended."),
+            )
+
+        async def approve_day():
+            handoff = current(ADMIN.user_id, 87302)
+            await handoff.response.defer(ephemeral=True)
+            await open_choice(handoff, game, review["id"])
+            form = handoff.edit_original_response.call_args.kwargs["view"]
+            form.values.update(confirmed=("yes",), account="The scene time log records a full day.")
+            await form.confirm.callback(current(ADMIN.user_id, 87303))
+            assert form.completed
+
+        asyncio.run(approve_day())
+        assert not days(state(game))
+        ledger.engine.dispose()
+        gain = next(x for x in game.choices(PLAYER) if x["kind"] == DAY_GAIN)
+        choices = game.decision(PLAYER, gain["id"])["detail"]
+        accepted = ChoiceAnswer(
+            fields=dict(
+                asset=next(iter(choices["assets"])), void_description="Crystals spread across it."
+            )
+        )
+        first = game.respond(PLAYER, "day-void", gain["id"], gain["revision"], accepted)
+        assert game.respond(PLAYER, "day-void", gain["id"], gain["revision"], accepted) == first
+        (elapsed,) = days(state(game))
+        assert elapsed.day == 1 and elapsed.original == action
+        assert elapsed.void_asset != effect.void_asset and elapsed.review
+        assert records(state(game)) == (effect,) and game.dice.calls == 1
+        assert state(game).sheets[girl.entity].identities == after.sheets[girl.entity].identities
+        assert gorgon_service.preview(ADMIN, 900)["exposure_days"][effect.source.token] == {
+            girl.token: 2
+        }
+        tick(worker, gateway, 5)
+        MovementService(game).move(
+            ADMIN,
+            "leave-exposure",
+            state(game).revision,
+            900,
+            effect.source,
+            (1, 0),
+            account="The original Jackdaw leaves the square.",
+        )
+        preview = gorgon_service.preview(ADMIN, 900)
+        assert "jackdaw_hallucinations_day" not in preview["plays"]

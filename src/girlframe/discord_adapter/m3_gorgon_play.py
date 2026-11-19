@@ -14,6 +14,7 @@ from girlframe.engine.m3_gorgon_type_tags import LABELS as TYPE_TAG_LABELS
 from girlframe.engine.m3_gorgon_type_tags import TYPES as TAG_TYPES
 from girlframe.engine.m3_growth import KINDS as GROWTH_KINDS
 from girlframe.engine.m3_growth import Adaptation, Regrowth
+from girlframe.engine.m3_hallucinations import PLAYS as HALLUCINATIONS_PLAYS
 from girlframe.engine.m3_jackdaw import EFFECTS as JACKDAW_EFFECTS
 from girlframe.engine.m3_jackdaw import Range as JackdawRange
 from girlframe.engine.m3_mother_sprite import BirthPlan
@@ -56,10 +57,10 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
             if kind not in riding_choices:
                 return "Use the actual Parasite whose host state permits this Play."
             targets = [x for x in targets if x["token"] in riding_choices[kind]]
-        if type_tag or kind == "jackdaw_hallucinations":
+        if type_tag or kind in HALLUCINATIONS_PLAYS:
             eligible = data["typed_targets"].get(actor["token"], {}).get(kind, ())
             targets = [x for x in targets if x["token"] in eligible]
-        targeted = kind in ("attack", "parasite_hitch", "jackdaw_hallucinations") or type_tag
+        targeted = kind in ("attack", "parasite_hitch", *HALLUCINATIONS_PLAYS) or type_tag
         if targeted and not targets:
             return "Join the actual eligible target to the scene before declaring this Play."
         if kind in ("attack", "collateral") and not actor["assets"]:
@@ -178,6 +179,9 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
                         weakness=details["sprite_weakness"],
                     )
                     if kind == "mother_sprite"
+                    else None,
+                    day=data["exposure_days"][actor["token"]][target["token"]]
+                    if kind == "jackdaw_hallucinations_day" and target
                     else None,
                     interference=jackdaw_range(details["audible_range"])
                     if kind in JACKDAW_EFFECTS

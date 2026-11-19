@@ -42,7 +42,7 @@ RULES: dict[str, str] = {
     "mother_sprite": mother_sprite.RULE,
     "jackdaw_jam": jackdaw.RULE,
     "jackdaw_catatonia": jackdaw.RULE,
-    "jackdaw_hallucinations": hallucinations.RULE,
+    **dict.fromkeys(hallucinations.PLAYS, hallucinations.RULE),
     **dict.fromkeys(parasite.PLAYS, parasite.RULE),
     **{str(kind): rule for kind, rule in TYPE_TAG_RULES.items()},
 }
@@ -73,6 +73,7 @@ class GorgonPlayService:
 
     def preview(self, viewer: GuildViewer, channel: int) -> dict[str, Any]:
         from girlframe.services.m3_battle import _cast, _visible
+        from girlframe.services.m3_hallucinations import daily_case, next_day
         from girlframe.services.m3_hallucinations import eligible as isolated
 
         with self.store.engine.connect() as c:
@@ -142,6 +143,7 @@ class GorgonPlayService:
                 )
             typed_targets: dict[str, dict[str, list[str]]] = {}
             parasite_choices: dict[str, dict[str, list[str]]] = {}
+            exposure_days: dict[str, dict[str, int]] = {}
             if state.world is not None:
                 for actor in state.world.gorgons:
                     token = ActorRef(kind="gorgon", entity=actor.id).token
@@ -175,6 +177,18 @@ class GorgonPlayService:
                             for girl in visible.values()
                             if isolated(c, self.store.campaign_id, state, caster.ref, girl, cast.id)
                         ]
+                        days = {
+                            girl.ref.token: next_day(state, case)
+                            for girl in visible.values()
+                            if (
+                                case := daily_case(
+                                    c, self.store.campaign_id, state, caster.ref, girl, cast.id
+                                )
+                            )
+                            is not None
+                        }
+                        exposure_days[token] = days
+                        options["jackdaw_hallucinations_day"] = list(days)
                     typed_targets[token] = {
                         kind: targets for kind, targets in options.items() if targets
                     }
@@ -184,7 +198,7 @@ class GorgonPlayService:
             for kind, identity in RULES.items():
                 if kind == "corrupt" and not can_corrupt:
                     continue
-                if (kind in TAG_TYPES or kind == "jackdaw_hallucinations") and not any(
+                if (kind in TAG_TYPES or kind in hallucinations.PLAYS) and not any(
                     kind in x for x in typed_targets.values()
                 ):
                     continue
@@ -212,6 +226,7 @@ class GorgonPlayService:
                 sprite_birth=can_birth,
                 jam=can_jam,
                 parasite=parasite_choices,
+                exposure_days=exposure_days,
             )
 
     def begin(
@@ -221,6 +236,7 @@ class GorgonPlayService:
 
         def operation(c: Connection) -> dict[str, Any]:
             from girlframe.services.m3_battle import _cast, _scene_judge, _visible
+            from girlframe.services.m3_hallucinations import daily_case, next_day
             from girlframe.services.m3_hallucinations import eligible as isolated
             from girlframe.services.m3_scene_requisitions import guard
 
@@ -319,6 +335,12 @@ class GorgonPlayService:
                     c, self.store.campaign_id, state, actual.ref, target, cast.id
                 ):
                     raise WorkflowError("The actual Girl must be Isolated by this original Jackdaw")
+                if declaration.day is not None:
+                    case = daily_case(c, self.store.campaign_id, state, actual.ref, target, cast.id)
+                    if case is None or declaration.day != next_day(state, case):
+                        raise WorkflowError(
+                            "Use the next fictional day with the original Girl still in range"
+                        )
                 if declaration.kind == "parasite_hitch" and (
                     not _visible(state, target.ref, viewer.user_id)
                     or not parasite.present(state, actual, target)
@@ -399,7 +421,7 @@ class GorgonPlayService:
                 actual.cell is None
                 or target_view is not None
                 and target_view.cell != actual.cell
-                and declaration.kind != "jackdaw_hallucinations"
+                and declaration.kind not in hallucinations.PLAYS
                 or declaration.interference is not None
                 and len(declaration.interference.cells) > 1
             )
@@ -852,7 +874,7 @@ def prepare_response(
     parent = game.action(c, prepared.parent)
     source = parent["data"].get("gorgon_play")
     if not source or (
-        source["kind"] == "jackdaw_hallucinations"
+        source["kind"] in hallucinations.PLAYS
         and prepared.play == "keep_your_head"
         and prepared.source_work is not None
     ):

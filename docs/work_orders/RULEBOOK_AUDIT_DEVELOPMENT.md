@@ -1986,6 +1986,29 @@ review without spending resources or resolving game effects. The
 Director review suite passed **11 tests in 16.29 seconds**.
 [Hallucinations p. 169](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=171) · [Native cases](../../tests/rules/test_gorgon_runtime.py) · [Director catalog check](../../tests/test_director_play_review.py)
 
+### Hallucinations elapsed days
+
+Base `73a1bf1aa373403576c891456c9f9838c8ba4a88`. The exact
+low-result source now offers the next fictional day while the
+original Girl and Jackdaw remain in range in their original open
+scene. The human GM privately confirms a full day of continuous
+exposure. The original Girl then authors one ordinary Void gain
+through the existing consequence controls. Saved progress survives
+restart and a repeated submission uses the original receipt. Each
+accepted day advances the counter once. Leaving the source range
+removes the next day from the scene's menu.
+
+The four focused cases passed **in 20.24 seconds** with the
+elapsed-day assertions. They include wrong authority, sequential
+day enforcement, private native approval, distinct actual Assets,
+replay, a single initial die roll and leaving range. The earlier
+immediate-outcome candidate's broader Gorgon, Void, registry and
+shadow selection passed **76 tests in 129.29 seconds**. The day
+clock uses recorded fictional time under human GM authority.
+Carrying a still-active exposure across a scene close needs a
+verified transfer source.
+[Hallucinations p. 169](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=171) · [Native verification](../../tests/rules/test_gorgon_runtime.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

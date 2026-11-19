@@ -25,6 +25,7 @@ class Declaration(Model):
             "jackdaw_jam",
             "jackdaw_catatonia",
             "jackdaw_hallucinations",
+            "jackdaw_hallucinations_day",
             "parasite_hitch",
             "parasite_detach",
         ]
@@ -43,6 +44,8 @@ class Declaration(Model):
     birth: BirthPlan | None = Field(default=None, exclude_if=lambda value: value is None)
     interference: JackdawRange | None = Field(default=None, exclude_if=lambda value: value is None)
 
+    day: int | None = Field(default=None, ge=1, exclude_if=lambda value: value is None)
+
     @model_validator(mode="after")
     def source_shape(self) -> "Declaration":
         if self.actor.kind != "gorgon" or len(set(self.assets)) != len(self.assets):
@@ -57,6 +60,7 @@ class Declaration(Model):
             "mother_mutation",
             "doppleganger_bond",
             "jackdaw_hallucinations",
+            "jackdaw_hallucinations_day",
             "parasite_hitch",
         ):
             if self.target is None or self.target_sha256 is None or self.target == self.actor:
@@ -79,4 +83,6 @@ class Declaration(Model):
             raise ValueError("Declare the original Mother's paid Sprite design")
         if (self.interference is not None) != (self.kind in EFFECTS):
             raise ValueError("Declare the actual audible range of this Jackdaw Play")
+        if (self.day is not None) != (self.kind == "jackdaw_hallucinations_day"):
+            raise ValueError("Choose the exact next fictional day of actual exposure")
         return self

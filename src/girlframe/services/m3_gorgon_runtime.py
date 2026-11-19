@@ -10,6 +10,7 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_battle as battle
 from girlframe.engine import m3_growth as growth
+from girlframe.engine import m3_hallucinations as hallucinations
 from girlframe.engine import m3_mother_sprite as mother_sprite
 from girlframe.engine import m3_parasite as parasite
 from girlframe.engine.m2 import ChoiceAnswer, GameState
@@ -138,7 +139,7 @@ def start(game: Any, c: Connection, state: GameState, action: dict[str, Any]) ->
         )
         action["data"]["result"]["catatonia" if people else "audible_communication_blocked"] = True
         return
-    if meta["kind"] == "jackdaw_hallucinations":
+    if meta["kind"] in hallucinations.PLAYS:
         from girlframe.services.m3_hallucinations import start as inflict
 
         inflict(game, c, state, action)
@@ -972,7 +973,7 @@ def synchronize(
     materialize_dormant(game, c, action, event)
     synchronize_damage(game, c, event)
     state = load_state(c, game.store.campaign_id)
-    if meta["kind"] == "jackdaw_hallucinations":
+    if meta["kind"] in hallucinations.PLAYS:
         from girlframe.services.m3_hallucinations import materialize
 
         materialize(game, c, state, action, event)
@@ -988,7 +989,10 @@ def synchronize(
         if active_child is None:
             choices = t.m2["m2_choices"]
             for pending in game.pending(c, action["id"]):
-                if pending["kind"].startswith("gorgon_"):
+                if (
+                    pending["kind"].startswith("gorgon_")
+                    and pending["kind"] != "gorgon_hallucinations_void"
+                ):
                     c.execute(
                         choices.update()
                         .where(

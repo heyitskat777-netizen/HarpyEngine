@@ -165,11 +165,33 @@ async def open_hallucinations(
     interaction: discord.Interaction, game: GameService, data: dict[str, Any]
 ) -> None:
     detail = data["detail"]
-    spend = detail["kind"] == "hallucinations_heat"
+    kind = detail["kind"]
+    spend = kind == "hallucinations_heat"
+    review_day = kind == "hallucinations_day_review"
+    gain_day = kind == "hallucinations_day_gain"
     fields: list[Field]
     if spend:
         description = f"You have {detail['heat']} Heat. Each Heat you spend adds one to the roll."
         fields = [Field("heat", "Heat to spend")]
+    elif review_day:
+        description = (
+            f"Review fictional day {detail['day']}. Confirm a full new day continuously in range."
+        )
+        fields = [
+            Field(
+                "confirmed", "Was there a full new day?", (("yes", "Confirm"), ("no", "Decline"))
+            ),
+            Field("account", "Record the source of the elapsed time", paragraph=True),
+        ]
+    elif gain_day:
+        description = f"Fictional day {detail['day']} in range was approved. Apply ordinary Void."
+        if not detail["assets"]:
+            await reply(interaction, "The original Void gain needs private human review.")
+            return
+        fields = [
+            Field("asset", "Your Asset affected by Void", tuple(detail["assets"].items())),
+            Field("void_description", "What changes about the Asset?", paragraph=True),
+        ]
     else:
         roll = detail["roll"]
         faces = " + ".join(str(x) for x in roll["faces"])
@@ -206,7 +228,8 @@ async def open_hallucinations(
             number = int(raw)
         answer = ChoiceAnswer(
             number=number,
-            text=values.get("label", ""),
+            text=values.get("account", "") if review_day else values.get("label", ""),
+            flag=values["confirmed"][0] == "yes" if review_day else None,
             options=tuple(values.get("identities", ())),
             fields={"asset": values["asset"][0], "void_description": values["void_description"]}
             if values.get("asset")

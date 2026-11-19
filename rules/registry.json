@@ -22014,7 +22014,7 @@
         ],
         "mandatory_followups": [
           "Resolve any threshold reached by the initial ordinary Void gain",
-          "Additional Void for further fictional days in range still needs its calendar source"
+          "Each approved full fictional day in the original open scene triggers another owned Void gain"
         ],
         "handler_or_gm_intervention": "The human GM handles the original source adjudication and unsupported Identity/physical cases.",
         "test_fixture_ids": [
