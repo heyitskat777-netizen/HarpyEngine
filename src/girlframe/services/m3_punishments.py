@@ -94,6 +94,13 @@ class PunishmentService:
             from girlframe.services.m3_pilot_fears import proof as prove_collective_call
 
             prove_collective_call(c, self.store.campaign_id, dict(row))
+        if (
+            row["kind"] == "punishment"
+            and json.loads(row["body_json"]).get("reason") == "strain_rebel_taunt"
+        ):
+            from girlframe.services.m3_rebel_taunt import prove as prove_rebel_taunt
+
+            prove_rebel_taunt(c, self.game, dict(row))
         from girlframe.services.m3_intracadre_marriage import prove_allocation
 
         prove_allocation(self.game, c, load_state(c, self.store.campaign_id), dict(row))
@@ -265,6 +272,7 @@ class PunishmentService:
             "janus_core_tag_removal",
             "defeat_post_mission",
             "role_punishment",
+            "strain_rebel_taunt",
         ):
             return [row]
         if row["off_duty_id"] is not None:

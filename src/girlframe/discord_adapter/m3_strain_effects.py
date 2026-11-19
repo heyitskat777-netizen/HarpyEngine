@@ -29,6 +29,7 @@ from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_defection import RULE as REBEL_DEFECTION
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_rebel_strafe import RULE as REBEL_STRAFE
+from girlframe.engine.m3_rebel_taunt import RULE as REBEL_TAUNT
 from girlframe.engine.m3_scientific_observation import Demand
 from girlframe.engine.m3_strain_effects import SPRITE_ESCORT, Choice, TagChoice
 from girlframe.engine.m3_void_revelation import PLAYS as REVELATIONS
@@ -127,6 +128,11 @@ async def open_effect(
         return
     if data["awaiting_rebel_strafe"]:
         await reply(interaction, "The original Rebel's physical pass is pending in the Inbox.")
+        return
+    if data["awaiting_rebel_taunt"]:
+        await reply(
+            interaction, "Review the radio transcript and original Handler Tag in the Inbox."
+        )
         return
     if data["rule_id"] == "strain.budget.high.1.2":
         from girlframe.discord_adapter.m3_fuel_shortage import open_fuel_shortage
@@ -575,12 +581,14 @@ def effect_form(
                 Field("revelation", "Which printed revelation do you make?", REVELATIONS),
                 Field("revelation_scene", "Where was it actually spoken?", channels),
             ]
-        if rule == REBEL_ESCAPE_OFFER:
+        if rule in (REBEL_ESCAPE_OFFER, REBEL_TAUNT):
             rebels = {x["id"] for x in world["factions"] if x["kind"] == "rebel" and x["active"]}
             fields.append(
                 Field(
                     "rebel_handler",
-                    "Which Rebel Handler initiates the private contact?",
+                    "Which Rebel Handler makes the radio call?"
+                    if rule == REBEL_TAUNT
+                    else "Which Rebel Handler initiates the private contact?",
                     options(
                         [
                             x
@@ -1225,7 +1233,7 @@ def effect_form(
                 revelation_play=values["revelation"][0],
                 revelation_channel=int(values["revelation_scene"][0]),
             )
-        if rule == REBEL_ESCAPE_OFFER:
+        if rule in (REBEL_ESCAPE_OFFER, REBEL_TAUNT):
             payload["target"] = values["rebel_handler"][0]
         if rule == REBEL_DEFECTION:
             payload.update(
@@ -1432,6 +1440,8 @@ def effect_form(
             return "Private find saved. The recipient can review it in their requests inbox."
         if rule == REBEL_ESCAPE_OFFER:
             return "The private offer is pending with the original rebel controller."
+        if rule == REBEL_TAUNT:
+            return "The original Rebel controller can transmit the taunt from the private Inbox."
         if rule in CIVIC_DIRECTIVES:
             return "The original Director's order is pending in their private Inbox."
         if rule == VOID_SIGNAL:

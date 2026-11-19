@@ -458,3 +458,18 @@ the base or other characters automatic damage. Off-Duty remains held
 through setup and advances only after the actual pass. A Pilot already
 recorded outside a Frame needs a separate cockpit entry workflow.
 [Low Rebellion p. 145](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=147) · [Strafing pass test](../../tests/rules/test_strain_rebel_strafe.py)
+
+## Low Rebellion radio taunt
+
+The base is `598f69848560a8107a9e6baee8e543ab0a0ffd93`.
+Low Rebellion 4.1 ties the private transmission to a living Rebel
+Handler under a separate controller. The original Cadre Handler gives
+herself a real Tag after receiving it. This lets Off-Duty begin and
+leaves the next interaction pending. The first actual eligible Order,
+applied targeted Handler Play or recorded joined conversation binds
+the original Girl and opens her actual Punishment. The binding carries
+the current Off-Duty period if there is one. Replays preserve the same
+subject and work. Each trigger passed through to an applied Punishment
+in the synthetic tests. Ordinary untracked dialogue and group-wide
+Plays with ambiguous recipients remain outside this trigger scope.
+[Low Rebellion p. 145](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=147) · [Radio taunt tests](../../tests/rules/test_strain_rebel_taunt.py)

@@ -2936,6 +2936,7 @@ class InboxService:
             from girlframe.engine.m3_rebel_defection import audience as defection_audience
             from girlframe.engine.m3_rebel_defection import cases as rebel_defections
             from girlframe.engine.m3_rebel_strafe import passes as rebel_passes
+            from girlframe.engine.m3_rebel_taunt import taunts as rebel_taunts
             from girlframe.engine.m3_void_revelation import revelations
             from girlframe.engine.m3_void_signal import signals as void_signals
             from girlframe.services.m3_handler_tags import HandlerTagService
@@ -2970,6 +2971,34 @@ class InboxService:
                         "",
                         "Open discovery",
                         task="m3_npc_interest",
+                    )
+                )
+
+            for taunt in rebel_taunts(canon):
+                addressed = (
+                    taunt.handler.entity == str(viewer.user_id) and taunt.radio_event is not None
+                )
+                if viewer.user_id != taunt.controller and not addressed:
+                    continue
+                actionable = (
+                    taunt.radio_event is None or addressed and taunt.interaction_event is None
+                )
+                items.append(
+                    InboxItem(
+                        "rebel-taunt:" + taunt.id,
+                        "rebel_taunt",
+                        taunt.id,
+                        canon.revision,
+                        "off_duty",
+                        "Private Rebel radio taunt",
+                        "Original speaker and Handler",
+                        "pending" if actionable else "resolved",
+                        actionable,
+                        False,
+                        "Review the actual original taunt.",
+                        "",
+                        "Open radio taunt",
+                        task="m3_rebel_taunt",
                     )
                 )
 

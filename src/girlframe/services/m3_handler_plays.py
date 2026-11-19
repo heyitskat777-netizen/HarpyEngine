@@ -1646,6 +1646,14 @@ class HandlerPlayService:
             else:
                 state = rules.direct(state, identity, event)
                 state = _complete(self.game, c, state, identity, event)
+            from girlframe.services.m3_rebel_taunt import bind_interaction, materialize
+            from girlframe.services.m3_rebel_taunt import pending as taunt_pending
+
+            taunt_works = (
+                bind_interaction(self.game, c, state, grant.chooser_actor, effect.target, event)
+                if effect.target is not None and taunt_pending(state, grant.chooser_actor)
+                else ()
+            )
             self.game.event(
                 c,
                 viewer.user_id,
@@ -1656,6 +1664,7 @@ class HandlerPlayService:
                 grant_id=identity,
                 play=play,
             )
+            materialize(self.game, c, viewer.user_id, event, taunt_works)
             if effect.kind == "punish":
                 from girlframe.services.m3_role_punishments import synchronize
 

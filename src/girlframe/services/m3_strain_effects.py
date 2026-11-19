@@ -22,6 +22,7 @@ from girlframe.engine.m3_pilot_fears import APPEARANCE as PUBLIC_APPEARANCE
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_rebel_strafe import RULE as REBEL_STRAFE
+from girlframe.engine.m3_rebel_taunt import RULE as REBEL_TAUNT
 from girlframe.engine.m3_supply_state import SupplyLoss
 from girlframe.engine.m3_void_revelation import RULE as VOID_REVELATION
 from girlframe.engine.m3_void_revelation import Revelation, revelations
@@ -109,6 +110,8 @@ class EffectService:
                 "awaiting_npc_interest": bool(body.get("interest_requested"))
                 and row["state"] == "pending",
                 "awaiting_rebel_strafe": bool(body.get("strafe_requested"))
+                and row["state"] == "pending",
+                "awaiting_rebel_taunt": bool(body.get("taunt_requested"))
                 and row["state"] == "pending",
                 "supply_outcome": {
                     "recipient": label,
@@ -642,6 +645,13 @@ class EffectService:
                     choice.target,
                     choice.account.strip(),
                 )
+            needs_taunt = choice.rule_id == REBEL_TAUNT
+            if needs_taunt:
+                from girlframe.services.m3_rebel_taunt import stage as stage_taunt
+
+                stage_taunt(
+                    c, self.strain, updated, row, event_id, choice.target, choice.account.strip()
+                )
             pending = (
                 needs_offer
                 or needs_directive
@@ -651,6 +661,7 @@ class EffectService:
                 or needs_leak
                 or needs_interest
                 or needs_strafe
+                or needs_taunt
             )
             scientific_period, scientific_events = None, []
             if choice.rule_id == "strain.budget.low.3.1":
@@ -869,7 +880,8 @@ class EffectService:
                 | ({"raid_requested": event} if needs_raid else {})
                 | ({"leak_requested": event} if needs_leak else {})
                 | ({"interest_requested": event} if needs_interest else {})
-                | ({"strafe_requested": event} if needs_strafe else {}),
+                | ({"strafe_requested": event} if needs_strafe else {})
+                | ({"taunt_requested": event} if needs_taunt else {}),
                 resolved=not pending,
             )
             return {

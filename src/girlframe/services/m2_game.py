@@ -6076,16 +6076,31 @@ class GameService:
             order_source_payload: dict[str, Any] = (
                 {"stim_sex": stim_authority} if stim_authority else {}
             )
-            self.event(
+            taunt_works: tuple[tuple[str, int, dict[str, Any]], ...] = ()
+            if viewer.user_id == state.handler:
+                from girlframe.engine.m3_actor_bonds import current_ref
+                from girlframe.engine.m3_handler_consequences import active_handler
+                from girlframe.services.m3_rebel_taunt import bind_interaction, materialize
+                from girlframe.services.m3_rebel_taunt import pending as taunt_pending
+
+                handler = active_handler(state)
+                if taunt_pending(state, handler):
+                    order_event = order_event or str(uuid4())
+                    taunt_works = bind_interaction(
+                        self, c, state, handler, current_ref(state, target), order_event
+                    )
+            applied_event = self.event(
                 c,
                 viewer.user_id,
                 key,
                 "m2.order_issued",
-                state if dose_order or stim_authority else None,
+                state if dose_order or stim_authority or taunt_works else None,
                 event_id=order_event,
                 action_id=identity,
                 **order_source_payload,
             )
+            if taunt_works:
+                materialize(self, c, viewer.user_id, applied_event, taunt_works)
             return {"action_id": identity, "order_id": order_id}
 
         try:
