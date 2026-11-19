@@ -333,6 +333,21 @@ class CastService:
                             )
                         except (ValueError, WorkflowError):
                             pass
+                    can_debt = can_debt_contact = False
+                    if actor.controller == role.controller == viewer.user_id:
+                        from girlframe.services.m3_mercenary_debt import DebtService
+
+                        try:
+                            debt = DebtService(self.game)
+                            if any(item.holder == actor.ref for item in state.held_items):
+                                _, mercenaries = debt.options(c, state, viewer, channel, actor.ref)
+                                can_debt = bool(mercenaries)
+                            if actor.rules == "ancillary" and actor.girl == "MERCENARY":
+                                can_debt_contact = bool(
+                                    debt.contact_options(c, state, viewer, channel, actor.ref)
+                                )
+                        except (ValueError, WorkflowError):
+                            pass
                     known_refs.add(actor.ref)
                     visible.append(
                         {
@@ -348,6 +363,8 @@ class CastService:
                             **({"escape_source": True} if can_escape else {}),
                             **({"abysstech": True} if can_abysstech else {}),
                             **({"patronage": True} if can_patronage else {}),
+                            **({"mercenary_debt": True} if can_debt else {}),
+                            **({"debt_contact": True} if can_debt_contact else {}),
                             **({"capture_source": True} if can_capture else {}),
                             **(
                                 {"director_phone": True}

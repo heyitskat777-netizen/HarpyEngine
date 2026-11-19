@@ -3394,3 +3394,27 @@ original Bond and new funding authority. Actual fines and sponsored
 medical, surgery and Frame spending remain open. The death trigger
 still needs direct verification.
 [Mercenary p. 96](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=98) · [Native case](../../tests/rules/test_mercenary_patron.py)
+
+### Mercenary’s Debt
+
+Base `864899c`. A known original cast member offers actual confirmed
+fictional cash and gives an Order. A Mercenary whose character is
+hidden may identify herself to one known contact for this scene.
+That permission leaves general visibility untouched. The original
+human facilitator privately verifies the cash offer. The original
+Mercenary can choose to follow or spend owned Heat and roll. The
+saved roll includes the original two dice, Heat expenditure and
+the printed −2. The supported middle result assigns an actual Tag
+and one or two Heat. A high result requires the owner's immediate
+action and awards two Heat. The facilitator reviews what the
+Foundation or Handler learned. Witnessed or uncertain outcomes
+remain pending for human consequence review.
+
+**One focused case passed in 6.95 seconds.** It used native Cast and
+Inbox controls with a genuinely confirmed cash object and scoped
+sharing, a rejected wrong owner, the same saved dice after
+reopening and replay, and the original new Tag and Heat. Cash
+transfer, Status and punishment for witnessed cases, the other
+middle result choices, other source types and the full regression
+remain open.
+[Debt p. 97](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=99) · [Disobey Orders p. 21](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=23) · [Native case](../../tests/rules/test_mercenary_debt.py)

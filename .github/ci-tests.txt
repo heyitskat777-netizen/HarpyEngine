@@ -206,3 +206,4 @@ tests/rules/test_abysstech.py
 tests/rules/test_harpy_intimacy.py
 tests/rules/test_harpy_kiss.py
 tests/rules/test_mercenary_patron.py
+tests/rules/test_mercenary_debt.py

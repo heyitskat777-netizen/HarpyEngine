@@ -2126,6 +2126,14 @@ class InboxView(discord.ui.View):
             await open_escape_choice(
                 interaction, EscapeService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_mercenary_debt":
+            from girlframe.discord_adapter.m3_mercenary_debt import open_debt_response
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_mercenary_debt import DebtService
+
+            await open_debt_response(
+                interaction, DebtService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_mercenary_patron":
             from girlframe.discord_adapter.m3_mercenary_patron import open_patron_inbox
             from girlframe.services.m2_game import GameService

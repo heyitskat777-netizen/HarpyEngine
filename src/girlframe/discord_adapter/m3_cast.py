@@ -88,6 +88,14 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
             key = "mask:" + token
             options.append((key, "Use A Human Mask as " + role["label"][:65]))
             actions[key] = ("harpy_mask", ActorRef.model_validate(role["ref"]))
+        if role.get("debt_contact"):
+            key = "debt-contact:" + token
+            options.append((key, "Manage cash offers to " + role["label"][:58]))
+            actions[key] = ("debt_contact", ActorRef.model_validate(role["ref"]))
+        if role.get("mercenary_debt"):
+            key = "debt:" + token
+            options.append((key, "Offer cash as " + role["label"][:65]))
+            actions[key] = ("mercenary_debt", ActorRef.model_validate(role["ref"]))
         if role.get("patronage"):
             key = "patronage:" + token
             options.append((key, "Review Patron funding for " + role["label"][:60]))
@@ -304,6 +312,20 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
 
             assert ref is not None
             await open_capture(current, CapturedService(service.game), channel, ref)
+            return
+        if action == "debt_contact":
+            from girlframe.discord_adapter.m3_mercenary_debt import open_debt_contact
+            from girlframe.services.m3_mercenary_debt import DebtService
+
+            assert ref is not None
+            await open_debt_contact(current, DebtService(service.game), channel, ref)
+            return
+        if action == "mercenary_debt":
+            from girlframe.discord_adapter.m3_mercenary_debt import open_debt
+            from girlframe.services.m3_mercenary_debt import DebtService
+
+            assert ref is not None
+            await open_debt(current, DebtService(service.game), channel, ref)
             return
         if action == "patronage":
             from girlframe.discord_adapter.m3_mercenary_patron import open_patron

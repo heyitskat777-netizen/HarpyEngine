@@ -4126,6 +4126,7 @@ class InboxService:
             from girlframe.services.m3_harpy_song import HarpySongService
             from girlframe.services.m3_harpy_visions import VisionsService
             from girlframe.services.m3_harpy_voidspace import HarpyVoidspaceService
+            from girlframe.services.m3_mercenary_debt import DebtService
             from girlframe.services.m3_mercenary_patron import MercenaryPatronService
             from girlframe.services.m3_npc_handover import LABELS as HANDOVER_LABELS
             from girlframe.services.m3_npc_handover import NpcHandoverService
@@ -4133,6 +4134,33 @@ class InboxService:
             from girlframe.services.m3_timeskip import TimeskipService
             from girlframe.services.m3_voidspace_invasion import InvasionService
             from girlframe.services.m3_warboy_hate import ConditionedHateService
+
+            debt_service = DebtService(GameService(self.store))
+            for debt_id, debt_step in debt_service.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "mercenary-debt:" + debt_id,
+                        "mercenary_debt_" + debt_step,
+                        debt_id,
+                        canon.revision,
+                        "plays",
+                        "Mercenary Debt",
+                        "Original cash offer",
+                        "pending",
+                        True,
+                        False,
+                        {
+                            "verify": "Verify the original fictional cash offer.",
+                            "respond": "Choose your response to the order.",
+                            "result": "Choose your response to the saved result.",
+                            "witness": "Review who noticed the attempted refusal.",
+                            "referred": "Resolve the original witnessed or uncertain refusal.",
+                        }[debt_step],
+                        "Access follows the actual scene and original decision owner.",
+                        "Review Debt",
+                        task="m3_mercenary_debt",
+                    )
+                )
 
             patronage = MercenaryPatronService(GameService(self.store))
             for patron_id, patron_step in patronage.tasks(connection, canon, viewer):
