@@ -34,6 +34,7 @@ from girlframe.engine.m3_supply_state import SupplyLoss
 from girlframe.engine.m3_void_revelation import RULE as VOID_REVELATION
 from girlframe.engine.m3_void_revelation import Play as RevelationPlay
 from girlframe.engine.m3_void_revelation import Revelation
+from girlframe.engine.m3_void_rift import RULE as VOID_RIFT
 from girlframe.engine.m3_void_signal import RULE as VOID_SIGNAL
 from girlframe.engine.m3_world_state import (
     AdversaryPilot,
@@ -65,6 +66,7 @@ SUPPORTED = frozenset(
         VOID_EXAMINATION,
         "strain.void.high.3.1",
         VOID_REVELATION,
+        VOID_RIFT,
         VOID_SIGNAL,
         PILOT_FEARS,
         DOPPELGANGER_REVEAL,
@@ -147,6 +149,7 @@ class Choice(Model):
     new_raid_harpy: AdversaryPilot | None = Field(default=None, exclude_if=lambda x: x is None)
     cult_harpy: str | None = Field(default=None, exclude_if=lambda x: x is None)
     new_cult_harpy: AdversaryPilot | None = Field(default=None, exclude_if=lambda x: x is None)
+    rift_harpy: AdversaryPilot | None = Field(default=None, exclude_if=lambda x: x is None)
     sprite_escort: SpriteEscortDesign | None = Field(default=None, exclude_if=lambda x: x is None)
     contact_play: ContactPlay | None = Field(default=None, exclude_if=lambda x: x is None)
     contact_channel: int | None = Field(default=None, ge=1, exclude_if=lambda x: x is None)
@@ -192,6 +195,22 @@ def apply(
     from girlframe.engine.m3_promotional_opportunity import in_responsibility, responsibility_edge
 
     rule = choice.rule_id
+    if rule == VOID_RIFT:
+        from girlframe.engine.m3_void_rift import arrive
+
+        fields(choice, {"gorgon", "rift_harpy", "victim"})
+        if source_event is None or period_id is None:
+            raise ValueError("Recover the actual Strain arrival's source and period")
+        return arrive(
+            state,
+            source_work,
+            period_id,
+            source_event,
+            choice.account,
+            choice.gorgon,
+            choice.rift_harpy,
+            choice.victim,
+        )
     if rule == ORBITAL_THREAT:
         from girlframe.engine.m3_orbital_threat import introduce
 
@@ -663,57 +682,18 @@ def apply(
             if victim is None:
                 raise ValueError("Choose an actual living NPC at the event's location")
             if rule == "strain.void.low.4.1":
-                from girlframe.engine.m3_battle import category, end_actor_casts
-                from girlframe.engine.m3_enforcer import end_grasps
-                from girlframe.engine.m3_physical import interrupt_journeys
-
-                ref = ActorRef(kind="npc", entity=victim.id)
                 if source_event is None:
                     raise ValueError(
                         "The actual Aggressive introduction needs its real source event"
                     )
-                if category(state, ref) == "harpy":
-                    raise ValueError(
-                        "A captured Harpy Core is not an ordinary NPC introduction victim"
-                    )
-                state.world = world
-                if "director" in victim.jobs:
-                    from girlframe.engine.m3_battle_director import die
+                from girlframe.engine.m3_gorgon_arrival import aggressive_casualty
 
-                    state = die(state, ref, source_event, choice.account)
-                else:
-                    state = end_actor_casts(
-                        end_grasps(
-                            interrupt_journeys(state, ref, source_event, choice.account),
-                            ref,
-                            source_event,
-                        ),
-                        ref,
-                        source_event,
-                    )
-                    assert state.world is not None
-                    state.world = world_rules.update(
-                        state.world,
-                        npcs=tuple(
-                            x.model_copy(update={"alive": False}) if x.id == victim.id else x
-                            for x in state.world.npcs
-                        ),
-                    )
-                assert state.world is not None
-                world = state.world
-                state.facts.append(
-                    dict(
-                        kind="aggressive_introduction_consumed",
-                        source_work=source_work,
-                        source_event=source_event,
-                        gorgon=incoming.id,
-                        followup="aggressive_introduction_npc_death",
-                        source_pdf="165",
-                        victim=ref.model_dump_json(),
-                        original_body=victim.model_dump_json(),
-                        account=choice.account,
-                    )
+                state.world = world
+                state = aggressive_casualty(
+                    state, incoming, victim, source_work, source_event, choice.account
                 )
+                world = state.world
+                assert world is not None
             else:
                 world = world_rules.update(
                     world,

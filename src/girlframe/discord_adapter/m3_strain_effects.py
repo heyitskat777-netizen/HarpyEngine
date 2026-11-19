@@ -34,6 +34,7 @@ from girlframe.engine.m3_scientific_observation import Demand
 from girlframe.engine.m3_strain_effects import SPRITE_ESCORT, Choice, TagChoice
 from girlframe.engine.m3_void_revelation import PLAYS as REVELATIONS
 from girlframe.engine.m3_void_revelation import RULE as VOID_REVELATION
+from girlframe.engine.m3_void_rift import RULE as VOID_RIFT
 from girlframe.engine.m3_void_signal import RULE as VOID_SIGNAL
 from girlframe.engine.m3_void_spread import RULE as VOID_SPREAD
 from girlframe.engine.m3_world import CLASS_ASSETS, distance
@@ -275,6 +276,7 @@ def effect_form(
         raise WorkflowError("Introduce the actual patron, then reopen this result.")
     orbital = rule == ORBITAL_THREAT
     disguise = rule == DOPPELGANGER_REVEAL
+    rift = rule == VOID_RIFT
     new_raid_actor = stable(identity, "new raid Harpy")
     new_cult_actor = stable(identity, "new cult Harpy")
     spawned = rule in {
@@ -645,6 +647,18 @@ def effect_form(
                     required=False,
                 )
             )
+        if rift:
+            fields.append(
+                Field(
+                    "arrival",
+                    "What emerges from the open sky?",
+                    (
+                        ("gorgon", "Gorgon"),
+                        ("harpy", "Harpy"),
+                    ),
+                )
+            )
+        rift_harpy = rift and values.get("arrival") == ("harpy",)
         if rule == "strain.rebellion.low.2.2":
             fields.append(
                 Field(
@@ -662,10 +676,26 @@ def effect_form(
                     ),
                 )
             )
-        elif spawned:
+        elif rift_harpy:
+            cells = tuple(
+                x for x in squares(world["board"]) if in_responsibility(state, coordinates(x[0]))
+            )
+            fields += [
+                Field("harpy_name", "Name of the arriving Harpy"),
+                Field("harpy_frame", "Her actual Frame"),
+                Field("girl_component", "Girl Asset"),
+                Field("frame_component", "Frame Asset"),
+                Field("cell", "Where does she emerge?", cells or WAIT),
+                Field(
+                    "revealed", "Has the Cadre seen her?", (("yes", "Yes"), ("no", "Keep private"))
+                ),
+            ]
+        elif spawned or rift:
             classes = (
                 ("benevolent", "erratic")
                 if disguise
+                else ("dormant", "erratic", "benevolent", "aggressive", "directed", "sprite")
+                if rift
                 else ("directed",)
                 if orbital or rule.endswith("1.1")
                 else ("dormant", "erratic")
@@ -731,12 +761,14 @@ def effect_form(
                         "goal",
                         "Which location is below its orbit?"
                         if orbital
+                        else "Which location is its goal?"
+                        if rift
                         else "Which city is its goal?",
                         options(
                             [
                                 x
                                 for x in world["locations"]
-                                if (orbital or x["kind"] == "city")
+                                if (orbital or rift or x["kind"] == "city")
                                 and x["condition"] != "destroyed"
                                 and in_responsibility(state, (x["cell"][0], x["cell"][1]))
                             ]
@@ -766,7 +798,9 @@ def effect_form(
                 and x["condition"] != "destroyed"
                 and in_responsibility(state, (x["cell"][0], x["cell"][1]))
             ]
-            if selected_class == "directed":
+            if rift:
+                cells = tuple(x for x in cells if in_responsibility(state, coordinates(x[0])))
+            elif selected_class == "directed":
                 cells = tuple(x for x in cells if responsibility_edge(state, coordinates(x[0])))
             elif selected_class in ("dormant", "erratic"):
                 cells = tuple(
@@ -780,7 +814,7 @@ def effect_form(
                 cells = tuple(x for x in cells if list(coordinates(x[0])) in bases)
             if not (orbital or disguise):
                 fields.append(Field("cell", "Choose a source-legal map square", cells or WAIT))
-            if selected_class in ("aggressive", "sprite"):
+            if selected_class == "aggressive" or (selected_class == "sprite" and not rift):
                 selected_cell = values.get("cell", ("",))[0]
                 victims = [
                     x
@@ -1248,7 +1282,32 @@ def effect_form(
             )
         if rule == "strain.rebellion.low.2.2":
             payload["target"] = values["target"][0]
-        elif spawned:
+        elif rift and values.get("arrival") == ("harpy",):
+            payload["rift_harpy"] = AdversaryPilot(
+                id=stable(identity, "rift Harpy"),
+                kind="harpy",
+                girl="HARPY",
+                controller=handler,
+                cell=coordinates(values["cell"][0]),
+                name=values["harpy_name"],
+                frame=values["harpy_frame"],
+                revealed=values["revealed"][0] == "yes",
+                assets=(
+                    Asset(
+                        id=stable(identity, "girl"),
+                        name=values["girl_component"],
+                        family="girl",
+                        description=values["girl_component"],
+                    ),
+                    Asset(
+                        id=stable(identity, "frame"),
+                        name=values["frame_component"],
+                        family="frame",
+                        description=values["frame_component"],
+                    ),
+                ),
+            )
+        elif spawned or rift:
             selected_class = values["class"][0]
             types = (
                 ("doppleganger",)
@@ -1469,6 +1528,14 @@ def effect_form(
         + (
             "The next actual Girl refusal gets +2; you do not choose its recipient. "
             if rule == "strain.rebellion.low.1.2"
+            else ""
+        )
+        + (
+            "The saved rift requires an arrival now and on the next "
+            f"{data['rift_duration']} Strain rolls. "
+            if rift and data["rift_duration"] is not None
+            else "This saved Strain roll requires one rift arrival. "
+            if rift
             else ""
         )
         + "Confirming applies its named world and character consequences. "

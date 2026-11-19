@@ -473,3 +473,20 @@ subject and work. Each trigger passed through to an applied Punishment
 in the synthetic tests. Ordinary untracked dialogue and group-wide
 Plays with ambiguous recipients remain outside this trigger scope.
 [Low Rebellion p. 145](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=147) · [Radio taunt tests](../../tests/rules/test_strain_rebel_taunt.py)
+
+## High Void sky rift
+
+The base is `ebdb851477671af09f8fdd9b2d0b755eeaa8c47f`.
+High Void 6.1 saves its extra duration die alongside the original
+column. It requires one actual arrival immediately and on each of the
+next saved Strain dice. The count includes individual track dice and
+cascade dice as they are rolled. Endgame choices use no die. Obligations
+carry across Off-Duty periods and do not close on descriptive text.
+Native Inbox controls introduce a Gorgon or a Harpy in the Handler's
+responsible area. An Aggressive arrival consumes the ordinary actual
+NPC casualty. It does not inherit the separate Low Void city clock.
+Unrevealed arrivals stay out of the players' map and private requests.
+The synthetic test exercised both native forms, the actual casualty,
+Off-Duty completion, a database reopen, the subsequent period's arrival,
+expiry, stale input, wrong audience, safety pause and command replay.
+[High Void p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) · [Aggressive introduction p. 163](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=165) · [Sky rift test](../../tests/rules/test_strain_void_rift.py)

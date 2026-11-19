@@ -13,6 +13,7 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_strain as rules
+from girlframe.engine import m3_void_rift as rift_rules
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_missions import Mission
@@ -379,12 +380,15 @@ class StrainService:
                 raise WorkflowError("This die is already saved; resume its column choice.")
             state.strain = rules.roll(state.strain, identity, self.dice.roll_d6())
             saved = next(x for x in state.strain.events if x.id == identity)
+            event_id = str(uuid4())
+            arrivals = rift_rules.upcoming(state, saved, event_id)
             event = self.game.event(
                 c,
                 viewer.user_id,
                 key,
                 "m3.strain_die_saved",
                 state,
+                event_id=event_id,
                 work_id=identity,
                 rng_source=self.rng_source,
             )
@@ -395,6 +399,23 @@ class StrainService:
                 json.loads(row["body_json"])
                 | {"stage": "column", "face": saved.face, "rng_source": self.rng_source},
             )
+            for rift, arrival in arrivals:
+                related(
+                    c,
+                    self.store,
+                    row,
+                    arrival.work,
+                    viewer.user_id,
+                    viewer.user_id,
+                    "strain_event",
+                    {
+                        "rule_id": rift_rules.RULE,
+                        "source_pdf": rift_rules.PAGE,
+                        "source_work": rift,
+                        "trigger_roll": identity,
+                    },
+                    event,
+                )
             return {
                 "id": identity,
                 "revision": revision + 1,
@@ -431,6 +452,8 @@ class StrainService:
                 raise WorkflowError("Initialize Strain before choosing an event.")
             old_requests = {x.id for x in state.strain.requests}
             cascade = False
+            event_id = str(uuid4())
+            rift_duration = None
             if endgame:
                 request = next((x for x in state.strain.requests if x.id == identity), None)
                 if request and request.track == "rebellion":
@@ -459,20 +482,29 @@ class StrainService:
                     rules.PAGES[(selected.track, selected.severity)],
                 )
                 cascade = selected.severity == "high" and selected.face == 6 and option == 2
+                if rule_id == rift_rules.RULE:
+                    rift_duration = self.dice.roll_d6()
+                    rift_rules.open_rift(state, selected, event_id, rift_duration, self.rng_source)
             event = self.game.event(
                 c,
                 viewer.user_id,
                 key,
                 "m3.strain_option_saved",
                 state,
+                event_id=event_id,
                 work_id=identity,
                 rule_id=rule_id,
             )
+            effect_body = {"rule_id": rule_id, "source_pdf": source_pdf, "source_work": identity}
+            roll_body = {"rule_id": rule_id, "source_pdf": source_pdf}
+            if rift_duration is not None:
+                roll_body |= {"rift_duration": rift_duration, "rift_rng_source": self.rng_source}
+                effect_body |= roll_body
             self._save(
                 c,
                 row,
                 event,
-                json.loads(row["body_json"]) | {"rule_id": rule_id, "source_pdf": source_pdf},
+                json.loads(row["body_json"]) | roll_body,
                 resolved=True,
             )
             for request in state.strain.requests:
@@ -487,7 +519,7 @@ class StrainService:
                     viewer.user_id,
                     viewer.user_id,
                     "strain_endgame_effect" if endgame else "strain_event",
-                    {"rule_id": rule_id, "source_pdf": source_pdf, "source_work": identity},
+                    effect_body,
                     event,
                 )
             return {

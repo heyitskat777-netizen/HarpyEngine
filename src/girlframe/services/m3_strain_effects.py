@@ -26,6 +26,7 @@ from girlframe.engine.m3_rebel_taunt import RULE as REBEL_TAUNT
 from girlframe.engine.m3_supply_state import SupplyLoss
 from girlframe.engine.m3_void_revelation import RULE as VOID_REVELATION
 from girlframe.engine.m3_void_revelation import Revelation, revelations
+from girlframe.engine.m3_void_rift import RULE as VOID_RIFT
 from girlframe.engine.m3_void_signal import RULE as VOID_SIGNAL
 from girlframe.engine.m3_void_spread import RULE as VOID_SPREAD
 from girlframe.engine.m3_void_spread import Spread, select
@@ -93,6 +94,14 @@ class EffectService:
                         "spread_started": bool(body.get("spread_started")),
                     }
                     if body["rule_id"] == VOID_SPREAD
+                    else {}
+                ),
+                **(
+                    {
+                        "rift_duration": body.get("rift_duration"),
+                        "trigger_roll": body.get("trigger_roll"),
+                    }
+                    if body["rule_id"] == VOID_RIFT
                     else {}
                 ),
                 "awaiting_rebel_offer": bool(body.get("offer_requested"))
@@ -251,6 +260,19 @@ class EffectService:
                 raise WorkflowError(
                     "The selected effect does not match this actual saved Strain event."
                 )
+            if choice.rule_id == VOID_RIFT:
+                from girlframe.engine.m3_void_rift import pending as pending_arrival
+
+                rift, arrival = pending_arrival(state, identity)
+                body = json.loads(row["body_json"])
+                if (
+                    row["event_id"] != arrival.source
+                    or body.get("source_work") != rift.id
+                    or body.get("trigger_roll", rift.id) != arrival.roll
+                ):
+                    raise WorkflowError(
+                        "Recover the actual saved roll that triggered this rift arrival"
+                    )
             event_id = str(uuid4())
             supply = None
             contraband = None
@@ -503,10 +525,14 @@ class EffectService:
                     rng_source=self.selection_source,
                     resource=choice.missing_resource,
                 )
+            aggressive_arrival = choice.rule_id == "strain.void.low.4.1" or (
+                choice.rule_id == VOID_RIFT
+                and choice.gorgon is not None
+                and choice.gorgon.gorgon_class == "aggressive"
+            )
             if (
-                choice.rule_id in {"strain.void.low.4.1", "strain.void.low.5.1"}
-                and choice.victim is not None
-            ):
+                aggressive_arrival or choice.rule_id == "strain.void.low.5.1"
+            ) and choice.victim is not None:
                 from girlframe.services.m3_world import require_onstage
 
                 require_onstage(state, ActorRef(kind="npc", entity=choice.victim))
@@ -517,7 +543,7 @@ class EffectService:
                     raise WorkflowError(
                         "Choose the present original NPC at the introduction's actual location."
                     )
-            if choice.rule_id == "strain.void.low.4.1":
+            if aggressive_arrival:
                 from girlframe.services.m3_battle_director import bind_legacy_context_bodies
 
                 state = bind_legacy_context_bodies(self.game, c, state)
@@ -702,7 +728,7 @@ class EffectService:
                 from girlframe.services.m3_void_examination import schedule
 
                 schedule(c, self.strain.periods, row, updated, event)
-            if choice.rule_id == "strain.void.low.4.1":
+            if aggressive_arrival:
                 from girlframe.services.m3_battle import synchronize_casts
                 from girlframe.services.m3_battle_director import create_replacements
                 from girlframe.services.m3_handler_void import synchronize_endings
