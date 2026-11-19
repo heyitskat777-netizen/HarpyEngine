@@ -130,3 +130,4 @@ tests/rules/test_strain_benevolent_contact.py
 tests/rules/test_strain_rebel_defection.py
 tests/rules/test_strain_public_appearance.py
 tests/rules/test_strain_npc_interest.py
+tests/rules/test_strain_rebel_strafe.py

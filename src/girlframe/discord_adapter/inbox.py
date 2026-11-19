@@ -1566,6 +1566,17 @@ class InboxView(discord.ui.View):
                 StrainService(OffDutyService(MissionService(self.service.store)))
             )
             await open_escape_offer(interaction, escape_service, item.identity)
+        elif item.task == "m3_rebel_strafe":
+            from girlframe.discord_adapter.m3_rebel_strafe import open_strafe
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_off_duty import OffDutyService
+            from girlframe.services.m3_rebel_strafe import StrafeService
+            from girlframe.services.m3_strain import StrainService
+
+            strafe_service = StrafeService(
+                StrainService(OffDutyService(MissionService(self.service.store)))
+            )
+            await open_strafe(interaction, strafe_service, item.identity)
         elif item.task == "m3_npc_interest":
             from girlframe.discord_adapter.m3_npc_interest import open_interest as open_npc_interest
             from girlframe.services.m3_missions import MissionService

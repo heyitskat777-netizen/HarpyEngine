@@ -2935,6 +2935,7 @@ class InboxService:
             from girlframe.engine.m3_pilot_fears import cases as public_fears
             from girlframe.engine.m3_rebel_defection import audience as defection_audience
             from girlframe.engine.m3_rebel_defection import cases as rebel_defections
+            from girlframe.engine.m3_rebel_strafe import passes as rebel_passes
             from girlframe.engine.m3_void_revelation import revelations
             from girlframe.engine.m3_void_signal import signals as void_signals
             from girlframe.services.m3_handler_tags import HandlerTagService
@@ -2969,6 +2970,28 @@ class InboxService:
                         "",
                         "Open discovery",
                         task="m3_npc_interest",
+                    )
+                )
+
+            for rebel_pass in rebel_passes(canon):
+                if viewer.user_id not in (rebel_pass.controller, int(rebel_pass.handler.entity)):
+                    continue
+                items.append(
+                    InboxItem(
+                        "rebel-pass:" + rebel_pass.id,
+                        "rebel_pass",
+                        rebel_pass.id,
+                        canon.revision,
+                        "off_duty",
+                        "Private Rebel strafing pass",
+                        "Original Rebel controller and Handler",
+                        "resolved" if rebel_pass.performance else "pending",
+                        not rebel_pass.performance,
+                        False,
+                        "Review the original cockpit or pass.",
+                        "",
+                        "Open pass",
+                        task="m3_rebel_strafe",
                     )
                 )
 

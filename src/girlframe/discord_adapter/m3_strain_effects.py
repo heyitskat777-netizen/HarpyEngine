@@ -28,6 +28,7 @@ from girlframe.engine.m3_pilot_fears import APPEARANCE as PUBLIC_APPEARANCE
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_defection import RULE as REBEL_DEFECTION
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
+from girlframe.engine.m3_rebel_strafe import RULE as REBEL_STRAFE
 from girlframe.engine.m3_scientific_observation import Demand
 from girlframe.engine.m3_strain_effects import SPRITE_ESCORT, Choice, TagChoice
 from girlframe.engine.m3_void_revelation import PLAYS as REVELATIONS
@@ -123,6 +124,9 @@ async def open_effect(
         return
     if data["awaiting_npc_interest"]:
         await reply(interaction, "The original discovery and Void gain are in the private Inbox.")
+        return
+    if data["awaiting_rebel_strafe"]:
+        await reply(interaction, "The original Rebel's physical pass is pending in the Inbox.")
         return
     if data["rule_id"] == "strain.budget.high.1.2":
         from girlframe.discord_adapter.m3_fuel_shortage import open_fuel_shortage
@@ -327,6 +331,41 @@ def effect_form(
 
     def build(values: dict[str, Any]) -> list[Field]:
         fields: list[Field] = []
+        if rule == REBEL_STRAFE:
+            rebels = {x["id"] for x in world["factions"] if x["kind"] == "rebel" and x["active"]}
+            fields += [
+                Field(
+                    "strafe_pilot",
+                    "Which actual Rebel Pilot strafes?",
+                    options(
+                        [
+                            x
+                            for x in world["pilots"]
+                            if x["alive"]
+                            and x["kind"] == "rebel"
+                            and x["custody"] == "free"
+                            and x["faction"] in rebels
+                        ]
+                    ),
+                ),
+                Field(
+                    "strafe_base",
+                    "Which Foundation base is nearby?",
+                    options(
+                        [
+                            x
+                            for x in regional_locations
+                            if x["kind"] == "base"
+                            and x["allegiance"] == "foundation"
+                            and x["condition"] != "destroyed"
+                            and not any(
+                                x.get(key)
+                                for key in ("blocked_by", "fallout_sources", "control_loss")
+                            )
+                        ]
+                    ),
+                ),
+            ]
         if rule == NPC_INTEREST:
             fields += [
                 Field(
@@ -1068,6 +1107,8 @@ def effect_form(
 
     def apply(actor: GuildViewer, key: str, values: dict[str, Any]) -> str:
         payload: dict[str, Any] = {"rule_id": rule, "account": values["account"]}
+        if rule == REBEL_STRAFE:
+            payload.update(target=values["strafe_base"][0], victim=values["strafe_pilot"][0])
         if rule == NPC_INTEREST:
             payload.update(
                 target=values["interest_npc"][0],
@@ -1405,6 +1446,10 @@ def effect_form(
             return "The original incident is pending. Reopen its private review."
         if rule == NPC_INTEREST:
             return "The original discovery and Void gain can be completed from the private Inbox."
+        if rule == REBEL_STRAFE:
+            return (
+                "The original Rebel controller can make the physical pass from the private Inbox."
+            )
         return "Event effects committed once. Reopen Off-Duty for remaining work."
 
     instructions = (

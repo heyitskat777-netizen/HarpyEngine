@@ -26,6 +26,7 @@ from girlframe.engine.m3_pilot_fears import APPEARANCE as PUBLIC_APPEARANCE
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_defection import RULE as REBEL_DEFECTION
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
+from girlframe.engine.m3_rebel_strafe import RULE as REBEL_STRAFE
 from girlframe.engine.m3_refusal_state import RefusalBonus
 from girlframe.engine.m3_scientific_observation import Demand, require_orders
 from girlframe.engine.m3_supply_state import SupplyLoss
@@ -72,6 +73,7 @@ SUPPORTED = frozenset(
         "strain.rebellion.low.1.1",
         "strain.rebellion.low.1.2",
         "strain.rebellion.low.2.2",
+        REBEL_STRAFE,
         "strain.rebellion.low.5.2",
         REBEL_PROTEST,
         REBEL_ESCAPE_OFFER,
@@ -339,6 +341,11 @@ def apply(
             speaker=choice.target,
             city=choice.protest_city,
         )
+    elif rule == REBEL_STRAFE:
+        from girlframe.engine.m3_rebel_strafe import source as strafe_source
+
+        fields(choice, {"target", "victim"})
+        strafe_source(state, choice.victim, choice.target)
     elif rule == REBEL_DEFECTION:
         from girlframe.engine.m3_rebel_defection import contact as stage_defection
 

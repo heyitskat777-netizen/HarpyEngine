@@ -444,3 +444,17 @@ available to the existing NPC corruption consumer. Independently
 controlled NPCs and interventions that prevent this printed gain
 remain outside this scope.
 [Low Void p. 142](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=144) · [NPC Void p. 18](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=20) · [Discovery tests](../../tests/rules/test_strain_npc_interest.py)
+
+## Low Rebellion strafing pass
+
+The base is `6375ade38943f6c6ec8c2f4e461cb0e87749e2c6`.
+Low Rebellion 2.1 binds an existing free Rebel Pilot and an operational
+Foundation base. The original owner can record occupied-cockpit facts
+at the Pilot's current square, with review by the original Handler.
+Existing physical authority is preserved. The pass uses a functional
+original Frame Asset in a joined scene and moves the real Pilot and Frame
+through adjacent map squares beside the base. Its receipt does not give
+the base or other characters automatic damage. Off-Duty remains held
+through setup and advances only after the actual pass. A Pilot already
+recorded outside a Frame needs a separate cockpit entry workflow.
+[Low Rebellion p. 145](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=147) · [Strafing pass test](../../tests/rules/test_strain_rebel_strafe.py)
