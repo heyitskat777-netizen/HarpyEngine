@@ -1,5 +1,7 @@
 """Actual contact and original-character immunity for Mother's Memetic Hazard."""
 
+from typing import Final
+
 from girlframe.engine.m2 import GameState, TagState
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, Model
 from girlframe.engine.m3_grow_unreal import original_target
@@ -8,7 +10,7 @@ from girlframe.engine.m3_janus_storage import effective_assets
 
 RULE = "gorgon-type.mother.memetic-hazard"
 PLAY = "mother_hazard"
-KIND = "mother_memetic_hazard"
+KIND: Final = "mother_memetic_hazard"
 
 
 class Exposure(Model):

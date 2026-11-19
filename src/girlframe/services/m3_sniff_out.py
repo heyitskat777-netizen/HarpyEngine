@@ -255,15 +255,15 @@ class SniffOutService:
         cases = rules.records(state)
         result = []
         for case in cases:
-            hunter = case.hunter.entity == str(viewer.user_id)
+            investigator = case.hunter.entity == str(viewer.user_id)
             review = (
                 viewer.user_id == case.gm
                 and case.bait
                 and not case.discovered
                 and (not case.needs_suspects or not case.suspects or case.inquiry_event is not None)
             )
-            can_inquire = hunter and case.suspects and not case.inquiry_event
-            if hunter or review:
+            can_inquire = investigator and case.suspects and not case.inquiry_event
+            if investigator or review:
                 result.append(
                     dict(
                         id=case.id,
