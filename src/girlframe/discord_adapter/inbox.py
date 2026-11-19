@@ -2126,6 +2126,14 @@ class InboxView(discord.ui.View):
             await open_escape_choice(
                 interaction, EscapeService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_chained_placement":
+            from girlframe.discord_adapter.m3_chained_darling import open_chained_review
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_chained_darling import ChainedPlacementService
+
+            await open_chained_review(
+                interaction, ChainedPlacementService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_chronically_online":
             from girlframe.discord_adapter.m3_chronically_online import open_recollection_inbox
             from girlframe.services.m2_game import GameService

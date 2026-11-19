@@ -4116,6 +4116,7 @@ class InboxService:
             from girlframe.services.m2_game import GameService
             from girlframe.services.m3_abysstech import AbysstechService
             from girlframe.services.m3_captured import CapturedService
+            from girlframe.services.m3_chained_darling import ChainedPlacementService
             from girlframe.services.m3_chronically_online import ChronicallyOnlineService
             from girlframe.services.m3_escape import EscapeService
             from girlframe.services.m3_harpy_eagle import EagleService
@@ -4135,6 +4136,27 @@ class InboxService:
             from girlframe.services.m3_timeskip import TimeskipService
             from girlframe.services.m3_voidspace_invasion import InvasionService
             from girlframe.services.m3_warboy_hate import ConditionedHateService
+
+            placements = ChainedPlacementService(GameService(self.store))
+            for placement_id in placements.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "chained-placement:" + placement_id,
+                        "chained_placement",
+                        placement_id,
+                        canon.revision,
+                        "world",
+                        "Chained Darling placement",
+                        "Original facilitator",
+                        "pending",
+                        True,
+                        False,
+                        "Verify the actual physical placement or cockpit exit.",
+                        "Use the original body and Frame.",
+                        "Review placement",
+                        task="m3_chained_placement",
+                    )
+                )
 
             recollections = ChronicallyOnlineService(GameService(self.store))
             for recall_id, recall_step in recollections.tasks(connection, canon, viewer):

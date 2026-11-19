@@ -366,6 +366,21 @@ class CastService:
                             )
                         except (ValueError, WorkflowError):
                             pass
+                    can_chained_placement = False
+                    if (
+                        actor.controller == role.controller == viewer.user_id
+                        and actor.rules == "ancillary" and actor.girl == "CHAINED DARLING"
+                    ):
+                        from girlframe.services.m3_chained_darling import ChainedPlacementService
+
+                        try:
+                            can_chained_placement = bool(
+                                ChainedPlacementService(self.game).available(
+                                    c, state, viewer, channel, actor.ref
+                                )
+                            )
+                        except (ValueError, WorkflowError):
+                            pass
                     known_refs.add(actor.ref)
                     visible.append(
                         {
@@ -384,6 +399,7 @@ class CastService:
                             **({"mercenary_debt": True} if can_debt else {}),
                             **({"debt_contact": True} if can_debt_contact else {}),
                             **({"chronically_online": True} if can_recall else {}),
+                            **({"chained_placement": True} if can_chained_placement else {}),
                             **({"capture_source": True} if can_capture else {}),
                             **(
                                 {"director_phone": True}

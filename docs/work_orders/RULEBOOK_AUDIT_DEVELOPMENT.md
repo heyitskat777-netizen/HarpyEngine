@@ -3452,3 +3452,20 @@ and Dog Status still require actor-level support. The printed
 second-use interaction with fixed pronouns remains a human ruling
 question. The implemented modifier can be used once per scene.
 [Warboy p. 106](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=108) · [Native case](../../tests/rules/test_warboy_boy.py)
+
+### Chained Darling’s Inherently Dangerous
+
+Base `17ad231`. The original owner can submit her physical
+placement or voluntary exit for factual review. The current
+original facilitator verifies it privately. The physical service
+records her actual original body and Frame. Leaving the Frame
+uses the same physical identity and preserves its position.
+Canonical Helplessness follows the original confirmed outside pose.
+
+**One focused case passed in 5.59 seconds.** It exercised native
+Cast and Inbox, denied a third party, reopened the pending exit,
+verified the parked Frame and showed that ordinary unsupported
+movement was blocked by the actual Helplessness. Assisted return,
+nonstandard occupancy, the private-play exception and using Pilot
+status as a Tag remain open.
+[Chained Darling p. 105](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=107) · [Native case](../../tests/rules/test_chained_darling.py)

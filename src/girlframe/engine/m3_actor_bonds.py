@@ -349,6 +349,10 @@ def is_helpless(
 
         if active_words(state, subject, foe):
             return True
+    from girlframe.engine.m3_chained_darling import helpless as chained_helpless
+
+    if chained_helpless(state, subject):
+        return True
     from girlframe.engine.m3_ankou import helpless as ankou_helpless
 
     if ankou_helpless(state, subject, foe):

@@ -88,6 +88,10 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
             key = "mask:" + token
             options.append((key, "Use A Human Mask as " + role["label"][:65]))
             actions[key] = ("harpy_mask", ActorRef.model_validate(role["ref"]))
+        if role.get("chained_placement"):
+            key = "chained-placement:" + token
+            options.append((key, "Record placement for " + role["label"][:62]))
+            actions[key] = ("chained_placement", ActorRef.model_validate(role["ref"]))
         if role.get("chronically_online"):
             key = "recollection:" + token
             options.append((key, "Recall prior Pilot facts as " + role["label"][:58]))
@@ -316,6 +320,15 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
 
             assert ref is not None
             await open_capture(current, CapturedService(service.game), channel, ref)
+            return
+        if action == "chained_placement":
+            from girlframe.discord_adapter.m3_chained_darling import open_chained_placement
+            from girlframe.services.m3_chained_darling import ChainedPlacementService
+
+            assert ref is not None
+            await open_chained_placement(
+                current, ChainedPlacementService(service.game), channel, ref
+            )
             return
         if action == "chronically_online":
             from girlframe.discord_adapter.m3_chronically_online import open_recollection
