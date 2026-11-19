@@ -661,3 +661,18 @@ views. Base Personnel, Civilian, Creep, Ex-Pilot, Prisoner and
 Protestor prompt the conversation. Actual scene effects still go
 through their respective rules and sources.
 [NPC jobs pp. 187–189](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=189) · [Cast tests](../../tests/rules/test_cast_service.py)
+
+## Public Relations expectations
+
+The base is `b434d5867b926614e7b0d4b5c9aae0322f44ce68`.
+The original joined Public Relations NPC controller can address a Girl
+with a specific expectation. Her original player describes what happened
+in the private Inbox. Falling short adds the original NPC's Tag. Meeting
+the expectation requires an actual marked Identity and uses the standard
+unmark workflow. If there is no eligible reward or the event is disputed,
+leave the request pending for human review. The NPC controller sees the
+response without access to the Girl's selection list. The review gate
+remains in force. The existing Smooth Things Over remains independent.
+All 42 selected tests passed, including both mechanical outcomes, wrong
+owner, stale and withdrawn access, safety pause, replay and reopening.
+[Public Relations p. 189](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=191) · [NPC request tests](../../tests/rules/test_journalist.py)

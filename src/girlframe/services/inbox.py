@@ -2965,6 +2965,10 @@ class InboxService:
                         "Private Psychologist directive",
                         "Review the original directive and Identity.",
                     ),
+                    "public_relations": (
+                        "Private Public Relations expectation",
+                        "Review the original expectation and report the outcome.",
+                    ),
                 }[question.job]
                 items.append(
                     InboxItem(

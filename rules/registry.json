@@ -22846,7 +22846,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_npc_bond_play.py"
+        "tests/rules/test_npc_bond_play.py",
+        "tests/rules/test_journalist.py"
       ],
       "m2_play_id": null,
       "module": "core"

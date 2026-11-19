@@ -12,8 +12,16 @@ from girlframe.discord_adapter.m3_actors import LABELS
 from girlframe.discord_adapter.m3_punishments import Picker
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_journalist import Job
 from girlframe.services.m3_cast import CastService
 from girlframe.services.onboarding import WorkflowError
+
+NPC_REQUEST_LABELS: dict[Job, str] = {
+    "journalist": "Ask a direct question as ",
+    "family": "Point out a change as ",
+    "psychologist": "Give a directive as ",
+    "public_relations": "Set an expectation as ",
+}
 
 
 async def open_cast(interaction: discord.Interaction, service: CastService) -> None:
@@ -26,6 +34,7 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
     own_cast = {x["token"]: x for x in data["roles"] if x.get("own")}
     options: list[tuple[str, str]] = []
     actions: dict[str, tuple[str, ActorRef | None]] = {}
+    npc_requests: dict[str, tuple[Job, ActorRef]] = {}
     prompt_roles = {}
     for role in owned["actors"]:
         if role["token"] not in own_cast:
@@ -45,18 +54,11 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
             jobs_key = "jobs:" + token
             options.append((jobs_key, "Change jobs for " + role["label"][:65]))
             actions[jobs_key] = ("jobs", ActorRef.model_validate(role["ref"]))
-            if "journalist" in role["job_prompts"]:
-                ask = "journalist:" + token
-                options.append((ask, "Ask a direct question as " + role["label"][:55]))
-                actions[ask] = ("journalist", ActorRef.model_validate(role["ref"]))
-            if "family" in role["job_prompts"]:
-                note = "family:" + token
-                options.append((note, "Point out a change as " + role["label"][:55]))
-                actions[note] = ("family", ActorRef.model_validate(role["ref"]))
-            if "psychologist" in role["job_prompts"]:
-                directive = "psychologist:" + token
-                options.append((directive, "Give a directive as " + role["label"][:55]))
-                actions[directive] = ("psychologist", ActorRef.model_validate(role["ref"]))
+            for job, label in NPC_REQUEST_LABELS.items():
+                if job in role["job_prompts"]:
+                    request = job + ":" + token
+                    options.append((request, label + role["label"][:55]))
+                    npc_requests[request] = (job, ActorRef.model_validate(role["ref"]))
     if data["may_facilitate"] and not data["own_facilitator"]:
         options.append(("facilitate", "Join as facilitator (no fictional character)"))
         actions["facilitate"] = ("facilitate", None)
@@ -107,6 +109,15 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
                     viewer.user_id, "Choose one of this NPC's current jobs.", jobs, show_job
                 ).show(current)
             return
+        if token in npc_requests:
+            from girlframe.discord_adapter.m3_journalist import open_ask
+            from girlframe.services.m3_journalist import JournalistService
+
+            requested_job, requester = npc_requests[token]
+            await open_ask(
+                current, JournalistService(service.game), channel, requester, job=requested_job
+            )
+            return
         action, ref = actions[token]
         if action == "jobs":
             from girlframe.services.m3_npc_roles import NpcRoleService
@@ -150,19 +161,6 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
                 values={"jobs": job_data["jobs"]},
             )
             await reply(current, form.text(), form)
-            return
-        if action in ("journalist", "family", "psychologist"):
-            from girlframe.discord_adapter.m3_journalist import open_ask
-            from girlframe.services.m3_journalist import JournalistService
-
-            assert ref is not None
-            await open_ask(
-                current,
-                JournalistService(service.game),
-                channel,
-                ref,
-                job=action,
-            )
             return
 
         async def submit(actor: discord.Interaction, values: dict[str, Any]) -> str:

@@ -1,4 +1,4 @@
-"""Owned Journalist questions and the original Girl's private answer."""
+"""Native controls for original NPC job requests and Girl responses."""
 
 import asyncio
 from typing import Any
@@ -39,6 +39,11 @@ async def open_ask(
             "Give a directive and an Identity",
             "What do you direct her to do?",
             Field("identity", "New Identity"),
+        ),
+        "public_relations": (
+            "Set a Public Relations expectation",
+            "What do you expect her to do?",
+            Field("tag", "Tag if the expectation falls through"),
         ),
     }[job]
     if not data["targets"]:
@@ -83,6 +88,7 @@ async def open_response(
     question = clean(data["question"])
     family = data["job"] == "family"
     psychology = data["job"] == "psychologist"
+    public_relations = data["job"] == "public_relations"
     if psychology:
         question += "\nNew Identity · " + clean(data["identity_label"])
         if data["can_answer"] and data["needs_replacement"] and not data["replacements"]:
@@ -113,6 +119,7 @@ async def open_response(
             values.get("response", ("answer",))[0],
             values.get("reply", ""),
             replace=values.get("replace", (None,))[0],
+            unmark=next(iter(values.get("unmark", ())), None),
         )
         return "Your response was saved."
 
@@ -130,6 +137,40 @@ async def open_response(
             + [
                 Field("response", "Confirm the Identity", (("answer", "Add this Identity"),)),
             ],
+            submit,
+        )
+        await reply(interaction, form.text(), form)
+        return
+
+    if public_relations:
+        outcomes: tuple[tuple[str, str], ...] = (("decline", "Could not meet the expectation"),)
+        if data["marked_identities"]:
+            outcomes += (("answer", "Met the expectation"),)
+            instruction = "Meeting it unmarks an Identity. Falling short gives your Girl a Tag."
+            fields = [
+                Field(
+                    "unmark",
+                    "Identity to unmark if you met the expectation",
+                    data["marked_identities"],
+                    minimum=0,
+                    required=False,
+                )
+            ]
+        else:
+            instruction = (
+                "You can report falling short. If you met the expectation, leave this pending "
+                "for human review of the Identity reward."
+            )
+            fields = []
+        form = NativeForm(
+            viewer.user_id,
+            "Respond to the Public Relations expectation",
+            question + "\n" + instruction,
+            [
+                Field("response", "What happened?", outcomes),
+                Field("reply", "Describe what actually happened", paragraph=True),
+            ]
+            + fields,
             submit,
         )
         await reply(interaction, form.text(), form)

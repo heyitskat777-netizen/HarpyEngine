@@ -1,4 +1,4 @@
-"""A private native job question with an actual source-owned refusal Tag."""
+"""Private native NPC requests and their source-bound mechanical consequences."""
 
 from typing import Any
 from uuid import uuid4
@@ -23,15 +23,19 @@ FAMILY_ASKED = "m3.family_discrepancy_raised"
 FAMILY_ANSWERED = "m3.family_discrepancy_answered"
 PSYCHOLOGIST_DIRECTIVE = "m3.psychologist_directive"
 PSYCHOLOGIST_IDENTITY = "m3.psychologist_identity_received"
+EXPECTATION_SET = "m3.public_relations_expectation_set"
+EXPECTATION_ANSWERED = "m3.public_relations_expectation_answered"
 SOURCE_EVENTS: dict[rules.Job, str] = {
     "journalist": ASKED,
     "family": FAMILY_ASKED,
     "psychologist": PSYCHOLOGIST_DIRECTIVE,
+    "public_relations": EXPECTATION_SET,
 }
 RESULT_EVENTS: dict[rules.Job, str] = {
     "journalist": ANSWERED,
     "family": FAMILY_ANSWERED,
     "psychologist": PSYCHOLOGIST_IDENTITY,
+    "public_relations": EXPECTATION_ANSWERED,
 }
 
 
@@ -49,6 +53,21 @@ def identity_slots(sheet: PilotSheet) -> tuple[bool, tuple[tuple[str, str], ...]
         )
     )
     return ordinary >= 4, allowed if ordinary >= 4 else ()
+
+
+def marked_identities(state: GameState, sheet: PilotSheet) -> tuple[tuple[str, str], ...]:
+    from girlframe.engine.m3_clone_am import additional_identities
+    from girlframe.engine.m3_oldgen import marked_maxims
+
+    return (
+        tuple(
+            (x.id, x.name)
+            for x in sheet.identities
+            if x.marked and x.id not in sheet.sedation_locked
+        )
+        + tuple((x.id, x.name) for x in additional_identities(state, sheet.owner) if x.marked)
+        + marked_maxims(state, sheet.owner)
+    )
 
 
 def eligible(
@@ -228,7 +247,13 @@ class JournalistService:
         )
         first = GameState.model_validate_json(raw) if raw else None
         if first is None or value.model_copy(
-            update=dict(response=None, reply=None, response_event=None, replaced_identity=None)
+            update=dict(
+                response=None,
+                reply=None,
+                response_event=None,
+                replaced_identity=None,
+                unmarked_identity=None,
+            )
         ) not in rules.questions(first):
             raise WorkflowError("Recover the actual original NPC request source")
         return state, value
@@ -265,6 +290,11 @@ class JournalistService:
                 identity_label=value.identity_label,
                 needs_replacement=needs_replacement,
                 replacements=replacements,
+                marked_identities=(
+                    marked_identities(state, state.sheets[value.girl.entity])
+                    if value.job == "public_relations" and can_answer
+                    else ()
+                ),
             )
 
     def respond(
@@ -277,6 +307,7 @@ class JournalistService:
         reply: str,
         *,
         replace: str | None = None,
+        unmark: str | None = None,
     ) -> dict[str, Any]:
         if response not in ("answer", "decline") or len(reply) > 1200:
             raise WorkflowError("Record the original Girl's actual answer or in-character refusal")
@@ -296,6 +327,8 @@ class JournalistService:
                 or not self.live(c, state, value)
             ):
                 raise WorkflowError("STALE_QUESTION: recover the unchanged original NPC and Girl")
+            if unmark is not None and (value.job != "public_relations" or response != "answer"):
+                raise WorkflowError("Only meeting the actual expectation unmarks an Identity")
             event = str(uuid4())
             if value.job == "psychologist":
                 if response != "answer":
@@ -304,10 +337,20 @@ class JournalistService:
                     )
                 assert value.identity_label is not None
                 self._receive_identity(state, value, replace)
-            elif replace is not None or (response == "answer" and not reply.strip()):
+            elif replace is not None or (
+                (response == "answer" or value.job == "public_relations") and not reply.strip()
+            ):
                 raise WorkflowError(
                     "Record the original Girl's actual answer or in-character refusal"
                 )
+            if value.job == "public_relations" and response == "answer":
+                from girlframe.services.m2_choices import ChoiceEngine
+
+                sheet = state.sheets[value.girl.entity]
+                if unmark is None or unmark not in dict(marked_identities(state, sheet)):
+                    raise WorkflowError("Choose an eligible marked Identity owned by this Girl")
+                ChoiceEngine(self.game).unmark(c, state, sheet, (unmark,), 1)
+                sheet.revision += 1
             rules.save(
                 state,
                 value.model_copy(
@@ -316,6 +359,7 @@ class JournalistService:
                         reply=reply.strip(),
                         response_event=event,
                         replaced_identity=replace,
+                        unmarked_identity=unmark,
                     )
                 ),
             )
@@ -348,7 +392,8 @@ class JournalistService:
             key,
             ANSWERED,
             dict(id=identity, expected=expected, response=response, reply=reply)
-            | (dict(replace=replace) if replace is not None else {}),
+            | (dict(replace=replace) if replace is not None else {})
+            | (dict(unmark=unmark) if unmark is not None else {}),
             operation,
             auto_audit=False,
             authorize=authorize,

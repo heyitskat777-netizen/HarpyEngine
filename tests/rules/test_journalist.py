@@ -27,7 +27,7 @@ from girlframe.services.onboarding import WorkflowError
 
 
 @pytest.mark.parametrize("reply", ["answer", "decline", "withdraw"])
-@pytest.mark.parametrize("job", ["journalist", "family"])
+@pytest.mark.parametrize("job", ["journalist", "family", "public_relations"])
 def test_owned_npc_request_awards_a_real_tag_only_after_the_original_trigger(
     ledger, tmp_path, monkeypatch, reply, job
 ):
@@ -41,7 +41,7 @@ def test_owned_npc_request_awards_a_real_tag_only_after_the_original_trigger(
             id=reporter.entity,
             name="PRIVATE_REPORTER",
             jobs=(job,),
-            detail="An actual Journalist.",
+            detail="An actual NPC with a scene role.",
             cell=(0, 0),
             controller=ADMIN.user_id,
         ),
@@ -57,6 +57,19 @@ def test_owned_npc_request_awards_a_real_tag_only_after_the_original_trigger(
     assert service.targets(OTHER, 900, reporter, job=job)["targets"] == ()
     question = "PRIVATE_QUESTION"
     tag = "PRIVATE_REFUSAL_TAG"
+    explanation = "PRIVATE_ACTUAL_REPLY" if reply == "answer" or job == "public_relations" else ""
+    unmark = None
+    locked = None
+    if job == "public_relations":
+        with ledger.transaction() as c:
+            canon = state(game)
+            sheet = canon.sheets["2"]
+            sheet.identities[0].marked = sheet.identities[1].marked = True
+            locked = sheet.identities[1].id
+            sheet.sedation_locked = (locked,)
+            if reply == "answer":
+                unmark = sheet.identities[0].id
+            game.event(c, 1, "original-marks", "synthetic.existing_marks", canon)
     before = state(game).sheets["2"].tags
 
     async def native_ask():
@@ -81,6 +94,7 @@ def test_owned_npc_request_awards_a_real_tag_only_after_the_original_trigger(
     identity = saved["id"]
     assert saved["state"] == "pending" and state(game).sheets["2"].tags == before
     assert tag not in str(service.view(PLAYER, identity))
+    assert service.view(ADMIN, identity)["marked_identities"] == ()
     assert not any(x.identity == identity for x in InboxService(ledger).items(OTHER))
     with pytest.raises(WorkflowError, match="original NPC controller and Girl"):
         service.view(OTHER, identity)
@@ -100,14 +114,22 @@ def test_owned_npc_request_awards_a_real_tag_only_after_the_original_trigger(
     with pytest.raises(WorkflowError, match="SAFETY_PAUSED"):
         service.respond(PLAYER, "paused-answer", identity, state(game).revision, "decline", "")
     ledger.safety(OTHER, "resume-question", ledger.status(OTHER)["revision"], pause=False)
-    text = "PRIVATE_ACTUAL_REPLY" if reply == "answer" else ""
     revision = state(game).revision
+    if job == "public_relations" and reply == "answer":
+        with pytest.raises(WorkflowError, match="eligible marked Identity"):
+            service.respond(
+                PLAYER, "locked", identity, revision, "answer", explanation, unmark=locked
+            )
+        with pytest.raises(WorkflowError, match="eligible marked Identity"):
+            service.respond(PLAYER, "no-owned-effect", identity, revision, "answer", explanation)
+        assert questions(state(game))[0].response is None
 
     async def native_reply():
         inbox = InboxService(ledger)
         item = next(x for x in inbox.items(PLAYER) if x.identity == identity)
         assert item.task == "m3_journalist"
         assert ("Family" in item.title) == (job == "family")
+        assert ("Public Relations" in item.title) == (job == "public_relations")
         click = current(PLAYER.user_id, 89923)
         await click.response.defer(ephemeral=True)
         await InboxView(inbox, PLAYER.user_id).route(click, item)
@@ -117,17 +139,31 @@ def test_owned_npc_request_awards_a_real_tag_only_after_the_original_trigger(
             and clean(question) in form.instructions
             and clean(tag) not in form.instructions
         )
-        form.values.update(response=(reply,), reply=text)
+        form.values.update(response=(reply,), reply=explanation)
+        if unmark is not None:
+            assert next(field for field in form.fields if field.key == "unmark").options == (
+                (unmark, state(game).sheets["2"].identities[0].name),
+            )
+            form.values["unmark"] = (unmark,)
         await form.confirm.callback(current(PLAYER.user_id, 89924))
         assert form.completed
 
     asyncio.run(native_reply())
-    assert service.respond(PLAYER, "89924", identity, revision, reply, text)["response"] == reply
+    assert (
+        service.respond(PLAYER, "89924", identity, revision, reply, explanation, unmark=unmark)[
+            "response"
+        ]
+        == reply
+    )
     ledger.engine.dispose()
     current_state = state(game)
     (case,) = questions(current_state)
-    assert case.reply == text and case.response == reply and case.job == job
-    assert service.view(ADMIN, identity)["reply"] == text
+    assert case.reply == explanation and case.response == reply and case.job == job
+    assert case.unmarked_identity == unmark
+    assert service.view(ADMIN, identity)["reply"] == explanation
+    if job == "public_relations":
+        assert current_state.sheets["2"].identities[0].marked == (reply != "answer")
+        assert current_state.sheets["2"].identities[1].marked
     tags = current_state.sheets["2"].tags
     if reply == "decline":
         assert (

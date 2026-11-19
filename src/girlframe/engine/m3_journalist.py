@@ -1,4 +1,4 @@
-"""Questions and discrepancies from actual NPCs, with original Girl responses."""
+"""Source-bound NPC job requests with effects owned by the original Girl."""
 
 from typing import Literal
 
@@ -10,9 +10,15 @@ from girlframe.engine.m3_actor_state import ActorRef, Model
 RULE = "npc.npc.journalist"
 FAMILY = "npc.npc.family"
 PSYCHOLOGIST = "npc.npc.psychologist"
+PUBLIC_RELATIONS = "npc.npc.public-relations"
 KIND = "journalist_question"
-Job = Literal["journalist", "family", "psychologist"]
-RULES: dict[Job, str] = {"journalist": RULE, "family": FAMILY, "psychologist": PSYCHOLOGIST}
+Job = Literal["journalist", "family", "psychologist", "public_relations"]
+RULES: dict[Job, str] = {
+    "journalist": RULE,
+    "family": FAMILY,
+    "psychologist": PSYCHOLOGIST,
+    "public_relations": PUBLIC_RELATIONS,
+}
 Response = Literal["answer", "decline"]
 
 
@@ -35,6 +41,7 @@ class Question(Model):
     reply: str | None = None
     response_event: str | None = None
     replaced_identity: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    unmarked_identity: str | None = Field(default=None, exclude_if=lambda x: x is None)
 
     @model_validator(mode="after")
     def effect_shape(self) -> "Question":
@@ -47,6 +54,9 @@ class Question(Model):
             or self.replaced_identity is not None
         ):
             raise ValueError("This original request supplies its actual conditional Tag")
+        needs_unmark = self.job == "public_relations" and self.response == "answer"
+        if needs_unmark != (self.unmarked_identity is not None):
+            raise ValueError("A met Public Relations expectation unmarks an actual Identity")
         return self
 
 
