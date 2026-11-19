@@ -16,7 +16,7 @@ from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import NativeForm
 from girlframe.discord_adapter.m3_cast import open_cast
 from girlframe.engine.m3_actor_state import ActorRef
-from girlframe.engine.m3_journalist import RULE, questions
+from girlframe.engine.m3_journalist import RULES, questions
 from girlframe.engine.m3_world_state import Npc
 from girlframe.services.inbox import InboxService
 from girlframe.services.m3_actors import ActorService
@@ -27,8 +27,9 @@ from girlframe.services.onboarding import WorkflowError
 
 
 @pytest.mark.parametrize("reply", ["answer", "decline", "withdraw"])
-def test_journalist_awards_a_real_tag_only_after_an_original_in_character_refusal(
-    ledger, tmp_path, monkeypatch, reply
+@pytest.mark.parametrize("job", ["journalist", "family"])
+def test_owned_npc_request_awards_a_real_tag_only_after_the_original_trigger(
+    ledger, tmp_path, monkeypatch, reply, job
 ):
     world, game = ready(ledger)
     reporter = ActorRef(kind="npc", entity="original-reporter")
@@ -39,7 +40,7 @@ def test_journalist_awards_a_real_tag_only_after_an_original_in_character_refusa
         Npc(
             id=reporter.entity,
             name="PRIVATE_REPORTER",
-            jobs=("journalist",),
+            jobs=(job,),
             detail="An actual Journalist.",
             cell=(0, 0),
             controller=ADMIN.user_id,
@@ -50,10 +51,10 @@ def test_journalist_awards_a_real_tag_only_after_an_original_in_character_refusa
     service = JournalistService(game)
     approved(ledger, game, tmp_path, monkeypatch)
     with pytest.raises(WorkflowError, match="implementation and review"):
-        service.targets(ADMIN, 900, reporter)
-    approved(ledger, game, tmp_path, monkeypatch, extra=(RULE,))
+        service.targets(ADMIN, 900, reporter, job=job)
+    approved(ledger, game, tmp_path, monkeypatch, extra=(RULES[job],))
     cast = CastService(ActorService(MissionService(ledger)))
-    assert service.targets(OTHER, 900, reporter)["targets"] == ()
+    assert service.targets(OTHER, 900, reporter, job=job)["targets"] == ()
     question = "PRIVATE_QUESTION"
     tag = "PRIVATE_REFUSAL_TAG"
     before = state(game).sheets["2"].tags
@@ -64,7 +65,7 @@ def test_journalist_awards_a_real_tag_only_after_an_original_in_character_refusa
         await click.response.defer(ephemeral=True)
         await open_cast(click, cast)
         menu = click.edit_original_response.call_args.kwargs["view"]
-        token = next(x for x, _ in menu.options if x.startswith("journalist:"))
+        token = next(x for x, _ in menu.options if x.startswith(job + ":"))
         opening = current(ADMIN.user_id, 89921)
         await opening.response.defer(ephemeral=True)
         await menu.open_item(opening, token)
@@ -76,12 +77,12 @@ def test_journalist_awards_a_real_tag_only_after_an_original_in_character_refusa
 
     revision = state(game).revision
     asyncio.run(native_ask())
-    saved = service.ask(ADMIN, "89922", 900, revision, reporter, 2, question, tag)
+    saved = service.ask(ADMIN, "89922", 900, revision, reporter, 2, question, tag, job=job)
     identity = saved["id"]
     assert saved["state"] == "pending" and state(game).sheets["2"].tags == before
     assert tag not in str(service.view(PLAYER, identity))
     assert not any(x.identity == identity for x in InboxService(ledger).items(OTHER))
-    with pytest.raises(WorkflowError, match="original Journalist controller and Girl"):
+    with pytest.raises(WorkflowError, match="original NPC controller and Girl"):
         service.view(OTHER, identity)
     with pytest.raises(WorkflowError, match="actual addressed Girl"):
         service.respond(ADMIN, "forged-answer", identity, state(game).revision, "decline", "")
@@ -106,6 +107,7 @@ def test_journalist_awards_a_real_tag_only_after_an_original_in_character_refusa
         inbox = InboxService(ledger)
         item = next(x for x in inbox.items(PLAYER) if x.identity == identity)
         assert item.task == "m3_journalist"
+        assert ("Family" in item.title) == (job == "family")
         click = current(PLAYER.user_id, 89923)
         await click.response.defer(ephemeral=True)
         await InboxView(inbox, PLAYER.user_id).route(click, item)
@@ -124,7 +126,7 @@ def test_journalist_awards_a_real_tag_only_after_an_original_in_character_refusa
     ledger.engine.dispose()
     current_state = state(game)
     (case,) = questions(current_state)
-    assert case.reply == text and case.response == reply
+    assert case.reply == text and case.response == reply and case.job == job
     assert service.view(ADMIN, identity)["reply"] == text
     tags = current_state.sheets["2"].tags
     if reply == "decline":

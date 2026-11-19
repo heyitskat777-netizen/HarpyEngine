@@ -42,10 +42,17 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
             prompt_key = "prompts:" + token
             options.append((prompt_key, "Review job prompts for " + role["label"][:65]))
             prompt_roles[prompt_key] = token
+            jobs_key = "jobs:" + token
+            options.append((jobs_key, "Change jobs for " + role["label"][:65]))
+            actions[jobs_key] = ("jobs", ActorRef.model_validate(role["ref"]))
             if "journalist" in role["job_prompts"]:
                 ask = "journalist:" + token
                 options.append((ask, "Ask a direct question as " + role["label"][:55]))
                 actions[ask] = ("journalist", ActorRef.model_validate(role["ref"]))
+            if "family" in role["job_prompts"]:
+                note = "family:" + token
+                options.append((note, "Point out a change as " + role["label"][:55]))
+                actions[note] = ("family", ActorRef.model_validate(role["ref"]))
     if data["may_facilitate"] and not data["own_facilitator"]:
         options.append(("facilitate", "Join as facilitator (no fictional character)"))
         actions["facilitate"] = ("facilitate", None)
@@ -97,12 +104,61 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
                 ).show(current)
             return
         action, ref = actions[token]
-        if action == "journalist":
+        if action == "jobs":
+            from girlframe.services.m3_npc_roles import NpcRoleService
+            from girlframe.services.m3_world import WorldService
+
+            assert ref is not None
+            npc_roles = NpcRoleService(WorldService(service.actors.missions))
+            job_data = await asyncio.to_thread(
+                npc_roles.jobs, viewer_from_interaction(current), channel, ref
+            )
+
+            async def save_jobs(click: discord.Interaction, values: dict[str, Any]) -> str:
+                await asyncio.to_thread(
+                    npc_roles.change_jobs,
+                    viewer_from_interaction(click),
+                    str(click.id),
+                    channel,
+                    job_data["revision"],
+                    ref,
+                    values.get("jobs", ()),
+                    values["account"],
+                )
+                return "The NPC's current jobs are saved."
+
+            form = NativeForm(
+                viewer.user_id,
+                "Change this NPC's jobs",
+                "Record the actual change in the scene.",
+                [
+                    Field(
+                        "jobs",
+                        "Current ordinary jobs",
+                        job_data["options"],
+                        0 if job_data["fixed"] else 1,
+                        len(job_data["options"]),
+                        required=not job_data["fixed"],
+                    ),
+                    Field("account", "What changed?", paragraph=True),
+                ],
+                save_jobs,
+                values={"jobs": job_data["jobs"]},
+            )
+            await reply(current, form.text(), form)
+            return
+        if action in ("journalist", "family"):
             from girlframe.discord_adapter.m3_journalist import open_ask
             from girlframe.services.m3_journalist import JournalistService
 
             assert ref is not None
-            await open_ask(current, JournalistService(service.game), channel, ref)
+            await open_ask(
+                current,
+                JournalistService(service.game),
+                channel,
+                ref,
+                job="family" if action == "family" else "journalist",
+            )
             return
 
         async def submit(actor: discord.Interaction, values: dict[str, Any]) -> str:

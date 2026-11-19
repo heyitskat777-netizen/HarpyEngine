@@ -606,3 +606,26 @@ both responses, withdrawn access, wrong owner and command replay.
 The default review gate passed. Photograph consequences and non-Girl
 targets remain open.
 [Journalist p. 188](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=190) · [Journalist tests](../../tests/rules/test_journalist.py)
+
+## Family discrepancy
+
+The base is `a90a081a5b6bbe7306045175464d1269f9661484`.
+The Family NPC can point out a specific change in a native private
+request. The original Girl can report the actual correction or leave
+the discrepancy uncorrected. Leaving it in place adds the actual
+original Family NPC's Tag. The flow reuses the Journalist's source,
+owner, scope and replay protections with a separate rule and event
+type. The native tests cover correction, an uncorrected discrepancy,
+withdrawal and default gating for both jobs. Disputed corrections
+and corrections that require other actions keep their ordinary human
+or native resolution paths.
+[Family p. 188](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=190) · [NPC response tests](../../tests/rules/test_journalist.py)
+
+The same candidate adds ordinary NPC job changes through the native
+scene-role form. The original current NPC controller owns the change.
+Director, prisoner and candidate statuses retain their existing
+source-specific paths. New prompts follow the saved jobs, with the
+original controller, body and resources preserved. The tests cover
+wrong owner, stale choice, safety pause, native confirmation, replay
+and reopening.
+[NPC playbooks p. 187](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=189) · [NPC role tests](../../tests/rules/test_npc_roles.py)

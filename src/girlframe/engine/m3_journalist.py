@@ -1,4 +1,4 @@
-"""An actual Journalist asks a direct question and an original Girl owns the reply."""
+"""Questions and discrepancies from actual NPCs, with original Girl responses."""
 
 from typing import Literal
 
@@ -8,7 +8,10 @@ from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model
 
 RULE = "npc.npc.journalist"
+FAMILY = "npc.npc.family"
 KIND = "journalist_question"
+Job = Literal["journalist", "family"]
+RULES: dict[Job, str] = {"journalist": RULE, "family": FAMILY}
 Response = Literal["answer", "decline"]
 
 
@@ -21,6 +24,7 @@ class Question(Model):
     girl: ActorRef
     question: str = Field(min_length=1, max_length=1200)
     tag: str = Field(min_length=1, max_length=120)
+    job: Job = Field(default="journalist", exclude_if=lambda value: value == "journalist")
     response: Response | None = None
     reply: str | None = None
     response_event: str | None = None

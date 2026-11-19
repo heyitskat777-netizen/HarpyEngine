@@ -2962,14 +2962,18 @@ class InboxService:
                         question.id,
                         1,
                         "playbook",
-                        "Private Journalist question",
+                        "Private Family discrepancy"
+                        if question.job == "family"
+                        else "Private Journalist question",
                         "Original scene roles",
                         "pending" if question.response is None else "resolved",
                         actionable,
                         False,
-                        "Review the original direct question.",
+                        "Review the original discrepancy."
+                        if question.job == "family"
+                        else "Review the original direct question.",
                         "",
-                        "Open question",
+                        "Open response",
                         task="m3_journalist",
                     )
                 )

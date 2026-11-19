@@ -10,18 +10,23 @@ from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_journalist import Job
 from girlframe.services.m3_journalist import JournalistService
 
 
 async def open_ask(
-    interaction: discord.Interaction, service: JournalistService, channel: int, reporter: ActorRef
+    interaction: discord.Interaction,
+    service: JournalistService,
+    channel: int,
+    reporter: ActorRef,
+    *,
+    job: Job = "journalist",
 ) -> None:
     viewer = viewer_from_interaction(interaction)
-    data = await asyncio.to_thread(service.targets, viewer, channel, reporter)
+    data = await asyncio.to_thread(service.targets, viewer, channel, reporter, job=job)
+    family = job == "family"
     if not data["targets"]:
-        await reply(
-            interaction, "Choose a scene with your original Journalist and an addressed Girl."
-        )
+        await reply(interaction, "Choose a scene with your original NPC and an addressed Girl.")
         return
 
     async def submit(click: discord.Interaction, values: dict[str, Any]) -> str:
@@ -35,17 +40,27 @@ async def open_ask(
             int(values["girl"][0]),
             values["question"],
             values["tag"],
+            job=job,
         )
         return "The original Girl can respond from her private Inbox."
 
     form = NativeForm(
         viewer.user_id,
-        "Ask a direct Journalist question",
-        "The addressed Girl owns her answer.",
+        "Point out an actual change" if family else "Ask a direct Journalist question",
+        "The addressed Girl owns her response.",
         [
             Field("girl", "Which Girl do you address?", data["targets"]),
-            Field("question", "What do you ask?", paragraph=True),
-            Field("tag", "Tag if she declines in character"),
+            Field(
+                "question",
+                "What change do you point out?" if family else "What do you ask?",
+                paragraph=True,
+            ),
+            Field(
+                "tag",
+                "Tag if the change stays uncorrected"
+                if family
+                else "Tag if she declines in character",
+            ),
         ],
         submit,
     )
@@ -58,12 +73,13 @@ async def open_response(
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(service.view, viewer, identity)
     question = clean(data["question"])
+    family = data["job"] == "family"
     if not data["can_answer"]:
         status = (
             ("\n" + clean(data["reply"]))
             if data["reply"]
             else (
-                "\nDeclined in character."
+                ("\nThe change remains uncorrected." if family else "\nDeclined in character.")
                 if data["response"] == "decline"
                 else "\nAwaiting the original Girl's response."
             )
@@ -85,13 +101,20 @@ async def open_response(
 
     form = NativeForm(
         viewer.user_id,
-        "Respond to the Journalist",
-        question + "\nAn in-character refusal gives your Girl a Tag.",
+        "Respond to the Family NPC" if family else "Respond to the Journalist",
+        question
+        + (
+            "\nLeaving the discrepancy uncorrected gives your Girl a Tag."
+            if family
+            else "\nAn in-character refusal gives your Girl a Tag."
+        ),
         [
             Field(
                 "response",
                 "Your own response",
-                (("answer", "Answer"), ("decline", "Decline in character")),
+                (("answer", "Describe the actual correction"), ("decline", "Leave it uncorrected"))
+                if family
+                else (("answer", "Answer"), ("decline", "Decline in character")),
             ),
             Field("reply", "Your reply", paragraph=True, required=False),
         ],
