@@ -13,6 +13,7 @@ from girlframe.engine.m3_gorgon_play_state import Declaration
 from girlframe.engine.m3_gorgon_type_tags import LABELS as TYPE_TAG_LABELS
 from girlframe.engine.m3_growth import KINDS as GROWTH_KINDS
 from girlframe.engine.m3_growth import Adaptation, Regrowth
+from girlframe.engine.m3_mother_sprite import BirthPlan
 from girlframe.engine.m3_world_state import CorePlan
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_gorgon_play import GorgonPlayService
@@ -32,6 +33,8 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
         kind = values["play"][0]
         if kind in GROWTH_KINDS and kind not in data["growth"].get(actor["token"], ()):
             return "Choose a Growth whose current Core or damaged Assets permit this Play."
+        if kind == "mother_sprite" and actor["token"] not in data["sprite_birth"]:
+            return "Choose the original Mother with an intact Asset."
         targets = [x for x in data["actors"] if x["ref"] != actor["ref"]]
         type_tag = kind in TYPE_TAG_LABELS
         if type_tag:
@@ -83,6 +86,16 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
                     maximum=len(actor["assets"]),
                 )
             )
+        if kind == "mother_sprite":
+            intact = tuple((x["id"], x["name"]) for x in actor["assets"] if not x["damaged"])
+            fields.extend(
+                (
+                    Field("payment", "Intact Asset the Mother damages", intact),
+                    Field("sprite_name", "The new Sprite's name"),
+                    Field("sprite_asset", "The Sprite's original Asset"),
+                    Field("sprite_weakness", "The Sprite's Core weakness", paragraph=True),
+                )
+            )
         fields.extend(
             [
                 Field("account", "Describe the action and actual reach", paragraph=True),
@@ -126,6 +139,14 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
                         description=details["description"],
                     )
                     if kind == "growth_regrow"
+                    else None,
+                    birth=BirthPlan(
+                        payment=details["payment"][0],
+                        name=details["sprite_name"],
+                        asset=details["sprite_asset"],
+                        weakness=details["sprite_weakness"],
+                    )
+                    if kind == "mother_sprite"
                     else None,
                 ),
             )

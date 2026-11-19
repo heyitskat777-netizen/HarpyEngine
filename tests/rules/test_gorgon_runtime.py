@@ -7,7 +7,7 @@ from test_battle_service import prepared
 from test_cast_service import change
 from test_ledger import ADMIN, PLAYER
 from test_ledger import ledger as ledger
-from test_m2_game import answer, state, tick
+from test_m2_game import Gateway, answer, state, tick
 from test_world import gorgon
 
 from girlframe.engine.m3_actor_state import ActorRef
@@ -1300,3 +1300,197 @@ def test_native_growth_preserves_old_damage_and_changes_actual_core_requirements
     world = expose_gorgon(world, actor.entity, guards.weakness)
     assert next(x for x in world.gorgons if x.id == actor.entity).exposed
     assert game.dice.calls == 0
+
+
+@pytest.mark.parametrize("escaped", [False, True])
+def test_native_mother_pays_real_birth_and_only_reviewed_escape_matures(ledger, escaped):
+    import asyncio
+
+    from test_ledger import OTHER
+    from test_mission_ui import current
+    from test_off_duty_cycle import activate
+    from test_off_duty_cycle import prepared as ready_period
+
+    from girlframe.delivery.m2_worker import GameWorker
+    from girlframe.discord_adapter.m2_forms import NativeForm
+    from girlframe.discord_adapter.m3_gorgon_play import open_gorgon_play
+    from girlframe.discord_adapter.m3_world import open_world
+    from girlframe.engine import m3_mother_sprite as rules
+    from girlframe.services.m2_game import GameService
+    from girlframe.services.m3_mother_sprite import SpriteEscapeService
+    from girlframe.services.m3_movement import MovementService
+    from girlframe.services.m3_world import WorldService
+    from girlframe.services.onboarding import WorkflowError
+
+    mother = ActorRef(kind="gorgon", entity="original-mother")
+    marker = {}
+    sprite_name, sprite_asset = "Original Sprite", "Filament"
+
+    def introduce_before_period(game):
+        approval = ledger.policy.m3_approval
+        ledger.policy = ledger.policy.model_copy(
+            update=dict(
+                m3_approval=approval.model_copy(
+                    update=dict(subsystems=approval.subsystems | {"plays"})
+                ),
+            )
+        )
+        with ledger.transaction() as c:
+            original = state(game)
+            body = gorgon("erratic", mother.entity, revealed=True, types=("mother", "growth"))
+            original.world = update(original.world, gorgons=(*original.world.gorgons, body))
+            game.event(c, 1, "mother-source", "synthetic.original_mother", original)
+        cast = CastService(ActorService(MissionService(ledger)))
+        change(cast, ADMIN, "join", mother)
+        service = GorgonPlayService(game)
+        data = service.preview(ADMIN, 900)
+        actual = next(x for x in data["actors"] if x["token"] == mother.token)
+        assert "mother_sprite" in data["plays"]
+        assert "mother_sprite" not in service.preview(PLAYER, 900)["plays"]
+        cost = actual["assets"][0]["id"]
+        arguments = dict(
+            payment=cost,
+            name=sprite_name,
+            asset=sprite_asset,
+            weakness="Interrupt the original filament",
+        )
+
+        async def native_birth():
+            click = current(1, 93100)
+            click.channel_id = 900
+            await click.response.defer(ephemeral=True)
+            await open_gorgon_play(click, game)
+            form = click.edit_original_response.call_args.kwargs["view"]
+            form.values.update(actor=(mother.token,), play=("mother_sprite",))
+            selected = current(1, 93101)
+            await selected.response.defer(ephemeral=True)
+            await form.confirm.callback(selected)
+            confirm = selected.edit_original_response.call_args.kwargs["view"]
+            confirm.values.update(
+                payment=(cost,),
+                sprite_name=sprite_name,
+                sprite_asset=sprite_asset,
+                sprite_weakness=arguments["weakness"],
+                account="Actual paid Sprite birth",
+                reach=("confirmed",),
+            )
+            await confirm.confirm.callback(current(1, 93102))
+            assert confirm.completed
+
+        declaration = Declaration(
+            kind="mother_sprite",
+            actor=mother,
+            actor_sha256=actual["source_sha256"],
+            account="Actual paid Sprite birth",
+            reach_confirmed=True,
+            birth=rules.BirthPlan(**arguments),
+        )
+        with pytest.raises(WorkflowError, match="actual owned"):
+            service.begin(PLAYER, "forged-sprite", 900, data["revision"], declaration)
+        asyncio.run(native_birth())
+        request = service.begin(ADMIN, "93102", 900, data["revision"], declaration)
+        assert not rules.records(state(game))
+        replay_game = GameService(ledger, dice=game.dice)
+        worker, gateway = GameWorker(replay_game), Gateway()
+        tick(worker, gateway, 4)
+        with ledger.engine.connect() as c:
+            active = game.action(c, request["action_id"])["data"]["gorgon_play"]["started"]
+        if not active:
+            replay_game.roll(ADMIN, "advance-birth", request["action_id"])
+        tick(worker, gateway, 5)
+        (birth,) = rules.records(state(game))
+        marker["birth"] = birth
+        canon = state(game)
+        current_mother = next(x for x in canon.world.gorgons if x.id == mother.entity)
+        born = next(x for x in canon.world.gorgons if x.id == birth.sprite.entity)
+        assert birth.action == request["action_id"] and birth.paid_asset == cost
+        assert any(x.id == cost and x.damaged for x in current_mother.assets)
+        assert born.types == current_mother.types and born.follows == mother.entity
+        assert born.gorgon_class == "sprite" and born.assets[0].name == sprite_asset
+        assert not rules.pending(canon) and not rules.maturities(canon)
+        assert sprite_name not in str(WorldService(MissionService(ledger)).get(PLAYER))
+
+        change(cast, ADMIN, "join", birth.sprite)
+        mover = MovementService(game)
+        before = state(game)
+        mover.move(
+            ADMIN,
+            "physical-sprite-flight",
+            before.revision,
+            900,
+            birth.sprite,
+            (1, 0),
+            account="The Sprite escapes the current firefight.",
+        )
+        (move,) = rules.moves(state(game))
+        marker["move"] = move
+        assert (move.origin, move.destination, move.sprite) == ((0, 0), (1, 0), birth.sprite)
+
+    cycle, game, period = ready_period(ledger, before_period=introduce_before_period)
+    service = SpriteEscapeService(game)
+    birth, move = marker["birth"], marker["move"]
+    assert service.options(ADMIN)["options"][0][0] == move.event
+    with pytest.raises(WorkflowError, match="human table adjudicator"):
+        service.options(OTHER)
+    with pytest.raises(WorkflowError, match="escape review before Off-Duty"):
+        activate(cycle, game, period)
+    assert cycle.periods.get(ADMIN, period)["phase"] == "preparing"
+
+    adult = (
+        rules.Adult(gorgon_class="dormant", extra_assets=("Outer jaw", "Veil")) if escaped else None
+    )
+    description = "Human GM resolves the actual Sprite's flight."
+    revision = state(game).revision
+    with pytest.raises(WorkflowError, match="original move"):
+        service.review(ADMIN, "stale-flight", revision - 1, move.event, description, adult)
+
+    ledger.safety(PLAYER, "pause-escape", ledger.status(PLAYER)["revision"], pause=True)
+    with pytest.raises(WorkflowError, match="SAFETY_PAUSED"):
+        service.review(ADMIN, "paused-flight", revision, move.event, description, adult)
+    ledger.safety(PLAYER, "resume-escape", ledger.status(PLAYER)["revision"], pause=False)
+
+    async def review():
+        click = current(1, 93120)
+        await click.response.defer(ephemeral=True)
+        await open_world(click, WorldService(MissionService(ledger)))
+        menu = click.edit_original_response.call_args.kwargs["view"]
+        picked = current(1, 93121)
+        await picked.response.defer(ephemeral=True)
+        await menu.open_item(picked, "sprite_escape")
+        form = picked.edit_original_response.call_args.kwargs["view"]
+        assert isinstance(form, NativeForm)
+        form.values.update(
+            movement=(move.event,),
+            result=("dormant",) if escaped else ("stayed",),
+            assets="Outer jaw\nVeil" if escaped else "",
+            account=description,
+        )
+        sent = current(1, 93122)
+        await form.confirm.callback(sent)
+        assert form.completed, sent.followup.send.call_args
+
+    asyncio.run(review())
+    saved = service.review(ADMIN, "93122", revision, move.event, description, adult)
+    assert saved["escaped"] == escaped
+    assert not rules.maturities(state(game))
+    assert not service.options(ADMIN)["options"]
+
+    replay_cycle = type(cycle)(type(cycle.periods)(MissionService(ledger)))
+    expect = replay_cycle.review(ADMIN, period)["revision"]
+    game_revision = state(game).revision
+    first = replay_cycle.activate(ADMIN, "grow-next-period", period, expect, game_revision)
+    assert first == replay_cycle.activate(ADMIN, "grow-next-period", period, expect, game_revision)
+    final = state(game)
+    body = next(x for x in final.world.gorgons if x.id == birth.sprite.entity)
+    assert body.alive and body.cell == (1, 0)
+    assert body.gorgon_class == ("dormant" if escaped else "sprite")
+    assert body.follows == (None if escaped else mother.entity)
+    assert [x.name for x in body.assets] == (
+        [sprite_asset, "Outer jaw", "Veil"] if escaped else [sprite_asset]
+    )
+    assert body.core_plan.assets == (body.assets[0].id,)
+    if escaped:
+        (grown,) = rules.maturities(final)
+        assert (grown.escape, grown.period) == (saved["event"], period)
+    else:
+        assert not rules.maturities(final)

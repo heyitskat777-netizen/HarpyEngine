@@ -1946,3 +1946,36 @@ processes, all eight approved synthetic Ancillary creations, default
 denials, private Inbox, connected P2 and release recovery. The previous
 detached P2 run had already reached its final state assertions before
 failing to write its evidence file.
+
+### Mother Sprite birth, escape and maturation
+
+Base `3263a9df6a5697a09679143fa747b6dbeba1ffb1`. The actual Mother
+damages one intact owned Asset through the native Gorgon Play. This
+creates a separate living Sprite, with an original Asset and Core
+and its Mother's Types. Ordinary movement records the actual Sprite's
+departure. The human GM privately rules whether that movement was an
+escape. Off-Duty activation waits while an eligible movement still
+needs a ruling. An approved, living Sprite matures on that activation
+and keeps its identity, site, original Asset and Core. Declining the
+escape leaves the body a Sprite. The supported adult Classes are
+Benevolent, Dormant and Erratic. Directed or Aggressive setup,
+other escape sources and Memetic Hazard remain separate.
+
+**89 selected tests passed in 241.28 seconds** across Gorgon,
+world, Off-Duty, movement, Sprite interception and source-registry
+workflows. The native scenario exercised both escape decisions,
+wrong owner, stale requests, safety pause, restart, private World
+review and replay of the actual activation. No expired choice
+automatically confirmed escape or grew another body.
+[Mother p. 170](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=172)
+
+### Archived Activity adapter verification
+
+**13 tests passed in 65.16 seconds** against exact engine revision
+`3263a9df6a5697a09679143fa747b6dbeba1ffb1` with the archived
+2026-11-16 Activity source and the P2 route overlay. The four tested
+modules cover mission lifecycle, managed recovery, campaign opening,
+and campaign switching. This used disposable adapter instances and
+synthetic data. The JUnit evidence is at
+`var/activity-rulebook-3263a9d/pytest.xml`. Authenticated Discord
+Activity routes and real-player acceptance remain unverified.

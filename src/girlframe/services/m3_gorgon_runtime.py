@@ -10,6 +10,7 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_battle as battle
 from girlframe.engine import m3_growth as growth
+from girlframe.engine import m3_mother_sprite as mother_sprite
 from girlframe.engine.m2 import ChoiceAnswer, GameState
 from girlframe.engine.m3_actor_state import ActorRef, SceneCast
 from girlframe.engine.m3_actors import resolve
@@ -118,6 +119,21 @@ def start(game: Any, c: Connection, state: GameState, action: dict[str, Any]) ->
             changed = growth.regrow(actual, declaration.regrowth, action["id"])
             action["data"]["result"]["regrown_asset"] = "growth:" + action["id"]
         state.world = growth.save(state.world, changed)
+        return
+    if meta["kind"] == "mother_sprite":
+        declaration = Declaration.model_validate_json(json.dumps(meta["declaration"]))
+        assert declaration.birth is not None
+        cell = resolve(state, declaration.actor, (), require_current_profile=False).cell
+        birth = mother_sprite.spawn(
+            state,
+            actual,
+            cell,
+            declaration.birth,
+            action=action["id"],
+            scene=action["scene_id"],
+            event=_event(action),
+        )
+        action["data"]["result"]["sprite_birth"] = birth.sprite.entity
         return
     if meta["kind"] == "warp":
         if not actual.exposed:

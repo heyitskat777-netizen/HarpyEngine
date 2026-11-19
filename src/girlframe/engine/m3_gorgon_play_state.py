@@ -7,11 +7,20 @@ from pydantic import Field, model_validator
 from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_gorgon_type_tags import LABELS, TypeTag
 from girlframe.engine.m3_growth import Adaptation, Regrowth
+from girlframe.engine.m3_mother_sprite import BirthPlan
 
 
 class Declaration(Model):
     kind: (
-        Literal["attack", "collateral", "warp", "corrupt", "growth_adapt", "growth_regrow"]
+        Literal[
+            "attack",
+            "collateral",
+            "warp",
+            "corrupt",
+            "growth_adapt",
+            "growth_regrow",
+            "mother_sprite",
+        ]
         | TypeTag
     )
     actor: ActorRef
@@ -24,6 +33,7 @@ class Declaration(Model):
     tag: str | None = Field(default=None, max_length=40, exclude_if=lambda value: value is None)
     adaptation: Adaptation | None = Field(default=None, exclude_if=lambda value: value is None)
     regrowth: Regrowth | None = Field(default=None, exclude_if=lambda value: value is None)
+    birth: BirthPlan | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def source_shape(self) -> "Declaration":
@@ -47,4 +57,6 @@ class Declaration(Model):
             self.regrowth is not None
         ) != (self.kind == "growth_regrow"):
             raise ValueError("Use this exact Growth Play's owned choices")
+        if (self.birth is not None) != (self.kind == "mother_sprite"):
+            raise ValueError("Declare the original Mother's paid Sprite design")
         return self

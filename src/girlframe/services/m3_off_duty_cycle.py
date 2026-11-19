@@ -227,8 +227,10 @@ class CycleService:
                 punishment_body.update(character=subject.incarnation)
                 punishment_body.update(marriage.allocation_fields(state, updated.handler_work))
             if kind == "m3.off_duty_activated":
+                from girlframe.services.m3_mother_sprite import mature_at_start
                 from girlframe.services.m3_red_queen import reset_at_start as reset_court
 
+                mature_at_start(self.game, c, state, identity, event_id)
                 for uid in updated.pilots:
                     sheet = state.sheets.get(str(uid))
                     if sheet is not None and sheet.character_id == updated.character_ids.get(

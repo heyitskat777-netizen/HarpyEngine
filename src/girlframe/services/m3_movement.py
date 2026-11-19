@@ -342,6 +342,17 @@ class MovementService:
             from girlframe.services.m3_prisoner_escape import stage_movement as stage_escape
 
             stage_escape(self.game, c, before, state, context, event)
+            if actor.kind == "gorgon":
+                from girlframe.engine.m3_mother_sprite import travel
+
+                travel(
+                    state,
+                    actor,
+                    (context["origin"][0], context["origin"][1]),
+                    destination,
+                    context["scene"],
+                    event,
+                )
             self.game.event(
                 c,
                 viewer.user_id,

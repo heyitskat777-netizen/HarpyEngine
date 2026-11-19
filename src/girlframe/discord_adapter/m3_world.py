@@ -227,6 +227,7 @@ class MapPages(discord.ui.View):
 async def open_world(interaction: discord.Interaction, service: WorldService) -> None:
     from girlframe.services.m3_ancillary import AncillaryService
     from girlframe.services.m3_expanded_status import ExpandedStatusService
+    from girlframe.services.m3_mother_sprite import SpriteEscapeService
 
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(service.get, viewer, private=True)
@@ -237,6 +238,15 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
     ancillary_options = await asyncio.to_thread(ancillary.invite_options, viewer)
     standing = ExpandedStatusService(service.game)
     standing_enabled = await asyncio.to_thread(standing.enabled)
+    sprite_escape = SpriteEscapeService(service.game)
+    sprite_reviews = False
+    if any(row["gorgon_class"] == "sprite" and row["alive"] for row in data["world"]["gorgons"]):
+        try:
+            sprite_reviews = bool(
+                (await asyncio.to_thread(sprite_escape.options, viewer))["options"]
+            )
+        except WorkflowError:
+            pass
 
     async def choose(current: discord.Interaction, action: str) -> None:
         fresh = await asyncio.to_thread(service.get, viewer_from_interaction(current), private=True)
@@ -252,6 +262,11 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
             from girlframe.discord_adapter.m3_expanded_status import open_status
 
             await open_status(current, standing)
+            return
+        if action == "sprite_escape" and sprite_reviews:
+            from girlframe.discord_adapter.m3_mother_sprite import open_review
+
+            await open_review(current, sprite_escape)
             return
         if action == "location_build":
             from girlframe.discord_adapter.m3_location_build import open_build
@@ -537,6 +552,7 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
                 else ()
             ),
             ("reveal", "Reveal a Gorgon encountered by the Cadre"),
+            *((("sprite_escape", "Review a Sprite's actual escape"),) if sprite_reviews else ()),
             *((("expanded_status", "Review Expanded Status"),) if standing_enabled else ()),
             *(
                 (("share_gorgon_tag", "Share an observed Gorgon Tag"),)

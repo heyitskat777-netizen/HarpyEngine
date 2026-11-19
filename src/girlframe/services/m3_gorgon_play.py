@@ -10,6 +10,7 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_growth as growth
+from girlframe.engine import m3_mother_sprite as mother_sprite
 from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, SceneCast
 from girlframe.engine.m3_actors import fingerprint, resolve
@@ -35,6 +36,7 @@ RULES: dict[str, str] = {
     "corrupt": corrupt_rule,
     "growth_adapt": growth.RULE,
     "growth_regrow": growth.RULE,
+    "mother_sprite": mother_sprite.RULE,
     **{str(kind): rule for kind, rule in TYPE_TAG_RULES.items()},
 }
 
@@ -74,6 +76,7 @@ class GorgonPlayService:
             visible: dict[str, ActorView] = {}
             can_corrupt = False
             can_grow: dict[str, list[str]] = {}
+            can_birth: list[str] = []
             for role in cast.roles:
                 actual = resolve(state, role.actor, bound, require_current_profile=False)
                 if not _visible(state, role.actor, viewer.user_id):
@@ -96,6 +99,13 @@ class GorgonPlayService:
                             )
                             if available
                         ]
+                    if (
+                        body.alive
+                        and "mother" in body.types
+                        and not actual.offstage_source
+                        and any(not x.damaged for x in body.assets)
+                    ):
+                        can_birth.append(role.actor.token)
                 if (
                     owned
                     and role.actor.kind == "gorgon"
@@ -148,6 +158,8 @@ class GorgonPlayService:
                     continue
                 if kind in growth.KINDS and not any(kind in x for x in can_grow.values()):
                     continue
+                if kind == "mother_sprite" and not can_birth:
+                    continue
                 try:
                     access.registry.require_available(identity)
                 except ValueError:
@@ -161,6 +173,7 @@ class GorgonPlayService:
                 plays=plays,
                 typed_targets=typed_targets,
                 growth=can_grow,
+                sprite_birth=can_birth,
             )
 
     def begin(
@@ -212,6 +225,10 @@ class GorgonPlayService:
                     growth.adapt(gorgon, declaration.adaptation, "preview")
                 if declaration.regrowth is not None:
                     growth.regrow(gorgon, declaration.regrowth, "preview")
+            if declaration.birth is not None:
+                if actual.cell is None:
+                    raise WorkflowError("Use this actual Mother's established map square")
+                mother_sprite.check(gorgon, declaration.birth)
 
             if (
                 gorgon.gorgon_class == "benevolent"
