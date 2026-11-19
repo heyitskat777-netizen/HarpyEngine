@@ -103,6 +103,21 @@ class ActorPlayService:
                 raise WorkflowError(str(error)) from None
         return True
 
+    def _soldier_surgery(self, state: GameState, actor: ActorRef) -> bool:
+        from girlframe.engine.m3_ancillary import SOLDIER_SIMPLIFICATION, find
+        from girlframe.services.m3_access import Access
+
+        role = find(state, actor)
+        if role is None or role.draft.book != "SOLDIER":
+            return False
+        registry = Access(self.store).registry
+        assert registry is not None
+        try:
+            registry.require_available(SOLDIER_SIMPLIFICATION)
+        except ValueError:
+            return False
+        return True
+
     def saved(self, viewer: GuildViewer) -> list[dict[str, Any]]:
         with self.store.engine.connect() as c:
             self.game.authorize(c, viewer, game=False)
@@ -1442,10 +1457,29 @@ class ActorPlayService:
             from girlframe.services.m3_enforcer_requisitions import keep_extras
 
             extra = keep_extras(self.game, c, state, action, answer)
+            discipline = answer.fields.get("soldier_do_not_think")
+            embrace_selection = answer.fields.get("soldier_embrace")
+            level = action["data"]["result"]["tier"]
+            if discipline is not None or embrace_selection is not None:
+                if (
+                    not self._soldier_surgery(state, actor.ref)
+                    or discipline not in (None, "yes")
+                    or (embrace_selection is not None and level != "high")
+                ):
+                    raise WorkflowError("Choose only actual owned Soldier Simplification effects.")
+                if discipline == "yes":
+                    extra.add("do_not_think_about_it")
             ordinary = answer.model_copy(
                 update={
                     "fields": {
-                        k: v for k, v in answer.fields.items() if not k.startswith("pavlov_")
+                        k: v
+                        for k, v in answer.fields.items()
+                        if not k.startswith("pavlov_")
+                        and k
+                        not in (
+                            "soldier_do_not_think",
+                            "soldier_embrace",
+                        )
                     }
                 }
             )
@@ -1455,8 +1489,18 @@ class ActorPlayService:
                 else rules.keep(action["data"]["result"]["tier"], ordinary)
             )
             result["positive"] = sorted(set(result["positive"]) | extra)
-            if action["data"]["result"]["tier"] == "high":
+            if level == "high":
                 rules.add_tag(state, actor.ref, answer.text, tuple(action["data"]["participants"]))
+                if embrace_selection is not None:
+                    fresh = rules.tags(state, actor.ref)[-1]
+                    rules.embrace(
+                        state,
+                        actor.ref,
+                        fresh.id,
+                        () if embrace_selection == "embrace" else (embrace_selection,),
+                        soldier_setter=actor.ref,
+                    )
+                    result["immediately_embraced"] = [fresh.id]
             action["data"]["result"].update(result)
             self.game.request(c, action, judge, "handler_keep")
         elif kind == "handler_keep" and owner == judge:
@@ -1556,6 +1600,8 @@ class ActorPlayService:
             result["battle"] = damage_projection(self.game, c, state, action, row)
         if row["kind"] == "tag_resolution" and actor.ref.kind == "clone_am":
             result["copy_identity_cap"] = 1
+        if row["kind"] == "actor_keep" and own and self._soldier_surgery(state, actor.ref):
+            result["soldier_surgery"] = True
         if action["data"].get("dive") and row["kind"].startswith("dive_"):
             from girlframe.services.m3_dive import projection
 

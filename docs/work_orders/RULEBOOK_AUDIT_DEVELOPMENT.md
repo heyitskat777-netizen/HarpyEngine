@@ -1983,3 +1983,22 @@ Activity routes and real-player acceptance remain unverified.
 The P2 mission-cycle and knowledge-acquisition checks also create
 their own evidence directory. The connected campaign, mission
 cycle and knowledge suites passed **8 tests in 42.52 seconds**.
+
+### Soldier Simplification Surgery
+
+Base `1740c2d55a087a9863f65f10e228abd3f6b6e7cb`. The separately
+approved Soldier can choose its extra Keep Your Head trait through
+its private Inbox. On a high result, the original Soldier is the
+actual setter of its own new Tag. It can immediately embrace that
+Tag and identify the ordinary Identity it replaces at the
+two-Identity cap. Its own Heat and roll stay attached to that role.
+The original human GM still judges whether the described action
+is enough. The primary Girl keeps her own resources.
+
+**65 selected tests passed in 211.39 seconds** across the existing
+Ancillary, Actor, Cast, uniform and private Inbox workflows. The
+new scenario verifies an actual embrace and original-source
+ownership, and checks that the same controls and forged submissions
+are blocked on an approved Soldier when this effect lacks approval.
+Externally given Tags need their own setter route.
+[Soldier pp. 94–95](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=96)

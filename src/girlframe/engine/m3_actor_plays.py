@@ -257,7 +257,14 @@ def mark(state: GameState, target: ActorRef, tag_id: str, scene: str) -> bool:
     return was_marked
 
 
-def embrace(state: GameState, actor: ActorRef, tag_id: str, replaced: tuple[str, ...]) -> None:
+def embrace(
+    state: GameState,
+    actor: ActorRef,
+    tag_id: str,
+    replaced: tuple[str, ...],
+    *,
+    soldier_setter: ActorRef | None = None,
+) -> None:
     if actor.kind == "clone_am":
         from girlframe.engine.m3_clone_am import embrace as clone_embrace
 
@@ -267,7 +274,22 @@ def embrace(state: GameState, actor: ActorRef, tag_id: str, replaced: tuple[str,
 
     require_identity_change(state, actor, replaced)
     if ancillary := ancillary_actor(state, actor):
-        original = next((x for x in ancillary.tags if x.id == tag_id and x.marked), None)
+        original = next(
+            (
+                x
+                for x in ancillary.tags
+                if x.id == tag_id
+                and (
+                    x.marked
+                    or (
+                        ancillary.draft.book == "SOLDIER"
+                        and soldier_setter is not None
+                        and x.giver_actor == soldier_setter
+                    )
+                )
+            ),
+            None,
+        )
         limit = 2 if ancillary.draft.book == "SOLDIER" else 4
         count = 1 if len(ancillary.identities) >= limit else 0
         removable = {

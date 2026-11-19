@@ -10,6 +10,7 @@ from girlframe.engine.m2 import GameState, IdentityState, TagState
 from girlframe.engine.m3_actor_state import ActorRef, Model
 
 RULE = "optional.ancillary.shared-rules"
+SOLDIER_SIMPLIFICATION = "ancillary.soldier.simplification-surgery"
 
 Book = Literal[
     "SOLDIER",

@@ -344,6 +344,35 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
                 fields.append(
                     Field("fields." + key, label, (("yes", "Yes"),), minimum=0, required=False)
                 )
+        if decision.get("soldier_surgery") and own is not None:
+            fields.append(
+                Field(
+                    "fields.soldier_do_not_think",
+                    "Also choose a Soldier trait",
+                    (("yes", "I don't think about it"),),
+                    0,
+                    required=False,
+                )
+            )
+            if level == "high":
+                identities = own["identities"]
+                replacements = (
+                    (("embrace", "Embrace into an empty slot"),)
+                    if len(identities) < 2
+                    else tuple(
+                        (x["id"], "Replace " + x["name"]) for x in identities if not x["protected"]
+                    )
+                )
+                if replacements:
+                    fields.append(
+                        Field(
+                            "fields.soldier_embrace",
+                            "Immediately embrace your new Tag",
+                            replacements,
+                            0,
+                            required=False,
+                        )
+                    )
     elif kind == "handler_keep":
         fields = [flags("Is it enough?"), text("text", "Explain the outcome")]
     elif kind == "harpy_sensor_answers":

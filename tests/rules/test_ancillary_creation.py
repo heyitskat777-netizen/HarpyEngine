@@ -93,13 +93,13 @@ def scenario(ledger):
     return game
 
 
-def enable(ledger, game, tmp_path, monkeypatch):
+def enable(ledger, game, tmp_path, monkeypatch, *, extra=()):
     approved(
         ledger,
         game,
         tmp_path,
         monkeypatch,
-        extra=(rules.RULE, *(x.rule for x in rules.STARTERS.values())),
+        extra=(rules.RULE, *(x.rule for x in rules.STARTERS.values()), *extra),
     )
     registry = load_registry().model_copy(
         update=dict(enabled_modules=frozenset({"core", "ancillary"}))
@@ -273,8 +273,12 @@ def test_approved_ancillary_books_create_independent_actual_roles(
     assert any(x["ref"] == receipt["actor"] for x in cast.view(PLAYER, 900)["roles"])
 
 
+@pytest.mark.parametrize("surgery", [False, True])
 def test_ancillary_native_keep_pays_its_own_heat_and_reaches_the_original_gm(
-    ledger, tmp_path, monkeypatch
+    ledger,
+    tmp_path,
+    monkeypatch,
+    surgery,
 ):
     from test_m2_game import Dice, Gateway, answer, pass_tags, tick
 
@@ -284,7 +288,13 @@ def test_ancillary_native_keep_pays_its_own_heat_and_reaches_the_original_gm(
     from girlframe.services.m3_actor_plays import ActorPlayService
 
     game = scenario(ledger)
-    enable(ledger, game, tmp_path, monkeypatch)
+    enable(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(rules.SOLDIER_SIMPLIFICATION,) if surgery else (),
+    )
     missions = MissionService(ledger)
     ancillary = AncillaryService(missions)
     original = state(game)
@@ -379,7 +389,41 @@ def test_ancillary_native_keep_pays_its_own_heat_and_reaches_the_original_gm(
     (pending,) = [x for x in game.choices(PLAYER) if x["kind"] == "actor_keep"]
     with pytest.raises(WorkflowError):
         game.decision(OTHER, pending["id"])
-    answer(game, PLAYER, "actor_keep", text="Reserve pilot held her ground")
+    decision = game.decision(PLAYER, pending["id"])
+    assert decision.get("soldier_surgery", False) is surgery
+    replace = next(x["id"] for x in decision["own"]["identities"] if not x["marked"])
+    response_tag = "Reserve pilot held her ground"
+    if surgery:
+
+        async def respond_native():
+            inbox = InboxService(ledger)
+            item = next(x for x in inbox.items(PLAYER) if x.identity == pending["id"])
+            click = current(2, 51210)
+            await click.response.defer(ephemeral=True)
+            await InboxView(inbox, 2).route(click, item)
+            form = click.edit_original_response.call_args.kwargs["view"]
+            form.values.update(
+                {
+                    "text": response_tag,
+                    "fields.soldier_do_not_think": ("yes",),
+                    "fields.soldier_embrace": (replace,),
+                }
+            )
+            sent = current(2, 51211)
+            await form.confirm.callback(sent)
+            assert form.completed, sent.followup.send.call_args
+
+        asyncio.run(respond_native())
+    else:
+        with pytest.raises(WorkflowError, match="actual owned Soldier"):
+            answer(
+                game,
+                PLAYER,
+                "actor_keep",
+                text=response_tag,
+                fields={"soldier_do_not_think": "yes", "soldier_embrace": replace},
+            )
+        answer(game, PLAYER, "actor_keep", text=response_tag)
     answer(
         game,
         ADMIN,
@@ -394,5 +438,11 @@ def test_ancillary_native_keep_pays_its_own_heat_and_reaches_the_original_gm(
     after = state(game)
     (role,) = rules.records(after)
     assert role.heat == 1 and role.identities[0].marked
-    assert [x.giver_actor for x in role.tags] == [actor]
+    assert ("do_not_think_about_it" in details["result"]["positive"]) is surgery
+    if surgery:
+        assert not role.tags and any(x.name == response_tag for x in role.identities)
+        assert replace not in {x.id for x in role.identities}
+        assert len(role.identities) == 2 and len(details["result"]["immediately_embraced"]) == 1
+    else:
+        assert [x.giver_actor for x in role.tags] == [actor]
     assert original.sheets == after.sheets
