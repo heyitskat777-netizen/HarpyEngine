@@ -15567,14 +15567,42 @@
         "heading": "Missions"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original appointed Handler offers an actual mission objective to eligible original Girls.",
+        "actor_type": "Original Handler and active original Girl participants.",
+        "pre_roll_sources": [
+          "Actual current membership, appointment and roster",
+          "Original mission offer and dispatch",
+          "Active Off-Duty and scene constraints"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {},
+        "choice_ownership": "The Handler sets the mission and adjudicates success. The actual original Girls own participation and actions.",
+        "target_policy": "Hold to the original mission and its role-scoped private audience.",
+        "post_roll_effects": [
+          "Actual native offer, dispatch, mission completion and source-owned payouts.",
+          "Immutable mission history and backup recovery."
+        ],
+        "mandatory_followups": [
+          "Individual printed mission modes and variant consequences keep their own acceptance checks."
+        ],
+        "handler_or_gm_intervention": "Ordinary human Handler and table adjudication remains authoritative.",
+        "test_fixture_ids": [
+          "tests/rules/test_mission_service.py",
+          "tests/rules/test_strain_orbital.py::test_original_orbital_gorgon_defeat_saves_city_at_actual_mission_settlement"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_mission_service.py",
+        "tests/rules/test_strain_orbital.py::test_original_orbital_gorgon_defeat_saves_city_at_actual_mission_settlement"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -15590,14 +15618,42 @@
         "heading": "Your Job"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The actual loss of the final Foundation base opens the world consequence path or the original Handler ends their tenure.",
+        "actor_type": "Original appointed Handler body and its actual Cadre.",
+        "pre_roll_sources": [
+          "Canonical surviving bases and actual source destruction",
+          "Original Handler and Cadre",
+          "Actual source-bound departure if applicable"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {},
+        "choice_ownership": "The human table retains employment and aftermath outcomes. An actual successor uses the existing original-owner creation path.",
+        "target_policy": "Apply source consequences to the original world and parties.",
+        "post_roll_effects": [
+          "Real last-base condition and required Handler loss work.",
+          "Actual retirement archive and separately owned fresh successor."
+        ],
+        "mandatory_followups": [
+          "Execution, imprisonment and reassignment across all triggering endings retain their own direct coverage requirements."
+        ],
+        "handler_or_gm_intervention": "The authorized human table owns which valid aftermath occurs.",
+        "test_fixture_ids": [
+          "tests/rules/test_world.py",
+          "tests/rules/test_handler_retirement.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_world.py",
+        "tests/rules/test_handler_retirement.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -22207,14 +22263,39 @@
         "heading": "Base Personnel"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original authorized human reviews the actual joined NPC’s current job.",
+        "actor_type": "Current original NPC and its actual controller.",
+        "pre_roll_sources": [
+          "Actual scene membership and current role control",
+          "Printed job prompts"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {},
+        "choice_ownership": "The human NPC controller chooses whether and how to narrate.",
+        "target_policy": "The native scene-role view serves the actual NPC controller only.",
+        "post_roll_effects": [
+          "Ordinary work, keeping services running, and reactions to disturbance.",
+          "Opening the prompts does not commit canon or a mechanical outcome."
+        ],
+        "mandatory_followups": [
+          "Any mechanical effect arising in the scene uses its existing source-specific rules."
+        ],
+        "handler_or_gm_intervention": "Ordinary human authority and consent govern the scene.",
+        "test_fixture_ids": [
+          "tests/rules/test_cast_service.py::test_native_job_prompts_cover_printed_jobs_and_follow_current_original_cast"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_cast_service.py::test_native_job_prompts_cover_printed_jobs_and_follow_current_original_cast"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -22230,14 +22311,39 @@
         "heading": "Civilian"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original authorized human reviews the actual joined NPC’s current job.",
+        "actor_type": "Current original NPC and its actual controller.",
+        "pre_roll_sources": [
+          "Actual scene membership and current role control",
+          "Printed job prompts"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {},
+        "choice_ownership": "The human NPC controller chooses whether and how to narrate.",
+        "target_policy": "The native scene-role view serves the actual NPC controller only.",
+        "post_roll_effects": [
+          "Keeping a low profile, leaving when appropriate, and reacting to a disturbance.",
+          "Opening the prompts does not commit canon or a mechanical outcome."
+        ],
+        "mandatory_followups": [
+          "Any mechanical effect arising in the scene uses its existing source-specific rules."
+        ],
+        "handler_or_gm_intervention": "Ordinary human authority and consent govern the scene.",
+        "test_fixture_ids": [
+          "tests/rules/test_cast_service.py::test_native_job_prompts_cover_printed_jobs_and_follow_current_original_cast"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_cast_service.py::test_native_job_prompts_cover_printed_jobs_and_follow_current_original_cast"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -22253,14 +22359,39 @@
         "heading": "Creep"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original authorized human reviews the actual joined NPC’s current job.",
+        "actor_type": "Current original NPC and its actual controller.",
+        "pre_roll_sources": [
+          "Actual scene membership and current role control",
+          "Printed job prompts"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {},
+        "choice_ownership": "The human NPC controller chooses whether and how to narrate.",
+        "target_policy": "The native scene-role view serves the actual NPC controller only.",
+        "post_roll_effects": [
+          "Inappropriate remarks, exploitative intent, and excuses within ordinary table boundaries.",
+          "Opening the prompts does not commit canon or a mechanical outcome."
+        ],
+        "mandatory_followups": [
+          "Any mechanical effect arising in the scene uses its existing source-specific rules."
+        ],
+        "handler_or_gm_intervention": "Ordinary human authority and consent govern the scene.",
+        "test_fixture_ids": [
+          "tests/rules/test_cast_service.py::test_native_job_prompts_cover_printed_jobs_and_follow_current_original_cast"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_cast_service.py::test_native_job_prompts_cover_printed_jobs_and_follow_current_original_cast"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -22299,14 +22430,39 @@
         "heading": "Ex-Pilot"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original authorized human reviews the actual joined NPC’s current job.",
+        "actor_type": "Current original NPC and its actual controller.",
+        "pre_roll_sources": [
+          "Actual scene membership and current role control",
+          "Printed job prompts"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {},
+        "choice_ownership": "The human NPC controller chooses whether and how to narrate.",
+        "target_policy": "The native scene-role view serves the actual NPC controller only.",
+        "post_roll_effects": [
+          "Going along, a reaction to familiar events, and advice grounded in experience.",
+          "Opening the prompts does not commit canon or a mechanical outcome."
+        ],
+        "mandatory_followups": [
+          "Any mechanical effect arising in the scene uses its existing source-specific rules."
+        ],
+        "handler_or_gm_intervention": "Ordinary human authority and consent govern the scene.",
+        "test_fixture_ids": [
+          "tests/rules/test_cast_service.py::test_native_job_prompts_cover_printed_jobs_and_follow_current_original_cast"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_cast_service.py::test_native_job_prompts_cover_printed_jobs_and_follow_current_original_cast"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -22561,14 +22717,39 @@
         "heading": "Prisoner"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original authorized human reviews the actual joined NPC’s current job.",
+        "actor_type": "Current original NPC and its actual controller.",
+        "pre_roll_sources": [
+          "Actual scene membership and current role control",
+          "Printed job prompts"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {},
+        "choice_ownership": "The human NPC controller chooses whether and how to narrate.",
+        "target_policy": "The native scene-role view serves the actual NPC controller only.",
+        "post_roll_effects": [
+          "Defiance, the cost of confinement, and a reminder of common ground.",
+          "Opening the prompts does not commit canon or a mechanical outcome."
+        ],
+        "mandatory_followups": [
+          "Any mechanical effect arising in the scene uses its existing source-specific rules."
+        ],
+        "handler_or_gm_intervention": "Ordinary human authority and consent govern the scene.",
+        "test_fixture_ids": [
+          "tests/rules/test_cast_service.py::test_native_job_prompts_cover_printed_jobs_and_follow_current_original_cast"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_cast_service.py::test_native_job_prompts_cover_printed_jobs_and_follow_current_original_cast"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -22584,14 +22765,39 @@
         "heading": "Protestor"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original authorized human reviews the actual joined NPC’s current job.",
+        "actor_type": "Current original NPC and its actual controller.",
+        "pre_roll_sources": [
+          "Actual scene membership and current role control",
+          "Printed job prompts"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {},
+        "choice_ownership": "The human NPC controller chooses whether and how to narrate.",
+        "target_policy": "The native scene-role view serves the actual NPC controller only.",
+        "post_roll_effects": [
+          "Calling others together, voicing a grievance, and threatening escalation.",
+          "Opening the prompts does not commit canon or a mechanical outcome."
+        ],
+        "mandatory_followups": [
+          "Any mechanical effect arising in the scene uses its existing source-specific rules."
+        ],
+        "handler_or_gm_intervention": "Ordinary human authority and consent govern the scene.",
+        "test_fixture_ids": [
+          "tests/rules/test_cast_service.py::test_native_job_prompts_cover_printed_jobs_and_follow_current_original_cast"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_cast_service.py::test_native_job_prompts_cover_printed_jobs_and_follow_current_original_cast"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

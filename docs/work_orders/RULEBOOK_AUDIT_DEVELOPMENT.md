@@ -629,3 +629,19 @@ original controller, body and resources preserved. The tests cover
 wrong owner, stale choice, safety pause, native confirmation, replay
 and reopening.
 [NPC playbooks p. 187](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=189) · [NPC role tests](../../tests/rules/test_npc_roles.py)
+
+## Mission framework and narrative NPC jobs
+
+The base is `60205267edf76da27fd0f9cfe35f13631137fbd2`.
+The native mission framework already handles the original offer,
+dispatch, private outcome, payout and recovery. Individual objectives
+remain tied to their own effect evidence. The Handler's world duty
+already has the last-base trigger and the actual retirement route.
+Other employment and Cadre outcomes retain their acceptance checks.
+[World duty and missions p. 120](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=122) · [Mission tests](../../tests/rules/test_mission_service.py)
+
+Six printed NPC prompt sets now cite their controller-owned native
+views. Base Personnel, Civilian, Creep, Ex-Pilot, Prisoner and
+Protestor prompt the conversation. Actual scene effects still go
+through their respective rules and sources.
+[NPC jobs pp. 187–189](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=189) · [Cast tests](../../tests/rules/test_cast_service.py)
