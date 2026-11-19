@@ -17,6 +17,7 @@ from girlframe.engine.m3_choices import OFF_DUTY
 from girlframe.engine.m3_core import RepairSelection
 from girlframe.engine.m3_modular import Replacement
 from girlframe.engine.m3_off_duty import HANDLER_SCENES, HandlerContext, RecoveryChoice
+from girlframe.engine.m3_scientist_lab import LabAnswer, LabProposal
 from girlframe.engine.m3_world import ClassChange, Movement
 from girlframe.engine.m3_world_state import Goal, Gorgon
 from girlframe.services.m3_off_duty_cycle import CycleService
@@ -354,8 +355,41 @@ async def open_action(
         fields = [
             Field("confirm", "Your participation", (("yes", "I confirm my own participation"),))
         ]
+        lab = scene.get("lab")
+        lab_patient = lab is not None and viewer.user_id != data["handler"]
+        if lab is not None:
+            from girlframe.discord_adapter.ledger import clean
+
+            instructions += (
+                "\nProposed Void Asset " + clean(lab["name"]) + "\n" + clean(lab["description"])
+            )
+        if lab_patient:
+            if sheet is None:
+                raise WorkflowError("Recover the affected Girl's own sheet")
+            assets = [x for x in sheet["assets"] if x["family"] == "girl"]
+            void = tuple((x["id"], x["name"]) for x in assets if x["void"])
+            if not void:
+                raise WorkflowError("This lab scene needs one actual Void-touched Girl Asset")
+            fields.append(Field("remove_void", "Girl Asset to clear of Void", void))
+            replacements = tuple((x["id"], x["name"]) for x in assets if not x["void"])
+            if replacements:
+                fields.append(
+                    Field(
+                        "replace",
+                        "Replace a non-Void Girl Asset at the cap",
+                        replacements,
+                        required=False,
+                    )
+                )
 
         async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+            if lab_patient:
+                return await change(
+                    current,
+                    "acknowledge",
+                    subject,
+                    LabAnswer(remove_void=values["remove_void"][0], replace=one(values, "replace")),
+                )
             return await change(current, "acknowledge", subject)
     elif action == "recover":
         if sheet is None:
@@ -476,6 +510,8 @@ async def open_action(
             scene_kinds = tuple((x, x.replace("_", " ").title()) for x in HANDLER_SCENES)
             if data.get("trainer_can_install_speak"):
                 scene_kinds += (("trainer_conditioning", "Install Speak"),)
+            if data.get("scientist_lab_available"):
+                scene_kinds += (("scientist_lab", "Head to the Lab"),)
             fields = [
                 Field(
                     "kind",
@@ -487,7 +523,9 @@ async def open_action(
                     "Participating Girls",
                     data["participants"],
                     1,
-                    1 if kind == "trainer_conditioning" else len(data["participants"]),
+                    1
+                    if kind in ("trainer_conditioning", "scientist_lab")
+                    else len(data["participants"]),
                 ),
             ]
             members = {data["handler"]} | {int(x) for x in values.get("participants", ())}
@@ -551,6 +589,11 @@ async def open_action(
                     and x["custodian"] in members
                 )
                 fields.append(Field("entity", "Actual current prisoner", targets or WAIT))
+            elif kind == "scientist_lab":
+                fields += [
+                    Field("asset_name", "New Void Asset name"),
+                    Field("asset_description", "New Void Asset description", paragraph=True),
+                ]
             fields.append(
                 Field(
                     "summary",
@@ -589,6 +632,9 @@ async def open_action(
                 int(selected) if selected else None,
                 context,
                 "speak" if kind == "trainer_conditioning" else None,
+                LabProposal(name=values["asset_name"], description=values["asset_description"])
+                if kind == "scientist_lab"
+                else None,
             )
 
         form = DependentForm(

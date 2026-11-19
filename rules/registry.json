@@ -16033,14 +16033,16 @@
         "heading": "Head to the Lab"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_scientist_lab.py::test_owned_scientist_lab_installs_and_clears_actual_original_assets"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -16079,14 +16081,16 @@
         "heading": "The Big Picture"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_scientist_lab.py::test_owned_scientist_lab_installs_and_clears_actual_original_assets"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

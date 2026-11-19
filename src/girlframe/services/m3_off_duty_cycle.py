@@ -20,6 +20,7 @@ from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_careers import can_pilot, original_sheet
 from girlframe.engine.m3_core import Recovery
 from girlframe.engine.m3_intracadre_marriage import status_groups
+from girlframe.engine.m3_scientist_lab import LabAnswer, LabProposal
 from girlframe.engine.m3_strain_state import TRACKS, Trigger
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_choices import ChoiceEngine
@@ -550,13 +551,23 @@ class CycleService:
         expected: int,
         game_revision: int,
         scene_owner: int | None,
+        lab_answer: LabAnswer | None = None,
     ) -> dict[str, Any]:
+        if lab_answer is not None:
+            lab_answer = LabAnswer.model_validate_json(lab_answer.model_dump_json())
+
         def change(c: Connection, period: rules.Period, state: GameState, event_id: str) -> Outcome:
             actual_scene = (
                 period.handler_scene
                 if scene_owner is None
                 else (period.progress.get(str(scene_owner), rules.Progress()).scene)
             )
+            if lab_answer is not None and (
+                scene_owner is not None
+                or actual_scene is None
+                or actual_scene.kind != "scientist_lab"
+            ):
+                raise WorkflowError("Asset choices belong only to an actual Scientist lab scene")
             if actual_scene is not None and str(viewer.user_id) in (
                 actual_scene.character_ids or period.character_ids
             ):
@@ -600,6 +611,12 @@ class CycleService:
             if scene_owner is None:
                 scene = updated.handler_scene
                 assert scene is not None
+                if scene.kind == "scientist_lab":
+                    from girlframe.services.m3_scientist_lab import attest as lab_attest
+
+                    lab_attest(
+                        self.game, c, state, updated, scene, viewer.user_id, lab_answer, event_id
+                    )
                 if set(scene.participants) == set(scene.acknowledgements):
                     if scene.kind == "trainer_conditioning":
                         from girlframe.services.m3_trainer_phrases import complete_training
@@ -757,7 +774,8 @@ class CycleService:
             expected,
             game_revision,
             "m3.off_duty_scene_attested",
-            {"scene_owner": scene_owner},
+            {"scene_owner": scene_owner}
+            | ({"lab_answer": lab_answer.model_dump(mode="json")} if lab_answer else {}),
             change,
             director_response=scene_owner is not None,
         )
@@ -884,13 +902,16 @@ class CycleService:
         recipient: int | None = None,
         context: rules.HandlerContext | None = None,
         conditioning_phrase: Literal["speak"] | None = None,
+        lab: LabProposal | None = None,
     ) -> dict[str, Any]:
         if context is not None:
             context = rules.HandlerContext.model_validate_json(context.model_dump_json())
+        if lab is not None:
+            lab = LabProposal.model_validate_json(lab.model_dump_json())
 
         def change(c: Connection, period: rules.Period, state: GameState, event_id: str) -> Outcome:
             self.missions._handler(c, viewer)
-            if kind not in (*rules.HANDLER_SCENES, "trainer_conditioning"):
+            if kind not in (*rules.HANDLER_SCENES, "trainer_conditioning", "scientist_lab"):
                 raise WorkflowError("Choose a printed Handler scene.")
             extra: frozenset[int] = frozenset()
             if kind in ("npc_employment", "prisoner"):
@@ -914,6 +935,10 @@ class CycleService:
                 from girlframe.services.m3_trainer_phrases import training_target
 
                 training_target(self.game, c, state, period, people, conditioning_phrase)
+            if kind == "scientist_lab":
+                from girlframe.services.m3_scientist_lab import scope as lab_scope
+
+                lab_scope(self.game, c, state, period, people)
             updated = rules.handler_scene(
                 period,
                 expected,
@@ -923,6 +948,7 @@ class CycleService:
                 summary,
                 extra_participants=extra,
                 conditioning_phrase=conditioning_phrase,
+                lab=lab,
             )
             if (
                 kind in ("permission", "punish", "exploit")
@@ -958,6 +984,7 @@ class CycleService:
                     if conditioning_phrase is not None
                     else {}
                 ),
+                **({"lab": lab.model_dump(mode="json")} if lab is not None else {}),
             },
             change,
         )
@@ -1053,6 +1080,7 @@ class CycleService:
     def review(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
         from girlframe.services.m3_frame_rewards import needs_refresh
         from girlframe.services.m3_handler_book_orders import active_book
+        from girlframe.services.m3_scientist_lab import available as lab_available
         from girlframe.services.m3_trainer_phrases import RULE as conditioning_rule
 
         with self.store.engine.connect() as c:
@@ -1066,6 +1094,13 @@ class CycleService:
                 if progress.scene is not None and viewer.user_id in progress.scene.participants
             ]
             handler_scene = period.handler_scene
+            handler_scene_view = None
+            if handler_scene and viewer.user_id in handler_scene.participants:
+                handler_scene_view = handler_scene.model_dump(mode="json")
+                if viewer.user_id == period.handler and set(handler_scene.participants) != set(
+                    handler_scene.acknowledgements
+                ):
+                    handler_scene_view.pop("lab_answer", None)
             observation_people: frozenset[int] = frozenset()
             if own is not None and own.observation is not None:
                 from girlframe.engine.m3_observation import scene_roles
@@ -1132,6 +1167,8 @@ class CycleService:
                 "trainer_can_install_speak": viewer.user_id == period.handler
                 and active_book(self.game, c, state, book="Trainer", rule=conditioning_rule)
                 is not None,
+                "scientist_lab_available": viewer.user_id == period.handler
+                and lab_available(self.game, c, state) is not None,
                 "participants": tuple(
                     (str(uid), state.sheets[str(uid)].callsign) for uid in state.order
                 ),
@@ -1167,9 +1204,7 @@ class CycleService:
                     for uid in sorted(observation_people)
                     if uid not in period.pilots and uid != period.handler
                 ),
-                "handler_scene": handler_scene.model_dump(mode="json")
-                if handler_scene and viewer.user_id in handler_scene.participants
-                else None,
+                "handler_scene": handler_scene_view,
                 "status_reviewed": period.status_review is not None
                 and period.status_review_game_revision == state.revision,
                 "rewards_need_refresh": needs_refresh(c, self.store, state, period),

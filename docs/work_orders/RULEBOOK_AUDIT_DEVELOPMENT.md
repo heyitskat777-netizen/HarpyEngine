@@ -1320,3 +1320,22 @@ hearing, restart, stale and duplicate choices and a wrong original owner.
 The selected native control, Off-Duty, authority and Inbox regression
 passed **230 tests in 145.17 seconds**.
 [Rulebook p. 136](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=138) · [Tests](../../tests/rules/test_trainer_phrases.py)
+
+### Scientist's initial laboratory Project step
+
+Base `06aa08cbeb9592c1d3d1a86dbd081f710098d371`. Head to the Lab can
+complete the printed first Project node for installing a Void Asset and the
+separate printed laboratory option for removing Void from a different Girl
+Asset. The native Off-Duty scene binds the actual original Scientist and
+one original Girl. She owns the affected Asset selections. Both handlers
+of those two roles attest before the engine enforces the Asset cap, installs
+the named Asset, clears Void from the preserved Asset, and records one
+completed Project step. Other nodes, additional effects, two-patient scenes
+and threshold interactions remain open.
+
+The focused test covered cap replacement, wrong owner, private plans and
+selections, restart, duplicate confirmation and the two actual committed
+Asset changes. Together with the previous Trainer cases, all five focused
+tests passed. The selected Asset, Void, Handler, Off-Duty, Strain and Inbox
+regression passed **268 tests in 126.61 seconds**.
+[Rulebook pp. 127–128](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=129) · [Tests](../../tests/rules/test_scientist_lab.py)
