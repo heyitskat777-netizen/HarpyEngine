@@ -519,3 +519,22 @@ effects, the native Inbox opening, idempotent replay, database reopen
 and actual Off-Duty activation passed. Moving-ship labs and travel
 through the portal are separate open workflows.
 [Void Endgames p. 144](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=146) · [Laboratory portal test](../../tests/rules/test_void_lab_portal.py)
+
+## Existing Handler Plays, Bonded creation, concealment and safety
+
+The base is `40248f63495d91049636a3dc223b53e85a0250ed`.
+Four Handler entries already have native effects. Escalate saves the
+threat and stakes. Introduce the Support creates the actual employee.
+Mess applies the target's Status, Tag or Asset outcome and preserves
+any required follow-through. Place an Expectation saves and delivers the
+authorized expectation and its stated consequences. The registry links
+these workflows to their existing direct tests.
+[Handler Plays p. 115](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=117) · [Native Handler effects](../../tests/rules/test_handler_plays.py)
+
+The Bonded overview links to the existing Pair-owned selection and
+Girl-owned description and creation routes. Hiding Void links to the
+tested owned examination and its real discovery consequences. Ordinary
+suspicion and concealment in conversation remain open. The safety entry
+records existing participant-owned pause, release, retry and recovery.
+The table's safety discussion remains with the participants.
+[Bonded p. 55](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=57) · [Hiding Void p. 18](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=20) · [Safety p. 110](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=112)

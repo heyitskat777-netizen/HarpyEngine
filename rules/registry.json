@@ -8390,14 +8390,42 @@
         "heading": "Hiding Void"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "An actual original Girl has Void and is examined through the source-bound Low Void examination.",
+        "actor_type": "Original patient and actual Handler for subsequent Observation and discipline.",
+        "pre_roll_sources": [
+          "Actual examination work and original Girl",
+          "Existing Void Asset and its concealment state",
+          "The original patient records actual discovery"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {},
+        "choice_ownership": "The authorized original owns the examination report. Human adjudication governs any other discovery context and Disobey trigger.",
+        "target_policy": "Unreported concealment stays private. Actual discovery routes its specific Observation and discipline only to original authorized roles.",
+        "post_roll_effects": [
+          "Keep concealed Assets and source information separate from rights to use them.",
+          "Actual discovery produces Observation and actual required discipline where applicable."
+        ],
+        "mandatory_followups": [
+          "Generic suspicion, voluntary concealment in conversation and other disclosure sources still require their own native coverage."
+        ],
+        "handler_or_gm_intervention": "Retain the workflow’s existing human authority and approval scope.",
+        "test_fixture_ids": [
+          "tests/rules/test_strain_orbital.py::test_medical_exam_is_patient_owned_and_only_actual_discovery_creates_discipline",
+          "tests/rules/test_contraband_service.py::test_concealed_asset_stays_out_of_other_public_views_until_owned_explicit_sharing"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain_orbital.py::test_medical_exam_is_patient_owned_and_only_actual_discovery_creates_discipline",
+        "tests/rules/test_contraband_service.py::test_concealed_asset_stays_out_of_other_public_views_until_owned_explicit_sharing"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -10543,14 +10571,44 @@
         "heading": "BONDED"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The Girl owner selects Bonded for actual character creation.",
+        "actor_type": "Original Girl owner, actual Pair and approved starting Bond counterparts.",
+        "pre_roll_sources": [
+          "Owned starting draft",
+          "Original Pair relationship and selections",
+          "Printed starting Identity and Asset catalog"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {},
+        "choice_ownership": "The actual Pair chooses two listed Assets. The Girl owner writes the descriptions and owns her draft.",
+        "target_policy": "Original Pair and Girl choices are separate, source-bound and private.",
+        "post_roll_effects": [
+          "Record the actual creation inputs and Pair, starting identities, linked Bonds and selected Assets.",
+          "Preserve the protected Hers identity at activation."
+        ],
+        "mandatory_followups": [
+          "Individual Bonded Plays, retained sources, and NPC counterpart variants keep their independent entries and gates."
+        ],
+        "handler_or_gm_intervention": "Retain the workflow’s existing human authority and approval scope.",
+        "test_fixture_ids": [
+          "tests/test_pair_assets.py::test_pair_option_and_owner_authority",
+          "tests/test_pair_assets.py::test_owner_descriptions_staleness_withdrawal_and_private_restart",
+          "tests/test_creation_review.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/test_pair_assets.py::test_pair_option_and_owner_authority",
+        "tests/test_pair_assets.py::test_owner_descriptions_staleness_withdrawal_and_private_restart",
+        "tests/test_creation_review.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -15017,14 +15075,40 @@
         "heading": "Core game and safety"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "A current participant pauses play using the safety control.",
+        "actor_type": "Original participant owning the pause and affected authorized table.",
+        "pre_roll_sources": [
+          "Actual campaign membership",
+          "Original safety state and command receipt"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {},
+        "choice_ownership": "A participant can use the pause control; the original owner controls its own release.",
+        "target_policy": "Pause applies to the active campaign scope while preserving private pending work.",
+        "post_roll_effects": [
+          "Block gameplay effects during pause and preserve pending choices for authorized resumption."
+        ],
+        "mandatory_followups": [
+          "The printed table conversation and choice to step away remain human."
+        ],
+        "handler_or_gm_intervention": "Retain the workflow’s existing human authority and approval scope.",
+        "test_fixture_ids": [
+          "tests/test_ledger.py::test_safety_pause_persists_self_clear_only_and_replay_works",
+          "tests/test_m2_game.py::test_stale_forms_pauses_replay_restart_and_unsupported_no_rng"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/test_ledger.py::test_safety_pause_persists_self_clear_only_and_replay_works",
+        "tests/test_m2_game.py::test_stale_forms_pauses_replay_restart_and_unsupported_no_rng"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -15090,14 +15174,42 @@
         "heading": "Escalate the Situation"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "A Handler calls this Play to introduce or raise an actual threat.",
+        "actor_type": "Original authorized Handler or source-granted fictional actor.",
+        "pre_roll_sources": [
+          "Actual original grant",
+          "Original audience",
+          "Threat and stakes",
+          "Existing actor reference if provided"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {},
+        "choice_ownership": "The source chooser supplies the threat and stakes. An explicit supporting actor reference must resolve.",
+        "target_policy": "The saved affected originals receive scoped information.",
+        "post_roll_effects": [
+          "Commit the actual authorized threat and its stakes to the Handler Play receipt."
+        ],
+        "mandatory_followups": [
+          "World introduction, dispatch and combat remain their separate native effects."
+        ],
+        "handler_or_gm_intervention": "Retain the workflow’s existing human authority and approval scope.",
+        "test_fixture_ids": [
+          "tests/rules/test_handler_plays.py::test_brief_threat_expectation_are_real_owned_saved_facts_not_player_responses",
+          "tests/rules/test_director_handler_play_examples.py::test_every_basic_handler_play_runs_through_review_to_native_completion"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_handler_plays.py::test_brief_threat_expectation_are_real_owned_saved_facts_not_player_responses",
+        "tests/rules/test_director_handler_play_examples.py::test_every_basic_handler_play_runs_through_review_to_native_completion"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -15113,14 +15225,40 @@
         "heading": "Introduce the Support"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The Handler calls this Play to introduce Foundation Support.",
+        "actor_type": "Original authorized Handler or source-granted fictional actor.",
+        "pre_roll_sources": [
+          "Actual original grant",
+          "Owned NPC name, work and valid map context"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {},
+        "choice_ownership": "The source chooser introduces the actual employee under their control. Transfer needs the existing separate acceptance.",
+        "target_policy": "The actual authorized audience receives the scoped introduction.",
+        "post_roll_effects": [
+          "Create a real revealed employee and preserve their original controller."
+        ],
+        "mandatory_followups": [
+          "Job-specific consequences have separate source and approval rules."
+        ],
+        "handler_or_gm_intervention": "Retain the workflow’s existing human authority and approval scope.",
+        "test_fixture_ids": [
+          "tests/rules/test_handler_plays.py::test_introduce_support_creates_owned_revealed_employee_without_borrowing_other_human",
+          "tests/rules/test_director_handler_play_examples.py::test_every_basic_handler_play_runs_through_review_to_native_completion"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_handler_plays.py::test_introduce_support_creates_owned_revealed_employee_without_borrowing_other_human",
+        "tests/rules/test_director_handler_play_examples.py::test_every_basic_handler_play_runs_through_review_to_native_completion"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -15136,14 +15274,43 @@
         "heading": "Mess with Their Status, Tags, or Assets"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The Handler directly changes Status, gives a Tag or damages an Asset through the original Play.",
+        "actor_type": "Original authorized Handler or source-granted fictional actor.",
+        "pre_roll_sources": [
+          "Actual original grant and target",
+          "Current body or Asset for the chosen effect"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {},
+        "choice_ownership": "The original chooser selects the actual target effect. The subject and other authorized owners keep their follow-up choices.",
+        "target_policy": "The effect stays bound to the exact currently eligible original target.",
+        "post_roll_effects": [
+          "Real Status change, attributed Tag, or owned Asset damage.",
+          "Last-Asset outcomes retain required native Defeat or replacement work."
+        ],
+        "mandatory_followups": [
+          "Source privacy, safety pause and actual mandatory aftermath are preserved."
+        ],
+        "handler_or_gm_intervention": "Retain the workflow’s existing human authority and approval scope.",
+        "test_fixture_ids": [
+          "tests/rules/test_handler_plays.py::test_mess_changes_actual_status_and_gives_source_bound_tag_once",
+          "tests/rules/test_handler_plays.py::test_handler_asset_damage_uses_actual_owned_physical_source_and_real_asset",
+          "tests/rules/test_handler_plays.py::test_last_frame_damage_waits_for_real_source_defeat_before_handler_play_completes"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_handler_plays.py::test_mess_changes_actual_status_and_gives_source_bound_tag_once",
+        "tests/rules/test_handler_plays.py::test_handler_asset_damage_uses_actual_owned_physical_source_and_real_asset",
+        "tests/rules/test_handler_plays.py::test_last_frame_damage_waits_for_real_source_defeat_before_handler_play_completes"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -15159,14 +15326,40 @@
         "heading": "Place an Expectation on Them"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The Handler states an expectation and its consequences.",
+        "actor_type": "Original authorized Handler or source-granted fictional actor.",
+        "pre_roll_sources": [
+          "Actual original grant and audience",
+          "Explicit expectation and stakes"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {},
+        "choice_ownership": "The source chooser states the requirement. Player choices and adjudication remain separate.",
+        "target_policy": "Only the saved original scope receives the expectation.",
+        "post_roll_effects": [
+          "Save the actual expectation and scoped notice."
+        ],
+        "mandatory_followups": [
+          "Consequences require their actual triggering evidence and native authority."
+        ],
+        "handler_or_gm_intervention": "Retain the workflow’s existing human authority and approval scope.",
+        "test_fixture_ids": [
+          "tests/rules/test_handler_plays.py::test_brief_threat_expectation_are_real_owned_saved_facts_not_player_responses",
+          "tests/rules/test_director_handler_play_examples.py::test_every_basic_handler_play_runs_through_review_to_native_completion"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_handler_plays.py::test_brief_threat_expectation_are_real_owned_saved_facts_not_player_responses",
+        "tests/rules/test_director_handler_play_examples.py::test_every_basic_handler_play_runs_through_review_to_native_completion"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
