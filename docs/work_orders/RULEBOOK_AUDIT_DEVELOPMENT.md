@@ -428,3 +428,19 @@ Regulations. A missed appearance and changes to the original roster
 remain held for review. High Void's independent Director and Severe
 Punishment path passed its two existing outcomes.
 [Low Void p. 142](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=144) · [Appearance tests](../../tests/rules/test_strain_public_appearance.py) · [Directors' demand tests](../../tests/rules/test_strain_pilot_fears.py)
+
+## Low Void NPC discovery
+
+The base is `292f684012266230e9dbe555f329c2f79959df24`.
+Low Void 5.2 preserves the original Handler-controlled NPC, the Girl's
+character identity and the chosen chronology. The Girl records the
+actual discovery in a joined scene. In the after case the source
+Handler commits the manifestation first and the Girl discovers that
+actual Tag. In the before case the Girl records the discovery first
+and the Handler chooses the subsequent manifestation separately. The
+discovery receipt preserves only what she witnessed at that time.
+Off-Duty waits for both real events. The resulting Tag is also
+available to the existing NPC corruption consumer. Independently
+controlled NPCs and interventions that prevent this printed gain
+remain outside this scope.
+[Low Void p. 142](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=144) · [NPC Void p. 18](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=20) · [Discovery tests](../../tests/rules/test_strain_npc_interest.py)

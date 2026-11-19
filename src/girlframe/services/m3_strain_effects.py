@@ -17,6 +17,7 @@ from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_contraband_state import ContrabandFind
 from girlframe.engine.m3_doppelganger_reveal import reveals as disguise_reveals
 from girlframe.engine.m3_harpy_raid import RULE as HARPY_RAID
+from girlframe.engine.m3_npc_interest import RULE as NPC_INTEREST
 from girlframe.engine.m3_pilot_fears import APPEARANCE as PUBLIC_APPEARANCE
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
@@ -103,6 +104,8 @@ class EffectService:
                 "awaiting_harpy_raid": bool(body.get("raid_requested"))
                 and row["state"] == "pending",
                 "awaiting_cadre_leak": bool(body.get("leak_requested"))
+                and row["state"] == "pending",
+                "awaiting_npc_interest": bool(body.get("interest_requested"))
                 and row["state"] == "pending",
                 "supply_outcome": {
                     "recipient": label,
@@ -605,6 +608,23 @@ class EffectService:
                     choice.leak_parties,
                     choice.leak_report.strip(),
                 )
+            needs_interest = choice.rule_id == NPC_INTEREST
+            if needs_interest:
+                from girlframe.services.m3_npc_interest import stage as stage_interest
+
+                assert choice.target and choice.victim and choice.interest_timing
+                stage_interest(
+                    c,
+                    self.strain,
+                    updated,
+                    row,
+                    event_id,
+                    choice.target,
+                    int(choice.victim),
+                    choice.interest_timing,
+                    choice.account.strip(),
+                    choice.interest_manifestation,
+                )
             pending = (
                 needs_offer
                 or needs_directive
@@ -612,6 +632,7 @@ class EffectService:
                 or needs_fear
                 or needs_raid
                 or needs_leak
+                or needs_interest
             )
             scientific_period, scientific_events = None, []
             if choice.rule_id == "strain.budget.low.3.1":
@@ -828,7 +849,8 @@ class EffectService:
                 | ({"signal_requested": event} if needs_signal else {})
                 | ({"fear_requested": event} if needs_fear else {})
                 | ({"raid_requested": event} if needs_raid else {})
-                | ({"leak_requested": event} if needs_leak else {}),
+                | ({"leak_requested": event} if needs_leak else {})
+                | ({"interest_requested": event} if needs_interest else {}),
                 resolved=not pending,
             )
             return {

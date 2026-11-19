@@ -21,6 +21,8 @@ from girlframe.engine.m3_cult_occupation import RULE as CULT_OCCUPATION
 from girlframe.engine.m3_doppelganger_reveal import RULE as DOPPELGANGER_REVEAL
 from girlframe.engine.m3_gorgon_catalog import ASSETS
 from girlframe.engine.m3_harpy_raid import RULE as HARPY_RAID
+from girlframe.engine.m3_npc_interest import RULE as NPC_INTEREST
+from girlframe.engine.m3_npc_void import MANIFESTATIONS
 from girlframe.engine.m3_orbital_threat import RULE as ORBITAL_THREAT
 from girlframe.engine.m3_pilot_fears import APPEARANCE as PUBLIC_APPEARANCE
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
@@ -118,6 +120,9 @@ async def open_effect(
         return
     if data["awaiting_cadre_leak"]:
         await reply(interaction, "The actual leak stays pending. Review its private case.")
+        return
+    if data["awaiting_npc_interest"]:
+        await reply(interaction, "The original discovery and Void gain are in the private Inbox.")
         return
     if data["rule_id"] == "strain.budget.high.1.2":
         from girlframe.discord_adapter.m3_fuel_shortage import open_fuel_shortage
@@ -322,6 +327,42 @@ def effect_form(
 
     def build(values: dict[str, Any]) -> list[Field]:
         fields: list[Field] = []
+        if rule == NPC_INTEREST:
+            fields += [
+                Field(
+                    "interest_npc",
+                    "Which ordinary NPC takes an interest?",
+                    options(
+                        [
+                            x
+                            for x in world["npcs"]
+                            if x["alive"]
+                            and x["captive_of"] is None
+                            and x["controller"] == handler
+                            and "director" not in x["jobs"]
+                            and x.get("source_kind") is None
+                        ]
+                    ),
+                ),
+                Field(
+                    "interest_girl",
+                    "Which Girl will find them?",
+                    tuple((str(uid), state.sheets[str(uid)].callsign) for uid in state.order),
+                ),
+                Field(
+                    "interest_timing",
+                    "When does the Girl find the NPC?",
+                    (("before", "Just before corruption"), ("after", "After corruption")),
+                ),
+            ]
+            if values.get("interest_timing") == ("after",):
+                fields.append(
+                    Field(
+                        "interest_manifestation",
+                        "Which Void manifestation occurs first?",
+                        tuple((x, "Void of the " + x) for x in MANIFESTATIONS),
+                    )
+                )
         if rule == SPRITE_ESCORT:
             fields += [
                 Field("sprite_name", "Name the Sprite group"),
@@ -1027,6 +1068,13 @@ def effect_form(
 
     def apply(actor: GuildViewer, key: str, values: dict[str, Any]) -> str:
         payload: dict[str, Any] = {"rule_id": rule, "account": values["account"]}
+        if rule == NPC_INTEREST:
+            payload.update(
+                target=values["interest_npc"][0],
+                victim=values["interest_girl"][0],
+                interest_timing=values["interest_timing"][0],
+                interest_manifestation=values.get("interest_manifestation", (None,))[0],
+            )
         if rule == SPRITE_ESCORT:
             payload["sprite_escort"] = SpriteEscortDesign(
                 name=values["sprite_name"],
@@ -1355,6 +1403,8 @@ def effect_form(
             return "The original Harpy's controller can confirm the real attack in the Inbox."
         if rule == CADRE_LEAK:
             return "The original incident is pending. Reopen its private review."
+        if rule == NPC_INTEREST:
+            return "The original discovery and Void gain can be completed from the private Inbox."
         return "Event effects committed once. Reopen Off-Duty for remaining work."
 
     instructions = (

@@ -19,6 +19,8 @@ from girlframe.engine.m3_contraband_state import ContrabandFind
 from girlframe.engine.m3_cult_occupation import RULE as CULT_OCCUPATION
 from girlframe.engine.m3_doppelganger_reveal import RULE as DOPPELGANGER_REVEAL
 from girlframe.engine.m3_harpy_raid import RULE as HARPY_RAID
+from girlframe.engine.m3_npc_interest import RULE as NPC_INTEREST
+from girlframe.engine.m3_npc_interest import Timing as InterestTiming
 from girlframe.engine.m3_orbital_threat import RULE as ORBITAL_THREAT
 from girlframe.engine.m3_pilot_fears import APPEARANCE as PUBLIC_APPEARANCE
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
@@ -56,6 +58,7 @@ SUPPORTED = frozenset(
         "strain.void.low.4.1",
         BENEVOLENT_CONTACT,
         "strain.void.low.5.1",
+        NPC_INTEREST,
         ORBITAL_THREAT,
         VOID_EXAMINATION,
         "strain.void.high.3.1",
@@ -144,6 +147,8 @@ class Choice(Model):
     contact_play: ContactPlay | None = Field(default=None, exclude_if=lambda x: x is None)
     contact_channel: int | None = Field(default=None, ge=1, exclude_if=lambda x: x is None)
     defection_recipient: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    interest_timing: InterestTiming | None = Field(default=None, exclude_if=lambda x: x is None)
+    interest_manifestation: str | None = Field(default=None, exclude_if=lambda x: x is None)
     leak_parties: tuple[ActorRef, ...] = Field(default=(), exclude_if=lambda x: not x)
     leak_report: str | None = Field(default=None, max_length=1200, exclude_if=lambda x: x is None)
 
@@ -219,6 +224,17 @@ def apply(
         ):
             raise ValueError("Recover the performed original Benevolent Gorgon Play")
         commit_contact(state, contact)
+    elif rule == NPC_INTEREST:
+        fields(choice, {"target", "victim", "interest_timing", "interest_manifestation"})
+        if (
+            not choice.target
+            or choice.victim is None
+            or not choice.victim.isascii()
+            or not choice.victim.isdecimal()
+            or int(choice.victim) not in state.order
+            or choice.interest_timing is None
+        ):
+            raise ValueError("Choose an original NPC, Girl and the timing of her discovery")
     elif rule == VOID_REVELATION:
         from girlframe.engine.m3_void_revelation import commit
 

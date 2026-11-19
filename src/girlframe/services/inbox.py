@@ -2931,6 +2931,7 @@ class InboxService:
             from girlframe.engine.m3_civic_directive import cases as civic_directives
             from girlframe.engine.m3_doppelganger_reveal import reveals as disguise_reveals
             from girlframe.engine.m3_harpy_raid import raids as harpy_raids
+            from girlframe.engine.m3_npc_interest import interests as npc_interests
             from girlframe.engine.m3_pilot_fears import cases as public_fears
             from girlframe.engine.m3_rebel_defection import audience as defection_audience
             from girlframe.engine.m3_rebel_defection import cases as rebel_defections
@@ -2939,6 +2940,37 @@ class InboxService:
             from girlframe.services.m3_handler_tags import HandlerTagService
             from girlframe.services.m3_pilot_fears import access as fear_access
             from girlframe.services.m3_rebel_escape_offer import visible as visible_escape_offers
+
+            for interest in npc_interests(canon):
+                discoverer = interest.girl.entity == str(viewer.user_id)
+                author = interest.handler.entity == str(viewer.user_id)
+                if not (discoverer or author):
+                    continue
+                actionable = bool(
+                    discoverer
+                    and not interest.seen_event
+                    or author
+                    and interest.seen_event
+                    and not interest.gain_event
+                )
+                items.append(
+                    InboxItem(
+                        "npc-interest:" + interest.id,
+                        "npc_interest",
+                        interest.id,
+                        canon.revision,
+                        "off_duty",
+                        "Private NPC discovery",
+                        "Original discoverer and Handler",
+                        "resolved" if interest.complete else "pending",
+                        actionable,
+                        False,
+                        "Review the actual discovery.",
+                        "",
+                        "Open discovery",
+                        task="m3_npc_interest",
+                    )
+                )
 
             for defection in rebel_defections(canon):
                 contacted, heard_report = defection_audience(canon, defection, viewer.user_id)

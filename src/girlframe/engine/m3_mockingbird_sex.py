@@ -671,6 +671,7 @@ def corruption_options(state: GameState, target: ActorRef) -> tuple[tuple[str, s
     result = [("asset:" + x.id, x.name) for x in assets(state, target) if x.void]
     if target.kind == "npc" and state.world:
         from girlframe.engine.m3_fuel_shortage import npc_void_tags
+        from girlframe.engine.m3_npc_interest import known_void_tags
 
         proven = {
             x["tag"]
@@ -679,6 +680,7 @@ def corruption_options(state: GameState, target: ActorRef) -> tuple[tuple[str, s
             and x.get("actor") == target.model_dump_json()
         }
         proven.update(npc_void_tags(state, target))
+        proven.update(known_void_tags(state, target))
         for fact in state.facts:
             if fact.get("kind") == "dive_effect" and fact.get("option") == "nearby_npcs_gain_void":
                 if any(x.get("npc") == target.entity for x in json.loads(fact["effect"])["npcs"]):
