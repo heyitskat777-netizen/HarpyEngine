@@ -1,7 +1,7 @@
 """Original participants retain authority over approved private Ancillary Plays."""
 
 from collections.abc import Callable
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 from uuid import uuid4
 
 from sqlalchemy import Connection
@@ -46,6 +46,9 @@ from girlframe.services.p1_facilitator import require_scene_clear
 from girlframe.services.p1_source_pause import require_clear
 from girlframe.services.read_only_bot import GuildViewer
 
+if TYPE_CHECKING:
+    from girlframe.services.m3_ancillary_orders import Order
+
 CHAINED = "ancillary.chained-darling.sex-play"
 WARBOY = "ancillary.warboy.sex-play"
 ANGEL = "ancillary.angel-wife.sex-play"
@@ -80,7 +83,7 @@ RESULTS = {
     "MERCENARY": {
         "low": "mercenary_low_terms",
         "mid": "mercenary_request",
-        "high": "mercenary_high_hold",
+        "high": "mercenary_high_request",
     },
     "ABYSSAL ACOLYTE": {
         "low": "abyssal_void_choice",
@@ -152,6 +155,9 @@ class Encounter(Model):
         "mercenary_low_action",
         "mercenary_low_verify",
         "mercenary_high_hold",
+        "mercenary_high_request",
+        "mercenary_high_reply",
+        "mercenary_high_order",
         "mercenary_request",
         "mercenary_reply",
         "mercenary_verify",
@@ -187,6 +193,7 @@ class Encounter(Model):
     reaction_actor: ActorRef | None = None
     reaction_owner: int | None = None
     payment: Payment | None = None
+    high_order: str | None = None
     transfer_asset: str | None = None
     prodigy_cadre: str | None = None
     prodigy_ace: bool = False
@@ -197,6 +204,54 @@ class Encounter(Model):
 def records(state: GameState) -> tuple[Encounter, ...]:
     return tuple(
         Encounter.model_validate_json(x["body"]) for x in state.facts if x.get("kind") == KIND
+    )
+
+
+def _put(state: GameState, case: Encounter) -> None:
+    state.facts = [x for x in state.facts if (x.get("kind"), x.get("id")) != (KIND, case.id)]
+    state.facts.append(dict(kind=KIND, id=case.id, body=case.model_dump_json()))
+
+
+def prove_high_order(
+    game: GameService, c: Connection, state: GameState, order: "Order"
+) -> Encounter:
+    Access(game.store).require_specialist_rule(MERCENARY)
+    case = next((x for x in records(state) if x.id == order.mercenary), None)
+    if (
+        case is None
+        or case.book != "MERCENARY"
+        or case.step != "mercenary_high_order"
+        or case.high_order != order.id
+        or case.roll is None
+        or case.roll.result != "high"
+        or case.consent is None
+        or case.confirmed is None
+        or case.actor != order.target
+        or case.partner != order.owner
+        or (case.scene, case.channel, case.gm, case.appointment)
+        != (order.scene, order.channel, order.gm, order.appointment)
+        or order.instruction != case.account
+    ):
+        raise WorkflowError("Recover the exact original Mercenary request and high roll.")
+    AncillaryIntimacyService(game)._source(c, state, case)
+    return case
+
+
+def settle_high_order(state: GameState, case: Encounter, order: "Order") -> None:
+    if order.consequence not in ("chosen_follow", "owned_refusal"):
+        raise WorkflowError(
+            "The original requested action or actual refusal still needs resolution."
+        )
+    _put(
+        state,
+        case.model_copy(
+            update=dict(
+                step="closed",
+                disposition="mercenary_order_followed"
+                if order.consequence == "chosen_follow"
+                else "mercenary_order_refused",
+            )
+        ),
     )
 
 
@@ -407,8 +462,7 @@ class AncillaryIntimacyService:
         case: Encounter,
         event: str,
     ) -> dict[str, Any]:
-        state.facts = [x for x in state.facts if (x.get("kind"), x.get("id")) != (KIND, case.id)]
-        state.facts.append(dict(kind=KIND, id=case.id, body=case.model_dump_json()))
+        _put(state, case)
         self.game.event(
             c,
             viewer.user_id,
@@ -505,6 +559,7 @@ class AncillaryIntimacyService:
             "prodigy_low",
             "mercenary_reply",
             "mercenary_low_terms",
+            "mercenary_high_request",
             "abyssal_reply",
             "abyssal_void_choice",
             "abyssal_swap",
@@ -529,6 +584,7 @@ class AncillaryIntimacyService:
             "mercenary_request",
             "mercenary_give_tag",
             "mercenary_low_action",
+            "mercenary_high_reply",
             "abyssal_erase_tag",
             "abyssal_leave",
             "abyssal_ask",
@@ -698,6 +754,7 @@ class AncillaryIntimacyService:
                 )
                 if case.payment is not None
                 else None,
+                demand=case.answer if case.step == "mercenary_high_hold" else None,
                 cash={
                     key: value.name
                     for key, value in cash_options(self.game, c, state, counterpart.ref).items()
@@ -782,6 +839,20 @@ class AncillaryIntimacyService:
                 raise WorkflowError("Reopen the original withdrawal.")
             event = str(uuid4())
             closed = case.model_copy(update=dict(step="closed", disposition="withdrawn"))
+            if case.high_order is not None:
+                from girlframe.services.m3_ancillary_orders import AncillaryOrderService
+
+                orders = AncillaryOrderService(self.game)
+                original = orders._order(state, case.high_order)
+                orders._put(
+                    state,
+                    original.model_copy(
+                        update=dict(
+                            stage="closed",
+                            consequence="withdrawn",
+                        )
+                    ),
+                )
             return self._save(c, state, viewer, key, closed, event)
 
         return self._write(
@@ -1365,6 +1436,37 @@ def _mercenary(
     picks: tuple[str, ...],
     event: str,
 ) -> tuple[GameState, dict[str, Any]]:
+    if case.step == "mercenary_high_request":
+        if choice == "pass" and not account:
+            return state, dict(step="closed", disposition="no_original_request")
+        if choice == "ask" and account:
+            return state, dict(step="mercenary_high_reply", account=account)
+    if case.step == "mercenary_high_reply":
+        if choice == "recompense" and account:
+            return state, dict(
+                step="mercenary_high_hold", answer=account, disposition="recompense_pending"
+            )
+        if choice == "open_order" and not account and case.account:
+            from girlframe.services.m3_ancillary_orders import AncillaryOrderService, Order
+
+            orders = AncillaryOrderService(game)
+            orders._guard(c, case.channel)
+            orders._put(
+                state,
+                Order(
+                    id=event,
+                    owner=case.partner,
+                    target=case.actor,
+                    scene=case.scene,
+                    channel=case.channel,
+                    gm=case.gm,
+                    appointment=case.appointment,
+                    source=event,
+                    instruction=case.account,
+                    mercenary=case.id,
+                ),
+            )
+            return state, dict(step="mercenary_high_order", high_order=event)
     if case.step == "mercenary_low_terms":
         if choice == "hold" and not account and not picks:
             return state, dict(step="mercenary_low_hold", disposition="pocket_money_pending")

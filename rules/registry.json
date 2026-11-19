@@ -14956,7 +14956,7 @@
             "Ask an original small favour or pass; verify actual fulfilment or issue a scoped Tag after refusal"
           ],
           "high": [
-            "Keep the paid Order and refusal consequence pending"
+            "The original counterpart may request an action. The Mercenary can follow the linked Order, roll to refuse, or demand recompense for review."
           ]
         },
         "choice_ownership": "Original Mercenary requests and owns the Tag. Original counterpart owns their response and account. Original facilitator verifies fulfilment.",
@@ -14965,7 +14965,7 @@
           "Record a fulfilled small favour or create the actual privately scoped Tag."
         ],
         "mandatory_followups": [
-          "High Orders and fair recompense, 2-cost Requisitions, ordinary modifiers and direct evidence for the fulfilled middle route remain open."
+          "Fair recompense, 2-cost Requisitions, ordinary modifiers, and direct evidence for following the high Order or fulfilling a middle request remain open."
         ],
         "handler_or_gm_intervention": "The actual facilitator verifies the encounter and any claimed actual fulfilment.",
         "test_fixture_ids": [

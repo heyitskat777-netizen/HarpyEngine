@@ -17,6 +17,7 @@ from girlframe.services.m3_actors import ActorService
 from girlframe.services.m3_ancillary import AncillaryService
 from girlframe.services.m3_ancillary_cadre import AncillaryCadreService
 from girlframe.services.m3_ancillary_intimacy import MERCENARY, AncillaryIntimacyService, records
+from girlframe.services.m3_ancillary_orders import AncillaryOrderService
 from girlframe.services.m3_cast import CastService
 from girlframe.services.m3_chained_darling import ChainedPlacementService
 from girlframe.services.m3_items import ItemService, prove_transfer
@@ -25,7 +26,9 @@ from girlframe.services.m3_physical import PhysicalService
 from girlframe.services.onboarding import WorkflowError
 
 
-@pytest.mark.parametrize("tier", ("mid", "low"), ids=("original-mid", "pocket-money"))
+@pytest.mark.parametrize(
+    "tier", ("mid", "low", "high"), ids=("original-mid", "pocket-money", "high-refusal")
+)
 def test_mercenary_original_private_outcome(ledger, tmp_path, monkeypatch, tier):
     game = scenario(ledger)
     enable(ledger, game, tmp_path, monkeypatch, extra=(MERCENARY,))
@@ -80,6 +83,47 @@ def test_mercenary_original_private_outcome(ledger, tmp_path, monkeypatch, tier)
         channel=900,
     )
     service = AncillaryIntimacyService(game)
+    if tier == "high":
+        game.dice = Dice((6, 6))
+        source = service.offer(
+            PLAYER, "actual-high", 900, actor, state(game).revision, partner.token
+        )["id"]
+        for viewer, choice in ((OTHER, "yes"), (ADMIN, "yes"), (PLAYER, "roll")):
+            service.act(viewer, choice + str(viewer.user_id), source, state(game).revision, choice)
+        request = "Give me that notebook."
+        service.act(OTHER, "actual-request", source, state(game).revision, "ask", account=request)
+        service.act(PLAYER, "open-order", source, state(game).revision, "open_order")
+        current = records(state(game))[0]
+        orders = AncillaryOrderService(game)
+        with pytest.raises(WorkflowError, match="unavailable"):
+            orders.get(OTHER, current.high_order)
+        assert orders.get(PLAYER, current.high_order)["instruction"] == request
+        game.dice = Dice((4, 5))
+        orders.act(PLAYER, "refuse", current.high_order, state(game).revision, "disobey")
+        orders.act(PLAYER, "pass-modifiers", current.high_order, state(game).revision, "pass")
+        orders.act(
+            PLAYER,
+            "apply-mid",
+            current.high_order,
+            state(game).revision,
+            "act",
+            heat=1,
+            account="Keeps her secrets",
+        )
+        assert records(state(game))[0].step == "mercenary_high_order"
+        orders.act(
+            ADMIN,
+            "review-witnesses",
+            current.high_order,
+            state(game).revision,
+            "unheard",
+            account="No relevant authority noticed the refusal.",
+        )
+        final = state(game)
+        assert records(final)[0].disposition == "mercenary_order_refused"
+        assert ancillary.find(final, actor).tags[0].label == "Keeps her secrets"
+        assert game.dice.calls == 1
+        return
     if tier == "low":
         added = creation.invite(ADMIN, "cadre-peer", state(game).revision, OTHER.user_id, "base0")
         peer_draft = ancillary.Draft(

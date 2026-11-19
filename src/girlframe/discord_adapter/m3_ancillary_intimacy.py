@@ -97,7 +97,10 @@ async def open_ancillary_intimacy_choice(
         await reply(interaction, "The actual Void gain or Void Asset exchange remains pending.")
         return
     if step in ("mercenary_low_hold", "mercenary_high_hold"):
-        await reply(interaction, "The original paid Order or Status consequence remains pending.")
+        message = "The original paid Order or Status consequence remains pending."
+        if data["demand"]:
+            message += "\nRequested recompense — " + clean(data["demand"])
+        await reply(interaction, message)
         return
     if step == "prodigy_rank" and not data["can_change_status"]:
         await reply(
@@ -244,6 +247,14 @@ async def open_ancillary_intimacy_choice(
         "mercenary_low_verify": (
             "Verify the fictional cash and the original action before applying the effects.",
             (("confirm", "Confirm action and cash"), ("hold", "Leave pending")),
+        ),
+        "mercenary_high_request": (
+            "State your original request or pass.",
+            (("ask", "Make a request"), ("pass", "Pass")),
+        ),
+        "mercenary_high_reply": (
+            "Open the original Order to follow or roll to refuse. You may also demand recompense.",
+            (("open_order", "Open the Order"), ("recompense", "Demand recompense")),
         ),
         "mercenary_reply": (
             "Choose whether to decline or describe your own actual fulfilment.",
@@ -454,6 +465,11 @@ async def open_ancillary_intimacy_choice(
         )
     if step == "mercenary_low_verify":
         instructions += "\nOriginal action — " + clean(data["actual_favor"])
+    if step == "mercenary_high_request":
+        fields.append(Field("account", "Your original request", paragraph=True, required=False))
+    if step == "mercenary_high_reply":
+        instructions += "\nOriginal request — " + clean(data["account"])
+        fields.append(Field("account", "Requested recompense", paragraph=True, required=False))
     if step == "abyssal_gain" and data["void_choices"]:
         fields.append(Field("account", "Rewrite the chosen Asset", paragraph=True, required=False))
     if step == "prodigy_low" and data["can_change_status"]:

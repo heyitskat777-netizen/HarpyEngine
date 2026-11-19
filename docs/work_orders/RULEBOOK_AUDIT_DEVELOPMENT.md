@@ -3715,7 +3715,22 @@ counterpart control of the Mercenary’s action, kept the
 consequences pending before verification, and proved custody
 through the original before-and-after transfer record. The
 middle case was deselected. High Orders and fair recompense
-remain open.
+are tracked separately.
+[Mercenary p. 97](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=99) · [Native case](../../tests/rules/test_mercenary_private_play.py)
+
+### Mercenary high request and refusal
+
+Base `837b5a10da7f254afe325636dfa648b209063df4`. The original
+counterpart’s request on a high result can open a private Order
+for the exact Mercenary. She owns following or rolling to refuse.
+The original Play stays pending through required consequences,
+including human review of whether an authority noticed the refusal.
+
+One focused case passed in 5.17 seconds. The requester could
+not act for the Mercenary. Her saved refusal rolled once,
+applied the middle result’s owned Tag and Heat, and closed the
+linked Play after the witness review. Two prior cases were
+deselected. Fair recompense remains pending for actual payment.
 [Mercenary p. 97](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=99) · [Native case](../../tests/rules/test_mercenary_private_play.py)
 
 ### Actor-level Ancillary Cadre Status and the Warboy Dog

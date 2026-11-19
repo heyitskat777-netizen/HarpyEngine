@@ -55,6 +55,7 @@ class Order(Model):
     source: str
     instruction: str
     isolation: str | None = None
+    mercenary: str | None = None
     address: Address | None = None
     stage: Literal["respond", "tag", "outcome", "review", "held", "closed"] = "respond"
     faces: tuple[int, int] | None = None
@@ -361,6 +362,11 @@ class AncillaryOrderService:
             from girlframe.services.m3_chained_isolation import complete_order
 
             complete_order(state, order.isolation, order.id, event)
+        elif order.mercenary is not None and order.stage == "closed":
+            from girlframe.services.m3_ancillary_intimacy import prove_high_order, settle_high_order
+
+            case = prove_high_order(self.game, c, state, order)
+            settle_high_order(state, case, order)
         self.game.event(
             c,
             viewer.user_id,
@@ -514,6 +520,11 @@ class AncillaryOrderService:
             from girlframe.services.m3_chained_isolation import prove_order
 
             prove_order(self.game, c, state, order.isolation, order.id, owner, recipient)
+            port = (order.consequence == "cannot_disobey", False)
+        elif order.mercenary is not None:
+            from girlframe.services.m3_ancillary_intimacy import prove_high_order
+
+            prove_high_order(self.game, c, state, order)
             port = (order.consequence == "cannot_disobey", False)
         else:
             port = _rules(
@@ -821,7 +832,11 @@ class AncillaryOrderService:
                 and account.strip()
             ):
                 stage = "closed" if choice == "unheard" else "held"
-                if order.isolation is not None and stage == "closed" and order.total is not None:
+                if (
+                    (order.isolation is not None or order.mercenary is not None)
+                    and stage == "closed"
+                    and order.total is not None
+                ):
                     if tier(order.total) == "low":
                         stage = "respond"
                 update = dict(stage=stage)
