@@ -12,6 +12,7 @@ from girlframe.discord_adapter.m3_punishments import Picker
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_gorgon import NpcAttack
+from girlframe.services.m3_erratic_gorgon import ErraticService
 from girlframe.services.m3_gorgon import GorgonService
 
 
@@ -97,3 +98,43 @@ async def open_gorgon_attack(interaction: discord.Interaction, service: GorgonSe
         tuple((k, x["label"]) for k, x in attackers.items()),
         select,
     ).show(interaction)
+
+
+async def open_erratic_tag(interaction: discord.Interaction, service: ErraticService) -> None:
+    viewer = viewer_from_interaction(interaction)
+    if interaction.channel_id is None:
+        await reply(interaction, "Open this control from the Erratic Gorgon's joined scene.")
+        return
+    channel = interaction.channel_id
+    data = await asyncio.to_thread(service.view, viewer, channel)
+    if not data["gorgons"] or not data["npcs"]:
+        await reply(interaction, "Join with an actual Erratic Gorgon and recover an eligible NPC.")
+        return
+
+    async def submit(click: discord.Interaction, values: dict[str, Any]) -> str:
+        await asyncio.to_thread(
+            service.tag,
+            viewer_from_interaction(click),
+            str(click.id),
+            channel,
+            data["revision"],
+            values["gorgon"][0],
+            values["npc"][0],
+            values["tag"],
+            values["account"],
+        )
+        return "The actual NPC's Tag is recorded."
+
+    form = NativeForm(
+        viewer.user_id,
+        "Inflict an Erratic Gorgon Tag",
+        "Record the actual NPC consequence.",
+        [
+            Field("gorgon", "Original Erratic Gorgon", data["gorgons"]),
+            Field("npc", "Actual NPC", data["npcs"]),
+            Field("tag", "Tag"),
+            Field("account", "What caused it?", paragraph=True),
+        ],
+        submit,
+    )
+    await reply(interaction, form.text(), form)

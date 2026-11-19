@@ -567,3 +567,15 @@ The synthetic test uses the existing appointment and actual original
 owners' starting agreements for the successor. Simultaneous forced
 loss and a change of human appointment need separate review.
 [Void Endgames p. 144](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=146) · [Handler retirement test](../../tests/rules/test_handler_retirement.py)
+
+## Erratic Gorgon NPC Tag
+
+The base is `6d320992f8ec3893ceb254144985407f67063c89`.
+From its joined scene, the original controller of a real Erratic
+Gorgon can apply the printed actual Tag to a living NPC they can
+access. An off-scene original NPC is eligible. The native test
+introduced the real Gorgon through Low Void, then proved the tagged
+NPC's durable state, source actor, retry, reopen and view scope. A
+temporary reviewed fixture allowed the effect. The default review
+gate passed. Fleeing and pursuit remain open under this class entry.
+[Erratic Gorgon p. 164](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=166) · [Erratic Gorgon Tag test](../../tests/rules/test_erratic_gorgon.py)
