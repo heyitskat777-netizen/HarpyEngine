@@ -23303,14 +23303,29 @@
         "heading": "A Song of Love Lost"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "A living Harpy with the actual owned advancement broadcasts to an audible original Girl without a Bond.",
+        "actor_type": "Living original Harpy and original Girl",
+        "pre_roll_sources": ["Actual advancement, active scene and actual audible reach"],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "direct": ["Choose an unbonded original Girl and offer the actual step toward the Harpy."]
+        },
+        "choice_ownership": "Harpy chooses and describes the source. The original Girl owns her response and step.",
+        "target_policy": "Same scene, no existing Bond, actual adjacent Girl outside her Frame and audible radio reach.",
+        "post_roll_effects": ["Apply the actual owned body movement and deepen the original Bond once."],
+        "mandatory_followups": ["Require the original Girl's explicit acceptance and currently possible movement."],
+        "handler_or_gm_intervention": "The Handler and NPC crowd options remain separate pending implementations.",
+        "test_fixture_ids": ["tests/rules/test_harpy_advancements.py"]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_harpy_advancements.py::test_song_of_love_lost_moves_only_the_original_accepting_girl"],
       "m2_play_id": null,
       "module": "core"
     },

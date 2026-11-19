@@ -2076,6 +2076,16 @@ class InboxView(discord.ui.View):
             await open_enforcer_task(
                 interaction, EnforcerService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_harpy_song":
+            from girlframe.discord_adapter.m3_harpy_song import open_song_response
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_harpy_song import HarpySongService
+
+            await open_song_response(
+                interaction,
+                HarpySongService(GameService(self.service.store)),
+                item.identity,
+            )
         elif item.task == "m3_sniff_out":
             from girlframe.discord_adapter.m3_sniff_out import open_search
             from girlframe.services.m3_sniff_out import SniffOutService

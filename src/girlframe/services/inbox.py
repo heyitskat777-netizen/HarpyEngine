@@ -4113,6 +4113,29 @@ class InboxService:
                         task="m3_privacy_trouble",
                     )
                 )
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_harpy_song import HarpySongService
+
+            for song in HarpySongService(GameService(self.store)).tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "harpy-song:" + song.id,
+                        "harpy_song",
+                        song.id,
+                        canon.revision,
+                        "plays",
+                        "A Song of Love Lost",
+                        "Original Harpy contact",
+                        "pending",
+                        True,
+                        False,
+                        "Choose whether to step toward the actual Harpy.",
+                        "Your body moves and the Bond deepens only after your choice.",
+                        "Review the song",
+                        task="m3_harpy_song",
+                    )
+                )
+
             from girlframe.services.m3_npc_care import NpcCareService
             from girlframe.services.m3_parasite_excision import ExcisionService
             from girlframe.services.m3_sniff_out import SniffOutService

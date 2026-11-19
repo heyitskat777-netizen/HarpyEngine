@@ -6,18 +6,16 @@ from uuid import uuid4
 from sqlalchemy import Connection
 
 from girlframe.engine.m2 import GameState
-from girlframe.engine.m3_actor_bonds import is_helpless
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, SceneCast
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_harpy_advancements import ONLY_SHE_MATTERS
-from girlframe.engine.m3_harpy_defeat import harpy
 from girlframe.engine.m3_harpy_only_she import Killing, kill
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_battle import _cast, _visible, synchronize_casts
-from girlframe.services.m3_harpy_advancements import advancement_source
+from girlframe.services.m3_harpy_advancements import scene_harpy
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -27,27 +25,14 @@ class OnlySheMattersService:
         self.game, self.store, self.access = game, game.store, Access(game.store)
 
     def source(
-        self, c: Connection, state: GameState, viewer: GuildViewer, cast: SceneCast, actor: ActorRef
+        self,
+        c: Connection,
+        state: GameState,
+        viewer: GuildViewer,
+        cast: SceneCast,
+        actor: ActorRef,
     ) -> tuple[ActorView, str]:
-        actual = resolve(
-            state, actor, profiles(c, self.store.campaign_id), require_current_profile=False
-        )
-        if (
-            actor.kind != "external_pilot"
-            or actual.girl != "harpy"
-            or actual.controller != viewer.user_id
-            or actual.cell is None
-            or actual.offstage_source is not None
-            or not any(
-                role.actor == actor and role.controller == viewer.user_id for role in cast.roles
-            )
-            or is_helpless(state, actor)
-        ):
-            raise WorkflowError("Use your actual living Harpy in the original scene")
-        receipt = advancement_source(self.game, c, state, actor, viewer.user_id, ONLY_SHE_MATTERS)
-        if receipt is None or harpy(state, actor).body_incapacitated:
-            raise WorkflowError("Use an active Harpy with its own Only She Matters advancement")
-        return actual, receipt
+        return scene_harpy(self.game, c, state, viewer.user_id, cast, actor, ONLY_SHE_MATTERS)
 
     def _targets(
         self, c: Connection, state: GameState, cast: SceneCast, actual: ActorView

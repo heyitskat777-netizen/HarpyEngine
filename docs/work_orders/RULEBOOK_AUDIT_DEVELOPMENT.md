@@ -2359,6 +2359,22 @@ public map. Other printed combinations and wider reveal paths
 remain open.
 [Dopplegänger p. 168](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=170) · [Native case](../../tests/rules/test_sniff_out.py)
 
+### A Song of Love Lost creates an actual Bond and owned step
+
+Base `f91df50f07e3f6f6d66f910239be832251cce931`. A living Harpy
+with the verified advancement may use the cast action and
+choose an original Girl who can hear the radio and has no
+Bond with that Harpy. Only the original Girl receives the
+private decision. Her accepted step uses the actual movement
+service and deepens the original Bond. Her Frame stays parked.
+The advance uses the existing specialist release gate.
+
+**One focused native case passed in 5.52 seconds**, including
+the cast action, private Inbox, restart and actual movement.
+The coupled Bond and step require the Girl’s acceptance.
+Other printed options are still open.
+[Harpy advancements p. 182](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=184) · [Native case](../../tests/rules/test_harpy_advancements.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

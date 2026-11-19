@@ -53,6 +53,10 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
             key = "only-she:" + token
             options.append((key, "Use Only She Matters as " + role["label"][:55]))
             actions[key] = ("only_she", ActorRef.model_validate(role["ref"]))
+        if role.get("harpy_song"):
+            key = "song:" + token
+            options.append((key, "Sing A Song of Love Lost as " + role["label"][:54]))
+            actions[key] = ("harpy_song", ActorRef.model_validate(role["ref"]))
         if role.get("director_phone"):
             phone = "phone:" + token
             options.append((phone, "Call the Handler as " + role["label"][:55]))
@@ -169,6 +173,13 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
 
             assert ref is not None
             await open_only_she(current, OnlySheMattersService(service.game), channel, ref)
+            return
+        if action == "harpy_song":
+            from girlframe.discord_adapter.m3_harpy_song import open_song
+            from girlframe.services.m3_harpy_song import HarpySongService
+
+            assert ref is not None
+            await open_song(current, HarpySongService(service.game), channel, ref)
             return
         if action == "phone":
             from girlframe.discord_adapter.m3_director_strain import open_phone

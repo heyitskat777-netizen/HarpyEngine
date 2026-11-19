@@ -214,22 +214,29 @@ class CastService:
                         if owned_npc
                         else {}
                     )
-                    only_she_matters = False
+                    harpy_actions: dict[str, bool] = {}
                     if (
                         actor.ref.kind == "external_pilot"
                         and actor.girl == "harpy"
                         and actor.controller == role.controller == viewer.user_id
                     ):
-                        from girlframe.services.m3_harpy_only_she import OnlySheMattersService
+                        from girlframe.engine.m3_harpy_advancements import (
+                            ONLY_SHE_MATTERS,
+                            SONG_OF_LOVE_LOST,
+                        )
+                        from girlframe.services.m3_harpy_advancements import scene_harpy
 
-                        try:
-                            OnlySheMattersService(self.game).source(
-                                c, state, viewer, cast, actor.ref
-                            )
-                        except (ValueError, WorkflowError):
-                            pass
-                        else:
-                            only_she_matters = True
+                        for tag, rule in (
+                            ("only_she_matters", ONLY_SHE_MATTERS),
+                            ("harpy_song", SONG_OF_LOVE_LOST),
+                        ):
+                            try:
+                                scene_harpy(
+                                    self.game, c, state, viewer.user_id, cast, actor.ref, rule
+                                )
+                            except (ValueError, WorkflowError):
+                                continue
+                            harpy_actions[tag] = True
                     known_refs.add(actor.ref)
                     visible.append(
                         {
@@ -241,7 +248,7 @@ class CastService:
                             "stale": role.controller != actor.controller,
                             "own": role.controller == viewer.user_id,
                             **({"job_prompts": prompts} if prompts else {}),
-                            **({"only_she_matters": True} if only_she_matters else {}),
+                            **harpy_actions,
                             **(
                                 {"director_phone": True}
                                 if owned_npc

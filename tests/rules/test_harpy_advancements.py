@@ -514,3 +514,84 @@ def test_only_she_matters_native_death_applies_heat_and_keeps_cast_authority(led
         x["ref"] == witness.model_dump(mode="json") for x in cast.view(support, 900)["roles"]
     )
     assert target not in service.get(PLAYER, 900, actor)["targets"]
+
+
+def test_song_of_love_lost_moves_only_the_original_accepting_girl(ledger):
+    from test_physical_operations import place
+
+    from girlframe.discord_adapter.m3_cast import open_cast
+    from girlframe.discord_adapter.m3_harpy_song import open_song_response
+    from girlframe.engine.m3_actor_bonds import depth
+    from girlframe.engine.m3_harpy_advancements import SONG_OF_LOVE_LOST
+    from girlframe.services.m3_harpy_song import HarpySongService, records
+
+    _, game, casting, actor = ready(ledger)
+    policy = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update=dict(
+            m3_approval=policy.model_copy(
+                update=dict(
+                    activity_specialist_rules=policy.activity_specialist_rules
+                    | {SONG_OF_LOVE_LOST},
+                )
+            ),
+        )
+    )
+    HarpyAdvancementService(ledger).select(
+        PLAYER,
+        "learn-song",
+        actor.entity,
+        state(game).revision,
+        SONG_OF_LOVE_LOST,
+    )
+    with ledger.transaction() as c:
+        canon = place(state(game), OTHER.user_id, mode="outside_frame", cell=(1, 0))
+        game.event(c, ADMIN.user_id, "synthetic-song-placement", "synthetic.position", canon)
+    original = state(game)
+    recipient = current_ref(original, OTHER.user_id)
+    song = HarpySongService(game)
+    assert song.options(PLAYER, 900, actor)["targets"] == {
+        recipient.token: original.sheets["3"].callsign
+    }
+
+    async def broadcast():
+        interaction = current(PLAYER.user_id, 89600)
+        interaction.channel_id = 900
+        await interaction.response.defer(ephemeral=True)
+        await open_cast(interaction, casting)
+        picker = interaction.edit_original_response.call_args.kwargs["view"]
+        selected = current(PLAYER.user_id, 89601)
+        selected.channel_id = 900
+        await selected.response.defer(ephemeral=True)
+        await picker.open_item(selected, "song:" + actor.token)
+        form = selected.edit_original_response.call_args.kwargs["view"]
+        form.values.update(target=(recipient.token,), account="The Harpy sings over the radio.")
+        await form.confirm.callback(current(PLAYER.user_id, 89602))
+        assert form.completed
+
+    asyncio.run(broadcast())
+    inbox = InboxService(ledger)
+    (task,) = [x for x in inbox.items(OTHER) if x.task == "m3_harpy_song"]
+    assert not [x for x in inbox.items(PLAYER) if x.task == "m3_harpy_song"]
+    with pytest.raises(WorkflowError, match="unavailable"):
+        song.get(PLAYER, task.identity)
+    assert depth(state(game), actor, recipient) == 0
+    ledger.engine.dispose()
+
+    async def step():
+        interaction = current(OTHER.user_id, 89603)
+        await interaction.response.defer(ephemeral=True)
+        await open_song_response(interaction, song, task.identity)
+        form = interaction.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            choice=("step",), account="I step into the next square toward the Harpy."
+        )
+        await form.confirm.callback(current(OTHER.user_id, 89604))
+        assert form.completed
+
+    asyncio.run(step())
+    updated = state(game)
+    actual = next(x for x in updated.placements if x.actor == recipient)
+    assert actual.girl_cell == (0, 0) and actual.frame_cell == (1, 0)
+    assert depth(updated, actor, recipient) == 1 and records(updated)[0].moved
+    assert game.dice.calls == 0

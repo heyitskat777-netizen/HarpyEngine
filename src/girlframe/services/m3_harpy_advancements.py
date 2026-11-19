@@ -9,12 +9,15 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_harpy_advancements as rules
 from girlframe.engine.m2 import GameState
-from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_actor_bonds import is_helpless
+from girlframe.engine.m3_actor_state import ActorRef, ActorView, SceneCast
+from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_harpy_defeat import harpy
 from girlframe.engine.m3_janus_state import JanusCore
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
+from girlframe.services.m3_actors import profiles
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -73,6 +76,35 @@ def advancement_source(
     if raw is None or record not in rules.advances(GameState.model_validate_json(raw), actor):
         raise WorkflowError("Recover the actual original Harpy advancement receipt")
     return record.event
+
+
+def scene_harpy(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    controller: int,
+    cast: SceneCast,
+    actor: ActorRef,
+    advancement: str,
+) -> tuple[ActorView, str]:
+    actual = resolve(
+        state, actor, profiles(c, game.store.campaign_id), require_current_profile=False
+    )
+    if (
+        actor.kind != "external_pilot"
+        or actual.girl != "harpy"
+        or not actual.alive
+        or actual.controller != controller
+        or actual.cell is None
+        or actual.offstage_source is not None
+        or not any(role.actor == actor and role.controller == controller for role in cast.roles)
+        or is_helpless(state, actor)
+    ):
+        raise WorkflowError("Use your actual living Harpy in the original scene")
+    receipt = advancement_source(game, c, state, actor, controller, advancement)
+    if receipt is None or harpy(state, actor).body_incapacitated:
+        raise WorkflowError("Use an active Harpy with its own required advancement")
+    return actual, receipt
 
 
 def choose_sparrows(action: dict[str, Any], value: str | None) -> None:

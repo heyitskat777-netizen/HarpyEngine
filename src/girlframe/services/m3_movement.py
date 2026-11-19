@@ -134,7 +134,10 @@ def _physical_context(
             )
     elif actor.kind == "gorgon":
         from girlframe.engine.m3_parasite import active
+        from girlframe.engine.m3_parasite_infection import inhabits_original_body
 
+        if inhabits_original_body(state, actor):
+            raise WorkflowError("The original Parasite is folded inside its host until excision")
         if active(state, actor) is not None:
             raise WorkflowError("The actual Parasite must detach from its host before moving alone")
     elif actor.kind == "handler" and not frame and actual.inside_frame is not True:
@@ -227,6 +230,38 @@ def _apply_context(state: GameState, context: dict[str, Any], event: str) -> Non
         ]
     else:
         raise WorkflowError("This actual body requires its specific movement source adapter")
+
+
+def apply_reviewed_movement(
+    game: GameService,
+    c: Connection,
+    viewer: GuildViewer,
+    state: GameState,
+    context: dict[str, Any],
+    event: str,
+    *,
+    travel: str | None = None,
+) -> None:
+    """Apply physical movement with the same travel and source hooks after authorization."""
+    from girlframe.services.m3_prisoner_escape import stage_movement as stage_escape
+    from girlframe.services.m3_vatgrown_travel import before_move, stage_movement
+
+    before_move(game, c, state, viewer, context, travel=travel)
+    before = GameState.model_validate_json(state.model_dump_json())
+    _apply_context(state, context, event)
+    stage_movement(game, c, before, state, context, travel, event)
+    stage_escape(game, c, before, state, context, event)
+    if context["actor"]["kind"] == "gorgon":
+        from girlframe.engine.m3_mother_sprite import travel as sprite_travel
+
+        sprite_travel(
+            state,
+            ActorRef.model_validate(context["actor"]),
+            tuple(context["origin"]),
+            tuple(context["destination"]),
+            context["scene"],
+            event,
+        )
 
 
 class MovementService:
@@ -342,27 +377,16 @@ class MovementService:
                 self.game, c, viewer, state, channel, actor, destination, frame, account
             )
             assert state.world is not None
-            from girlframe.services.m3_vatgrown_travel import before_move, stage_movement
-
-            before_move(self.game, c, state, viewer, context, travel=vatgrown_travel)
-            before = GameState.model_validate_json(state.model_dump_json())
             event = str(uuid4())
-            _apply_context(state, context, event)
-            stage_movement(self.game, c, before, state, context, vatgrown_travel, event)
-            from girlframe.services.m3_prisoner_escape import stage_movement as stage_escape
-
-            stage_escape(self.game, c, before, state, context, event)
-            if actor.kind == "gorgon":
-                from girlframe.engine.m3_mother_sprite import travel
-
-                travel(
-                    state,
-                    actor,
-                    (context["origin"][0], context["origin"][1]),
-                    destination,
-                    context["scene"],
-                    event,
-                )
+            apply_reviewed_movement(
+                self.game,
+                c,
+                viewer,
+                state,
+                context,
+                event,
+                travel=vatgrown_travel,
+            )
             self.game.event(
                 c,
                 viewer.user_id,
