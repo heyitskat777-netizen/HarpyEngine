@@ -2931,6 +2931,7 @@ class InboxService:
             from girlframe.engine.m3_civic_directive import cases as civic_directives
             from girlframe.engine.m3_doppelganger_reveal import reveals as disguise_reveals
             from girlframe.engine.m3_harpy_raid import raids as harpy_raids
+            from girlframe.engine.m3_journalist import questions as journalist_questions
             from girlframe.engine.m3_npc_interest import interests as npc_interests
             from girlframe.engine.m3_pilot_fears import cases as public_fears
             from girlframe.engine.m3_rebel_defection import audience as defection_audience
@@ -2941,8 +2942,37 @@ class InboxService:
             from girlframe.engine.m3_void_revelation import revelations
             from girlframe.engine.m3_void_signal import signals as void_signals
             from girlframe.services.m3_handler_tags import HandlerTagService
+            from girlframe.services.m3_journalist import JournalistService
             from girlframe.services.m3_pilot_fears import access as fear_access
             from girlframe.services.m3_rebel_escape_offer import visible as visible_escape_offers
+
+            journalism = JournalistService(GameService(self.store))
+            for question in journalist_questions(canon):
+                if viewer.user_id not in (question.controller, int(question.girl.entity)):
+                    continue
+                actionable = (
+                    question.response is None
+                    and question.girl.entity == user
+                    and journalism.live(connection, canon, question)
+                )
+                items.append(
+                    InboxItem(
+                        "journalist:" + question.id,
+                        "work",
+                        question.id,
+                        1,
+                        "playbook",
+                        "Private Journalist question",
+                        "Original scene roles",
+                        "pending" if question.response is None else "resolved",
+                        actionable,
+                        False,
+                        "Review the original direct question.",
+                        "",
+                        "Open question",
+                        task="m3_journalist",
+                    )
+                )
 
             for interest in npc_interests(canon):
                 discoverer = interest.girl.entity == str(viewer.user_id)

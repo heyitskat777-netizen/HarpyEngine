@@ -22440,14 +22440,28 @@
         "heading": "Journalist"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "An actual Journalist with a joined role asks the addressed Girl a direct question.",
+        "actor_type": "Original living Journalist under the exact current human controller and the addressed original Girl.",
+        "pre_roll_sources": ["Actual original scene and current cast", "Job, controller, shared scene, and character incarnation", "Owned direct question and predeclared refusal Tag"],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {},
+        "choice_ownership": "Reporter chooses the question and Tag label. The actual original Girl chooses an answer or explicit in-character refusal in the private Inbox.",
+        "target_policy": "The original actors and their scene authority must still match at response time. Only the two original humans receive the question and reply.",
+        "post_roll_effects": ["An actual answer leaves Tags unchanged", "In-character refusal adds one canonical Tag attributed to the original Journalist", "Safety pause, revocation, idle pending and unrelated viewers produce no Tag"],
+        "mandatory_followups": ["Open-ended silence, non-Girl recipients and physical evidence from photographs remain separate scope", "Default independent review gate remains in place"],
+        "handler_or_gm_intervention": "Original scene participants retain their own responses. A human GM can adjudicate unsupported discovery or consequence questions without rewriting the receipt.",
+        "test_fixture_ids": ["tests/rules/test_journalist.py", "tests/rules/test_princess_npc_conversation.py"]
+      },
       "dependencies": [],
       "test_evidence": [
+        "tests/rules/test_journalist.py",
         "tests/rules/test_princess_npc_conversation.py"
       ],
       "m2_play_id": null,

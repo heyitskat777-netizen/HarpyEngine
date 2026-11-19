@@ -1576,6 +1576,14 @@ class InboxView(discord.ui.View):
                 StrainService(OffDutyService(MissionService(self.service.store)))
             )
             await open_escape_offer(interaction, escape_service, item.identity)
+        elif item.task == "m3_journalist":
+            from girlframe.discord_adapter.m3_journalist import open_response
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_journalist import JournalistService
+
+            await open_response(
+                interaction, JournalistService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_rebel_taunt":
             from girlframe.discord_adapter.m3_rebel_taunt import open_taunt
             from girlframe.services.m3_missions import MissionService

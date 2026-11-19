@@ -591,3 +591,18 @@ mechanical job consequences keep their existing acceptance status.
 The synthetic native test verifies job inventory, another cast
 member's scope, multi-job viewing and access after withdrawal.
 [NPC jobs pp. 187–189](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=189) · [Cast tests](../../tests/rules/test_cast_service.py)
+
+## Journalist question and refusal
+
+The base is `c4ff89edc8c3e7dc7e75157606a5582d7a6e8bcb`.
+The current original Journalist controller asks a direct question
+through the native cast menu. The addressed original Girl answers
+or explicitly refuses in character in her private Inbox. Refusal
+adds the recorded Tag once, with the actual Journalist as giver.
+The question, Tag choice and reply follow the two original humans'
+authority. No effect is inferred from waiting, revoked scene access
+or a safety pause. The synthetic verified-rule fixture exercised
+both responses, withdrawn access, wrong owner and command replay.
+The default review gate passed. Photograph consequences and non-Girl
+targets remain open.
+[Journalist p. 188](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=190) · [Journalist tests](../../tests/rules/test_journalist.py)

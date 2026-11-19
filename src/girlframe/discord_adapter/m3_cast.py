@@ -42,6 +42,10 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
             prompt_key = "prompts:" + token
             options.append((prompt_key, "Review job prompts for " + role["label"][:65]))
             prompt_roles[prompt_key] = token
+            if "journalist" in role["job_prompts"]:
+                ask = "journalist:" + token
+                options.append((ask, "Ask a direct question as " + role["label"][:55]))
+                actions[ask] = ("journalist", ActorRef.model_validate(role["ref"]))
     if data["may_facilitate"] and not data["own_facilitator"]:
         options.append(("facilitate", "Join as facilitator (no fictional character)"))
         actions["facilitate"] = ("facilitate", None)
@@ -93,6 +97,13 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
                 ).show(current)
             return
         action, ref = actions[token]
+        if action == "journalist":
+            from girlframe.discord_adapter.m3_journalist import open_ask
+            from girlframe.services.m3_journalist import JournalistService
+
+            assert ref is not None
+            await open_ask(current, JournalistService(service.game), channel, ref)
+            return
 
         async def submit(actor: discord.Interaction, values: dict[str, Any]) -> str:
             await asyncio.to_thread(
