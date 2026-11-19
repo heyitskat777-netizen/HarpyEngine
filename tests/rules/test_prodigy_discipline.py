@@ -3,14 +3,16 @@
 import asyncio
 
 import pytest
-from test_ancillary_creation import current, enable, scenario
+from test_ancillary_creation import PATRON, current, enable, scenario
 from test_cast_service import change
+from test_harpy_flirt import submit_form
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger
 from test_m2_game import Dice, Gateway, answer, pass_tags, state, tick
 
 from girlframe.delivery.m2_worker import GameWorker
 from girlframe.discord_adapter.inbox import InboxView
+from girlframe.discord_adapter.m3_ancillary_discipline import open_confidence
 from girlframe.engine import m3_ancillary as ancillary
 from girlframe.engine import m3_ancillary_cadre as cadre
 from girlframe.engine.m2 import PlayInput
@@ -19,6 +21,7 @@ from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_punishments import Details
 from girlframe.engine.m3_role_punishment_state import Instruction
+from girlframe.engine.m3_world import update
 from girlframe.services.inbox import InboxService
 from girlframe.services.m3_actor_plays import ActorPlayService
 from girlframe.services.m3_actors import ActorService
@@ -31,7 +34,9 @@ from girlframe.services.m3_ancillary_discipline import (
     AncillaryDisciplineService,
 )
 from girlframe.services.m3_cast import CastService
+from girlframe.services.m3_chained_darling import ChainedPlacementService
 from girlframe.services.m3_missions import MissionService
+from girlframe.services.m3_prodigy_swoon import SwoonService, records
 from girlframe.services.m3_role_punishments import RolePunishmentService
 from girlframe.services.onboarding import WorkflowError
 
@@ -197,4 +202,63 @@ def test_prodigy_confidence_and_favourite_follow_real_punishments(
     assert any(
         x.get("kind") == KIND and x.get("id") == ace_notch and x.get("roll") == action
         for x in state(game).facts
+    )
+
+    enact(soldier, PLAYER, "Punishment before the NPC reaction")
+    placement = ChainedPlacementService(game)
+    placed = placement.propose(
+        OTHER,
+        "prodigy-outside",
+        900,
+        prodigy,
+        state(game).revision,
+        "outside_frame",
+        "I step outside my original Frame.",
+    )
+    placement.decide(ADMIN, "observe-prodigy", placed["id"], state(game).revision, True)
+    with ledger.transaction() as c:
+        body = state(game)
+        body.world = update(
+            body.world,
+            npcs=tuple(
+                x.model_copy(update=dict(revealed=True)) if x.id == PATRON.entity else x
+                for x in body.world.npcs
+            ),
+        )
+        game.event(c, ADMIN.user_id, "patron-disclosed", "synthetic.sighted_npc", body)
+    change(cast_service, ADMIN, "join", PATRON)
+    asyncio.run(
+        submit_form(
+            OTHER,
+            lambda click: open_confidence(click, discipline, prodigy, 900),
+            dict(choice=(PATRON.token,)),
+            94880,
+        )
+    )
+    swoon = SwoonService(game)
+    (offer,) = records(state(game))
+    assert not swoon.menu(OTHER, 900, prodigy)["notches"]
+    assert swoon.get(ADMIN, offer.id)["known"] is None
+    with pytest.raises(WorkflowError, match="unavailable"):
+        swoon.get(PLAYER, offer.id)
+    ledger.engine.dispose()
+
+    async def npc_response():
+        inbox = InboxService(ledger)
+        item = next(x for x in inbox.items(ADMIN) if x.identity == offer.id)
+        click = current(ADMIN.user_id, 94882)
+        await click.response.defer(ephemeral=True)
+        await InboxView(inbox, ADMIN.user_id).route(click, item)
+        form = click.edit_original_response.call_args.kwargs["view"]
+        form.values.update(choice=("confirm",), account="My NPC goes quiet and loses his place.")
+        sent = current(ADMIN.user_id, 94883)
+        await form.confirm.callback(sent)
+        assert form.completed, sent.followup.send.call_args
+
+    asyncio.run(npc_response())
+    final = state(game)
+    assert records(final)[0].accepted and records(final)[0].resolved
+    assert any(
+        x.get("kind") == KIND and x.get("id") == offer.notch and x.get("reaction") == offer.id
+        for x in final.facts
     )

@@ -55,7 +55,7 @@ def immune(game: GameService, state: GameState, cadre: rank.Cadre, subject: Acto
 
 
 def _notches(
-    game: GameService, state: GameState, actor: ActorRef, owner: int, *, ace: bool
+    game: GameService, state: GameState, actor: ActorRef, owner: int, *, ace: bool | None
 ) -> tuple[str, ...]:
     body = find(state, actor)
     cadre = rank.current(state, actor)
@@ -64,7 +64,7 @@ def _notches(
         or cadre is None
         or body.controller != owner
         or body.draft.book != "PRODIGY"
-        or (rank.actual_members(state, cadre)[0] == actor) != ace
+        or (ace is not None and (rank.actual_members(state, cadre)[0] == actor) != ace)
         or not _approved(game, EARNED)
     ):
         return ()
@@ -75,6 +75,7 @@ def _notches(
         and x.get("actor") == actor.token
         and x.get("cadre") == cadre.id
         and not x.get("spent")
+        and not x.get("reserved")
     )
 
 
@@ -82,6 +83,12 @@ def roll_notches(
     game: GameService, state: GameState, actor: ActorRef, owner: int
 ) -> tuple[str, ...]:
     return _notches(game, state, actor, owner, ace=True)
+
+
+def reaction_notches(
+    game: GameService, state: GameState, actor: ActorRef, owner: int
+) -> tuple[str, ...]:
+    return _notches(game, state, actor, owner, ace=None)
 
 
 def spend_roll_notch(

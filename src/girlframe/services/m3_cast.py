@@ -405,12 +405,16 @@ class CastService:
                         from girlframe.services.m3_ancillary_discipline import (
                             AncillaryDisciplineService,
                         )
+                        from girlframe.services.m3_prodigy_swoon import SwoonService
 
                         try:
                             can_confidence = bool(
                                 AncillaryDisciplineService(self.game).confidence(
                                     c, state, viewer, actor.ref
                                 )
+                                or SwoonService(self.game).options(
+                                    c, state, viewer, channel, actor.ref
+                                )["npcs"]
                             )
                         except (ValueError, WorkflowError):
                             pass

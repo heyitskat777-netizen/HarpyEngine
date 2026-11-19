@@ -374,7 +374,7 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
             from girlframe.services.m3_ancillary_discipline import AncillaryDisciplineService
 
             assert ref is not None
-            await open_confidence(current, AncillaryDisciplineService(service.game), ref)
+            await open_confidence(current, AncillaryDisciplineService(service.game), ref, channel)
             return
         if action == "ancillary_intimacy":
             from girlframe.discord_adapter.m3_ancillary_intimacy import open_ancillary_intimacy

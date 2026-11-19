@@ -3656,6 +3656,21 @@ Asset transfer, selectively ignoring the other participant’s
 separate Play, and direct middle verification remain open.
 [Abyssal Acolyte p. 109](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=111) · [Native case](../../tests/rules/test_abyssal_private_play.py)
 
+### Earned Confidence’s NPC reaction
+
+Base `526ccfbec17ef0e2846999b17c316897a4256355`. The Prodigy
+can reserve a true earned notch for a known, present NPC. The
+NPC controller records their own reaction in the private Inbox.
+The notch is spent when that reaction is recorded. Declining
+or withdrawing releases the reservation.
+
+One focused native case passed in 12.07 seconds. It earned the
+notch through actual discipline, reserved it once, denied a
+third party, withheld a name the original NPC could not see,
+and recorded the response after reconnect. Decline, withdrawal
+and other encounter scopes remain open for direct verification.
+[Earned Confidence p. 98](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=100) · [Native case](../../tests/rules/test_prodigy_discipline.py)
+
 ### Actor-level Ancillary Cadre Status and the Warboy Dog
 
 Base `083b876`. The original facilitator privately proposes a

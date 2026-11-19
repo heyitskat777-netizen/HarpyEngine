@@ -4137,6 +4137,7 @@ class InboxService:
             from girlframe.services.m3_npc_handover import LABELS as HANDOVER_LABELS
             from girlframe.services.m3_npc_handover import NpcHandoverService
             from girlframe.services.m3_npc_intelligence import IntelligenceService
+            from girlframe.services.m3_prodigy_swoon import SwoonService
             from girlframe.services.m3_timeskip import TimeskipService
             from girlframe.services.m3_voidspace_invasion import InvasionService
             from girlframe.services.m3_warboy_hate import ConditionedHateService
@@ -4202,6 +4203,30 @@ class InboxService:
                         "Only the original participants control their choices.",
                         "Open private choice",
                         task="m3_ancillary_private_play",
+                    )
+                )
+
+            for identity, role in SwoonService(GameService(self.store)).tasks(
+                connection, canon, viewer
+            ):
+                items.append(
+                    InboxItem(
+                        "prodigy-swoon:" + identity,
+                        "prodigy_swoon",
+                        identity,
+                        canon.revision,
+                        "plays",
+                        "Earned Confidence",
+                        "Original Prodigy" if role == "withdraw" else "Original NPC",
+                        "pending",
+                        True,
+                        False,
+                        "Withdraw your offer."
+                        if role == "withdraw"
+                        else "Choose your NPC’s reaction.",
+                        "The original notch remains reserved until a response.",
+                        "Open private choice",
+                        task="m3_prodigy_swoon",
                     )
                 )
 

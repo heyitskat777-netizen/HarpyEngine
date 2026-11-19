@@ -15007,7 +15007,8 @@
           "notch": [
             "Record one notch per actual other-member Punishment",
             "Spend one unspent original notch to advance current optional Status",
-            "As the current Ace, spend one unspent original notch to set your saved native Keep to 8–10"
+            "As the current Ace, spend one unspent original notch to set your saved native Keep to 8–10",
+            "Reserve one notch for a known original NPC’s swoon. Consume it when that NPC controller actually records the reaction."
           ]
         },
         "choice_ownership": "The actual Prodigy owns spending that original notch.",
@@ -15016,7 +15017,7 @@
           "Commit the source-bound notch and actual actor-level Status change or middle Keep result. Preserve the original dice, Heat, and ordinary Tag history."
         ],
         "mandatory_followups": [
-          "NPC reaction, other roll paths and punishment producers, and mixed Cadres remain open."
+          "Other roll paths and punishment producers, mixed Cadres, and direct refusal and withdrawal checks for the NPC reaction remain open."
         ],
         "handler_or_gm_intervention": "The original Handler executes the native real social consequence.",
         "test_fixture_ids": [
