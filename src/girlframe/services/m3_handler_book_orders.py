@@ -48,7 +48,7 @@ def active_book(
 ) -> tuple[ActorRef, int] | None:
     persona = state.handler_persona
     handler = active_handler(state)
-    if persona is None or persona.playbook != book or handler is None:
+    if persona is None or handler is None:
         return None
     setup = HandlerService(game.store)
     if (
@@ -57,8 +57,20 @@ def active_book(
         or not setup._member(c, int(handler.entity))
     ):
         return None
-    events = t.events
     change = persona.book_change
+    if persona.playbook != book:
+        from girlframe.engine.m3_handler_borrowed import PLAYS
+        from girlframe.services.m3_handler_book_swap import change_sequence
+        from girlframe.services.m3_handler_borrowed import acquired
+
+        if rule not in PLAYS or PLAYS[rule][0] != book:
+            return None
+        if change is not None and change.native_rule == rule:
+            sequence = change_sequence(game, c, handler, change)
+            return (handler, sequence) if sequence is not None else None
+        learned = acquired(game, c, state, handler, rule)
+        return (handler, learned[1]) if learned is not None else None
+    events = t.events
     if change is not None:
         from girlframe.services.m3_handler_book_swap import change_sequence
 

@@ -1726,3 +1726,25 @@ and wrong-owner denial, replay after restart, and result isolation.
 The Incubus stun and Emotional Conditioning, and the Mother's Sprite
 maturation and Memetic Hazard, remain open.
 [Incubus p. 167](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=169) · [Mother p. 170](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=172)
+
+### Borrow and retain actual Handler abilities
+
+Base `61d2873818e64d808bce79b3a7dd28bd3155a97b`. Paid Dress Them Down,
+Break Down, and Get Them Alone use their existing controls, real dice
+where applicable, and original owners. Borrowing leaves the Handler's
+book, remaining Plays and passives unchanged. In the Advocate test a
+real private order reached its original Girl; Conditional Empathy
+remained unavailable on the Scientist's sheet.
+
+A swap now selects a different printed book and one source-proved
+native or paid Play. It can also retain the sole other earned
+advancement, verified with actual Successor advice after a book change.
+The original body, starting sheets and earlier receipts survive. An
+actual later award can add a new borrowed Play after a swap. Open
+scene obligations or competing acquired advancements require separate
+resolution. The remaining portable Plays still need their own ports.
+
+**74 selected tests passed in 170.89 seconds**, including the three
+retention paths, wrong owner, duplicate spend, safety pause, recovery,
+later purchase and the native Frantic and Advocate paths.
+[Handler advancements p. 151](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=153)

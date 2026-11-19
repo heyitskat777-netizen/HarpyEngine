@@ -97,10 +97,8 @@ def _ordinary_scene_idle(c: Connection, game: "GameService") -> None:
 def _can_dress(
     c: Connection, game: "GameService", state: GameState, handler: ActorRef | None
 ) -> bool:
-    from girlframe.services.m3_handler_borrowed import owned
-
     role = active_book(game, c, state, book="Dogrunner", rule=DRESS_RULE)
-    return (role is not None and role[0] == handler) or owned(game, c, state, handler, DRESS_RULE)
+    return role is not None and role[0] == handler
 
 
 def _original_scene(

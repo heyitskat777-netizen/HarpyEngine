@@ -177,6 +177,8 @@ class BookChange(Model):
     event: str
     playbook: Playbook
     retained: str
+    native_rule: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    retained_advancement: bool = Field(default=False, exclude_if=lambda value: not value)
 
 
 class HandlerPersona(Model):
