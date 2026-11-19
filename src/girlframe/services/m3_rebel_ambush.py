@@ -1,7 +1,9 @@
 """A concealed mission threat is consumed by the actual original Rebel's Assault."""
 
+from __future__ import annotations
+
 import json
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 import sqlalchemy as sa
@@ -13,8 +15,9 @@ from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_resources import rebel_inventory
 from girlframe.engine.m3_actor_state import ActorRef, SceneCast
 from girlframe.engine.m3_actors import resolve
-from girlframe.engine.m3_handler_consequences import same_handler_body
+from girlframe.engine.m3_handler_consequences import active_handler, same_handler_body
 from girlframe.engine.m3_missions import Mission
+from girlframe.engine.m3_rebel_frame_theft import base as require_base
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
@@ -23,18 +26,88 @@ from girlframe.services.m3_missions import MissionService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
+if TYPE_CHECKING:
+    from girlframe.services.m3_strain import StrainService
+
 
 def visible(state: GameState, viewer: GuildViewer) -> tuple[rules.Ambush, ...]:
     return tuple(
         x
         for x in rules.ambushes(state)
-        if x.mission is not None
+        if (x.mission is not None or x.siege is not None)
         and (
             x.controller == viewer.user_id
             or x.handler.entity == str(viewer.user_id)
             and same_handler_body(state, x.handler)
         )
     )
+
+
+def stage_siege(
+    c: Connection,
+    strain: StrainService,
+    state: GameState,
+    row: dict[str, Any],
+    source: str,
+    base: str,
+    account: str,
+) -> None:
+    site = require_base(state, base)
+    period = strain.periods._get(c, row["off_duty_id"])
+    handler = active_handler(state)
+    members = HandlerService(strain.store)
+    ace = next((str(uid) for uid in state.order if str(uid) not in period.ended_characters), None)
+    if (
+        handler is None
+        or ace is None
+        or ace not in period.character_ids
+        or not members._member(c, int(ace))
+        or any(x.id == row["id"] for x in rules.sieges(state))
+    ):
+        raise WorkflowError("Recover the actual original Handler and present Ace")
+    target = ActorRef(kind="pilot", entity=ace, incarnation=period.character_ids[ace])
+    if (
+        resolve(
+            state, target, profiles(c, strain.store.campaign_id), require_current_profile=False
+        ).cell
+        != site.cell
+    ):
+        raise WorkflowError("Choose the operational base the original Ace actually occupies")
+    assert state.world is not None
+    factions = {x.id for x in state.world.factions if x.active and x.kind == "rebel"}
+    roster = tuple(
+        (ActorRef(kind="external_pilot", entity=x.id), x.controller)
+        for x in state.world.pilots
+        if x.kind == "rebel" and x.alive and x.custody == "free" and x.faction in factions
+    )
+    if not roster:
+        raise WorkflowError("The printed three-Rebel introduction requires its own setup")
+    siege = rules.Siege(
+        id=row["id"],
+        period=period.id,
+        source=source,
+        handler=handler,
+        base=site.id,
+        cell=site.cell,
+        target=target,
+        attackers=tuple(actor for actor, _controller in roster),
+    )
+    for actor, controller in roster:
+        if controller in (state.handler, int(ace)) or not members._member(c, controller):
+            raise WorkflowError("Recover each original Rebel's independent campaign controller")
+        attempt = rules.Ambush(
+            id=siege.id + ":" + actor.entity,
+            period=siege.period,
+            source=source,
+            handler=handler,
+            attacker=actor,
+            controller=controller,
+            account=account,
+            siege=siege.id,
+        )
+        _resources(c, strain.game, state, attempt)
+        rules.save(state, attempt)
+    rules.save_siege(state, siege)
 
 
 def _mission(c: Connection, game: GameService, case: rules.Ambush) -> Mission:
@@ -109,6 +182,44 @@ def _targets(
     )
 
 
+def _active_targets(
+    c: Connection, game: GameService, state: GameState, case: rules.Ambush, cast: SceneCast
+) -> tuple[ActorRef, ...]:
+    if case.siege is None:
+        mission = _mission(c, game, case)
+        return _targets(state, mission, case, cast) if mission.phase == "active" else ()
+
+    from girlframe.services.m3_off_duty import OffDutyService
+
+    siege = next((x for x in rules.sieges(state) if x.id == case.siege), None)
+    if (
+        siege is None
+        or siege.completed
+        or siege.period != case.period
+        or siege.source != case.source
+        or case.attacker not in siege.attackers
+        or not same_handler_body(state, siege.handler)
+        or require_base(state, siege.base).cell != siege.cell
+    ):
+        return ()
+    period = OffDutyService(MissionService(game.store))._get(c, siege.period)
+    if (
+        period.phase != "preparing"
+        or period.character_ids.get(siege.target.entity) != siege.target.incarnation
+        or siege.target.entity in period.ended_characters
+        or not any(x.actor == case.attacker and x.controller == case.controller for x in cast.roles)
+        or not any(
+            x.actor == siege.target and x.controller == int(siege.target.entity) for x in cast.roles
+        )
+        or resolve(
+            state, siege.target, profiles(c, game.store.campaign_id), require_current_profile=False
+        ).cell
+        != siege.cell
+    ):
+        return ()
+    return (siege.target,)
+
+
 def _case(state: GameState, viewer: GuildViewer, identity: str) -> rules.Ambush:
     value = next((x for x in visible(state, viewer) if x.id == identity), None)
     if value is None:
@@ -167,9 +278,8 @@ def context(
         or json.loads(proof.payload_json).get("work_id") != result.id
     ):
         raise WorkflowError("Recover the actual original Rebel's opening receipt")
-    mission = _mission(c, game, result)
     _resources(c, game, state, result)
-    if mission.phase != "active" or target not in _targets(state, mission, result, cast):
+    if target not in _active_targets(c, game, state, result, cast):
         raise WorkflowError("The original attacker and mission target must still be present")
     acting = resolve(state, actor, ())
     defender = resolve(
@@ -199,28 +309,29 @@ def require_completed(
     for case in rules.ambushes(state):
         if case.mission != mission.id or case.completed:
             continue
-        if case.action is None:
+        if not _completed_attack(c, game, case):
             raise WorkflowError(
-                "Complete the actual Rebel ambush against this mission before ending it"
-            )
-        action = game.action(c, case.action)
-        meta = action["data"].get("battle", {})
-        if (
-            action["state"] != "complete"
-            or action["data"].get("play") != "all_out_assault"
-            or action["scene_id"] != case.scene
-            or action["actor_id"] != str(case.controller)
-            or meta.get("rebel_ambush") != case.id
-            or meta.get("roll_event") is None
-            or meta.get("actor") != case.attacker.model_dump(mode="json")
-            or case.target is None
-            or meta.get("target") != case.target.model_dump(mode="json")
-        ):
-            raise WorkflowError(
-                "Complete the actual original ambush and its native combat consequences"
+                "Complete the actual Rebel ambush and its native combat consequences"
             )
         if event is not None:
             rules.save(state, case.model_copy(update=dict(completed=event)))
+
+
+def _completed_attack(c: Connection, game: GameService, case: rules.Ambush) -> bool:
+    if case.action is None or case.target is None:
+        return False
+    action = game.action(c, case.action)
+    meta = action["data"].get("battle", {})
+    return (
+        action["state"] == "complete"
+        and action["data"].get("play") == "all_out_assault"
+        and action["scene_id"] == case.scene
+        and action["actor_id"] == str(case.controller)
+        and meta.get("rebel_ambush") == case.id
+        and meta.get("roll_event") is not None
+        and meta.get("actor") == case.attacker.model_dump(mode="json")
+        and meta.get("target") == case.target.model_dump(mode="json")
+    )
 
 
 class AmbushService:
@@ -235,12 +346,11 @@ class AmbushService:
             cast = (
                 _cast(self.game, c, state, channel) if viewer.user_id == case.controller else None
             )
-            mission = _mission(c, self.game, case)
             targets: tuple[tuple[str, str], ...] = ()
-            if case.opening is None and cast is not None and mission.phase == "active":
+            if case.opening is None and cast is not None:
                 targets = tuple(
                     (x.entity, state.sheets[x.entity].callsign)
-                    for x in _targets(state, mission, case, cast)
+                    for x in _active_targets(c, self.game, state, case, cast)
                 )
             return dict(
                 revision=state.revision,
@@ -248,6 +358,7 @@ class AmbushService:
                 opened=bool(case.opening),
                 used=bool(case.action),
                 complete=bool(case.completed),
+                siege=case.siege is not None,
             )
 
     def open(
@@ -280,16 +391,14 @@ class AmbushService:
             case = _case(state, viewer, identity)
             _resources(c, self.game, state, case)
             cast = _cast(self.game, c, state, channel)
-            mission = _mission(c, self.game, case)
             attacker = resolve(state, case.attacker, ())
-            eligible = _targets(state, mission, case, cast) if cast is not None else ()
+            eligible = _active_targets(c, self.game, state, case, cast) if cast is not None else ()
             target = next((x for x in eligible if x.entity == recipient), None)
             if (
                 state.revision != revision
                 or case.opening is not None
                 or cast is None
                 or target is None
-                or mission.phase != "active"
                 or self.game.pending_actions(c)
                 or not attacker.piloting
                 or attacker.cell is None
@@ -309,8 +418,10 @@ class AmbushService:
                     for x in rules.ambushes(state)
                 )
             ):
+                label = "base" if case.siege else "mission"
                 raise WorkflowError(
-                    "Reopen the actual mission cast with the original target and an operating Frame"
+                    f"Reopen the actual {label} cast with the original target "
+                    "and an operating Frame"
                 )
             event = str(uuid4())
             rules.save(
@@ -343,6 +454,99 @@ class AmbushService:
             dict(
                 id=identity, revision=revision, channel=channel, target=recipient, account=account
             ),
+            operation,
+            authorize,
+        )
+
+
+class SiegeService:
+    def __init__(self, strain: StrainService):
+        self.strain, self.game, self.store = strain, strain.game, strain.store
+
+    def _case(self, state: GameState, viewer: GuildViewer, identity: str) -> rules.Siege:
+        case = next((x for x in rules.sieges(state) if x.id == identity), None)
+        if (
+            case is None
+            or case.handler.entity != str(viewer.user_id)
+            or not same_handler_body(state, case.handler)
+        ):
+            raise WorkflowError("The siege review belongs to the original Handler")
+        return case
+
+    def _attacks(self, state: GameState, value: rules.Siege) -> tuple[rules.Ambush, ...]:
+        attacks = tuple(x for x in rules.ambushes(state) if x.siege == value.id)
+        if (
+            len(attacks) != len(value.attackers)
+            or {x.attacker for x in attacks} != set(value.attackers)
+            or any(
+                x.source != value.source or x.target not in (None, value.target) for x in attacks
+            )
+        ):
+            raise WorkflowError("Recover every original attack from this saved siege")
+        return attacks
+
+    def get(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
+        with self.store.engine.connect() as c:
+            self.game.authorize(c, viewer, game=False)
+            state = load_state(c, self.store.campaign_id)
+            case = self._case(state, viewer, identity)
+            attacks = self._attacks(state, case)
+            return dict(
+                revision=state.revision,
+                complete=bool(case.completed),
+                total=len(attacks),
+                resolved=sum(_completed_attack(c, self.game, x) for x in attacks),
+            )
+
+    def finish(self, viewer: GuildViewer, key: str, identity: str, revision: int) -> dict[str, Any]:
+        def authorize(c: Connection) -> None:
+            self.strain._authorize(c, viewer)
+            self.game.unpaused(c)
+            self._case(load_state(c, self.store.campaign_id), viewer, identity)
+
+        def operation(c: Connection) -> dict[str, Any]:
+            from girlframe.services.m3_strain_effects import EffectService
+
+            state = self.strain._state(c, revision)
+            case = self._case(state, viewer, identity)
+            row = EffectService(self.strain)._row(c, identity)
+            body = json.loads(row["body_json"])
+            attacks = self._attacks(state, case)
+            if (
+                case.completed
+                or row["state"] != "pending"
+                or row["owner_id"] != case.handler.entity
+                or row["off_duty_id"] != case.period
+                or body.get("rule_id") != rules.SIEGE_RULE
+                or body.get("siege_requested") != case.source
+                or self.strain.periods._get(c, case.period).phase != "preparing"
+                or not all(_completed_attack(c, self.game, x) for x in attacks)
+            ):
+                raise WorkflowError(
+                    "Resolve every original Rebel attack before finishing the siege"
+                )
+            event = str(uuid4())
+            for attack in attacks:
+                rules.save(state, attack.model_copy(update=dict(completed=event)))
+            rules.save_siege(state, case.model_copy(update=dict(completed=event)))
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.rebel_siege_resolved",
+                state,
+                event_id=event,
+                work_id=identity,
+                actions=tuple(x.action for x in attacks),
+            )
+            self.strain._save(c, row, event, body | dict(siege_resolved=event), resolved=True)
+            return dict(id=identity, complete=True)
+
+        return self.strain.missions._write(
+            viewer,
+            key,
+            "m3.rebel_siege_resolved",
+            dict(id=identity, revision=revision),
             operation,
             authorize,
         )

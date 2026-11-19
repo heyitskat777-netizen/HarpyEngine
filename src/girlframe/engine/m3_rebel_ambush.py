@@ -6,11 +6,14 @@ from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_missions import Mission
+from girlframe.engine.m3_world_state import Cell
 
 RULE = "strain.rebellion.low.5.1"
 HUNT_RULE = "strain.rebellion.high.4.1"
+SIEGE_RULE = "strain.rebellion.high.1.1"
 KIND = "strain_rebel_ambush"
 HUNT_KIND = "strain_rebel_hunt"
+SIEGE_KIND = "strain_rebel_siege"
 
 
 class Ambush(Model):
@@ -22,6 +25,7 @@ class Ambush(Model):
     controller: int
     account: str = Field(min_length=1, max_length=1200)
     pursuit: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    siege: str | None = Field(default=None, exclude_if=lambda x: x is None)
     mission: str | None = None
     dispatch: str | None = None
     channel: int | None = None
@@ -48,6 +52,18 @@ class Hunt(Model):
     reason: str | None = None
 
 
+class Siege(Model):
+    id: str
+    period: str
+    source: str
+    handler: ActorRef
+    base: str
+    cell: Cell
+    target: ActorRef
+    attackers: tuple[ActorRef, ...] = Field(min_length=1)
+    completed: str | None = None
+
+
 def ambushes(state: GameState) -> tuple[Ambush, ...]:
     return tuple(
         Ambush.model_validate_json(x["body"]) for x in state.facts if x.get("kind") == KIND
@@ -70,6 +86,18 @@ def save_hunt(state: GameState, hunt: Hunt) -> None:
     state.facts = [
         x for x in state.facts if (x.get("kind"), x.get("id")) != (HUNT_KIND, hunt.id)
     ] + [dict(kind=HUNT_KIND, id=hunt.id, body=hunt.model_dump_json())]
+
+
+def sieges(state: GameState) -> tuple[Siege, ...]:
+    return tuple(
+        Siege.model_validate_json(x["body"]) for x in state.facts if x.get("kind") == SIEGE_KIND
+    )
+
+
+def save_siege(state: GameState, siege: Siege) -> None:
+    state.facts = [
+        x for x in state.facts if (x.get("kind"), x.get("id")) != (SIEGE_KIND, siege.id)
+    ] + [dict(kind=SIEGE_KIND, id=siege.id, body=siege.model_dump_json())]
 
 
 def attacker(state: GameState, actor: ActorRef) -> int:
@@ -125,7 +153,7 @@ def arm(
 
 def bind(state: GameState, mission: Mission, dispatch: str) -> None:
     for ambush in ambushes(state):
-        if ambush.mission is None:
+        if ambush.mission is None and ambush.siege is None:
             save(state, ambush.model_copy(update=dict(mission=mission.id, dispatch=dispatch)))
     world = state.world
     if world is None:

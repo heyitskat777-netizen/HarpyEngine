@@ -8,7 +8,7 @@ import discord
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
-from girlframe.services.m3_rebel_ambush import AmbushService, HuntService
+from girlframe.services.m3_rebel_ambush import AmbushService, HuntService, SiegeService
 
 
 async def open_ambush(
@@ -20,15 +20,19 @@ async def open_ambush(
     data = await asyncio.to_thread(
         service.get, viewer_from_interaction(interaction), identity, channel
     )
+    siege = data["siege"]
     if data["complete"]:
-        await reply(interaction, "The original mission and ambush are complete.")
+        await reply(interaction, "The original attack is complete.")
         return
     if data["opened"]:
         await reply(interaction, "Use the original scene's battle control to resolve the Assault.")
         return
     if not data["targets"]:
         await reply(
-            interaction, "The original Rebel can open the attack in the actual mission scene."
+            interaction,
+            "The original Rebel can open the attack in the actual base scene."
+            if siege
+            else "The original Rebel can open the attack in the actual mission scene.",
         )
         return
 
@@ -49,12 +53,42 @@ async def open_ambush(
 
     await NativeForm(
         interaction.user.id,
-        "Open the original ambush",
-        "Choose an original mission participant you are attempting to capture.",
+        "Open a Rebel siege attack" if siege else "Open the original ambush",
+        "Confirm the original Ace your Rebel is attacking."
+        if siege
+        else "Choose an original mission participant you are attempting to capture.",
         [
             Field("target", "Original Girl", data["targets"]),
             Field("account", "Describe your actual ambush", paragraph=True),
         ],
+        submit,
+    ).present(interaction)
+
+
+async def open_siege(
+    interaction: discord.Interaction, service: SiegeService, identity: str
+) -> None:
+    data = await asyncio.to_thread(service.get, viewer_from_interaction(interaction), identity)
+    text = f"Resolved Rebel attacks: {data['resolved']} of {data['total']}."
+    if data["complete"] or data["resolved"] != data["total"]:
+        await reply(interaction, text)
+        return
+
+    async def submit(click: discord.Interaction, _values: dict[str, Any]) -> str:
+        await asyncio.to_thread(
+            service.finish,
+            viewer_from_interaction(click),
+            str(click.id),
+            identity,
+            data["revision"],
+        )
+        return "The siege is resolved. Reopen Off-Duty for any remaining work."
+
+    await NativeForm(
+        interaction.user.id,
+        "Finish the Rebel siege",
+        text,
+        [Field("decision", "Siege outcome", (("finish", "Confirm completed attacks"),))],
         submit,
     ).present(interaction)
 

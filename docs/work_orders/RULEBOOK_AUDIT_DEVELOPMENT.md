@@ -38,8 +38,8 @@ Off-Duty resumes only at its genuine completion boundary.
 | High Rebellion 3 | Reveal the original NPC Bond, retain that actor's history, and open an actual attack on the Handler that calls for Cadre intervention. | Have the fictional Director choose an actual Rebel faction and issue the order to demonstrate support. Resolve the actual public show of support without borrowing software Director authority. [Rulebook p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) |
 
 The registry tracks each source's current scope and its acceptance tests.
-The core table columns awaiting effects are High Rebellion 1.1 and
-High Budget 5.2. Rebellion Endgames 3–8 and Budget
+The core table column still awaiting any effect is High Budget 5.2.
+Rebellion Endgames 3–8 and Budget
 Endgames 1–2 have no effect resolver. Current subset limitations include
 the High Budget hearing's Severe finding and the High Void bunk's separate
 contact Play. The individual receipts below retain the rest of the source
@@ -1020,3 +1020,22 @@ on eleven source files. This scope uses a parked Frame at an operational
 base, the original owner present and an existing on-foot Rebel. Other
 locations, occupied Frames and recovery by force remain open.
 [High Rebellion p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) · [Theft test](../../tests/rules/test_rebel_frame_theft.py)
+
+## High Rebellion occupied-base siege
+
+The base is `b5e300efe0ed7afecb9a086423bdac3eaa0699f5`. Against the
+current Ace, the actual original Rebel roster attacks the operational
+base that Girl occupies. Each Rebel opens an owned attack through the
+private Inbox and runs its own native Assault from the actual scene.
+The Handler can complete the original Strain work only after each saved
+attacker's combat consequences have completed. The siege creates no
+mission, proxy sheet or fabricated attack.
+
+The 22 selected tests passed in 40.34 seconds. The two-Rebel siege could
+not finish after only one attack. Both originals spent their own Heat,
+and the native receipt survived reopening and retry. The prior next-
+mission ambush and recurring pursuit passed in the same run. Ruff and
+mypy passed for the changed source. Attacking the Handler, introducing
+three Rebels when none exist, and external Pilot variants without a
+supported inventory still need their own implementation.
+[Status p. 12](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=14) · [High Rebellion p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) · [Siege test](../../tests/rules/test_rebel_ambush.py)

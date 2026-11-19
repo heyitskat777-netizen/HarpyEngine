@@ -25,6 +25,7 @@ from girlframe.engine.m3_pilot_fears import APPEARANCE as PUBLIC_APPEARANCE
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_ambush import HUNT_RULE as REBEL_HUNT
 from girlframe.engine.m3_rebel_ambush import RULE as REBEL_AMBUSH
+from girlframe.engine.m3_rebel_ambush import SIEGE_RULE as REBEL_SIEGE
 from girlframe.engine.m3_rebel_base_capture import RULE as REBEL_BASE_CAPTURE
 from girlframe.engine.m3_rebel_bond_attack import RULE as REBEL_BOND_ATTACK
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
@@ -152,6 +153,8 @@ class EffectService:
                 "awaiting_bunk_harpy": bool(body.get("bunk_requested"))
                 and row["state"] == "pending",
                 "awaiting_rebel_bond": bool(body.get("bond_attack_requested"))
+                and row["state"] == "pending",
+                "awaiting_rebel_siege": bool(body.get("siege_requested"))
                 and row["state"] == "pending",
                 "awaiting_frame_theft": bool(body.get("theft_requested"))
                 and row["state"] == "pending",
@@ -668,6 +671,14 @@ class EffectService:
                 contact=contact,
             )
             needs_offer = choice.rule_id == REBEL_ESCAPE_OFFER
+            needs_siege = choice.rule_id == REBEL_SIEGE
+            if needs_siege:
+                from girlframe.services.m3_rebel_ambush import stage_siege
+
+                assert choice.target
+                stage_siege(
+                    c, self.strain, updated, row, event_id, choice.target, choice.account.strip()
+                )
             needs_theft = choice.rule_id == REBEL_FRAME_THEFT
             if needs_theft:
                 from girlframe.services.m3_rebel_frame_theft import stage as stage_theft
@@ -839,6 +850,7 @@ class EffectService:
                 or needs_bunk
                 or needs_bond_attack
                 or needs_theft
+                or needs_siege
             )
             scientific_period, scientific_events = None, []
             if choice.rule_id == "strain.budget.low.3.1":
@@ -1067,7 +1079,8 @@ class EffectService:
                 | ({"hearing_requested": event} if needs_hearing else {})
                 | ({"bunk_requested": event} if needs_bunk else {})
                 | ({"bond_attack_requested": event} if needs_bond_attack else {})
-                | ({"theft_requested": event} if needs_theft else {}),
+                | ({"theft_requested": event} if needs_theft else {})
+                | ({"siege_requested": event} if needs_siege else {}),
                 resolved=not pending,
             )
             return {

@@ -30,6 +30,7 @@ from girlframe.engine.m3_pilot_fears import APPEARANCE as PUBLIC_APPEARANCE
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_ambush import HUNT_RULE as REBEL_HUNT
 from girlframe.engine.m3_rebel_ambush import RULE as REBEL_AMBUSH
+from girlframe.engine.m3_rebel_ambush import SIEGE_RULE as REBEL_SIEGE
 from girlframe.engine.m3_rebel_base_capture import RULE as REBEL_BASE_CAPTURE
 from girlframe.engine.m3_rebel_bond_attack import RULE as REBEL_BOND_ATTACK
 from girlframe.engine.m3_rebel_defection import RULE as REBEL_DEFECTION
@@ -93,6 +94,7 @@ SUPPORTED = frozenset(
         REBEL_VOICE,
         REBEL_AMBUSH,
         REBEL_HUNT,
+        REBEL_SIEGE,
         REBEL_BASE_CAPTURE,
         REBEL_BOND_ATTACK,
         REBEL_FRAME_THEFT,
@@ -268,6 +270,10 @@ def apply(
             choice.victim,
             choice.account.strip(),
         )
+    elif rule == REBEL_SIEGE:
+        fields(choice, {"target"})
+        if not choice.target:
+            raise ValueError("Choose the operational base currently occupied by the original Cadre")
     elif rule == REBEL_AMBUSH:
         from girlframe.engine.m3_rebel_ambush import arm as arm_ambush
 

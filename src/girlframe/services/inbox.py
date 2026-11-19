@@ -3055,13 +3055,15 @@ class InboxService:
                         "work",
                         ambush.id,
                         canon.revision,
-                        "mission",
-                        "Rebel ambush",
+                        "off_duty" if ambush.siege else "mission",
+                        "Rebel siege attack" if ambush.siege else "Rebel ambush",
                         "Original Rebel and Handler",
                         "pending" if pending else "resolved",
                         pending and ambush.opening is None and viewer.user_id == ambush.controller,
                         False,
-                        "Review the original mission ambush.",
+                        "Review the original base attack."
+                        if ambush.siege
+                        else "Review the original mission ambush.",
                         "",
                         "Open ambush",
                         task="m3_rebel_ambush",

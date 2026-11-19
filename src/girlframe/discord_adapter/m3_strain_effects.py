@@ -32,6 +32,7 @@ from girlframe.engine.m3_pilot_fears import APPEARANCE as PUBLIC_APPEARANCE
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_ambush import HUNT_RULE as REBEL_HUNT
 from girlframe.engine.m3_rebel_ambush import RULE as REBEL_AMBUSH
+from girlframe.engine.m3_rebel_ambush import SIEGE_RULE as REBEL_SIEGE
 from girlframe.engine.m3_rebel_base_capture import RULE as REBEL_BASE_CAPTURE
 from girlframe.engine.m3_rebel_bond_attack import RULE as REBEL_BOND_ATTACK
 from girlframe.engine.m3_rebel_defection import RULE as REBEL_DEFECTION
@@ -127,6 +128,12 @@ async def open_effect(
         return
     if data.get("awaiting_rebel_bond"):
         await reply(interaction, "The original betrayal remains open in the private Inbox.")
+        return
+    if data.get("awaiting_rebel_siege"):
+        from girlframe.discord_adapter.m3_rebel_ambush import open_siege
+        from girlframe.services.m3_rebel_ambush import SiegeService
+
+        await open_siege(interaction, SiegeService(service.strain), identity)
         return
     if data.get("awaiting_frame_theft"):
         await reply(interaction, "The original Frame theft is pending in the private Inbox.")
@@ -375,7 +382,7 @@ def effect_form(
     from girlframe.engine.m3_rebel_frame_theft import thief as theft_actor
 
     theft_bases = {}
-    if rule == REBEL_FRAME_THEFT:
+    if rule in (REBEL_FRAME_THEFT, REBEL_SIEGE):
         for location in regional_locations:
             try:
                 eligible_base = theft_base(state, location["id"])
@@ -758,6 +765,14 @@ def effect_form(
                     "overrun_frame", "Which original parked Frame is seized?", tuple(held) or WAIT
                 ),
             ]
+        if rule == REBEL_SIEGE:
+            fields.append(
+                Field(
+                    "siege_base",
+                    "Which operational base is the Cadre occupying?",
+                    tuple((site.id, site.name) for site in theft_bases.values()) or WAIT,
+                )
+            )
         if rule == REBEL_FRAME_THEFT:
             fields.append(
                 Field(
@@ -1512,6 +1527,8 @@ def effect_form(
                 victim=values["overrun_rebel"][0],
                 captured_frame=values["overrun_frame"][0],
             )
+        if rule == REBEL_SIEGE:
+            payload["target"] = values["siege_base"][0]
         if rule == REBEL_FRAME_THEFT:
             payload.update(target=values["theft_base"][0], victim=values["frame_thief"][0])
         if rule == REBEL_BOND_ATTACK:
@@ -1774,6 +1791,8 @@ def effect_form(
             return "The original attack is pending for the next dispatched mission."
         if rule == REBEL_HUNT:
             return "The original Rebel will pursue this Girl on future missions."
+        if rule == REBEL_SIEGE:
+            return "Each original Rebel can open their attack from their private Inbox."
         if rule == REBEL_BASE_CAPTURE:
             return "The base fell. Prisoners are free and the parked Frame is in Rebel custody."
         if rule == REBEL_BOND_ATTACK:

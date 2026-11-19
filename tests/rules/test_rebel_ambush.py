@@ -25,7 +25,7 @@ from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_battle_state import Declaration
 from girlframe.engine.m3_leviathan_arrival import install_external_pose
 from girlframe.engine.m3_punishments import Details
-from girlframe.engine.m3_rebel_ambush import HUNT_RULE, RULE, ambushes, hunts
+from girlframe.engine.m3_rebel_ambush import HUNT_RULE, RULE, SIEGE_RULE, ambushes, hunts, sieges
 from girlframe.engine.m3_strain_effects import Choice
 from girlframe.engine.m3_world_state import AdversaryPilot, Asset, Faction
 from girlframe.services.inbox import InboxService
@@ -34,13 +34,14 @@ from girlframe.services.m3_battle import BattleService
 from girlframe.services.m3_cast import CastService
 from girlframe.services.m3_off_duty_cycle import CycleService
 from girlframe.services.m3_punishments import PunishmentService
-from girlframe.services.m3_rebel_ambush import AmbushService, HuntService
+from girlframe.services.m3_rebel_ambush import AmbushService, HuntService, SiegeService
 from girlframe.services.m3_strain_effects import EffectService
 from girlframe.services.onboarding import WorkflowError
 
 
-@pytest.mark.parametrize("pursuit", (False, True))
-def test_actual_rebel_ambush_and_recurring_pursuit_use_original_roles(ledger, pursuit):
+@pytest.mark.parametrize("rule", (RULE, HUNT_RULE, SIEGE_RULE))
+def test_actual_rebel_attacks_use_original_roles(ledger, rule):
+    pursuit, siege = rule == HUNT_RULE, rule == SIEGE_RULE
     strain, game = ready(ledger)
     policy = ledger.policy.m3_approval
     ledger.policy = ledger.policy.model_copy(
@@ -76,9 +77,16 @@ def test_actual_rebel_ambush_and_recurring_pursuit_use_original_roles(ledger, pu
         controller=3,
         revealed=True,
     )
+    second_actor = ActorRef(kind="external_pilot", entity="second-siege-original")
+    second_weapon = weapon.model_copy(update=dict(id="second-source-launcher"))
+    second_rebel = rebel.model_copy(
+        update=dict(id=second_actor.entity, name="Second Rebel", assets=(second_weapon, spare))
+    )
     with ledger.transaction() as c:
         canon = state(game)
-        canon.world = initial().model_copy(update=dict(pilots=(rebel,), factions=(faction,)))
+        canon.world = initial().model_copy(
+            update=dict(pilots=(rebel, second_rebel) if siege else (rebel,), factions=(faction,))
+        )
         canon = place(place(canon, 2), 3)
         canon = install_external_pose(
             canon,
@@ -91,6 +99,22 @@ def test_actual_rebel_ambush_and_recurring_pursuit_use_original_roles(ledger, pu
             owner=3,
             judge=1,
         )
+        if siege:
+            canon = install_external_pose(
+                canon,
+                second_actor,
+                (0, 0),
+                (0, 0),
+                "piloting",
+                "fixture-second-siege-pose",
+                "Second original Rebel cockpit",
+                owner=3,
+                judge=1,
+            )
+            reserve = next(x for x in canon.sheets["2"].assets if x.family == "frame")
+            canon.sheets["2"].assets.append(
+                reserve.model_copy(update=dict(id="ace-reserve-frame-asset", name="Reserve Plate"))
+            )
         for sheet in canon.sheets.values():
             for asset in sheet.assets:
                 asset.void = False
@@ -106,7 +130,18 @@ def test_actual_rebel_ambush_and_recurring_pursuit_use_original_roles(ledger, pu
         "My original Rebel's own Heat and Identity",
         actual=True,
     )
-    period = prepared(strain, game, high=frozenset({"rebellion"}) if pursuit else frozenset())
+    if siege:
+        actors.confirm_rebel_inventory(
+            OTHER,
+            "second-siege-actual-pool",
+            state(game).revision,
+            second_actor,
+            (),
+            2,
+            "I confirm the second independently controlled Rebel's Heat",
+            actual=True,
+        )
+    period = prepared(strain, game, high=frozenset({"rebellion"}) if rule != RULE else frozenset())
     effects = EffectService(strain)
     for track, face, column, choice in (
         (
@@ -125,7 +160,7 @@ def test_actual_rebel_ambush_and_recurring_pursuit_use_original_roles(ledger, pu
             2,
             Choice(rule_id="strain.budget.low.5.2", account="Rooms reassigned.", rooms=((2, 3),)),
         ),
-        ("rebellion", 4 if pursuit else 5, 1, None),
+        ("rebellion", 1 if siege else 4 if pursuit else 5, 1, None),
     ):
         request = next(x for x in state(game).strain.requests if x.track == track)
         strain.dice.face = face
@@ -138,7 +173,7 @@ def test_actual_rebel_ambush_and_recurring_pursuit_use_original_roles(ledger, pu
             effects.apply(
                 ADMIN, "ambush-effect-" + track, identity, 1, state(game).revision, choice
             )
-    assert outcome["rule_id"] == (HUNT_RULE if pursuit else RULE)
+    assert outcome["rule_id"] == rule
 
     async def native_form(viewer, sid, display, **values):
         click = current(viewer.user_id, sid)
@@ -161,34 +196,45 @@ def test_actual_rebel_ambush_and_recurring_pursuit_use_original_roles(ledger, pu
             ADMIN,
             40400,
             lambda click: open_effect(click, effects, identity),
-            ambusher=(actor.entity,),
             account="PRIVATE_AMBUSH_SOURCE",
+            **({"siege_base": ("base0",)} if siege else {"ambusher": (actor.entity,)}),
             **({"hunt_victim": ("2",)} if pursuit else {}),
         )
     )
     assert not any(x.mission for x in ambushes(state(game)))
     cycle = CycleService(strain.periods)
-    activate(cycle, game, period)
-    recover_both(cycle, game, period)
-    finish_routine(cycle, game, period)
-    assert call(cycle, game, ADMIN, period, "finish", movement(game))["phase"] == "complete"
     missions = strain.missions
-    invitation = missions.offer(
-        ADMIN, "first-actual-ambush-mission", "Transport a synthetic cargo", (2,)
-    )
-    assert not any(x.mission for x in ambushes(state(game)))
-    accepted = missions.respond(
-        PLAYER, "accept-ambush-mission", invitation["id"], invitation["revision"], "accept"
-    )
-    mission = missions.start(
-        ADMIN, "dispatch-ambush-mission", invitation["id"], accepted["revision"]
-    )
-    (bound,) = ambushes(state(game))
-    assert bound.mission == mission["id"] and bound.dispatch
+    if siege:
+        with pytest.raises(WorkflowError, match="Strain"):
+            activate(cycle, game, period)
+        (plan,) = sieges(state(game))
+        assert plan.attackers == (actor, second_actor) and plan.target.entity == "2"
+        with pytest.raises(WorkflowError, match="every original Rebel attack"):
+            SiegeService(strain).finish(ADMIN, "premature-siege", identity, state(game).revision)
+    else:
+        activate(cycle, game, period)
+        recover_both(cycle, game, period)
+        finish_routine(cycle, game, period)
+        assert call(cycle, game, ADMIN, period, "finish", movement(game))["phase"] == "complete"
+        invitation = missions.offer(
+            ADMIN, "first-actual-ambush-mission", "Transport a synthetic cargo", (2,)
+        )
+        assert not any(x.mission for x in ambushes(state(game)))
+        accepted = missions.respond(
+            PLAYER, "accept-ambush-mission", invitation["id"], invitation["revision"], "accept"
+        )
+        mission = missions.start(
+            ADMIN, "dispatch-ambush-mission", invitation["id"], accepted["revision"]
+        )
+    bound = next(x for x in ambushes(state(game)) if x.attacker == actor)
     root = identity
     identity = bound.id
-    with pytest.raises(WorkflowError, match="Complete the actual Rebel ambush"):
-        missions.end(ADMIN, "premature-mission", mission["id"], mission["revision"], True)
+    if siege:
+        assert bound.siege == root and bound.mission is None
+    else:
+        assert bound.mission == mission["id"] and bound.dispatch
+        with pytest.raises(WorkflowError, match="Complete the actual Rebel ambush"):
+            missions.end(ADMIN, "premature-mission", mission["id"], mission["revision"], True)
     inbox = InboxService(ledger)
     assert not any(x.task == "m3_rebel_ambush" for x in inbox.items(PLAYER))
     service = AmbushService(game)
@@ -197,7 +243,7 @@ def test_actual_rebel_ambush_and_recurring_pursuit_use_original_roles(ledger, pu
     cast = CastService(actors)
     change(cast, OTHER, "join", actor)
     revision = state(game).revision
-    with pytest.raises(WorkflowError, match="actual mission cast"):
+    with pytest.raises(WorkflowError, match="actual (mission|base) cast"):
         service.open(OTHER, "not-a-mission-target", identity, revision, 900, "3", "Invalid attempt")
     with pytest.raises(WorkflowError, match="Only the original Rebel"):
         service.open(ADMIN, "admin-cannot-open", identity, revision, 900, "2", "Invalid speaker")
@@ -209,7 +255,9 @@ def test_actual_rebel_ambush_and_recurring_pursuit_use_original_roles(ledger, pu
     ledger.safety(PLAYER, "resume-ambush", ledger.status(PLAYER)["revision"], pause=False)
 
     async def inbox_open(click):
-        entry = next(x for x in inbox.items(OTHER) if x.task == "m3_rebel_ambush")
+        entry = next(
+            x for x in inbox.items(OTHER) if x.task == "m3_rebel_ambush" and x.identity == identity
+        )
         await InboxView(inbox, 3).route(click, entry)
 
     asyncio.run(
@@ -223,16 +271,16 @@ def test_actual_rebel_ambush_and_recurring_pursuit_use_original_roles(ledger, pu
     worker, gateway = GameWorker(game), Gateway()
     old_other = state(game).sheets["3"].model_copy(deep=True)
 
-    def assault(number, target_asset, *, vast):
+    def assault(number, target_asset, *, vast, assailant=actor, attacking_asset=weapon.id):
         fight = BattleService(ledger)
         data = fight.preview(OTHER, 900)
-        fighter = next(x for x in data["actors"] if x["ref"]["entity"] == actor.entity)
+        fighter = next(x for x in data["actors"] if x["ref"]["entity"] == assailant.entity)
         chased = next(x for x in data["actors"] if x["ref"]["entity"] == "2")
         declaration = Declaration(
             play="all_out_assault",
-            actor=actor,
+            actor=assailant,
             target=ActorRef.model_validate(chased["ref"]),
-            attacking_asset=weapon.id,
+            attacking_asset=attacking_asset,
             target_asset=target_asset,
             actor_sha256=fighter["sha256"],
             target_sha256=chased["sha256"],
@@ -270,7 +318,7 @@ def test_actual_rebel_ambush_and_recurring_pursuit_use_original_roles(ledger, pu
             answer(game, member, "battle_assault_table", flag=vast, text="Original table view")
 
     assault(40420, asset, vast=False)
-    (completed_attack,) = ambushes(state(game))
+    completed_attack = next(x for x in ambushes(state(game)) if x.attacker == actor)
     assert completed_attack.action and completed_attack.completed is None
     assert game.inspect(OTHER, completed_attack.action)["state"] == "complete"
     canon = state(game)
@@ -278,6 +326,40 @@ def test_actual_rebel_ambush_and_recurring_pursuit_use_original_roles(ledger, pu
     assert canon.sheets["3"] == old_other
     assert rebel_inventory(canon, actor).heat == 1
     tick(worker, gateway, 5)
+
+    if siege:
+        review = SiegeService(strain)
+        with pytest.raises(WorkflowError, match="original Handler"):
+            review.get(OTHER, root)
+        assert review.get(ADMIN, root)["resolved"] == 1
+        with pytest.raises(WorkflowError, match="every original Rebel attack"):
+            review.finish(ADMIN, "one-attack-is-insufficient", root, state(game).revision)
+        second = next(x for x in ambushes(state(game)) if x.attacker == second_actor)
+        change(cast, OTHER, "join", second_actor)
+        identity = second.id
+        asyncio.run(
+            native_form(OTHER, 40434, inbox_open, target=("2",), account="Second original attack")
+        )
+        remaining = next(
+            x.id for x in state(game).sheets["2"].assets if x.family == "frame" and not x.damaged
+        )
+        assault(
+            40436, remaining, vast=False, assailant=second_actor, attacking_asset=second_weapon.id
+        )
+        assert review.get(ADMIN, root)["resolved"] == 2
+        assert rebel_inventory(state(game), second_actor).heat == 1
+        tick(worker, gateway, 5)
+        revision = state(game).revision
+        asyncio.run(
+            native_form(
+                ADMIN, 40432, lambda click: open_effect(click, effects, root), decision=("finish",)
+            )
+        )
+        assert review.finish(ADMIN, "40433", root, revision)["complete"]
+        completion = sieges(state(game))[0].completed
+        assert completion and {x.completed for x in ambushes(state(game))} == {completion}
+        assert activate(cycle, game, period)["phase"] == "active"
+        return
 
     def finish_mission(value, number):
         settled = missions.end(
