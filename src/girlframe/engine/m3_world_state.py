@@ -438,6 +438,14 @@ class Region(Model):
         return self
 
 
+class CorruptedCell(Model):
+    cell: Cell
+    sentinel: str = Field(min_length=1, max_length=100)
+    action: str = Field(min_length=1)
+    scene: str = Field(min_length=1)
+    event: str = Field(min_length=1)
+
+
 class World(Model):
     quadrant12: Board | None = Field(default=None, exclude_if=lambda x: x is None)
     regions: tuple[Region, ...] = Field(default=(), exclude_if=lambda x: not x)
@@ -459,6 +467,7 @@ class World(Model):
     starting_npc_links: tuple[StartingNpcLink, ...] = ()
     npc_role_offers: tuple[NpcRoleOffer, ...] = ()
     sprite_escorts: tuple[SpriteEscort, ...] = Field(default=(), exclude_if=lambda x: not x)
+    corrupted_cells: tuple[CorruptedCell, ...] = Field(default=(), exclude_if=lambda x: not x)
 
     @model_validator(mode="after")
     def references(self) -> "World":
@@ -482,6 +491,12 @@ class World(Model):
                     raise ValueError("An unlocked region retains its real map, office and contents")
         if any(not self.board.contains(cell) for zone in self.fallout for cell in zone.cells):
             raise ValueError("Actual fallout occupies on-board cells")
+        if (
+            len({x.cell for x in self.corrupted_cells}) != len(self.corrupted_cells)
+            or len({x.action for x in self.corrupted_cells}) != len(self.corrupted_cells)
+            or any(not self.board.contains(x.cell) for x in self.corrupted_cells)
+        ):
+            raise ValueError("Corrupted terrain retains its unique original source and map square")
         if any(
             site.condition != "destroyed" and zone.id not in site.fallout_sources
             for zone in self.fallout

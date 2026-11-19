@@ -16,7 +16,7 @@ from girlframe.services.m3_battle import BattleService, pre_roll, prepare
 from girlframe.services.onboarding import WorkflowError
 
 
-def prepared(store, *, girl=None):
+def prepared(store, *, girl=None, other_cell=(0, 0)):
     if girl is None:
         game, worker, gateway = ready(store)
     else:
@@ -38,7 +38,7 @@ def prepared(store, *, girl=None):
     with store.transaction() as c:
         canon = state(game)
         canon.world = initial()
-        canon = place(place(canon, 2), 3)
+        canon = place(place(canon, 2), 3, cell=other_cell)
         game.event(c, 1, "actual-battle-positions", "synthetic.state", canon)
     svc = BattleService(store)
     data = svc.preview(PLAYER, 900)

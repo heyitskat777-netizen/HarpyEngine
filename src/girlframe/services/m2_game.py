@@ -2232,6 +2232,10 @@ class GameService:
                     c, state, mechanical_owner, require_current_profile=False
                 ),
             )
+            if prepared.play == "check_sensors":
+                from girlframe.services.m3_sentinel import require_sensors
+
+                require_sensors(c, self.store.campaign_id, state, acting_ref)
             if defeat is None and void_keep is None:
                 from girlframe.services.m3_ankou import require_free as require_ankou_free
 
@@ -4269,6 +4273,18 @@ class GameService:
             if sheet.revision != action["data"]["sheet_revision"]:
                 raise WorkflowError("STALE_SHEET: recover the unrolled action; no dice consumed.")
             prepared = PlayInput.model_validate_json(json.dumps(action["data"]["prepared"]))
+            if prepared.play == "check_sensors" and sheet.character_id:
+                from girlframe.engine.m3_actor_state import ActorRef
+                from girlframe.services.m3_sentinel import require_sensors
+
+                require_sensors(
+                    c,
+                    self.store.campaign_id,
+                    state,
+                    ActorRef(
+                        kind="pilot", entity=str(action["actor_id"]), incarnation=sheet.character_id
+                    ),
+                )
             if prepared.play == "keep_your_head":
                 from girlframe.services.m3_nightmare import pre_roll as nightmare_pre_roll
 

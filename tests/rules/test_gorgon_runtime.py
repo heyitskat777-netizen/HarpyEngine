@@ -21,7 +21,7 @@ from girlframe.services.m3_missions import MissionService
 
 @pytest.fixture(autouse=True)
 def candidate_source_gate(monkeypatch):
-    """Only this candidate's three reviewed source IDs bypass production availability in tests."""
+    """Enable the candidate source IDs for synthetic runtime verification."""
     from girlframe.engine.rules_registry import Registry
 
     actual = Registry.require_available
@@ -31,6 +31,7 @@ def candidate_source_gate(monkeypatch):
             "gorgon.gorgon.attack",
             "gorgon.gorgon.collateral-damage",
             "gorgon.gorgon.warp",
+            "gorgon-type.sentinel.sentinel-type",
         }:
             return next(x for x in registry.entries if x.id == identity)
         return actual(registry, identity)
@@ -57,8 +58,11 @@ def gorgon_source(
     opposing_class="benevolent",
     actor_void=False,
     advance=True,
+    types=("incubus",),
+    begin=True,
+    other_cell=(0, 0),
 ):
-    game, worker, gateway, _, _, _ = prepared(store)
+    game, worker, gateway, _, _, _ = prepared(store, other_cell=other_cell)
     approval = store.policy.m3_approval
     store.policy = store.policy.model_copy(
         update=dict(
@@ -67,7 +71,7 @@ def gorgon_source(
     )
     with store.transaction() as c:
         canon = state(game)
-        actual = gorgon(gorgon_class, "source-gorgon", revealed=True)
+        actual = gorgon(gorgon_class, "source-gorgon", revealed=True, types=types)
         if damaged:
             actual = actual.model_copy(
                 update={
@@ -228,13 +232,15 @@ def gorgon_source(
     declaration = Declaration(
         kind=kind,
         actor=actor,
-        assets=(actual["assets"][0]["id"],) if kind != "warp" else (),
+        assets=(actual["assets"][0]["id"],) if kind in ("attack", "collateral") else (),
         actor_sha256=actual["source_sha256"],
         target=ActorRef.model_validate(victim["ref"]) if kind == "attack" else None,
         target_sha256=victim["source_sha256"] if kind == "attack" else None,
         account="Actual declared source effect at the present battlefield",
         reach_confirmed=True,
     )
+    if not begin:
+        return game, worker, gateway, None, declaration
     action = svc.begin(ADMIN, str(uuid4()), 900, data["revision"], declaration)["action_id"]
     if advance:
         tick(worker, gateway, 3)
@@ -255,6 +261,93 @@ def gorgon_source(
                 text="Actual source judge confirms this original attack capability and reach",
             )
     return game, worker, gateway, action, declaration
+
+
+def test_sentinel_native_corruption_preserves_position_owner_privacy_and_restart(ledger):
+    import asyncio
+
+    from test_ledger import OTHER
+    from test_mission_ui import current
+
+    from girlframe.delivery.m2_worker import GameWorker
+    from girlframe.discord_adapter.m2_forms import NativeForm
+    from girlframe.discord_adapter.m3_gorgon_play import open_gorgon_play
+    from girlframe.engine.m2 import PlayInput
+    from girlframe.services.m2_game import GameService
+    from girlframe.services.m3_world import WorldService
+    from girlframe.services.onboarding import WorkflowError
+
+    game, _, gateway, _, declaration = gorgon_source(
+        ledger, kind="corrupt", types=("sentinel",), begin=False, other_cell=(2, 0)
+    )
+    service = GorgonPlayService(game)
+    revision = state(game).revision
+    assert "corrupt" not in service.preview(PLAYER, 900)["plays"]
+    with pytest.raises(WorkflowError, match="actual owned"):
+        service.begin(PLAYER, "wrong-owner", 900, revision, declaration)
+    with pytest.raises(WorkflowError, match="STALE_GORGON_PLAY"):
+        service.begin(ADMIN, "stale", 900, revision - 1, declaration)
+
+    async def native_begin():
+        owner = current(1)
+        owner.channel_id = 900
+        await owner.response.defer(ephemeral=True)
+        await open_gorgon_play(owner, game)
+        form = owner.edit_original_response.call_args.kwargs["view"]
+        assert isinstance(form, NativeForm)
+        assert not await form.interaction_check(current(2))
+        form.values.update(actor=(declaration.actor.token,), play=("corrupt",))
+        select = current(1, 999300)
+        await select.response.defer(ephemeral=True)
+        await form.confirm.callback(select)
+        confirm = select.edit_original_response.call_args.kwargs["view"]
+        assert isinstance(confirm, NativeForm)
+        confirm.values.update(account=declaration.account, reach=("confirmed",))
+        await confirm.confirm.callback(current(1, 999301))
+        assert confirm.completed
+
+    asyncio.run(native_begin())
+    replay = service.begin(ADMIN, "999301", 900, revision, declaration)
+    action = replay["action_id"]
+    assert not state(game).world.corrupted_cells
+    ledger.safety(PLAYER, "pause-before-corruption", ledger.status(PLAYER)["revision"], pause=True)
+    tick(GameWorker(game), gateway, 3)
+    assert not state(game).world.corrupted_cells
+    ledger.safety(PLAYER, "resume-corruption", ledger.status(PLAYER)["revision"], pause=False)
+
+    restarted = GameService(ledger, dice=game.dice)
+    tick(GameWorker(restarted), gateway, 5)
+    if not state(restarted).world.corrupted_cells:
+        restarted.roll(ADMIN, "resume-original", action)
+        tick(GameWorker(restarted), gateway, 5)
+    (terrain,) = state(restarted).world.corrupted_cells
+    assert (terrain.cell, terrain.sentinel, terrain.action) == ((0, 0), "source-gorgon", action)
+    with ledger.engine.connect() as connection:
+        source = restarted.action(connection, action)
+        assert source["state"] == "complete"
+        assert terrain.event == source["data"]["gorgon_play"]["advance_event"]
+        assert terrain.scene == source["scene_id"]
+        assert restarted.lock(connection, 900)["state"] == "released"
+    with pytest.raises(WorkflowError, match="clear map square"):
+        service.begin(ADMIN, "repeated-corruption", 900, state(restarted).revision, declaration)
+    assert state(restarted).world.corrupted_cells == (terrain,)
+
+    world = WorldService(MissionService(ledger))
+    assert "corrupted_cells" not in world.get(PLAYER)["world"]
+    assert "corrupted_cells" not in world.get(ADMIN, private=True)["world"]
+    cast = CastService(ActorService(MissionService(ledger)))
+    change(cast, ADMIN, "withdraw", declaration.actor)
+    request = PlayInput(
+        play="check_sensors", context="Synthetic current terrain", trigger_confirmed=True, heat=0
+    )
+    with pytest.raises(WorkflowError, match="Corrupted terrain blocks Check Your Sensors"):
+        restarted.begin(
+            PLAYER, "blocked-sensors", 900, state(restarted).sheets["2"].revision, request
+        )
+    unaffected = restarted.begin(
+        OTHER, "unaffected-sensors", 900, state(restarted).sheets["3"].revision, request
+    )
+    assert unaffected["action_id"] != action and game.dice.calls == 0
 
 
 def test_actual_gorgon_attack_owned_damage_no_dice_and_real_replay(ledger):

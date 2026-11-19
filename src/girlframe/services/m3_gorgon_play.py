@@ -14,6 +14,8 @@ from girlframe.engine.m3_actor_state import ActorRef, SceneCast
 from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_gorgon_play_state import Declaration
 from girlframe.engine.m3_handler_consequences import active_handler
+from girlframe.engine.m3_sentinel import RULE as corrupt_rule
+from girlframe.engine.m3_sentinel import already_corrupted
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
@@ -26,6 +28,7 @@ RULES = {
     "attack": "gorgon.gorgon.attack",
     "collateral": "gorgon.gorgon.collateral-damage",
     "warp": "gorgon.gorgon.warp",
+    "corrupt": corrupt_rule,
 }
 
 
@@ -61,17 +64,32 @@ class GorgonPlayService:
             cast = _cast(self.game, c, state, channel)
             bound = profiles(c, self.store.campaign_id)
             rows = []
+            can_corrupt = False
             for role in cast.roles:
                 actual = resolve(state, role.actor, bound, require_current_profile=False)
                 if not _visible(state, role.actor, viewer.user_id):
                     continue
+                owned = actual.controller == viewer.user_id
+                if (
+                    owned
+                    and role.actor.kind == "gorgon"
+                    and actual.cell is not None
+                    and not actual.offstage_source
+                    and state.world is not None
+                    and not already_corrupted(state.world, actual.cell)
+                    and any(
+                        x.id == role.actor.entity and "sentinel" in x.types
+                        for x in state.world.gorgons
+                    )
+                ):
+                    can_corrupt = True
                 rows.append(
                     dict(
                         ref=role.actor.model_dump(mode="json"),
                         token=role.actor.token,
                         label=actual.label,
                         source_sha256=actual.source_sha256,
-                        owned=actual.controller == viewer.user_id,
+                        owned=owned,
                         assets=[asset.model_dump(mode="json") for asset in actual.assets],
                     )
                 )
@@ -79,6 +97,8 @@ class GorgonPlayService:
             assert access.registry is not None
             plays = []
             for kind, identity in RULES.items():
+                if kind == "corrupt" and not can_corrupt:
+                    continue
                 try:
                     access.registry.require_available(identity)
                 except ValueError:
@@ -127,6 +147,13 @@ class GorgonPlayService:
                 item for item in state.world.gorgons if item.id == declaration.actor.entity
             )
             from girlframe.engine.m3_janus_pandora import require_can_harm, vicious
+
+            if declaration.kind == "corrupt" and (
+                "sentinel" not in gorgon.types
+                or actual.cell is None
+                or already_corrupted(state.world, actual.cell)
+            ):
+                raise WorkflowError("Use the actual Sentinel standing in a clear map square")
 
             if (
                 gorgon.gorgon_class == "benevolent"

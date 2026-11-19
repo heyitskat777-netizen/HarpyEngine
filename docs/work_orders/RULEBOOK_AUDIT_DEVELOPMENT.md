@@ -1668,3 +1668,23 @@ Both affected checks passed in later targeted runs. This is offline
 development evidence. Authenticated Activity and real-player acceptance
 remain separate.
 [Director regression](../../tests/test_director_play_review.py) · [Harpy regression](../../tests/rules/test_harpy_core.py)
+
+### Sentinel terrain and Sensors
+
+Base `f274757bc36adea4ea1d040754bdaa5a8fff0b13`. The actual Sentinel's
+controller declares Corruption from the native Gorgon menu. After the
+scene lock is acknowledged, the engine records the occupied square
+and its original action, scene and event. The proof survives a worker
+restart and the Sentinel leaving the scene. Check Your Sensors refuses
+the ordinary Girl's declaration and pre-roll while she occupies the
+square. An unaffected Girl retains access. General map views omit
+the source and location so the observation does not cross scene roles.
+
+**177 selected tests passed in 165.44 seconds**, covering Gorgon
+combat, recovery, world, Sensors, Director referrals and the registry.
+The new native synthetic test includes a wrong owner, stale revision,
+duplicate, safety pause, restart and a second square. Scoped mypy
+passed for eight source files. Remaining Sentinel work includes
+communication boundaries, the terrain Tag, fouled footing, and the
+Shell's owned Heat roll and consequences.
+[Sentinel p. 171](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=173)

@@ -8,7 +8,7 @@ from girlframe.engine.m3_actor_state import ActorRef, Model
 
 
 class Declaration(Model):
-    kind: Literal["attack", "collateral", "warp"]
+    kind: Literal["attack", "collateral", "warp", "corrupt"]
     actor: ActorRef
     assets: tuple[str, ...] = ()
     actor_sha256: str = Field(min_length=64, max_length=64)
@@ -23,13 +23,13 @@ class Declaration(Model):
             raise ValueError("Declare distinct actual Assets of the actual attacking Gorgon")
         if not all(x.strip() for x in self.assets) or not self.account.strip():
             raise ValueError("State the actual physical attack/destruction and source capabilities")
-        if self.kind != "warp" and not self.assets or self.kind == "warp" and self.assets:
+        if bool(self.assets) != (self.kind in ("attack", "collateral")):
             raise ValueError(
-                "Attack/destruction declare actual Assets; Warp declares its exposed Core"
+                "Attack and Collateral declare actual Assets. Warp and Corrupt do not."
             )
         if self.kind == "attack":
             if self.target is None or self.target_sha256 is None or self.target == self.actor:
                 raise ValueError("An Attack needs its actual distinct opposing body and source")
         elif self.target is not None or self.target_sha256 is not None:
-            raise ValueError("Collateral targets the actual environment, not a substituted person")
+            raise ValueError("This Play targets the actual environment, not a substituted person")
         return self

@@ -90,6 +90,16 @@ def start(game: Any, c: Connection, state: GameState, action: dict[str, Any]) ->
     from girlframe.services.m3_gorgon_dormant import record_own_wake
 
     record_own_wake(game, c, state, action)
+    if meta["kind"] == "corrupt":
+        from girlframe.engine.m3_sentinel import corrupt
+
+        assert state.world is not None
+        cell = resolve(state, _ref(meta["actor"]), (), require_current_profile=False).cell
+        state.world = corrupt(
+            state.world, actual, cell, action["id"], action["scene_id"], _event(action)
+        )
+        action["data"]["result"]["corrupted"] = cell
+        return
     if meta["kind"] == "warp":
         if not actual.exposed:
             raise WorkflowError("Warp charges an actually exposed Core.")

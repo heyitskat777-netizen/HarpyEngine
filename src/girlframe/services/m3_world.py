@@ -80,7 +80,7 @@ def _world_projection(state: GameState) -> dict[str, Any]:
     from girlframe.services.m3_red_queen_accusation import official_allegations
 
     assert state.world is not None
-    projected = state.world.model_dump(mode="json")
+    projected = state.world.model_dump(mode="json", exclude={"corrupted_cells"})
     if portals := lab_portals(state):
         projected["stable_portals"] = portals
     for row in projected["locations"]:

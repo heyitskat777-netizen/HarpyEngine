@@ -29,7 +29,7 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
         targets = [x for x in data["actors"] if x["ref"] != actor["ref"]]
         if kind == "attack" and not targets:
             return "Join the actual opposing body to the scene before declaring an Attack."
-        if kind != "warp" and not actor["assets"]:
+        if kind in ("attack", "collateral") and not actor["assets"]:
             return "Declare actual owned Gorgon Assets for this Play."
         fields: list[Field] = []
         if kind == "attack":
@@ -40,7 +40,7 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
                     tuple((x["token"], x["label"]) for x in targets),
                 )
             )
-        if kind != "warp":
+        if kind in ("attack", "collateral"):
             fields.append(
                 Field(
                     "assets",

@@ -21541,14 +21541,41 @@
         "heading": "Sentinel-Type"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "An actual living Sentinel chooses to corrupt its currently occupied map square.",
+        "actor_type": "The original present Sentinel and its current scene controller.",
+        "pre_roll_sources": [
+          "Original Gorgon and cast, actual physical position and unchanged scene/resource revisions, synthetic or released source approval, and acknowledged scene lock."
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "diceless": [
+            "Cause the currently occupied clear square to become Corrupted."
+          ]
+        },
+        "choice_ownership": "Only the original Sentinel's current controller declares this effect.",
+        "target_policy": "The original living Sentinel's currently occupied square. No arbitrary or already Corrupted cell.",
+        "post_roll_effects": [
+          "Persist a Corrupted cell with its original source action, scene and event. Ordinary Girls occupying it cannot declare or roll Check Your Sensors."
+        ],
+        "mandatory_followups": [
+          "Fouling footing, the terrain Tag, Handler communication boundaries, and Withdraw Into Your Shell require additional ports."
+        ],
+        "handler_or_gm_intervention": "The direct terrain effect requires the original Gorgon controller. General Handler or public map viewing does not reveal hidden provenance.",
+        "test_fixture_ids": [
+          "tests/rules/test_gorgon_runtime.py::test_sentinel_native_corruption_preserves_position_owner_privacy_and_restart"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_gorgon_runtime.py::test_sentinel_native_corruption_preserves_position_owner_privacy_and_restart"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
