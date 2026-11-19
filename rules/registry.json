@@ -17464,6 +17464,7 @@
         "tests/rules/test_trainer_phrases.py::test_play_gentle_requires_the_original_girls_flirt_with_the_issued_target",
         "tests/rules/test_trainer_phrases.py::test_heel_ends_the_prior_sit_and_waits_for_real_movement_to_the_issuer",
         "tests/rules/test_trainer_phrases.py::test_hunt_requires_its_exact_assault_and_earns_one_engage_maneuver",
+        "tests/rules/test_trainer_phrases.py::test_trainer_installs_one_uninstalled_phrase_during_actual_punishment",
         "tests/rules/test_trainer_phrases.py::test_protect_keeps_its_position_and_redirects_actual_damage_to_its_owners_asset"
       ],
       "m2_play_id": null,

@@ -825,3 +825,72 @@ def test_protect_keeps_its_position_and_redirects_actual_damage_to_its_owners_as
     assert actual.sheets["2"].assets == pending.sheets["2"].assets
     assert next(x for x in actual.sheets["3"].assets if x.id == payment).damaged
     assert game.inspect(FOUR, assault)["state"] == "complete" and game.dice.calls == 1
+
+
+def test_trainer_installs_one_uninstalled_phrase_during_actual_punishment(ledger):
+    from test_harpy_flirt import submit_form
+
+    from girlframe.engine.m3_punishments import Details
+    from girlframe.services.m3_missions import MissionService
+    from girlframe.services.m3_punishments import PunishmentService
+
+    _, game = ready(ledger)
+    create_trainer(ledger, start_with_speak=False)
+    missions = MissionService(ledger)
+    offered = missions.offer(ADMIN, "training-punishment-mission", "Synthetic test mission", (2, 3))
+    identity = offered["id"]
+    missions.respond(PLAYER, "training-mission-yes-2", identity, 1, "accept")
+    missions.respond(OTHER, "training-mission-yes-3", identity, 2, "accept")
+    missions.start(ADMIN, "training-mission-start", identity, 3)
+    missions.end(ADMIN, "training-mission-end", identity, 4, False)
+    work = next(x["id"] for x in missions.get(ADMIN, identity)["work"] if x["subject"] == 3)
+    service = PunishmentService(ledger)
+    before = service.get(ADMIN, work)
+    assert set(dict(before["conditioning_phrases"])) >= {"speak", "protect"}
+    assert "conditioning_phrases" not in service.get(OTHER, work)
+    with pytest.raises(WorkflowError):
+        service.apply(
+            OTHER,
+            "not-the-trainer",
+            work,
+            before["revision"],
+            before["game_revision"],
+            Details(kind="stimulant_injection"),
+            conditioning_phrase="speak",
+        )
+
+    inbox = InboxService(ledger)
+
+    async def select(click):
+        item = next(x for x in inbox.items(ADMIN) if x.identity == work)
+        await InboxView(inbox, 1).route(click, item)
+        view = click.edit_original_response.call_args.kwargs["view"]
+        await view.open_item(click, "stimulant_injection")
+
+    key = asyncio.run(
+        submit_form(ADMIN, select, dict(confirm=("yes",), conditioning_phrase=("speak",)), 47420)
+    )
+    ledger.engine.dispose()
+    applied = service.apply(
+        ADMIN,
+        key,
+        work,
+        before["revision"],
+        before["game_revision"],
+        Details(kind="stimulant_injection"),
+        conditioning_phrase="speak",
+    )
+    assert applied["state"] == "resolved" and state(game).sheets["3"].heat == 7
+    installations = [
+        entry for entry in state(game).handler_persona.conditioning if "speak" in entry.phrases
+    ]
+    assert len(installations) == 1 and installations[0].pilot.entity == "3"
+    made = game.issue_order(
+        ADMIN, "punishment-speak-order", 900, 3, "Report.", conditioning_phrase="speak"
+    )
+    worker, gateway = GameWorker(game), Gateway()
+    tick(worker, gateway, 3)
+    answer(game, OTHER, "order_response", options=("obedient",))
+    answer(game, OTHER, SPEAK, text="This is the original Girl's answer.")
+    answer(game, ADMIN, HEAR, flag=True)
+    assert game.inspect(OTHER, made["action_id"])["state"] == "complete"

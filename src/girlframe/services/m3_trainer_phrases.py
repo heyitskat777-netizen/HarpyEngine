@@ -78,6 +78,11 @@ def _installation(
     if saved.source_event == persona.source_event:
         return saved.source_event
     if snapshot is not None:
+        work = _punishment_installation(
+            game, c, snapshot, original.owner, target, phrase, saved.source_event
+        )
+        if work is not None:
+            return saved.source_event
         from girlframe.engine.m3_handler_private_scene import records as private_scenes
         from girlframe.services.m3_handler_private_scene import TRAINER_EVENT
 
@@ -140,6 +145,138 @@ def _installation(
     ):
         return None
     return saved.source_event
+
+
+def _punishment_installation(
+    game: "GameService",
+    c: Connection,
+    snapshot: GameState,
+    handler: int,
+    target: ActorRef,
+    phrase: str,
+    event: str,
+) -> str | None:
+    fact = next(
+        (
+            x
+            for x in snapshot.facts
+            if x.get("kind") == "trainer_punishment_install"
+            and x.get("event") == event
+            and x.get("phrase") == phrase
+            and x.get("target") == target.token
+        ),
+        None,
+    )
+    if fact is None:
+        return None
+    work = t.m3["m3_required_work"]
+    return c.scalar(
+        sa.select(work.c.id)
+        .join(
+            t.events,
+            sa.and_(
+                t.events.c.campaign_id == work.c.campaign_id,
+                t.events.c.id == work.c.event_id,
+            ),
+        )
+        .where(
+            work.c.campaign_id == game.store.campaign_id,
+            work.c.id == fact["work"],
+            work.c.event_id == event,
+            work.c.kind == "punishment",
+            work.c.state == "resolved",
+            work.c.subject_id == target.entity,
+            t.events.c.kind == "m3.punishment_applied",
+            t.events.c.actor_id == str(handler),
+            sa.func.json_extract(work.c.body_json, "$.applied_event") == event,
+            sa.func.json_extract(work.c.body_json, "$.character") == target.incarnation,
+        )
+    )
+
+
+def punishment_training(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    viewer: int,
+    row: dict[str, Any],
+) -> tuple[ActorRef, str, tuple[tuple[str, str], ...]] | None:
+    persona = state.handler_persona
+    subject = int(row["subject_id"])
+    if (
+        persona is None
+        or viewer != state.handler
+        or row["owner_id"] != str(viewer)
+        or str(subject) not in state.sheets
+        or active_book(game, c, state, book="Trainer", rule=RULE) is None
+    ):
+        return None
+    target = current_ref(state, subject)
+    scenes = t.m2["m2_scenes"]
+    scope = sa.select(scenes.c.channel_id).where(
+        scenes.c.campaign_id == game.store.campaign_id,
+        scenes.c.open.is_(True),
+    )
+    if row["scene_id"]:
+        scope = scope.where(scenes.c.id == row["scene_id"])
+    shared = []
+    for channel in c.scalars(scope):
+        scene = game.scene(c, channel)
+        if not {viewer, subject} <= set(scene["participants"]):
+            continue
+        try:
+            game.pilot_cast(c, state, scene, owners=(viewer, subject))
+        except WorkflowError:
+            continue
+        shared.append(scene["id"])
+    if len(shared) != 1:
+        return None
+    installed = {
+        phrase
+        for entry in persona.conditioning
+        if entry.pilot == target
+        for phrase in entry.phrases
+    }
+    return (
+        target,
+        shared[0],
+        tuple(
+            (phrase, label) for phrase, label in PHRASE_LABELS.items() if phrase not in installed
+        ),
+    )
+
+
+def install_during_punishment(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    viewer: int,
+    row: dict[str, Any],
+    phrase: str,
+    event: str,
+) -> None:
+    course = punishment_training(game, c, state, viewer, row)
+    if course is None or phrase not in dict(course[2]):
+        raise WorkflowError(
+            "Choose an uninstalled phrase for the original Girl in this Trainer's Punishment"
+        )
+    target, scene, _ = course
+    persona = state.handler_persona
+    assert persona is not None
+    installment = Conditioning(pilot=target, phrases=(phrase,), source_event=event)
+    state.handler_persona = persona.model_copy(
+        update=dict(conditioning=(*persona.conditioning, installment))
+    )
+    state.facts.append(
+        dict(
+            kind="trainer_punishment_install",
+            event=event,
+            work=row["id"],
+            target=target.token,
+            scene=scene,
+            phrase=phrase,
+        )
+    )
 
 
 def training_target(

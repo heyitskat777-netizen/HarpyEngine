@@ -1466,6 +1466,17 @@ competing protections, damage without an Asset, and damage outside this
 battle service have separate adjudication needs.
 [Protect and private installation cases](../../tests/rules/test_trainer_phrases.py)
 
+The original Trainer can also install one new phrase when applying an
+ordinary Punishment in the original shared scene, based on `e369d15`.
+The installation is recorded with the same event as the resolved
+Punishment. Delegation, unresolved surgery and career endings have
+their own workflows. One case passed in 4.21 seconds using
+`python -m pytest -q --tb=short tests/rules/test_trainer_phrases.py -k installs_one`
+with `PYTHONPATH="$PWD/src"`. It verified private selection, rejection
+of another owner's attempt, a single installation on replay after restart,
+the ordinary Punishment cost, and subsequent activation by a native Order.
+[Punishment installation case](../../tests/rules/test_trainer_phrases.py)
+
 ### Scientist's initial laboratory Project step
 
 Base `06aa08cbeb9592c1d3d1a86dbd081f710098d371`. Head to the Lab can

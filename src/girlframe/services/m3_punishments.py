@@ -478,6 +478,11 @@ class PunishmentService:
                     and (key != "disclosed" or proposal["kind"] == "strict_regulations")
                 ]
             if row["kind"] == "punishment" and row["state"] != "resolved":
+                from girlframe.services.m3_trainer_phrases import punishment_training
+
+                training = punishment_training(self.game, c, state, viewer.user_id, row)
+                if training is not None and training[2]:
+                    result["conditioning_phrases"] = training[2]
                 bundle = self._bundle(c, row)
                 result["causes"] = [self._body(x)["reason"] for x in bundle]
                 result["required_severity"] = body.get("required_severity")
@@ -580,6 +585,7 @@ class PunishmentService:
         details: rules.Details,
         *,
         execution_account: str | None = None,
+        conditioning_phrase: str | None = None,
     ) -> dict[str, Any]:
         details = rules.Details.model_validate_json(details.model_dump_json())
 
@@ -589,6 +595,15 @@ class PunishmentService:
             if row["kind"] != "punishment":
                 raise WorkflowError("Choose the typed resolver for this required task.")
             severity = rules.validate(details)
+            if conditioning_phrase is not None and details.kind in (
+                "passing_responsibility",
+                "lobotomization",
+                "execution",
+                "indefinite_imprisonment",
+            ):
+                raise WorkflowError(
+                    "Install a phrase during the Trainer's own Punishment of an active Girl"
+                )
             required_severity = self._body(row).get("required_severity")
             if required_severity is not None and severity != required_severity:
                 raise WorkflowError(
@@ -771,6 +786,12 @@ class PunishmentService:
                 from girlframe.services.m3_role_punishments import mark_pc_effect
 
                 mark_pc_effect(result.state, role_case, event_id, execution_account or "")
+            if conditioning_phrase is not None:
+                from girlframe.services.m3_trainer_phrases import install_during_punishment
+
+                install_during_punishment(
+                    self.game, c, result.state, viewer.user_id, row, conditioning_phrase, event_id
+                )
             if details.kind == "beating" and details.body_part is None:
                 from girlframe.engine.m3_actor_bonds import current_ref
                 from girlframe.engine.m3_appearance_matrix import record_damage
@@ -986,7 +1007,12 @@ class PunishmentService:
                 "game_revision": game_revision,
                 "details": details.model_dump(mode="json"),
                 "execution_account": execution_account,
-            },
+            }
+            | (
+                {"conditioning_phrase": conditioning_phrase}
+                if conditioning_phrase is not None
+                else {}
+            ),
             operation,
             execution=True,
         )

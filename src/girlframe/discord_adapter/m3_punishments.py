@@ -217,11 +217,26 @@ async def open_details(
         fields.append(
             Field("confirm", "Confirm the printed effect", (("yes", "Apply " + KINDS[kind][0]),))
         )
+    if data.get("conditioning_phrases") and kind not in (
+        "passing_responsibility",
+        "lobotomization",
+        "execution",
+        "indefinite_imprisonment",
+    ):
+        fields.append(
+            Field(
+                "conditioning_phrase",
+                "Install a Conditioning Phrase (optional)",
+                tuple(data["conditioning_phrases"]),
+                minimum=0,
+                required=False,
+            )
+        )
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
         details: dict[str, Any] = {"kind": kind}
         for field in fields:
-            if field.key in ("operation", "confirm"):
+            if field.key in ("operation", "confirm", "conditioning_phrase"):
                 continue
             value = values[field.key]
             if field.key != "identities" and isinstance(value, tuple):
@@ -247,6 +262,11 @@ async def open_details(
             data["revision"],
             data["game_revision"],
             Details(**details),
+            **(
+                {"conditioning_phrase": values["conditioning_phrase"][0]}
+                if values.get("conditioning_phrase")
+                else {}
+            ),
         )
         return (
             "Saved: "
