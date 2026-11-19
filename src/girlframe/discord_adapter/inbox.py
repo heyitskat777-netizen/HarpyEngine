@@ -1498,6 +1498,15 @@ class InboxView(discord.ui.View):
                 item.task.split(":", 1)[1],
                 item.identity,
             )
+        elif item.task == "m3_harpy_advancement":
+            from girlframe.discord_adapter.m3_harpy_advancements import (
+                open_advancement as open_harpy_advancement,
+            )
+            from girlframe.services.m3_harpy_advancements import HarpyAdvancementService
+
+            await open_harpy_advancement(
+                interaction, HarpyAdvancementService(self.service.store), item.identity
+            )
         elif item.task in ("m3_harpy_physical", "m3_harpy_help"):
             from girlframe.discord_adapter.m3_harpy_physical import (
                 open_physical,

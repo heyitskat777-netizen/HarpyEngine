@@ -659,6 +659,12 @@ class ActorPlayService:
                 "result": {},
                 "choices": {},
             }
+            if actor.girl == "harpy" and prepared.play in ("keep_your_head", "engage"):
+                from girlframe.services.m3_harpy_advancements import sparrows_source
+
+                source = sparrows_source(self.game, c, state, ref, viewer.user_id)
+                if source is not None:
+                    data["harpy_sparrows"] = source
             from girlframe.engine.m3_handler_consequences import active_handler
 
             handler = active_handler(state)
@@ -1455,8 +1461,10 @@ class ActorPlayService:
             self.finish(c, state, action)
         elif kind == "actor_keep" and owner == actor.controller:
             from girlframe.services.m3_enforcer_requisitions import keep_extras
+            from girlframe.services.m3_harpy_advancements import choose_sparrows
 
             extra = keep_extras(self.game, c, state, action, answer)
+            choose_sparrows(action, answer.fields.get("harpy_sparrows"))
             discipline = answer.fields.get("soldier_do_not_think")
             embrace_selection = answer.fields.get("soldier_embrace")
             level = action["data"]["result"]["tier"]
@@ -1479,6 +1487,7 @@ class ActorPlayService:
                         not in (
                             "soldier_do_not_think",
                             "soldier_embrace",
+                            "harpy_sparrows",
                         )
                     }
                 }
@@ -1602,6 +1611,10 @@ class ActorPlayService:
             result["copy_identity_cap"] = 1
         if row["kind"] == "actor_keep" and own and self._soldier_surgery(state, actor.ref):
             result["soldier_surgery"] = True
+        if row["kind"] == "actor_keep" and own and action["data"].get("harpy_sparrows"):
+            from girlframe.engine.m3_harpy_advancements import SPARROWS_CHOICES
+
+            result["harpy_sparrows"] = SPARROWS_CHOICES
         if action["data"].get("dive") and row["kind"].startswith("dive_"):
             from girlframe.services.m3_dive import projection
 

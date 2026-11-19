@@ -2588,13 +2588,35 @@ class InboxService:
             from girlframe.services.m3_physical import PhysicalService
 
             physical = PhysicalService(self.store)
+            from girlframe.engine.m3_harpy_advancements import sparrows
             from girlframe.services.m3_battle import BattleService
             from girlframe.services.m3_battle_dormant import DormantService
             from girlframe.services.m3_careers import CareerService
             from girlframe.services.m3_handler_creation import HandlerCreationService
+            from girlframe.services.m3_harpy_advancements import HarpyAdvancementService
             from girlframe.services.m3_harpy_defeat import HarpyDefeatService
             from girlframe.services.m3_harpy_physical import HarpyPhysicalService
 
+            for advancing in HarpyAdvancementService(self.store).tasks(connection, canon, viewer):
+                available = sparrows(canon, advancing) is None
+                items.append(
+                    InboxItem(
+                        "harpy-advancement:" + advancing.entity,
+                        "harpy_advancement",
+                        advancing.entity,
+                        canon.revision,
+                        "plays",
+                        "Harpy advancements",
+                        "Original controller",
+                        "pending" if available else "resolved",
+                        available,
+                        False,
+                        "Review your Harpy's available advancements.",
+                        "",
+                        "Open advancements",
+                        task="m3_harpy_advancement",
+                    )
+                )
             harpy_service = HarpyDefeatService(self.store)
             for harpy_task in harpy_service._tasks(connection, viewer):
                 if (

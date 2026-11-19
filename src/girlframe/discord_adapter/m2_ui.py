@@ -323,6 +323,16 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
             fields = [menu("options", "Choose one positive trait", traits)]
         else:
             fields = [text("text", "Take a Tag: write its label")]
+        if decision.get("harpy_sparrows"):
+            fields.append(
+                Field(
+                    "fields.harpy_sparrows",
+                    "Choose an extra Sparrows effect",
+                    decision["harpy_sparrows"],
+                    0,
+                    required=False,
+                )
+            )
         if decision.get("cute_uniforms"):
             fields.append(
                 Field(

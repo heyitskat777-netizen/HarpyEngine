@@ -43,6 +43,16 @@ async def open_engage(interaction: discord.Interaction, game: GameService, ident
         ),
     ]
     vehicles = detail.get("wyvern_vehicles", [])
+    if detail.get("harpy_sparrows"):
+        fields.append(
+            Field(
+                "harpy_sparrows",
+                "Choose an extra Sparrows effect",
+                detail["harpy_sparrows"],
+                0,
+                required=False,
+            )
+        )
     if vehicles:
         fields.append(
             Field(
@@ -84,6 +94,8 @@ async def open_engage(interaction: discord.Interaction, game: GameService, ident
             selected_fields["wyvern_vehicle"] = values["wyvern_vehicle"][0]
         if values.get("untouchable_tag"):
             selected_fields["untouchable_tag"] = values["untouchable_tag"][0]
+        if values.get("harpy_sparrows"):
+            selected_fields["harpy_sparrows"] = values["harpy_sparrows"][0]
         answer = ChoiceAnswer(
             options=choices,
             fields=selected_fields,

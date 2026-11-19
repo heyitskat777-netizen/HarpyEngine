@@ -223,6 +223,7 @@ def apply(
     answer: ChoiceAnswer,
 ) -> None:
     from girlframe.services.m3_battle import damage_actor
+    from girlframe.services.m3_harpy_advancements import choose_sparrows
 
     extra = row["kind"] == "engage_assault_extra"
     if row["kind"] not in ("engage_maneuvers", "engage_assault_extra"):
@@ -232,6 +233,7 @@ def apply(
     actor = resolve(state, ref, profiles(c, game.store.campaign_id), require_current_profile=False)
     if int(row["actor_id"]) != actor.controller or actor.controller != int(action["actor_id"]):
         raise WorkflowError("Only the actual acting body's human chooses its maneuvers")
+    choose_sparrows(action, answer.fields.get("harpy_sparrows"))
     from girlframe.engine import m3_untouchable as untouchable
     from girlframe.services.m3_untouchable import entitlement
 
@@ -246,7 +248,7 @@ def apply(
             "fields": {
                 k: v
                 for k, v in answer.fields.items()
-                if k not in ("untouchable_tag", "wyvern_vehicle")
+                if k not in ("untouchable_tag", "wyvern_vehicle", "harpy_sparrows")
             }
         }
     )
@@ -384,6 +386,7 @@ def projection(
     )
     count = 0 if extra else {"low": 1, "mid": 2, "high": 3}[action["data"]["result"]["tier"]]
     from girlframe.engine.m2 import MANEUVERS
+    from girlframe.engine.m3_harpy_advancements import SPARROWS_CHOICES
     from girlframe.services.m3_wyvern_combat import crushing_options
 
     meta = action["data"].get("engage") or action["data"]["battle"]
@@ -400,6 +403,9 @@ def projection(
 
         learned = consumed_no_one_better(game, c, state, action)
     return dict(
+        harpy_sparrows=SPARROWS_CHOICES
+        if not extra and action["data"].get("harpy_sparrows")
+        else (),
         **(
             {"learned_rider": "No One Better: actual spent lesson, one extra Engage option"}
             if learned

@@ -178,6 +178,7 @@ tests/rules/test_rebel_base_capture.py
 tests/rules/test_rebel_bond_attack.py
 tests/rules/test_rebel_frame_theft.py
 tests/rules/test_foundation_attack.py
+tests/rules/test_harpy_advancements.py
 tests/rules/test_handler_conversion.py
 tests/rules/test_erratic_gorgon.py
 tests/rules/test_journalist.py

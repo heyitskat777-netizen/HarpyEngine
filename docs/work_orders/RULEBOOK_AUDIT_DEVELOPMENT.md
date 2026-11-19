@@ -1740,6 +1740,34 @@ If the target's body ends independently before the source strike,
 closing the original effect still needs dedicated source handling.
 [High Budget p. 149](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=151) · [Native cases](../../tests/rules/test_foundation_attack.py)
 
+The broader Foundation selection passed **71 tests in 135.89
+seconds**, including Battle, required Defeat, the Rebel siege,
+Strain, Inbox and release recovery. A detached full run of
+`3c73518bfd88a3f7ecfade03351cfe083a6406bb` collected **3,804**.
+
+### Harpy advancement capacity and Sparrows
+
+Base `3c73518bfd88a3f7ecfade03351cfe083a6406bb`. The original living
+Harpy's controller can select Sparrows from the private Inbox
+under its separate candidate approval. The engine preserves one
+starting slot, a second after actual natural High Void, and a
+third after an actual Void Endgame. A previously earned slot
+survives later severity changes. The receipt is bound to the
+original external actor and source event. Keep Your Head and
+Engage the Enemy each offer the printed extra choice alongside
+the ordinary result to the owner. Learning it after a Play
+starts leaves that Play's saved entitlements intact. The other
+Harpy advancements still need their own effects.
+
+**74 Harpy, Engage, registry and Inbox checks passed in 85.05
+seconds.** A later **64 checks passed in 161.97 seconds** with
+the converted Harpy, Void, retained-resource and Compliance
+Virus cases. The two selections overlap. The source audit also
+linked current native evidence for the already available
+Apometanoia and standard Harpy Order exemption. The separate
+A Human Mask branch remains open.
+[Harpy pp. 177–181](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=179) · [Advancement tests](../../tests/rules/test_harpy_advancements.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab
