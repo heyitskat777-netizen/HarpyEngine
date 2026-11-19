@@ -34,6 +34,7 @@ from girlframe.engine.m3_rebel_base_capture import RULE as REBEL_BASE_CAPTURE
 from girlframe.engine.m3_rebel_bond_attack import RULE as REBEL_BOND_ATTACK
 from girlframe.engine.m3_rebel_defection import RULE as REBEL_DEFECTION
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
+from girlframe.engine.m3_rebel_frame_theft import RULE as REBEL_FRAME_THEFT
 from girlframe.engine.m3_rebel_strafe import RULE as REBEL_STRAFE
 from girlframe.engine.m3_rebel_taunt import RULE as REBEL_TAUNT
 from girlframe.engine.m3_rebel_voice import RULE as REBEL_VOICE
@@ -94,6 +95,7 @@ SUPPORTED = frozenset(
         REBEL_HUNT,
         REBEL_BASE_CAPTURE,
         REBEL_BOND_ATTACK,
+        REBEL_FRAME_THEFT,
         "strain.rebellion.low.5.2",
         REBEL_PROTEST,
         REBEL_ESCAPE_OFFER,
@@ -341,6 +343,10 @@ def apply(
             choice.account.strip(),
         )
         world = state.world
+    elif rule == REBEL_FRAME_THEFT:
+        fields(choice, {"target", "victim"})
+        if not choice.target or not choice.victim or source_event is None or period_id is None:
+            raise ValueError("Choose the actual base and living Rebel for the original Frame draw")
     elif rule == ORBITAL_THREAT:
         from girlframe.engine.m3_orbital_threat import introduce
 

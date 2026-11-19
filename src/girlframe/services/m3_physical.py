@@ -16,6 +16,7 @@ from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import fingerprint, owned_refs, resolve
 from girlframe.engine.m3_girl_runtime_state import has_rule
 from girlframe.engine.m3_physical_state import CockpitAction, FrameLock, InitialPlacement, Review
+from girlframe.engine.m3_rebel_frame_theft import missing
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
@@ -125,6 +126,7 @@ class PhysicalService:
                 state, ref, profiles(c, self.store.campaign_id), require_current_profile=False
             )
             placement = next((x for x in state.placements if x.actor == ref), None)
+            stolen_frame = missing(state, ref, actor.frame_instance)
             return dict(
                 game_revision=state.revision,
                 pending_id=next(
@@ -159,7 +161,9 @@ class PhysicalService:
                         )
                     )
                 ],
+                stolen_frame=stolen_frame,
                 can_record_unknown=placement is not None
+                and not stolen_frame
                 and placement.custody is None
                 and placement.occupied_frame_owner is None
                 and not any(

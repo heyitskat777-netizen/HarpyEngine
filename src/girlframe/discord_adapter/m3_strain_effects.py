@@ -36,6 +36,7 @@ from girlframe.engine.m3_rebel_base_capture import RULE as REBEL_BASE_CAPTURE
 from girlframe.engine.m3_rebel_bond_attack import RULE as REBEL_BOND_ATTACK
 from girlframe.engine.m3_rebel_defection import RULE as REBEL_DEFECTION
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
+from girlframe.engine.m3_rebel_frame_theft import RULE as REBEL_FRAME_THEFT
 from girlframe.engine.m3_rebel_strafe import RULE as REBEL_STRAFE
 from girlframe.engine.m3_rebel_taunt import RULE as REBEL_TAUNT
 from girlframe.engine.m3_rebel_voice import RULE as REBEL_VOICE
@@ -126,6 +127,9 @@ async def open_effect(
         return
     if data.get("awaiting_rebel_bond"):
         await reply(interaction, "The original betrayal remains open in the private Inbox.")
+        return
+    if data.get("awaiting_frame_theft"):
+        await reply(interaction, "The original Frame theft is pending in the private Inbox.")
         return
     if data["rule_id"] == VOID_SPREAD:
         await open_spread(interaction, service, data, identity)
@@ -367,6 +371,17 @@ def effect_form(
             parking = at_base(state, base)
             if parking:
                 overrun_bases[base.id] = (base, parking)
+    from girlframe.engine.m3_rebel_frame_theft import base as theft_base
+    from girlframe.engine.m3_rebel_frame_theft import thief as theft_actor
+
+    theft_bases = {}
+    if rule == REBEL_FRAME_THEFT:
+        for location in regional_locations:
+            try:
+                eligible_base = theft_base(state, location["id"])
+            except ValueError:
+                continue
+            theft_bases[eligible_base.id] = eligible_base
 
     masks = (
         {
@@ -743,6 +758,30 @@ def effect_form(
                     "overrun_frame", "Which original parked Frame is seized?", tuple(held) or WAIT
                 ),
             ]
+        if rule == REBEL_FRAME_THEFT:
+            fields.append(
+                Field(
+                    "theft_base",
+                    "Which actual base does the Rebel enter?",
+                    tuple((site.id, site.name) for site in theft_bases.values()) or WAIT,
+                )
+            )
+            selected_site = theft_bases.get(values.get("theft_base", ("",))[0])
+            eligible_thieves = []
+            if selected_site is not None:
+                for pilot in world["pilots"]:
+                    try:
+                        thief = theft_actor(state, pilot["id"], selected_site.cell)
+                    except ValueError:
+                        continue
+                    eligible_thieves.append((thief.id, thief.name))
+            fields.append(
+                Field(
+                    "frame_thief",
+                    "Which original Rebel is on foot here?",
+                    tuple(eligible_thieves) or WAIT,
+                )
+            )
         if rule == REBEL_BOND_ATTACK:
             assert state.world is not None
             fields += [
@@ -1473,6 +1512,8 @@ def effect_form(
                 victim=values["overrun_rebel"][0],
                 captured_frame=values["overrun_frame"][0],
             )
+        if rule == REBEL_FRAME_THEFT:
+            payload.update(target=values["theft_base"][0], victim=values["frame_thief"][0])
         if rule == REBEL_BOND_ATTACK:
             payload.update(
                 target=values["betrayal_bond"][0], faction_id=values["betrayal_faction"][0]
@@ -1737,6 +1778,8 @@ def effect_form(
             return "The base fell. Prisoners are free and the parked Frame is in Rebel custody."
         if rule == REBEL_BOND_ATTACK:
             return "The original NPC's attack is pending in the private Inbox."
+        if rule == REBEL_FRAME_THEFT:
+            return "The original Rebel can attempt the theft in the source scene."
         if rule == PUBLIC_APPEARANCE:
             return "The original Cadre can record attendance from their private Inbox."
         if rule == HARPY_RAID:

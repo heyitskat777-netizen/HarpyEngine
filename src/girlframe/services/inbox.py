@@ -2976,8 +2976,33 @@ class InboxService:
             from girlframe.services.m3_rebel_ambush import visible as visible_ambushes
             from girlframe.services.m3_rebel_bond_attack import visible as visible_betrayals
             from girlframe.services.m3_rebel_escape_offer import visible as visible_escape_offers
+            from girlframe.services.m3_rebel_frame_theft import choices as theft_choices
+            from girlframe.services.m3_rebel_frame_theft import visible as visible_thefts
 
             journalism = JournalistService(GameService(self.store))
+            for frame_theft in visible_thefts(canon, viewer):
+                can_act = bool(theft_choices(frame_theft, viewer))
+                items.append(
+                    InboxItem(
+                        "rebel-frame-theft:" + frame_theft.id,
+                        "work",
+                        frame_theft.id,
+                        canon.revision,
+                        "off_duty",
+                        "Original Frame theft",
+                        "Original participants",
+                        "pending"
+                        if can_act
+                        or not (frame_theft.lost or frame_theft.stopped_by or frame_theft.returned)
+                        else "resolved",
+                        can_act,
+                        False,
+                        "Review the original Frame theft.",
+                        "",
+                        "Open Frame theft",
+                        task="m3_rebel_frame_theft",
+                    )
+                )
             for betrayal in visible_betrayals(canon, viewer):
                 pending = betrayal.finished is None
                 can_act = (

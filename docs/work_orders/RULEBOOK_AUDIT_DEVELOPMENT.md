@@ -38,8 +38,8 @@ Off-Duty resumes only at its genuine completion boundary.
 | High Rebellion 3 | Reveal the original NPC Bond, retain that actor's history, and open an actual attack on the Handler that calls for Cadre intervention. | Have the fictional Director choose an actual Rebel faction and issue the order to demonstrate support. Resolve the actual public show of support without borrowing software Director authority. [Rulebook p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) |
 
 The registry tracks each source's current scope and its acceptance tests.
-The core table columns awaiting effects are High Rebellion 1.1 and 6.1
-and High Budget 5.2. Rebellion Endgames 3–8 and Budget
+The core table columns awaiting effects are High Rebellion 1.1 and
+High Budget 5.2. Rebellion Endgames 3–8 and Budget
 Endgames 1–2 have no effect resolver. Current subset limitations include
 the High Budget hearing's Severe finding and the High Void bunk's separate
 contact Play. The individual receipts below retain the rest of the source
@@ -999,3 +999,24 @@ eight modules. The implemented path stops the attack through a fatal
 Core strike. Nonlethal intervention, the optional Rebel Pilot identity,
 and a successful assassination with Handler succession remain open.
 [High Rebellion p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) · [Betrayal test](../../tests/rules/test_rebel_bond_attack.py)
+
+## High Rebellion random Frame theft
+
+The base is `f10cad06cebdce23233fef696e40fadd147ac4fa`. High Rebellion
+6.1 saves one draw from the original available Frame instances. The
+independently controlled Rebel attempts the theft in the official scene
+with the selected Frame's original Girl. An original defender can stop it
+with a completed native Engage that pins the thief or drives them back.
+If the defenders all let the thief go and none has stopped the attack, the
+Handler can record the original Frame as lost. This removes the Frame from
+the map, preserves the Girl's body and sheet, and makes ordinary placement
+unavailable until the genuine recovery. The original Rebel can offer the
+same Frame back and the original Girl can recover it at the original site.
+
+All 70 selected tests passed in 58.29 seconds. They cover native private
+Inbox, unauthorized and stale controls, retry, reload, genuine interception,
+Off-Duty, and loss and recovery of the same instance. Static checks passed
+on eleven source files. This scope uses a parked Frame at an operational
+base, the original owner present and an existing on-foot Rebel. Other
+locations, occupied Frames and recovery by force remain open.
+[High Rebellion p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) · [Theft test](../../tests/rules/test_rebel_frame_theft.py)

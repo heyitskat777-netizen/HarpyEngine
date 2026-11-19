@@ -14,6 +14,7 @@ from girlframe.engine.m3_physical_state import (
     ParkedFrame,
     Placement,
 )
+from girlframe.engine.m3_rebel_frame_theft import missing
 
 
 def validate(
@@ -25,6 +26,8 @@ def validate(
     actor = resolve(state, proposal.actor, bindings, require_current_profile=False)
     if actor.rules != "girl_frame" or actor.frame_instance != proposal.frame_instance:
         raise ValueError("STALE_PLACEMENT: recover the actual original character and Frame")
+    if missing(state, proposal.actor, proposal.frame_instance):
+        raise ValueError("Recover the stolen original Frame through its private Inbox workflow")
     previous = next((x for x in state.placements if x.actor == proposal.actor), None)
     if previous is not None:
         replacement = previous.frame_instance != actor.frame_instance
