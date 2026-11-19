@@ -1209,6 +1209,15 @@ class InboxView(discord.ui.View):
             await open_order(
                 interaction, SuccubusService(GameService(self.service.store)), item.identity
             )
+        elif item.task in ("m3_void_leave", "m3_void_leave_poll"):
+            from girlframe.discord_adapter.m3_void_leave import open_leave, open_poll
+            from girlframe.services.m3_void_leave import LeaveService
+
+            leave_service = LeaveService(self.service.store)
+            if item.task == "m3_void_leave":
+                await open_leave(interaction, leave_service, item.identity)
+            else:
+                await open_poll(interaction, leave_service, item.identity)
         elif item.task == "m3_void_lab_portal":
             from girlframe.discord_adapter.m3_void_lab_portal import open_lab
             from girlframe.services.m3_void_lab_portal import LabPortalService

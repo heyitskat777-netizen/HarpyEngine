@@ -240,6 +240,11 @@ async def open_period(interaction: discord.Interaction, service: OffDutyService)
                 from girlframe.services.m3_handler_advancements import HandlerAdvancementService
 
                 await open_advancement(current, HandlerAdvancementService(service.store), identity)
+            elif saved["body"]["rule_id"] == "strain.void.endgame.1":
+                from girlframe.discord_adapter.m3_void_leave import open_leave
+                from girlframe.services.m3_void_leave import LeaveService
+
+                await open_leave(current, LeaveService(service.store), identity)
             elif saved["body"]["rule_id"] == "strain.void.endgame.2":
                 from girlframe.discord_adapter.m3_void_lab_portal import open_lab
                 from girlframe.services.m3_void_lab_portal import LabPortalService

@@ -810,3 +810,23 @@ use one authored table and the approved custom NPC Tag effect shape.
 Named-track severity variants, free-form mechanical effects, additional
 printed trigger consumers and off-period rift arrivals remain open. No independent review or runtime approval was issued.
 [Director phone powers p. 190](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=192) · [Phone tests](../../tests/rules/test_director_strain_calls.py)
+
+## Void Endgame leave and table decision
+
+The base is `ba1a4a76aedcdbf693907390a60a175ce342cab9`. The original
+Handler selects a hometown or an actual bonded NPC's hometown outside
+Quadrant 12 and leaves the local map for the next real Off-Duty. Their
+separate scene must finish through their own private control. Other
+participants retain their actual recovery work. The Handler returns to
+her prior position when Off-Duty ends. Each original player receives a
+private chance to give a preference. The campaign's human table authority
+records the final choice after all original voters respond. A closed game
+blocks new Plays, Off-Duty and missions. Private recovery and reopening
+remain available.
+
+All 131 selected tests passed, including both table outcomes, original
+player and Handler authority, wrong owner, stale controls, safety pause,
+replay and restart. The chosen destination is an attested hometown. It
+is not a newly simulated map. An overlapping Handler loss or replacement
+remains subject to independent review before this workflow can progress.
+[Void Endgame p. 144](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=146) · [Leave tests](../../tests/rules/test_void_leave.py)

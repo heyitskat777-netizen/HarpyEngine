@@ -314,8 +314,10 @@ class OffDutyService:
         )
         from girlframe.services.m3_handler_retirement import require_successor
         from girlframe.services.m3_quadrant_loss import require_aftermath_clear
+        from girlframe.services.m3_void_leave import require_story
 
         require_aftermath_clear(state)
+        require_story(state)
         require_successor(state)
         require_gorgon_costs_clear(self.game, c)
         if self.game.pending_actions(c):

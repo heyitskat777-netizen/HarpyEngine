@@ -199,6 +199,9 @@ class MissionService:
         return value
 
     def _not_off_duty(self, c: Connection) -> None:
+        from girlframe.services.m3_void_leave import require_story
+
+        require_story(load_state(c, self.store.campaign_id))
         table = t.m3["m3_off_duty"]
         if c.scalar(
             sa.select(table.c.id).where(

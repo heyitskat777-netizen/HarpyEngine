@@ -76,6 +76,9 @@ class GameService:
                     "UNSUPPORTED_RULE: resolve the Director's Handler/Girl rules context first."
                 )
             state = load_state(c, self.store.campaign_id)
+            from girlframe.services.m3_void_leave import require_story
+
+            require_story(state)
             if (
                 state.sheets
                 and HandlerService(self.store).current(c)[1].handler_id != state.handler

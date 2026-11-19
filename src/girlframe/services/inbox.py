@@ -2961,6 +2961,7 @@ class InboxService:
             from girlframe.engine.m3_rebel_strafe import passes as rebel_passes
             from girlframe.engine.m3_rebel_taunt import taunts as rebel_taunts
             from girlframe.engine.m3_rebel_voice import voices as rebel_voices
+            from girlframe.engine.m3_void_leave import leaves as void_leaves
             from girlframe.engine.m3_void_revelation import revelations
             from girlframe.engine.m3_void_signal import signals as void_signals
             from girlframe.services.m3_handler_tags import HandlerTagService
@@ -2969,6 +2970,33 @@ class InboxService:
             from girlframe.services.m3_rebel_escape_offer import visible as visible_escape_offers
 
             journalism = JournalistService(GameService(self.store))
+            for leave in void_leaves(canon):
+                requester = leave.handler.entity == user
+                voter = next((x for x in leave.voters if x.entity == user), None)
+                if not leave.returned or not (requester or voter):
+                    continue
+                responded = {x.voter for x in leave.votes}
+                can_act = (
+                    responded == set(leave.voters) if requester else voter not in responded
+                ) and leave.decision is None
+                items.append(
+                    InboxItem(
+                        "void-leave-poll:" + leave.id,
+                        "work",
+                        leave.id,
+                        canon.revision,
+                        "strain",
+                        "Continue the campaign?",
+                        "Original Off-Duty table",
+                        "resolved" if leave.decision else "pending",
+                        can_act,
+                        False,
+                        "Review your private choice about the next phase.",
+                        "",
+                        "Open table follow-up",
+                        task="m3_void_leave_poll",
+                    )
+                )
             for phone_call in director_strain_calls(canon):
                 if viewer.user_id in (phone_call.controller, int(phone_call.handler.entity)):
                     items.append(
@@ -4243,6 +4271,11 @@ class InboxService:
                     and json.loads(work["body_json"]).get("rule_id") == "strain.void.endgame.2"
                 ):
                     primary, task_name = "Open the stable laboratory portal", "m3_void_lab_portal"
+                elif (
+                    kind == "strain_endgame_effect"
+                    and json.loads(work["body_json"]).get("rule_id") == "strain.void.endgame.1"
+                ):
+                    primary, task_name = "Take leave outside the Quadrant", "m3_void_leave"
                 elif (
                     kind == "strain_endgame_effect"
                     and json.loads(work["body_json"]).get("rule_id") == "strain.void.endgame.3"

@@ -4626,3 +4626,12 @@ spent by the gain itself. Subsequent voluntary disclosure and medical choices
 use their existing authority. This interpretation is awaiting independent
 printed-rule review.
 [High Void and Endgames pp. 143–144](../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145)
+
+## Void Endgame leave consultation
+
+The Handler's own offsite scene fulfils the Handler's part of that Off-Duty.
+After the period, each original player records a private opinion about
+continuing the campaign. The human table authority chooses the outcome once
+all original players have given their opinions. A change of Handler during
+leave requires human review. This interpretation awaits independent review.
+[Void Endgame p. 144](../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=146)

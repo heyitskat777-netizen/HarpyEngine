@@ -376,6 +376,21 @@ class CycleService:
             ):
                 raise WorkflowError("Resolve actual start triggers and immediate sheet work first.")
             updated = rules.activate(period, period.revision, pending_preparation=blockers)
+            from girlframe.engine.m3_void_leave import leaves as reserved_leave
+            from girlframe.engine.m3_void_leave import start as start_leave
+
+            if any(x.period == identity and x.departed is None for x in reserved_leave(state)):
+                from girlframe.services.m3_medical import MedicalService
+
+                _, appointment = MedicalService(self.store)._handler(c)
+                away = start_leave(state, identity, event_id, appointment)
+                assert away is not None
+                updated.handler_scene = rules.Scene(
+                    kind="void_leave",
+                    participants=(viewer.user_id,),
+                    roles=(away.handler,),
+                    summary=away.account,
+                )
             return (
                 updated,
                 state,
@@ -1224,6 +1239,7 @@ class CycleService:
                 from girlframe.engine.m3_handler_retirement import finish as retire_handler
                 from girlframe.engine.m3_rebel_defection import settle as settle_defections
                 from girlframe.engine.m3_repairs import close_period
+                from girlframe.engine.m3_void_leave import finish as finish_leave
 
                 settle_defections(updated, identity, event)
                 updated = close_period(updated, identity)
@@ -1239,6 +1255,7 @@ class CycleService:
                             self.game, c, updated, ended_period_actor(updated, uid), identity, event
                         )
                 if loss_episode is None:
+                    finish_leave(updated, identity, event)
                     updated = retire_handler(updated, identity, event, appointment)
             self.game.event(
                 c,

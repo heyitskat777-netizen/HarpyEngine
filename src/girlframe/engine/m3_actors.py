@@ -598,7 +598,10 @@ def _resolve(
         None,
     )
     handler_cell = None
-    if ref.kind == "handler" and journey is None and handler_position is not None:
+    from girlframe.engine.m3_void_leave import away as handler_leave
+
+    away = handler_leave(state, ref) if ref.kind == "handler" else None
+    if ref.kind == "handler" and journey is None and handler_position is not None and away is None:
         recorded = json.loads(handler_position["cell"])
         if recorded is not None:
             if (
@@ -813,6 +816,7 @@ def _resolve(
                 alive=True,
                 rules="handler_girl",
                 cell=None if passengers else handler_cell,
+                offstage_source=away.departed if away else None,
                 custody="supervised_visit:" + journey.id if journey is not None else None,
                 heat=state.handler_heat,
                 identities=identities(context.identities),
@@ -866,6 +870,7 @@ def _resolve(
             alive=True,
             rules="handler",
             cell=handler_cell,
+            offstage_source=away.departed if away else None,
             custody="supervised_visit:" + journey.id if journey is not None else None,
             heat=None,
             source_sha256=hashlib.sha256(
