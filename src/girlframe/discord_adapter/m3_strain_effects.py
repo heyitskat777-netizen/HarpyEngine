@@ -33,6 +33,7 @@ from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_ambush import HUNT_RULE as REBEL_HUNT
 from girlframe.engine.m3_rebel_ambush import RULE as REBEL_AMBUSH
 from girlframe.engine.m3_rebel_base_capture import RULE as REBEL_BASE_CAPTURE
+from girlframe.engine.m3_rebel_bond_attack import RULE as REBEL_BOND_ATTACK
 from girlframe.engine.m3_rebel_defection import RULE as REBEL_DEFECTION
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_rebel_strafe import RULE as REBEL_STRAFE
@@ -122,6 +123,9 @@ async def open_effect(
         return
     if data.get("awaiting_bunk_harpy"):
         await reply(interaction, "The encounter is awaiting a private appearance.")
+        return
+    if data.get("awaiting_rebel_bond"):
+        await reply(interaction, "The original betrayal remains open in the private Inbox.")
         return
     if data["rule_id"] == VOID_SPREAD:
         await open_spread(interaction, service, data, identity)
@@ -737,6 +741,30 @@ def effect_form(
                 ),
                 Field(
                     "overrun_frame", "Which original parked Frame is seized?", tuple(held) or WAIT
+                ),
+            ]
+        if rule == REBEL_BOND_ATTACK:
+            assert state.world is not None
+            fields += [
+                Field(
+                    "betrayal_bond",
+                    "Which original NPC Bond is a secret Rebel?",
+                    tuple(
+                        (x.id, x.name)
+                        for x in state.world.npcs
+                        if x.alive
+                        and x.source_kind is None
+                        and x.controller != handler
+                        and x.captive_of is None
+                        and "director" not in x.jobs
+                        and original_bonds(state, x)
+                    )
+                    or WAIT,
+                ),
+                Field(
+                    "betrayal_faction",
+                    "Which Rebel Group do they serve?",
+                    options([x for x in world["factions"] if x["kind"] == "rebel" and x["active"]]),
                 ),
             ]
         if rule == REBEL_DEFECTION:
@@ -1445,6 +1473,10 @@ def effect_form(
                 victim=values["overrun_rebel"][0],
                 captured_frame=values["overrun_frame"][0],
             )
+        if rule == REBEL_BOND_ATTACK:
+            payload.update(
+                target=values["betrayal_bond"][0], faction_id=values["betrayal_faction"][0]
+            )
         if rule == REBEL_DEFECTION:
             payload.update(
                 target=values["defection_npc"][0],
@@ -1703,6 +1735,8 @@ def effect_form(
             return "The original Rebel will pursue this Girl on future missions."
         if rule == REBEL_BASE_CAPTURE:
             return "The base fell. Prisoners are free and the parked Frame is in Rebel custody."
+        if rule == REBEL_BOND_ATTACK:
+            return "The original NPC's attack is pending in the private Inbox."
         if rule == PUBLIC_APPEARANCE:
             return "The original Cadre can record attendance from their private Inbox."
         if rule == HARPY_RAID:

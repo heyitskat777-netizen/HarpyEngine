@@ -1644,6 +1644,17 @@ class InboxView(discord.ui.View):
                 StrainService(OffDutyService(MissionService(self.service.store)))
             )
             await open_hearing(interaction, hearing, item.identity)
+        elif item.task == "m3_rebel_bond_attack":
+            from girlframe.discord_adapter.m3_rebel_bond_attack import open_betrayal
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_off_duty import OffDutyService
+            from girlframe.services.m3_rebel_bond_attack import AttackService
+            from girlframe.services.m3_strain import StrainService
+
+            service = AttackService(
+                StrainService(OffDutyService(MissionService(self.service.store)))
+            )
+            await open_betrayal(interaction, service, item.identity)
         elif item.task == "m3_rebel_hunt":
             from girlframe.discord_adapter.m3_rebel_ambush import open_hunt
             from girlframe.services.m2_game import GameService

@@ -26,6 +26,7 @@ from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_ambush import HUNT_RULE as REBEL_HUNT
 from girlframe.engine.m3_rebel_ambush import RULE as REBEL_AMBUSH
 from girlframe.engine.m3_rebel_base_capture import RULE as REBEL_BASE_CAPTURE
+from girlframe.engine.m3_rebel_bond_attack import RULE as REBEL_BOND_ATTACK
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_rebel_strafe import RULE as REBEL_STRAFE
 from girlframe.engine.m3_rebel_taunt import RULE as REBEL_TAUNT
@@ -148,6 +149,8 @@ class EffectService:
                 "awaiting_budget_hearing": bool(body.get("hearing_requested"))
                 and row["state"] == "pending",
                 "awaiting_bunk_harpy": bool(body.get("bunk_requested"))
+                and row["state"] == "pending",
+                "awaiting_rebel_bond": bool(body.get("bond_attack_requested"))
                 and row["state"] == "pending",
                 "supply_outcome": {
                     "recipient": label,
@@ -312,6 +315,15 @@ class EffectService:
                             "Choose an actual original Girl from this preparing period"
                         )
             base_capture = choice.rule_id == REBEL_BASE_CAPTURE
+            needs_bond_attack = choice.rule_id == REBEL_BOND_ATTACK
+            if needs_bond_attack and choice.target:
+                from girlframe.engine.m3_rebel_bond_attack import actor as assailant
+                from girlframe.services.handler_setup import HandlerService
+
+                if not HandlerService(self.store)._member(
+                    c, assailant(state, choice.target).controller
+                ):
+                    raise WorkflowError("Recover the original NPC's joined controller")
             if base_capture and choice.target and choice.victim:
                 from girlframe.engine.m2 import GameState
                 from girlframe.engine.m3_rebel_base_capture import frames, occupants, rebel
@@ -805,6 +817,7 @@ class EffectService:
                 or needs_voice
                 or needs_hearing
                 or needs_bunk
+                or needs_bond_attack
             )
             scientific_period, scientific_events = None, []
             if choice.rule_id == "strain.budget.low.3.1":
@@ -1031,7 +1044,8 @@ class EffectService:
                 | ({"taunt_requested": event} if needs_taunt else {})
                 | ({"voice_requested": event} if needs_voice else {})
                 | ({"hearing_requested": event} if needs_hearing else {})
-                | ({"bunk_requested": event} if needs_bunk else {}),
+                | ({"bunk_requested": event} if needs_bunk else {})
+                | ({"bond_attack_requested": event} if needs_bond_attack else {}),
                 resolved=not pending,
             )
             return {

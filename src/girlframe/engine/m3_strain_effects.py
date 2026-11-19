@@ -31,6 +31,7 @@ from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_ambush import HUNT_RULE as REBEL_HUNT
 from girlframe.engine.m3_rebel_ambush import RULE as REBEL_AMBUSH
 from girlframe.engine.m3_rebel_base_capture import RULE as REBEL_BASE_CAPTURE
+from girlframe.engine.m3_rebel_bond_attack import RULE as REBEL_BOND_ATTACK
 from girlframe.engine.m3_rebel_defection import RULE as REBEL_DEFECTION
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_rebel_strafe import RULE as REBEL_STRAFE
@@ -92,6 +93,7 @@ SUPPORTED = frozenset(
         REBEL_AMBUSH,
         REBEL_HUNT,
         REBEL_BASE_CAPTURE,
+        REBEL_BOND_ATTACK,
         "strain.rebellion.low.5.2",
         REBEL_PROTEST,
         REBEL_ESCAPE_OFFER,
@@ -320,6 +322,22 @@ def apply(
             choice.target,
             choice.victim,
             choice.captured_frame,
+            choice.account.strip(),
+        )
+        world = state.world
+    elif rule == REBEL_BOND_ATTACK:
+        from girlframe.engine.m3_rebel_bond_attack import arm as arm_betrayal
+
+        fields(choice, {"target", "faction_id"})
+        if not choice.target or not choice.faction_id or source_event is None or period_id is None:
+            raise ValueError("Bind the original NPC Bond and their actual Rebel Group")
+        arm_betrayal(
+            state,
+            source_work,
+            period_id,
+            source_event,
+            choice.target,
+            choice.faction_id,
             choice.account.strip(),
         )
         world = state.world

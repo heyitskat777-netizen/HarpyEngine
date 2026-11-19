@@ -2974,9 +2974,35 @@ class InboxService:
             from girlframe.services.m3_pilot_fears import access as fear_access
             from girlframe.services.m3_rebel_ambush import hunt_options, visible_hunts
             from girlframe.services.m3_rebel_ambush import visible as visible_ambushes
+            from girlframe.services.m3_rebel_bond_attack import visible as visible_betrayals
             from girlframe.services.m3_rebel_escape_offer import visible as visible_escape_offers
 
             journalism = JournalistService(GameService(self.store))
+            for betrayal in visible_betrayals(canon, viewer):
+                pending = betrayal.finished is None
+                can_act = (
+                    viewer.user_id == betrayal.controller
+                    and not betrayal.attempt
+                    or any(x.entity == user for x in betrayal.defenders)
+                )
+                items.append(
+                    InboxItem(
+                        "rebel-betrayal:" + betrayal.id,
+                        "work",
+                        betrayal.id,
+                        canon.revision,
+                        "off_duty",
+                        "Betrayal by an NPC Bond",
+                        "Original participants",
+                        "pending" if pending else "resolved",
+                        pending and can_act,
+                        False,
+                        "Review the original betrayal.",
+                        "",
+                        "Open betrayal",
+                        task="m3_rebel_bond_attack",
+                    )
+                )
             for hunt in visible_hunts(canon, viewer):
                 items.append(
                     InboxItem(

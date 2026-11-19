@@ -38,8 +38,8 @@ Off-Duty resumes only at its genuine completion boundary.
 | High Rebellion 3 | Reveal the original NPC Bond, retain that actor's history, and open an actual attack on the Handler that calls for Cadre intervention. | Have the fictional Director choose an actual Rebel faction and issue the order to demonstrate support. Resolve the actual public show of support without borrowing software Director authority. [Rulebook p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) |
 
 The registry tracks each source's current scope and its acceptance tests.
-The core table columns awaiting effects are High Rebellion 1.1, 2.1, 3.1
-and 6.1, and High Budget 5.2. Rebellion Endgames 3–8 and Budget
+The core table columns awaiting effects are High Rebellion 1.1 and 6.1
+and High Budget 5.2. Rebellion Endgames 3–8 and Budget
 Endgames 1–2 have no effect resolver. Current subset limitations include
 the High Budget hearing's Severe finding and the High Void bunk's separate
 contact Play. The individual receipts below retain the rest of the source
@@ -980,3 +980,22 @@ mypy passed on four modules. Active or carried Frames, linked JANUS Cores,
 overlapping prison escape work and subsequent recovery or reassignment
 remain open variants.
 [High Rebellion p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) · [Base overrun test](../../tests/rules/test_rebel_base_capture.py)
+
+## High Rebellion betrayal by an NPC Bond
+
+The base is `5ddaf95`. High Rebellion 3.1 records the original NPC
+Bond's secret allegiance and keeps the relationship and actor identity.
+The NPC's independent controller authors the attempt in a scene where
+the original Handler and an original Cadre member are actually present.
+Only those parties receive the private attempt. At the attempt the
+Handler is Helpless against the original attacker. A completed native
+Core strike by an original Cadre defender proves the attacker was stopped
+and clears the Helplessness from this source.
+
+All 20 selected tests passed. They cover wrong role, wrong scene,
+private audience, pause, replay, reopening, the real native strike and
+the subsequent Off-Duty transition. Source static checking passed on
+eight modules. The implemented path stops the attack through a fatal
+Core strike. Nonlethal intervention, the optional Rebel Pilot identity,
+and a successful assassination with Handler succession remain open.
+[High Rebellion p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) · [Betrayal test](../../tests/rules/test_rebel_bond_attack.py)
