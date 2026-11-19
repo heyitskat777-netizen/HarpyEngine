@@ -88,6 +88,10 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
             key = "mask:" + token
             options.append((key, "Use A Human Mask as " + role["label"][:65]))
             actions[key] = ("harpy_mask", ActorRef.model_validate(role["ref"]))
+        if role.get("ancillary_intimacy"):
+            key = "ancillary-private-play:" + token
+            options.append((key, "Open a private invitation as " + role["label"][:50]))
+            actions[key] = ("ancillary_intimacy", ActorRef.model_validate(role["ref"]))
         if role.get("chained_placement"):
             key = "chained-placement:" + token
             options.append((key, "Record placement for " + role["label"][:62]))
@@ -320,6 +324,15 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
 
             assert ref is not None
             await open_capture(current, CapturedService(service.game), channel, ref)
+            return
+        if action == "ancillary_intimacy":
+            from girlframe.discord_adapter.m3_ancillary_intimacy import open_ancillary_intimacy
+            from girlframe.services.m3_ancillary_intimacy import AncillaryIntimacyService
+
+            assert ref is not None
+            await open_ancillary_intimacy(
+                current, AncillaryIntimacyService(service.game), channel, ref
+            )
             return
         if action == "chained_placement":
             from girlframe.discord_adapter.m3_chained_darling import open_chained_placement

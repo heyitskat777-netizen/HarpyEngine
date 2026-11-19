@@ -210,3 +210,4 @@ tests/rules/test_mercenary_patron.py
 tests/rules/test_mercenary_debt.py
 tests/rules/test_chronically_online.py
 tests/rules/test_chained_darling.py
+tests/rules/test_chained_private_play.py

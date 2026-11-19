@@ -4115,6 +4115,7 @@ class InboxService:
                 )
             from girlframe.services.m2_game import GameService
             from girlframe.services.m3_abysstech import AbysstechService
+            from girlframe.services.m3_ancillary_intimacy import AncillaryIntimacyService
             from girlframe.services.m3_captured import CapturedService
             from girlframe.services.m3_chained_darling import ChainedPlacementService
             from girlframe.services.m3_chronically_online import ChronicallyOnlineService
@@ -4136,6 +4137,28 @@ class InboxService:
             from girlframe.services.m3_timeskip import TimeskipService
             from girlframe.services.m3_voidspace_invasion import InvasionService
             from girlframe.services.m3_warboy_hate import ConditionedHateService
+
+            ancillary_private = AncillaryIntimacyService(GameService(self.store))
+            for private_id, private_step in ancillary_private.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "ancillary-private:" + private_id + ":" + private_step,
+                        "ancillary_private_" + private_step,
+                        private_id,
+                        canon.revision,
+                        "plays",
+                        "Private Ancillary Play",
+                        "Original private choice",
+                        "pending",
+                        True,
+                        False,
+                        "Withdraw from your original encounter." if private_step == "withdraw"
+                        else "Review only the original choice assigned to you.",
+                        "Only the original participants control their choices.",
+                        "Open private choice",
+                        task="m3_ancillary_private_play",
+                    )
+                )
 
             placements = ChainedPlacementService(GameService(self.store))
             for placement_id, placement_step in placements.tasks(connection, canon, viewer):

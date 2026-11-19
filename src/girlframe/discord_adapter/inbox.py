@@ -2126,6 +2126,17 @@ class InboxView(discord.ui.View):
             await open_escape_choice(
                 interaction, EscapeService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_ancillary_private_play":
+            from girlframe.discord_adapter.m3_ancillary_intimacy import (
+                open_ancillary_intimacy_choice,
+            )
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_ancillary_intimacy import AncillaryIntimacyService
+
+            await open_ancillary_intimacy_choice(
+                interaction, AncillaryIntimacyService(GameService(self.service.store)),
+                item.identity, item.source.removeprefix("ancillary_private_"),
+            )
         elif item.task == "m3_chained_placement":
             from girlframe.discord_adapter.m3_chained_darling import open_chained_review
             from girlframe.services.m2_game import GameService

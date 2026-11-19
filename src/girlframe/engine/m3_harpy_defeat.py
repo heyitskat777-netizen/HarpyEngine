@@ -167,6 +167,8 @@ def give_tag(
     observers: tuple[int, ...],
 ) -> GameState:
     from girlframe.engine.m2 import TagState
+    from girlframe.engine.m3_ancillary import find as ancillary_actor
+    from girlframe.engine.m3_ancillary import put as put_ancillary
     from girlframe.engine.m3_void_state import HarpyTag
     from girlframe.engine.m3_world_state import WorldTag
 
@@ -174,7 +176,17 @@ def give_tag(
     human = controller(state, giver)
     if not label.strip():
         raise ValueError("The actual printed chooser must provide the Tag")
-    if target.kind == "pilot":
+    if auxiliary := ancillary_actor(state, target):
+        if state.world is None or not any(
+            body.id == target.entity and body.alive and body.controller == auxiliary.controller
+            for body in state.world.pilots
+        ):
+            raise ValueError("Recover the original living Ancillary Tag recipient")
+        tag = TagState(
+            id=identity, label=label, giver=human, giver_actor=giver, observers=observers
+        )
+        put_ancillary(state, auxiliary.model_copy(update=dict(tags=(*auxiliary.tags, tag))))
+    elif target.kind == "pilot":
         sheet = state.sheets.get(target.entity)
         if sheet is None or sheet.character_id != target.incarnation:
             raise ValueError("The original Tag recipient ended; no replacement may inherit it")

@@ -3488,3 +3488,21 @@ same native workload through an original helper's real movement
 and cockpit exit, private approval, and the exact original
 facilitator’s verification. Remote assisted travel, nonstandard
 occupancy and the separate exception remain open.
+
+### Chained Darling’s private Play
+
+Base `514146b`. The original participants agree privately, and
+the original facilitator confirms the actual encounter. Either
+participant can stop remaining choices. The original player spends
+owned Heat and rolls once. The middle result makes the other
+participant Helpless and suspends the Chained Darling’s
+pose-based restriction for the original cast role until closeout.
+The high route saves an actual participant-authored Tag and later
+reaffirmation. The low route opens a private question and answer.
+
+**One focused case passed in 7.09 seconds.** It verified private
+withdrawal, independent original consent, the actual middle-tier
+roll and effect, and expiration on real scene close. The high and
+low routes still need direct verification. Other counterpart
+kinds and ordinary Tag modifiers remain open.
+[Chained Darling p. 105](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=107) · [Native case](../../tests/rules/test_chained_private_play.py)

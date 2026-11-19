@@ -381,6 +381,23 @@ class CastService:
                             )
                         except (ValueError, WorkflowError):
                             pass
+                    can_ancillary_intimacy = False
+                    if (
+                        actor.controller == role.controller == viewer.user_id
+                        and actor.rules == "ancillary"
+                    ):
+                        from girlframe.services.m3_ancillary_intimacy import (
+                            AncillaryIntimacyService,
+                        )
+
+                        try:
+                            can_ancillary_intimacy = bool(
+                                AncillaryIntimacyService(self.game).options(
+                                    c, state, viewer, channel, actor.ref
+                                )
+                            )
+                        except (ValueError, WorkflowError):
+                            pass
                     known_refs.add(actor.ref)
                     visible.append(
                         {
@@ -400,6 +417,7 @@ class CastService:
                             **({"debt_contact": True} if can_debt_contact else {}),
                             **({"chronically_online": True} if can_recall else {}),
                             **({"chained_placement": True} if can_chained_placement else {}),
+                            **({"ancillary_intimacy": True} if can_ancillary_intimacy else {}),
                             **({"capture_source": True} if can_capture else {}),
                             **(
                                 {"director_phone": True}
