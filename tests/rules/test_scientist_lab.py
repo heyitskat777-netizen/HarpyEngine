@@ -9,37 +9,43 @@ from test_ledger import ledger as ledger
 from test_m2_game import state
 from test_mission_ui import current
 from test_off_duty_cycle import activate, call, prepared
+from test_physical_operations import place
 
+from girlframe.discord_adapter.inbox import InboxView
+from girlframe.discord_adapter.m3_handler_plays import open_handler_plays
 from girlframe.discord_adapter.m3_off_duty_cycle import open_action
 from girlframe.engine.m2 import AssetState
 from girlframe.engine.m3_actor_bonds import current_ref
+from girlframe.engine.m3_handler_private_scene import records
 from girlframe.engine.m3_scientist_lab import LabAnswer, steps
+from girlframe.services.inbox import InboxService
 from girlframe.services.m3_handler_creation import HandlerCreationService
+from girlframe.services.m3_handler_plays import HandlerPlayService
+from girlframe.services.m3_handler_private_scene import HandlerPrivateSceneService
 from girlframe.services.onboarding import WorkflowError
 
 
-def test_owned_scientist_lab_installs_and_clears_actual_original_assets(ledger):
-    def create(_):
-        creation = HandlerCreationService(ledger)
-        approval, rulings = ledger.policy.m3_approval, ledger.policy.owner_m3_rulings
-        ledger.policy = ledger.policy.model_copy(
-            update=dict(
-                m3_approval=approval.model_copy(
-                    update=dict(subsystems=approval.subsystems | {"plays", "playbooks"})
-                ),
-                owner_m3_rulings=rulings.model_copy(
-                    update=dict(handler_creation="owned_shared_choices_preserve_existing")
-                ),
-            )
+def create_scientist(ledger):
+    creation = HandlerCreationService(ledger)
+    approval, rulings = ledger.policy.m3_approval, ledger.policy.owner_m3_rulings
+    ledger.policy = ledger.policy.model_copy(
+        update=dict(
+            m3_approval=approval.model_copy(
+                update=dict(subsystems=approval.subsystems | {"plays", "playbooks"})
+            ),
+            owner_m3_rulings=rulings.model_copy(
+                update=dict(handler_creation="owned_shared_choices_preserve_existing")
+            ),
         )
-        save(creation, complete(creation, "Scientist"))
-        agree(creation)
-        preview = creation.view(ADMIN)
-        creation.activate(
-            ADMIN, "lab-scientist", preview["revision"], preview["game_revision"], True
-        )
+    )
+    save(creation, complete(creation, "Scientist"))
+    agree(creation)
+    preview = creation.view(ADMIN)
+    creation.activate(ADMIN, "lab-scientist", preview["revision"], preview["game_revision"], True)
 
-    cycle, game, period = prepared(ledger, before_period=create)
+
+def test_owned_scientist_lab_installs_and_clears_actual_original_assets(ledger):
+    cycle, game, period = prepared(ledger, before_period=lambda _: create_scientist(ledger))
     with ledger.transaction() as c:
         original = state(game)
         patient = original.sheets["3"]
@@ -121,3 +127,104 @@ def test_owned_scientist_lab_installs_and_clears_actual_original_assets(ledger):
     assert not any(
         w["kind"] == "off_duty_handler_scene" for w in cycle.periods.get(ADMIN, period)["work"]
     )
+
+
+def test_private_scientist_exchange_changes_one_actual_owned_void_asset(ledger):
+    _, game, _ = prepared(ledger, before_period=lambda _: create_scientist(ledger))
+    game.leave_scene(PLAYER, "scientist-private-lab", 900)
+    service = HandlerPrivateSceneService(ledger, game)
+    with pytest.raises(WorkflowError, match="operational Base laboratory"):
+        service.invite(ADMIN, "no-original-lab", state(game).revision, 900, playbook="Scientist")
+    with ledger.transaction() as c:
+        canon = place(state(game), 3, mode="outside_frame")
+        original = next(x for x in canon.sheets["3"].assets if x.family == "girl")
+        original.void, original.concealed = True, True
+        game.event(
+            c, OTHER.user_id, "synthetic-lab-fixture", "synthetic.owned_lab_resources", canon
+        )
+    inbox = InboxService(ledger)
+
+    async def invite():
+        click = current(1, 49600)
+        click.channel_id = 900
+        await click.response.defer(ephemeral=True)
+        await open_handler_plays(click, HandlerPlayService(ledger))
+        hub = click.edit_original_response.call_args.kwargs["view"]
+        await hub.open_item(click, "scientist_private")
+        form = click.edit_original_response.call_args.kwargs["view"]
+        form.values.update(offer=("offer",))
+        sent = current(1, 49601)
+        await form.confirm.callback(sent)
+        assert form.completed, sent.followup.send.call_args
+
+    asyncio.run(invite())
+    (value,) = records(state(game))
+    assert value.lab == "base0" and not any(x.identity == value.id for x in inbox.items(PLAYER))
+
+    async def submit(viewer, sequence, decision, **values):
+        click = current(viewer.user_id, sequence)
+        await click.response.defer(ephemeral=True)
+        item = next(x for x in inbox.items(viewer) if x.identity == value.id)
+        await InboxView(inbox, viewer.user_id).route(click, item)
+        form = click.edit_original_response.call_args.kwargs["view"]
+        form.values.update(choice=(decision,), **values)
+        sent = current(viewer.user_id, sequence + 1)
+        await form.confirm.callback(sent)
+        assert form.completed, sent.followup.send.call_args
+
+    asyncio.run(submit(OTHER, 49610, "consent"))
+    asyncio.run(submit(ADMIN, 49612, "attest"))
+    asyncio.run(submit(OTHER, 49614, "attest"))
+    replacement = "PRIVATE_REPLACEMENT_IN_LAB"
+    asyncio.run(
+        submit(
+            ADMIN,
+            49616,
+            "scientist_plan_exchange",
+            asset_name=replacement,
+            asset_description="The actual non-Void replacement",
+        )
+    )
+    pending = state(game)
+    assert service.menu(ADMIN, value.id)["assets"] == ()
+    assert service.menu(OTHER, value.id)["assets"] == ((original.id, original.name),)
+    assert next(x for x in pending.sheets["3"].assets if x.id == original.id).concealed
+    with pytest.raises(WorkflowError, match="your own"):
+        service.respond(
+            ADMIN,
+            "take-ownership",
+            value.id,
+            pending.revision,
+            "scientist_exchange",
+            text=original.id,
+        )
+    with pytest.raises(WorkflowError, match="ordinary Void-touched"):
+        service.respond(
+            OTHER,
+            "unowned-excision",
+            value.id,
+            pending.revision,
+            "scientist_exchange",
+            text="unknown",
+        )
+    ledger.engine.dispose()
+    asyncio.run(submit(OTHER, 49620, "scientist_exchange", asset=(original.id,)))
+    assert (
+        service.respond(
+            OTHER,
+            "49621",
+            value.id,
+            pending.revision,
+            "scientist_exchange",
+            text=original.id,
+        )["phase"]
+        == "complete"
+    )
+    after = state(game)
+    (exchanged,) = records(after)
+    assert exchanged.outcome == "scientist_exchanged" and exchanged.removed_asset == original.id
+    old = {x.id: x for x in pending.sheets["3"].assets if x.id != original.id}
+    new = {x.id: x for x in after.sheets["3"].assets}
+    inserted = new.pop(exchanged.installed_asset)
+    assert new == old and inserted.name == replacement and not inserted.void
+    assert not steps(after, current_ref(after, 1))

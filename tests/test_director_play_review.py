@@ -39,6 +39,9 @@ def test_entire_inventory_and_every_native_identifier_have_explicit_review_route
             "handler_trainer_private",
             "handler_dogrunner_private",
             "handler_insurgent_private",
+            "handler_scientist_private",
+            "handler_frantic_private",
+            "handler_advocate_private",
         }
         == NATIVE_RULES.keys()
     )

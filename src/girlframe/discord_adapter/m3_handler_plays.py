@@ -39,6 +39,9 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
         "trainer_private": "Trainer",
         "dogrunner_private": "Dogrunner",
         "insurgent_private": "Insurgent",
+        "scientist_private": "Scientist",
+        "frantic_private": "Frantic",
+        "advocate_private": "Advocate",
     }
     if interaction.channel_id is not None:
         options.extend(

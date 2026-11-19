@@ -16148,14 +16148,16 @@
         "heading": "Sex Play"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_scientist_lab.py::test_private_scientist_exchange_changes_one_actual_owned_void_asset"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -16276,14 +16278,16 @@
         "heading": "Sex Play"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_frantic_crisis.py::test_frantic_private_roll_keeps_printed_effects_owned"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -16709,14 +16713,16 @@
         "heading": "Sex Play"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_advocate_empathy.py::test_advocate_private_effect_changes_original_tag_asset_and_status"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

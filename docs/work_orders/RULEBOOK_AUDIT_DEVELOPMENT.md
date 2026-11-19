@@ -1625,3 +1625,46 @@ ordinary Punishment and a saved pre-roll bonus, and rejection of a
 Tag outside the Insurgent's knowledge. The Director refers the new
 Plays to their own native player/Handler controls.
 [Dogrunner p. 125](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=127) · [Insurgent p. 135](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=137) · [Dogrunner tests](../../tests/rules/test_dogrunner_private_scene.py) · [Insurgent tests](../../tests/rules/test_insurgent_private_scene.py)
+
+### Scientist, Frantic and Advocate private effects
+
+Base `3e4c385d3508fbdb545b3ceeb749aba922712c90`. At the actual original
+controlled Base laboratory, the Scientist can exchange one ordinary
+Void-touched Girl Asset for an independently proposed non-Void
+replacement. The affected Girl chooses the actual Asset without
+exposing the rest of her sheet to the Scientist. The Project and other
+printed experiments remain separate.
+
+The Frantic records its original status-based roll and keeps both dice.
+The Girl owns comfort and her answers, and each participant owns any
+Tag they give. Comfort gives an actual Permission and lowers Status.
+Other supported paths deepen the Bond, let the Girl unmark her original
+Identities, or stage the real Punishment for a disbelieved answer.
+Protected marks retain their ordinary locks.
+
+The Advocate can damage one ordinary visible Girl Asset, give an actual
+private Tag and raise or lower Status in the same write. Any resulting
+hazard work stays pending. The separate printed secrecy, discovery and
+credibility effects remain open.
+
+The selected combined regression passed **39 tests in 99.82 seconds**.
+It includes both Advocate Status outcomes, the Scientist's real exchange
+and five Frantic cases, including mutual Tags and a real pending
+Punishment. All seven Handler private Plays now have at least one native
+effect path. Independent review and unsupported variants remain open.
+[Scientist p. 129](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=131) · [Frantic p. 131](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=133) · [Advocate p. 139](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=141)
+
+### Full synthetic regression and follow-up corrections
+
+The exact revision `43326a1922c60cba7ada4372215683091da6135d`
+ran all **3,741** collected tests in four isolated processes. **3,739
+passed and two failed**. The longest partition ran **2,136.11 seconds**.
+The Director catalog lacked the native Dress Them Down and Successor
+advice routes, corrected in `783c2038ff74b32c7e6dc7703ac8853a8ad0131f`.
+The Harpy test expected a later rejection message, even though the
+canonical original-body check had already rejected the substitution.
+`9d8ac3dbd2e4952c70358137b411626186529b1f` corrects that assertion.
+Both affected checks passed in later targeted runs. This is offline
+development evidence. Authenticated Activity and real-player acceptance
+remain separate.
+[Director regression](../../tests/test_director_play_review.py) · [Harpy regression](../../tests/rules/test_harpy_core.py)

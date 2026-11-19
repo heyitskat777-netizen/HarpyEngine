@@ -7,13 +7,17 @@ from pydantic import Field
 from girlframe.engine.m2 import GameState, shift_status
 from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_intracadre_marriage import status_groups
+from girlframe.engine.rolls import Face
 
-Book = Literal["Mistress", "Trainer", "Dogrunner", "Insurgent"]
+Book = Literal["Mistress", "Trainer", "Dogrunner", "Insurgent", "Scientist", "Frantic", "Advocate"]
 RULES: dict[Book, str] = {
     "Mistress": "handler-playbook.mistress.sex-play",
     "Trainer": "handler-playbook.trainer.sex-play",
     "Dogrunner": "handler-playbook.dogrunner.sex-play",
     "Insurgent": "handler-playbook.insurgent.sex-play",
+    "Scientist": "handler-playbook.scientist.sex-play",
+    "Frantic": "handler-playbook.frantic.sex-play",
+    "Advocate": "handler-playbook.advocate.sex-play",
 }
 Phase = Literal[
     "invite",
@@ -33,9 +37,36 @@ Phase = Literal[
     "insurgent_answer",
     "insurgent_no_suspicion",
     "insurgent_suspicion",
+    "scientist_proposal",
+    "scientist_asset",
+    "frantic_roll",
+    "frantic_comfort",
+    "frantic_girl_tag",
+    "frantic_handler_tag",
+    "frantic_high",
+    "frantic_care",
+    "frantic_verdict",
+    "frantic_bond_tag",
+    "frantic_discipline",
+    "advocate_choice",
+    "advocate_followup",
     "complete",
     "withdrawn",
 ]
+
+
+class LabExchange(Model):
+    name: str = Field(min_length=1, max_length=80)
+    description: str = Field(min_length=1, max_length=1200)
+
+
+class FranticRoll(Model):
+    faces: tuple[Face, Face]
+    modifier: Literal[-1, 1, 3]
+
+    @property
+    def total(self) -> int:
+        return sum(self.faces) + self.modifier
 
 
 class PrivateScene(Model):
@@ -61,6 +92,13 @@ class PrivateScene(Model):
             "dogrunner_punishment",
             "insurgent_resolved",
             "insurgent_left_suspicions",
+            "scientist_exchanged",
+            "frantic_comforted",
+            "frantic_mutual_tags",
+            "frantic_bond",
+            "frantic_punishment",
+            "advocate_lowered",
+            "advocate_raised",
         ]
         | None
     ) = None
@@ -68,6 +106,14 @@ class PrivateScene(Model):
     tag: str | None = Field(default=None, exclude_if=lambda value: value is None)
     discipline: str | None = Field(default=None, exclude_if=lambda value: value is None)
     effects: tuple[str, ...] = Field(default=(), exclude_if=lambda value: not value)
+    lab: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    exchange: LabExchange | None = Field(default=None, exclude_if=lambda value: value is None)
+    removed_asset: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    installed_asset: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    roll: FranticRoll | None = Field(default=None, exclude_if=lambda value: value is None)
+    handler_tag: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    damaged_asset: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    required_work: tuple[str, ...] = Field(default=(), exclude_if=lambda value: not value)
     action: str | None = None
     account: str = Field(default="", max_length=1200)
 
@@ -77,7 +123,14 @@ KINDS: dict[Book, str] = {
     "Trainer": "trainer_private_scene",
     "Dogrunner": "dogrunner_private_scene",
     "Insurgent": "insurgent_private_scene",
+    "Scientist": "scientist_private_scene",
+    "Frantic": "frantic_private_scene",
+    "Advocate": "advocate_private_scene",
 }
+
+DISCIPLINE_BOOKS: tuple[Book, ...] = ("Dogrunner", "Frantic")
+DISCIPLINE_PHASES = ("dogrunner_discipline", "frantic_discipline")
+DISCIPLINE_CAUSES = frozenset(RULES[x] for x in DISCIPLINE_BOOKS)
 
 
 def records(state: GameState) -> tuple[PrivateScene, ...]:

@@ -30,6 +30,9 @@ EVENT = "m3.mistress_favor"
 TRAINER_EVENT = "m3.trainer_private_scene"
 DOGRUNNER_EVENT = "m3.dogrunner_private_scene"
 INSURGENT_EVENT = "m3.insurgent_private_scene"
+SCIENTIST_EVENT = "m3.scientist_private_scene"
+FRANTIC_EVENT = "m3.frantic_private_scene"
+ADVOCATE_EVENT = "m3.advocate_private_scene"
 
 
 class HandlerPrivateSceneService:
@@ -56,7 +59,7 @@ class HandlerPrivateSceneService:
 
     def _available(
         self, c: Connection, state: GameState, channel: int, handler: ActorRef
-    ) -> tuple[str, ActorRef]:
+    ) -> tuple[str, ActorRef, tuple[int, int] | None]:
         scene, girl = private_handler_scene(self.game, c, state, channel, handler)
         sheet = state.sheets[girl.entity]
         actual = resolve(
@@ -73,7 +76,16 @@ class HandlerPrivateSceneService:
         lock = self.game.lock(c, channel)
         if lock and lock["state"] != "released":
             raise WorkflowError("Finish the pending Play in the original scene")
-        return scene["id"], girl
+        return scene["id"], girl, actual.cell
+
+    def _pending(self, c: Connection, state: GameState, value: rules.PrivateScene) -> bool:
+        if value.phase in rules.DISCIPLINE_PHASES:
+            return rules.pending_discipline(state, value)
+        if value.phase == "advocate_followup":
+            from girlframe.services.m3_advocate_private_scene import pending
+
+            return pending(self.game, c, value)
+        return value.phase not in ("complete", "withdrawn")
 
     def invite(
         self,
@@ -93,12 +105,18 @@ class HandlerPrivateSceneService:
                 or canon.revision != expected
             ):
                 raise WorkflowError("Use the original Handler in this book and reopen the scene")
-            scene, girl = self._available(c, canon, channel, owned[0])
+            scene, girl, cell = self._available(c, canon, channel, owned[0])
+            lab = None
+            if playbook == "Scientist":
+                from girlframe.services.m3_scientist_private_scene import lab_at
+
+                lab = lab_at(canon, cell)
+                if lab is None:
+                    raise WorkflowError(
+                        "Join the original Scientist at a controlled operational Base laboratory"
+                    )
             if any(
-                x.handler == owned[0]
-                and x.girl == girl
-                and x.phase not in ("complete", "withdrawn")
-                and (x.phase != "dogrunner_discipline" or rules.pending_discipline(canon, x))
+                x.handler == owned[0] and x.girl == girl and self._pending(c, canon, x)
                 for x in rules.records(canon)
             ):
                 raise WorkflowError(
@@ -113,6 +131,7 @@ class HandlerPrivateSceneService:
                 channel=channel,
                 event=event,
                 playbook=playbook,
+                lab=lab,
             )
             rules.put(canon, value)
             self.game.event(
@@ -171,6 +190,25 @@ class HandlerPrivateSceneService:
             return ("insurgent_apply",)
         if value.phase == "insurgent_suspicion" and actor == value.handler:
             return ("insurgent_leave_suspicions",)
+        if value.phase == "scientist_proposal" and actor == value.handler:
+            return ("scientist_plan_exchange",)
+        if value.phase == "scientist_asset" and actor == value.girl:
+            return ("scientist_exchange", "scientist_decline")
+        if value.phase == "advocate_choice" and actor == value.handler:
+            return ("advocate_lower", "advocate_raise")
+        frantic_choices = {
+            "frantic_roll": (value.handler, ("frantic_roll",)),
+            "frantic_comfort": (value.girl, ("frantic_comfort", "frantic_decline_comfort")),
+            "frantic_girl_tag": (value.girl, ("frantic_girl_tag",)),
+            "frantic_handler_tag": (value.handler, ("frantic_handler_tag",)),
+            "frantic_high": (value.girl, ("frantic_high",)),
+            "frantic_care": (value.girl, ("frantic_care",)),
+            "frantic_verdict": (value.handler, ("frantic_believe", "frantic_doubt")),
+            "frantic_bond_tag": (value.girl, ("frantic_bond_tag", "frantic_no_tag")),
+        }
+        frantic = frantic_choices.get(value.phase)
+        if frantic is not None:
+            return frantic[1] if frantic[0] == actor else ()
         if value.phase == "favor" and actor == value.handler:
             return ("ask",)
         if value.phase == "decision" and actor == value.girl:
@@ -225,6 +263,7 @@ class HandlerPrivateSceneService:
         action: str = "",
         effects: tuple[str, ...] = (),
         tag: str = "",
+        exchange: rules.LabExchange | None = None,
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             canon = load_state(c, self.store.campaign_id)
@@ -244,11 +283,15 @@ class HandlerPrivateSceneService:
             in_scene = step in ("consent", "attest", "ask", "accept", "decline") or (
                 value.playbook != "Mistress" and step != "withdraw"
             )
-            if in_scene and self._available(c, canon, value.channel, value.handler) != (
-                value.scene,
-                value.girl,
-            ):
-                raise WorkflowError("Recover the original private scene and participants")
+            if in_scene:
+                scene, girl, cell = self._available(c, canon, value.channel, value.handler)
+                if (scene, girl) != (value.scene, value.girl):
+                    raise WorkflowError("Recover the original private scene and participants")
+                if value.playbook == "Scientist":
+                    from girlframe.services.m3_scientist_private_scene import lab_at
+
+                    if value.lab is None or lab_at(canon, cell) != value.lab:
+                        raise WorkflowError("Recover the original lab and location of the Girl")
             if step in ("ask", "fulfilled", "failed", "confirm", "find_failed") and not (
                 1 <= len(text.strip()) <= 1200
             ):
@@ -267,6 +310,9 @@ class HandlerPrivateSceneService:
                         "Trainer": "trainer_question",
                         "Dogrunner": "dogrunner_question",
                         "Insurgent": "insurgent_question",
+                        "Scientist": "scientist_proposal",
+                        "Frantic": "frantic_roll",
+                        "Advocate": "advocate_choice",
                     }[value.playbook]
                     if len(performed) == 2
                     else "scene",
@@ -291,6 +337,33 @@ class HandlerPrivateSceneService:
                             ),
                         }[step]
                     )
+            elif value.playbook == "Scientist":
+                if step == "scientist_plan_exchange" and exchange is not None:
+                    if not exchange.name.strip() or not exchange.description.strip():
+                        raise WorkflowError("Name and describe the proposed replacement Asset")
+                    update.update(phase="scientist_asset", exchange=exchange)
+                elif step == "scientist_exchange" and value.exchange is not None:
+                    from girlframe.services.m3_scientist_private_scene import excise
+
+                    replacement = excise(canon, value.girl, text, value.exchange, event)
+                    update.update(
+                        phase="complete",
+                        outcome="scientist_exchanged",
+                        removed_asset=text,
+                        installed_asset=replacement,
+                    )
+                elif step == "scientist_decline":
+                    update.update(phase="complete", outcome="declined")
+                else:
+                    raise WorkflowError("Recover the original proposed Asset exchange")
+            elif value.playbook == "Frantic":
+                from girlframe.services.m3_frantic_private_scene import respond as respond_frantic
+
+                update.update(respond_frantic(self.game, canon, value, step, text, effects, event))
+            elif value.playbook == "Advocate":
+                from girlframe.services.m3_advocate_private_scene import apply as apply_advocate
+
+                update.update(apply_advocate(self.game, c, canon, value, event, step, text, tag))
             elif step == "ask":
                 update.update(phase="decision", favor=text.strip())
             elif step == "decline":
@@ -333,13 +406,18 @@ class HandlerPrivateSceneService:
                 case=identity,
                 step=step,
             )
+            if value.playbook == "Advocate" and value.required_work:
+                from girlframe.services.m3_battle import synchronize_damage
+
+                synchronize_damage(self.game, c, event)
             return dict(id=identity, phase=value.phase, revision=canon.revision)
 
         return self._write(
             viewer,
             key,
             dict(id=identity, expected=expected, step=step, text=text, action=action)
-            | (dict(effects=effects, tag=tag) if effects or tag else {}),
+            | (dict(effects=effects, tag=tag) if effects or tag else {})
+            | (dict(exchange=exchange.model_dump(mode="json")) if exchange is not None else {}),
             operation,
         )
 
@@ -383,6 +461,15 @@ class HandlerPrivateSceneService:
             value, actor = self._case(c, canon, viewer, identity)
             sheet = canon.sheets.get(value.girl.entity)
             tag_options: tuple[tuple[str, str], ...] = ()
+            assets: tuple[tuple[str, str], ...] = ()
+            if value.phase == "scientist_asset" and actor == value.girl:
+                from girlframe.services.m3_scientist_private_scene import eligible
+
+                assets = eligible(canon, value.girl)
+            if value.phase == "advocate_choice" and actor == value.handler:
+                from girlframe.services.m3_advocate_private_scene import eligible as advocate_assets
+
+                assets = advocate_assets(canon, value)
             if (
                 value.phase == "insurgent_no_suspicion"
                 and actor == value.handler
@@ -400,8 +487,7 @@ class HandlerPrivateSceneService:
                 id=value.id,
                 revision=canon.revision,
                 phase="complete"
-                if value.phase == "dogrunner_discipline"
-                and not rules.pending_discipline(canon, value)
+                if value.phase != "withdrawn" and not self._pending(c, canon, value)
                 else value.phase,
                 playbook=value.playbook,
                 options=self._options(value, actor),
@@ -411,6 +497,9 @@ class HandlerPrivateSceneService:
                 account=value.account,
                 discipline=value.discipline,
                 tags=tag_options,
+                exchange=value.exchange,
+                assets=assets,
+                roll=value.roll,
                 identities=tuple(
                     (x.id, x.name)
                     for x in sheet.identities
@@ -444,6 +533,9 @@ def _event(value: rules.PrivateScene) -> str:
         "Trainer": TRAINER_EVENT,
         "Dogrunner": DOGRUNNER_EVENT,
         "Insurgent": INSURGENT_EVENT,
+        "Scientist": SCIENTIST_EVENT,
+        "Frantic": FRANTIC_EVENT,
+        "Advocate": ADVOCATE_EVENT,
     }[value.playbook]
 
 
@@ -453,18 +545,21 @@ def prove_discipline(
     value = next((x for x in rules.records(state) if x.discipline == debt.id), None)
     if (
         value is None
-        or value.playbook != "Dogrunner"
+        or value.playbook not in rules.DISCIPLINE_BOOKS
         or value.handler != active_handler(state)
         or value.handler.entity != str(handler)
         or debt.target != handler
         or debt.owner != int(value.girl.entity)
         or current_ref(state, debt.owner) != value.girl
         or debt.action != value.id
-        or value.outcome != "dogrunner_punishment"
-        or value.phase != "dogrunner_discipline"
+        or debt.details.get("cause") != rules.RULES[value.playbook]
+        or value.outcome not in ("dogrunner_punishment", "frantic_punishment")
+        or value.phase not in rules.DISCIPLINE_PHASES
         or value not in rules.records(_history(c, game, value.event))
     ):
-        raise WorkflowError("Recover the original Dogrunner and this actual discipline decision")
+        raise WorkflowError(
+            "Recover the original Handler and this actual private discipline decision"
+        )
 
 
 def _training(

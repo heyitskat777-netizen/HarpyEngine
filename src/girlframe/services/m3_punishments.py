@@ -211,10 +211,10 @@ class PunishmentService:
         if load_state(c, self.store.campaign_id).revision != game_revision:
             raise WorkflowError("STALE_STATE: sheets or Status changed; review the task again.")
         from girlframe.engine.m3_frantic_breakdown import RULE as breakdown_rule
-        from girlframe.engine.m3_handler_private_scene import RULES as private_rules
+        from girlframe.engine.m3_handler_private_scene import DISCIPLINE_CAUSES
 
         cause = body.get("cause")
-        if cause in (breakdown_rule, private_rules["Dogrunner"]):
+        if cause == breakdown_rule or cause in DISCIPLINE_CAUSES:
             state = load_state(c, self.store.campaign_id)
             debt = next(
                 (

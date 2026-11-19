@@ -28,6 +28,9 @@ HANDLER_SCENES = {
     "handler_trainer_private": (private_scenes["Trainer"], "Trainer Sex Play"),
     "handler_dogrunner_private": (private_scenes["Dogrunner"], "Dogrunner Sex Play"),
     "handler_insurgent_private": (private_scenes["Insurgent"], "Insurgent Sex Play"),
+    "handler_scientist_private": (private_scenes["Scientist"], "Scientist Sex Play"),
+    "handler_frantic_private": (private_scenes["Frantic"], "Frantic Sex Play"),
+    "handler_advocate_private": (private_scenes["Advocate"], "Advocate Sex Play"),
 }
 
 NATIVE_RULES = {

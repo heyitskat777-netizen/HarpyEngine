@@ -16,16 +16,19 @@ from test_strain_effect_service import pending
 from girlframe.discord_adapter.inbox import InboxView
 from girlframe.discord_adapter.m3_frantic_crisis import ImmediateBreakdown, SiteRuin
 from girlframe.engine.m3_actor_bonds import current_ref
+from girlframe.engine.m3_actor_bonds import depth as bond_depth
 from girlframe.engine.m3_frantic_breakdown import records as breakdowns
 from girlframe.engine.m3_frantic_crisis import records
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_handler_play_state import Effect
+from girlframe.engine.m3_handler_private_scene import records as private_scenes
 from girlframe.engine.m3_punishments import Details
 from girlframe.services.inbox import InboxService
 from girlframe.services.m3_frantic_breakdown import FranticBreakdownService
 from girlframe.services.m3_frantic_crisis import CrisisService
 from girlframe.services.m3_handler_creation import HandlerCreationService
 from girlframe.services.m3_handler_plays import HandlerPlayService
+from girlframe.services.m3_handler_private_scene import HandlerPrivateSceneService
 from girlframe.services.m3_punishments import PunishmentService
 from girlframe.services.m3_quadrant_loss import require_aftermath_clear
 from girlframe.services.onboarding import WorkflowError
@@ -297,3 +300,131 @@ def test_each_printed_city_and_base_ruin_applies_and_keeps_aftermath(ledger):
     assert sum(x.get("kind") == "quadrant_loss" for x in after.facts) == 1
     with pytest.raises(WorkflowError, match="quadrant-loss aftermath"):
         require_aftermath_clear(after)
+
+
+@pytest.mark.parametrize(
+    "branch,faces,subject,modifier",
+    (
+        ("comfort", (4, 5), PLAYER, -1),
+        ("mutual", (2, 3), OTHER, 3),
+        ("high", (4, 4), OTHER, 3),
+        ("believe", (1, 1), OTHER, 3),
+        ("doubt", (1, 1), OTHER, 3),
+    ),
+)
+def test_frantic_private_roll_keeps_printed_effects_owned(
+    ledger, monkeypatch, branch, faces, subject, modifier
+):
+    cycle, game, period = prepared(ledger, before_period=lambda _: create_frantic(ledger))
+    activate(cycle, game, period)
+    outsider = OTHER if subject == PLAYER else PLAYER
+    game.leave_scene(outsider, "private-frantic-roll-scene", 900)
+    if branch == "high":
+        with ledger.transaction() as c:
+            canon = state(game)
+            canon.sheets[str(subject.user_id)].identities[0].marked = True
+            game.event(c, subject.user_id, "synthetic-identity-mark", "synthetic.fixture", canon)
+    game.dice = Dice(faces)
+    monkeypatch.setattr("girlframe.services.m3_handler_private_scene.GameService", lambda _: game)
+    service, inbox = HandlerPrivateSceneService(ledger), InboxService(ledger)
+    identity = service.invite(
+        ADMIN,
+        "private-frantic-invitation",
+        state(game).revision,
+        900,
+        playbook="Frantic",
+    )["id"]
+    assert not any(x.identity == identity for x in inbox.items(outsider))
+
+    def respond(viewer, choice, *, text="", effects=()):
+        return service.respond(
+            viewer,
+            "actual-private:" + choice + ":" + str(viewer.user_id),
+            identity,
+            state(game).revision,
+            choice,
+            text=text,
+            effects=effects,
+        )
+
+    respond(subject, "consent")
+    respond(ADMIN, "attest")
+    respond(subject, "attest")
+    before = state(game)
+    assert not game.dice.calls
+
+    async def owned_roll():
+        own = current(1, 49700)
+        await own.response.defer(ephemeral=True)
+        item = next(x for x in inbox.items(ADMIN) if x.identity == identity)
+        await InboxView(inbox, 1).route(own, item)
+        form = own.edit_original_response.call_args.kwargs["view"]
+        form.values.update(choice=("frantic_roll",))
+        sent = current(1, 49701)
+        await form.confirm.callback(sent)
+        assert form.completed, sent.followup.send.call_args
+
+    asyncio.run(owned_roll())
+    (saved,) = private_scenes(state(game))
+    assert (saved.roll.faces, saved.roll.modifier, saved.roll.total) == (
+        faces,
+        modifier,
+        sum(faces) + modifier,
+    )
+    service.respond(ADMIN, "49701", identity, before.revision, "frantic_roll")
+    assert game.dice.calls == 1
+    ledger.engine.dispose()
+    if branch == "comfort":
+        with pytest.raises(WorkflowError, match="your own"):
+            respond(ADMIN, "frantic_comfort")
+        respond(subject, "frantic_comfort")
+        assert state(game).order == (3, 2)
+        assert state(game).sheets["2"].permissions == before.sheets["2"].permissions + 1
+    elif branch == "mutual":
+        respond(subject, "frantic_decline_comfort")
+        respond(subject, "frantic_girl_tag", text="An actual Girl-authored Tag")
+        assert service.menu(ADMIN, identity)["phase"] == "frantic_handler_tag"
+        respond(ADMIN, "frantic_handler_tag", text="An actual Handler-authored Tag")
+        (actual,) = private_scenes(state(game))
+        assert any(
+            x.id == actual.tag and x.giver_actor == saved.handler
+            for x in state(game).sheets["3"].tags
+        )
+        assert any(
+            x.id == actual.handler_tag and x.giver_actor == saved.girl
+            for x in state(game).handler_tags
+        )
+    elif branch == "high":
+        assert (
+            bond_depth(state(game), saved.handler, saved.girl)
+            == bond_depth(before, saved.handler, saved.girl) + 1
+        )
+        assert any(x.marked for x in state(game).sheets["3"].identities)
+        respond(subject, "frantic_high", effects=("unmark", "printed_tag"))
+        assert not any(x.marked for x in state(game).sheets["3"].identities)
+        (actual,) = private_scenes(state(game))
+        assert any(
+            x.id == actual.handler_tag and x.giver_actor == saved.girl
+            for x in state(game).handler_tags
+        )
+    else:
+        respond(subject, "frantic_care", text="My original Girl's own answer.")
+        if branch == "believe":
+            respond(ADMIN, "frantic_believe")
+            respond(subject, "frantic_no_tag")
+            assert (
+                bond_depth(state(game), saved.handler, saved.girl)
+                == bond_depth(before, saved.handler, saved.girl) + 1
+            )
+        else:
+            respond(ADMIN, "frantic_doubt")
+            (actual,) = private_scenes(state(game))
+            assert service.menu(subject, identity)["phase"] == "frantic_discipline"
+            assert any(
+                x.id == actual.discipline and x.state == "pending" for x in state(game).obligations
+            )
+            assert bond_depth(state(game), saved.handler, saved.girl) == bond_depth(
+                before, saved.handler, saved.girl
+            )
+            return
+    assert service.menu(subject, identity)["phase"] == "complete" and game.dice.calls == 1

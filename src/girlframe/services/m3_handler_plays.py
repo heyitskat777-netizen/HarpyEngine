@@ -1189,6 +1189,18 @@ class HandlerPlayService:
                     self.game, c, state, book="Insurgent", rule=private_rules["Insurgent"]
                 )
                 is not None,
+                scientist_private=active_book(
+                    self.game, c, state, book="Scientist", rule=private_rules["Scientist"]
+                )
+                is not None,
+                frantic_private=active_book(
+                    self.game, c, state, book="Frantic", rule=private_rules["Frantic"]
+                )
+                is not None,
+                advocate_private=active_book(
+                    self.game, c, state, book="Advocate", rule=private_rules["Advocate"]
+                )
+                is not None,
                 successor=owned_successor(self.game, c, state, active_handler(state)) is not None,
                 frantic_breakdown=active_book(
                     self.game, c, state, book="Frantic", rule=breakdown_rule
