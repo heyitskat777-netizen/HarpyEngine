@@ -5,7 +5,7 @@ import re
 from girlframe.ai.play_review import PlayReferral
 from girlframe.engine.m2 import PLAY_IDS
 from girlframe.engine.m3_consume import PLAYS as CONSUME
-from girlframe.engine.m3_handler_play_state import BASIC, EXTRA
+from girlframe.engine.m3_handler_play_state import BASIC, DRESS_RULE, EXTRA, SUCCESSOR_ADVICE
 from girlframe.engine.m3_red_queen import PLAYS as RED_QUEEN
 from girlframe.engine.m3_wyvern import PLAYS as WYVERN
 from girlframe.engine.rules_registry import Registry
@@ -66,6 +66,8 @@ NATIVE_RULES = {
     "handler_tracker_intercept": "handler-advancement.handler-advancement.tracker-implants",
     "handler_tracker_voyeur": "handler-advancement.handler-advancement.tracker-implants",
     "handler_contaminant_warp": "handler-advancement.handler-advancement.contaminant-zone",
+    "handler_dress_them_down": DRESS_RULE,
+    "handler_successor_advice": SUCCESSOR_ADVICE,
     "gorgon_attack": "gorgon.gorgon.attack",
     "gorgon_collateral": "gorgon.gorgon.collateral-damage",
     "gorgon_warp": "gorgon.gorgon.warp",
@@ -128,7 +130,19 @@ class PlayCatalog:
             return ()
         if re.search(r"\b(?:not|never|don't|won't)\b", text[: declaration.start()], re.I):
             return ()
-        goal = re.search(r"\s+to\s+", text[declaration.end() :], re.I)
+        routes = self.all()
+        statement = text[declaration.end() :]
+        # A printed title can itself contain "to". Its words are part of the declaration.
+        title_end = max(
+            (
+                match.end()
+                for route in routes
+                if " to " in route.title.casefold()
+                and (match := re.match(r"\s*" + re.escape(route.title) + r"\b", statement, re.I))
+            ),
+            default=0,
+        )
+        goal = re.compile(r"\s+to\s+", re.I).search(statement, title_end)
         if goal is not None:
             text = text[: declaration.end() + goal.start()]
         # Typed IDs take precedence over similarly named source headings.
@@ -143,7 +157,7 @@ class PlayCatalog:
                     (declaration.end() + match.start(), declaration.end() + match.end(), route)
                 )
         matches: list[tuple[int, int, PlayReferral]] = []
-        for route in self.all():
+        for route in routes:
             entry = self.registry.entry(route.rule_id)
             labels = {route.play_id, route.rule_id, *entry.aliases}
             # Shared Sex Play headings need a playbook; the bare heading stays ambiguous.
