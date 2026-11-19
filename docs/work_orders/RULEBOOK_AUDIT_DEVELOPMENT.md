@@ -759,3 +759,15 @@ pause, replay, reopen, private recipients and the actual triggered Disobey
 bonus. Six direct trigger consumers are enabled. Replacement and new track
 creation have their own acceptance checks below as work continues.
 [Director phone powers p. 190](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=192) · [Phone tests](../../tests/rules/test_director_strain_calls.py)
+
+## Learned Stim NPC regression reconciliation
+
+The full run on historical candidate `a90a081a5b6bbe7306045175464d1269f9661484`
+exposed a test that still expected learned Stim Orders to be refused for
+an ordinary NPC. The failure reproduced independently on that commit and
+on the development branch. The already integrated engine implementation
+allows the scoped effect. The corrected tests exercise both Helpless and
+Orders, send a native learned Order, verify the NPC controller's owned
+response, and confirm expiry closes new Order authority. All six selected
+learned and direct Stim NPC Order tests passed. Gameplay code is unchanged.
+[Prior integration scope](../../reports/GIRL_FRAME_INTEGRATION_HANDOFF.md#stim-blissed-pilot-to-ordinary-npc-orders) · [Learned Stim tests](../../tests/rules/test_learned_stim_npc.py)

@@ -32,12 +32,14 @@ from girlframe.services.m3_learned_sex import lessons
 from girlframe.services.m3_learned_sex import prove as prove_lesson
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_stim_sex import SexService, _drug, prove, prove_effect
+from girlframe.services.m3_succubus import SuccubusService
 from girlframe.services.m3_world import WorldService
 from girlframe.services.onboarding import WorkflowError
 
 
+@pytest.mark.parametrize("effect_kind", ("helpless", "orders"))
 def test_earned_stim_npc_decline_fresh_contact_once_only_drug_and_actual_expiry(
-    ledger, tmp_path, monkeypatch
+    ledger, tmp_path, monkeypatch, effect_kind
 ):
     game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch, teacher="STIM-BLISSED")
     approved(
@@ -155,19 +157,17 @@ def test_earned_stim_npc_decline_fresh_contact_once_only_drug_and_actual_expiry(
     pass_tags(game)
     receipt = game.inspect(PLAYER, action)["receipt"]
     choose(game, PLAYER, "stim_sex_drug", ("calm",), native=True)
-    before_unsupported = state(game)
-    with pytest.raises(WorkflowError, match="human adjudication"):
-        choose(game, PLAYER, "stim_sex_effects", ("orders",))
-    assert state(game) == before_unsupported
     assert game.inspect(PLAYER, action)["state"] != "complete"
-    choose(game, PLAYER, "stim_sex_effects", ("helpless",), native=True)
+    choose(game, PLAYER, "stim_sex_effects", (effect_kind,), native=True)
     actual = state(game)
     drug = rules.records(actual, rules.Drug)[-1]
     effect = rules.records(actual, rules.Effect)[-1]
     assert drug.giver == learner and drug.target == npc and drug.session == link.session
     assert drug.action == action and drug.tag in actor_tags(actual, npc)
     assert effect.giver == learner and effect.target == npc and effect.drug == drug.id
-    assert is_helpless(actual, npc) and not is_helpless(actual, learner)
+    assert effect.kind == effect_kind
+    assert is_helpless(actual, npc) == (effect_kind == "helpless")
+    assert not is_helpless(actual, learner)
     assert actual.sheets["2"].heat == heat - 1 and game.dice.calls == calls + 1
     assert game.inspect(PLAYER, action)["state"] == "complete"
     with ledger.engine.connect() as c:
@@ -189,8 +189,31 @@ def test_earned_stim_npc_decline_fresh_contact_once_only_drug_and_actual_expiry(
         )
     assert state(game) == actual and game.dice.calls == calls + 1
     tick(worker, gateway, 8)
+    if effect_kind == "orders":
+        view = service.view(PLAYER, link.session, order_channel=900)
+        assert view["pilot_order_effect"] == effect.id
+        orders = SuccubusService(game)
+        issued = orders.issue_npc(
+            PLAYER,
+            "learned-stim-order",
+            900,
+            state(game).revision,
+            npc,
+            view["pilot_order_cast"],
+            "Wait by the office",
+            stim_effect=effect.id,
+        )["action_id"]
+        tick(worker, gateway, 5)
+        pending = orders.inspect(ADMIN, issued)
+        orders.choose(
+            ADMIN, "learned-stim-obey", issued, pending["revision"], "obedient", "I wait."
+        )
+        assert orders.inspect(ADMIN, issued)["phase"] == "complete"
+        assert game.dice.calls == calls + 1
+        tick(worker, gateway, 5)
     game.close_scene(ADMIN, str(uuid4()), 900)
-    assert not rules.expired(state(game), drug.id) and is_helpless(state(game), npc)
+    assert not rules.expired(state(game), drug.id)
+    assert is_helpless(state(game), npc) == (effect_kind == "helpless")
     game.bind_scene(ADMIN, str(uuid4()), 900)
     for viewer in (PLAYER, OTHER, ADMIN):
         game.join_scene(viewer, str(uuid4()), 900)
@@ -201,6 +224,7 @@ def test_earned_stim_npc_decline_fresh_contact_once_only_drug_and_actual_expiry(
     assert not any(x.id == drug.id for x in actor_tags(actual, npc))
     assert game.inspect(PLAYER, action)["receipt"] == receipt and game.dice.calls == calls + 1
     assert service.view(PLAYER, link.session)["drugs"][0]["expired"]
+    assert service.view(PLAYER, link.session, order_channel=900)["pilot_order_effect"] is None
     with ledger.engine.connect() as c:
         assert prove_lesson(game, c, actual, link.id).action == action
         assert prove_lesson(game, c, actual, declined.id).released_kind == "declined"
