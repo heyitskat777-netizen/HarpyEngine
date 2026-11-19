@@ -9,6 +9,7 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import current_ref
+from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m3_access import Access, digest
@@ -17,16 +18,14 @@ if TYPE_CHECKING:
     from girlframe.services.m2_game import GameService
 
 
-def direct_order_source(
+def active_book(
     game: "GameService",
     c: Connection,
     state: GameState,
-    action: dict[str, Any],
     *,
     book: str,
     rule: str,
-    order_state: str,
-) -> dict[str, Any] | None:
+) -> tuple[ActorRef, int] | None:
     persona = state.handler_persona
     handler = active_handler(state)
     if persona is None or persona.draft.playbook != book or handler is None:
@@ -49,6 +48,34 @@ def direct_order_source(
         or HandlerService(game.store).current(c)[1].handler_id != int(handler.entity)
     ):
         return None
+    events = t.events
+    activation = c.scalar(
+        sa.select(events.c.seq).where(
+            events.c.campaign_id == game.store.campaign_id,
+            events.c.id == persona.source_event,
+            events.c.kind == "m3.handler_activated",
+            events.c.actor_id == handler.entity,
+        )
+    )
+    return (handler, activation) if activation is not None else None
+
+
+def direct_order_source(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    *,
+    book: str,
+    rule: str,
+    order_state: str,
+) -> dict[str, Any] | None:
+    owned = active_book(game, c, state, book=book, rule=rule)
+    if owned is None:
+        return None
+    handler, activation = owned
+    persona = state.handler_persona
+    assert persona is not None
     data = action["data"]
     order_id = data.get("order_id") or data.get("prepared", {}).get("order_id")
     if not order_id or not action["actor_id"].isdigit():
@@ -80,16 +107,6 @@ def direct_order_source(
     if order is None or json.loads(order).get("npc_order"):
         return None
     events = t.events
-    activation = c.scalar(
-        sa.select(events.c.seq).where(
-            events.c.campaign_id == game.store.campaign_id,
-            events.c.id == persona.source_event,
-            events.c.kind == "m3.handler_activated",
-            events.c.actor_id == handler.entity,
-        )
-    )
-    if activation is None:
-        return None
     issued = c.scalars(
         sa.select(events.c.payload_json).where(
             events.c.campaign_id == game.store.campaign_id,

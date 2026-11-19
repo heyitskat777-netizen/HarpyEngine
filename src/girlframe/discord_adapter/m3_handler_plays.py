@@ -10,7 +10,7 @@ from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.m3_punishments import Picker
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_actor_state import ActorRef
-from girlframe.engine.m3_handler_play_state import BASIC, EXTRA, Effect, Play
+from girlframe.engine.m3_handler_play_state import BASIC, DRESS_STEPS, EXTRA, Effect, Play
 from girlframe.engine.m3_world_state import Npc
 from girlframe.services.m3_handler_plays import HandlerPlayService
 from girlframe.services.onboarding import WorkflowError
@@ -23,6 +23,8 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
         ("new", "Make a basic Handler Play"),
         ("off_duty", "Go Off-Duty / actual period and scenes"),
     ]
+    if data.get("dress_them_down") and interaction.channel_id is not None:
+        options.append(("dress", "Dress Them Down in this scene"))
     options.extend(
         ("warp:" + x["id"], "Warp area: " + x["label"]) for x in data.get("warp_zones", [])
     )
@@ -44,9 +46,10 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
             from girlframe.services.m3_off_duty import OffDutyService
 
             await open_period(current, OffDutyService(MissionService(service.store)))
-        elif identity != "new":
+        elif identity not in ("new", "dress"):
             await open_play(current, service, identity)
         else:
+            dress_scene = interaction.channel_id if identity == "dress" else None
 
             async def submit(actual: discord.Interaction, values: dict[str, Any]) -> str:
                 result = await asyncio.to_thread(
@@ -55,6 +58,7 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
                     str(actual.id),
                     data["game_revision"],
                     tuple(ActorRef.model_validate(targets[x]["ref"]) for x in values["targets"]),
+                    dress_scene=dress_scene,
                 )
                 return (
                     "Owned Handler Play saved. Reopen your Inbox or Handler Plays to "
@@ -67,14 +71,14 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
                 )
             form = NativeForm(
                 viewer_from_interaction(current).user_id,
-                "Handler Play — affected characters",
+                "Dress Them Down" if dress_scene else "Handler Play — affected characters",
                 "Choose the actual originals affected. No player reply or consent is generated.",
                 [
                     Field(
                         "targets",
                         "Who is affected?",
                         tuple((key, x["label"]) for key, x in targets.items()),
-                        maximum=len(targets),
+                        maximum=1 if dress_scene else len(targets),
                     )
                 ],
                 submit,
@@ -261,7 +265,15 @@ async def effect_form(
 ) -> None:
     targets = {x["token"]: x for x in data["targets"]}
     fields = [Field("account", "Information / consequence to communicate", paragraph=True)]
-    if kind in ("status", "tag", "damage", "punish", "tracker_intercept", "tracker_voyeur"):
+    if kind in (
+        "status",
+        "tag",
+        "damage",
+        "punish",
+        "tracker_intercept",
+        "tracker_voyeur",
+        "dress_them_down",
+    ):
         fields.insert(
             0,
             Field(
@@ -292,6 +304,13 @@ async def effect_form(
                 "Status change",
                 (("1", "Raise one position"), ("-1", "Lower one position")),
             )
+        )
+    elif kind == "dress_them_down":
+        fields.extend(
+            [
+                Field("dress_steps", "Choose one to three printed steps", DRESS_STEPS, maximum=3),
+                Field("tag", "Tag only if they become the Dog", required=False),
+            ]
         )
     elif kind == "tag":
         fields.append(Field("tag", "New Tag"))
@@ -386,6 +405,8 @@ async def effect_form(
             effect_data["detail"] = data["observed_moment"]
         elif kind == "status":
             effect_data["status"] = int(values["status"][0])
+        elif kind == "dress_them_down":
+            effect_data.update(dress_steps=values["dress_steps"], tag=values.get("tag", ""))
         elif kind == "tag":
             effect_data["tag"] = values["tag"]
         elif kind == "damage":

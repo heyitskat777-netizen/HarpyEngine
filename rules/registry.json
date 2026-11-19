@@ -15934,14 +15934,16 @@
         "heading": "Dress Them Down"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_dogrunner_status.py::test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_dog"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

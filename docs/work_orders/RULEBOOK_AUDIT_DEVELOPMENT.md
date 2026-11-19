@@ -1284,3 +1284,19 @@ discipline effect after both participants attested to its scene. The selected
 Handler, Strain, Off-Duty, discipline and Inbox regression passed
 **143 tests in 100.63 seconds**.
 [Rulebook p. 123](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=125) · [Tests](../../tests/rules/test_mistress_rewards.py)
+
+### Dogrunner Dress Them Down
+
+Base `dca66de85f7f2f2afe3baac293931f02163df878`. The Dogrunner can start
+this signature Play from the native Handler menu in an actual jointly attended
+scene. The exact original Girl and Handler stay bound to the private Inbox
+grant. The competency, appearance, inherent-trait and dog-language options
+each lower actual Status by one position and require the actual Tag if the
+Girl becomes a Dog. She keeps her own actions. The physical, third-party,
+demeaning-order, dismissal-order and regular Punishment branches remain open.
+
+The focused cases covered the native menu and Inbox, the required Tag,
+wrong owner, unrelated readers, wrong scene, restart, safety pause, retries
+and stale choices. The selected Handler, mission, discipline, Off-Duty,
+Harpy, Void and Inbox regression passed **197 tests in 132.96 seconds**.
+[Rulebook p. 125](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=127) · [Tests](../../tests/rules/test_dogrunner_status.py)

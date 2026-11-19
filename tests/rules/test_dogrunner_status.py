@@ -1,5 +1,7 @@
 """Dogrunner rank changes and native mission discipline use the original Dogs."""
 
+import asyncio
+
 import pytest
 from m3_policy_scenario import configure_m3_fixture
 from test_handler_creation import complete, save
@@ -8,28 +10,33 @@ from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger
 from test_m2_game import answer, pass_tags, state, tick
 from test_mission_service import launched
+from test_mission_ui import current
 from test_punishment_service import submit
 
+from girlframe.discord_adapter.inbox import InboxView
+from girlframe.discord_adapter.m3_handler_plays import open_handler_plays
 from girlframe.engine.m2 import PlayInput, shift_status
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_dogrunner import owners
+from girlframe.engine.m3_handler_play_state import Effect
 from girlframe.engine.m3_intracadre_marriage import is_dog
 from girlframe.engine.m3_punishments import Details
 from girlframe.services.inbox import InboxService
 from girlframe.services.m3_handler_creation import HandlerCreationService
+from girlframe.services.m3_handler_plays import HandlerPlayService
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_punishments import PunishmentService
 from girlframe.services.onboarding import WorkflowError
 
 
-def test_dogrunner_keeps_raised_dogs_and_mission_punishes_each_original_once(ledger):
+def dogrunner_ready(ledger):
     game, worker, gateway, _ = setup_three(ledger)
     registry = configure_m3_fixture(ledger)
     approval, rulings = ledger.policy.m3_approval, ledger.policy.owner_m3_rulings
     ledger.policy = ledger.policy.model_copy(
         update=dict(
             m3_approval=approval.model_copy(
-                update=dict(subsystems=approval.subsystems | {"playbooks"})
+                update=dict(subsystems=approval.subsystems | {"playbooks", "plays"})
             ),
             owner_m3_rulings=rulings.model_copy(
                 update=dict(handler_creation="owned_shared_choices_preserve_existing"),
@@ -50,6 +57,11 @@ def test_dogrunner_keeps_raised_dogs_and_mission_punishes_each_original_once(led
     )
     assert state(game).order == (2, 3, 4)
     assert owners(state(game)) == (4,)
+    return game, worker, gateway, registry
+
+
+def test_dogrunner_keeps_raised_dogs_and_mission_punishes_each_original_once(ledger):
+    game, worker, gateway, registry = dogrunner_ready(ledger)
 
     order = game.issue_order(ADMIN, "dogrunner-actual-order", 900, 3, "Stay by the entrance.")
     tick(worker, gateway, 3)
@@ -125,3 +137,92 @@ def test_dogrunner_keeps_raised_dogs_and_mission_punishes_each_original_once(led
         missions.complete(ADMIN, "all-current-dogs-resolved", mission, ended["revision"])["phase"]
         == "complete"
     )
+
+
+def test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_dog(ledger):
+    game, *_ = dogrunner_ready(ledger)
+    service = HandlerPlayService(ledger)
+    original = state(game)
+    actor = current_ref(original, 2)
+    with pytest.raises(WorkflowError, match="scene"):
+        service.start(ADMIN, "unbound-dressing", original.revision, (actor,), dress_scene=901)
+
+    async def begin():
+        invoked = current(1, 47000)
+        invoked.channel_id = 900
+        await invoked.response.defer(ephemeral=True)
+        await open_handler_plays(invoked, service)
+        hub = invoked.edit_original_response.call_args.kwargs["view"]
+        assert "dress" in dict(hub.options)
+        await hub.open_item(invoked, "dress")
+        form = invoked.edit_original_response.call_args.kwargs["view"]
+        form.values.update(targets=(actor.token,))
+        await form.confirm.callback(current(1, 47001))
+        assert form.completed
+
+    asyncio.run(begin())
+    (task,) = service.tasks(ADMIN)
+    identity = task["id"]
+    inbox = InboxService(ledger)
+    assert all(x.identity != identity for x in inbox.items(OTHER))
+    effect = Effect(
+        kind="dress_them_down",
+        target=actor,
+        account="PRIVATE_ACTUAL_DRESSING",
+        dress_steps=("competency", "dog"),
+        tag="PRIVATE_NEW_DOG_TAG",
+    )
+    information = service.get(ADMIN, identity)
+    revision = information["game_revision"]
+    with pytest.raises(WorkflowError):
+        service.submit(OTHER, "forged-dressing", identity, revision, "dress_them_down", effect)
+    with pytest.raises(WorkflowError, match="Tag exactly"):
+        service.submit(
+            ADMIN,
+            "without-required-tag",
+            identity,
+            revision,
+            "dress_them_down",
+            effect.model_copy(update=dict(tag="")),
+        )
+    ledger.safety(OTHER, "dressing-paused", ledger.status(OTHER)["revision"], pause=True)
+    with pytest.raises(WorkflowError, match="SAFETY_PAUSED"):
+        service.submit(ADMIN, "try-paused-dress", identity, revision, "dress_them_down", effect)
+    ledger.safety(OTHER, "dressing-resume", ledger.status(OTHER)["revision"], pause=False)
+    ledger.engine.dispose()
+    assert state(game).order == original.order
+    assert not state(game).sheets["2"].tags
+
+    async def submit_via_inbox():
+        click = current(1, 47010)
+        await click.response.defer(ephemeral=True)
+        item = next(x for x in inbox.items(ADMIN) if x.identity == identity)
+        await InboxView(inbox, 1).route(click, item)
+        menu = click.edit_original_response.call_args.kwargs["view"]
+        await menu.open_item(click, "dress_them_down")
+        form = click.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            target=(actor.token,),
+            dress_steps=effect.dress_steps,
+            account=effect.account,
+            tag=effect.tag,
+        )
+        sent = current(1, 47011)
+        await form.confirm.callback(sent)
+        assert form.completed, (sent.followup.send.call_args, sent.edit_original_response.call_args)
+
+    asyncio.run(submit_via_inbox())
+    assert (
+        service.submit(ADMIN, "47011", identity, revision, "dress_them_down", effect)["state"]
+        == "complete"
+    )
+    with pytest.raises(WorkflowError):
+        service.submit(ADMIN, "stale-dress", identity, revision, "dress_them_down", effect)
+    canonical = state(game)
+    assert canonical.order == (3, 4, 2) and owners(canonical) == (4, 2)
+    (tag,) = canonical.sheets["2"].tags
+    assert tag.label == effect.tag and tag.giver_actor == current_ref(canonical, 1)
+    assert set(tag.observers) == {1, 2}
+    assert service.notice(PLAYER, identity)["account"] == effect.account
+    with pytest.raises(WorkflowError):
+        service.notice(OTHER, identity)

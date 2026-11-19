@@ -22,7 +22,16 @@ EXTRA = (
     ("tracker_intercept", "Intercept them"),
     ("tracker_voyeur", "Play voyeur to a private moment"),
     ("contaminant_warp", "Warp the quarantined area"),
+    ("dress_them_down", "Dress Them Down"),
 )
+DRESS_RULE = "handler-playbook.dogrunner.dress-them-down"
+DRESS_STEPS = (
+    ("competency", "Insult their competency"),
+    ("appearance", "Insult their appearance"),
+    ("identity", "Dismiss them for an inherent trait"),
+    ("dog", "Call them a dog, mutt or stray"),
+)
+DressStep = Literal["competency", "appearance", "identity", "dog"]
 Play = Literal[
     "brief",
     "punish",
@@ -34,6 +43,7 @@ Play = Literal[
     "tracker_intercept",
     "tracker_voyeur",
     "contaminant_warp",
+    "dress_them_down",
 ]
 
 
@@ -51,6 +61,7 @@ class Effect(Model):
         "tracker_intercept",
         "tracker_voyeur",
         "contaminant_warp",
+        "dress_them_down",
     ]
     account: str = Field(min_length=1, max_length=1200)
     detail: str = Field(default="", max_length=1200)
@@ -70,6 +81,7 @@ class Effect(Model):
         default=None, min_length=1, max_length=100, exclude_if=lambda x: x is None
     )
     cell: Cell | None = Field(default=None, exclude_if=lambda x: x is None)
+    dress_steps: tuple[DressStep, ...] = Field(default=(), max_length=3, exclude_if=lambda x: not x)
 
     @model_validator(mode="after")
     def actual_effect(self) -> "Effect":
@@ -88,6 +100,7 @@ class Effect(Model):
             "tracker_intercept": {"target"},
             "tracker_voyeur": {"target", "detail"},
             "contaminant_warp": {"zone", "cell", "detail"},
+            "dress_them_down": {"target", "tag", "dress_steps"},
         }[self.kind] | {"kind", "account", "source_label"}
         baseline = Effect.model_construct(kind=self.kind, account=self.account)
         if any(
@@ -130,6 +143,13 @@ class Effect(Model):
             or not self.detail.strip()
         ):
             raise ValueError("Warp a real owned zone with an actual located feature")
+        if self.kind == "dress_them_down" and (
+            self.target is None
+            or self.target.kind != "pilot"
+            or not self.dress_steps
+            or len(set(self.dress_steps)) != len(self.dress_steps)
+        ):
+            raise ValueError("Choose one to three distinct options and an actual original Girl")
         return self
 
 
@@ -165,6 +185,15 @@ class HandlerPlay(Model):
 
     @model_validator(mode="after")
     def actual_authority(self) -> "HandlerPlay":
+        if self.clause == DRESS_RULE and (
+            self.source != "ordinary"
+            or self.scope.scene_id is None
+            or self.chooser_actor is None
+            or self.chooser_actor.kind != "handler"
+            or len(self.targets) != 1
+            or self.targets[0].kind != "pilot"
+        ):
+            raise ValueError("Dress Them Down belongs to the original Dogrunner and Girl in scene")
         if self.offered_play is not None and (
             self.source != "ordinary"
             or self.clause != "director_offer"

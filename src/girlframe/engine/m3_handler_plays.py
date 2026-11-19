@@ -1,7 +1,7 @@
 """Finite Handler Play grants; a printed counter never changes campaign GM authority."""
 
 from girlframe.engine.m2 import GameState, TagState, shift_status
-from girlframe.engine.m3_handler_play_state import BASIC, Effect, HandlerPlay, Play
+from girlframe.engine.m3_handler_play_state import BASIC, DRESS_RULE, Effect, HandlerPlay, Play
 from girlframe.engine.m3_void_state import HarpyTag
 from girlframe.engine.m3_world import introduce_npc
 from girlframe.engine.m3_world_state import WorldTag
@@ -19,6 +19,8 @@ def replace(state: GameState, value: HandlerPlay) -> None:
 
 
 def available_plays(state: GameState, grant: HandlerPlay) -> tuple[str, ...]:
+    if grant.clause == DRESS_RULE:
+        return ("dress_them_down",)
     if grant.brief_account is not None:
         return ("brief",)
     if grant.offered_play is not None:
@@ -63,6 +65,8 @@ def select(state: GameState, identity: str, play: Play, effect: Effect, event: s
             raise ValueError("This zone source grants only its actual warp Play")
     elif play == "contaminant_warp":
         raise ValueError("A basic Handler grant has no quarantined-zone authority")
+    if (grant.clause == DRESS_RULE) != (play == "dress_them_down"):
+        raise ValueError("Use only the original Dogrunner's Dress Them Down grant")
     if grant.nonbody_only and effect.kind not in ("brief", "escalate", "support", "expectation"):
         raise ValueError(
             "The actual original ended; only the source-owned nonbody procedure remains"
@@ -92,6 +96,32 @@ def direct(state: GameState, identity: str, event: str) -> GameState:
         if sheet is None or sheet.character_id != target.incarnation:
             raise ValueError("The original target ended; replacements cannot inherit this effect")
         shift_status(changed, sheet.owner, effect.status)
+    elif effect.kind == "dress_them_down":
+        from girlframe.engine.m3_intracadre_marriage import is_dog
+
+        target = effect.target
+        assert target is not None
+        sheet = changed.sheets.get(target.entity)
+        if sheet is None or sheet.character_id != target.incarnation:
+            raise ValueError("The original target ended; replacements cannot inherit this effect")
+        was_dog = is_dog(changed, sheet.owner)
+        for _ in effect.dress_steps:
+            shift_status(changed, sheet.owner, -1)
+        became_dog = not was_dog and is_dog(changed, sheet.owner)
+        label = effect.tag.strip()
+        if became_dog != bool(label):
+            raise ValueError("Give a Tag exactly when this original Girl becomes the Dog")
+        if became_dog:
+            sheet.tags.append(
+                TagState(
+                    id=identity + ":tag",
+                    label=label,
+                    giver=grant.chooser_controller,
+                    giver_actor=grant.chooser_actor,
+                    observers=(grant.chooser_controller, sheet.owner),
+                )
+            )
+        sheet.revision += 1
     elif effect.kind == "tag":
         target = effect.target
         assert target is not None
