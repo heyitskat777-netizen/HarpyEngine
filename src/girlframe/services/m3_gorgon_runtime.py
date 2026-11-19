@@ -11,6 +11,7 @@ from girlframe.database import tables as t
 from girlframe.engine import m3_battle as battle
 from girlframe.engine import m3_growth as growth
 from girlframe.engine import m3_mother_sprite as mother_sprite
+from girlframe.engine import m3_parasite as parasite
 from girlframe.engine.m2 import ChoiceAnswer, GameState
 from girlframe.engine.m3_actor_state import ActorRef, SceneCast
 from girlframe.engine.m3_actors import resolve
@@ -136,6 +137,22 @@ def start(game: Any, c: Connection, state: GameState, action: dict[str, Any]) ->
             victims=people,
         )
         action["data"]["result"]["catatonia" if people else "audible_communication_blocked"] = True
+        return
+    if meta["kind"] in parasite.PLAYS:
+        declaration = Declaration.model_validate_json(json.dumps(meta["declaration"]))
+        if declaration.target is None:
+            parasite.detach(state, declaration.actor, _event(action))
+        else:
+            bound = profiles(c, game.store.campaign_id)
+            parasite.hitch(
+                state,
+                resolve(state, declaration.actor, bound, require_current_profile=False),
+                resolve(state, declaration.target, bound, require_current_profile=False),
+                action=action["id"],
+                scene=action["scene_id"],
+                event=_event(action),
+            )
+        action["data"]["result"]["parasite_riding"] = declaration.target is not None
         return
     if meta["kind"] in growth.KINDS:
         declaration = Declaration.model_validate_json(json.dumps(meta["declaration"]))

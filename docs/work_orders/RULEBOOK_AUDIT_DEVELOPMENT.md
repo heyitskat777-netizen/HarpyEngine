@@ -1927,6 +1927,33 @@ its square. Extra non-Pilot job paths, visual alternatives and
 the separate Hallucinations roll still need coverage.
 [Jackdaw p. 169](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=171) · [Native cases](../../tests/rules/test_gorgon_runtime.py)
 
+The broader Gorgon, NPC Order, World, movement, registry and shadow
+selection passed **96 tests in 195.86 seconds** on the catatonia
+candidate. The archived Activity overlay at
+`ca2a9009b54eeaf33c4b5f504a00471ef9c6f55f` passed **13 simulated
+adapter tests in 47.74 seconds**. Those exercised the disposable
+mission, campaign, recovery and P2 routes using the inert Discord SDK.
+
+### Parasite ride
+
+Base `7891cd2b70a44c5a7d3f391c667ff0df55f0332d`. The original
+Parasite can hitch a ride on a known living ordinary NPC in its same
+actual square through the native Gorgon control. Canonical host
+movement moves the attached Parasite atomically with the original
+host, while the NPC's controller retains control of its travel.
+The original Parasite can detach in the current scene. The historical
+ride retains its original source event, latest movement and ending.
+
+The Gorgon, recovery, physical operations and registry selection
+passed **75 tests in 127.54 seconds**. After tightening the original
+host visibility and physical source check, the Parasite and
+catatonia cases passed **2 tests in 6.30 seconds**. The native case
+verifies original host selection, wrong controller and body, no dice,
+restart, replay, movement and detachment without changing either
+Girl sheet. Infiltrating technology and Infect still need their own
+workflows.
+[Parasite p. 174](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=176) · [Native ride case](../../tests/rules/test_gorgon_runtime.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

@@ -24,6 +24,8 @@ class Declaration(Model):
             "mother_sprite",
             "jackdaw_jam",
             "jackdaw_catatonia",
+            "parasite_hitch",
+            "parasite_detach",
         ]
         | TypeTag
     )
@@ -48,7 +50,13 @@ class Declaration(Model):
             raise ValueError("State the actual physical attack/destruction and source capabilities")
         if bool(self.assets) != (self.kind in ("attack", "collateral")):
             raise ValueError("Attack and Collateral require actual owned Assets")
-        if self.kind in ("attack", "incubus_inflict", "mother_mutation", "doppleganger_bond"):
+        if self.kind in (
+            "attack",
+            "incubus_inflict",
+            "mother_mutation",
+            "doppleganger_bond",
+            "parasite_hitch",
+        ):
             if self.target is None or self.target_sha256 is None or self.target == self.actor:
                 raise ValueError("This Play needs its actual distinct target body and source")
         elif self.target is not None or self.target_sha256 is not None:

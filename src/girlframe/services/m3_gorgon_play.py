@@ -12,6 +12,7 @@ from girlframe.database import tables as t
 from girlframe.engine import m3_growth as growth
 from girlframe.engine import m3_jackdaw as jackdaw
 from girlframe.engine import m3_mother_sprite as mother_sprite
+from girlframe.engine import m3_parasite as parasite
 from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, SceneCast
 from girlframe.engine.m3_actors import fingerprint, resolve
@@ -40,6 +41,7 @@ RULES: dict[str, str] = {
     "mother_sprite": mother_sprite.RULE,
     "jackdaw_jam": jackdaw.RULE,
     "jackdaw_catatonia": jackdaw.RULE,
+    **dict.fromkeys(parasite.PLAYS, parasite.RULE),
     **{str(kind): rule for kind, rule in TYPE_TAG_RULES.items()},
 }
 
@@ -136,12 +138,24 @@ class GorgonPlayService:
                     )
                 )
             typed_targets: dict[str, dict[str, list[str]]] = {}
+            parasite_choices: dict[str, dict[str, list[str]]] = {}
             if state.world is not None:
                 for actor in state.world.gorgons:
                     token = ActorRef(kind="gorgon", entity=actor.id).token
                     caster = visible.get(token)
                     if caster is None or caster.controller != viewer.user_id:
                         continue
+                    if actor.alive and "parasite" in actor.types and not caster.offstage_source:
+                        if parasite.active(state, caster.ref):
+                            parasite_choices[token] = {"parasite_detach": []}
+                        else:
+                            hosts = [
+                                host.ref.token
+                                for host in visible.values()
+                                if parasite.present(state, caster, host)
+                            ]
+                            if hosts:
+                                parasite_choices[token] = {"parasite_hitch": hosts}
                     options = {
                         kind: [
                             target.ref.token
@@ -162,6 +176,8 @@ class GorgonPlayService:
                 if kind == "corrupt" and not can_corrupt:
                     continue
                 if kind in TAG_TYPES and not any(kind in x for x in typed_targets.values()):
+                    continue
+                if kind in parasite.PLAYS and not any(kind in x for x in parasite_choices.values()):
                     continue
                 if kind in growth.KINDS and not any(kind in x for x in can_grow.values()):
                     continue
@@ -184,6 +200,7 @@ class GorgonPlayService:
                 growth=can_grow,
                 sprite_birth=can_birth,
                 jam=can_jam,
+                parasite=parasite_choices,
             )
 
     def begin(
@@ -192,7 +209,7 @@ class GorgonPlayService:
         declaration = Declaration.model_validate_json(declaration.model_dump_json())
 
         def operation(c: Connection) -> dict[str, Any]:
-            from girlframe.services.m3_battle import _cast, _scene_judge
+            from girlframe.services.m3_battle import _cast, _scene_judge, _visible
             from girlframe.services.m3_scene_requisitions import guard
 
             self.game.unpaused(c)
@@ -222,6 +239,16 @@ class GorgonPlayService:
             )
             from girlframe.engine.m3_janus_pandora import require_can_harm, vicious
 
+            if declaration.kind in parasite.PLAYS:
+                riding = parasite.active(state, actual.ref) is not None
+                if (
+                    not gorgon.alive
+                    or "parasite" not in gorgon.types
+                    or riding != (declaration.kind == "parasite_detach")
+                ):
+                    raise WorkflowError(
+                        "Use the original Parasite with the matching current host state"
+                    )
             if declaration.kind == "corrupt" and (
                 "sentinel" not in gorgon.types
                 or actual.cell is None
@@ -276,6 +303,11 @@ class GorgonPlayService:
                     raise WorkflowError(
                         "Use the actual present original target and source resources"
                     )
+                if declaration.kind == "parasite_hitch" and (
+                    not _visible(state, target.ref, viewer.user_id)
+                    or not parasite.present(state, actual, target)
+                ):
+                    raise WorkflowError("Choose an actual living ordinary NPC in your square")
                 if declaration.kind in (
                     "incubus_inflict",
                     "mother_mutation",

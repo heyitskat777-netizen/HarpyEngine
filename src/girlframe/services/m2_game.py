@@ -346,6 +346,10 @@ class GameService:
             from girlframe.services.m3_harpy_bond_void import stage as stage_temptation
 
             stage_temptation(self, c, state, event, metadata)
+            if any(fact.get("kind") == "parasite_ride" for fact in state.facts):
+                from girlframe.engine.m3_parasite import follow_hosts
+
+                follow_hosts(state, event)
             body = GameState.model_validate_json(state.model_dump_json()).model_dump_json()
             c.execute(
                 t.m2["m2_state_history"]

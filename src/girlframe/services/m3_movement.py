@@ -129,7 +129,10 @@ def _physical_context(
                 "This source body needs its actual carrier or software-access adapter"
             )
     elif actor.kind == "gorgon":
-        pass
+        from girlframe.engine.m3_parasite import active
+
+        if active(state, actor) is not None:
+            raise WorkflowError("The actual Parasite must detach from its host before moving alone")
     elif actor.kind == "handler" and not frame and actual.inside_frame is not True:
         pass
     elif actor.kind == "external_pilot":

@@ -6400,3 +6400,12 @@ Foundation base destruction and Cadre interception (41), and the Budget
 trial's rescue and terminal sentence (52). The work order links the
 focused tests and printed sources. The selections share some
 tests. Authenticated Activity and real-player acceptance remain pending.
+
+The exact Foundation development revision
+`3c73518bfd88a3f7ecfade03351cfe083a6406bb` subsequently passed
+all 3,804 tests in four detached partitions. The archived Activity
+overlay at `ca2a9009b54eeaf33c4b5f504a00471ef9c6f55f` passed 13
+simulated adapter tests in 47.74 seconds. Subsequent Jackdaw and
+Parasite work passed the source-linked focused selections in the
+work order. Authenticated Discord and live campaign acceptance
+remain separate.

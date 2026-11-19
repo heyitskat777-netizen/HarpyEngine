@@ -17,6 +17,7 @@ from girlframe.engine.m3_growth import Adaptation, Regrowth
 from girlframe.engine.m3_jackdaw import EFFECTS as JACKDAW_EFFECTS
 from girlframe.engine.m3_jackdaw import Range as JackdawRange
 from girlframe.engine.m3_mother_sprite import BirthPlan
+from girlframe.engine.m3_parasite import PLAYS as PARASITE_PLAYS
 from girlframe.engine.m3_world_state import Cell, CorePlan
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_gorgon_play import GorgonPlayService
@@ -50,10 +51,15 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
             return "Choose the actual Jackdaw with an established position."
         targets = [x for x in data["actors"] if x["ref"] != actor["ref"]]
         type_tag = kind in TAG_TYPES
+        if kind in PARASITE_PLAYS:
+            riding_choices = data["parasite"].get(actor["token"], {})
+            if kind not in riding_choices:
+                return "Use the actual Parasite whose host state permits this Play."
+            targets = [x for x in targets if x["token"] in riding_choices[kind]]
         if type_tag:
             eligible = data["typed_targets"].get(actor["token"], {}).get(kind, ())
             targets = [x for x in targets if x["token"] in eligible]
-        targeted = kind == "attack" or type_tag
+        targeted = kind in ("attack", "parasite_hitch") or type_tag
         if targeted and not targets:
             return "Join the actual eligible target to the scene before declaring this Play."
         if kind in ("attack", "collateral") and not actor["assets"]:
@@ -63,7 +69,7 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
             fields.append(
                 Field(
                     "target",
-                    "Actual opposing body",
+                    "Actual NPC host" if kind == "parasite_hitch" else "Actual opposing body",
                     tuple((x["token"], x["label"]) for x in targets),
                 )
             )

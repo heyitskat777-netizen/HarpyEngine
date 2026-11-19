@@ -37,6 +37,7 @@ def candidate_source_gate(monkeypatch):
             "gorgon-type.mother.mother-type",
             "gorgon-type.growth.growth-type",
             "gorgon-type.doppleganger.doppleganger-type",
+            "gorgon-type.parasite.parasite-type",
         }:
             return next(x for x in registry.entries if x.id == identity)
         return actual(registry, identity)
@@ -237,7 +238,13 @@ def gorgon_source(
     data = svc.preview(ADMIN, 900)
     actual = next(x for x in data["actors"] if x["ref"] == actor.model_dump(mode="json"))
     victim = next(x for x in data["actors"] if x["ref"]["entity"] == (target or "2"))
-    targeted = kind in ("attack", "incubus_inflict", "mother_mutation", "doppleganger_bond")
+    targeted = kind in (
+        "attack",
+        "incubus_inflict",
+        "mother_mutation",
+        "doppleganger_bond",
+        "parasite_hitch",
+    )
     declaration = Declaration(
         kind=kind,
         actor=actor,
@@ -1926,3 +1933,146 @@ def test_native_mother_pays_real_birth_and_only_reviewed_escape_matures(ledger, 
         assert (grown.escape, grown.period) == (saved["event"], period)
     else:
         assert not rules.maturities(final)
+
+
+def test_parasite_rides_actual_npc_until_owned_detachment(ledger):
+    import asyncio
+
+    from test_ledger import OTHER
+    from test_mission_ui import current
+
+    from girlframe.discord_adapter.m3_gorgon_play import open_gorgon_play
+    from girlframe.engine.m3_actor_bonds import current_ref
+    from girlframe.engine.m3_parasite import active, records
+    from girlframe.services.m3_movement import MovementService
+    from girlframe.services.onboarding import WorkflowError
+
+    game, worker, gateway, _, declaration = gorgon_source(
+        ledger,
+        kind="parasite_hitch",
+        types=("parasite",),
+        npc=True,
+        target="actual-guard",
+        begin=False,
+    )
+    original = state(game)
+    actor = declaration.actor
+    host = declaration.target
+    service = GorgonPlayService(game)
+    preview = service.preview(ADMIN, 900)
+    assert preview["parasite"] == {actor.token: {"parasite_hitch": [host.token]}}
+    assert not service.preview(OTHER, 900)["parasite"]
+    with pytest.raises(WorkflowError, match="owned"):
+        service.begin(OTHER, "wrong-parasite-controller", 900, original.revision, declaration)
+    other = current_ref(original, OTHER.user_id)
+    unowned = next(x for x in preview["actors"] if x["token"] == other.token)
+    with pytest.raises(WorkflowError, match="ordinary NPC"):
+        service.begin(
+            ADMIN,
+            "wrong-parasite-host",
+            900,
+            original.revision,
+            declaration.model_copy(
+                update=dict(target=other, target_sha256=unowned["source_sha256"])
+            ),
+        )
+
+    async def native():
+        owner = current(ADMIN.user_id, 87200)
+        owner.channel_id = 900
+        await owner.response.defer(ephemeral=True)
+        await open_gorgon_play(owner, game)
+        form = owner.edit_original_response.call_args.kwargs["view"]
+        form.values.update(actor=(actor.token,), play=("parasite_hitch",))
+        chosen = current(ADMIN.user_id, 87201)
+        await chosen.response.defer(ephemeral=True)
+        await form.confirm.callback(chosen)
+        details = chosen.edit_original_response.call_args.kwargs["view"]
+        details.values.update(
+            target=(host.token,), account=declaration.account, reach=("confirmed",)
+        )
+        sent = current(ADMIN.user_id, 87202)
+        await details.confirm.callback(sent)
+        assert details.completed, sent.followup.send.call_args
+
+    asyncio.run(native())
+    action = service.begin(ADMIN, "87202", 900, original.revision, declaration)
+    tick(worker, gateway, 5)
+    if active(state(game), actor) is None:
+        game.roll(ADMIN, "advance-ride", action["action_id"])
+        tick(worker, gateway, 5)
+
+    ride = active(state(game), actor)
+    assert ride is not None and (ride.host, ride.cell) == (host, (0, 0))
+    assert ride.action == action["action_id"]
+    assert game.inspect(ADMIN, action["action_id"])["state"] == "complete"
+    assert game.dice.calls == 0
+    ledger.engine.dispose()
+
+    movement = MovementService(game)
+    with pytest.raises(WorkflowError, match="detach"):
+        movement.move(
+            ADMIN,
+            "separate-movement",
+            state(game).revision,
+            900,
+            actor,
+            (1, 0),
+            account="The original Parasite tries moving independently.",
+        )
+    revision = state(game).revision
+    trip = movement.move(
+        OTHER,
+        "host-moves",
+        revision,
+        900,
+        host,
+        (1, 0),
+        account="The Guard takes the stairs.",
+    )
+    assert (
+        movement.move(
+            OTHER,
+            "host-moves",
+            revision,
+            900,
+            host,
+            (1, 0),
+            account="The Guard takes the stairs.",
+        )
+        == trip
+    )
+    current_ride = active(state(game), actor)
+    assert current_ride.cell == (1, 0) and current_ride.position_event != ride.position_event
+    assert next(x for x in state(game).world.gorgons if x.id == actor.entity).cell == (1, 0)
+    assert state(game).sheets == original.sheets
+
+    preview = service.preview(ADMIN, 900)
+    source = next(x for x in preview["actors"] if x["token"] == actor.token)
+    assert preview["parasite"] == {actor.token: {"parasite_detach": []}}
+    detach = Declaration(
+        kind="parasite_detach",
+        actor=actor,
+        actor_sha256=source["source_sha256"],
+        account="The Parasite leaves its actual original host.",
+        reach_confirmed=True,
+    )
+    command = service.begin(ADMIN, "detach-ride", 900, preview["revision"], detach)
+    tick(worker, gateway, 5)
+    if active(state(game), actor) is not None:
+        game.roll(ADMIN, "advance-detach", command["action_id"])
+        tick(worker, gateway, 5)
+    (closed,) = records(state(game))
+    assert closed.event == ride.event and closed.ended and closed.action == ride.action
+    movement.move(
+        OTHER,
+        "host-alone",
+        state(game).revision,
+        900,
+        host,
+        (0, 0),
+        account="The Guard leaves the Parasite on the stairs.",
+    )
+    assert state(game).world.npcs[0].cell == (0, 0)
+    assert next(x for x in state(game).world.gorgons if x.id == actor.entity).cell == (1, 0)
+    assert state(game).sheets == original.sheets and game.dice.calls == 0

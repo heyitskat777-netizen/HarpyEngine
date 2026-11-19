@@ -138,6 +138,7 @@ tests/rules/test_custom_strain.py
 tests/rules/test_director_strain_calls.py
 tests/rules/test_void_lab_portal.py
 tests/rules/test_gorgon_tags.py
+tests/rules/test_gorgon_runtime.py::test_parasite_rides_actual_npc_until_owned_detachment
 tests/rules/test_handler_retirement.py
 tests/rules/test_void_privacy.py
 tests/rules/test_void_leave.py

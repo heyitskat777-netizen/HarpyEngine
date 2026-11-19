@@ -22316,14 +22316,38 @@
         "heading": "Parasite-Type"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original Parasite hitches a ride on a living ordinary NPC in its current square",
+        "actor_type": "Actual original Parasite and host NPC",
+        "pre_roll_sources": [
+          "Actual open physical scene and same-square living NPC"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "direct": [
+            "Hitch a ride on the actual NPC",
+            "Detach from the current host"
+          ]
+        },
+        "choice_ownership": "Only the Parasite controller declares attachment and detachment. The NPC controller retains movement ownership.",
+        "target_policy": "Original ordinary NPC present in the same actual source square.",
+        "post_roll_effects": [
+          "The actual Parasite follows each canonical host movement until detachment, original role loss or forced separation."
+        ],
+        "mandatory_followups": [],
+        "handler_or_gm_intervention": "Current source approval and original scene authority apply. Form changes and Infect are separate uncovered workflows.",
+        "test_fixture_ids": [
+          "tests/rules/test_gorgon_runtime.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_gorgon_runtime.py::test_parasite_rides_actual_npc_until_owned_detachment"],
       "m2_play_id": null,
       "module": "core"
     },
