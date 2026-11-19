@@ -4116,6 +4116,7 @@ class InboxService:
             from girlframe.services.m2_game import GameService
             from girlframe.services.m3_abysstech import AbysstechService
             from girlframe.services.m3_captured import CapturedService
+            from girlframe.services.m3_chronically_online import ChronicallyOnlineService
             from girlframe.services.m3_escape import EscapeService
             from girlframe.services.m3_harpy_eagle import EagleService
             from girlframe.services.m3_harpy_gaze import GazeService
@@ -4134,6 +4135,31 @@ class InboxService:
             from girlframe.services.m3_timeskip import TimeskipService
             from girlframe.services.m3_voidspace_invasion import InvasionService
             from girlframe.services.m3_warboy_hate import ConditionedHateService
+
+            recollections = ChronicallyOnlineService(GameService(self.store))
+            for recall_id, recall_step in recollections.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "recollection:" + recall_id,
+                        "chronically_online_" + recall_step,
+                        recall_id,
+                        canon.revision,
+                        "plays",
+                        "Chronically Online",
+                        "Original participants",
+                        "pending",
+                        True,
+                        False,
+                        {
+                            "confirm": "Verify the exact earlier facts.",
+                            "meet": "Record the original meeting.",
+                            "encounter": "Confirm the meeting and apply the verified facts.",
+                        }[recall_step],
+                        "Both participants keep their original choices.",
+                        "Review recollection",
+                        task="m3_chronically_online",
+                    )
+                )
 
             debt_service = DebtService(GameService(self.store))
             for debt_id, debt_step in debt_service.tasks(connection, canon, viewer):

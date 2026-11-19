@@ -348,6 +348,24 @@ class CastService:
                                 )
                         except (ValueError, WorkflowError):
                             pass
+                    can_recall = False
+                    if (
+                        actor.controller == role.controller == viewer.user_id
+                        and actor.rules == "ancillary"
+                        and actor.girl == "REVOLUTIONARY IDEALIST"
+                    ):
+                        from girlframe.services.m3_chronically_online import (
+                            ChronicallyOnlineService,
+                        )
+
+                        try:
+                            can_recall = bool(
+                                ChronicallyOnlineService(self.game).options(
+                                    c, state, viewer, channel, actor.ref
+                                )
+                            )
+                        except (ValueError, WorkflowError):
+                            pass
                     known_refs.add(actor.ref)
                     visible.append(
                         {
@@ -365,6 +383,7 @@ class CastService:
                             **({"patronage": True} if can_patronage else {}),
                             **({"mercenary_debt": True} if can_debt else {}),
                             **({"debt_contact": True} if can_debt_contact else {}),
+                            **({"chronically_online": True} if can_recall else {}),
                             **({"capture_source": True} if can_capture else {}),
                             **(
                                 {"director_phone": True}

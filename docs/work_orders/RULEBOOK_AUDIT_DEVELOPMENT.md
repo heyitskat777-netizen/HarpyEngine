@@ -3418,3 +3418,19 @@ transfer, Status and punishment for witnessed cases, the other
 middle result choices, other source types and the full regression
 remain open.
 [Debt p. 97](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=99) · [Disobey Orders p. 21](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=23) · [Native case](../../tests/rules/test_mercenary_debt.py)
+
+### Revolutionary Idealist’s Chronically Online
+
+Base `4c45cc9`. The original Revolutionary recalls two distinct
+printed categories of facts about a named standard Pilot. The
+original Pilot privately verifies the exact earlier knowledge
+while their bodies are apart. Only after actual co-location and
+both owners confirming their meeting do the facts become ordinary
+Tags on the original Pilot, scoped to the two original humans.
+
+**One focused case passed in 5.22 seconds.** It used native Cast
+and Inbox controls, denied a third party access, used the real
+movement service, and checked both exact Tag labels, their source
+actor and their audience. Cross-scene knowledge, other Pilot
+bodies and cases with fewer than two verified facts remain open.
+[Chronically Online p. 101](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=103) · [Native case](../../tests/rules/test_chronically_online.py)

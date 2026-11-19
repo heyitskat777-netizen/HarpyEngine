@@ -88,6 +88,10 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
             key = "mask:" + token
             options.append((key, "Use A Human Mask as " + role["label"][:65]))
             actions[key] = ("harpy_mask", ActorRef.model_validate(role["ref"]))
+        if role.get("chronically_online"):
+            key = "recollection:" + token
+            options.append((key, "Recall prior Pilot facts as " + role["label"][:58]))
+            actions[key] = ("chronically_online", ActorRef.model_validate(role["ref"]))
         if role.get("debt_contact"):
             key = "debt-contact:" + token
             options.append((key, "Manage cash offers to " + role["label"][:58]))
@@ -312,6 +316,13 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
 
             assert ref is not None
             await open_capture(current, CapturedService(service.game), channel, ref)
+            return
+        if action == "chronically_online":
+            from girlframe.discord_adapter.m3_chronically_online import open_recollection
+            from girlframe.services.m3_chronically_online import ChronicallyOnlineService
+
+            assert ref is not None
+            await open_recollection(current, ChronicallyOnlineService(service.game), channel, ref)
             return
         if action == "debt_contact":
             from girlframe.discord_adapter.m3_mercenary_debt import open_debt_contact

@@ -2126,6 +2126,16 @@ class InboxView(discord.ui.View):
             await open_escape_choice(
                 interaction, EscapeService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_chronically_online":
+            from girlframe.discord_adapter.m3_chronically_online import open_recollection_inbox
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_chronically_online import ChronicallyOnlineService
+
+            await open_recollection_inbox(
+                interaction,
+                ChronicallyOnlineService(GameService(self.service.store)),
+                item.identity,
+            )
         elif item.task == "m3_mercenary_debt":
             from girlframe.discord_adapter.m3_mercenary_debt import open_debt_response
             from girlframe.services.m2_game import GameService
