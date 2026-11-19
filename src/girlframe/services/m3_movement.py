@@ -97,6 +97,10 @@ def _physical_context(
         x.actor == actor and x.controller == controller for x in cast.roles
     ):
         raise WorkflowError("Join this actual role in the source scene first")
+    if destination != actual.cell and actual.rules == "ancillary":
+        from girlframe.services.m3_ancillary_intimacy import require_revolutionary_departure
+
+        require_revolutionary_departure(state, actor)
     pose = next((x for x in state.placements if x.actor == actor), None)
     external_pose = next((x for x in state.external_poses if x.actor == actor), None)
     if actor.kind == "pilot":

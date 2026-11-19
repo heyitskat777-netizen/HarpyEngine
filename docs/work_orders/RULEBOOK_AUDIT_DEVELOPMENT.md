@@ -3544,3 +3544,23 @@ with an actual slot replacement and scoped Helplessness. The
 Intense Bond exception, husband NPC, other counterpart types,
 last-Asset work and direct mid and high evidence remain open.
 [Angel-Wife p. 103](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=105) · [Native case](../../tests/rules/test_angel_wife_private_play.py)
+
+### Revolutionary Idealist’s private Play
+
+Base `8f13259`. The original middle result unmarks eligible
+Identities and can wait for actual owned departure. The low
+result gives the other participant the exact two eligible
+Identity erasures and an optional Bond change. The high result
+deepens the Bond. The original Revolutionary offers two
+printed consequences, and the other participant selects one
+of them. The movement gate enforces the optional departure hold
+while both original cast roles remain in the source scene.
+Either participant can stop further choices for safety.
+
+**One focused case passed in 5.11 seconds.** It verified the
+actual saved high roll, mutually owned separate selections,
+the original Personal Bond, actual movement refusal while the
+permission was pending, and real movement after the counterpart
+granted it. Other movement producers, optional counterpart kinds,
+modifiers and direct middle and low evidence remain open.
+[Revolutionary Idealist p. 101](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=103) · [Native case](../../tests/rules/test_revolutionary_private_play.py)

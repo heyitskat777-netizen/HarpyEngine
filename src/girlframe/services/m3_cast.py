@@ -370,7 +370,8 @@ class CastService:
                     if (
                         actor.controller == role.controller == viewer.user_id
                         and actor.rules == "ancillary"
-                        and actor.girl in ("CHAINED DARLING", "WARBOY", "ANGEL-WIFE")
+                        and actor.girl
+                        in ("CHAINED DARLING", "WARBOY", "ANGEL-WIFE", "REVOLUTIONARY IDEALIST")
                     ):
                         from girlframe.services.m3_chained_darling import ChainedPlacementService
 

@@ -42,16 +42,24 @@ CHAINED = "ancillary.chained-darling.sex-play"
 WARBOY = "ancillary.warboy.sex-play"
 ANGEL = "ancillary.angel-wife.sex-play"
 CHASTE = "ancillary.angel-wife.chaste"
+REVOLUTIONARY = "ancillary.revolutionary-idealist.sex-play"
+REVOLUTIONARY_OPTIONS = ("erase", "tag", "remain")
 RULES: dict[ancillary.Book, str] = {
     "CHAINED DARLING": CHAINED,
     "WARBOY": WARBOY,
     "ANGEL-WIFE": ANGEL,
+    "REVOLUTIONARY IDEALIST": REVOLUTIONARY,
 }
 WARBOY_REFUSAL = "warboy_private_refusal"
 RESULTS = {
     "CHAINED DARLING": {"low": "ask", "mid": "middle", "high": "tag"},
     "WARBOY": {"low": "warboy_bond", "mid": "warboy_weaken", "high": "warboy_strong"},
     "ANGEL-WIFE": {"low": "angel_replace", "mid": "angel_tag", "high": "angel_replace"},
+    "REVOLUTIONARY IDEALIST": {
+        "low": "revolutionary_erase_two",
+        "mid": "revolutionary_clear",
+        "high": "revolutionary_offer",
+    },
 }
 KIND = "ancillary_private_play"
 
@@ -98,6 +106,14 @@ class Encounter(Model):
         "angel_replace",
         "angel_damage",
         "angel_helpless",
+        "revolutionary_erase_two",
+        "revolutionary_clear",
+        "revolutionary_offer",
+        "revolutionary_choice",
+        "revolutionary_erase",
+        "revolutionary_tag",
+        "revolutionary_release",
+        "revolutionary_escape",
     ]
     consent: str | None = None
     confirmed: str | None = None
@@ -109,6 +125,7 @@ class Encounter(Model):
     identity: str | None = None
     partner_pose: str | None = None
     partner_cell: tuple[int, int] | None = None
+    picks: tuple[str, ...] = ()
 
 
 def records(state: GameState) -> tuple[Encounter, ...]:
@@ -351,6 +368,11 @@ class AncillaryIntimacyService:
             "angel_space",
             "angel_replace",
             "angel_helpless",
+            "revolutionary_erase_two",
+            "revolutionary_choice",
+            "revolutionary_erase",
+            "revolutionary_tag",
+            "revolutionary_release",
         ):
             return case.partner.controller
         if case.step in (
@@ -365,6 +387,9 @@ class AncillaryIntimacyService:
             "chaste",
             "angel_tag",
             "angel_damage",
+            "revolutionary_clear",
+            "revolutionary_offer",
+            "revolutionary_escape",
         ):
             return case.actor.controller
         return case.gm if case.step == "verify" else None
@@ -384,7 +409,7 @@ class AncillaryIntimacyService:
                 case.gm,
                 case.appointment,
             )
-            or case.step != "angel_space"
+            or case.step not in ("angel_space", "revolutionary_escape")
             and not self._together(actual, partner)
             or partner.rules != "girl_frame"
         ):
@@ -482,8 +507,16 @@ class AncillaryIntimacyService:
                 if case.step == "angel_replace"
                 else {},
                 assets=_angel_assets(counterpart) if case.step == "angel_damage" else {},
-                stepped_away=case.step == "angel_space"
-                and self._separated(actual, counterpart, case),
+                stepped_away=(
+                    case.step == "angel_space"
+                    and self._separated(actual, counterpart, case)
+                    or case.step == "revolutionary_escape"
+                    and self._separated(counterpart, actual, case)
+                ),
+                offered=case.picks if case.step == "revolutionary_choice" else (),
+                identities=_revolutionary_identities(state, actual.ref)
+                if case.step in ("revolutionary_erase", "revolutionary_erase_two")
+                else {},
             )
 
     def withdraw(
@@ -516,6 +549,7 @@ class AncillaryIntimacyService:
         *,
         heat: int = 0,
         account: str = "",
+        picks: tuple[str, ...] = (),
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             self.game.unpaused(c)
@@ -531,6 +565,15 @@ class AncillaryIntimacyService:
                 or len(account) > 1200
                 or case.step != "roll"
                 and heat
+                or len(picks) > 2
+                or len(set(picks)) != len(picks)
+                or picks
+                and case.step
+                not in (
+                    "revolutionary_offer",
+                    "revolutionary_erase",
+                    "revolutionary_erase_two",
+                )
             ):
                 raise WorkflowError(
                     "Reopen the original choice and use only its allowed resources."
@@ -620,6 +663,24 @@ class AncillaryIntimacyService:
                         state, case, partner, bindings, choice, account.strip(), event
                     )
 
+            elif case.book == "REVOLUTIONARY IDEALIST" and case.step.startswith("revolutionary_"):
+                partner = resolve(state, case.partner.actor, profiles(c, self.store.campaign_id))
+                if case.step == "revolutionary_escape" and choice == "confirm" and not account:
+                    if not self._separated(partner, actual, case):
+                        raise WorkflowError(
+                            "Verify your actual departure through physical movement first."
+                        )
+                    update = dict(step="closed", disposition="escaped")
+                else:
+                    state, update = _revolutionary(
+                        state,
+                        case,
+                        actual,
+                        choice,
+                        account.strip(),
+                        picks,
+                        event,
+                    )
             else:
                 raise WorkflowError("Choose the original owner's supported private response.")
             return self._save(c, state, viewer, key, case.model_copy(update=update), event)
@@ -633,6 +694,7 @@ class AncillaryIntimacyService:
                 choice=choice,
                 heat=heat,
                 account=account,
+                picks=picks,
             ),
             operation,
         )
@@ -780,3 +842,114 @@ def _angel(
             raise WorkflowError("Resolve the unsupported Asset consequence with the human GM.")
         return state, dict(step="closed", disposition="asset_damaged")
     raise WorkflowError("Choose the original player's printed Angel-Wife result.")
+
+
+def _revolutionary_identities(state: GameState, actor: ActorRef) -> dict[str, str]:
+    role = ancillary.find(state, actor)
+    return (
+        {
+            x.id: x.name
+            for x in role.identities
+            if not x.protected and not x.paired and not x.obsession_sources and not x.am_limiter
+        }
+        if role is not None
+        else {}
+    )
+
+
+def require_revolutionary_departure(state: GameState, actor: ActorRef) -> None:
+    for case in records(state):
+        if case.actor.actor != actor or case.step != "revolutionary_release":
+            continue
+        if any(
+            cast.open
+            and cast.id == case.scene
+            and case.actor in cast.roles
+            and case.partner in cast.roles
+            for cast in state.scene_casts
+        ):
+            raise WorkflowError("The original private choice to permit departure is still pending.")
+
+
+def _revolutionary(
+    state: GameState,
+    case: Encounter,
+    actual: ActorView,
+    choice: str,
+    account: str,
+    picks: tuple[str, ...],
+    event: str,
+) -> tuple[GameState, dict[str, Any]]:
+    actor, other = case.actor.actor, case.partner.actor
+    if case.step == "revolutionary_clear" and choice in ("finish", "leave") and not account:
+        role = ancillary.find(state, actor)
+        assert role is not None
+        identities = tuple(
+            x.model_copy(update=dict(marked=False))
+            if not x.obsession_sources and not x.am_limiter
+            else x
+            for x in role.identities
+        )
+        ancillary.put(state, role.model_copy(update=dict(identities=identities)))
+        if choice == "leave":
+            return state, dict(
+                step="revolutionary_escape",
+                partner_pose=actual.position_sha256,
+                partner_cell=actual.cell,
+            )
+        return state, dict(step="closed", disposition="unmarked")
+    if case.step == "revolutionary_offer" and choice == "offer" and not account:
+        if len(picks) != 2 or not set(picks) <= set(REVOLUTIONARY_OPTIONS):
+            raise WorkflowError("Choose exactly two distinct printed consequences.")
+        if "erase" in picks and not _revolutionary_identities(state, actor):
+            raise WorkflowError("The original actor has no eligible Identity to remove.")
+        state = change(state, actor, other, 1, event)
+        return state, dict(step="revolutionary_choice", picks=picks)
+    if case.step == "revolutionary_choice" and choice in case.picks and not account:
+        return state, dict(
+            step={
+                "erase": "revolutionary_erase",
+                "tag": "revolutionary_tag",
+                "remain": "revolutionary_release",
+            }[choice]
+        )
+    if case.step in ("revolutionary_erase", "revolutionary_erase_two") and not account:
+        count = 2 if case.step == "revolutionary_erase_two" else 1
+        choices = ("erase", "bond") if count == 2 else ("erase",)
+        if (
+            choice not in choices
+            or len(picks) != count
+            or not set(picks) <= _revolutionary_identities(state, actor).keys()
+        ):
+            raise WorkflowError("Choose the exact number of eligible original Identities.")
+        from girlframe.engine.m3_leviathan_obsession import require_identity_change
+
+        require_identity_change(state, actor, picks)
+        role = ancillary.find(state, actor)
+        assert role is not None
+        ancillary.put(
+            state,
+            role.model_copy(
+                update=dict(
+                    identities=tuple(x for x in role.identities if x.id not in picks),
+                )
+            ),
+        )
+        if choice == "bond":
+            state = change(state, actor, other, 1, event)
+        return state, dict(step="closed", disposition="identities_erased")
+    if case.step == "revolutionary_tag" and choice == "tag" and 0 < len(account) <= 120:
+        tag = str(uuid4())
+        state = give_tag(
+            state,
+            actor,
+            other,
+            account,
+            event,
+            tag,
+            (case.actor.controller, case.partner.controller),
+        )
+        return state, dict(step="closed", tag=tag, disposition="tag_given")
+    if case.step == "revolutionary_release" and choice == "release" and not account:
+        return state, dict(step="closed", disposition="released")
+    raise WorkflowError("Choose the original player's printed Revolutionary result.")

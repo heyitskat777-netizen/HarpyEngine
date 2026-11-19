@@ -15119,14 +15119,49 @@
         "heading": "Sex Play"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "An original Revolutionary Idealist and original standard Pilot independently agree to a verified private encounter.",
+        "actor_type": "Original Revolutionary, actual standard Pilot and original human facilitator",
+        "pre_roll_sources": [
+          "Actual original consent and verified co-presence",
+          "Original optional playbook and Play",
+          "Owned Heat"
+        ],
+        "roll_kind": "2d6",
+        "allowed_modifiers": [
+          "Owned Heat"
+        ],
+        "tier_options": {
+          "low": [
+            "Original partner removes two eligible Identities and can deepen their Bond"
+          ],
+          "mid": [
+            "Unmark eligible Identities and verify any chosen actual departure"
+          ],
+          "high": [
+            "Deepen the Bond and offer two choices; original partner selects one and confirms its actual effect"
+          ]
+        },
+        "choice_ownership": "Original participants own the offered consequences, chosen effect, and any consent or withdrawal.",
+        "target_policy": "Original scoped co-present characters, with departure checked using actual positions and original cast.",
+        "post_roll_effects": [
+          "Apply actual Bond, Tag, Identity and voluntary movement consequences."
+        ],
+        "mandatory_followups": [
+          "The high route treats the counterpart as selecting one of the Revolutionary’s two offered effects. Other movement producers, modifiers, optional actors and direct low and middle verification remain open."
+        ],
+        "handler_or_gm_intervention": "The original facilitator verifies the original encounter. Any participant can stop further decisions and release the optional departure hold.",
+        "test_fixture_ids": [
+          "tests/rules/test_revolutionary_private_play.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_revolutionary_private_play.py"],
       "m2_play_id": null,
       "module": "ancillary"
     },

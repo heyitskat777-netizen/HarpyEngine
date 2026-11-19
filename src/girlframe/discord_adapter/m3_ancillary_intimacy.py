@@ -14,6 +14,11 @@ from girlframe.services.m3_ancillary_intimacy import AncillaryIntimacyService
 from girlframe.services.onboarding import WorkflowError
 
 TITLE = "Private Ancillary Play"
+REVOLUTIONARY_LABELS = {
+    "erase": "Erase one eligible Identity",
+    "tag": "Give a Tag",
+    "remain": "Choose when they may leave",
+}
 
 
 async def open_ancillary_intimacy(
@@ -150,8 +155,40 @@ async def open_ancillary_intimacy_choice(
             "Damage one actual reachable Asset of the original other character.",
             tuple(data["assets"].items()),
         ),
+        "revolutionary_clear": (
+            "Unmark your eligible Identities. You can then use your movement controls to leave.",
+            (("finish", "Unmark and finish"), ("leave", "Unmark and leave")),
+        ),
+        "revolutionary_escape": (
+            "Use your movement controls to leave, then confirm your departure here.",
+            (("confirm", "Confirm departure"),),
+        ),
+        "revolutionary_offer": (
+            "Deepen your Bond and offer two printed consequences.",
+            (("offer", "Offer the selected consequences"),),
+        ),
+        "revolutionary_choice": (
+            "Choose one of the offered consequences.",
+            tuple((x, REVOLUTIONARY_LABELS[x]) for x in data["offered"]),
+        ),
+        "revolutionary_erase": (
+            "Erase one eligible Identity from the original character.",
+            (("erase", "Erase the selected Identity"),),
+        ),
+        "revolutionary_erase_two": (
+            "Erase two eligible Identities. You can also deepen your Bond.",
+            (("erase", "Erase two"), ("bond", "Erase two and deepen our Bond")),
+        ),
+        "revolutionary_tag": (
+            "Give the original character the chosen Tag.",
+            (("tag", "Give a Tag"),),
+        ),
+        "revolutionary_release": (
+            "Your counterpart remains until you use this choice to let them leave.",
+            (("release", "Let them leave"),),
+        ),
     }[step]
-    if step == "angel_space" and not data["stepped_away"]:
+    if step in ("angel_space", "revolutionary_escape") and not data["stepped_away"]:
         await reply(interaction, instructions)
         return
     if step == "angel_damage" and not options:
@@ -182,6 +219,26 @@ async def open_ancillary_intimacy_choice(
         )
     if step in ("angel_tag", "angel_replace"):
         fields.append(Field("account", "New Tag or Identity if chosen", required=False))
+    if step == "revolutionary_offer":
+        fields.append(Field("picks", "Choose two", tuple(REVOLUTIONARY_LABELS.items()), 2, 2))
+    if step in ("revolutionary_erase", "revolutionary_erase_two"):
+        count = 2 if step == "revolutionary_erase_two" else 1
+        if len(data["identities"]) < count:
+            await reply(
+                interaction, "There are too few eligible Identities. The effect stays pending."
+            )
+            return
+        fields.append(
+            Field(
+                "picks",
+                "Original eligible Identities",
+                tuple(data["identities"].items()),
+                count,
+                count,
+            )
+        )
+    if step == "revolutionary_tag":
+        fields.append(Field("account", "Actual new Tag"))
     if step == "warboy_replace":
         instructions += "\n" + clean(data["identity"])
     if step == "answer":
@@ -202,6 +259,7 @@ async def open_ancillary_intimacy_choice(
             values["choice"][0],
             heat=int(raw),
             account=values.get("account", ""),
+            picks=tuple(values.get("picks", ())),
         )
         return "Your original choice is saved."
 
