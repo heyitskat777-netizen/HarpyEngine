@@ -22,6 +22,7 @@ from girlframe.engine.m3_actor_state import (
     SceneCast,
 )
 from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_assets import can_replace_at_limit, counts_toward_limit
 from girlframe.engine.m3_battle import damage
 from girlframe.engine.m3_cast import validate_role
 from girlframe.engine.m3_chained_darling import EXEMPTION
@@ -154,6 +155,7 @@ class Encounter(Model):
         "abyssal_void_hold",
         "abyssal_void_choice",
         "abyssal_gain",
+        "abyssal_swap",
         "abyssal_erase_tag",
         "abyssal_leave",
         "abyssal_ask",
@@ -180,6 +182,7 @@ class Encounter(Model):
     picks: tuple[str, ...] = ()
     reaction_actor: ActorRef | None = None
     reaction_owner: int | None = None
+    transfer_asset: str | None = None
     prodigy_cadre: str | None = None
     prodigy_ace: bool = False
     repair_asset: str | None = None
@@ -498,6 +501,7 @@ class AncillaryIntimacyService:
             "mercenary_reply",
             "abyssal_reply",
             "abyssal_void_choice",
+            "abyssal_swap",
         ):
             return case.partner.controller
         if case.step in (
@@ -660,6 +664,12 @@ class AncillaryIntimacyService:
             )
             role = ancillary.find(state, case.actor.actor)
             group = cadre_rank.current(state, actual.ref)
+            transfers = (
+                _abyssal_transfers(state, actual.ref, counterpart.ref)
+                if case.step in ("abyssal_void_choice", "abyssal_swap")
+                else {}
+            )
+            replacement = transfers.get(case.transfer_asset or "")
             label = (
                 next((tag.label for tag in role.tags if tag.id == case.tag), None)
                 if case.step == "reaffirm" and role is not None
@@ -728,14 +738,15 @@ class AncillaryIntimacyService:
                 void_choices={x.id: x.name for x in ancillary_void.gains(state, actual.ref)}
                 if case.step == "abyssal_gain"
                 else {},
-                void_assets={
-                    key: asset.name
-                    for key, (asset, _) in _abyssal_transfers(
-                        state, actual.ref, counterpart.ref
-                    ).items()
-                }
+                void_assets={key: asset.name for key, (asset, _) in transfers.items()}
                 if case.step == "abyssal_void_choice"
                 else {},
+                void_replacements={
+                    x.id: x.name for x in counterpart.assets if x.id in replacement[1]
+                }
+                if replacement is not None
+                else {},
+                void_open_slot=replacement is not None and None in replacement[1],
             )
 
     def withdraw(
@@ -1394,7 +1405,7 @@ def _abyssal_assets(partner: ActorView) -> dict[str, str]:
 
 def _abyssal_transfers(
     state: GameState, actor: ActorRef, other: ActorRef
-) -> dict[str, tuple[Asset, PilotSheet]]:
+) -> dict[str, tuple[Asset, dict[str | None, PilotSheet]]]:
     body = ancillary_void.body(state, actor)
     sheet = state.sheets[other.entity]
     if body is None or sum(x.family == "girl" for x in body.assets) < 2:
@@ -1402,7 +1413,11 @@ def _abyssal_transfers(
     from girlframe.engine.m3_janus_storage import active
 
     stored = frozenset(x.asset for x in active(state, other))
-    supported = {}
+    own = tuple(x for x in sheet.assets if x.family == "girl")
+    slots: tuple[str | None, ...] = (None,)
+    if sum(counts_toward_limit(sheet, x) for x in own) >= 4:
+        slots = tuple(x.id for x in own if can_replace_at_limit(sheet, x) and x.id not in stored)
+    supported: dict[str, tuple[Asset, dict[str | None, PilotSheet]]] = {}
     for asset in body.assets:
         if (
             asset.family != "girl"
@@ -1412,17 +1427,22 @@ def _abyssal_transfers(
             or not any(x.id != asset.id and x.family == "girl" and not x.void for x in body.assets)
         ):
             continue
-        try:
-            candidate = install(
-                sheet,
-                AssetState.model_validate_json(asset.model_dump_json()),
-                effective_void=stored,
-                state=state,
-            ).sheet
-            if not void_followups(candidate, piloting=False, effective_void=stored):
-                supported[asset.id] = (asset, candidate)
-        except ValueError:
-            continue
+        choices: dict[str | None, PilotSheet] = {}
+        for replacement in slots:
+            try:
+                candidate = install(
+                    sheet,
+                    AssetState.model_validate_json(asset.model_dump_json()),
+                    replace=replacement,
+                    effective_void=stored,
+                    state=state,
+                ).sheet
+                if not void_followups(candidate, piloting=False, effective_void=stored):
+                    choices[replacement] = candidate
+            except ValueError:
+                continue
+        if choices:
+            supported[asset.id] = (asset, choices)
     return supported
 
 
@@ -1446,11 +1466,21 @@ def _abyssal(
             )
         if choice == "review":
             return state, dict(step="abyssal_void_hold", disposition="original_transfer_pending")
-        selected = _abyssal_transfers(state, actor, other).get(choice)
+    if case.step in ("abyssal_void_choice", "abyssal_swap") and not account:
+        if case.step == "abyssal_swap" and choice == "review":
+            return state, dict(step="abyssal_void_hold", disposition="original_transfer_pending")
+        asset_id = (case.transfer_asset or "") if case.step == "abyssal_swap" else choice
+        selected = _abyssal_transfers(state, actor, other).get(asset_id)
         body = ancillary_void.body(state, actor)
         if selected is not None and body is not None:
-            asset, sheet = selected
-            state.sheets[other.entity] = sheet
+            asset, installs = selected
+            replacement = choice if case.step == "abyssal_swap" and choice != "open_slot" else None
+            if case.step == "abyssal_void_choice" and None not in installs:
+                return state, dict(step="abyssal_swap", transfer_asset=asset.id)
+            current = installs.get(replacement)
+            if current is None:
+                raise WorkflowError("Choose an actual eligible replacement on your original sheet.")
+            state.sheets[other.entity] = current
             ancillary_void.set_assets(
                 state, actor, tuple(x for x in body.assets if x.id != asset.id)
             )
@@ -1461,6 +1491,7 @@ def _abyssal(
                     asset=asset.id,
                     from_actor=actor.token,
                     to_actor=other.token,
+                    replaced=replacement or "",
                     event=event,
                 )
             )

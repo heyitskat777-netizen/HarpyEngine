@@ -3686,6 +3686,21 @@ receipt. Two older cases were deselected. The high entry point
 and alternate primary outcomes still need direct evidence.
 [Void-Drunk p. 109](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=111) · [Dive Deep p. 22](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=24) · [Native case](../../tests/rules/test_void_drunk.py)
 
+### Acolyte Asset transfer at capacity
+
+Base `249019dfb49463d01f01612e0c7846d2d6ab55d1`. If the
+original counterpart has no open Girl Asset slot, the selected
+Voided Asset stays with the Acolyte until the counterpart
+chooses an eligible replacement on her own sheet. Commit the
+replacement and change of ownership together, with the same
+Asset ID and Void description.
+
+One focused case passed in 7.34 seconds. It verified both
+inventories before the owned choice, denied the source actor
+access to the replacement, then confirmed the exact replaced
+and transferred Assets. Two existing cases were deselected.
+[Acolyte p. 109](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=111) · [Native case](../../tests/rules/test_abyssal_private_play.py)
+
 ### Actor-level Ancillary Cadre Status and the Warboy Dog
 
 Base `083b876`. The original facilitator privately proposes a

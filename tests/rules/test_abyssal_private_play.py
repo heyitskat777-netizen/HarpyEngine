@@ -8,6 +8,7 @@ from test_ledger import ledger as ledger
 from test_m2_game import Dice, state
 
 from girlframe.engine import m3_ancillary as ancillary
+from girlframe.engine.m2 import AssetState
 from girlframe.engine.m3_actor_bonds import current_ref, is_helpless
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_physical_state import CockpitAction
@@ -26,7 +27,9 @@ from girlframe.services.m3_physical import PhysicalService
 from girlframe.services.onboarding import WorkflowError
 
 
-@pytest.mark.parametrize("tier", ("high", "low"), ids=("original-high", "actual-void"))
+@pytest.mark.parametrize(
+    "tier", ("high", "low", "cap"), ids=("original-high", "actual-void", "replace-at-cap")
+)
 def test_abyssal_native_asset_outcomes(ledger, tmp_path, monkeypatch, tier):
     game = scenario(ledger)
     enable(ledger, game, tmp_path, monkeypatch, extra=(ABYSSAL,))
@@ -101,7 +104,7 @@ def test_abyssal_native_asset_outcomes(ledger, tmp_path, monkeypatch, tier):
         channel=900,
     )
     service = AncillaryIntimacyService(game)
-    if tier == "low":
+    if tier in ("low", "cap"):
         game.dice = Dice((2, 3))
 
         def low(label):
@@ -132,14 +135,39 @@ def test_abyssal_native_asset_outcomes(ledger, tmp_path, monkeypatch, tier):
         changed = next(x for x in original.assets if x.id == asset)
         assert changed.void and changed.description == rewrite
 
+        replaced = None
+        if tier == "cap":
+            with ledger.transaction() as c:
+                before = state(game)
+                sheet = before.sheets[victim.entity]
+                missing = 4 - sum(x.family == "girl" for x in sheet.assets)
+                sheet.assets.extend(
+                    AssetState(id=f"installed-gear-{n}", name=f"Owned gear {n}", family="girl")
+                    for n in range(missing)
+                )
+                game.event(
+                    c, ADMIN.user_id, "actual-inventory", "synthetic.existing_assets", before
+                )
+
         transferred = low("second-low")
         assert service.get(OTHER, transferred)["void_assets"] == {asset: changed.name}
         service.act(OTHER, "take-original-asset", transferred, state(game).revision, asset)
+        if tier == "cap":
+            before_swap = state(game)
+            assert all(x.id != asset for x in before_swap.sheets[victim.entity].assets)
+            original_holder = next(x for x in before_swap.world.pilots if x.id == actor.entity)
+            assert any(x.id == asset for x in original_holder.assets)
+            with pytest.raises(WorkflowError, match="unavailable"):
+                service.get(PLAYER, transferred)
+            replaced = next(iter(service.get(OTHER, transferred)["void_replacements"]))
+            service.act(OTHER, "replace-owned", transferred, before_swap.revision, replaced)
         final = state(game)
         source = next(x for x in final.world.pilots if x.id == actor.entity)
         assert all(x.id != asset for x in source.assets)
         result = next(x for x in final.sheets[victim.entity].assets if x.id == asset)
         assert result.description == rewrite and result.void
+        if replaced is not None:
+            assert all(x.id != replaced for x in final.sheets[victim.entity].assets)
         assert {x.disposition for x in records(final)} == {
             "abyssal_void_gained",
             "abyssal_void_transferred",

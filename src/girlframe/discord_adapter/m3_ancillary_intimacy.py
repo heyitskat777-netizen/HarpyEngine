@@ -277,6 +277,14 @@ async def open_ancillary_intimacy_choice(
             "Choose how your original uncorrupted Girl Asset changes.",
             (*tuple(data.get("void_choices", {}).items()), ("review", "Hold for the table")),
         ),
+        "abyssal_swap": (
+            "Choose which eligible Asset on your own sheet the selected Voided Asset replaces.",
+            (
+                *tuple(data.get("void_replacements", {}).items()),
+                *((("open_slot", "Use the open slot"),) if data.get("void_open_slot") else ()),
+                ("review", "Hold for the table"),
+            ),
+        ),
         "abyssal_damage": (
             "Choose how many of the reachable Girl Assets to damage, from zero to all.",
             (("damage", "Apply damage to the selection"),),
