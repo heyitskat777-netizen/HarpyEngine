@@ -1,4 +1,4 @@
-"""Consent, original Harpy Heat, saved roll and actual low Visions consequence."""
+"""Consent, actual Harpy dice and independently owned Visions decisions."""
 
 from collections.abc import Callable
 from typing import Any
@@ -169,7 +169,9 @@ class VisionsService:
             return "roll" if viewer.user_id == case.controller else None
         if case.roll.result == "low":
             return "replace" if str(viewer.user_id) == case.subject.entity else None
-        return "review" if viewer.user_id == case.controller else None
+        if case.proposed is not None:
+            return "confirm" if str(viewer.user_id) == case.subject.entity else None
+        return "plan" if viewer.user_id == case.controller else None
 
     def tasks(
         self,
@@ -199,21 +201,24 @@ class VisionsService:
         if case is None or step is None:
             raise WorkflowError("This original private Visions decision is unavailable")
         history = t.m2["m2_state_history"]
-        roots = (
+        rolled = case.model_copy(update=dict(plans=(), returned=()))
+        roots = [
             (
                 case.id,
                 "offered",
                 case.controller,
-                case.model_copy(update=dict(consent=None, roll=None, low_identities=())),
+                rolled.model_copy(update=dict(consent=None, roll=None, low_identities=())),
             ),
             (
                 case.consent,
                 "consent",
                 int(case.subject.entity),
-                case.model_copy(update=dict(roll=None, low_identities=())),
+                rolled.model_copy(update=dict(roll=None, low_identities=())),
             ),
-            (case.roll.event if case.roll else None, "roll", case.controller, case),
-        )
+            (case.roll.event if case.roll else None, "roll", case.controller, rolled),
+        ]
+        if case.proposed is not None:
+            roots.append((case.proposed.event, "plan", case.controller, case))
         for event, kind, author, expected in roots:
             if event is None:
                 continue
@@ -237,14 +242,24 @@ class VisionsService:
             self._gate(c, viewer)
             state = load_state(c, self.store.campaign_id)
             case, step = self._read(c, state, viewer, identity)
+            proposal = case.proposed
+            descriptions: tuple[str, ...] | None = None
+            if step == "confirm" and proposal is not None:
+                try:
+                    if rules.baseline(state, case, proposal.choices) == proposal.baseline:
+                        _, descriptions = rules.preview(state, case, proposal.choices, "preview")
+                except ValueError:
+                    pass
             return dict(
                 revision=state.revision,
                 step=step,
                 account=case.account,
                 heat=harpy(state, case.harpy).heat if step == "roll" else None,
                 roll=case.roll.model_dump(mode="json") if case.roll else None,
+                tier=case.roll.result if case.roll else None,
                 identities=[x.name for x in case.low_identities] if step == "replace" else [],
                 can_replace=rules.can_replace(state, case) if step == "replace" else False,
+                descriptions=descriptions,
             )
 
     def respond(
@@ -257,6 +272,7 @@ class VisionsService:
         *,
         choice: bool | None = None,
         heat: int | None = None,
+        choices: tuple[rules.Adjustment, ...] | None = None,
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             self.game.unpaused(c)
@@ -278,7 +294,7 @@ class VisionsService:
                     "Recover the original bodies, their contact and the original advancement"
                 )
             event = str(uuid4())
-            if step == "consent" and type(choice) is bool and heat is None:
+            if step == "consent" and type(choice) is bool and heat is None and choices is None:
                 rules.put(
                     state,
                     case.model_copy(
@@ -287,7 +303,7 @@ class VisionsService:
                         )
                     ),
                 )
-            elif step == "roll" and heat is not None and choice is None:
+            elif step == "roll" and heat is not None and choice is None and choices is None:
                 body = harpy(state, case.harpy)
                 if (
                     type(heat) is not int
@@ -307,8 +323,28 @@ class VisionsService:
                         )
                     ),
                 )
-            elif step == "replace" and choice is True and heat is None:
+            elif step == "replace" and choice is True and heat is None and choices is None:
                 state = rules.replace_low(state, case, event)
+            elif step == "plan" and choices is not None and choice is None and heat is None:
+                self._propose(state, case, choices, event)
+            elif (
+                step == "confirm"
+                and case.proposed is not None
+                and type(choice) is bool
+                and heat is None
+                and choices is None
+            ):
+                proposal = case.proposed
+                if choice:
+                    if rules.baseline(state, case, proposal.choices) != proposal.baseline:
+                        raise WorkflowError("Return the changed original choices before applying")
+                    state, _ = rules.preview(state, case, proposal.choices, event)
+                    rules.put(state, case.model_copy(update=dict(resolved=event)))
+                else:
+                    rules.put(
+                        state,
+                        case.model_copy(update=dict(returned=(*case.returned, proposal.event))),
+                    )
             else:
                 raise WorkflowError(
                     "The original saved Visions still require their actual consequence"
@@ -333,6 +369,21 @@ class VisionsService:
                 step=step,
                 choice=choice,
                 heat=heat,
+                choices=(
+                    [x.model_dump(mode="json") for x in choices] if choices is not None else None
+                ),
             ),
             operation,
         )
+
+    @staticmethod
+    def _propose(
+        state: GameState,
+        case: rules.Vision,
+        choices: tuple[rules.Adjustment, ...],
+        event: str,
+    ) -> None:
+        rules.require_choice_count(case, choices)
+        baseline = rules.baseline(state, case, choices)
+        plan = rules.Plan(event=event, baseline=baseline, choices=choices)
+        rules.put(state, case.model_copy(update=dict(plans=(*case.plans, plan))))

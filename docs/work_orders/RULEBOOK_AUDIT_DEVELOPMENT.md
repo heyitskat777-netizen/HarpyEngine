@@ -2869,3 +2869,22 @@ The focused native case passed in **5.42 seconds**, including
 restart, role access, original source Identities, actual Heat
 and exposure. Mid and high remain held at the saved roll.
 [Harpy p. 182](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=184) · [Native case](../../tests/rules/test_harpy_advancements.py)
+
+### Visions of Infinity’s ordered choices
+
+Base `712029df9409ea5d47881d73eaabf44512f9a5c0`. The original
+Harpy chooses up to four effects on mid and exactly eight on
+high. Ordinary Identity creation, Identity-to-Tag conversion,
+and adjustment or removal of the original Harpy Bond use actual
+canonical resources. Effects are ordered and repeatable. The
+Harpy selects opaque Identity slots. The original Girl sees the
+exact changes in her private Inbox and can return the proposal.
+Fresh private approval applies the whole set atomically.
+
+**Two focused cases passed in 8.39 seconds**. They cover the
+original low result and the native eight-effect high result
+including the budget, repeated conversions, approval, private
+view, actual Tags and Bond removal. Memory removal, Play
+restriction and Foundation reconditioning, and Bond changes
+with other people remain open.
+[Harpy p. 182](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=184) · [Native cases](../../tests/rules/test_harpy_advancements.py)

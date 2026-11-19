@@ -1136,3 +1136,94 @@ def test_visions_of_infinity_low_copies_actual_identities_and_exposes_original_c
     assert actual_harpy(final, harpy).identities == actual_harpy(original, harpy).identities
     assert next(x for x in final.world.pilots if x.id == harpy.entity).exposed
     assert records(final)[0].resolved and records(final)[0].roll.faces == (1, 2)
+
+
+def test_visions_high_requires_eight_ordered_private_effects(ledger):
+    from test_harpy_flirt import submit_form
+    from test_physical_operations import place
+
+    from girlframe.discord_adapter.m3_harpy_visions import open_visions_response
+    from girlframe.engine.m3_actor_bonds import depth, set_depth
+    from girlframe.engine.m3_harpy_advancements import VISIONS
+    from girlframe.engine.m3_harpy_visions import Adjustment, records
+    from girlframe.engine.m3_identity_slots import bind
+    from girlframe.services.m3_harpy_visions import VisionsService
+
+    _, game, _, harpy = ready(ledger, faces=(5, 5), heat=1)
+    policy = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update=dict(
+            m3_approval=policy.model_copy(
+                update=dict(activity_specialist_rules=policy.activity_specialist_rules | {VISIONS})
+            )
+        )
+    )
+    HarpyAdvancementService(ledger).select(
+        PLAYER, "learn-high-visions", harpy.entity, state(game).revision, VISIONS
+    )
+    with ledger.transaction() as c:
+        canon = place(state(game), OTHER.user_id, mode="outside_frame")
+        girl = current_ref(canon, OTHER.user_id)
+        canon.sheets[girl.entity] = bind(canon.sheets[girl.entity])
+        canon = set_depth(canon, girl, harpy, 2, "synthetic-existing-bond")
+        game.event(c, ADMIN.user_id, "synthetic-high-placement", "synthetic.position", canon)
+    original = state(game)
+    original_sheet = original.sheets[girl.entity]
+    original_identity = next(x for x in original_sheet.identities if x.slot == 0)
+    service = VisionsService(game)
+    identity = service.start(
+        PLAYER,
+        "initiate-high-visions",
+        900,
+        harpy,
+        original.revision,
+        girl.token,
+        "Share a vision.",
+    )["id"]
+    view = service.get(OTHER, identity)
+    service.respond(
+        OTHER, "approve-high-visions", identity, view["revision"], "consent", choice=True
+    )
+    view = service.get(PLAYER, identity)
+    service.respond(PLAYER, "roll-high-visions", identity, view["revision"], "roll", heat=1)
+    view = service.get(PLAYER, identity)
+    assert view["tier"] == "high" and view["descriptions"] is None
+    with pytest.raises(WorkflowError, match="exactly eight"):
+        service.respond(
+            PLAYER,
+            "seven-effects-do-not-satisfy-high",
+            identity,
+            view["revision"],
+            "plan",
+            choices=(Adjustment(effect="tag", slot=0),) * 7,
+        )
+
+    def open_response(interaction):
+        return open_visions_response(interaction, service, identity)
+
+    selections = ("tag:0", "identity", "tag:0", "identity", "tag:0", "identity", "weaken", "remove")
+    values = {f"effect_{i}": (choice,) for i, choice in enumerate(selections)}
+    asyncio.run(submit_form(PLAYER, open_response, values | {"names": "One\nTwo\nThree"}, 89970))
+    assert state(game).sheets[girl.entity].identities == original_sheet.identities
+    with pytest.raises(WorkflowError, match="unavailable"):
+        service.get(PLAYER, identity)
+    with pytest.raises(WorkflowError, match="unavailable"):
+        service.get(ADMIN, identity)
+    assert [
+        x.identity for x in InboxService(ledger).items(OTHER) if x.task == "m3_harpy_visions"
+    ] == [identity]
+    view = service.get(OTHER, identity)
+    assert len(view["descriptions"]) == 8 and original_identity.name in view["descriptions"][0]
+    asyncio.run(submit_form(OTHER, open_response, {"choice": ("yes",)}, 89974, wrong_owner=True))
+    final = state(game)
+    receipt = records(final)[0]
+    sheet = final.sheets[girl.entity]
+    assert game.dice.calls == 1 and receipt.roll.faces == (5, 5) and receipt.roll.heat == 1
+    assert receipt.resolved and len(receipt.proposed.choices) == 8
+    assert next(x.name for x in sheet.identities if x.slot == 0) == "Three"
+    assert [(x.label, x.giver_actor) for x in sheet.tags[-3:]] == [
+        (original_identity.name, harpy),
+        ("One", harpy),
+        ("Two", harpy),
+    ]
+    assert depth(final, girl, harpy) == 0

@@ -1,4 +1,9 @@
-"""Actual original Harpy Identities and Core exposure for Visions of Infinity."""
+"""Source-owned Visions choices and the original recipient's actual consequences."""
+
+import hashlib
+from typing import Literal
+
+from pydantic import Field
 
 from girlframe.engine.m2 import GameState, IdentityState
 from girlframe.engine.m3_actor_state import ActorRef, Model
@@ -7,6 +12,18 @@ from girlframe.engine.m3_harpy_defeat import harpy, update
 from girlframe.engine.m3_void_state import HarpyIdentity, HarpyState
 
 KIND = "harpy_visions"
+
+
+class Adjustment(Model):
+    effect: Literal["identity", "tag", "deepen", "weaken", "remove"]
+    name: str = Field(default="", max_length=120)
+    slot: int | None = Field(default=None, ge=0, le=3)
+
+
+class Plan(Model):
+    event: str
+    baseline: str
+    choices: tuple[Adjustment, ...]
 
 
 class Vision(Model):
@@ -21,7 +38,14 @@ class Vision(Model):
     consent: str | None = None
     roll: Roll | None = None
     low_identities: tuple[HarpyIdentity, ...] = ()
+    plans: tuple[Plan, ...] = ()
+    returned: tuple[str, ...] = ()
     resolved: str | None = None
+
+    @property
+    def proposed(self) -> Plan | None:
+        last = self.plans[-1] if self.plans else None
+        return last if last and last.event not in self.returned else None
 
 
 def records(state: GameState) -> tuple[Vision, ...]:
@@ -87,3 +111,103 @@ def replace_low(state: GameState, case: Vision, event: str) -> GameState:
     sheet.revision += 1
     put(state, case.model_copy(update=dict(resolved=event)))
     return state
+
+
+def baseline(state: GameState, case: Vision, choices: tuple[Adjustment, ...]) -> str:
+    from girlframe.engine.m3_actor_bonds import depth
+
+    sheet = state.sheets[case.subject.entity]
+    material = []
+    if any(x.effect in {"identity", "tag"} for x in choices):
+        material.append(sheet.model_dump_json(include={"identities", "sedation_locked", "frame"}))
+    if any(x.effect in {"deepen", "weaken", "remove"} for x in choices):
+        material.append(str(depth(state, case.subject, case.harpy)))
+    return hashlib.sha256("\0".join(material).encode()).hexdigest()
+
+
+def preview(
+    original: GameState, case: Vision, choices: tuple[Adjustment, ...], event: str
+) -> tuple[GameState, tuple[str, ...]]:
+    require_choice_count(case, choices)
+    state = GameState.model_validate_json(original.model_dump_json())
+    labels = []
+    for offset, item in enumerate(choices):
+        state, label = _apply_adjustment(state, case, item, event, offset)
+        labels.append(label)
+    return state, tuple(labels)
+
+
+def require_choice_count(case: Vision, choices: tuple[Adjustment, ...]) -> None:
+    if case.roll is None or not (
+        (case.roll.result == "mid" and len(choices) <= 4)
+        or (case.roll.result == "high" and len(choices) == 8)
+    ):
+        raise ValueError("Choose up to four effects on 8–10, or exactly eight on 11+")
+
+
+def _apply_adjustment(
+    state: GameState, case: Vision, item: Adjustment, event: str, offset: int
+) -> tuple[GameState, str]:
+    from girlframe.engine.m3_actor_bonds import change, depth
+    from girlframe.engine.m3_clone_am import additional_identities
+    from girlframe.engine.m3_harpy_defeat import give_tag
+    from girlframe.engine.m3_identity_slots import bind, replacement_slot
+    from girlframe.engine.m3_parasite_infection import controls_identity
+
+    sheet = state.sheets[case.subject.entity]
+    if item.effect in {"identity", "tag"}:
+        if sheet.frame == "PROJECT ANKOU" or additional_identities(state, sheet.owner):
+            raise ValueError("This original Identity adjustment needs lifecycle review")
+        sheet = bind(sheet)
+        state.sheets[case.subject.entity] = sheet
+        if item.effect == "identity":
+            name = item.name.strip()
+            slot = replacement_slot(sheet, None)
+            if (
+                not name
+                or item.slot is not None
+                or slot is None
+                or any(x.name.casefold() == name.casefold() for x in sheet.identities)
+            ):
+                raise ValueError("Give a distinct Identity in a free ordinary slot")
+            sheet.identities.append(IdentityState(id=f"{event}:{offset}", name=name, slot=slot))
+            sheet.revision += 1
+            return state, "New Identity " + name
+        elif item.effect == "tag":
+            identity = next((x for x in sheet.identities if x.slot == item.slot), None)
+            if (
+                item.name
+                or item.slot is None
+                or identity is None
+                or identity.protected
+                or identity.paired
+                or identity.am_limiter
+                or identity.obsession_sources
+                or identity.id in sheet.sedation_locked
+                or controls_identity(state, case.subject, identity.id)
+            ):
+                raise ValueError("Choose an ordinary available Identity slot")
+            sheet.identities.remove(identity)
+            state = give_tag(
+                state,
+                case.subject,
+                case.harpy,
+                identity.name,
+                event,
+                f"{event}:{offset}",
+                (case.controller, int(case.subject.entity)),
+            )
+            return state, "Identity becomes a Tag " + identity.name
+    if item.name or item.slot is not None:
+        raise ValueError("Use the actual Bond with the original Harpy")
+    before = depth(state, case.subject, case.harpy)
+    if not before or (before == 2 and item.effect == "deepen"):
+        raise ValueError("Adjust an existing Bond to a different depth")
+    if item.effect == "deepen":
+        state = change(state, case.subject, case.harpy, 1, event)
+    else:
+        state = change(state, case.subject, case.harpy, -1, event)
+        if before == 2 and item.effect == "remove":
+            state = change(state, case.subject, case.harpy, -1, event)
+    after = depth(state, case.subject, case.harpy)
+    return state, f"Bond with the Harpy changes from {before} to {after}"
