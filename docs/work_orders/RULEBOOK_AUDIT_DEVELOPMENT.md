@@ -2132,6 +2132,29 @@ selection passed **111 tests in 207.07 seconds**. Its separate
 detached regression collected **3,833 tests**.
 [Incubus p. 167](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=169) · [Native tests](../../tests/rules/test_gorgon_runtime.py)
 
+### Growth sheds an Asset and Grows Unreal
+
+Base `bfd53484f005a27e8bc0c61c65302eaebcbf405a`. The original
+Growth pays by sacrificing an exact Asset before the original
+Girl spends Heat and rolls. The saved result gives the Growth
+one, two or four choices. Native cases exercise crossing actual
+mapped distance, moving into the actual cockpit, reinforcing an
+existing Core plan, causing ordinary Void and recording narrated
+forms in that original scene. The high tier gives the affected
+Girl the printed optional damage choice. That choice waits until
+an actual Void threshold and its required resistance are resolved.
+
+**Five focused cases passed in 18.07 seconds**, including the real
+owned cost, native selection, retry, restart, distant factual
+review, the original operative Frame, actual damaged Gorgon
+Asset and a fully resolved Void threshold. Narrative forms are
+saved against their actor, original source and actual scene.
+Time-related narration keeps established event history. Further
+physical consequences for non-mechanical prompts and travel
+within Voidspace remain open. The prior Incubus and related
+selection passed **105 tests in 273.30 seconds**.
+[Growth p. 173](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=175) · [Native cases](../../tests/rules/test_gorgon_runtime.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

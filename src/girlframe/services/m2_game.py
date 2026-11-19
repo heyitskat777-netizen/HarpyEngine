@@ -2406,6 +2406,7 @@ class GameService:
                                 "gorgon_contact_frame_void",
                                 "gorgon_shell_threshold",
                                 "gorgon_conditioning_threshold",
+                                "gorgon_unreal_threshold",
                                 "snoop_item_void_threshold",
                                 "gorgon_response_play",
                             )
@@ -2483,6 +2484,7 @@ class GameService:
                     "gorgon_contact_frame_void",
                     "gorgon_shell_threshold",
                     "gorgon_conditioning_threshold",
+                    "gorgon_unreal_threshold",
                     "snoop_item_void_threshold",
                 ) and (void_keep is None or prepared.play != "keep_your_head"):
                     raise WorkflowError("Use the actual source-owned Void resistance controls.")

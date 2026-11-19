@@ -10,6 +10,7 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_gorgon_frame_contact as frame_contact
+from girlframe.engine import m3_grow_unreal as unreal
 from girlframe.engine import m3_growth as growth
 from girlframe.engine import m3_hallucinations as hallucinations
 from girlframe.engine import m3_incubus_conditioning as incubus
@@ -49,6 +50,7 @@ RULES: dict[str, str] = {
     shell.PLAY: shell.RULE,
     incubus.PLAY: incubus.RULE,
     shell.RELEASE: shell.RULE,
+    unreal.PLAY: unreal.RULE,
     "growth_adapt": growth.RULE,
     "growth_regrow": growth.RULE,
     "mother_sprite": mother_sprite.RULE,
@@ -162,6 +164,7 @@ class GorgonPlayService:
             parasite_choices: dict[str, dict[str, list[str]]] = {}
             exposure_days: dict[str, dict[str, int]] = {}
             conditioning_tags: dict[str, dict[str, list[tuple[str, str]]]] = {}
+            shed_assets: dict[str, tuple[str, ...]] = {}
             if state.world is not None:
                 for actor in state.world.gorgons:
                     token = ActorRef(kind="gorgon", entity=actor.id).token
@@ -240,6 +243,13 @@ class GorgonPlayService:
                         }
                         conditioning_tags[token] = known
                         options[incubus.PLAY] = list(known)
+                    if actor.alive and "growth" in actor.types and unreal.available_assets(actor):
+                        shed_assets[token] = unreal.available_assets(actor)
+                        options[unreal.PLAY] = [
+                            girl.ref.token
+                            for girl in visible.values()
+                            if unreal.original_target(caster, girl)
+                        ]
                     typed_targets[token] = {
                         kind: targets for kind, targets in options.items() if targets
                     }
@@ -253,7 +263,7 @@ class GorgonPlayService:
                     kind in TAG_TYPES
                     or kind in hallucinations.PLAYS
                     or kind in contact_plays
-                    or kind in (shell.PLAY, shell.RELEASE, incubus.PLAY)
+                    or kind in (shell.PLAY, shell.RELEASE, incubus.PLAY, unreal.PLAY)
                 ) and not any(kind in x for x in typed_targets.values()):
                     continue
                 if kind in parasite.PLAYS and not any(kind in x for x in parasite_choices.values()):
@@ -282,6 +292,7 @@ class GorgonPlayService:
                 parasite=parasite_choices,
                 exposure_days=exposure_days,
                 conditioning_tags=conditioning_tags,
+                shed_assets=shed_assets,
             )
 
     def begin(
@@ -396,6 +407,12 @@ class GorgonPlayService:
                         raise WorkflowError(
                             "Use the next fictional day with the original Girl still in range"
                         )
+                if declaration.kind == unreal.PLAY and (
+                    "growth" not in gorgon.types
+                    or declaration.shed not in unreal.available_assets(gorgon)
+                    or not unreal.original_target(actual, target)
+                ):
+                    raise WorkflowError("Use an actual Growth Asset and an actual reachable Girl")
                 if declaration.kind == incubus.PLAY and not any(
                     x.id == declaration.tag for x in incubus.available(state, actual, target)
                 ):
@@ -964,7 +981,8 @@ def prepare_response(
     parent = game.action(c, prepared.parent)
     source = parent["data"].get("gorgon_play")
     if not source or (
-        source["kind"] in (*hallucinations.PLAYS, frame_contact.PLAY, shell.PLAY, incubus.PLAY)
+        source["kind"]
+        in (*hallucinations.PLAYS, frame_contact.PLAY, shell.PLAY, incubus.PLAY, unreal.PLAY)
         and prepared.play == "keep_your_head"
         and prepared.source_work is not None
     ):

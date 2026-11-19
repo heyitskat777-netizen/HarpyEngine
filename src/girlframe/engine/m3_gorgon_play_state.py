@@ -32,6 +32,7 @@ class Declaration(Model):
             "sentinel_withdraw",
             "sentinel_release",
             "incubus_conditioning",
+            "grow_unreal",
             "parasite_detach",
         ]
         | TypeTag
@@ -50,6 +51,8 @@ class Declaration(Model):
     interference: JackdawRange | None = Field(default=None, exclude_if=lambda value: value is None)
 
     day: int | None = Field(default=None, ge=1, exclude_if=lambda value: value is None)
+
+    shed: str | None = Field(default=None, max_length=100, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def source_shape(self) -> "Declaration":
@@ -72,6 +75,7 @@ class Declaration(Model):
             "sentinel_withdraw",
             "sentinel_release",
             "incubus_conditioning",
+            "grow_unreal",
         ):
             if self.target is None or self.target_sha256 is None or self.target == self.actor:
                 raise ValueError("This Play needs its actual distinct target body and source")
@@ -95,4 +99,6 @@ class Declaration(Model):
             raise ValueError("Declare the actual audible range of this Jackdaw Play")
         if (self.day is not None) != (self.kind == "jackdaw_hallucinations_day"):
             raise ValueError("Choose the exact next fictional day of actual exposure")
+        if (self.shed is not None and bool(self.shed.strip())) != (self.kind == "grow_unreal"):
+            raise ValueError("Choose the actual original Growth Asset this source sacrifices")
         return self

@@ -19,6 +19,7 @@ from girlframe.engine.m3_actor_state import ActorRef, SceneCast
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_collateral import Selection, Source, perform
 from girlframe.engine.m3_gorgon_play_state import Declaration
+from girlframe.engine.m3_grow_unreal import PLAY as unreal_play
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_incubus_conditioning import PLAY as incubus_play
 from girlframe.engine.m3_world_state import Asset
@@ -142,6 +143,11 @@ def start(game: Any, c: Connection, state: GameState, action: dict[str, Any]) ->
             victims=people,
         )
         action["data"]["result"]["catatonia" if people else "audible_communication_blocked"] = True
+        return
+    if meta["kind"] == unreal_play:
+        from girlframe.services.m3_grow_unreal import start as grow_unreal
+
+        grow_unreal(game, c, state, action)
         return
     if meta["kind"] == incubus_play:
         from girlframe.services.m3_incubus_conditioning import start as condition
@@ -450,6 +456,11 @@ def apply(
     meta, event = _meta(action), _event(action)
     body = json.loads(row["body_json"])
     kind = row["kind"].removeprefix("gorgon_")
+    if kind.startswith("unreal_"):
+        from girlframe.services.m3_grow_unreal import apply as apply_unreal
+
+        apply_unreal(game, c, state, action, row, answer)
+        return
     if kind.startswith("conditioning_"):
         from girlframe.services.m3_incubus_conditioning import apply as settle_conditioning
 
@@ -802,6 +813,10 @@ def projection(
     body = json.loads(row["body_json"])
     kind = row["kind"].removeprefix("gorgon_")
     result: dict[str, Any] = dict(kind=kind, account=action["data"].get("context", ""))
+    if kind.startswith("unreal_"):
+        from girlframe.services.m3_grow_unreal import project as project_unreal
+
+        return project_unreal(game, c, state, action, row)
     if kind.startswith("conditioning_"):
         from girlframe.services.m3_incubus_conditioning import project as project_conditioning
 
@@ -1027,6 +1042,10 @@ def synchronize(
     materialize_dormant(game, c, action, event)
     synchronize_damage(game, c, event)
     state = load_state(c, game.store.campaign_id)
+    if meta["kind"] == unreal_play:
+        from girlframe.services.m3_grow_unreal import materialize as materialize_unreal
+
+        materialize_unreal(game, c, state, action, event)
     if meta["kind"] == incubus_play:
         from girlframe.services.m3_incubus_conditioning import materialize as materialize_incubus
 
@@ -1058,6 +1077,7 @@ def synchronize(
                     frame_contact.FRAME_VOID,
                     "gorgon_shell_threshold",
                     "gorgon_conditioning_threshold",
+                    "gorgon_unreal_threshold",
                 ):
                     c.execute(
                         choices.update()

@@ -25,6 +25,9 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
             interaction, GorgonDormantService(game.store, game), detail["work_id"]
         )
         return
+    if kind.startswith("unreal_"):
+        await open_unreal(interaction, game, data)
+        return
     if kind.startswith("conditioning_"):
         await open_incubus_conditioning(interaction, game, data)
         return
@@ -490,4 +493,80 @@ async def open_incubus_conditioning(
         return "Your choice is saved. Recover any remaining step in the private Inbox."
 
     form = NativeForm(interaction.user.id, "Emotional Conditioning", message, fields, submit)
+    await reply(interaction, form.text(), form)
+
+
+async def open_unreal(
+    interaction: discord.Interaction, game: GameService, data: dict[str, Any]
+) -> None:
+    detail = data["detail"]
+    kind = detail["kind"]
+    if kind == "unreal_threshold":
+        from girlframe.discord_adapter.m3_void import open_void
+        from girlframe.services.m3_void import VoidService
+
+        await open_void(interaction, VoidService(game.store), detail["work"])
+        return
+    if kind == "unreal_heat":
+        message = f"The Growth paid an Asset. Choose what to spend from your {detail['heat']} Heat."
+        fields = [Field("heat", "Heat to spend")]
+    elif kind == "unreal_grow":
+        count = detail["count"]
+        message = f"Choose exactly {count} forms of growth from the saved roll."
+        fields = [
+            Field(
+                "options", "Printed growth choices", tuple(detail["options"].items()), count, count
+            )
+        ]
+        if detail["guards"]:
+            fields.append(
+                Field(
+                    "guard",
+                    "Additional Core protector, if reinforcing",
+                    tuple(detail["guards"].items()),
+                    required=False,
+                    minimum=0,
+                )
+            )
+        fields.append(Field("account", "Describe the actual ordered growth", paragraph=True))
+    else:
+        damage = kind == "unreal_damage"
+        message = (
+            "Damage one actual Growth Asset, or decline." if damage else "Apply ordinary Void."
+        )
+        fields = [
+            Field(
+                "options",
+                "Actual original Asset",
+                tuple(detail["assets"].items()),
+                minimum=0 if damage else 1,
+                required=not damage,
+            )
+        ]
+        if not damage:
+            fields.append(Field("account", "Describe the actual Void change", paragraph=True))
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        number = None
+        if kind == "unreal_heat":
+            heat = values["heat"].strip()
+            if not heat.isascii() or not heat.isdecimal() or len(heat) > 9:
+                return "Enter a whole amount of your actual Heat."
+            number = int(heat)
+        await asyncio.to_thread(
+            game.respond,
+            viewer_from_interaction(current),
+            str(current.id),
+            data["id"],
+            data["revision"],
+            ChoiceAnswer(
+                number=number,
+                text=values.get("account", ""),
+                options=tuple(values.get("options", ())),
+                fields={"guard": values["guard"][0]} if values.get("guard") else {},
+            ),
+        )
+        return "Your choice is saved. Any remaining consequence is in the Inbox."
+
+    form = NativeForm(interaction.user.id, "Grow Unreal", message, fields, submit)
     await reply(interaction, form.text(), form)

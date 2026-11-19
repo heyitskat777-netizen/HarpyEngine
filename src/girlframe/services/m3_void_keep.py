@@ -166,6 +166,7 @@ def prepare_keep(
                 "gorgon_contact_frame_void",
                 "gorgon_shell_threshold",
                 "gorgon_conditioning_threshold",
+                "gorgon_unreal_threshold",
             )
             and x["actor_id"] == actor.entity
             and json.loads(x["body_json"]).get("work_id") == row["id"]

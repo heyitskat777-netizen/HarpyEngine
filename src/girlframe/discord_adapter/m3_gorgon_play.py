@@ -12,6 +12,7 @@ from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_gorgon_play_state import Declaration
 from girlframe.engine.m3_gorgon_type_tags import LABELS as TYPE_TAG_LABELS
 from girlframe.engine.m3_gorgon_type_tags import TYPES as TAG_TYPES
+from girlframe.engine.m3_grow_unreal import PLAY as unreal_play
 from girlframe.engine.m3_growth import KINDS as GROWTH_KINDS
 from girlframe.engine.m3_growth import Adaptation, Regrowth
 from girlframe.engine.m3_hallucinations import PLAYS as HALLUCINATIONS_PLAYS
@@ -61,7 +62,13 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
             if kind not in riding_choices:
                 return "Use the actual Parasite whose host state permits this Play."
             targets = [x for x in targets if x["token"] in riding_choices[kind]]
-        if type_tag or kind in (*HALLUCINATIONS_PLAYS, *contact_plays, shell_play, shell_release):
+        if type_tag or kind in (
+            *HALLUCINATIONS_PLAYS,
+            *contact_plays,
+            shell_play,
+            shell_release,
+            unreal_play,
+        ):
             eligible = data["typed_targets"].get(actor["token"], {}).get(kind, ())
             targets = [x for x in targets if x["token"] in eligible]
         targeted = (
@@ -71,6 +78,7 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
                 "parasite_hitch",
                 shell_play,
                 shell_release,
+                unreal_play,
                 *contact_plays,
                 *HALLUCINATIONS_PLAYS,
             )
@@ -120,6 +128,15 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
             fields.append(Field("tag", "Choose the printed effect", TYPE_TAG_LABELS[kind]))
         if kind == "doppleganger_bond":
             fields.append(Field("bond_tag", "Tag from the actual interaction"))
+        if kind == unreal_play:
+            known = data["shed_assets"].get(actor["token"], ())
+            fields.append(
+                Field(
+                    "shed",
+                    "Actual Asset to sacrifice",
+                    tuple((x["id"], x["name"]) for x in actor["assets"] if x["id"] in known),
+                )
+            )
         if kind == "growth_adapt":
             guards = tuple((x["id"], x["name"]) for x in actor["assets"])
             fields.extend(
@@ -208,6 +225,7 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
                     else details.get("bond_tag")
                     if kind == "doppleganger_bond"
                     else (details.get("tag") or (None,))[0],
+                    shed=details["shed"][0] if kind == unreal_play else None,
                     adaptation=Adaptation(
                         guards=CorePlan(assets=details["guards"], weakness=details["weakness"]),
                         tag=details["growth_tag"],

@@ -41,6 +41,7 @@ def candidate_source_gate(monkeypatch):
             "gorgon-type.incubus.emotional-conditioning",
             "gorgon-type.mother.mother-type",
             "gorgon-type.growth.growth-type",
+            "gorgon-type.growth.grow-unreal",
             "gorgon-type.doppleganger.doppleganger-type",
             "gorgon-type.parasite.parasite-type",
         }:
@@ -3378,3 +3379,196 @@ def test_incubus_marks_only_its_actual_known_tag_and_the_girl_owns_results(ledge
         game.inspect(OTHER, action)
     tick(worker, gateway, 5)
     assert {recipient for recipient, _ in gateway.private} == {ADMIN.user_id, PLAYER.user_id}
+
+
+@pytest.mark.parametrize(
+    "faces,choices,threshold",
+    [
+        ((3, 4), ("cockpit",), False),
+        ((3, 4), ("distance",), False),
+        ((5, 5), ("thoughts", "reinforce"), False),
+        ((5, 5), ("thoughts", "reinforce"), True),
+        ((1, 2), ("tree", "underground", "time", "fill_square"), False),
+    ],
+)
+def test_grow_unreal_pays_original_asset_and_applies_owned_tier_choices(
+    ledger, faces, choices, threshold
+):
+    import asyncio
+
+    from test_ledger import OTHER
+    from test_m2_game import Dice, pass_tags
+    from test_mission_ui import current
+
+    from girlframe.discord_adapter.m3_gorgon_play import open_gorgon_play
+    from girlframe.engine.m2 import ChoiceAnswer, PlayInput
+    from girlframe.engine.m3_grow_unreal import get
+    from girlframe.services.m3_grow_unreal import DAMAGE, GROW, HEAT, VOID
+    from girlframe.services.m3_void import VoidService
+    from girlframe.services.onboarding import WorkflowError
+
+    far = "distance" in choices
+    viewer = OTHER if far else PLAYER
+    game, worker, gateway, _, original = gorgon_source(
+        ledger,
+        types=("growth",),
+        target=str(viewer.user_id),
+        other_cell=(2, 0),
+        begin=False,
+    )
+    game.dice = Dice(faces)
+    reserved = None
+    with ledger.transaction() as c:
+        canon = state(game)
+        sheet = canon.sheets[str(viewer.user_id)]
+        sheet.heat = 2
+        if threshold:
+            frame_assets = [x for x in sheet.assets if x.family == "frame"]
+            reserved = frame_assets[-1].id
+            for item in frame_assets[:-1]:
+                item.void = True
+        game.event(c, viewer.user_id, "synthetic-growth-heat", "synthetic.heat", canon)
+    before = state(game)
+    parent = next(x for x in before.world.gorgons if x.id == original.actor.entity)
+    sacrifice = parent.assets[-1].id
+    svc = GorgonPlayService(game)
+    selection = svc.preview(ADMIN, 900)
+    source_rows = {x["token"]: x for x in selection["actors"]}
+    assert sacrifice in selection["shed_assets"][original.actor.token]
+    declared = Declaration(
+        kind="grow_unreal",
+        actor=original.actor,
+        target=original.target,
+        shed=sacrifice,
+        actor_sha256=source_rows[original.actor.token]["source_sha256"],
+        target_sha256=source_rows[original.target.token]["source_sha256"],
+        account="The original Growth sheds an Asset before approaching.",
+        reach_confirmed=True,
+    )
+    with pytest.raises(WorkflowError, match="Growth Asset"):
+        svc.begin(
+            ADMIN,
+            "not-a-growth-asset",
+            900,
+            before.revision,
+            declared.model_copy(update=dict(shed="someone-elses-asset")),
+        )
+
+    async def native():
+        home = current(ADMIN.user_id, 87800)
+        home.channel_id = 900
+        await home.response.defer(ephemeral=True)
+        await open_gorgon_play(home, game)
+        form = home.edit_original_response.call_args.kwargs["view"]
+        form.values.update(actor=(original.actor.token,), play=("grow_unreal",))
+        selected = current(ADMIN.user_id, 87801)
+        await selected.response.defer(ephemeral=True)
+        await form.confirm.callback(selected)
+        details = selected.edit_original_response.call_args.kwargs["view"]
+        details.values.update(
+            target=(original.target.token,),
+            shed=(sacrifice,),
+            account=declared.account,
+            reach=("confirmed",),
+        )
+        await details.confirm.callback(current(ADMIN.user_id, 87802))
+        assert details.completed
+
+    asyncio.run(native())
+    action = svc.begin(ADMIN, "87802", 900, before.revision, declared)["action_id"]
+    tick(worker, gateway, 5)
+    if not any(
+        x["kind"] in (HEAT, "gorgon_asset_capability")
+        for user in (ADMIN, viewer)
+        for x in game.choices(user)
+    ):
+        game.roll(ADMIN, "advance-grow-unreal", action)
+    if far:
+        assert not any(x["kind"] == HEAT for x in game.choices(viewer))
+        answer(
+            game,
+            ADMIN,
+            "gorgon_asset_capability",
+            flag=True,
+            text="The original Growth can actually reach the original distant Girl.",
+        )
+    retired = next(x for x in state(game).world.gorgons if x.id == parent.id)
+    assert {x.id for x in retired.assets} == {x.id for x in parent.assets} - {sacrifice}
+    assert any(x.id == sacrifice for x in retired.destroyed_assets) and game.dice.calls == 0
+    row = next(x for x in game.choices(viewer) if x["kind"] == HEAT)
+    accepted = ChoiceAnswer(number=1)
+    saved = game.respond(viewer, "grow-heat", row["id"], row["revision"], accepted)
+    assert game.respond(viewer, "grow-heat", row["id"], row["revision"], accepted) == saved
+    ledger.engine.dispose()
+    owned = next(x for x in game.choices(ADMIN) if x["kind"] == GROW)
+    view = game.decision(ADMIN, owned["id"])["detail"]
+    assert view["count"] == len(choices) and view["roll"]["faces"] == list(faces)
+    options = {"guard": next(iter(view["guards"]))} if "reinforce" in choices else {}
+    with pytest.raises(WorkflowError, match="rolled number"):
+        answer(game, ADMIN, GROW, text="Too few choices.", options=())
+    answer(
+        game,
+        ADMIN,
+        GROW,
+        text="The Growth changes form in the chosen order.",
+        options=choices,
+        fields=options,
+    )
+    if "thoughts" in choices:
+        item = next(x for x in game.choices(viewer) if x["kind"] == VOID)
+        detail = game.decision(viewer, item["id"])["detail"]
+        voided = reserved or next(iter(detail["assets"]))
+        assert game.inspect(ADMIN, action)["state"] == "awaiting_choices"
+        answer(game, viewer, VOID, options=(voided,), text="The material echoes what the Girl saw.")
+        if threshold:
+            saved_case = get(state(game), action)
+            work = saved_case.void_work
+            assert work and game.inspect(ADMIN, action)["state"] == "awaiting_choices"
+            assert not any(x["kind"] == DAMAGE for x in game.choices(viewer))
+            void_service = VoidService(ledger)
+            assert void_service.get(viewer, work)["stage"] == "resist_pending"
+            game.dice.faces = (1, 1)
+            child = game.begin(
+                viewer,
+                "grow-resistance",
+                900,
+                state(game).sheets["2"].revision,
+                PlayInput(
+                    play="keep_your_head",
+                    heat=0,
+                    parent=action,
+                    source_work=work,
+                    context="I resist the actual Growth-corrupted Frame.",
+                    trigger_confirmed=True,
+                ),
+            )["action_id"]
+            tick(worker, gateway, 5)
+            pass_tags(game)
+            answer(game, viewer, "actor_keep", options=("in_control",))
+            answer(game, ADMIN, "handler_keep", flag=True, text="The resistance was sufficient.")
+            tick(worker, gateway, 5)
+            assert game.inspect(viewer, child)["state"] == "complete"
+            assert void_service.get(viewer, work)["stage"] == "prevented"
+        offered = next(x for x in game.choices(viewer) if x["kind"] == DAMAGE)
+        extra = game.decision(viewer, offered["id"])["detail"]
+        exact = next(iter(extra["assets"]))
+        answer(game, viewer, DAMAGE, options=(exact,))
+        updated = state(game)
+        original_girl = updated.sheets[str(viewer.user_id)]
+        assert next(x for x in original_girl.assets if x.id == voided).void
+        mutated = next(x for x in updated.world.gorgons if x.id == parent.id)
+        assert options["guard"] in mutated.core_plan.assets
+        assert next(x for x in mutated.assets if x.id == exact).damaged
+    canon = state(game)
+    record = get(canon, action)
+    assert (
+        record.completed is not None
+        and record.options == choices
+        and record.sacrificed == sacrifice
+    )
+    assert game.inspect(ADMIN, action)["state"] == "complete"
+    assert game.dice.calls == (2 if threshold else 1)
+    if far:
+        assert next(x for x in canon.world.gorgons if x.id == parent.id).cell == (2, 0)
+    if "cockpit" in choices:
+        assert record.frame_instance == canon.placements[0].frame_instance
