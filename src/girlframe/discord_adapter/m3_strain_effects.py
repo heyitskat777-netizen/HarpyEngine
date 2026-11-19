@@ -22,6 +22,7 @@ from girlframe.engine.m3_doppelganger_reveal import RULE as DOPPELGANGER_REVEAL
 from girlframe.engine.m3_gorgon_catalog import ASSETS
 from girlframe.engine.m3_harpy_raid import RULE as HARPY_RAID
 from girlframe.engine.m3_orbital_threat import RULE as ORBITAL_THREAT
+from girlframe.engine.m3_pilot_fears import APPEARANCE as PUBLIC_APPEARANCE
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_defection import RULE as REBEL_DEFECTION
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
@@ -105,7 +106,12 @@ async def open_effect(
         await reply(interaction, "The original recipient's Void consequence is still pending.")
         return
     if data["awaiting_pilot_fears"]:
-        await reply(interaction, "The original Director and Cadre have the demand in their Inbox.")
+        await reply(
+            interaction,
+            "The Cadre's city appearance is pending in the original participants' Inbox."
+            if data["rule_id"] == PUBLIC_APPEARANCE
+            else "The original Director and Cadre have the demand in their Inbox.",
+        )
         return
     if data["awaiting_harpy_raid"]:
         await reply(interaction, "The Harpy's completed Assault is required in the original raid.")
@@ -420,6 +426,25 @@ def effect_form(
                     "signal",
                     "Which original Gorgon reaches out?",
                     options([x for x in world["gorgons"] if x["alive"]]),
+                )
+            )
+        if rule == PUBLIC_APPEARANCE:
+            fields.append(
+                Field(
+                    "appearance_city",
+                    "Which city hosts the Cadre's public appearance?",
+                    options(
+                        [
+                            x
+                            for x in regional_locations
+                            if x["kind"] == "city"
+                            and x["condition"] != "destroyed"
+                            and not any(
+                                x.get(key)
+                                for key in ("blocked_by", "fallout_sources", "control_loss")
+                            )
+                        ]
+                    ),
                 )
             )
         if rule in CIVIC_DIRECTIVES or rule in (PILOT_FEARS, CADRE_LEAK):
@@ -1095,6 +1120,8 @@ def effect_form(
                 )
         if rule == VOID_SIGNAL:
             payload["target"] = values["signal"][0]
+        if rule == PUBLIC_APPEARANCE:
+            payload["target"] = values["appearance_city"][0]
         if rule in CIVIC_DIRECTIVES or rule in (PILOT_FEARS, CADRE_LEAK):
             payload["target"] = values["civic_director"][0]
             if rule == CIVIC_PROTEST:
@@ -1322,6 +1349,8 @@ def effect_form(
             return "The original recipient can finish the Void change in their private Inbox."
         if rule == PILOT_FEARS:
             return "The original fictional Director can issue the demand in their private Inbox."
+        if rule == PUBLIC_APPEARANCE:
+            return "The original Cadre can record attendance from their private Inbox."
         if rule == HARPY_RAID:
             return "The original Harpy's controller can confirm the real attack in the Inbox."
         if rule == CADRE_LEAK:

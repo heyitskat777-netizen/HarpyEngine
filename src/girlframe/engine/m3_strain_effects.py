@@ -20,6 +20,7 @@ from girlframe.engine.m3_cult_occupation import RULE as CULT_OCCUPATION
 from girlframe.engine.m3_doppelganger_reveal import RULE as DOPPELGANGER_REVEAL
 from girlframe.engine.m3_harpy_raid import RULE as HARPY_RAID
 from girlframe.engine.m3_orbital_threat import RULE as ORBITAL_THREAT
+from girlframe.engine.m3_pilot_fears import APPEARANCE as PUBLIC_APPEARANCE
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_defection import RULE as REBEL_DEFECTION
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
@@ -51,6 +52,7 @@ SUPPORTED = frozenset(
         "strain.void.low.1.1",
         "strain.void.low.2.1",
         SPRITE_ESCORT,
+        PUBLIC_APPEARANCE,
         "strain.void.low.4.1",
         BENEVOLENT_CONTACT,
         "strain.void.low.5.1",
@@ -242,6 +244,16 @@ def apply(
             or not any(x.id == choice.target and x.alive for x in world.gorgons)
         ):
             raise ValueError("Bind the original living Gorgon to the preparing period")
+    elif rule == PUBLIC_APPEARANCE:
+        fields(choice, {"target"})
+        if not any(
+            x.id == choice.target
+            and x.kind == "city"
+            and x.operational
+            and in_responsibility(state, x.cell)
+            for x in world.locations
+        ):
+            raise ValueError("Choose an actual available city for the Cadre's public appearance")
     elif rule == PILOT_FEARS:
         from girlframe.engine.m3_civic_directive import director
 

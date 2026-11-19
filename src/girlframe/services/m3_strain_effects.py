@@ -17,6 +17,7 @@ from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_contraband_state import ContrabandFind
 from girlframe.engine.m3_doppelganger_reveal import reveals as disguise_reveals
 from girlframe.engine.m3_harpy_raid import RULE as HARPY_RAID
+from girlframe.engine.m3_pilot_fears import APPEARANCE as PUBLIC_APPEARANCE
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_supply_state import SupplyLoss
@@ -558,11 +559,21 @@ class EffectService:
                     self.selector,
                     self.selection_source,
                 )
-            needs_fear = choice.rule_id == PILOT_FEARS
+            needs_fear = choice.rule_id in (PILOT_FEARS, PUBLIC_APPEARANCE)
             if needs_fear:
                 from girlframe.services.m3_pilot_fears import stage as stage_pilot_fears
 
-                stage_pilot_fears(c, self.strain, updated, row, choice.target, event_id)
+                stage_pilot_fears(
+                    c,
+                    self.strain,
+                    updated,
+                    row,
+                    choice.target,
+                    event_id,
+                    appearance=choice.account.strip()
+                    if choice.rule_id == PUBLIC_APPEARANCE
+                    else None,
+                )
             needs_raid = choice.rule_id == HARPY_RAID
             if needs_raid:
                 from girlframe.services.m3_harpy_raid import stage as stage_harpy_raid

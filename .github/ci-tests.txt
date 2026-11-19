@@ -128,3 +128,4 @@ tests/rules/test_strain_cult_occupation.py
 tests/rules/test_strain_sprite_escort.py
 tests/rules/test_strain_benevolent_contact.py
 tests/rules/test_strain_rebel_defection.py
+tests/rules/test_strain_public_appearance.py

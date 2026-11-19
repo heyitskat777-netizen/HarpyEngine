@@ -8,6 +8,7 @@ import discord
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
+from girlframe.engine.m3_strain_state import TRACKS
 from girlframe.services.m3_pilot_fears import FearsService
 
 
@@ -17,20 +18,33 @@ async def open_fears(
     identity: str,
 ) -> None:
     data = await asyncio.to_thread(service.get, viewer_from_interaction(interaction), identity)
+    appearance = data["city"] is not None
+    title = "Cadre public appearance" if appearance else "Directors' public-fear demand"
+    severity = "Moderate" if appearance else "Severe"
     options = []
     if data["issue"]:
         options.append(("demand", "Make the actual demand"))
     if data["respond"]:
-        options.append(("respond", "Record my Girl's actual response in this scene"))
+        options.append(
+            (
+                "respond",
+                "Record my Girl's attendance"
+                if appearance
+                else "Record my Girl's actual response in this scene",
+            )
+        )
     if data["review"]:
         if data["responses"]:
             options.append(("addressed", "Accept a recorded Cadre response"))
-        options.append(("discipline", "Call for collective Severe Punishment"))
+        if not appearance or data["responses"]:
+            options.append(("discipline", "Call for collective " + severity + " Punishment"))
     prompt = data["demand"] or "Speak the original Directors' demand to the Cadre."
     if not options:
         result = {
-            "addressed": "The Directors accepted the response.",
-            "discipline": "The Directors called for collective Severe Punishment.",
+            "addressed": "The public appearance was accepted."
+            if appearance
+            else "The Directors accepted the response.",
+            "discipline": "Collective " + severity + " Punishment was required.",
         }
         await reply(interaction, prompt + "\n" + result.get(data["result"], "Awaiting a response."))
         return
@@ -42,8 +56,19 @@ async def open_fears(
         fields.append(
             Field(
                 "response",
-                "Which recorded action satisfies the demand?",
+                "Choose a response from the actual appearance"
+                if appearance
+                else "Which recorded action satisfies the demand?",
                 data["responses"],
+                required=False,
+            )
+        )
+    if appearance and data["review"]:
+        fields.append(
+            Field(
+                "track",
+                "Which Strain rises if the appearance failed?",
+                tuple((x, x.title()) for x in TRACKS),
                 required=False,
             )
         )
@@ -51,6 +76,7 @@ async def open_fears(
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
         action = values["action"][0]
         response = values.get("response", ())
+        track = values.get("track", ())
         result = await asyncio.to_thread(
             service.act,
             viewer_from_interaction(current),
@@ -61,14 +87,15 @@ async def open_fears(
             values["account"],
             channel=current.channel_id if action == "respond" else None,
             evidence=response[0] if response else None,
+            track=track[0] if action == "discipline" and track else None,
         )
         if result["state"] == "discipline":
-            return "Collective Severe Punishment is required. The actual cases are in the Inbox."
+            return "Collective " + severity + " Punishment is required. The cases are in the Inbox."
         return "The original demand record was updated."
 
     await NativeForm(
         interaction.user.id,
-        "Directors' public-fear demand",
+        title,
         prompt,
         fields,
         submit,

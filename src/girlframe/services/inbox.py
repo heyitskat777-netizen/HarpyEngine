@@ -3157,7 +3157,7 @@ class InboxService:
                         fear.id,
                         canon.revision,
                         "off_duty",
-                        "Directors' public-fear demand",
+                        "Cadre public appearance" if fear.city else "Directors' public-fear demand",
                         "Original participants",
                         "pending" if not fear.result else "resolved",
                         actionable,

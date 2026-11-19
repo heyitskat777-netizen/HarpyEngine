@@ -2,10 +2,14 @@
 
 from typing import Literal
 
+from pydantic import Field
+
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model
+from girlframe.engine.m3_strain_state import Track
 
 RULE = "strain.void.high.4.2"
+APPEARANCE = "strain.void.low.3.2"
 KIND = "strain_pilot_fears"
 
 
@@ -20,7 +24,7 @@ class Fears(Model):
     id: str
     source: str
     period: str
-    director: str
+    director: str | None
     controller: int
     handler: ActorRef
     cadre: tuple[ActorRef, ...]
@@ -31,6 +35,8 @@ class Fears(Model):
     result_event: str | None = None
     decision: str | None = None
     evidence: str | None = None
+    city: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    track: Track | None = Field(default=None, exclude_if=lambda x: x is None)
 
 
 def cases(state: GameState) -> tuple[Fears, ...]:

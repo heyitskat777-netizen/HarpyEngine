@@ -412,3 +412,19 @@ tests. General NPC Tag roll modifiers, ordinary NPC discovery and surgery
 and wider Handler medical enforcement still need dedicated coverage.
 Independent review and admission checks retain their original requirements.
 [NPC Tags p. 10](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=12) · [Assets p. 13](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=15) · [Void pp. 17–18](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=19)
+
+## Low Void public appearance
+
+The base is `7146db194b8521133ddf6c440a04da192bf9ea4a`.
+Low Void 3.2 calls the original Cadre to an actual available city.
+Each original Girl confirms her own attendance from one joined scene at
+that location. The original Handler controller can adjudicate the
+public response after those confirmations. Public acceptance resolves
+the effect. Failure raises the chosen track to High and opens a real
+Moderate Punishment for each original participant. Off-Duty stays
+held through those actual punishments. The successful and failed
+public show passed, including the actual application of Strict
+Regulations. A missed appearance and changes to the original roster
+remain held for review. High Void's independent Director and Severe
+Punishment path passed its two existing outcomes.
+[Low Void p. 142](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=144) · [Appearance tests](../../tests/rules/test_strain_public_appearance.py) · [Directors' demand tests](../../tests/rules/test_strain_pilot_fears.py)

@@ -11,12 +11,14 @@ from girlframe.database import tables as t
 from girlframe.engine import m3_pilot_fears as rules
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import current_ref
+from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_civic_directive import director
 from girlframe.engine.m3_handler_consequences import active_handler, same_handler_body
 from girlframe.engine.m3_intracadre_marriage import allocation_fields
+from girlframe.engine.m3_strain_state import TRACKS, Track
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_state import load_state
-from girlframe.services.m3_actors import ActorService
+from girlframe.services.m3_actors import ActorService, profiles
 from girlframe.services.m3_cast import CastService
 from girlframe.services.m3_intracadre_marriage import allocate_punishment
 from girlframe.services.m3_strain import StrainService
@@ -36,8 +38,10 @@ def stage(
     row: dict[str, Any],
     actor: str | None,
     event: str,
+    *,
+    appearance: str | None = None,
 ) -> None:
-    npc = director(state, actor)
+    npc = director(state, actor) if appearance is None else None
     period = strain.periods._get(c, row["off_duty_id"])
     handler = active_handler(state)
     cadre = tuple(current_ref(state, uid) for uid in period.pilots)
@@ -45,7 +49,10 @@ def stage(
         handler is None
         or not cadre
         or any(period.character_ids.get(x.entity) != x.incarnation for x in cadre)
-        or not HandlerService(strain.store)._member(c, npc.controller)
+        or npc is not None
+        and not HandlerService(strain.store)._member(c, npc.controller)
+        or appearance is not None
+        and not actor
         or any(x.id == row["id"] for x in rules.cases(state))
     ):
         raise WorkflowError("Recover the original Director, Handler and preparing Cadre")
@@ -55,10 +62,13 @@ def stage(
             id=row["id"],
             source=event,
             period=period.id,
-            director=npc.id,
-            controller=npc.controller,
+            director=npc.id if npc else None,
+            controller=npc.controller if npc else int(handler.entity),
             handler=handler,
             cadre=cadre,
+            city=actor if appearance else None,
+            demand=appearance,
+            demand_event=event if appearance else None,
         ),
     )
 
@@ -108,6 +118,7 @@ def proof(c: Connection, campaign: str, row: dict[str, Any]) -> None:
         if raw
         else None
     )
+    severity = "moderate" if case is not None and case.city is not None else "severe"
     if (
         case is None
         or case.result != "discipline"
@@ -115,10 +126,10 @@ def proof(c: Connection, campaign: str, row: dict[str, Any]) -> None:
         or case.period != row["off_duty_id"]
         or case.handler.entity != row["owner_id"]
         or not any(
-            x.token == body.get("original") and row["id"] == f"{case.id}:severe:{x.entity}"
+            x.token == body.get("original") and row["id"] == f"{case.id}:{severity}:{x.entity}"
             for x in case.cadre
         )
-        or body.get("required_severity") != "severe"
+        or body.get("required_severity") != severity
     ):
         raise WorkflowError("Recover the Directors' actual original call for collective discipline")
 
@@ -148,6 +159,7 @@ class FearsService:
                 issue=is_director and not case.demand_event,
                 review=is_director and bool(case.demand_event) and not case.result,
                 respond=member and bool(case.demand_event) and not case.result,
+                city=case.city,
                 responses=tuple(
                     (x.event, x.account)
                     for x in case.responses
@@ -166,12 +178,14 @@ class FearsService:
         *,
         channel: int | None = None,
         evidence: str | None = None,
+        track: Track | None = None,
     ) -> dict[str, Any]:
         if (
             action not in ("demand", "respond", "addressed", "discipline")
             or not 0 < len(account.strip()) <= 1200
             or (channel is not None) != (action == "respond")
-            or (evidence is not None) != (action == "addressed")
+            or (evidence is not None and action not in ("addressed", "discipline"))
+            or (track is not None and (track not in TRACKS or action != "discipline"))
         ):
             raise WorkflowError("Record the actual demand, performed action or adjudication")
 
@@ -185,7 +199,9 @@ class FearsService:
             if action == "respond":
                 if not member or current_ref(state, viewer.user_id) not in case.cadre:
                     raise WorkflowError("Only the original Girl can record her own Cadre action")
-            elif not is_director or director(state, case.director).controller != viewer.user_id:
+            elif not is_director or (
+                case.city is None and director(state, case.director).controller != viewer.user_id
+            ):
                 raise WorkflowError(
                     "Only the original fictional Director's controller can adjudicate"
                 )
@@ -200,11 +216,13 @@ class FearsService:
                 row["state"] != "pending"
                 or row["off_duty_id"] != case.period
                 or body.get("fear_requested") != case.source
-                or body["rule_id"] != rules.RULE
+                or body["rule_id"] != (rules.APPEARANCE if case.city else rules.RULE)
                 or case.result
                 or period.phase != "preparing"
                 or not same_handler_body(state, case.handler)
                 or (case.demand_event is None) != (action == "demand")
+                or (track is not None) != (case.city is not None and action == "discipline")
+                or (case.city is None and action == "discipline" and evidence is not None)
             ):
                 raise WorkflowError("Reopen the original pending public-fear demand")
             event = str(uuid4())
@@ -219,12 +237,48 @@ class FearsService:
                 )
                 if not any(x.actor == actor and x.controller == viewer.user_id for x in cast.roles):
                     raise WorkflowError("Record the action from the Girl's actual joined scene")
+                if case.city is not None:
+                    site = (
+                        next(
+                            (
+                                x
+                                for x in state.world.locations
+                                if x.id == case.city and x.kind == "city" and x.operational
+                            ),
+                            None,
+                        )
+                        if state.world
+                        else None
+                    )
+                    actual = resolve(
+                        state,
+                        actor,
+                        profiles(c, self.store.campaign_id),
+                        require_current_profile=False,
+                    )
+                    if (
+                        site is None
+                        or cast.facilitator != case.controller
+                        or actual.cell != site.cell
+                    ):
+                        raise WorkflowError(
+                            "Join the actual public appearance at the original city"
+                        )
                 response = rules.Response(
                     actor=actor, scene=cast.id, event=event, account=account.strip()
                 )
                 case = case.model_copy(update=dict(responses=case.responses + (response,)))
             else:
-                if action == "addressed" and not any(x.event == evidence for x in case.responses):
+                cited = next((x for x in case.responses if x.event == evidence), None)
+                if case.city is not None and (
+                    cited is None
+                    or {x.actor for x in case.responses if x.scene == cited.scene}
+                    != set(case.cadre)
+                ):
+                    raise WorkflowError(
+                        "Every original Girl must record attendance at the same appearance"
+                    )
+                if action == "addressed" and cited is None:
                     raise WorkflowError("Choose an actual performed action from the original Cadre")
                 case = case.model_copy(
                     update=dict(
@@ -232,14 +286,21 @@ class FearsService:
                         result_event=event,
                         decision=account.strip(),
                         evidence=evidence,
+                        track=track,
                     )
                 )
                 if action == "discipline":
                     self.strain.missions.access.authorize(c, viewer, "discipline")
+                    severity = "moderate" if case.city is not None else "severe"
+                    if track is not None:
+                        assert state.strain is not None
+                        state.strain = state.strain.model_copy(
+                            update={"levels": state.strain.levels | {track: "high"}}
+                        )
                     for original in case.cadre:
                         if current_ref(state, int(original.entity)) != original:
                             raise WorkflowError("Recover the original collective discipline roster")
-                        work = f"{identity}:severe:{original.entity}"
+                        work = f"{identity}:{severity}:{original.entity}"
                         allocation = allocate_punishment(
                             self.game,
                             c,
@@ -258,9 +319,9 @@ class FearsService:
                                     reason=rules.KIND,
                                     fear_case=identity,
                                     original=original.token,
-                                    source_pdf=145,
+                                    source_pdf=144 if case.city is not None else 145,
                                     character=recipient.incarnation,
-                                    required_severity="severe",
+                                    required_severity=severity,
                                     **allocation_fields(state, work),
                                 ),
                             )
@@ -296,6 +357,7 @@ class FearsService:
                 account=account,
                 channel=channel,
                 evidence=evidence,
+                **({"track": track} if track is not None else {}),
             ),
             operation,
             authorize,
