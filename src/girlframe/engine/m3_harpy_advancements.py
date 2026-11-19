@@ -13,6 +13,7 @@ MANIC_PIXIE = "harpy.harpy.manic-pixie-dream-monster"
 VISIONS = "harpy.harpy.visions-of-infinity"
 NOTHING = "harpy.harpy.nothing-can-ever-be-as-important-as-us"
 MASK = "harpy.harpy.a-human-mask"
+KISS = "harpy.harpy.kiss-me-darling"
 ADVANCEMENTS = (
     (SPARROWS, "Sparrows Led You Over the Black Earth"),
     (ECHOES, "Echoes of Old Command"),
@@ -23,6 +24,7 @@ ADVANCEMENTS = (
     (VISIONS, "Visions of Infinity"),
     (NOTHING, "Nothing Can Ever Be As Important As Us"),
     (MASK, "A Human Mask"),
+    (KISS, "Kiss Me, Darling"),
 )
 SPARROWS_CHOICES = (
     ("shadow", "I’m a shadow in the corner of their eye"),

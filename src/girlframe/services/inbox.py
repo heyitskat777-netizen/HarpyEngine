@@ -4120,6 +4120,7 @@ class InboxService:
             from girlframe.services.m3_harpy_eagle import EagleService
             from girlframe.services.m3_harpy_gaze import GazeService
             from girlframe.services.m3_harpy_intimacy import HarpyIntimacyService
+            from girlframe.services.m3_harpy_kiss import KissService
             from girlframe.services.m3_harpy_mask import MaskService
             from girlframe.services.m3_harpy_rewrite import RewriteService
             from girlframe.services.m3_harpy_song import HarpySongService
@@ -4131,6 +4132,27 @@ class InboxService:
             from girlframe.services.m3_timeskip import TimeskipService
             from girlframe.services.m3_voidspace_invasion import InvasionService
             from girlframe.services.m3_warboy_hate import ConditionedHateService
+
+            kisses = KissService(GameService(self.store))
+            for kiss_id in kisses.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "harpy-kiss:" + kiss_id,
+                        "harpy_kiss",
+                        kiss_id,
+                        canon.revision,
+                        "plays",
+                        "Kiss Me, Darling",
+                        "Original facilitator",
+                        "pending",
+                        True,
+                        False,
+                        "Verify the actual surprise during the original Harpy Play.",
+                        "The original Girl still owns her private consent.",
+                        "Review actual surprise",
+                        task="m3_harpy_kiss",
+                    )
+                )
 
             intimacies = HarpyIntimacyService(GameService(self.store))
             for intimacy_id, intimacy_step in intimacies.tasks(connection, canon, viewer):

@@ -64,6 +64,10 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
             key = "eagle:" + token
             options.append((key, "Use Eagle Cracks the Shell as " + role["label"][:50]))
             actions[key] = ("harpy_eagle", ActorRef.model_validate(role["ref"]))
+        if role.get("harpy_kiss"):
+            key = "kiss:" + token
+            options.append((key, "Use Kiss Me, Darling as " + role["label"][:58]))
+            actions[key] = ("harpy_kiss", ActorRef.model_validate(role["ref"]))
         if role.get("harpy_intimacy"):
             key = "intimacy:" + token
             options.append((key, "Open a private Harpy invitation as " + role["label"][:50]))
@@ -247,6 +251,13 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
 
             assert ref is not None
             await open_eagle(current, EagleService(service.game), channel, ref)
+            return
+        if action == "harpy_kiss":
+            from girlframe.discord_adapter.m3_harpy_kiss import open_kiss
+            from girlframe.services.m3_harpy_kiss import KissService
+
+            assert ref is not None
+            await open_kiss(current, KissService(service.game), channel, ref)
             return
         if action == "harpy_intimacy":
             from girlframe.discord_adapter.m3_harpy_intimacy import open_intimacy

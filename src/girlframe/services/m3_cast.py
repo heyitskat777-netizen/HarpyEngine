@@ -256,6 +256,7 @@ class CastService:
                     ):
                         from girlframe.engine.m3_harpy_advancements import (
                             EAGLE,
+                            KISS,
                             MANIC_PIXIE,
                             MASK,
                             NOTHING,
@@ -273,6 +274,7 @@ class CastService:
                             ("harpy_visions", VISIONS),
                             ("harpy_rewrite", NOTHING),
                             ("harpy_mask", MASK),
+                            ("harpy_kiss", KISS),
                         ):
                             try:
                                 scene_harpy(

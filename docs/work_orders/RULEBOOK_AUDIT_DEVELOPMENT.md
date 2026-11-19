@@ -3361,3 +3361,20 @@ Manic Pixie private Keep regression. Other kinds of escape Plays and
 nonstandard bodies remain open. The Personal-to-Intense transition
 uses ordinary Sin of Temptation and still needs direct verification.
 [Harpy p. 178](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=180) · [Native cases](../../tests/rules/test_harpy_intimacy.py)
+
+### Harpy’s Kiss Me, Darling
+
+Base `04ea3d8`. The original Harpy must have acquired the actual
+advancement before the qualifying Play and been outside her
+Frame when it started. The original facilitator privately
+verifies surprise from that saved targeted Play. The kiss choice
+opens the same scoped participant consent and encounter system.
+The linger choice records the verified fiction.
+
+**One focused case passed in 7.49 seconds**. It used actual saved
+Harpy Flirt, the Native Cast and Inbox controls, verified the
+original physical source, and proved that the original Girl
+could decline after the GM accepted the surprise. The same Play
+could no longer be used a second time. Other Play sources and
+direct verification of the linger choice remain open.
+[Kiss Me, Darling p. 183](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=185) · [Native case](../../tests/rules/test_harpy_kiss.py)

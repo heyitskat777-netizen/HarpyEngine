@@ -56,6 +56,7 @@ class Encounter(Model):
     void_asset: str | None = None
     rebirth_event: str | None = None
     work: str | None = None
+    kiss: str | None = None
 
 
 def records(state: GameState) -> tuple[Encounter, ...]:
@@ -134,6 +135,10 @@ class HarpyIntimacyService:
             or actual != (case.gm, case.appointment)
         ):
             raise WorkflowError("Recover the original participants and actual private scene")
+        if case.kiss:
+            from girlframe.services.m3_harpy_kiss import prove_encounter
+
+            prove_encounter(self.game, c, state, case)
         return cast, girl
 
     def _write(
