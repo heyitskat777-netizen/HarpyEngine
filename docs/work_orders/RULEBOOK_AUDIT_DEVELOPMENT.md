@@ -1414,3 +1414,22 @@ discipline. It checked the private Inbox, wrong owners, pause, restart,
 replay and no disclosure to an uninvolved Pilot. The selected Handler,
 order, discipline and Inbox regression passed **206 tests in 103.92 seconds**.
 [Rulebook p. 133](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=135) · [Tests](../../tests/rules/test_insurgent_loyalty.py)
+
+### Insurgent Cover Strain and evidence
+
+Base `57bc3022e9a5abdd8b83492e0c510ccda7edcddb`. Off-Duty schedules the
+Insurgent's separate actual Cover roll when a living Sympathizer is present.
+The saved raw die stays intact. An already-used effective result advances
+one printed row. A repeat of six retains the die and awaits a ruling on the
+missing next row. For Cover 1.2, the original Insurgent selects an original
+Girl, who owns the actual discovery. Her private evidence supplies a usable
+Handler Tag for as long as she holds it. Off-Duty advances only after the
+evidence exists. Other trigger conditions and the remaining Cover columns
+stay open. A saved unsupported result remains pending.
+
+The focused cases checked the native Inbox, phase blocking, original
+owners, private acquisition, pause, restart, duplicate and stale inputs,
+repeated Tag use while held and actual loss. The selected Strain,
+Handler Tag, Off-Duty, fictional Director and Inbox regression passed
+**97 tests in 131.33 seconds**.
+[Rulebook pp. 133–134](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=135) · [Tests](../../tests/rules/test_insurgent_cover.py)

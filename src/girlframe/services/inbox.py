@@ -2904,10 +2904,32 @@ class InboxService:
             from girlframe.services.m3_frantic_breakdown import FranticBreakdownService
             from girlframe.services.m3_frantic_crisis import CrisisService
             from girlframe.services.m3_handler_plays import HandlerPlayService
+            from girlframe.services.m3_insurgent_cover import CoverService
             from girlframe.services.m3_medical import MedicalService
             from girlframe.services.m3_privacy_trouble import PrivacyTroubleService
             from girlframe.services.m3_scene_requisitions import SceneRequisitionService
 
+            if any(x.get("kind") == "insurgent_cover_strain" for x in canon.facts):
+                covers = CoverService(OffDutyService(MissionService(self.store)))
+                for request in covers._tasks(connection, viewer):
+                    items.append(
+                        InboxItem(
+                            "insurgent-evidence:" + request["id"],
+                            "insurgent_cover_evidence",
+                            request["id"],
+                            canon.revision,
+                            "plays",
+                            "Original Cover evidence",
+                            "You own the evidence decision",
+                            "pending",
+                            True,
+                            False,
+                            "Record actual discovery or the loss of evidence you held.",
+                            "Only the original holder sees these controls.",
+                            "Review your evidence",
+                            task="m3_insurgent_cover",
+                        )
+                    )
             for crisis in CrisisService(self.store)._tasks(connection, viewer):
                 items.append(
                     InboxItem(
@@ -4583,6 +4605,8 @@ class InboxService:
                     primary, task_name = "Review reaction", "m3_reaction"
                 elif kind in ("off_duty_strain_start", "strain_roll", "strain_endgame"):
                     primary, task_name = "Review Strain", "m3_strain"
+                elif kind == "insurgent_cover_strain":
+                    primary, task_name = "Review Cover Strain", "m3_insurgent_cover"
                 elif kind == "doctor_credit":
                     primary, task_name = "Record credit sharing", "m3_off_duty_credit"
                 elif kind in ("observation_choice", "observation_effect"):
@@ -4752,6 +4776,7 @@ class InboxService:
                     "frame_replacement_court": "Confirm replacement Court role",
                     "off_duty_strain_start": "Strain start review and required effects",
                     "strain_roll": "Saved Strain roll / event choice",
+                    "insurgent_cover_strain": "Saved Insurgent Cover Strain",
                     "strain_endgame": "Choose an unused Strain Endgame",
                     "strain_event": "Required Strain event effects",
                     "strain_endgame_effect": "Required Endgame effects",

@@ -1382,6 +1382,17 @@ class InboxView(discord.ui.View):
                 EffectService(StrainService(OffDutyService(MissionService(self.service.store)))),
                 item.identity,
             )
+        elif item.task == "m3_insurgent_cover":
+            from girlframe.discord_adapter.m3_insurgent_cover import open_cover
+            from girlframe.services.m3_insurgent_cover import CoverService
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_off_duty import OffDutyService
+
+            await open_cover(
+                interaction,
+                CoverService(OffDutyService(MissionService(self.service.store))),
+                item.identity,
+            )
         elif item.task == "m3_strain":
             from girlframe.discord_adapter.m3_strain import open_work
             from girlframe.services.m3_missions import MissionService

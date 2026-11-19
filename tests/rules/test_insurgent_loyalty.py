@@ -24,41 +24,55 @@ from girlframe.services.m3_punishments import PunishmentService
 from girlframe.services.onboarding import WorkflowError
 
 
-def test_only_observed_refusal_and_owned_disclosure_create_insurgent_labels(ledger):
-    def create(game):
-        with ledger.transaction() as c:
-            original = state(game)
-            npc = Npc(
-                id="actual-npc",
-                name="Private character",
-                controller=1,
-                jobs=("guard",),
-                detail="An original synthetic NPC with a recorded Handler bond.",
-                cell=(1, 0),
-                bonds={"handler:1": 1},
-            )
-            original.world = original.world.model_copy(update=dict(npcs=(npc,)))
-            game.event(c, 1, "insurgent-old-bond", "synthetic.preexisting_bond", original)
-        creation = HandlerCreationService(ledger)
-        approval, rulings = ledger.policy.m3_approval, ledger.policy.owner_m3_rulings
-        ledger.policy = ledger.policy.model_copy(
-            update=dict(
-                m3_approval=approval.model_copy(
-                    update=dict(subsystems=approval.subsystems | {"plays", "playbooks"})
-                ),
-                owner_m3_rulings=rulings.model_copy(
-                    update=dict(handler_creation="owned_shared_choices_preserve_existing")
-                ),
-            )
+def create_insurgent(ledger, game):
+    with ledger.transaction() as c:
+        original = state(game)
+        npc = Npc(
+            id="actual-npc",
+            name="Private character",
+            controller=1,
+            jobs=("guard",),
+            detail="An original synthetic NPC with a recorded Handler bond.",
+            cell=(1, 0),
+            bonds={"handler:1": 1},
         )
-        save(creation, complete(creation, "Insurgent"))
-        agree(creation)
-        first = creation.view(ADMIN)
-        creation.activate(
-            ADMIN, "create-insurgent", first["revision"], first["game_revision"], True
+        original.world = original.world.model_copy(update=dict(npcs=(npc,)))
+        game.event(c, 1, "insurgent-old-bond", "synthetic.preexisting_bond", original)
+    creation = HandlerCreationService(ledger)
+    approval, rulings = ledger.policy.m3_approval, ledger.policy.owner_m3_rulings
+    ledger.policy = ledger.policy.model_copy(
+        update=dict(
+            m3_approval=approval.model_copy(
+                update=dict(subsystems=approval.subsystems | {"plays", "playbooks"})
+            ),
+            owner_m3_rulings=rulings.model_copy(
+                update=dict(handler_creation="owned_shared_choices_preserve_existing")
+            ),
         )
+    )
+    save(creation, complete(creation, "Insurgent"))
+    agree(creation)
+    first = creation.view(ADMIN)
+    creation.activate(ADMIN, "create-insurgent", first["revision"], first["game_revision"], True)
 
-    cycle, game, period = prepared(ledger, before_period=create)
+
+def test_only_observed_refusal_and_owned_disclosure_create_insurgent_labels(ledger):
+    cycle, game, period = prepared(
+        ledger, before_period=lambda game: create_insurgent(ledger, game)
+    )
+    from test_strain_service import D6
+
+    from girlframe.services.m3_insurgent_cover import CoverService
+
+    cover = CoverService(cycle.periods, dice=D6(1))
+    case = "cover:" + period
+    cover.roll(ADMIN, "loyalty-cover-roll", case, state(game).revision)
+    cover.choose_evidence(
+        ADMIN, "loyalty-cover-column", case, state(game).revision, current_ref(state(game), 2)
+    )
+    cover.acquire(
+        PLAYER, "loyalty-cover-evidence", case, state(game).revision, "A synthetic receipt."
+    )
     activate(cycle, game, period)
     game.dice = Dice((4, 5))
     worker, gateway = GameWorker(game), Gateway()

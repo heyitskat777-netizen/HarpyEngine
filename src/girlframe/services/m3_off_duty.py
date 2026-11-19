@@ -382,6 +382,11 @@ class OffDutyService:
             from girlframe.services.m3_a_bomb import expire_fallout
 
             changed |= expire_fallout(self.game, c, state, source_event)
+            from girlframe.services.m3_insurgent_cover import materialize as cover_work
+            from girlframe.services.m3_insurgent_cover import stage_start as stage_cover_start
+
+            cover = stage_cover_start(self.game, c, state, period, source_event)
+            changed |= cover is not None
             event = self.game.event(
                 c,
                 viewer.user_id,
@@ -392,6 +397,8 @@ class OffDutyService:
                 period_id=period.id,
             )
             self._save(c, period, event)
+            if cover is not None:
+                cover_work(c, self, cover, event)
             from girlframe.services.m3_debts import synchronize
 
             synchronize(c, self.store, state, event)

@@ -61,6 +61,7 @@ class HandlerTagService:
         handler_ref: ActorRef | None = None,
     ) -> dict[str, Any]:
         from girlframe.engine.m3_budget_tags import persistent
+        from girlframe.engine.m3_insurgent_cover import held_tag
         from girlframe.services.m3_battle import _cast
 
         state = load_state(c, self.store.campaign_id)
@@ -121,7 +122,11 @@ class HandlerTagService:
             scene=cast.id,
             tags=[
                 dict(id=tag.id, label=tag.label)
-                | ({"persistent": True} if persistent(state, handler, tag.id) else {})
+                | (
+                    {"persistent": True}
+                    if persistent(state, handler, tag.id) or held_tag(state, handler, tag.id)
+                    else {}
+                )
                 | (
                     {"backstory_helpless": True}
                     if backstory_eligible(state, handler, tag.id)
@@ -194,8 +199,11 @@ class HandlerTagService:
                 raise WorkflowError("STALE_HANDLER_TAG: refresh the actual Tag and original roles")
             state = load_state(c, self.store.campaign_id)
             from girlframe.services.m3_budget_tags import prove_persistent
+            from girlframe.services.m3_insurgent_cover import prove_held
 
-            prove_persistent(c, self.game, state, ActorRef.model_validate(view["handler"]), tag)
+            handler = ActorRef.model_validate(view["handler"])
+            prove_persistent(c, self.game, state, handler, tag)
+            prove_held(self.game, c, state, handler, girl, tag)
             if kind == "helpless":
                 from girlframe.services.m3_rebel_backstory import prove
 

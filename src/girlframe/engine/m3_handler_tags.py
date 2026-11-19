@@ -131,8 +131,9 @@ def consume(
     if not identity or not event or not scene or any(x.id == identity for x in uses(state)):
         raise ValueError("Use a fresh actual source event and original scene")
     from girlframe.engine.m3_budget_tags import persistent
+    from girlframe.engine.m3_insurgent_cover import held_tag
 
-    retained = persistent(state, handler, tag)
+    retained = persistent(state, handler, tag) or held_tag(state, handler, tag)
     value = Use(
         id=identity,
         revision=1,
