@@ -8,6 +8,7 @@ from sqlalchemy import Connection
 from girlframe.engine import m3_ancillary_cadre as rank
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import depth
+from girlframe.engine.m3_actor_state import CastRole
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_ancillary import find
 from girlframe.engine.m3_battle import damage
@@ -59,6 +60,55 @@ def pending(state: GameState, identity: str) -> bool:
     )
 
 
+def _issued(state: GameState, identity: str, order: str) -> dict[str, str]:
+    fact = next(
+        (
+            x for x in state.facts if x.get("kind") == KIND and x.get("id") == identity
+            and x.get("order") == order and not x.get("decided")
+        ),
+        None,
+    )
+    if fact is None:
+        raise WorkflowError("Recover the original outstanding Isolation Order.")
+    return fact
+
+
+def prove_order(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    identity: str,
+    order: str,
+    owner: CastRole,
+    target: CastRole,
+) -> None:
+    Access(game.store).require_specialist_rule(RULE)
+    fact = _issued(state, identity, order)
+    case = case_proof(c, game, identity)
+    current(c, game, state, case)
+    if (
+        case.effect_event != fact["source"]
+        or (case.executor, case.executor_controller) != (owner.actor, owner.controller)
+        or (case.subject, case.subject_controller) != (target.actor, target.controller)
+    ):
+        raise WorkflowError("Recover the original Handler and affected Chained Darling.")
+
+
+def complete_order(state: GameState, identity: str, order: str, event: str) -> None:
+    _issued(state, identity, order)["decided"] = event
+
+
+def _channel(state: GameState, identity: str) -> int:
+    from girlframe.services.m3_ancillary_discipline import SCOPE
+
+    fact = next(
+        (x for x in state.facts if x.get("kind") == SCOPE and x.get("id") == identity), None
+    )
+    if fact is None:
+        raise WorkflowError("Recover the original punishment scene.")
+    return int(fact["channel"])
+
+
 class IsolationService:
     def __init__(self, game: GameService):
         self.game, self.store = game, game.store
@@ -82,6 +132,7 @@ class IsolationService:
                 if x.get("kind") == KIND
                 and x.get("id") == identity
                 and not x.get("decided")
+                and not x.get("order")
                 and x.get("handler") == str(viewer.user_id)
             ),
             None,
@@ -110,6 +161,7 @@ class IsolationService:
             if x.get("kind") == KIND
             and x.get("handler") == str(viewer.user_id)
             and not x.get("decided")
+            and not x.get("order")
         )
         if not candidates:
             return ()
@@ -127,11 +179,25 @@ class IsolationService:
         return tuple(ready)
 
     def get(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
+        from girlframe.services.m3_ancillary_orders import AncillaryOrderService
+
         with self.store.engine.connect() as c:
             self._gate(c, viewer)
             state = load_state(c, self.store.campaign_id)
             _, case = self._source(c, state, viewer, identity)
-            return dict(revision=state.revision, assets=self._damage(c, state, case))
+            available = False
+            try:
+                AncillaryOrderService(self.game).isolation_roles(
+                    c, state, case, _channel(state, identity)
+                )
+                available = True
+            except (ValueError, WorkflowError):
+                pass
+            return dict(
+                revision=state.revision,
+                assets=self._damage(c, state, case),
+                order_available=available,
+            )
 
     def decide(
         self,
@@ -150,7 +216,13 @@ class IsolationService:
             if state.revision != revision:
                 raise WorkflowError("Reopen the exact original Isolation replacement.")
             event = str(uuid4())
-            if choice == "tag" and 0 < len(tag.strip()) <= 120:
+            if choice == "order" and not tag:
+                from girlframe.services.m3_ancillary_orders import AncillaryOrderService
+
+                AncillaryOrderService(self.game).isolation_order(
+                    c, state, case, _channel(state, identity), event
+                )
+            elif choice == "tag" and 0 < len(tag.strip()) <= 120:
                 state = give_tag(
                     state,
                     case.subject,
@@ -174,7 +246,10 @@ class IsolationService:
             elif choice != "pass" or tag:
                 raise WorkflowError("Choose exactly one actual permitted replacement or pass.")
             fact = next(x for x in state.facts if (x.get("kind"), x.get("id")) == (KIND, identity))
-            fact.update(decided=event, choice=choice)
+            if choice == "order":
+                fact.update(order=event, choice=choice)
+            else:
+                fact.update(decided=event, choice=choice)
             self.game.event(
                 c,
                 viewer.user_id,

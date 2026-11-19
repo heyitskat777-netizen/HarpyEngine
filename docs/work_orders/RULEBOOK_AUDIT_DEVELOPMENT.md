@@ -3745,8 +3745,8 @@ that replacement resolves.
 actual instruction and attendance, stopped the new Bond, routed
 the private choice to the original Handler, rejected the Chained
 Darling acting in that role and committed the selected Tag before
-the original case completed. The order to come to their side,
-other Bond sources and direct Asset-damage evidence remain open.
+the original case completed. The Order landed in a later change.
+Other Bond sources and direct Asset-damage evidence remain open.
 [Isolation Protocol p. 104](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=106) · [Native case](../../tests/rules/test_chained_isolation.py)
 
 ### Illegal Girl and Made For Service Orders
@@ -3799,3 +3799,19 @@ count, the former authority lost access, and only the recipient
 could open the new Order. Later Identity cycles and additional
 personal Handler duties remain open.
 [Easily Broken p. 100](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=102) · [Native case](../../tests/rules/test_easily_broken.py)
+
+### Isolation’s Order to return
+
+Base `d9ce6ee04f202e78769f9d40923880b26df80be6`. The original
+Handler can issue the printed replacement Order, and the Chained
+Darling opens it privately. Following checks actual current body
+positions. It does not move either character. The native source
+Punishment stays pending until the original Order resolves.
+
+One focused native case passed in 8.33 seconds. It reopened the
+private Order after database reconnect, denied a different user
+and a premature claim of following, and completed after the
+original owner's actual movement and exit from the Frame. The
+existing Tag case was deselected. Refusal and other Bond producers
+still need direct verification.
+[Isolation Protocol p. 104](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=106) · [Native case](../../tests/rules/test_chained_isolation.py)

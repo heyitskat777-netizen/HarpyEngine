@@ -17,11 +17,13 @@ async def open_isolation(
     identity: str,
 ) -> None:
     data = await asyncio.to_thread(service.get, viewer_from_interaction(interaction), identity)
-    choices = (
+    choices: tuple[tuple[str, str], ...] = (
         ("tag", "Give a Tag"),
         ("pass", "Pass"),
         *((key, "Damage " + name) for key, name in data["assets"].items()),
     )
+    if data["order_available"]:
+        choices += (("order", "Order her to come to my side"),)
 
     async def submit(click: discord.Interaction, values: dict[str, Any]) -> str:
         await asyncio.to_thread(

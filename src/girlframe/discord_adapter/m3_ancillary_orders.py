@@ -69,6 +69,8 @@ async def open_order_response(
     choices: tuple[tuple[str, str], ...]
     fields: list[Field] = []
     if stage == "respond":
+        if data["isolation"]:
+            instructions += "\nUse actual movement to reach the Handler if you choose to follow."
         choices = (
             (("follow", "Follow"),)
             if data["forbidden"]

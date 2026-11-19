@@ -16,6 +16,7 @@ from girlframe.engine.m3_actor_state import ActorRef, ActorView, CastRole, Model
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_ancillary import CapturedDraft, find
 from girlframe.engine.m3_cast import validate_role
+from girlframe.engine.m3_role_punishment_state import RolePunishment
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
@@ -46,6 +47,7 @@ class Order(Model):
     appointment: str
     source: str
     instruction: str
+    isolation: str | None = None
     stage: Literal["respond", "tag", "outcome", "review", "held", "closed"] = "respond"
     faces: tuple[int, int] | None = None
     rng_source: str | None = None
@@ -271,8 +273,11 @@ class AncillaryOrderService:
         order: Order,
         event: str,
     ) -> dict[str, Any]:
-        state.facts = [x for x in state.facts if (x.get("kind"), x.get("id")) != (KIND, order.id)]
-        state.facts.append(dict(kind=KIND, id=order.id, body=order.model_dump_json()))
+        self._put(state, order)
+        if order.isolation is not None and order.stage == "closed":
+            from girlframe.services.m3_chained_isolation import complete_order
+
+            complete_order(state, order.isolation, order.id, event)
         self.game.event(
             c,
             viewer.user_id,
@@ -282,7 +287,53 @@ class AncillaryOrderService:
             event_id=event,
             scene_id=order.scene,
         )
+        if order.isolation is not None and order.stage == "closed":
+            from girlframe.services.m3_role_punishments import synchronize
+
+            synchronize(self.game, c, None, event)
         return dict(id=order.id, event=event, stage=order.stage, total=order.total)
+
+    def _put(self, state: GameState, order: Order) -> None:
+        state.facts = [x for x in state.facts if (x.get("kind"), x.get("id")) != (KIND, order.id)]
+        state.facts.append(dict(kind=KIND, id=order.id, body=order.model_dump_json()))
+
+    def isolation_roles(
+        self,
+        c: Connection,
+        state: GameState,
+        case: RolePunishment,
+        channel: int,
+    ) -> tuple[SceneCast, int, str, CastRole, CastRole]:
+        cast, gm, appointment = self._scene(c, state, channel)
+        owner, _ = self._person(c, state, cast, case.executor)
+        recipient, _ = self._person(c, state, cast, case.subject)
+        return cast, gm, appointment, owner, recipient
+
+    def isolation_order(
+        self,
+        c: Connection,
+        state: GameState,
+        case: RolePunishment,
+        channel: int,
+        event: str,
+    ) -> None:
+        self._guard(c, channel)
+        cast, gm, appointment, owner, recipient = self.isolation_roles(c, state, case, channel)
+        self._put(
+            state,
+            Order(
+                id=event,
+                owner=owner,
+                target=recipient,
+                channel=channel,
+                scene=cast.id,
+                gm=gm,
+                appointment=appointment,
+                source=event,
+                isolation=case.id,
+                instruction="Come to my side.",
+            ),
+        )
 
     def issue(
         self,
@@ -356,12 +407,21 @@ class AncillaryOrderService:
         cast, gm, appointment = self._scene(c, state, order.channel)
         owner, actor = self._person(c, state, cast, order.owner.actor)
         recipient, target = self._person(c, state, cast, order.target.actor)
-        port = _rules(self.game, c, state, owner.actor, recipient.actor, npc=actor.rules == "npc")
+        port: tuple[bool, bool] | None
+        if order.isolation is not None:
+            from girlframe.services.m3_chained_isolation import prove_order
+
+            prove_order(self.game, c, state, order.isolation, order.id, owner, recipient)
+            port = (order.consequence == "cannot_disobey", False)
+        else:
+            port = _rules(
+                self.game, c, state, owner.actor, recipient.actor, npc=actor.rules == "npc"
+            )
         if (
             (cast.id, gm, appointment, owner, recipient)
             != (order.scene, order.gm, order.appointment, order.owner, order.target)
             or port is None
-            or actor.cell != target.cell
+            or (order.isolation is None and actor.cell != target.cell)
         ):
             raise WorkflowError("Recover the original current scene and Order authority.")
         return actor, target, port
@@ -412,6 +472,7 @@ class AncillaryOrderService:
                 stage=value.stage,
                 issuer=issuer.label,
                 instruction=value.instruction,
+                isolation=value.isolation is not None,
                 forbidden=forbidden,
                 heat=target.heat,
                 tags=self._tags(state, value) if self_tag and value.stage == "tag" else {},
@@ -501,7 +562,7 @@ class AncillaryOrderService:
         def operation(c: Connection) -> dict[str, Any]:
             state = load_state(c, self.store.campaign_id)
             order = self._order(state, identity)
-            _, actor, (forbidden, self_tag) = self._source(c, state, viewer, order)
+            issuer, actor, (forbidden, self_tag) = self._source(c, state, viewer, order)
             self._guard(c, order.channel)
             if (
                 state.revision != revision
@@ -518,10 +579,19 @@ class AncillaryOrderService:
             update: dict[str, Any]
             if order.stage == "respond":
                 if choice == "follow" and not heat and account.strip():
+                    if order.isolation is not None and (
+                        actor.cell != issuer.cell
+                        or bool(actor.inside_frame) != bool(issuer.inside_frame)
+                        or (
+                            actor.inside_frame
+                            and actor.occupied_frame_instance != issuer.occupied_frame_instance
+                        )
+                    ):
+                        raise WorkflowError("Use physical movement to come to the Handler's side.")
                     update = dict(
                         stage="closed", consequence="chosen_follow", account=account.strip()
                     )
-                elif choice == "disobey" and not forbidden and not account:
+                elif choice == "disobey" and not forbidden and not account and not order.faces:
                     state = commit(
                         state,
                         actor.ref,
@@ -593,7 +663,11 @@ class AncillaryOrderService:
                 and not heat
                 and account.strip()
             ):
-                update = dict(stage="closed" if choice == "unheard" else "held")
+                stage = "closed" if choice == "unheard" else "held"
+                if order.isolation is not None and stage == "closed" and order.total is not None:
+                    if tier(order.total) == "low":
+                        stage = "respond"
+                update = dict(stage=stage)
                 state.facts.append(
                     dict(
                         kind="ancillary_order_notice",

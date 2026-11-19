@@ -10,10 +10,12 @@ from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger
 from test_m2_game import state
 
+from girlframe.discord_adapter.m3_ancillary_orders import open_order_response
 from girlframe.discord_adapter.m3_chained_isolation import open_isolation
 from girlframe.engine import m3_ancillary as ancillary
 from girlframe.engine.m3_actor_bonds import depth
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_chained_darling import RULE as PLACEMENT
 from girlframe.engine.m3_punishments import Details
 from girlframe.engine.m3_role_punishment_state import Instruction
 from girlframe.services.inbox import InboxService
@@ -21,20 +23,25 @@ from girlframe.services.m3_actors import ActorService
 from girlframe.services.m3_ancillary import AncillaryService
 from girlframe.services.m3_ancillary_cadre import AncillaryCadreService
 from girlframe.services.m3_ancillary_discipline import AncillaryDisciplineService
+from girlframe.services.m3_ancillary_orders import AncillaryOrderService
 from girlframe.services.m3_cast import CastService
+from girlframe.services.m3_chained_darling import ChainedPlacementService
 from girlframe.services.m3_chained_isolation import RULE, IsolationService, pending
 from girlframe.services.m3_missions import MissionService
+from girlframe.services.m3_movement import MovementService
 from girlframe.services.m3_role_punishments import RolePunishmentService
 from girlframe.services.onboarding import WorkflowError
 
 
+@pytest.mark.parametrize("choice", ("tag", "order"), ids=("original-tag", "actual-order"))
 def test_isolation_blocks_real_quality_time_bond_and_keeps_original_alternative_pending(
     ledger,
     tmp_path,
     monkeypatch,
+    choice,
 ):
     game = scenario(ledger)
-    enable(ledger, game, tmp_path, monkeypatch, extra=(RULE,))
+    enable(ledger, game, tmp_path, monkeypatch, extra=(RULE, PLACEMENT))
     missions = MissionService(ledger)
     setup = AncillaryService(missions)
     cast = CastService(ActorService(missions))
@@ -113,18 +120,56 @@ def test_isolation_blocks_real_quality_time_bond_and_keeps_original_alternative_
     service = IsolationService(game)
     with pytest.raises(WorkflowError, match="unavailable"):
         service.get(PLAYER, work)
+    if choice == "order":
+        placement = ChainedPlacementService(game)
+        request = placement.propose(
+            PLAYER, "pilot", 900, chained, state(game).revision, "piloting", "I pilot the Frame."
+        )
+        placement.decide(ADMIN, "see-pilot", request["id"], state(game).revision, True)
+        movement = MovementService(game)
+        movement.move(
+            PLAYER, "away", state(game).revision, 900, chained, (0, 3), frame=True, account="I go."
+        )
     asyncio.run(
         submit_form(
             ADMIN,
             lambda click: open_isolation(click, service, work),
-            dict(choice=("tag",), tag="Isolated in the Cadre"),
+            dict(choice=(choice,), tag="Isolated in the Cadre" if choice == "tag" else ""),
             94800,
         )
     )
+    if choice == "order":
+        assert pending(state(game), work)
+        ledger.engine.dispose()
+        inbox = InboxService(ledger)
+        (item,) = [x for x in inbox.items(PLAYER) if x.task == "m3_ancillary_order"]
+        orders = AncillaryOrderService(game)
+        with pytest.raises(WorkflowError, match="unavailable"):
+            orders.get(OTHER, item.identity)
+        with pytest.raises(WorkflowError, match="Use physical movement"):
+            orders.act(
+                PLAYER, "claim-follow", item.identity, state(game).revision, "follow",
+                account="I am there.",
+            )
+        assert pending(state(game), work)
+        movement.move(
+            PLAYER, "back", state(game).revision, 900, chained, (0, 4), frame=True,
+            account="I pilot back to the Handler's square.",
+        )
+        request = placement.propose(
+            PLAYER, "out", 900, chained, state(game).revision, "outside_frame", "I step out."
+        )
+        placement.decide(ADMIN, "see-exit", request["id"], state(game).revision, True)
+        asyncio.run(
+            submit_form(
+                PLAYER,
+                lambda click: open_order_response(click, orders, item.identity),
+                dict(choice=("follow",), account="I go to the original Handler's side."),
+                94802,
+            )
+        )
     final = state(game)
     assert not pending(final, work) and final.role_punishments[0].completion_event
-    assert {x.label for x in ancillary.find(final, chained).tags} == {
-        "Original critique",
-        "Isolated in the Cadre",
-    }
+    tags = {"Original critique"} | ({"Isolated in the Cadre"} if choice == "tag" else set())
+    assert {x.label for x in ancillary.find(final, chained).tags} == tags
     assert depth(final, chained, REBEL) == 0

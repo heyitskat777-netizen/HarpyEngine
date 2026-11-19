@@ -15626,7 +15626,7 @@
         "allowed_modifiers": [],
         "tier_options": {
           "replacement": [
-            "Give an actual scoped Tag, damage an eligible original Girl Asset, or pass"
+            "Give an actual scoped Tag, damage an eligible original Girl Asset, send the original recipient a private Order to come to the Handler's side, or pass"
           ]
         },
         "choice_ownership": "The actual original Handler owns the replacement choice.",
@@ -15635,7 +15635,7 @@
           "Keep the Bond at zero; perform the actual selected replacement before completing the source."
         ],
         "mandatory_followups": [
-          "The order to come to the Handler’s side, other Bond producers and direct Asset replacement verification remain open."
+          "Other Bond producers, refusal outcomes and direct Asset replacement verification remain open."
         ],
         "handler_or_gm_intervention": "The actual Handler must take the original replacement. The existing native case supplies source and attendance proof.",
         "test_fixture_ids": [
