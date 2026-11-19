@@ -14,6 +14,7 @@ from girlframe.engine.m2 import GameState, IdentityState
 from girlframe.engine.m3_actor_bonds import make_helpless
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, SceneCast
 from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_ancillary import Book
 from girlframe.engine.m3_hallucinations import Roll
 from girlframe.engine.m3_parasite_infection import controls_identity
 from girlframe.engine.m3_world_state import AdversaryPilot, Npc
@@ -252,6 +253,8 @@ class CapturedService:
             if result.chosen_event:
                 return "erase" if owner else None
             return "high_scene" if value.gm == viewer.user_id else None
+        if result.chosen_event:
+            return "convert" if owner else None
         return "low_review" if owner or value.gm == viewer.user_id else None
 
     def tasks(
@@ -306,7 +309,9 @@ class CapturedService:
         )
         current = value.current
         if current:
-            first = current.model_copy(update=dict(prompt=None, chosen_event=None))
+            first = current.model_copy(
+                update=dict(prompt=None, chosen_event=None, conversion_identity=None)
+            )
             first = first.model_copy(update=dict(completed=None, erased_identity=None))
             yield (
                 current.roll.event,
@@ -322,6 +327,8 @@ class CapturedService:
                     value.gm,
                     value.model_copy(update=dict(rolls=(*value.rolls[:-1], scene))),
                 )
+            if current.roll.result == "low":
+                yield current.chosen_event, "low_review", value.gm, value
             if current.completed:
                 kind = "erase" if current.roll.result == "high" else "mid"
                 yield current.completed, kind, int(value.girl.entity), value
@@ -346,6 +353,7 @@ class CapturedService:
             state = load_state(c, self.store.campaign_id)
             value, step = self._record(c, state, viewer, identity)
             current = value.current
+            books = self._conversion_books(c, viewer) if step in ("low_review", "convert") else {}
             return dict(
                 step=step,
                 revision=state.revision,
@@ -356,7 +364,26 @@ class CapturedService:
                 roll=current.roll.model_dump(mode="json") if current else None,
                 tier=current.roll.result if current else None,
                 slots={i.id: i.name for i in self._slots(state, value)} if step == "erase" else {},
+                books=books if step == "convert" else {},
+                can_stage_low=(
+                    step == "low_review"
+                    and value.gm == viewer.user_id
+                    and value.captor.kind == "npc"
+                    and bool(books)
+                ),
+                conversion_identity=current.conversion_identity
+                if current and step == "convert"
+                else None,
+                conversion_prompt=current.prompt if current and step == "convert" else None,
             )
+
+    def _conversion_books(self, c: Connection, viewer: GuildViewer) -> dict[str, Book]:
+        from girlframe.services.m3_captured_conversion import available
+
+        try:
+            return available(self.game, c, viewer)
+        except WorkflowError:
+            return {}
 
     def act(
         self,
@@ -369,13 +396,19 @@ class CapturedService:
         choice: str | None = None,
         heat: int | None = None,
         account: str = "",
+        new_identity: str = "",
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             self.game.unpaused(c)
             MedicalService(self.store)._idle(c)
             state = load_state(c, self.store.campaign_id)
             value, expected = self._record(c, state, viewer, identity)
-            if expected != step or state.revision != revision or len(account.strip()) > 1200:
+            if (
+                expected != step
+                or state.revision != revision
+                or len(account.strip()) > 1200
+                or (new_identity and step != "low_review")
+            ):
                 raise WorkflowError("Refresh the actual original Captured! decision")
             event = str(uuid4())
             if step == "consent" and choice == "decline" and heat is None and not account:
@@ -399,6 +432,20 @@ class CapturedService:
                 or value.girl.token not in targets
             ):
                 raise WorkflowError("Recover the actual Rebel base and original capture")
+            if step in ("low_review", "convert"):
+                return self._convert_step(
+                    c,
+                    state,
+                    viewer,
+                    key,
+                    value,
+                    step,
+                    event,
+                    choice,
+                    heat,
+                    account.strip(),
+                    new_identity.strip(),
+                )
             state, changed = self._apply(state, value, event, step, choice, heat, account.strip())
             return self._save(c, state, viewer, key, step, changed, event)
 
@@ -407,9 +454,59 @@ class CapturedService:
             key,
             dict(
                 id=identity, revision=revision, step=step, choice=choice, heat=heat, account=account
-            ),
+            )
+            | (dict(new_identity=new_identity) if new_identity else {}),
             operation,
         )
+
+    def _convert_step(
+        self,
+        c: Connection,
+        state: GameState,
+        viewer: GuildViewer,
+        key: str,
+        value: rules.Capture,
+        step: str,
+        event: str,
+        choice: str | None,
+        heat: int | None,
+        account: str,
+        new_identity: str,
+    ) -> dict[str, Any]:
+        from girlframe.services.m3_captured_conversion import available, convert
+        from girlframe.services.m3_careers import synchronize_end
+
+        books = available(self.game, c, viewer)
+        current = value.current
+        if current is None or current.roll.result != "low" or heat is not None or not books:
+            raise WorkflowError("Recover the approved original low Ancillary consequence")
+        if step == "low_review":
+            if (
+                viewer.user_id != value.gm
+                or value.captor.kind != "npc"
+                or choice not in {"handler", "staff", "other"}
+                or not account
+                or not 0 < len(new_identity) <= 120
+            ):
+                raise WorkflowError("Use the source Rebel Handler’s scene and one new Identity")
+            result = current.model_copy(
+                update=dict(prompt=account, conversion_identity=new_identity, chosen_event=event)
+            )
+            changed = value.model_copy(update=dict(rolls=(*value.rolls[:-1], result)))
+            return self._save(c, state, viewer, key, step, changed, event)
+        book = books.get(choice or "")
+        if book is None or not current.prompt or not current.conversion_identity or account:
+            raise WorkflowError("Choose an approved original Rebel Ancillary playbook")
+        changed_state, resulting = convert(
+            c, self.game, state, value, book, current.conversion_identity, event, current.prompt
+        )
+        result = current.model_copy(update=dict(ancillary=resulting, completed=event))
+        changed = value.model_copy(update=dict(rolls=(*value.rolls[:-1], result)))
+        receipt = self._save(c, changed_state, viewer, key, step, changed, event)
+        synchronize_end(
+            c, self.game, next(a for a in changed_state.career_archives if a.id == event)
+        )
+        return receipt | dict(actor=resulting.model_dump(mode="json"))
 
     def _apply(
         self,

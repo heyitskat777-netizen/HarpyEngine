@@ -4147,6 +4147,7 @@ class InboxService:
                             "high_scene": "Set an actual punishment scene at the Rebel base.",
                             "erase": "Choose your exact original Identity to erase.",
                             "low_review": "The original low awaits the Ancillary consequence.",
+                            "convert": "Choose your approved Rebel Ancillary playbook.",
                         }[capture_step],
                         "This choice belongs to the original participant.",
                         "Open your choice",

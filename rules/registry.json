@@ -24634,7 +24634,7 @@
         "choice_ownership": "The original Girl confirms her capture, owns her roll and mid scene, and selects the actual erased Identity. The original facilitator sets high scenes.",
         "target_policy": "Original captive incarnation and verified custody. Normal Go Off-Duty is unavailable during that capture.",
         "post_roll_effects": ["Preserve the original roll, source-only Helplessness, ownership and actual custody. No outside Frame is moved."],
-        "mandatory_followups": ["Other printed mid continuations, captured low and additional Defeat sources remain open."],
+        "mandatory_followups": ["Low uses the separately gated original Ancillary conversion. Other printed mid scenes and additional Defeat sources remain open."],
         "handler_or_gm_intervention": "Human facilitator supplies the actual event and high scene. The software Director does not choose a character's response.",
         "test_fixture_ids": ["tests/rules/test_captured.py"]
       },
@@ -24719,14 +24719,27 @@
         "heading": "Captured!"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "A genuine low Captured! roll from a still-held original Girl at the active Rebel Handler’s actual base.",
+        "actor_type": "Original Girl, original Rebel Handler and human facilitator",
+        "pre_roll_sources": ["Actual approved Captured! source and exact preserved original low roll", "Approved Ancillary module, shared rules, conversion and selected Rebel starter"],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {},
+        "choice_ownership": "The original Rebel Handler’s human facilitator records the scene and new Identity. The original Girl chooses her approved Rebel Ancillary playbook.",
+        "target_policy": "One actual ordinary original role continuing under the same controller. The prior Frame stays parked.",
+        "post_roll_effects": ["Archive the original Girl configuration; preserve the person’s canonical Bonds, Tags, Heat and actual body Assets. Install the approved Ancillary role with only the new Identity."],
+        "mandatory_followups": ["The new fictional Rebel Handler is source-bound. Playbook-specific abilities, protected sheets, source Rebel Pilot alternatives and later restoration remain under separate workflows."],
+        "handler_or_gm_intervention": "The human facilitator records the scene and authored Identity. No software Director choices or unapproved module fallback.",
+        "test_fixture_ids": ["tests/rules/test_captured.py"]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_captured.py::test_captured_low_requires_optional_approval_and_continues_the_same_person"],
       "m2_play_id": null
     },
     {

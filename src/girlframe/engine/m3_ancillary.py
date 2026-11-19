@@ -10,6 +10,7 @@ from girlframe.engine.m2 import GameState, IdentityState, TagState
 from girlframe.engine.m3_actor_state import ActorRef, Model
 
 RULE = "optional.ancillary.shared-rules"
+CAPTURED_LOW = "optional.ancillary.captured-low"
 SOLDIER_SIMPLIFICATION = "ancillary.soldier.simplification-surgery"
 
 Book = Literal[
@@ -153,11 +154,32 @@ class Draft(Model):
         return self
 
 
+class CapturedDraft(Model):
+    name: str
+    book: Book
+    original: ActorRef
+    handler: ActorRef
+    frame: str
+    capture: str
+
+    @model_validator(mode="after")
+    def original_conversion(self) -> "CapturedDraft":
+        if (
+            STARTERS[self.book].affiliation != "rebel"
+            or self.original.kind != "pilot"
+            or not self.original.incarnation
+            or self.handler.kind != "npc"
+            or not all(x.strip() for x in (self.name, self.frame, self.capture))
+        ):
+            raise ValueError("Preserve the original captive, Rebel Handler and existing Frame")
+        return self
+
+
 class Character(Model):
     actor: ActorRef
     controller: int = Field(gt=0)
     event: str
-    draft: Draft
+    draft: Draft | CapturedDraft
     heat: int = Field(default=0, ge=0)
     identities: tuple[IdentityState, ...]
     tags: tuple[TagState, ...] = Field(default=(), exclude_if=lambda value: not value)

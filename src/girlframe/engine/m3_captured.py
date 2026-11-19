@@ -15,6 +15,8 @@ class Result(Model):
     chosen_event: str | None = None
     completed: str | None = None
     erased_identity: str | None = None
+    conversion_identity: str | None = None
+    ancillary: ActorRef | None = None
 
 
 class Capture(Model):

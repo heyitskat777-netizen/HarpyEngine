@@ -24,9 +24,9 @@ from girlframe.services.m3_cast import CastService
 from girlframe.services.onboarding import WorkflowError
 
 
-def test_captured_high_erases_original_identity_and_next_roll_cannot_spend_heat(ledger):
+def begin_capture(ledger, faces):
     world, game = ready(ledger)
-    game.dice.faces = (6, 6)
+    game.dice.faces = faces
     faction = Faction(id="actual-rebel-group", name="Rebel group", kind="rebel", cells=((0, 0),))
     world.faction(ADMIN, "rebel-faction", state(game).revision, faction)
     captor = ActorRef(kind="npc", entity="actual-rebel-handler")
@@ -73,7 +73,6 @@ def test_captured_high_erases_original_identity_and_next_roll_cannot_spend_heat(
     service = CapturedService(game)
     original = state(game)
     girl = current_ref(original, PLAYER.user_id)
-    original_placement = next(x for x in original.placements if x.actor == girl)
     asyncio.run(
         submit_form(
             ADMIN,
@@ -97,6 +96,12 @@ def test_captured_high_erases_original_identity_and_next_roll_cannot_spend_heat(
     native(PLAYER, dict(choice=("accept",)), 91504)
     assert is_helpless(state(game), girl, captor)
     assert next(x for x in state(game).placements if x.actor == girl).custody == captor
+    return game, service, native, original, girl, captor, capture.id
+
+
+def test_captured_high_erases_original_identity_and_next_roll_cannot_spend_heat(ledger):
+    game, service, native, original, girl, captor, identity = begin_capture(ledger, (6, 6))
+    original_placement = next(x for x in original.placements if x.actor == girl)
     with pytest.raises(WorkflowError, match="Captured!"):
         game.begin(
             PLAYER,
@@ -108,7 +113,7 @@ def test_captured_high_erases_original_identity_and_next_roll_cannot_spend_heat(
     native(PLAYER, dict(heat="1"), 91508)
     assert state(game).sheets["2"].heat == 1 and game.dice.calls == 1
     with pytest.raises(WorkflowError, match="unavailable"):
-        service.get(OTHER, capture.id)
+        service.get(OTHER, identity)
     native(
         ADMIN,
         dict(choice=("handler",), account="The original Rebel Handler sets the punishment scene."),
@@ -118,9 +123,7 @@ def test_captured_high_erases_original_identity_and_next_roll_cannot_spend_heat(
     native(PLAYER, dict(choice=(erased,)), 91516)
     assert all(x.id != erased for x in state(game).sheets["2"].identities)
     with pytest.raises(WorkflowError, match="permitted Heat"):
-        service.act(
-            PLAYER, "illegal-followup-heat", capture.id, state(game).revision, "roll", heat=1
-        )
+        service.act(PLAYER, "illegal-followup-heat", identity, state(game).revision, "roll", heat=1)
     assert game.dice.calls == 1
     ledger.engine.dispose()
     game.dice.faces = (4, 5)
@@ -137,3 +140,81 @@ def test_captured_high_erases_original_identity_and_next_roll_cannot_spend_heat(
     assert not is_helpless(canon, girl, captor)
     body = next(x for x in canon.placements if x.actor == girl)
     assert body.custody is None and body.frame_cell == original_placement.frame_cell
+
+
+def test_captured_low_requires_optional_approval_and_continues_the_same_person(
+    ledger, tmp_path, monkeypatch
+):
+    from test_ancillary_creation import enable
+    from test_harpy_actor_plays import begin, pass_tags
+    from test_m2_game import Gateway, answer, tick
+
+    from girlframe.delivery.m2_worker import GameWorker
+    from girlframe.engine import m3_ancillary as ancillary
+    from girlframe.engine.m3_actor_bonds import depth
+    from girlframe.services.m3_actor_plays import ActorPlayService
+
+    game, service, native, original, girl, captor, identity = begin_capture(ledger, (1, 2))
+    native(PLAYER, dict(heat="1"), 91600)
+    held = state(game)
+    original_roll = records(held)[0].current.roll
+    assert original_roll.result == "low" and not service.get(ADMIN, identity)["can_stage_low"]
+    with pytest.raises(WorkflowError, match="MODULE_DISABLED"):
+        service.act(
+            ADMIN,
+            "optional-disabled",
+            identity,
+            held.revision,
+            "low_review",
+            choice="handler",
+            account="Actual scene.",
+            new_identity="New oath",
+        )
+    assert state(game) == held
+    enable(ledger, game, tmp_path, monkeypatch, extra=(RULE, ancillary.CAPTURED_LOW))
+    native(
+        ADMIN,
+        dict(
+            choice=("handler",),
+            account="The rebel has her in their custody.",
+            new_identity="New oath",
+        ),
+        91604,
+    )
+    assert state(game).sheets["2"] == held.sheets["2"]
+    ledger.engine.dispose()
+    native(PLAYER, dict(choice=("REVOLUTIONARY IDEALIST",)), 91608)
+    canon = state(game)
+    captured = records(canon)[0].current
+    converted = ancillary.find(canon, captured.ancillary)
+    assert captured.roll == original_roll and converted.draft.original == girl
+    assert converted.draft.handler == captor and converted.controller == PLAYER.user_id
+    assert [x.name for x in converted.identities] == ["New oath"] and converted.heat == 1
+    assert "2" not in canon.sheets and canon.career_archives[-1].ending == "rebel_ancillary"
+    original_body = next(x for x in original.placements if x.actor == girl)
+    parked = next(x for x in canon.parked_frames if x.owner == girl)
+    assert (parked.frame_instance, parked.cell) == (
+        original_body.frame_instance,
+        original_body.frame_cell,
+    )
+    friend = current_ref(original, OTHER.user_id)
+    assert depth(canon, converted.actor, friend) == depth(original, girl, friend)
+    assert game.dice.calls == 1
+    game.dice.faces = (4, 5)
+    played = begin(
+        ActorPlayService(game),
+        converted.actor,
+        context="I keep my head under the new Handler's pressure.",
+    )
+    worker, gateway = GameWorker(game), Gateway()
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    answer(game, PLAYER, "actor_keep", options=("tough", "vicious"), denied=("desperate",))
+    answer(
+        game,
+        ADMIN,
+        "handler_keep",
+        flag=True,
+        text="The actual test GM rules on the chosen traits.",
+    )
+    assert game.inspect(PLAYER, played)["state"] == "complete" and game.dice.calls == 2

@@ -53,7 +53,7 @@ async def open_capture_choice(
 ) -> None:
     data = await asyncio.to_thread(service.get, viewer_from_interaction(interaction), identity)
     step = data["step"]
-    if step == "low_review":
+    if step == "low_review" and not data["can_stage_low"]:
         await reply(
             interaction,
             "The original low roll is saved. Actual Ancillary conversion is pending.",
@@ -75,12 +75,28 @@ async def open_capture_choice(
             if not data["no_heat"]
             else [Field("zero", "Roll without Heat", (("roll", "Roll with zero Heat"),))]
         )
-    elif step in ("mid", "high_scene"):
+    elif step in ("mid", "high_scene", "low_review"):
         text = "Choose and describe the original Captured! scene."
         choices = MID if step == "mid" else HIGH
+        if step == "low_review":
+            choices = {key: name for key, name in HIGH.items() if key != "pilot"}
         fields = [
             Field("choice", "Actual scene", tuple(choices.items())),
             Field("account", "Describe the original scene", paragraph=True),
+        ]
+        if step == "low_review":
+            fields.append(Field("new_identity", "The Rebel Handler’s new Identity"))
+    elif step == "convert":
+        if not data["books"]:
+            await reply(interaction, "The original rolled conversion awaits Ancillary approval.")
+            return
+        text = (
+            clean(data["conversion_prompt"])
+            + "\nNew Identity "
+            + clean(data["conversion_identity"])
+        )
+        fields = [
+            Field("choice", "Your original Rebel Ancillary playbook", tuple(data["books"].items())),
         ]
     else:
         text = clean(data["prompt"])
@@ -106,6 +122,7 @@ async def open_capture_choice(
             heat=heat,
             choice=(values.get("choice") or (None,))[0],
             account=values.get("account", ""),
+            new_identity=values.get("new_identity", ""),
         )
         return "The original Captured! choice is saved."
 

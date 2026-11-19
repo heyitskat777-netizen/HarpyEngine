@@ -3078,3 +3078,25 @@ Low remains visible in the private Inbox with its saved
 roll pending Ancillary conversion. Other mid scenes and
 the Defeat-produced capture route remain open.
 [Captured! p. 196](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=198) · [Native case](../../tests/rules/test_captured.py)
+
+### Captured! low and the optional Ancillary conversion
+
+Base `d793196`. An approved low result at the original
+Rebel Handler’s base lets the human facilitator record the
+printed scene and new Identity. The original player chooses
+an approved Rebel Ancillary book. The same person continues
+under that controller with the relevant original body
+Assets, Bonds, Tags and Heat. The original Girl sheet is
+archived. Her earlier Frame remains parked under its original
+identity. A completed choice can enter the existing actual
+Ancillary Keep Your Head.
+
+The focused conversion case passed in **7.44 seconds**.
+It verified the default module denial, reopening the same
+saved roll with approved synthetic configuration, the
+role and its exact new Identity, the original parked Frame,
+and a genuine Ancillary Play. The high and mid case passed
+during the preceding focused file run. Rebel Pilot captors,
+protected resources, book-specific later consequences,
+and restoration to the Foundation remain separate.
+[Captured! p. 196](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=198) · [Native cases](../../tests/rules/test_captured.py)
