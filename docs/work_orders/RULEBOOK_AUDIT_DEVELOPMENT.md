@@ -38,8 +38,8 @@ Off-Duty resumes only at its genuine completion boundary.
 | High Rebellion 3 | Reveal the original NPC Bond, retain that actor's history, and open an actual attack on the Handler that calls for Cadre intervention. | Have the fictional Director choose an actual Rebel faction and issue the order to demonstrate support. Resolve the actual public show of support without borrowing software Director authority. [Rulebook p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) |
 
 The registry tracks each source's current scope and its acceptance tests.
-The wholly open core table columns are High Rebellion 1.1, 2.1, 3.1,
-4.1 and 6.1, and High Budget 5.2. Rebellion Endgames 3–8 and Budget
+The core table columns awaiting effects are High Rebellion 1.1, 2.1, 3.1
+and 6.1, and High Budget 5.2. Rebellion Endgames 3–8 and Budget
 Endgames 1–2 have no effect resolver. Current subset limitations include
 the High Budget hearing's Severe finding and the High Void bunk's separate
 contact Play. The individual receipts below retain the rest of the source
@@ -936,3 +936,26 @@ an existing Rebel roster, factual cockpit placement and confirmed ordinary
 resources. Capturing a Girl, a last-Asset Rebel Defeat and other Rebel combat
 remain separate workflows.
 [Low Rebellion p. 145](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=147) · [Ambush test](../../tests/rules/test_rebel_ambush.py)
+
+## High Rebellion recurring pursuit
+
+The base is `9b8673e`. High Rebellion 4.1 binds the original Rebel and
+one original Girl to a continuing pursuit. A separate attack is scheduled
+when each actual dispatch includes that Girl. The original Rebel must
+open the attack in the mission scene and resolve the native Assault.
+Each mission retains its own opening, attack and resolution. Temporary
+custody and a missing target keep this supported attempt from dispatching.
+
+After actual completed missions, the original Rebel can permanently
+withdraw from the pursuit. The human table authority reviews that
+withdrawal. Only confirmation closes future scheduling. The original
+Girl's actions and decisions remain hers. The private case is visible to
+the original Rebel and Handler. All 46 selected tests passed, including
+two separate completed pursuit attacks, normal Dog Punishments, a restart
+between proposal and approval, and a later unaffected mission. Static
+checking passed on eight affected modules.
+
+The verified ending is voluntary abandonment confirmed by the human GM.
+An absent Girl's threat, forced capture, other methods of permanently
+stopping a Rebel and external Defeat still require their own checks.
+[High Rebellion p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) · [Recurring pursuit test](../../tests/rules/test_rebel_ambush.py)

@@ -15,6 +15,7 @@ from girlframe.engine.m3_actor_state import ActorRef, SceneCast
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_handler_consequences import same_handler_body
 from girlframe.engine.m3_missions import Mission
+from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_actors import profiles
@@ -81,12 +82,26 @@ def _targets(
         role.actor == case.attacker and role.controller == case.controller for role in cast.roles
     ):
         return ()
+    hunt = (
+        next((x for x in rules.hunts(state) if x.id == case.pursuit), None)
+        if case.pursuit
+        else None
+    )
+    if case.pursuit and (
+        hunt is None
+        or hunt.ended is not None
+        or hunt.source != case.source
+        or hunt.attacker != case.attacker
+        or hunt.controller != case.controller
+    ):
+        return ()
     return tuple(
         x.actor
         for x in cast.roles
         if x.actor.kind == "pilot"
         and x.controller == int(x.actor.entity)
         and x.controller != case.controller
+        and (hunt is None or x.actor == hunt.victim)
         and mission.character_ids.get(x.actor.entity) == x.actor.incarnation
         and x.actor.entity not in mission.ended_participants
         and (sheet := state.sheets.get(x.actor.entity)) is not None
@@ -328,6 +343,134 @@ class AmbushService:
             dict(
                 id=identity, revision=revision, channel=channel, target=recipient, account=account
             ),
+            operation,
+            authorize,
+        )
+
+
+def visible_hunts(state: GameState, viewer: GuildViewer) -> tuple[rules.Hunt, ...]:
+    return tuple(
+        x
+        for x in rules.hunts(state)
+        if x.controller == viewer.user_id
+        or x.handler.entity == str(viewer.user_id)
+        and same_handler_body(state, x.handler)
+    )
+
+
+def hunt_options(
+    state: GameState, value: rules.Hunt, viewer: GuildViewer
+) -> tuple[tuple[str, str], ...]:
+    attempts = tuple(x for x in rules.ambushes(state) if x.pursuit == value.id)
+    if value.ended or not attempts or any(not x.completed for x in attempts):
+        return ()
+    if viewer.user_id == value.controller and value.proposal is None:
+        return (("propose", "Permanently abandon the pursuit"),)
+    if value.handler.entity == str(viewer.user_id) and value.proposal is not None:
+        return (("approve", "Confirm the pursuit has ended"), ("decline", "Keep it active"))
+    return ()
+
+
+class HuntService:
+    def __init__(self, game: GameService):
+        self.game, self.store = game, game.store
+
+    def _hunt(self, state: GameState, viewer: GuildViewer, identity: str) -> rules.Hunt:
+        value = next((x for x in visible_hunts(state, viewer) if x.id == identity), None)
+        if value is None:
+            raise WorkflowError("The pursuit belongs to its original Rebel and Handler")
+        return value
+
+    def get(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
+        with self.store.engine.connect() as c:
+            self.game.authorize(c, viewer, game=False)
+            state = load_state(c, self.store.campaign_id)
+            value = self._hunt(state, viewer, identity)
+            return dict(
+                revision=state.revision,
+                ended=bool(value.ended),
+                proposal=value.withdrawal,
+                choices=hunt_options(state, value, viewer),
+                attempts=sum(
+                    x.pursuit == identity and bool(x.completed) for x in rules.ambushes(state)
+                ),
+            )
+
+    def respond(
+        self, viewer: GuildViewer, key: str, identity: str, revision: int, action: str, account: str
+    ) -> dict[str, Any]:
+        account = account.strip()
+        if not 0 < len(account) <= 1200:
+            raise WorkflowError(
+                "Record your own reason for permanently ending or keeping the pursuit"
+            )
+        missions = MissionService(self.store)
+
+        def authorize(c: Connection) -> None:
+            missions.access.authorize(c, viewer, "strain")
+            self.game.unpaused(c)
+            self._hunt(load_state(c, self.store.campaign_id), viewer, identity)
+
+        def operation(c: Connection) -> dict[str, Any]:
+            state = load_state(c, self.store.campaign_id)
+            value = self._hunt(state, viewer, identity)
+            members = HandlerService(self.store)
+            if (
+                state.revision != revision
+                or self.game.pending_actions(c)
+                or action not in {x[0] for x in hunt_options(state, value, viewer)}
+                or not same_handler_body(state, value.handler)
+                or not members._member(c, value.controller)
+                or rules.attacker(state, value.attacker) != value.controller
+                or any(
+                    _mission(c, self.game, attempt).phase != "complete"
+                    for attempt in rules.ambushes(state)
+                    if attempt.pursuit == value.id
+                )
+            ):
+                raise WorkflowError(
+                    "Reopen the original pursuit with its actual parties between missions"
+                )
+            event = str(uuid4())
+            if action == "propose":
+                updated = value.model_copy(update=dict(proposal=event, withdrawal=account))
+            else:
+                proof = c.execute(
+                    sa.select(t.events.c.kind, t.events.c.actor_id, t.events.c.payload_json).where(
+                        t.events.c.campaign_id == self.store.campaign_id,
+                        t.events.c.id == value.proposal,
+                    )
+                ).first()
+                if (
+                    proof is None
+                    or proof.kind != "m3.rebel_hunt_reviewed"
+                    or proof.actor_id != str(value.controller)
+                    or json.loads(proof.payload_json).get("work_id") != identity
+                ):
+                    raise WorkflowError("Recover the original Rebel's actual withdrawal")
+                updated = (
+                    value.model_copy(update=dict(ended=event, reason=account))
+                    if action == "approve"
+                    else value.model_copy(update=dict(proposal=None, withdrawal=""))
+                )
+            rules.save_hunt(state, updated)
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.rebel_hunt_reviewed",
+                state,
+                event_id=event,
+                work_id=identity,
+                decision=action,
+            )
+            return dict(id=identity, ended=bool(updated.ended))
+
+        return missions._write(
+            viewer,
+            key,
+            "m3.rebel_hunt_reviewed",
+            dict(id=identity, revision=revision, action=action, account=account),
             operation,
             authorize,
         )

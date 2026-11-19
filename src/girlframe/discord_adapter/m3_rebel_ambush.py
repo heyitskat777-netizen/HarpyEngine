@@ -8,7 +8,7 @@ import discord
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
-from girlframe.services.m3_rebel_ambush import AmbushService
+from girlframe.services.m3_rebel_ambush import AmbushService, HuntService
 
 
 async def open_ambush(
@@ -54,6 +54,46 @@ async def open_ambush(
         [
             Field("target", "Original Girl", data["targets"]),
             Field("account", "Describe your actual ambush", paragraph=True),
+        ],
+        submit,
+    ).present(interaction)
+
+
+async def open_hunt(
+    interaction: discord.Interaction,
+    service: HuntService,
+    identity: str,
+) -> None:
+    data = await asyncio.to_thread(service.get, viewer_from_interaction(interaction), identity)
+    status = "The original pursuit has ended." if data["ended"] else "The pursuit remains active."
+    text = status + f" Resolved attempts: {data['attempts']}."
+    if data["proposal"]:
+        text += "\n\n" + discord.utils.escape_mentions(data["proposal"])
+    if not data["choices"]:
+        await reply(interaction, text)
+        return
+
+    async def submit(click: discord.Interaction, values: dict[str, Any]) -> str:
+        result = await asyncio.to_thread(
+            service.respond,
+            viewer_from_interaction(click),
+            str(click.id),
+            identity,
+            data["revision"],
+            values["choice"][0],
+            values["account"],
+        )
+        return (
+            "The original pursuit has ended." if result["ended"] else "The pursuit remains active."
+        )
+
+    await NativeForm(
+        interaction.user.id,
+        "Review the Rebel pursuit",
+        text,
+        [
+            Field("choice", "Your decision", data["choices"]),
+            Field("account", "Your own account", paragraph=True),
         ],
         submit,
     ).present(interaction)

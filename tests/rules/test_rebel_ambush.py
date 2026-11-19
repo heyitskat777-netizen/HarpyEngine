@@ -10,6 +10,7 @@ from test_m2_game import Gateway, answer, pass_tags, state, tick
 from test_mission_ui import current
 from test_off_duty_cycle import activate, call, finish_routine, movement, recover_both
 from test_physical_operations import place
+from test_punishment_service import submit as submit_punishment
 from test_strain_service import prepared, ready
 from test_world import gorgon, initial
 
@@ -23,7 +24,8 @@ from girlframe.engine.m3_actor_resources import rebel_inventory
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_battle_state import Declaration
 from girlframe.engine.m3_leviathan_arrival import install_external_pose
-from girlframe.engine.m3_rebel_ambush import RULE, ambushes
+from girlframe.engine.m3_punishments import Details
+from girlframe.engine.m3_rebel_ambush import HUNT_RULE, RULE, ambushes, hunts
 from girlframe.engine.m3_strain_effects import Choice
 from girlframe.engine.m3_world_state import AdversaryPilot, Asset, Faction
 from girlframe.services.inbox import InboxService
@@ -31,18 +33,20 @@ from girlframe.services.m3_actors import ActorService
 from girlframe.services.m3_battle import BattleService
 from girlframe.services.m3_cast import CastService
 from girlframe.services.m3_off_duty_cycle import CycleService
-from girlframe.services.m3_rebel_ambush import AmbushService
+from girlframe.services.m3_punishments import PunishmentService
+from girlframe.services.m3_rebel_ambush import AmbushService, HuntService
 from girlframe.services.m3_strain_effects import EffectService
 from girlframe.services.onboarding import WorkflowError
 
 
-def test_actual_rebel_ambush_costs_its_own_heat_and_only_the_next_dispatched_mission(ledger):
+@pytest.mark.parametrize("pursuit", (False, True))
+def test_actual_rebel_ambush_and_recurring_pursuit_use_original_roles(ledger, pursuit):
     strain, game = ready(ledger)
     policy = ledger.policy.m3_approval
     ledger.policy = ledger.policy.model_copy(
         update={
             "m3_approval": policy.model_copy(
-                update={"subsystems": policy.subsystems | {"plays", "world"}}
+                update={"subsystems": policy.subsystems | {"plays", "world", "discipline"}}
             )
         }
     )
@@ -102,7 +106,7 @@ def test_actual_rebel_ambush_costs_its_own_heat_and_only_the_next_dispatched_mis
         "My original Rebel's own Heat and Identity",
         actual=True,
     )
-    period = prepared(strain, game)
+    period = prepared(strain, game, high=frozenset({"rebellion"}) if pursuit else frozenset())
     effects = EffectService(strain)
     for track, face, column, choice in (
         (
@@ -121,7 +125,7 @@ def test_actual_rebel_ambush_costs_its_own_heat_and_only_the_next_dispatched_mis
             2,
             Choice(rule_id="strain.budget.low.5.2", account="Rooms reassigned.", rooms=((2, 3),)),
         ),
-        ("rebellion", 5, 1, None),
+        ("rebellion", 4 if pursuit else 5, 1, None),
     ):
         request = next(x for x in state(game).strain.requests if x.track == track)
         strain.dice.face = face
@@ -134,7 +138,7 @@ def test_actual_rebel_ambush_costs_its_own_heat_and_only_the_next_dispatched_mis
             effects.apply(
                 ADMIN, "ambush-effect-" + track, identity, 1, state(game).revision, choice
             )
-    assert outcome["rule_id"] == RULE
+    assert outcome["rule_id"] == (HUNT_RULE if pursuit else RULE)
 
     async def native_form(viewer, sid, display, **values):
         click = current(viewer.user_id, sid)
@@ -159,9 +163,10 @@ def test_actual_rebel_ambush_costs_its_own_heat_and_only_the_next_dispatched_mis
             lambda click: open_effect(click, effects, identity),
             ambusher=(actor.entity,),
             account="PRIVATE_AMBUSH_SOURCE",
+            **({"hunt_victim": ("2",)} if pursuit else {}),
         )
     )
-    assert ambushes(state(game))[0].mission is None
+    assert not any(x.mission for x in ambushes(state(game)))
     cycle = CycleService(strain.periods)
     activate(cycle, game, period)
     recover_both(cycle, game, period)
@@ -171,7 +176,7 @@ def test_actual_rebel_ambush_costs_its_own_heat_and_only_the_next_dispatched_mis
     invitation = missions.offer(
         ADMIN, "first-actual-ambush-mission", "Transport a synthetic cargo", (2,)
     )
-    assert ambushes(state(game))[0].mission is None
+    assert not any(x.mission for x in ambushes(state(game)))
     accepted = missions.respond(
         PLAYER, "accept-ambush-mission", invitation["id"], invitation["revision"], "accept"
     )
@@ -180,6 +185,8 @@ def test_actual_rebel_ambush_costs_its_own_heat_and_only_the_next_dispatched_mis
     )
     (bound,) = ambushes(state(game))
     assert bound.mission == mission["id"] and bound.dispatch
+    root = identity
+    identity = bound.id
     with pytest.raises(WorkflowError, match="Complete the actual Rebel ambush"):
         missions.end(ADMIN, "premature-mission", mission["id"], mission["revision"], True)
     inbox = InboxService(ledger)
@@ -212,51 +219,57 @@ def test_actual_rebel_ambush_costs_its_own_heat_and_only_the_next_dispatched_mis
         "opened"
     ]
     ledger.engine.dispose()
-    fight = BattleService(ledger)
-    data = fight.preview(OTHER, 900)
-    fighter = next(x for x in data["actors"] if x["ref"]["entity"] == actor.entity)
-    chased = next(x for x in data["actors"] if x["ref"]["entity"] == "2")
     asset = next(x.id for x in state(game).sheets["2"].assets if x.family == "frame")
-    declaration = Declaration(
-        play="all_out_assault",
-        actor=actor,
-        target=ActorRef.model_validate(chased["ref"]),
-        attacking_asset=weapon.id,
-        target_asset=asset,
-        actor_sha256=fighter["sha256"],
-        target_sha256=chased["sha256"],
-        account="I flank the transport, aiming to capture the Girl.",
-    )
-    offered = fight.propose(OTHER, "ambush-assault-declaration", data["revision"], 900, declaration)
-    fight.confirm(
-        ADMIN,
-        "ambush-assault-confirmed",
-        state(game).revision,
-        offered["id"],
-        opening=True,
-        reach=True,
-        outside_permission=False,
-        indirect=False,
-        evidence="Actual close-range ambush",
-    )
-    old_other = state(game).sheets["3"].model_copy(deep=True)
     worker, gateway = GameWorker(game), Gateway()
-    game.dice.faces = (4, 4)
-    asyncio.run(
-        native_form(
-            OTHER,
-            40420,
-            lambda click: open_context(click, fight, offered["id"]),
-            identity=("none",),
-            gain=("0",),
-            pair_share=("0",),
-            heat=("1",),
+    old_other = state(game).sheets["3"].model_copy(deep=True)
+
+    def assault(number, target_asset, *, vast):
+        fight = BattleService(ledger)
+        data = fight.preview(OTHER, 900)
+        fighter = next(x for x in data["actors"] if x["ref"]["entity"] == actor.entity)
+        chased = next(x for x in data["actors"] if x["ref"]["entity"] == "2")
+        declaration = Declaration(
+            play="all_out_assault",
+            actor=actor,
+            target=ActorRef.model_validate(chased["ref"]),
+            attacking_asset=weapon.id,
+            target_asset=target_asset,
+            actor_sha256=fighter["sha256"],
+            target_sha256=chased["sha256"],
+            account="I flank the transport, aiming to capture the Girl.",
         )
-    )
-    tick(worker, gateway, 3)
-    pass_tags(game)
-    for member in (ADMIN, PLAYER, OTHER):
-        answer(game, member, "battle_assault_table", flag=False, text="Original table view")
+        offered = fight.propose(
+            OTHER, f"ambush-declaration-{number}", data["revision"], 900, declaration
+        )
+        fight.confirm(
+            ADMIN,
+            f"ambush-review-{number}",
+            state(game).revision,
+            offered["id"],
+            opening=True,
+            reach=True,
+            outside_permission=False,
+            indirect=False,
+            evidence="Actual close-range ambush",
+        )
+        game.dice.faces = (4, 4)
+        asyncio.run(
+            native_form(
+                OTHER,
+                number,
+                lambda click: open_context(click, fight, offered["id"]),
+                identity=("none",),
+                gain=("0",),
+                pair_share=("0",),
+                heat=("1",),
+            )
+        )
+        tick(worker, gateway, 3)
+        pass_tags(game)
+        for member in (ADMIN, PLAYER, OTHER):
+            answer(game, member, "battle_assault_table", flag=vast, text="Original table view")
+
+    assault(40420, asset, vast=False)
     (completed_attack,) = ambushes(state(game))
     assert completed_attack.action and completed_attack.completed is None
     assert game.inspect(OTHER, completed_attack.action)["state"] == "complete"
@@ -265,7 +278,90 @@ def test_actual_rebel_ambush_costs_its_own_heat_and_only_the_next_dispatched_mis
     assert canon.sheets["3"] == old_other
     assert rebel_inventory(canon, actor).heat == 1
     tick(worker, gateway, 5)
-    missions.end(ADMIN, "actual-ambush-outcome", mission["id"], mission["revision"], True)
+
+    def finish_mission(value, number):
+        settled = missions.end(
+            ADMIN, f"ambush-finish-{number}", value["id"], value["revision"], True
+        )
+        discipline = PunishmentService(ledger, missions.access.registry)
+        for entry in missions.get(ADMIN, value["id"])["work"]:
+            submit_punishment(
+                discipline,
+                ADMIN,
+                entry["id"],
+                Details(kind="stimulant_injection"),
+                f"ambush-dog-punishment-{number}",
+            )
+        assert (
+            missions.complete(ADMIN, f"ambush-complete-{number}", value["id"], settled["revision"])[
+                "phase"
+            ]
+            == "complete"
+        )
+
+    finish_mission(mission, 1)
     assert ambushes(state(game))[0].completed
-    next_offer = missions.offer(ADMIN, "second-ambush-test-mission", "Separate mission", (2,))
-    assert next_offer["id"] != ambushes(state(game))[0].mission
+
+    def dispatch(number):
+        offer = missions.offer(ADMIN, f"ambush-offer-{number}", "Separate mission", (2,))
+        reply = missions.respond(PLAYER, f"ambush-accept-{number}", offer["id"], 1, "accept")
+        return missions.start(ADMIN, f"ambush-start-{number}", offer["id"], reply["revision"])
+
+    next_mission = dispatch(2)
+    if not pursuit:
+        assert next_mission["id"] != ambushes(state(game))[0].mission
+        assert len(ambushes(state(game))) == 1
+        return
+    second = next(x for x in ambushes(state(game)) if x.mission == next_mission["id"])
+    assert second.pursuit == root and second.id != bound.id
+    with pytest.raises(WorkflowError, match="Complete the actual Rebel ambush"):
+        missions.end(
+            ADMIN,
+            "second-mission-before-pursuit",
+            next_mission["id"],
+            next_mission["revision"],
+            True,
+        )
+    service.open(
+        OTHER,
+        "repeated-capture-attempt",
+        second.id,
+        state(game).revision,
+        900,
+        "2",
+        "I return to try again.",
+    )
+    undamaged = next(
+        x.id for x in state(game).sheets["2"].assets if x.family == "frame" and not x.damaged
+    )
+    assault(40430, undamaged, vast=True)
+    tick(worker, gateway, 5)
+    finish_mission(next_mission, 2)
+    hunt_service = HuntService(game)
+    assert hunt_service.get(OTHER, root)["attempts"] == 2
+    with pytest.raises(WorkflowError, match="original Rebel and Handler"):
+        hunt_service.get(PLAYER, root)
+
+    async def open_pursuit(click):
+        viewer = ADMIN if click.user.id == 1 else OTHER
+        entry = next(x for x in inbox.items(viewer) if x.task == "m3_rebel_hunt")
+        await InboxView(inbox, viewer.user_id).route(click, entry)
+
+    asyncio.run(
+        native_form(
+            OTHER, 40440, open_pursuit, choice=("propose",), account="I genuinely call it off."
+        )
+    )
+    assert hunts(state(game))[0].ended is None
+    ledger.engine.dispose()
+    asyncio.run(
+        native_form(
+            ADMIN, 40450, open_pursuit, choice=("approve",), account="The pursuit ends here."
+        )
+    )
+    assert hunts(state(game))[0].ended
+    third = dispatch(3)
+    assert len(ambushes(state(game))) == 2 and all(
+        x.mission != third["id"] for x in ambushes(state(game))
+    )
+    finish_mission(third, 3)

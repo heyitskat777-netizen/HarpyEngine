@@ -23,6 +23,8 @@ from girlframe.engine.m3_harpy_raid import RULE as HARPY_RAID
 from girlframe.engine.m3_npc_interest import RULE as NPC_INTEREST
 from girlframe.engine.m3_pilot_fears import APPEARANCE as PUBLIC_APPEARANCE
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
+from girlframe.engine.m3_rebel_ambush import HUNT_RULE as REBEL_HUNT
+from girlframe.engine.m3_rebel_ambush import RULE as REBEL_AMBUSH
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_rebel_strafe import RULE as REBEL_STRAFE
 from girlframe.engine.m3_rebel_taunt import RULE as REBEL_TAUNT
@@ -274,6 +276,26 @@ class EffectService:
                 raise WorkflowError(
                     "The selected effect does not match this actual saved Strain event."
                 )
+            if choice.rule_id in (REBEL_AMBUSH, REBEL_HUNT) and choice.target:
+                from girlframe.engine.m3_rebel_ambush import attacker
+                from girlframe.services.handler_setup import HandlerService
+
+                controller = attacker(state, ActorRef(kind="external_pilot", entity=choice.target))
+                members = HandlerService(self.store)
+                if not members._member(c, controller):
+                    raise WorkflowError("Recover the actual joined Rebel controller")
+                if choice.rule_id == REBEL_HUNT and choice.victim in state.sheets:
+                    assert choice.victim is not None
+                    period = self.strain.periods._get(c, row["off_duty_id"])
+                    if (
+                        period.character_ids.get(choice.victim)
+                        != current_ref(state, int(choice.victim)).incarnation
+                        or choice.victim in period.ended_characters
+                        or not members._member(c, int(choice.victim))
+                    ):
+                        raise WorkflowError(
+                            "Choose an actual original Girl from this preparing period"
+                        )
             if choice.rule_id == VOID_RIFT:
                 from girlframe.engine.m3_void_rift import pending as pending_arrival
 

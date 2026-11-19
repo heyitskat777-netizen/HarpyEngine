@@ -2972,10 +2972,30 @@ class InboxService:
             from girlframe.services.m3_handler_tags import HandlerTagService
             from girlframe.services.m3_journalist import JournalistService
             from girlframe.services.m3_pilot_fears import access as fear_access
+            from girlframe.services.m3_rebel_ambush import hunt_options, visible_hunts
             from girlframe.services.m3_rebel_ambush import visible as visible_ambushes
             from girlframe.services.m3_rebel_escape_offer import visible as visible_escape_offers
 
             journalism = JournalistService(GameService(self.store))
+            for hunt in visible_hunts(canon, viewer):
+                items.append(
+                    InboxItem(
+                        "rebel-hunt:" + hunt.id,
+                        "work",
+                        hunt.id,
+                        canon.revision,
+                        "campaign",
+                        "Rebel pursuit",
+                        "Original Rebel and Handler",
+                        "resolved" if hunt.ended else "pending",
+                        bool(hunt_options(canon, hunt, viewer)),
+                        False,
+                        "Review the original Rebel pursuit.",
+                        "",
+                        "Open pursuit",
+                        task="m3_rebel_hunt",
+                    )
+                )
             for ambush in visible_ambushes(canon, viewer):
                 pending = ambush.completed is None
                 items.append(

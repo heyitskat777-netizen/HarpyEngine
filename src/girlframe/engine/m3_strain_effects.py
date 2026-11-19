@@ -28,6 +28,7 @@ from girlframe.engine.m3_npc_interest import Timing as InterestTiming
 from girlframe.engine.m3_orbital_threat import RULE as ORBITAL_THREAT
 from girlframe.engine.m3_pilot_fears import APPEARANCE as PUBLIC_APPEARANCE
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
+from girlframe.engine.m3_rebel_ambush import HUNT_RULE as REBEL_HUNT
 from girlframe.engine.m3_rebel_ambush import RULE as REBEL_AMBUSH
 from girlframe.engine.m3_rebel_defection import RULE as REBEL_DEFECTION
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
@@ -88,6 +89,7 @@ SUPPORTED = frozenset(
         REBEL_TAUNT,
         REBEL_VOICE,
         REBEL_AMBUSH,
+        REBEL_HUNT,
         "strain.rebellion.low.5.2",
         REBEL_PROTEST,
         REBEL_ESCAPE_OFFER,
@@ -271,6 +273,28 @@ def apply(
             period_id,
             source_event,
             ActorRef(kind="external_pilot", entity=choice.target),
+            choice.account.strip(),
+        )
+    elif rule == REBEL_HUNT:
+        from girlframe.engine.m3_actor_bonds import current_ref
+        from girlframe.engine.m3_rebel_ambush import arm_hunt
+
+        fields(choice, {"target", "victim"})
+        if (
+            not choice.target
+            or source_event is None
+            or period_id is None
+            or choice.victim not in {str(x) for x in state.order}
+        ):
+            raise ValueError("Bind the actual Rebel and original target of this pursuit")
+        assert choice.victim is not None
+        arm_hunt(
+            state,
+            source_work,
+            period_id,
+            source_event,
+            ActorRef(kind="external_pilot", entity=choice.target),
+            current_ref(state, int(choice.victim)),
             choice.account.strip(),
         )
     elif rule == ORBITAL_THREAT:

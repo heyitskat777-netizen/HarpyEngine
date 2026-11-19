@@ -8,7 +8,9 @@ from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_missions import Mission
 
 RULE = "strain.rebellion.low.5.1"
+HUNT_RULE = "strain.rebellion.high.4.1"
 KIND = "strain_rebel_ambush"
+HUNT_KIND = "strain_rebel_hunt"
 
 
 class Ambush(Model):
@@ -19,6 +21,7 @@ class Ambush(Model):
     attacker: ActorRef
     controller: int
     account: str = Field(min_length=1, max_length=1200)
+    pursuit: str | None = Field(default=None, exclude_if=lambda x: x is None)
     mission: str | None = None
     dispatch: str | None = None
     channel: int | None = None
@@ -28,6 +31,21 @@ class Ambush(Model):
     opening_account: str = Field(default="", max_length=1200)
     action: str | None = None
     completed: str | None = None
+
+
+class Hunt(Model):
+    id: str
+    period: str
+    source: str
+    handler: ActorRef
+    attacker: ActorRef
+    controller: int
+    victim: ActorRef
+    account: str = Field(min_length=1, max_length=1200)
+    proposal: str | None = None
+    withdrawal: str = Field(default="", max_length=1200)
+    ended: str | None = None
+    reason: str | None = None
 
 
 def ambushes(state: GameState) -> tuple[Ambush, ...]:
@@ -40,6 +58,18 @@ def save(state: GameState, ambush: Ambush) -> None:
     state.facts = [x for x in state.facts if (x.get("kind"), x.get("id")) != (KIND, ambush.id)] + [
         dict(kind=KIND, id=ambush.id, body=ambush.model_dump_json())
     ]
+
+
+def hunts(state: GameState) -> tuple[Hunt, ...]:
+    return tuple(
+        Hunt.model_validate_json(x["body"]) for x in state.facts if x.get("kind") == HUNT_KIND
+    )
+
+
+def save_hunt(state: GameState, hunt: Hunt) -> None:
+    state.facts = [
+        x for x in state.facts if (x.get("kind"), x.get("id")) != (HUNT_KIND, hunt.id)
+    ] + [dict(kind=HUNT_KIND, id=hunt.id, body=hunt.model_dump_json())]
 
 
 def attacker(state: GameState, actor: ActorRef) -> int:
@@ -97,3 +127,65 @@ def bind(state: GameState, mission: Mission, dispatch: str) -> None:
     for ambush in ambushes(state):
         if ambush.mission is None:
             save(state, ambush.model_copy(update=dict(mission=mission.id, dispatch=dispatch)))
+    world = state.world
+    if world is None:
+        return
+    for hunt in hunts(state):
+        fighter = next((x for x in world.pilots if x.id == hunt.attacker.entity), None)
+        if (
+            hunt.ended is not None
+            or fighter is None
+            or not fighter.alive
+            or fighter.custody != "free"
+            or fighter.kind != "rebel"
+            or mission.character_ids.get(hunt.victim.entity) != hunt.victim.incarnation
+        ):
+            continue
+        save(
+            state,
+            Ambush(
+                id=hunt.id + ":" + mission.id,
+                period=hunt.period,
+                source=hunt.source,
+                handler=hunt.handler,
+                attacker=hunt.attacker,
+                controller=hunt.controller,
+                account=hunt.account,
+                mission=mission.id,
+                dispatch=dispatch,
+                pursuit=hunt.id,
+            ),
+        )
+
+
+def arm_hunt(
+    state: GameState,
+    work: str,
+    period: str,
+    event: str,
+    rebel: ActorRef,
+    victim: ActorRef,
+    account: str,
+) -> None:
+    controller = attacker(state, rebel)
+    handler = active_handler(state)
+    if (
+        handler is None
+        or victim.kind != "pilot"
+        or controller in (state.handler, int(victim.entity))
+        or any(x.id == work for x in hunts(state))
+    ):
+        raise ValueError("Bind the independently controlled Rebel and original Girl to the pursuit")
+    save_hunt(
+        state,
+        Hunt(
+            id=work,
+            period=period,
+            source=event,
+            handler=handler,
+            attacker=rebel,
+            controller=controller,
+            victim=victim,
+            account=account,
+        ),
+    )
