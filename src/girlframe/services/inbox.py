@@ -2952,10 +2952,14 @@ class InboxService:
             from girlframe.engine.m3_civic_directive import cases as civic_directives
             from girlframe.engine.m3_director_strain import calls as director_strain_calls
             from girlframe.engine.m3_doppelganger_reveal import reveals as disguise_reveals
+            from girlframe.engine.m3_handler_consequences import (
+                active_handler as employment_handler,
+            )
             from girlframe.engine.m3_harpy_raid import raids as harpy_raids
             from girlframe.engine.m3_journalist import questions as journalist_questions
             from girlframe.engine.m3_npc_interest import interests as npc_interests
             from girlframe.engine.m3_pilot_fears import cases as public_fears
+            from girlframe.engine.m3_rebel_assimilation import work_plays as assimilated_work_plays
             from girlframe.engine.m3_rebel_defection import audience as defection_audience
             from girlframe.engine.m3_rebel_defection import cases as rebel_defections
             from girlframe.engine.m3_rebel_strafe import passes as rebel_passes
@@ -2986,6 +2990,28 @@ class InboxService:
             from girlframe.services.m3_rebel_frame_theft import visible as visible_thefts
 
             journalism = JournalistService(GameService(self.store))
+            play_owner = employment_handler(canon)
+            if play_owner is not None and play_owner.entity == user:
+                for employment in assimilated_work_plays(canon, play_owner):
+                    assert employment.employment_play is not None
+                    items.append(
+                        InboxItem(
+                            "foundation-employment:" + employment.id,
+                            "work",
+                            employment.id,
+                            canon.revision,
+                            "campaign",
+                            employment.employment_play.title,
+                            "Original Handler",
+                            "active",
+                            True,
+                            False,
+                            "Use the original group's work Play in your scene.",
+                            "",
+                            "Open work Play",
+                            task="m3_rebel_assimilation",
+                        )
+                    )
             for demotion in visible_demotions(
                 canon, viewer, administrator=self.store.policy.allow_guild_administrators
             ):
@@ -4508,6 +4534,19 @@ class InboxService:
                     and json.loads(work["body_json"]).get("rule_id") == "strain.rebellion.endgame.2"
                 ):
                     primary, task_name = "Resolve actual group merger", "m3_rebel_merge"
+                elif (
+                    kind == "strain_endgame_effect"
+                    and json.loads(work["body_json"]).get("rule_id") == "strain.rebellion.endgame.4"
+                ):
+                    if any(
+                        x.identity == work["id"] and x.task == "m3_rebel_assimilation"
+                        for x in items
+                    ):
+                        continue
+                    primary, task_name = (
+                        "Write the group's employment Play",
+                        "m3_rebel_assimilation",
+                    )
                 elif (
                     kind == "strain_endgame_effect"
                     and json.loads(work["body_json"]).get("rule_id") == "strain.rebellion.endgame.1"

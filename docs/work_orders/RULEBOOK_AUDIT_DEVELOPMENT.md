@@ -39,7 +39,7 @@ Off-Duty resumes only at its genuine completion boundary.
 
 The registry tracks each source's current scope and its acceptance tests.
 Every ordinary core Strain column has an effect path. Several have incomplete
-branches. Rebellion Endgames 3–8 are awaiting their first effect routes.
+branches. Rebellion Endgames 3 and 5–8 are awaiting their first effect routes.
 Current subset limitations include
 the High Budget hearing's Severe finding and the High Void bunk's separate
 contact Play. The individual receipts below retain the rest of the source
@@ -1102,3 +1102,21 @@ the original Handler's player has no separate active Girl. Handling an
 already occupied Girl slot or competing ending for the original body and
 any follow-up positioning relies on separate source review.
 [Budget Endgame p. 150](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=152) · [Demotion test](../../tests/rules/test_budget_demotion.py)
+
+## Rebellion Endgame assimilation and employment Play
+
+The base is `af8735dead032fb0d9f97ed0637b927855b8152f`. The original
+Handler authors a named, triggered narrative Play about working for the
+selected group. The original faction enters the Foundation without
+replacing its identity, membership or physical assets. The actual new
+Play survives reopening. Its original Handler can perform it from a
+scene in which they hold the actual character role. The engine records
+the owned action with the original faction and scene source.
+
+All 25 selected tests passed in 27.44 seconds. The tests cover original
+author, private Inbox, staleness, pause, replay, restart and actual use
+of the installed Play. The five source modules passed static typing.
+Authored Plays currently record performed work. User-defined dice,
+mechanical effects, and the existing external Pilots' resulting career
+choices are separate ports.
+[Rebellion Endgame p. 147](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=149) · [Assimilation test](../../tests/rules/test_rebel_assimilation.py)
