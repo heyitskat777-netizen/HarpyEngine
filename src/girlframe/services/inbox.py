@@ -553,6 +553,31 @@ class InboxService:
                         task="m2_choice",
                     )
                 )
+            from girlframe.services.m3_gorgon_contact_disclosure import (
+                FrameContactDisclosureService,
+            )
+
+            for report in FrameContactDisclosureService(GameService(self.store)).available(
+                connection, viewer
+            ):
+                items.append(
+                    InboxItem(
+                        "frame-contact-report:" + report["id"],
+                        "frame_contact_report",
+                        report["id"],
+                        report["revision"],
+                        "plays",
+                        "Disclose your private Gorgon contact",
+                        "Original participant",
+                        "pending",
+                        True,
+                        False,
+                        "The actual Handler hears the report in the selected scene.",
+                        "The printed Punishment becomes due after the disclosure.",
+                        "Review disclosure",
+                        task="m3_gorgon_contact_report",
+                    )
+                )
             actions = t.m2["m2_actions"]
             for saved in connection.execute(
                 sa.select(actions).where(

@@ -96,6 +96,13 @@ def source(
         )
         proof = GameState.model_validate_json(raw) if raw else None
         sheet = proof.sheets.get(actor.entity) if proof else None
+        if body.get("reason") == "gorgon_frame_contact_rebirth":
+            from girlframe.services.m3_gorgon_frame_contact import prove_frame_rebirth
+
+            if proof is None or sheet is None or sheet.character_id != actor.incarnation:
+                raise ValueError()
+            prove_frame_rebirth(game, c, proof, first, body, actor)
+            return current, body, actor
         from girlframe.engine.m3_janus_storage import effective_assets, for_family
 
         assets = [x for x in effective_assets(proof, actor) if x.family == family] if proof else []
@@ -163,6 +170,12 @@ def source(
             from girlframe.services.m3_harpy_bond_void import prove_void_source as prove_temptation
 
             prove_temptation(game, c, first, body, actor)
+            return current, body, actor
+        if body.get("reason") == "gorgon_frame_contact_consequence":
+            from girlframe.services.m3_gorgon_frame_contact import prove_frame_void
+
+            assert proof is not None
+            prove_frame_void(game, c, proof, first, body, actor)
             return current, body, actor
         if body.get("reason") == "jackdaw_hallucinations":
             from girlframe.services.m3_hallucinations import prove_threshold as prove_hallucinations
@@ -389,6 +402,8 @@ def prepare_threshold(
             row["id"],
             source_action=body["source_action"],
         )
+    if existing.forced_by is not None:
+        return state, existing
     latest = {
         x["id"]: dict(x)
         for x in c.execute(
@@ -568,6 +583,13 @@ def complete(
             from girlframe.services.m3_consume import resume_pending
 
             resume_pending(game, c, event)
+        elif body.get("reason") in (
+            "gorgon_frame_contact_consequence",
+            "gorgon_frame_contact_rebirth",
+        ):
+            from girlframe.services.m3_gorgon_frame_contact import complete_frame_void
+
+            complete_frame_void(game, c, identity, body["source_action"], event, viewer, key)
         elif body.get("reason") == "jackdaw_hallucinations":
             from girlframe.services.m3_hallucinations import (
                 complete_void as complete_hallucinations,
@@ -678,6 +700,12 @@ class VoidService:
             handler = True
         except WorkflowError:
             pass
+        if handler and body.get("reason") in (
+            "gorgon_frame_contact_consequence",
+            "gorgon_frame_contact_rebirth",
+        ):
+            parent = self.game.action(c, body["source_action"])
+            handler = viewer.user_id in parent["data"].get("private_audience", ())
         if handler and body.get("reason") == "scientist_private_void":
             from girlframe.engine.m3_handler_consequences import active_handler
             from girlframe.engine.m3_handler_private_scene import records as private_scenes

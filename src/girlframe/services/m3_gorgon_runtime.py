@@ -21,6 +21,7 @@ from girlframe.engine.m3_gorgon_play_state import Declaration
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_world_state import Asset
 from girlframe.services import m3_gorgon_contact as contact
+from girlframe.services import m3_gorgon_frame_contact as frame_contact
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_actors import profiles
 from girlframe.services.onboarding import WorkflowError
@@ -140,7 +141,7 @@ def start(game: Any, c: Connection, state: GameState, action: dict[str, Any]) ->
         )
         action["data"]["result"]["catatonia" if people else "audible_communication_blocked"] = True
         return
-    if meta["kind"] == contact.PLAY:
+    if meta["kind"] in contact.PLAYS:
         contact.start(game, c, state, action)
         return
     if meta["kind"] in hallucinations.PLAYS:
@@ -773,6 +774,8 @@ def projection(
     body = json.loads(row["body_json"])
     kind = row["kind"].removeprefix("gorgon_")
     result: dict[str, Any] = dict(kind=kind, account=action["data"].get("context", ""))
+    if kind.startswith("contact_"):
+        return contact.project(game, c, state, action, row)
     if kind.startswith("hallucinations_"):
         from girlframe.services.m3_hallucinations import project
 
@@ -892,6 +895,9 @@ def complete_response(
         .values(state="completed_by_work", revision=choices.c.revision + 1)
     )
     state = load_state(c, game.store.campaign_id)
+    if meta.get("frame_intervention"):
+        frame_contact.finish_intervention(game, c, state, parent, child, event)
+        return
     actor_alive = _actor(state, parent).alive
     enough = child["data"].get("result", {}).get("enough")
     if enough is None:
@@ -980,7 +986,7 @@ def synchronize(
     materialize_dormant(game, c, action, event)
     synchronize_damage(game, c, event)
     state = load_state(c, game.store.campaign_id)
-    if meta["kind"] == contact.PLAY:
+    if meta["kind"] in contact.PLAYS:
         contact.synchronize(game, c, state, action, event)
     if meta["kind"] in hallucinations.PLAYS:
         from girlframe.services.m3_hallucinations import materialize
@@ -998,9 +1004,9 @@ def synchronize(
         if active_child is None:
             choices = t.m2["m2_choices"]
             for pending in game.pending(c, action["id"]):
-                if (
-                    pending["kind"].startswith("gorgon_")
-                    and pending["kind"] != "gorgon_hallucinations_void"
+                if pending["kind"].startswith("gorgon_") and pending["kind"] not in (
+                    "gorgon_hallucinations_void",
+                    frame_contact.FRAME_VOID,
                 ):
                     c.execute(
                         choices.update()

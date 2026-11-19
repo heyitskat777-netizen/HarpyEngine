@@ -2225,7 +2225,7 @@ class GameService:
                     )
                     assert void_keep is not None
                     void_keep["cast"] = source_cast.model_dump(mode="json")
-                    void_keep["table"] = sorted(
+                    void_keep["table"] = void_keep.get("private_audience") or sorted(
                         {role.controller for role in source_cast.roles}
                         | ({source_cast.facilitator} if source_cast.facilitator else set())
                     )
@@ -2397,6 +2397,7 @@ class GameService:
                                 "mockingbird_sex_void_threshold",
                                 "janus_void_threshold",
                                 "gorgon_hallucinations_void",
+                                "gorgon_contact_frame_void",
                                 "snoop_item_void_threshold",
                                 "gorgon_response_play",
                             )
@@ -2471,6 +2472,7 @@ class GameService:
                     "mockingbird_sex_void_threshold",
                     "janus_void_threshold",
                     "gorgon_hallucinations_void",
+                    "gorgon_contact_frame_void",
                     "snoop_item_void_threshold",
                 ) and (void_keep is None or prepared.play != "keep_your_head"):
                     raise WorkflowError("Use the actual source-owned Void resistance controls.")
@@ -3347,8 +3349,14 @@ class GameService:
             if void_keep is not None:
                 data["void_keep"] = void_keep
                 data["participants"] = list(void_keep["table"])
+                if void_keep.get("private_audience"):
+                    data["private_audience"] = list(void_keep["private_audience"])
             if secretary_response is not None:
                 data["secretary_response"] = secretary_response
+            if gorgon_response is not None and gorgon_response.get("private_audience"):
+                audience = list(gorgon_response["private_audience"])
+                data["participants"] = data["private_audience"] = audience
+                data["tag_context"]["table"] = audience
             from girlframe.services.m3_recovery import enable as enable_recovery
 
             enable_recovery(self, c, viewer, data)
@@ -6412,11 +6420,11 @@ class GameService:
                 from girlframe.services.m3_leviathan_obsession import ObsessionService
 
                 return ObsessionService(self).inspect(viewer, identity)
-            from girlframe.services.m3_gorgon_contact import PLAY as private_gorgon_contact
+            from girlframe.services.m3_gorgon_contact import PLAYS as private_gorgon_contact
 
             snoop = action["data"].get("snoop")
             allowed = set(action["data"]["participants"])
-            if (action["data"].get("gorgon_play") or {}).get("kind") == private_gorgon_contact:
+            if (action["data"].get("gorgon_play") or {}).get("kind") in private_gorgon_contact:
                 from girlframe.services.m3_gorgon_play import GorgonPlayService
 
                 GorgonPlayService(self).authorize(c, viewer, action)

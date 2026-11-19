@@ -28,6 +28,7 @@ class Declaration(Model):
             "jackdaw_hallucinations_day",
             "parasite_hitch",
             "intimate_contact",
+            "intimate_frame_contact",
             "parasite_detach",
         ]
         | TypeTag
@@ -64,6 +65,7 @@ class Declaration(Model):
             "jackdaw_hallucinations_day",
             "parasite_hitch",
             "intimate_contact",
+            "intimate_frame_contact",
         ):
             if self.target is None or self.target_sha256 is None or self.target == self.actor:
                 raise ValueError("This Play needs its actual distinct target body and source")

@@ -1,4 +1,4 @@
-"""Private consent and original consequences for the out-of-Frame Gorgon Play."""
+"""Private consent and original consequences for the Gorgon contact Plays."""
 
 import json
 from typing import TYPE_CHECKING, Any
@@ -7,6 +7,7 @@ import sqlalchemy as sa
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
+from girlframe.engine import m3_gorgon_frame_contact as frame
 from girlframe.engine.m2 import ChoiceAnswer, GameState
 from girlframe.engine.m3_actor_bonds import is_helpless
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, SceneCast
@@ -23,13 +24,16 @@ if TYPE_CHECKING:
 
 PLAY = "intimate_contact"
 RULE = "gorgon.gorgon.gorgons-fucking-girls"
+PLAYS = (PLAY, frame.PLAY)
 CONSENT = "gorgon_contact_consent"
 REVIEW = "gorgon_contact_review"
 CONCLUSION = "gorgon_contact_conclusion"
 FINAL = "gorgon_contact_final"
 
 
-def eligible(state: GameState, gorgon: ActorView, girl: ActorView) -> bool:
+def eligible(
+    state: GameState, gorgon: ActorView, girl: ActorView, *, in_frame: bool = False
+) -> bool:
     if state.world is None or girl.ref.kind != "pilot" or girl.rules != "girl_frame":
         return False
     body = next((x for x in state.world.gorgons if x.id == gorgon.ref.entity), None)
@@ -45,7 +49,8 @@ def eligible(state: GameState, gorgon: ActorView, girl: ActorView) -> bool:
         and placement is not None
         and placement.vitals_active
         and not (placement.incapacitated or placement.subsumed)
-        and girl.inside_frame is False
+        and girl.inside_frame is in_frame
+        and (not in_frame or girl.frame_instance == girl.occupied_frame_instance)
         and girl.custody in (None, "free")
         and sheet.medical_state == "fit"
         and not is_helpless(state, girl.ref)
@@ -69,7 +74,7 @@ def _current(
         state, ActorRef.model_validate(meta["target"]), bound, require_current_profile=False
     )
     if (
-        not eligible(state, gorgon, girl)
+        not eligible(state, gorgon, girl, in_frame=meta["kind"] == frame.PLAY)
         or not any(x.id == cast.id and x.open and x.roles == cast.roles for x in state.scene_casts)
         or not any(x.actor == girl.ref and x.controller == girl.controller for x in cast.roles)
         or gorgon.controller != meta["controller"]
@@ -93,8 +98,11 @@ def _prove_contact(
     expected = {
         CONSENT: (meta["contact_consent"], girl.controller),
         REVIEW: (meta["contact_review"], meta["procedural_gm"]),
-        CONCLUSION: (meta["contact_conclusion"], gorgon.controller),
     }
+    if meta["kind"] == frame.PLAY:
+        expected[FINAL] = (meta["contact_final"], girl.controller)
+    else:
+        expected[CONCLUSION] = (meta["contact_conclusion"], gorgon.controller)
     choices, responses = t.m2["m2_choices"], t.m2["m2_responses"]
     actual = c.execute(
         sa.select(
@@ -119,15 +127,15 @@ def _prove_contact(
         for row in actual
         if expected[row.kind] == (row.event_id, int(row.actor_id))
     }
-    expected_tag = meta["contact_tag"]
-    if (
-        set(verified) != set(expected)
-        or verified[CONSENT].flag is not True
-        or verified[REVIEW].flag is not True
-        or verified[CONCLUSION].flag is not bool(expected_tag)
-        or verified[CONCLUSION].text.strip() != expected_tag
+    if set(verified) != set(expected) or any(
+        verified[kind].flag is not True for kind in expected if kind != CONCLUSION
     ):
-        raise WorkflowError("Recover the original owned consent, review and optional Tag receipts")
+        raise WorkflowError("Recover the original owned consent and factual review receipts")
+    if CONCLUSION in verified and (
+        verified[CONCLUSION].flag is not bool(meta["contact_tag"])
+        or verified[CONCLUSION].text.strip() != meta["contact_tag"]
+    ):
+        raise WorkflowError("Recover the original Gorgon's optional Tag receipt")
 
 
 def apply(
@@ -142,6 +150,11 @@ def apply(
     event = action["data"]["response_event"]
     meta = action["data"]["gorgon_play"]
     result = action["data"]["result"]
+    if row["kind"] not in (CONSENT, REVIEW, CONCLUSION, FINAL):
+        from girlframe.services.m3_gorgon_frame_contact import apply as frame_step
+
+        frame_step(game, c, state, action, row, answer, gorgon, girl)
+        return
     owner = {
         CONSENT: girl.controller,
         REVIEW: meta["procedural_gm"],
@@ -173,7 +186,10 @@ def apply(
             raise WorkflowError("Verify the actual trigger after the original Girl's consent")
         if answer.flag:
             meta["contact_review"] = event
-            game.request(c, action, gorgon.controller, CONCLUSION)
+            if meta["kind"] == frame.PLAY:
+                game.request(c, action, girl.controller, FINAL)
+            else:
+                game.request(c, action, gorgon.controller, CONCLUSION)
         else:
             result["contact"] = "unconfirmed"
         return
@@ -189,10 +205,16 @@ def apply(
         game.request(c, action, girl.controller, FINAL)
         return
 
-    if answer.text or "contact_tag" not in meta:
-        raise WorkflowError("Only the Girl confirms the actual irreversible outcome")
+    if answer.text:
+        raise WorkflowError("Only the original Girl confirms the final outcome")
     if not answer.flag:
         result["contact"] = "withdrawn"
+        return
+    if meta["kind"] == frame.PLAY:
+        from girlframe.services.m3_gorgon_frame_contact import FRAME_ROLL
+
+        meta["contact_final"] = event
+        game.request(c, action, gorgon.controller, FRAME_ROLL)
         return
     _prove_contact(game, c, action, gorgon, girl)
     label = meta["contact_tag"]
@@ -205,14 +227,7 @@ def apply(
             label,
         )
         tag.giver_actor = gorgon.ref
-    assert state.world is not None
-    state.world = update(
-        state.world,
-        gorgons=tuple(
-            x.model_copy(update=dict(exposed=True)) if x.id == gorgon.ref.entity else x
-            for x in state.world.gorgons
-        ),
-    )
+    _expose(state, gorgon.ref)
     # The original completed contact is the printed exceptional exposure.
     ended = end_in_transaction(
         c,
@@ -230,10 +245,40 @@ def apply(
     result["contact"] = "resolved"
 
 
+def _expose(state: GameState, source: ActorRef) -> None:
+    assert state.world is not None
+    state.world = update(
+        state.world,
+        gorgons=tuple(
+            x.model_copy(update=dict(exposed=True)) if x.id == source.entity else x
+            for x in state.world.gorgons
+        ),
+    )
+
+
+def project(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    row: dict[str, Any],
+) -> dict[str, Any]:
+    if action["data"]["gorgon_play"]["kind"] == frame.PLAY:
+        from girlframe.services.m3_gorgon_frame_contact import project as project_frame
+
+        return project_frame(game, c, state, action, row)
+    return dict(kind=row["kind"].removeprefix("gorgon_"), in_frame=False)
+
+
 def synchronize(
     game: "GameService", c: Connection, state: GameState, action: dict[str, Any], event: str
 ) -> None:
     meta = action["data"]["gorgon_play"]
+    if meta["kind"] == frame.PLAY:
+        from girlframe.services.m3_gorgon_frame_contact import materialize
+
+        materialize(game, c, state, action, event)
+        return
     if meta.get("contact_ending") != event:
         return
     archive = next(

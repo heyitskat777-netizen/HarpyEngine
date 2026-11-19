@@ -32,6 +32,7 @@ def candidate_source_gate(monkeypatch):
             "gorgon.gorgon.collateral-damage",
             "gorgon.gorgon.warp",
             "gorgon.gorgon.gorgons-fucking-girls",
+            "gorgon.gorgon.gorgons-fucking-frames",
             "gorgon-type.sentinel.sentinel-type",
             "gorgon-type.jackdaw.jackdaw-type",
             "gorgon-type.jackdaw.hallucinations",
@@ -247,6 +248,7 @@ def gorgon_source(
         "doppleganger_bond",
         "parasite_hitch",
         "intimate_contact",
+        "intimate_frame_contact",
     )
     declaration = Declaration(
         kind=kind,
@@ -2375,6 +2377,7 @@ def test_private_gorgon_contact_can_be_withdrawn_before_the_original_career_ends
 
     from test_ledger import OTHER
     from test_mission_ui import current
+    from test_privacy_game_delivery import PrivateGateway
 
     from girlframe.discord_adapter.m3_gorgon_play import open_gorgon_play
     from girlframe.discord_adapter.m3_gorgon_runtime import open_choice
@@ -2393,6 +2396,7 @@ def test_private_gorgon_contact_can_be_withdrawn_before_the_original_career_ends
         npc=True,
         begin=False,
     )
+    gateway = PrivateGateway()
     pilot = current_ref(state(game), PLAYER.user_id)
     outsider = current_ref(state(game), OTHER.user_id)
     source = original.actor
@@ -2485,6 +2489,12 @@ def test_private_gorgon_contact_can_be_withdrawn_before_the_original_career_ends
         ChoiceAnswer(flag=finalize),
     )
     assert game.inspect(ADMIN, action)["state"] == "complete"
+    tick(worker, gateway, 5)
+    with ledger.engine.connect() as c:
+        assert game.lock(c, 900)["state"] == "released"
+    assert {recipient for recipient, _ in gateway.private} == {ADMIN.user_id, PLAYER.user_id}
+    assert set(message["kind"] for message in gateway.messages.values()) <= {"control"}
+    assert all(set(message) == {"kind", "action_id"} for message in gateway.messages.values())
     assert outcome["action_id"] == action and game.dice.calls == 0
     after = state(game)
     body = next(x for x in after.world.gorgons if x.id == source.entity)
@@ -2505,3 +2515,342 @@ def test_private_gorgon_contact_can_be_withdrawn_before_the_original_career_ends
         assert tag.giver_actor == source and OTHER.user_id not in tag.observers
     else:
         assert after.sheets == before.sheets and not after.career_archives
+
+
+@pytest.mark.parametrize(
+    "sides,level,threshold",
+    [
+        ((1, 3), "low", False),
+        ((3, 5), "mid", False),
+        ((3, 4), "mid", True),
+        ((5, 5), "high", False),
+        ((5, 5), "interrupt", False),
+    ],
+)
+def test_in_frame_gorgon_roll_uses_actual_void_frame_assets(
+    ledger, sides, level, threshold, monkeypatch
+):
+    import asyncio
+
+    from test_ledger import OTHER
+    from test_m2_game import Dice
+    from test_mission_ui import current
+    from test_privacy_game_delivery import PrivateGateway
+    from test_void_service import respond as respond_void
+
+    import girlframe.services.m2_game as shared
+    from girlframe.discord_adapter.m3_gorgon_contact_disclosure import open_report
+    from girlframe.engine.m2 import ChoiceAnswer, PlayInput
+    from girlframe.engine.m3_battle_state import Declaration as BattleDeclaration
+    from girlframe.engine.m3_gorgon_frame_contact import results
+    from girlframe.engine.m3_handler_consequences import active_handler
+    from girlframe.services.inbox import InboxService
+    from girlframe.services.m3_battle import BattleService
+    from girlframe.services.m3_gorgon_contact import CONSENT, FINAL, REVIEW
+    from girlframe.services.m3_gorgon_contact_disclosure import KIND, FrameContactDisclosureService
+    from girlframe.services.m3_gorgon_frame_contact import (
+        FRAME_CONSEQUENCE,
+        FRAME_DAMAGE,
+        FRAME_ROLL,
+        FRAME_VOID,
+    )
+    from girlframe.services.m3_void import VoidService
+    from girlframe.services.onboarding import WorkflowError
+
+    game, worker, gateway, _, original = gorgon_source(
+        ledger,
+        kind="intimate_frame_contact",
+        begin=False,
+        exposed=level == "interrupt",
+    )
+    gateway = PrivateGateway()
+    game.dice = Dice(sides)
+    with ledger.transaction() as c:
+        canon = state(game)
+        original_assets = canon.sheets[str(PLAYER.user_id)].assets
+        frame_assets = [x for x in original_assets if x.family == "frame"]
+        frame = frame_assets[0]
+        reserved = frame_assets[-1] if threshold else None
+        already_void = tuple(frame_assets[:-1]) if threshold else (frame,)
+        girl_only = next(x for x in original_assets if x.family == "girl")
+        for asset in (*already_void, girl_only):
+            asset.void = True
+            asset.description = "An earlier fictional alteration."
+        game.event(c, ADMIN.user_id, "synthetic-frame-contact-void", "synthetic.void", canon)
+    service = GorgonPlayService(game)
+    before = state(game)
+    view = service.preview(ADMIN, 900)
+    assert (
+        original.target.token
+        in view["typed_targets"][original.actor.token]["intimate_frame_contact"]
+    )
+    updated = next(x for x in view["actors"] if x["token"] == original.target.token)
+    declared = original.model_copy(update=dict(target_sha256=updated["source_sha256"]))
+    action = service.begin(ADMIN, "frame-contact", 900, before.revision, declared)["action_id"]
+    tick(worker, gateway, 5)
+    if not any(x["kind"] == CONSENT for x in game.choices(PLAYER)):
+        game.roll(ADMIN, "advance-frame-contact", action)
+    answer(game, PLAYER, CONSENT, flag=True)
+    answer(game, ADMIN, REVIEW, flag=True, text="The original adult actors are in verified reach.")
+    answer(game, PLAYER, FINAL, flag=True)
+    roll = next(x for x in game.choices(ADMIN) if x["kind"] == FRAME_ROLL)
+    assert game.dice.calls == 0
+    rolled = game.respond(
+        ADMIN, "frame-contact-roll", roll["id"], roll["revision"], ChoiceAnswer(flag=True)
+    )
+    assert (
+        game.respond(
+            ADMIN, "frame-contact-roll", roll["id"], roll["revision"], ChoiceAnswer(flag=True)
+        )
+        == rolled
+    )
+    assert game.dice.calls == 1
+    ledger.engine.dispose()
+    if level not in ("high", "interrupt"):
+        item = next(x for x in game.choices(PLAYER) if x["kind"] == FRAME_DAMAGE)
+        detail = game.decision(PLAYER, item["id"])["detail"]
+        assert detail["faces"] == sides
+        assert detail["bonus"] == len(already_void)
+        assert detail["tier"] == ("high" if level == "interrupt" else level)
+        with pytest.raises(WorkflowError, match="intact Asset"):
+            answer(game, PLAYER, FRAME_DAMAGE, options=("another-original-asset",))
+        if level == "mid":
+            void = reserved.id if reserved else next(iter(detail["void_assets"]))
+            answer(
+                game,
+                PLAYER,
+                FRAME_DAMAGE,
+                options=(frame.id,),
+                flag=False,
+                fields=dict(void_asset=void, void_description="Shadows gather in its surface."),
+            )
+        else:
+            answer(game, PLAYER, FRAME_DAMAGE, options=(frame.id,))
+        after_damage = state(game)
+        assert next(x for x in after_damage.sheets["2"].assets if x.id == frame.id).damaged
+        opened = next(
+            x for x in after_damage.world.gorgons if x.id == original.actor.entity
+        ).exposed
+        assert opened == (level == "low")
+        (record,) = results(after_damage)
+        assert record.damaged_asset == frame.id
+        assert record.roll.void_assets == tuple(x.id for x in already_void)
+        if level == "mid":
+            assert record.void_asset == void and record.punishment_if_discovered
+            assert next(x for x in after_damage.sheets["2"].assets if x.id == void).void
+            assert not after_damage.role_punishments
+        if threshold:
+            assert game.inspect(ADMIN, action)["state"] == "awaiting_choices"
+            svc = VoidService(ledger)
+            work = record.void_work
+            assert work and svc.get(PLAYER, work)["stage"] == "resist_pending"
+            original_sheet = state(game).sheets["2"]
+            game.dice.faces = (1, 1)
+            counter = game.begin(
+                PLAYER,
+                "resist-contact-threshold",
+                900,
+                original_sheet.revision,
+                PlayInput(
+                    play="keep_your_head",
+                    source_work=work,
+                    heat=0,
+                    parent=action,
+                    context="The original Girl resists the actual Frame threshold.",
+                    trigger_confirmed=True,
+                ),
+            )["action_id"]
+            tick(worker, gateway, 4)
+            assert not game.choices(OTHER)
+            with pytest.raises(WorkflowError, match="not visible"):
+                game.inspect(OTHER, counter)
+            for participant in (PLAYER, ADMIN):
+                answer(game, participant, "tag_window", options=("pass",))
+            answer(game, PLAYER, "actor_keep", options=("in_control",))
+            answer(game, ADMIN, "handler_keep", flag=True, text="The actual resistance held.")
+            tick(worker, gateway, 5)
+            assert game.inspect(PLAYER, counter)["state"] == "complete"
+            assert svc.get(PLAYER, work)["stage"] == "prevented"
+            assert {recipient for recipient, _ in gateway.private} == {
+                ADMIN.user_id,
+                PLAYER.user_id,
+            }
+        assert game.inspect(ADMIN, action)["state"] == "complete"
+    else:
+        pending = next(x for x in game.choices(ADMIN) if x["kind"] == FRAME_CONSEQUENCE)
+        detail = game.decision(ADMIN, pending["id"])["detail"]
+        assert detail["faces"] == sides
+        assert detail["bonus"] == len(already_void)
+        assert detail["tier"] == ("high" if level == "interrupt" else level)
+        with pytest.raises(WorkflowError, match="verified immediate outcome"):
+            answer(game, ADMIN, FRAME_CONSEQUENCE, flag=True)
+        assert game.inspect(ADMIN, action)["state"] == "awaiting_choices"
+        assert state(game).sheets == before.sheets
+        if level == "interrupt":
+            monkeypatch.setattr(shared, "M3_HEAT_IDS", (*shared.M3_HEAT_IDS, "go_for_the_core"))
+            answer(
+                game,
+                ADMIN,
+                FRAME_CONSEQUENCE,
+                options=("intervene",),
+                text="The original Girl can make one immediate strike before the outcome.",
+            )
+            battle = BattleService(ledger)
+            choices = battle.preview(PLAYER, 900)
+            actor = next(x for x in choices["actors"] if x["owned"] and x["ref"]["kind"] == "pilot")
+            gorgon = next(
+                x for x in choices["actors"] if x["ref"]["entity"] == original.actor.entity
+            )
+            battle_request = BattleDeclaration(
+                play="go_for_the_core",
+                actor=original.target,
+                target=original.actor,
+                attacking_asset=actor["assets"][0]["id"],
+                actor_sha256=actor["sha256"],
+                target_sha256=gorgon["sha256"],
+                account="The original Girl strikes the actual exposed Gorgon Core.",
+            )
+            context = battle.propose(
+                PLAYER,
+                "offer-intervention",
+                choices["revision"],
+                900,
+                battle_request,
+                parent=action,
+            )["id"]
+            battle.confirm(
+                ADMIN,
+                "review-intervention",
+                state(game).revision,
+                context,
+                opening=True,
+                reach=True,
+                outside_permission=False,
+                indirect=False,
+                evidence="An actual exposed source Core within reach.",
+            )
+            game.dice.faces = (6, 6)
+            strike = game.begin(
+                PLAYER,
+                "actual-intervention",
+                900,
+                state(game).sheets["2"].revision,
+                PlayInput(
+                    play="go_for_the_core",
+                    heat=0,
+                    piloting=True,
+                    parent=action,
+                    target_actor=original.actor,
+                    attacking_asset=battle_request.attacking_asset,
+                    battle_context=context,
+                    context=battle_request.account,
+                    trigger_confirmed=True,
+                ),
+            )["action_id"]
+            tick(worker, gateway, 5)
+            for participant in (PLAYER, ADMIN):
+                answer(game, participant, "tag_window", options=("pass",))
+            assert not game.choices(OTHER)
+            tick(worker, gateway, 5)
+            assert game.inspect(PLAYER, strike)["state"] == "complete"
+            assert game.inspect(ADMIN, action)["state"] == "complete"
+            assert game.inspect(ADMIN, action)["result"]["contact"] == "interrupted"
+            after = state(game)
+            assert not next(x for x in after.world.gorgons if x.id == original.actor.entity).alive
+            assert after.sheets["2"].assets == before.sheets["2"].assets and not after.harpy_states
+            assert not after.void_thresholds and game.dice.calls == 2
+            assert {recipient for recipient, _ in gateway.private} == {
+                ADMIN.user_id,
+                PLAYER.user_id,
+            }
+            return
+        answer(
+            game,
+            ADMIN,
+            FRAME_CONSEQUENCE,
+            flag=True,
+            text="Both original actors survived the actual immediate aftermath.",
+        )
+        held = next(x for x in game.choices(PLAYER) if x["kind"] == FRAME_VOID)
+        work = game.decision(PLAYER, held["id"])["detail"]["work"]
+        svc = VoidService(ledger)
+        saved = svc.get(PLAYER, work)
+        assert saved["stage"] == "rebirth" and not saved["threshold"]["answers"]
+        with pytest.raises(WorkflowError, match="private Void"):
+            svc.get(OTHER, work)
+        choice = saved["rebirth_choice"] | dict(
+            new_identities=["Streetlights"],
+            account="The original Girl authors her changed self.",
+        )
+        respond_void(svc, work, "save_rebirth", dict(choice=choice, account=choice["account"]))
+        ledger.engine.dispose()
+        assert svc.get(PLAYER, work)["rebirth_choice"] == choice
+        start = svc.get(PLAYER, work)
+        response = respond_void(
+            svc,
+            work,
+            "rebirth",
+            dict(choice=choice, account=choice["account"]),
+            key="contact-rebirth",
+            view=start,
+        )
+        assert (
+            respond_void(
+                svc,
+                work,
+                "rebirth",
+                dict(choice=choice, account=choice["account"]),
+                key="contact-rebirth",
+                view=start,
+            )
+            == response
+        )
+        canon = state(game)
+        assert original.target.entity not in canon.sheets
+        (harpy,) = canon.harpy_states
+        assert harpy.origin == original.target
+        assert {x.id for x in harpy.assets} == {x.id for x in before.sheets["2"].assets}
+        assert any(x.name == "Streetlights" for x in harpy.identities)
+        assert game.inspect(ADMIN, action)["state"] == "complete"
+    assert state(game).sheets["3"] == before.sheets["3"]
+    assert not game.choices(OTHER)
+
+    if level == "mid" and not threshold:
+        tick(worker, gateway, 5)
+        inbox = InboxService(ledger)
+        report = FrameContactDisclosureService(game)
+        assert not any(x.task == "m3_gorgon_contact_report" for x in inbox.items(PLAYER))
+        cast = CastService(ActorService(MissionService(ledger)))
+        handler_role = active_handler(state(game))
+        change(cast, ADMIN, "join", handler_role)
+        offered = next(x for x in inbox.items(PLAYER) if x.task == "m3_gorgon_contact_report")
+        assert offered.identity == action
+        assert not any(x.task == offered.task for x in inbox.items(OTHER))
+        assert not any(x.task == offered.task for x in inbox.items(ADMIN))
+        ready = report.menu(PLAYER, action)
+        scene = ready["scenes"][0][0]
+        with pytest.raises(WorkflowError, match="original private report"):
+            report.report(OTHER, "not-my-disclosure", action, ready["revision"], scene)
+        with pytest.raises(WorkflowError, match="STALE_REPORT"):
+            report.report(PLAYER, "stale-report", action, ready["revision"] - 1, scene)
+        assert not [x for x in state(game).obligations if x.details.get("cause") == KIND]
+
+        async def disclose():
+            handoff = current(PLAYER.user_id, 87500)
+            await handoff.response.defer(ephemeral=True)
+            await open_report(handoff, report, action)
+            form = handoff.edit_original_response.call_args.kwargs["view"]
+            form.values.update(scene=(scene,))
+            await form.confirm.callback(current(PLAYER.user_id, 87501))
+            assert form.completed
+
+        asyncio.run(disclose())
+        delivered = report.report(PLAYER, "87501", action, ready["revision"], scene)
+        (punishment,) = [x for x in state(game).obligations if x.details.get("cause") == KIND]
+        assert punishment.target == ADMIN.user_id and punishment.owner == PLAYER.user_id
+        assert (
+            punishment.action == action and punishment.details["disclosure"] == delivered["event"]
+        )
+        (known,) = [x for x in state(game).facts if x.get("kind") == KIND]
+        assert known["recipient"] == handler_role.model_dump_json()
+        assert not any(x.task == offered.task for x in inbox.items(PLAYER))

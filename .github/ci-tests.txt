@@ -141,6 +141,7 @@ tests/rules/test_gorgon_tags.py
 tests/rules/test_gorgon_runtime.py::test_parasite_rides_actual_npc_until_owned_detachment
 tests/rules/test_gorgon_runtime.py::test_jackdaw_hallucinations_has_owned_heat_roll_and_printed_consequence
 tests/rules/test_gorgon_runtime.py::test_private_gorgon_contact_can_be_withdrawn_before_the_original_career_ends
+tests/rules/test_gorgon_runtime.py::test_in_frame_gorgon_roll_uses_actual_void_frame_assets
 tests/rules/test_handler_retirement.py
 tests/rules/test_void_privacy.py
 tests/rules/test_void_leave.py

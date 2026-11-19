@@ -2039,6 +2039,40 @@ finished with **3,813 passes and one failure**. The longest shard ran
 shared native catalog fix. Its focused rerun passed on newer code.
 Logs are under `var/rulebook-full-953a275/`.
 
+### Private in-Frame Gorgon Play
+
+Base `c8aa0bd7bfe2d9e6ce7c49edce95b0080eaaeab0`. The original
+Girl consents and confirms before the original Gorgon rolls. The
+engine adds the count of actual Void-corrupted Assets in her
+occupied Frame and saves the exact modifier sources. On low, the
+original Girl chooses an actual Asset to damage and the Gorgon's
+Core is exposed. On mid, she also gains ordinary Void and can
+choose whether to expose the Core. A resulting threshold stays in
+the same private audience and blocks completion until its original
+consequence is applied.
+
+The human GM can verify the high result's immediate survival and
+open the Girl's actual owned rebirth, or offer her one genuine
+immediate combat Play. The test's actual Core strike kills the
+original Gorgon and prevents rebirth. Rebirth preserves the
+owner's rewritten resources and source, with no invented answers
+to the separate Apometanoia questions. The original Girl can
+voluntarily report the mid result in an actual scene with the
+fictional Handler. The report creates one source-bound Punishment
+obligation when the Handler hears it. Human GM access alone
+does not trigger Punishment.
+
+**Seven focused cases passed in 36.61 seconds** across both
+contact Plays. The in-Frame cases exercise all tiers, an actual
+held Frame threshold, its private Keep Your Head, the distinct
+spoken disclosure, a confirmed rebirth and an immediate fatal
+interruption. They include owned native forms, retry and restart.
+The durable record retains the original role and event. Simulated
+delivery exposed only generic scene-lock controls to the scene.
+Alternate Handler discovery and third-party interruption routes
+remain open.
+[Rulebook p. 161](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=163) · [Native tests](../../tests/rules/test_gorgon_runtime.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

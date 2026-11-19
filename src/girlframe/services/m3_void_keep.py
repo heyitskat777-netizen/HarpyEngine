@@ -143,6 +143,14 @@ def prepare_keep(
         raise WorkflowError("The original Girl and actual Handler must join this bound scene.")
     if prepared.parent:
         parent = game.action(c, prepared.parent)
+        if body.get("reason") == "gorgon_frame_contact_consequence":
+            from girlframe.services.m3_gorgon_play import GorgonPlayService
+
+            original = GorgonPlayService(game).source(c, parent)
+            audience = original.get("private_audience", ())
+            if not {viewer.user_id, updated.handler} <= set(audience):
+                raise WorkflowError("Recover the actual private audience for this resistance")
+            meta["private_audience"] = audience
         if parent["channel_id"] != str(channel) or not any(
             x["kind"]
             in (
@@ -155,6 +163,7 @@ def prepare_keep(
                 "mockingbird_sex_void_threshold",
                 "janus_void_threshold",
                 "gorgon_hallucinations_void",
+                "gorgon_contact_frame_void",
             )
             and x["actor_id"] == actor.entity
             and json.loads(x["body_json"]).get("work_id") == row["id"]
@@ -196,6 +205,15 @@ def authorize_keep(
         )
     ):
         raise WorkflowError("Recover the exact pending source of this resistance.")
+    if body.get("reason") == "gorgon_frame_contact_consequence":
+        from girlframe.services.m3_gorgon_play import GorgonPlayService
+
+        parent = game.action(c, body["source_action"])
+        official = GorgonPlayService(game).source(c, parent).get("private_audience")
+        if not official or any(
+            action["data"].get(key) != official for key in ("private_audience", "participants")
+        ):
+            raise WorkflowError("Recover the original contact's private resistance audience")
     if blocked_play(state.sheets[action["actor_id"]], "keep_your_head") is not None:
         raise WorkflowError("The actual original Girl no longer has this optional rolled ability.")
 

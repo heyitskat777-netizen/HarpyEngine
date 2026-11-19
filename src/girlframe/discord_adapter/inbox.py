@@ -775,6 +775,18 @@ class InboxView(discord.ui.View):
                 CasualtyReplacementService(GameService(self.service.store)),
                 item.identity,
             )
+        elif item.task == "m3_gorgon_contact_report":
+            from girlframe.discord_adapter.m3_gorgon_contact_disclosure import open_report
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_gorgon_contact_disclosure import (
+                FrameContactDisclosureService,
+            )
+
+            await open_report(
+                interaction,
+                FrameContactDisclosureService(GameService(self.service.store)),
+                item.identity,
+            )
         elif item.task == "m3_harpy_bond_void":
             from girlframe.discord_adapter.m3_harpy_bond_void import open_temptation
             from girlframe.services.m2_game import GameService

@@ -9,6 +9,7 @@ from pydantic import ValidationError
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
+from girlframe.engine import m3_gorgon_frame_contact as frame_contact
 from girlframe.engine import m3_growth as growth
 from girlframe.engine import m3_hallucinations as hallucinations
 from girlframe.engine import m3_jackdaw as jackdaw
@@ -29,6 +30,7 @@ from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_gorgon_contact import PLAY as contact_play
+from girlframe.services.m3_gorgon_contact import PLAYS as contact_plays
 from girlframe.services.m3_gorgon_contact import RULE as contact_rule
 from girlframe.services.m3_gorgon_contact import eligible as contact_eligible
 from girlframe.services.m3_medical import MedicalService
@@ -38,6 +40,7 @@ from girlframe.services.read_only_bot import GuildViewer
 RULES: dict[str, str] = {
     "attack": "gorgon.gorgon.attack",
     contact_play: contact_rule,
+    frame_contact.PLAY: frame_contact.RULE,
     "collateral": "gorgon.gorgon.collateral-damage",
     "warp": "gorgon.gorgon.warp",
     "corrupt": corrupt_rule,
@@ -200,6 +203,11 @@ class GorgonPlayService:
                         for girl in visible.values()
                         if contact_eligible(state, caster, girl)
                     ]
+                    options[frame_contact.PLAY] = [
+                        girl.ref.token
+                        for girl in visible.values()
+                        if contact_eligible(state, caster, girl, in_frame=True)
+                    ]
                     typed_targets[token] = {
                         kind: targets for kind, targets in options.items() if targets
                     }
@@ -210,7 +218,7 @@ class GorgonPlayService:
                 if kind == "corrupt" and not can_corrupt:
                     continue
                 if (
-                    kind in TAG_TYPES or kind in hallucinations.PLAYS or kind == contact_play
+                    kind in TAG_TYPES or kind in hallucinations.PLAYS or kind in contact_plays
                 ) and not any(kind in x for x in typed_targets.values()):
                     continue
                 if kind in parasite.PLAYS and not any(kind in x for x in parasite_choices.values()):
@@ -352,8 +360,10 @@ class GorgonPlayService:
                         raise WorkflowError(
                             "Use the next fictional day with the original Girl still in range"
                         )
-                if declaration.kind == contact_play and not contact_eligible(state, actual, target):
-                    raise WorkflowError("Use the original free present Girl outside her Frame")
+                if declaration.kind in contact_plays and not contact_eligible(
+                    state, actual, target, in_frame=declaration.kind == frame_contact.PLAY
+                ):
+                    raise WorkflowError("Use the free original Girl in the actual cockpit context")
                 if declaration.kind == "parasite_hitch" and (
                     not _visible(state, target.ref, viewer.user_id)
                     or not parasite.present(state, actual, target)
@@ -491,7 +501,7 @@ class GorgonPlayService:
                     cast_sha256=meta["cast_sha256"],
                 ),
             )
-            if declaration.kind == contact_play and target_view is not None:
+            if declaration.kind in contact_plays and target_view is not None:
                 audience = sorted({viewer.user_id, target_view.controller, gm})
                 meta["private_audience"] = data["private_audience"] = audience
             state.facts.append(
@@ -892,7 +902,7 @@ def prepare_response(
     parent = game.action(c, prepared.parent)
     source = parent["data"].get("gorgon_play")
     if not source or (
-        source["kind"] in hallucinations.PLAYS
+        source["kind"] in (*hallucinations.PLAYS, frame_contact.PLAY)
         and prepared.play == "keep_your_head"
         and prepared.source_work is not None
     ):
@@ -909,12 +919,21 @@ def prepare_response(
     if int(parent["channel_id"]) != channel:
         raise WorkflowError("Respond in this Gorgon Play's actual original scene")
     cast = _cast(game, c, state, channel)
+    if source.get("frame_intervention") and prepared.play not in (
+        "engage",
+        "all_out_assault",
+        "go_for_the_core",
+    ):
+        raise WorkflowError("The immediate intervention needs its actual combat Play")
     return dict(
         choice=row["id"],
         actor=actor.model_dump(mode="json"),
         attacker=parent["data"]["gorgon_play"]["actor"],
         cast=cast.model_dump(mode="json"),
         cast_sha256=fingerprint(cast),
+        private_audience=source.get("private_audience")
+        if source.get("frame_intervention")
+        else None,
         table=sorted(
             {role.controller for role in cast.roles}
             | ({cast.facilitator} if cast.facilitator else set())

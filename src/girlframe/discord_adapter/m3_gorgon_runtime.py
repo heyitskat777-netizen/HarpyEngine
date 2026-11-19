@@ -255,7 +255,14 @@ async def open_hallucinations(
 async def open_contact(
     interaction: discord.Interaction, game: GameService, data: dict[str, Any]
 ) -> None:
-    kind = data["detail"]["kind"]
+    detail = data["detail"]
+    kind = detail["kind"]
+    if kind == "contact_frame_void":
+        from girlframe.discord_adapter.m3_void import open_void
+        from girlframe.services.m3_void import VoidService
+
+        await open_void(interaction, VoidService(game.store), detail["work"])
+        return
     prompts = {
         "contact_consent": "The printed out-of-Frame effect ends the Girl's original career. "
         "Choose whether to allow the private scene to proceed. You make a final choice later.",
@@ -264,20 +271,71 @@ async def open_contact(
         "contact_final": "Confirm the described scene and its printed outcome. "
         "Confirming exposes the Core and ends your original Girl's career. You may withdraw.",
     }
+    if detail["in_frame"]:
+        prompts.update(
+            contact_consent="Choose whether to allow the original in-Frame contact. "
+            "You confirm before its rule roll.",
+            contact_final="Confirm the private contact before the Gorgon rolls, or withdraw.",
+        )
+    prompts["contact_frame_roll"] = "Roll against the actual original occupied Frame."
     fields = [Field("choice", "Your decision", (("yes", "Confirm"), ("no", "Decline")))]
+    if kind in ("contact_frame_damage", "contact_frame_consequence"):
+        dice = " + ".join(str(x) for x in detail["faces"])
+        line = f"Saved roll {dice} + {detail['bonus']} Void-corrupted Frame Assets."
+        if kind == "contact_frame_consequence":
+            prompts[kind] = line + " Confirm the original actors survived the immediate aftermath."
+            choices: tuple[tuple[str, str], ...] = (("yes", "Confirm both survived"),)
+            if detail["can_intervene"]:
+                choices += (("intervene", "Offer one immediate combat Play"),)
+            fields = [
+                Field("choice", "Resolve the immediate aftermath", choices),
+                Field("account", "Record the actual immediate situation", paragraph=True),
+            ]
+        else:
+            prompts[kind] = line + " Choose your original intact Asset for the damage."
+            fields = [Field("asset", "Your actual Asset", tuple(detail["assets"].items()))]
+        if detail["tier"] == "mid":
+            if not detail["void_assets"]:
+                await reply(interaction, "This saved result needs private Void review.")
+                return
+            fields.extend(
+                (
+                    Field(
+                        "void_asset",
+                        "Your actual uncorrupted Asset",
+                        tuple(detail["void_assets"].items()),
+                    ),
+                    Field("void_description", "What changes about the Asset?", paragraph=True),
+                    Field(
+                        "choice", "Expose the Core?", (("yes", "Expose"), ("no", "Leave covered"))
+                    ),
+                )
+            )
     if kind == "contact_review":
         fields.append(Field("account", "State the verified context", paragraph=True))
     if kind == "contact_conclusion":
         fields.append(Field("account", "Your optional Tag", required=False))
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        selection = (values.get("choice") or (None,))[0]
         await asyncio.to_thread(
             game.respond,
             viewer_from_interaction(current),
             str(current.id),
             data["id"],
             data["revision"],
-            ChoiceAnswer(flag=values["choice"][0] == "yes", text=values.get("account", "")),
+            ChoiceAnswer(
+                flag=selection == "yes" if selection in ("yes", "no") else None,
+                options=("intervene",)
+                if selection == "intervene"
+                else tuple(values.get("asset", ())),
+                text=values.get("account", ""),
+                fields=dict(
+                    void_asset=values["void_asset"][0], void_description=values["void_description"]
+                )
+                if values.get("void_asset")
+                else {},
+            ),
         )
         return "Your private choice is saved. Recover any remaining step in your Inbox."
 

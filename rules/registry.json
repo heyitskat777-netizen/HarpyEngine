@@ -21404,14 +21404,50 @@
         "heading": "Gorgons Fucking Frames"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Actual in-Frame contact verified after private consent by the original physically present Girl and original Gorgon.",
+        "actor_type": "Original Gorgon, original Girl and human GM",
+        "pre_roll_sources": [
+          "The original owned physical cockpit and original sealed consent",
+          "Final confirmation by the original Girl before the Gorgon rolls"
+        ],
+        "roll_kind": "2d6",
+        "allowed_modifiers": [
+          "Count actual Void-corrupted Assets in the occupied original Frame, including effective stored Void"
+        ],
+        "tier_options": {
+          "low": [
+            "Damage an actual original Asset and expose the Gorgon's Core"
+          ],
+          "mid": [
+            "Apply ordinary Void and actual Asset damage, allow the Girl to expose the Core, and demand Punishment if the Handler learns through an actual disclosure"
+          ],
+          "high": [
+            "Open rebirth for the original Girl when both survive the immediate aftermath, or allow her one genuine immediate combat intervention"
+          ]
+        },
+        "choice_ownership": "The original Girl owns consent, damage and its Void/rebirth resource choices. The Gorgon owns the roll. The human GM verifies the trigger and aftermath.",
+        "target_policy": "Original eligible Pilot in her actual matching Frame, including only actual compatible simultaneous physical reach.",
+        "post_roll_effects": [
+          "Save the actual roll and exact modifier Assets",
+          "Keep actual Damage, original Void consequences, and any required rebirth in the private source and apply once"
+        ],
+        "mandatory_followups": [
+          "Resolve an actual pending Void threshold, immediate intervention or rebirth",
+          "Require a Punishment after the original Girl's private report is actually heard by the fictional Handler"
+        ],
+        "handler_or_gm_intervention": "The human GM may verify survival or offer the original Girl one actual combat Play. Other sources of immediate interruption and Handler discovery remain separate.",
+        "test_fixture_ids": [
+          "tests/rules/test_gorgon_runtime.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_gorgon_runtime.py::test_in_frame_gorgon_roll_uses_actual_void_frame_assets"],
       "m2_play_id": null,
       "module": "core"
     },

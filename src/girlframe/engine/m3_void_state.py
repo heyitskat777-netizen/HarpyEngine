@@ -190,6 +190,10 @@ class VoidThreshold(Model):
     allure_persists: bool = False
     protection_release_event: str | None = None
 
+    forced_by: Literal["gorgon_frame_contact"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+
     @model_validator(mode="after")
     def actual_sequence(self) -> "VoidThreshold":
         if self.actor.kind != "pilot" or len(set(self.source_works)) != len(self.source_works):
@@ -198,8 +202,18 @@ class VoidThreshold(Model):
             raise ValueError("The table asks the five actual questions in order")
         if any(x.owner != int(self.actor.entity) for x in self.answers):
             raise ValueError("Only the original Girl's human answers her actual questions")
-        if self.stage == "rebirth" and (
-            len(self.answers) != 5 or any(x.answer for x in self.answers)
+        if self.forced_by is not None and (
+            self.family != "frame"
+            or not self.source_action
+            or len(self.source_works) != 1
+            or self.answers
+            or self.stage not in ("rebirth", "converted")
+        ):
+            raise ValueError("Preserve the exact exceptional source of forced rebirth")
+        if (
+            self.stage == "rebirth"
+            and self.forced_by is None
+            and (len(self.answers) != 5 or any(x.answer for x in self.answers))
         ):
             raise ValueError("Actual rebirth requires five honest owned no answers")
         return self
