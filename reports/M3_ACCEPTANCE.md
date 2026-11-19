@@ -6382,3 +6382,14 @@ between two labels for the same Frame. The corrected fixture explicitly swaps
 to a different printed Frame so it tests replacing both managed roles.
 The fix changes only the test. The exact Activity overlay at `0d9a44c` passed
 13 simulated tests and both offline Chromium flows.
+
+## Rulebook audit continuation
+
+The development branch started this continuation at `292f684`. Its
+[source-linked work order](../docs/work_orders/RULEBOOK_AUDIT_DEVELOPMENT.md)
+records each implemented slice and the focused checks. The isolated full
+regression on `a90a081a5b6bbe7306045175464d1269f9661484` reported 3,661
+passes and three failures. The failed expectations were two stale Stim
+NPC tests and a stale historical registry hash assertion. The corrected
+cases passed their selected tests on newer code. The checkout under
+full regression did not contain those corrections.

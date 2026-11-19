@@ -846,3 +846,21 @@ pending. The printed general rule reserves infliction for the Handler and
 the Strain result leaves the Handler's hands tied. No Punishment, roster
 change or Off-Duty closure is applied on referral.
 [High Budget p. 149](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=151) · [Severe Punishment p. 16](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=18) · [Hearing tests](../../tests/rules/test_budget_hearing.py)
+
+## Historical full regression and JANUS approval fixture
+
+The detached `a90a081a5b6bbe7306045175464d1269f9661484` run of
+`python -m pytest -q` reported 3 failures and 3,661 passes in 6,478.44
+seconds. Two failed tests had obsolete Stim NPC Orders expectations and
+were corrected separately. The third expected the development registry
+to retain the historical name-only checksum after actual rules additions.
+The revised fixture verifies the current registry's own digest, hashes a
+substantive change separately and tests the exact old exception.
+
+All 14 selected name and registry tests passed. Loading the actual
+`0507117` registry in a separate local check produced its original
+approved checksum. Changing a title in that historical registry produced
+a different unapproved checksum. Runtime approval behavior is unchanged.
+The historical full-suite result does not cover any newer development
+revision.
+[Name and approval regression](../../tests/test_printed_frame_names.py)

@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+from types import SimpleNamespace
 
 import sqlalchemy as sa
 from test_creation_review import ready
@@ -12,6 +13,7 @@ from test_m2_game import setup_game, state
 from girlframe.database import tables as t
 from girlframe.engine.drafts import DraftInput
 from girlframe.engine.playbooks import FRAME_TYPES
+from girlframe.services import m3_access
 from girlframe.services.creation_review import CreationReviewService
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_access import digest, load_registry
@@ -77,9 +79,25 @@ def test_existing_live_sheet_reopens_with_same_identity_and_resources(ledger):
     assert ledger.draft(PLAYER)["frame_playbook"] == "JANUS"
 
 
-def test_registry_approval_survives_only_the_exact_name_only_edit():
+def test_current_registry_and_substantive_edits_have_their_own_digest():
     registry = load_registry()
-    assert digest(registry) == "73c4e0c1f3a350fa715fc17d082e40f82f1de05cd520804dae260f542a2f9941"
+    raw = hashlib.sha256(json.dumps(registry.model_dump(mode="json"), sort_keys=True).encode())
+    assert digest(registry) == raw.hexdigest()
     first, *rest = registry.entries
     changed = first.model_copy(update={"title": "A different rule title"})
     assert digest(registry.model_copy(update={"entries": (changed, *rest)})) != digest(registry)
+
+
+def test_registry_approval_alias_requires_the_exact_historical_digest(monkeypatch):
+    registry = load_registry()
+    exact_name_edit = "a8d61d0c8a3169e4bf047ccd4681171bc7997262b04ff0b90df9bbb646922350"
+    previous_approval = "73c4e0c1f3a350fa715fc17d082e40f82f1de05cd520804dae260f542a2f9941"
+    similar_unapproved = exact_name_edit[:-1] + "1"
+    values = iter((exact_name_edit, similar_unapproved))
+    monkeypatch.setattr(
+        m3_access,
+        "hashlib",
+        SimpleNamespace(sha256=lambda _: SimpleNamespace(hexdigest=values.__next__)),
+    )
+    assert digest(registry) == previous_approval
+    assert digest(registry) == similar_unapproved
