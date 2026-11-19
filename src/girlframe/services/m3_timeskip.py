@@ -13,6 +13,8 @@ from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_battle import category, end_actor_casts
 from girlframe.engine.m3_battle_director import die as end_director
+from girlframe.engine.m3_captured import active as active_capture
+from girlframe.engine.m3_captured import records as captures
 from girlframe.engine.m3_careers import binding
 from girlframe.engine.m3_collateral import install_budget, stage_loss
 from girlframe.engine.m3_enforcer import end_grasps
@@ -23,15 +25,17 @@ from girlframe.engine.m3_physical import interrupt_journeys
 from girlframe.engine.m3_vatgrown_death import RULE as VATGROWN_DEATH_RULE
 from girlframe.engine.m3_world_state import (
     NPC_JOBS,
+    AdversaryPilot,
     Asset,
     Cell,
     CorePlan,
+    Faction,
     Gorgon,
     GorgonType,
     Location,
     Npc,
 )
-from girlframe.engine.playbooks import GIRL_TYPES
+from girlframe.engine.playbooks import GIRL_TYPES, canonical_frame
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
@@ -67,6 +71,18 @@ class Arrival(Model):
     weakness: str
 
 
+class RebelSuccessor(Model):
+    fallen: str
+    name: str
+    cell: Cell
+    handler: str
+    girl: str
+    frame: str
+    body_asset: str
+    frame_asset: str
+    account: str
+
+
 class Timeskip(Model):
     id: str
     gm: int
@@ -85,6 +101,7 @@ class Timeskip(Model):
         "base_foundation",
         "base_contacts",
         "rebel_succession",
+        "identities",
         "declined",
     ]
     city_ruin: str | None = None
@@ -99,6 +116,10 @@ class Timeskip(Model):
     death_archive: str | None = None
     new_base: str | None = None
     base_contacts: dict[str, str] = {}
+    fallen_group: str | None = None
+    new_group: str | None = None
+    new_rebel_handler: str | None = None
+    new_rebel_girl: str | None = None
 
 
 def records(state: GameState) -> tuple[Timeskip, ...]:
@@ -363,6 +384,10 @@ class TimeskipService:
                 data["nominee"] = self._nominees(c, state, case).get(case.death)
             if step == "replacement":
                 data["can_continue"] = self._replacement_ready(state, case)
+            if step == "rebel_succession":
+                data["groups"] = {
+                    x.id: x.name for x in state.world.factions if x.kind == "rebel" and x.active
+                }
             if step == "create_contact":
                 site = next((x for x in state.world.locations if x.id == case.new_base), None)
                 if site is None or not site.foundation_operational:
@@ -865,5 +890,123 @@ class TimeskipService:
                 detail=detail,
                 acquaintance=acquaintance,
             ),
+            operation,
+        )
+
+    def replace_rebels(
+        self, viewer: GuildViewer, key: str, identity: str, revision: int, draft: RebelSuccessor
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            _ordinary_scene_idle(c, self.game)
+            state = load_state(c, self.store.campaign_id)
+            case = self._case(c, state, viewer, identity)
+            world = state.world
+            if (
+                case.step != "rebel_succession"
+                or world is None
+                or viewer.user_id != case.gm
+                or state.revision != revision
+                or not 0 < len(draft.account.strip()) <= 1200
+            ):
+                raise WorkflowError("Reopen the original Timeskip Rebel succession")
+            old = next(
+                (
+                    x
+                    for x in world.factions
+                    if x.id == draft.fallen and x.kind == "rebel" and x.active
+                ),
+                None,
+            )
+            if old is None:
+                raise WorkflowError("Choose one original active Rebel group that fell")
+            if any(
+                x.faction == old.id and active_capture(state, x.girl) for x in captures(state)
+            ) or any(x.alive and x.faction == old.id and x.captive_of for x in world.npcs):
+                raise WorkflowError("Resolve the original group's actual captivity before its fall")
+            cell = draft.cell
+            if (
+                not world.board.contains(cell)
+                or cell in world.territory
+                or any(
+                    x.active and x.kind == "rebel" and x.id != old.id and cell in x.cells
+                    for x in world.factions
+                )
+                or any(x.alive and x.cell == cell for x in world.gorgons)
+                or any(
+                    x.cell == cell and x.operational and x.allegiance == "foundation"
+                    for x in world.locations
+                )
+            ):
+                raise WorkflowError("Establish an actual on-map Rebel refuge free of other control")
+            event = str(uuid4())
+            faction = Faction(
+                id=event,
+                kind="rebel",
+                name=draft.name.strip(),
+                cells=(cell,),
+                leader=event + ":handler",
+                description=draft.account.strip(),
+            )
+            handler = Npc(
+                id=event + ":handler",
+                name=draft.handler.strip(),
+                jobs=("handler",),
+                detail="Handler of " + faction.name,
+                controller=case.gm,
+                cell=cell,
+                faction=event,
+            )
+            pilot = AdversaryPilot(
+                id=event + ":girl",
+                kind="rebel",
+                girl="MOCKINGBIRD",
+                name=draft.girl.strip(),
+                frame=canonical_frame(draft.frame),
+                controller=case.gm,
+                faction=event,
+                cell=cell,
+                assets=(
+                    Asset(
+                        id=event + ":body",
+                        name=draft.body_asset.strip(),
+                        family="girl",
+                        description=draft.body_asset.strip(),
+                    ),
+                    Asset(
+                        id=event + ":frame",
+                        name=draft.frame_asset.strip(),
+                        family="frame",
+                        description=draft.frame_asset.strip(),
+                    ),
+                ),
+            )
+            # Install both records together because the faction's leader must already exist.
+            state.world = world_rules.update(
+                world,
+                factions=tuple(
+                    x.model_copy(update=dict(active=False)) if x.id == old.id else x
+                    for x in world.factions
+                )
+                + (faction,),
+                npcs=world.npcs + (handler,),
+                pilots=world.pilots + (pilot,),
+                npc_recruitment=tuple(x for x in world.npc_recruitment if x.faction != old.id),
+            )
+            case = case.model_copy(
+                update=dict(
+                    step="identities",
+                    fallen_group=old.id,
+                    new_group=faction.id,
+                    new_rebel_handler=handler.id,
+                    new_rebel_girl=pilot.id,
+                )
+            )
+            return self._save(c, state, viewer, key, case, "rebel_succession", event)
+
+        return self._write(
+            viewer,
+            key,
+            dict(id=identity, revision=revision, draft=draft.model_dump(mode="json")),
             operation,
         )

@@ -4157,6 +4157,7 @@ class InboxService:
                             "base_contacts": "Check the original players’ NPC contributions.",
                             "create_contact": "Describe your new NPC at the original base.",
                             "rebel_succession": "Review the change in Rebel groups.",
+                            "identities": "Review the next step of changing the Girls’ Identities.",
                         }[timeskip_step],
                         "Only the original owners can make each decision.",
                         "Open Timeskip",

@@ -11,8 +11,14 @@ from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.m3_punishments import Picker
 from girlframe.discord_adapter.m3_world import TYPES, coordinates
 from girlframe.discord_adapter.onboarding import reply
-from girlframe.engine.playbooks import GIRL_TYPES
-from girlframe.services.m3_timeskip import BASE_JOBS, DURATIONS, Arrival, TimeskipService
+from girlframe.engine.playbooks import FRAME_TYPES, GIRL_TYPES
+from girlframe.services.m3_timeskip import (
+    BASE_JOBS,
+    DURATIONS,
+    Arrival,
+    RebelSuccessor,
+    TimeskipService,
+)
 
 
 async def open_timeskip_start(interaction: discord.Interaction, service: TimeskipService) -> None:
@@ -63,9 +69,10 @@ async def open_timeskip(
         await reply(interaction, "The Timeskip awaits the original players’ NPC contributions.")
         return
     if step == "rebel_succession":
-        await reply(
-            interaction, "The Timeskip awaits the fall and rise of the actual Rebel groups."
-        )
+        await _open_rebels(interaction, service, case, title, data)
+        return
+    if step == "identities":
+        await reply(interaction, "The Timeskip awaits each original Girl’s two Identity changes.")
         return
     if step == "create_contact":
         await _open_contact(interaction, service, case, title, data)
@@ -305,6 +312,61 @@ async def _open_contact(
         interaction.user.id,
         title,
         "Introduce your NPC at " + clean(data["site"]) + ".",
+        fields,
+        confirm,
+    )
+    await reply(interaction, form.text(), form)
+
+
+async def _open_rebels(
+    interaction: discord.Interaction,
+    service: TimeskipService,
+    identity: str,
+    title: str,
+    data: dict[str, Any],
+) -> None:
+    options = tuple(data["groups"].items())
+    if not options:
+        await reply(interaction, "Choose an actual existing Rebel group to establish its fall.")
+        return
+
+    async def confirm(click: discord.Interaction, values: dict[str, Any]) -> str:
+        draft = RebelSuccessor(
+            fallen=values["fallen"][0],
+            name=values["name"],
+            cell=coordinates(values["cell"]),
+            handler=values["handler"],
+            girl=values["girl"],
+            frame=values["frame"][0],
+            body_asset=values["body_asset"],
+            frame_asset=values["frame_asset"],
+            account=values["account"],
+        )
+        await asyncio.to_thread(
+            service.replace_rebels,
+            viewer_from_interaction(click),
+            str(click.id),
+            identity,
+            data["revision"],
+            draft,
+        )
+        return "The original group has fallen. Its successor and their actual roles are recorded."
+
+    fields = [
+        Field("fallen", "Original Rebel group", options),
+        Field("name", "Name of the new group"),
+        Field("cell", "Actual refuge square in x,y form"),
+        Field("handler", "Name of the actual Rebel Handler"),
+        Field("girl", "Name of the actual Rebel Girl"),
+        Field("frame", "The Rebel Girl’s actual Frame", tuple(FRAME_TYPES.items())),
+        Field("body_asset", "One of the Rebel Girl’s actual body Assets"),
+        Field("frame_asset", "One of the new Frame’s actual Assets"),
+        Field("account", "Describe who fell and who rose", paragraph=True),
+    ]
+    form = NativeForm(
+        interaction.user.id,
+        title,
+        "Establish the actual new group, Handler, and Girl.",
         fields,
         confirm,
     )

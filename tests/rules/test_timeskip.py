@@ -20,7 +20,7 @@ from girlframe.engine.bonds import BondProposal
 from girlframe.engine.cadre_history import PriorMission
 from girlframe.engine.drafts import DraftInput
 from girlframe.engine.handler_setup import PilotRef
-from girlframe.engine.m3_world_state import Npc
+from girlframe.engine.m3_world_state import Faction, Npc
 from girlframe.engine.shared_setup import CallsignChoice
 from girlframe.services.bonds import BondService
 from girlframe.services.creation import CreationService
@@ -56,6 +56,12 @@ def test_native_timeskip_agreement_and_ordered_world_changes(ledger):
         quads.board,
         quads.locations,
         quads.gorgons[0],
+    )
+    world.faction(
+        ADMIN,
+        "original-rebels",
+        state(game).revision,
+        Faction(id="old-rebels", kind="rebel", name="Old Rebels", cells=((6, 6),)),
     )
     world.npc(
         ADMIN,
@@ -377,3 +383,32 @@ def test_native_timeskip_agreement_and_ordered_world_changes(ledger):
     assert len(contacts) == 3
     assert all(x.cell == base.cell and x.controller == ADMIN.user_id and x.alive for x in contacts)
     assert not any(x.task == "m3_timeskip" for x in InboxService(ledger).items(PLAYER))
+
+    native(
+        ADMIN,
+        dict(
+            fallen=("old-rebels",),
+            name="New Rebels",
+            cell="6,6",
+            handler="Their actual Handler",
+            girl="Their actual Girl",
+            frame=("JANUS",),
+            body_asset="Marked Scout Uniform",
+            frame_asset="Signal Intercept Array",
+            account="The original group dissolved, and a separate group rose in the refuge.",
+        ),
+        93376,
+    )
+    after = state(game)
+    (new_groups,) = records(after)
+    assert new_groups.step == "identities"
+    assert after.world is not None
+    groups = {x.id: x for x in after.world.factions}
+    assert not groups["old-rebels"].active and groups[new_groups.new_group].active
+    handler = next(x for x in after.world.npcs if x.id == new_groups.new_rebel_handler)
+    rebel = next(x for x in after.world.pilots if x.id == new_groups.new_rebel_girl)
+    assert groups[rebel.faction].leader == handler.id
+    assert handler.jobs == ("handler",) and handler.faction == rebel.faction
+    assert rebel.kind == "rebel" and rebel.frame == "JANUS"
+    assert {x.family for x in rebel.assets} == {"girl", "frame"}
+    assert "Their actual Handler" not in str(world.get(PLAYER))

@@ -3231,3 +3231,19 @@ Timeskip to the actual base and all three NPC contributions.
 Director and captive/prisoner introductions keep their own gates.
 Rebel succession is the next open step.
 [Timeskip p. 197](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=199) · [Native case](../../tests/rules/test_timeskip.py)
+
+### Timeskip’s Rebel succession
+
+Base `ab21b33`. The human GM confirms the fall of an actual active
+Rebel group, preserves its earlier ties, cancels unused recruiting,
+and establishes a distinct group at a valid refuge. The successor
+has a real Rebel Handler in the world roster and an ordinary Rebel
+Girl with her source-owned body, Frame and Assets. The original
+group’s actual active captivity blocks the succession until resolved.
+The GM retains private control of the new people’s introduction.
+
+**One focused case passed in 11.23 seconds**. It verified the
+actual active and inactive factions, distinct official roles, Assets
+and default private scope. Special Rebel books and more complicated
+custody sources remain outside this slice.
+[Timeskip p. 197](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=199) · [Native case](../../tests/rules/test_timeskip.py)
