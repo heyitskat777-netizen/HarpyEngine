@@ -660,6 +660,13 @@ class ChoiceEngine:
             if not self.game.pending(c, action["id"]):
                 self.finish(c, state, action)
             return
+        if kind in ("insurgent_surveillance", "insurgent_reveal_sympathy"):
+            from girlframe.services.m3_insurgent_loyalty import decide as decide_loyalty
+
+            decide_loyalty(self, c, state, action, request, answer)
+            if not self.game.pending(c, action["id"]):
+                self.finish(c, state, action)
+            return
         from girlframe.services.m3_mistress_conditioning import CHOICE as MISTRESS_CONDITIONING
 
         if kind in ("tag_window", MISTRESS_CONDITIONING):
@@ -1038,6 +1045,10 @@ class ChoiceEngine:
                     outcome=level,
                 )
             result["handler_knows"] = answer.flag
+            if answer.flag and result.get("can_disobey"):
+                from girlframe.services.m3_insurgent_loyalty import offer as offer_loyalty
+
+                offer_loyalty(self.game, c, state, action)
             if not result.get("can_disobey"):
                 from girlframe.services.m3_trainer_phrases import offer_speak
 

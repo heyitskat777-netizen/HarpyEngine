@@ -242,6 +242,16 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
         fields = [text("text", "Your own answer to Speak")]
     elif kind == "trainer_speak_heard":
         fields = [Field("flag", "Confirm you heard this answer", (("yes", "I heard it"),))]
+    elif kind == "insurgent_surveillance":
+        fields = [
+            flags("Did the observed act demonstrate a lapse in Foundation loyalty?"),
+            text("text", "What you actually witnessed (if yes)", False),
+        ]
+    elif kind == "insurgent_reveal_sympathy":
+        fields = [
+            flags("Do you make your sympathies known to this original Handler?"),
+            text("text", "What you actually tell the Handler (if yes)", False),
+        ]
     elif kind == "tag_resolution" and decision.get("cute_uniform_tag"):
         fields = [
             menu("options", "Your uniform response", ("reject", "embrace", "embrace_asset")),

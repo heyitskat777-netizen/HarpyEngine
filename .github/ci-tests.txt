@@ -157,6 +157,7 @@ tests/rules/test_trainer_phrases.py
 tests/rules/test_scientist_lab.py
 tests/rules/test_frantic_breakdown.py
 tests/rules/test_frantic_crisis.py
+tests/rules/test_insurgent_loyalty.py
 tests/rules/test_bunk_harpy.py
 tests/rules/test_berserk_frame.py
 tests/rules/test_rebel_ambush.py

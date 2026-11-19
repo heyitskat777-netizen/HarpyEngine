@@ -1395,3 +1395,22 @@ restart, retry, actual Permission payment and repeat denial in a later
 Session. The selected advancement, Handler creation, registry and Inbox
 regression passed **78 tests in 111.45 seconds** under fixture-only approval.
 [Dogrunner p. 126](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=128) · [Scientist p. 129](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=131) · [Advocate p. 139](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=141) · [Dogrunner tests](../../tests/rules/test_dogrunner_status.py) · [Starting setup tests](../../tests/rules/test_handler_creation.py)
+
+### Insurgent loyalty labels from actual observed refusals
+
+Base `5d7e5df36487665a645ae91f6b0879a5252d5eb2`. The original Insurgent
+may record a demonstrated lapse after actually discovering a successful
+refusal of their direct order. That gives the original Girl the usable
+Surveilled Tag. Only that Girl can author a later disclosure to the
+original Insurgent, which gives the Sympathizer Tag and opens actual
+discipline. Both Tags retain the two original observers. An undiscovered
+refusal or a Girl's decision to decline disclosure adds no label.
+Other acts, other witnesses, NPC execution and Handler succession
+still need source-specific coverage.
+
+The focused test exercised a private undiscovered refusal, observed
+surveillance, a choice to remain silent, an owned disclosure and actual
+discipline. It checked the private Inbox, wrong owners, pause, restart,
+replay and no disclosure to an uninvolved Pilot. The selected Handler,
+order, discipline and Inbox regression passed **206 tests in 103.92 seconds**.
+[Rulebook p. 133](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=135) · [Tests](../../tests/rules/test_insurgent_loyalty.py)
