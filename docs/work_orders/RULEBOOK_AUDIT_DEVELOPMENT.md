@@ -41,6 +41,15 @@ The registry tracks each source's current scope and its acceptance tests.
 Every ordinary core Strain column has an effect path. Several have incomplete
 branches. Rebellion Endgame 3 depends on the optional Ancillary playbook
 entry and Play acquisition workflows. The default gate stays closed.
+Slot 3 needs a table ruling for a Girl who has no established own Ancillary
+playbook. The printed reference could mean an earlier book from that same
+character's career or a book newly chosen for this Endgame. No source
+authorizes borrowing a second character's book from the same controller.
+Keep the original die and current options. Acceptance requires a usable
+chosen Play for each eligible original Girl, with her own choice and any
+actual prerequisites intact before resolving the effect.
+[Rebellion Endgame p. 147](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=149) · [Ancillary graduation p. 93](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=95)
+
 Current subset limitations include
 the High Budget hearing's Severe finding and the High Void bunk's separate
 contact Play. The individual receipts below retain the rest of the source
@@ -3773,3 +3782,20 @@ the Inbox after database reconnect, and completed the middle
 Keep with one saved roll and one consumed notch. Other roll
 entry points and the swoon option remain open.
 [Earned Confidence p. 98](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=100) · [Native case](../../tests/rules/test_prodigy_discipline.py)
+
+### Easily Broken personal Handler succession
+
+Base `1fc0ad34fe3d91c490a10e12de38cb89db7127ae`. After the
+last saved original Identity is replaced, the first actual
+subsequent Bond change from Personal to Intense establishes
+the exact new personal Handler. Their controller can issue
+private Orders in the current scene. The campaign Handler's
+appointment stays in place.
+
+One focused case passed in 7.46 seconds. It used the native
+repeated-Tag choice and a later accepted Play to establish the
+Intense Bond. It verified that an earlier Intense Bond did not
+count, the former authority lost access, and only the recipient
+could open the new Order. Later Identity cycles and additional
+personal Handler duties remain open.
+[Easily Broken p. 100](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=102) · [Native case](../../tests/rules/test_easily_broken.py)

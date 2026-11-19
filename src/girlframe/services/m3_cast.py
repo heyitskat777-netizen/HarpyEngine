@@ -423,15 +423,14 @@ class CastService:
 
                         if actor.girl == "REVOLUTIONARY IDEALIST":
                             can_pronouns = illegal(c, self.game, state, actor.ref)
-                        if actor.rules == "npc":
-                            try:
-                                can_optional_order = bool(
-                                    AncillaryOrderService(self.game).options(
-                                        c, state, viewer, channel, actor.ref
-                                    )
+                        try:
+                            can_optional_order = bool(
+                                AncillaryOrderService(self.game).options(
+                                    c, state, viewer, channel, actor.ref
                                 )
-                            except (ValueError, WorkflowError):
-                                pass
+                            )
+                        except (ValueError, WorkflowError):
+                            pass
                     known_refs.add(actor.ref)
                     visible.append(
                         {

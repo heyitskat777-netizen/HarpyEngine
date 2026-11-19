@@ -25,6 +25,7 @@ from girlframe.services.m3_battle import _cast
 from girlframe.services.m3_consume_support import knowledge_allowed
 from girlframe.services.m3_medical import MedicalService
 from girlframe.services.m3_missions import MissionService
+from girlframe.services.m3_revolutionary_identity import personal_handler
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.p1_facilitator import require_scene_clear
 from girlframe.services.p1_source_pause import require_clear
@@ -146,9 +147,16 @@ def _rules(
     state: GameState,
     issuer: ActorRef,
     target: ActorRef,
+    *,
+    npc: bool,
 ) -> tuple[bool, bool] | None:
     role = find(state, target)
-    if role is None or not _independent(state, target):
+    if role is None:
+        return None
+    successor = personal_handler(game, state, target)
+    if successor is not None:
+        return (False, illegal(c, game, state, target)) if successor == issuer else None
+    if not npc or not _independent(state, target):
         return None
     if role.draft.book == "ANGEL-WIFE" and _available(game, SERVICE):
         spouse = role.draft.handler if isinstance(role.draft, CapturedDraft) else role.draft.bond
@@ -205,8 +213,8 @@ class AncillaryOrderService:
         self._gate(c, viewer)
         cast, _, _ = self._scene(c, state, channel)
         owner, actual = self._person(c, state, cast, issuer)
-        if actual.rules != "npc" or owner.controller != viewer.user_id:
-            raise WorkflowError("Use your actual original NPC authority.")
+        if owner.controller != viewer.user_id:
+            raise WorkflowError("Use your actual original Order authority.")
         people = {}
         blocked = {
             x.target.actor for x in records(state) if x.stage != "closed" and x.owner == owner
@@ -215,7 +223,8 @@ class AncillaryOrderService:
             if (
                 member.actor in blocked
                 or member.controller == viewer.user_id
-                or _rules(self.game, c, state, issuer, member.actor) is None
+                or _rules(self.game, c, state, issuer, member.actor, npc=actual.rules == "npc")
+                is None
             ):
                 continue
             try:
@@ -347,14 +356,14 @@ class AncillaryOrderService:
         cast, gm, appointment = self._scene(c, state, order.channel)
         owner, actor = self._person(c, state, cast, order.owner.actor)
         recipient, target = self._person(c, state, cast, order.target.actor)
-        port = _rules(self.game, c, state, owner.actor, recipient.actor)
+        port = _rules(self.game, c, state, owner.actor, recipient.actor, npc=actor.rules == "npc")
         if (
             (cast.id, gm, appointment, owner, recipient)
             != (order.scene, order.gm, order.appointment, order.owner, order.target)
             or port is None
             or actor.cell != target.cell
         ):
-            raise WorkflowError("Recover the original current scene, NPC and Order authority.")
+            raise WorkflowError("Recover the original current scene and Order authority.")
         return actor, target, port
 
     def _order(self, state: GameState, identity: str) -> Order:
