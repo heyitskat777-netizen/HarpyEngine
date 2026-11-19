@@ -4118,9 +4118,36 @@ class InboxService:
             from girlframe.services.m3_harpy_gaze import GazeService
             from girlframe.services.m3_harpy_song import HarpySongService
             from girlframe.services.m3_harpy_visions import VisionsService
+            from girlframe.services.m3_harpy_voidspace import HarpyVoidspaceService
             from girlframe.services.m3_npc_handover import LABELS as HANDOVER_LABELS
             from girlframe.services.m3_npc_handover import NpcHandoverService
             from girlframe.services.m3_npc_intelligence import IntelligenceService
+
+            passages = HarpyVoidspaceService(GameService(self.store))
+            for passage_id, passage_step in passages.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "harpy-voidspace:" + passage_id,
+                        "harpy_voidspace",
+                        passage_id,
+                        canon.revision,
+                        "plays",
+                        "Come to Me Now Once Again",
+                        "Original Harpy escape",
+                        "pending",
+                        True,
+                        False,
+                        {
+                            "propose": "Describe the original pair’s passage into Voidspace.",
+                            "verify": "Verify the original carried characters’ actual passage.",
+                            "offer": "Choose an experience for the Girl or let her choose it.",
+                            "gain": "Choose whether to accept the experience and alter your Asset.",
+                        }[passage_step],
+                        "This choice belongs to the original participants.",
+                        "Open your choice",
+                        task="m3_harpy_voidspace",
+                    )
+                )
 
             intelligence = IntelligenceService(GameService(self.store))
             for inquiry, step in intelligence.tasks(connection, canon, viewer):

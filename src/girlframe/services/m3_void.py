@@ -239,6 +239,12 @@ def source(
             assert proof is not None
             prove_npc_experiment(game, c, proof, first, body, actor)
             return current, body, actor
+        if body.get("reason") == "harpy_voidspace_carry":
+            from girlframe.services.m3_harpy_voidspace import prove_void as prove_harpy_passage
+
+            assert proof is not None
+            prove_harpy_passage(game, c, proof, first, body, actor)
+            return current, body, actor
         if body.get("reason") == "scientist_private_void":
             from girlframe.services.m3_scientist_private_scene import (
                 prove_threshold as prove_scientist_threshold,
@@ -798,6 +804,10 @@ class VoidService:
             from girlframe.services.m3_npc_care import void_audience as experiment_audience
 
             handler = viewer.user_id in experiment_audience(self.game, c, state, body)
+        if handler and body.get("reason") == "harpy_voidspace_carry":
+            from girlframe.services.m3_harpy_voidspace import audience as passage_audience
+
+            handler = viewer.user_id in passage_audience(self.game, c, state, body)
         if handler and body.get("reason") == "scientist_private_void":
             from girlframe.engine.m3_handler_consequences import active_handler
             from girlframe.engine.m3_handler_private_scene import records as private_scenes

@@ -993,3 +993,100 @@ def test_girls_actual_acceptance_preserves_her_current_piloted_frame_and_all_res
     assert (
         harpy(state(game), ref).cell is None and game.inspect(PLAYER, action)["state"] == "complete"
     )
+
+
+def test_genuine_harpy_carry_can_apply_repeatable_owned_void_in_private(ledger):
+    import asyncio
+
+    from test_harpy_flirt import submit_form
+
+    from girlframe.discord_adapter.m3_harpy_voidspace import open_passage
+    from girlframe.services.inbox import InboxService
+    from girlframe.services.m3_harpy_voidspace import RULE, HarpyVoidspaceService, carries
+    from girlframe.services.m3_void import VoidService
+
+    defeat, game, worker, gateway, ref, _, _, action = rolled(ledger, (6, 6))
+    holder = place_girl(ledger, game, defeated=True)
+    with ledger.transaction() as c:
+        canon = state(game)
+        sheet = canon.sheets[holder.entity]
+        sheet.girl = "PRINCESS"
+        sheet.girl_runtime = None
+        clean_assets = tuple(x.id for x in sheet.assets if x.family == "girl")
+        assert len(clean_assets) == 2
+        for x in sheet.assets:
+            if x.id in clean_assets:
+                x.void = False
+        game.event(c, ADMIN.user_id, "synthetic-carry-patient", "synthetic.position", canon)
+    original = next(x for x in state(game).placements if x.actor == holder)
+    choose(
+        defeat,
+        game,
+        PLAYER,
+        "harpy_defeat_select",
+        options=("kidnap",),
+        fields={"girl": holder.token},
+        text="The Harpy takes the original defeated Girl away.",
+    )
+    assert defeat.inspect(PLAYER, action)["state"] == "complete"
+    tick(worker, gateway, 5)
+    policy = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update=dict(
+            m3_approval=policy.model_copy(
+                update=dict(activity_specialist_rules=policy.activity_specialist_rules | {RULE})
+            )
+        )
+    )
+    service = HarpyVoidspaceService(game)
+    inbox = InboxService(ledger)
+
+    def task(viewer):
+        return next(x.identity for x in inbox.items(viewer) if x.task == "m3_harpy_voidspace")
+
+    def native(viewer, values, number):
+        identity = task(viewer)
+        asyncio.run(
+            submit_form(
+                viewer, lambda click: open_passage(click, service, identity), values, number
+            )
+        )
+
+    native(PLAYER, {"account": "The original pair enters Voidspace together."}, 90750)
+    case = carries(state(game))[0]
+    native(
+        ADMIN,
+        {"allow": ("yes",), "account": "The original passage into Voidspace occurred."},
+        90754,
+    )
+    native(PLAYER, {"method": ("lullaby",), "account": "The Harpy sings quietly."}, 90758)
+    assert service.get(OTHER, case.id)["method"] == "lullaby"
+    with pytest.raises(WorkflowError, match="unavailable"):
+        service.get(PLAYER, case.id)
+    native(
+        OTHER,
+        {"asset": (f"asset/{clean_assets[0]}",), "account": "The first Asset starts to glow."},
+        90762,
+    )
+    assert carries(state(game))[0].rounds[0].work is None
+    native(PLAYER, {"method": ("delegate",), "account": "The Harpy lets her choose."}, 90766)
+    ledger.engine.dispose()
+    native(
+        OTHER,
+        {
+            "method": ("dying_stars",),
+            "asset": (f"asset/{clean_assets[1]}",),
+            "account": "The other Asset now mirrors a dim light.",
+        },
+        90770,
+    )
+    final = state(game)
+    rounds = carries(final)[0].rounds
+    assert [x.asset for x in rounds] == list(clean_assets)
+    assert [x.used_method for x in rounds] == ["lullaby", "dying_stars"]
+    location = next(x for x in final.placements if x.actor == holder)
+    assert location.custody == ref and location.girl_cell is None
+    assert location.frame_cell == original.frame_cell
+    assert VoidService(ledger).get(OTHER, rounds[-1].work)["stage"] == "allured"
+    with pytest.raises(WorkflowError):
+        VoidService(ledger).get(PLAYER, rounds[-1].work)

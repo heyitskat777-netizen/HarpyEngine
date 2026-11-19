@@ -2086,6 +2086,14 @@ class InboxView(discord.ui.View):
                 VisionsService(GameService(self.service.store)),
                 item.identity,
             )
+        elif item.task == "m3_harpy_voidspace":
+            from girlframe.discord_adapter.m3_harpy_voidspace import open_passage
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_harpy_voidspace import HarpyVoidspaceService
+
+            await open_passage(
+                interaction, HarpyVoidspaceService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_npc_handover":
             from girlframe.discord_adapter.m3_npc_handover import open_handover_choice
             from girlframe.services.m2_game import GameService

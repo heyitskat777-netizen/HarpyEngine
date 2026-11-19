@@ -2982,3 +2982,23 @@ Scientist fixture had selected a Mockingbird, which correctly
 did not receive a Girl threshold. The corrected threshold
 fixture uses an ordinary Girl.
 [Scientist p. 189](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=191) · [Native cases](../../tests/rules/test_npc_care.py)
+
+### Come to Me Now Once Again
+
+Base `5f53c475619d294aca9cf38dc0b40e3acb8d9230`. A genuine
+finished high Harpy Defeat with kidnapping provides the saved
+roll, original held Girl and actual offstage custody. The
+original human facilitator verifies that their passage
+reached Voidspace. The Harpy can then offer repeated printed
+experiences, or let the original Girl choose. Each accepted
+round applies ordinary Void to the original Girl’s own chosen
+Asset. The preserved parked Frame stays where it was.
+
+**One focused native case passed in 9.01 seconds**. The
+first experience was chosen by the Harpy and the second by
+the original Girl after restart. The actual Girl threshold
+is private to her and the original GM. The test stops at that
+pending threshold. A verified route returning the captured
+Girl to her own Frame and other producers for taking a Girl
+into Voidspace still need direct support.
+[Harpy pp. 177–178](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=179) · [Native case](../../tests/rules/test_harpy_defeat.py)
