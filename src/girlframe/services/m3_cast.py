@@ -414,6 +414,24 @@ class CastService:
                             )
                         except (ValueError, WorkflowError):
                             pass
+                    can_optional_order = can_pronouns = False
+                    if actor.controller == role.controller == viewer.user_id:
+                        from girlframe.services.m3_ancillary_orders import (
+                            AncillaryOrderService,
+                            illegal,
+                        )
+
+                        if actor.girl == "REVOLUTIONARY IDEALIST":
+                            can_pronouns = illegal(c, self.game, state, actor.ref)
+                        if actor.rules == "npc":
+                            try:
+                                can_optional_order = bool(
+                                    AncillaryOrderService(self.game).options(
+                                        c, state, viewer, channel, actor.ref
+                                    )
+                                )
+                            except (ValueError, WorkflowError):
+                                pass
                     known_refs.add(actor.ref)
                     visible.append(
                         {
@@ -435,6 +453,8 @@ class CastService:
                             **({"chained_placement": True} if can_chained_placement else {}),
                             **({"ancillary_intimacy": True} if can_ancillary_intimacy else {}),
                             **({"spend_prodigy_confidence": True} if can_confidence else {}),
+                            **({"ancillary_order": True} if can_optional_order else {}),
+                            **({"illegal_pronouns": True} if can_pronouns else {}),
                             **({"capture_source": True} if can_capture else {}),
                             **(
                                 {"director_phone": True}

@@ -88,6 +88,14 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
             key = "mask:" + token
             options.append((key, "Use A Human Mask as " + role["label"][:65]))
             actions[key] = ("harpy_mask", ActorRef.model_validate(role["ref"]))
+        if role.get("ancillary_order"):
+            key = "ancillary-order:" + token
+            options.append((key, "Give a direct Order as " + role["label"][:63]))
+            actions[key] = ("ancillary_order", ActorRef.model_validate(role["ref"]))
+        if role.get("illegal_pronouns"):
+            key = "illegal-pronouns:" + token
+            options.append((key, "Choose pronouns for " + role["label"][:65]))
+            actions[key] = ("illegal_pronouns", ActorRef.model_validate(role["ref"]))
         if role.get("spend_prodigy_confidence"):
             key = "prodigy-confidence:" + token
             options.append((key, "Spend confidence as " + role["label"][:65]))
@@ -346,6 +354,20 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
 
             assert ref is not None
             await open_capture(current, CapturedService(service.game), channel, ref)
+            return
+        if action == "ancillary_order":
+            from girlframe.discord_adapter.m3_ancillary_orders import open_ancillary_order
+            from girlframe.services.m3_ancillary_orders import AncillaryOrderService
+
+            assert ref is not None
+            await open_ancillary_order(current, AncillaryOrderService(service.game), channel, ref)
+            return
+        if action == "illegal_pronouns":
+            from girlframe.discord_adapter.m3_ancillary_orders import open_illegal_pronouns
+            from girlframe.services.m3_ancillary_orders import AncillaryOrderService
+
+            assert ref is not None
+            await open_illegal_pronouns(current, AncillaryOrderService(service.game), ref)
             return
         if action == "prodigy_confidence":
             from girlframe.discord_adapter.m3_ancillary_discipline import open_confidence

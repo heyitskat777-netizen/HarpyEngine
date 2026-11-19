@@ -15285,14 +15285,45 @@
         "heading": "Illegal Girl"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The approved original independent Revolutionary chooses pronouns or receives an actual direct Order from the original authorized NPC.",
+        "actor_type": "Original Revolutionary and current NPC Handler",
+        "pre_roll_sources": [
+          "Actual original role and native scene",
+          "Actual original adopted NPC authority",
+          "Original faction and recorded Foundation control history"
+        ],
+        "roll_kind": "2d6",
+        "allowed_modifiers": [
+          "Owned Heat",
+          "One original ordinary own Tag"
+        ],
+        "tier_options": {
+          "status": [
+            "Save owner-selected pronouns",
+            "On the original Disobey roll the owner may mark an unmarked own Tag"
+          ]
+        },
+        "choice_ownership": "Original Revolutionary owns pronouns and response. The original NPC supplies the actual direct Order.",
+        "target_policy": "Original current independent actor. Canonical previous Foundation control or recorded custody revokes the rule.",
+        "post_roll_effects": [
+          "Save the actual original dice, Tag and modifier. Review observed consequences separately."
+        ],
+        "mandatory_followups": [
+          "Other refusal branches, non-NPC authorities, unrepresented custody, and direct historical-revocation verification remain open."
+        ],
+        "handler_or_gm_intervention": "The original human GM reviews whether relevant authorities heard or noticed.",
+        "test_fixture_ids": [
+          "tests/rules/test_ancillary_npc_orders.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_ancillary_npc_orders.py"],
       "m2_play_id": null,
       "module": "ancillary"
     },
@@ -15391,14 +15422,42 @@
         "heading": "Made For Service"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "An actual Angel-Wife retains Wife and receives a direct Order from her actual original spouse.",
+        "actor_type": "Original Angel-Wife and named original NPC spouse",
+        "pre_roll_sources": [
+          "Approved printed rule",
+          "Original Wife Identity",
+          "Exact original spouse and current scene"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "order": [
+            "Follow through the original owner’s declared action",
+            "Block the original spouse-specific Disobey path while Wife remains"
+          ]
+        },
+        "choice_ownership": "Spouse supplies the original Order. The human Angel-Wife controls the actual action and no response is inferred.",
+        "target_policy": "Exact original known spouse. Preserve existing Wife Identity protections.",
+        "post_roll_effects": [
+          "A blocked refusal rolls no dice and spends no Heat."
+        ],
+        "mandatory_followups": [
+          "Spouse pronoun directives, other authority sources and appearance remain outside this native subset."
+        ],
+        "handler_or_gm_intervention": "Retain human ownership of the other narrative requirements.",
+        "test_fixture_ids": [
+          "tests/rules/test_ancillary_npc_orders.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_ancillary_npc_orders.py"],
       "m2_play_id": null,
       "module": "ancillary"
     },

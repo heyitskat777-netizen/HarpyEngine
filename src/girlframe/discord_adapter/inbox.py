@@ -2126,6 +2126,14 @@ class InboxView(discord.ui.View):
             await open_escape_choice(
                 interaction, EscapeService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_ancillary_order":
+            from girlframe.discord_adapter.m3_ancillary_orders import open_order_response
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_ancillary_orders import AncillaryOrderService
+
+            await open_order_response(
+                interaction, AncillaryOrderService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_ancillary_cadre":
             from girlframe.discord_adapter.m3_ancillary_cadre import open_cadre_invitation
             from girlframe.services.m2_game import GameService

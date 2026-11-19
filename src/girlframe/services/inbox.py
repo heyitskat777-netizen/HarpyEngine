@@ -4117,6 +4117,7 @@ class InboxService:
             from girlframe.services.m3_abysstech import AbysstechService
             from girlframe.services.m3_ancillary_cadre import AncillaryCadreService
             from girlframe.services.m3_ancillary_intimacy import AncillaryIntimacyService
+            from girlframe.services.m3_ancillary_orders import AncillaryOrderService
             from girlframe.services.m3_captured import CapturedService
             from girlframe.services.m3_chained_darling import ChainedPlacementService
             from girlframe.services.m3_chained_isolation import IsolationService
@@ -4139,6 +4140,27 @@ class InboxService:
             from girlframe.services.m3_timeskip import TimeskipService
             from girlframe.services.m3_voidspace_invasion import InvasionService
             from girlframe.services.m3_warboy_hate import ConditionedHateService
+
+            optional_orders = AncillaryOrderService(GameService(self.store))
+            for optional_id, optional_step in optional_orders.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "ancillary-order:" + optional_id,
+                        "ancillary_order_" + optional_step,
+                        optional_id,
+                        canon.revision,
+                        "plays",
+                        "Ancillary Order",
+                        "Original source",
+                        "pending",
+                        optional_step != "held",
+                        False,
+                        "Review your original received or disputed Order.",
+                        "Original role and scene determine authority.",
+                        "Open the original Order",
+                        task="m3_ancillary_order",
+                    )
+                )
 
             ancillary_cadres = AncillaryCadreService(GameService(self.store))
             for cadre_id in ancillary_cadres.tasks(connection, canon, viewer):

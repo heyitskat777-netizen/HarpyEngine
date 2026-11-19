@@ -3739,3 +3739,21 @@ Darling acting in that role and committed the selected Tag before
 the original case completed. The order to come to their side,
 other Bond sources and direct Asset-damage evidence remain open.
 [Isolation Protocol p. 104](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=106) · [Native case](../../tests/rules/test_chained_isolation.py)
+
+### Illegal Girl and Made For Service Orders
+
+Base `21562bef839b590432f8276569581b23d1ab20da`. The
+current original NPC authority can give an Order to an
+eligible co-present character. An independent Revolutionary
+who has never been in Foundation custody can choose her
+pronouns and mark one owned Tag to adjust a saved refusal
+roll. A Wife with her current Wife Identity cannot choose
+Disobey the Handler against her actual spouse. No dice or
+Heat are spent for that unavailable response.
+
+The focused native case verifies the original issuer and
+recipient, the actual marked Tag and adjusted total, and the
+Wife's original-owner response. Direct former-custody and
+other refusal effects and the spouse's pronoun directives
+remain open.
+[Illegal Girl p. 101](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=103) · [Made For Service p. 102](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=104) · [Native case](../../tests/rules/test_ancillary_npc_orders.py)

@@ -204,6 +204,7 @@ tests/rules/test_timeskip.py
 tests/rules/test_warboy_hate.py
 tests/rules/test_ancillary_traits.py
 tests/rules/test_easily_broken.py
+tests/rules/test_ancillary_npc_orders.py
 tests/rules/test_pilot_candidate_promotion.py
 tests/rules/test_ancillary_cadre.py
 tests/rules/test_abysstech.py
