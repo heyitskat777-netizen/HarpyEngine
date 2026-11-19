@@ -32,6 +32,7 @@ from girlframe.engine.m3_pilot_fears import APPEARANCE as PUBLIC_APPEARANCE
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_ambush import HUNT_RULE as REBEL_HUNT
 from girlframe.engine.m3_rebel_ambush import RULE as REBEL_AMBUSH
+from girlframe.engine.m3_rebel_base_capture import RULE as REBEL_BASE_CAPTURE
 from girlframe.engine.m3_rebel_defection import RULE as REBEL_DEFECTION
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_rebel_strafe import RULE as REBEL_STRAFE
@@ -103,6 +104,13 @@ async def open_effect(
 ) -> None:
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(service.get, viewer, identity)
+    if captured := data.get("captured_base"):
+        await reply(
+            interaction,
+            "The base fell and the original parked Frame entered Rebel custody. "
+            f"Prisoners freed: {captured['freed']}. Staff killed: {captured['dead']}.",
+        )
+        return
     if data.get("awaiting_rebel_voice"):
         await reply(
             interaction,
@@ -340,6 +348,21 @@ def effect_form(
                     ambushers.append((pilot["id"], pilot["name"]))
             except ValueError:
                 continue
+    from girlframe.engine.m2 import PilotSheet
+    from girlframe.engine.m3_rebel_base_capture import frames as at_base
+    from girlframe.engine.m3_rebel_base_capture import rebel as overrun_attacker
+    from girlframe.engine.m3_rebel_base_capture import site as overrun_site
+
+    overrun_bases = {}
+    if rule == REBEL_BASE_CAPTURE:
+        for location in regional_locations:
+            try:
+                base = overrun_site(state, location["id"])
+            except ValueError:
+                continue
+            parking = at_base(state, base)
+            if parking:
+                overrun_bases[base.id] = (base, parking)
 
     masks = (
         {
@@ -685,6 +708,37 @@ def effect_form(
                     or WAIT,
                 )
             )
+        if rule == REBEL_BASE_CAPTURE:
+            fields.append(
+                Field(
+                    "overrun_base",
+                    "Which actual unattended base is overrun?",
+                    tuple((base.id, base.name) for base, _ in overrun_bases.values()) or WAIT,
+                )
+            )
+            selected = overrun_bases.get(values.get("overrun_base", ("",))[0])
+            foes = []
+            held = []
+            if selected is not None:
+                base, parked = selected
+                held = [
+                    (frame.frame_instance, PilotSheet.model_validate_json(frame.frame_json).frame)
+                    for frame in parked
+                ]
+                for pilot in world["pilots"]:
+                    try:
+                        body = overrun_attacker(state, pilot["id"], base)
+                    except ValueError:
+                        continue
+                    foes.append((body.id, body.name))
+            fields += [
+                Field(
+                    "overrun_rebel", "Which original Rebel leads the takeover?", tuple(foes) or WAIT
+                ),
+                Field(
+                    "overrun_frame", "Which original parked Frame is seized?", tuple(held) or WAIT
+                ),
+            ]
         if rule == REBEL_DEFECTION:
             assert state.world is not None
             group = values.get("defection_faction", ("",))[0]
@@ -1385,6 +1439,12 @@ def effect_form(
             payload["target"] = values["ambusher"][0]
         if rule == REBEL_HUNT:
             payload["victim"] = values["hunt_victim"][0]
+        if rule == REBEL_BASE_CAPTURE:
+            payload.update(
+                target=values["overrun_base"][0],
+                victim=values["overrun_rebel"][0],
+                captured_frame=values["overrun_frame"][0],
+            )
         if rule == REBEL_DEFECTION:
             payload.update(
                 target=values["defection_npc"][0],
@@ -1641,6 +1701,8 @@ def effect_form(
             return "The original attack is pending for the next dispatched mission."
         if rule == REBEL_HUNT:
             return "The original Rebel will pursue this Girl on future missions."
+        if rule == REBEL_BASE_CAPTURE:
+            return "The base fell. Prisoners are free and the parked Frame is in Rebel custody."
         if rule == PUBLIC_APPEARANCE:
             return "The original Cadre can record attendance from their private Inbox."
         if rule == HARPY_RAID:

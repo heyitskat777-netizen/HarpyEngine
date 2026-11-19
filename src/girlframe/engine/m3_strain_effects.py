@@ -30,6 +30,7 @@ from girlframe.engine.m3_pilot_fears import APPEARANCE as PUBLIC_APPEARANCE
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_ambush import HUNT_RULE as REBEL_HUNT
 from girlframe.engine.m3_rebel_ambush import RULE as REBEL_AMBUSH
+from girlframe.engine.m3_rebel_base_capture import RULE as REBEL_BASE_CAPTURE
 from girlframe.engine.m3_rebel_defection import RULE as REBEL_DEFECTION
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_rebel_strafe import RULE as REBEL_STRAFE
@@ -90,6 +91,7 @@ SUPPORTED = frozenset(
         REBEL_VOICE,
         REBEL_AMBUSH,
         REBEL_HUNT,
+        REBEL_BASE_CAPTURE,
         "strain.rebellion.low.5.2",
         REBEL_PROTEST,
         REBEL_ESCAPE_OFFER,
@@ -155,6 +157,7 @@ class Choice(Model):
     fighters: tuple[int, ...] = Field(default=(), exclude_if=lambda value: not value)
     backstory_observers: tuple[int, ...] = Field(default=(), exclude_if=lambda value: not value)
     storage_owner: int | None = Field(default=None, ge=1, exclude_if=lambda value: value is None)
+    captured_frame: str | None = Field(default=None, exclude_if=lambda x: x is None)
     fight_channel: int | None = Field(default=None, ge=1, exclude_if=lambda value: value is None)
     revelation_play: RevelationPlay | None = Field(default=None, exclude_if=lambda x: x is None)
     revelation_channel: int | None = Field(default=None, ge=1, exclude_if=lambda x: x is None)
@@ -297,6 +300,29 @@ def apply(
             current_ref(state, int(choice.victim)),
             choice.account.strip(),
         )
+    elif rule == REBEL_BASE_CAPTURE:
+        from girlframe.engine.m3_rebel_base_capture import apply as overrun
+
+        fields(choice, {"target", "victim", "captured_frame"})
+        if (
+            source_event is None
+            or not choice.target
+            or not choice.victim
+            or not choice.captured_frame
+        ):
+            raise ValueError(
+                "Bind the actual base, its Rebel attacker and one original parked Frame"
+            )
+        state = overrun(
+            state,
+            source_work,
+            source_event,
+            choice.target,
+            choice.victim,
+            choice.captured_frame,
+            choice.account.strip(),
+        )
+        world = state.world
     elif rule == ORBITAL_THREAT:
         from girlframe.engine.m3_orbital_threat import introduce
 

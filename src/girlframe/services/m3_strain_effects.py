@@ -25,6 +25,7 @@ from girlframe.engine.m3_pilot_fears import APPEARANCE as PUBLIC_APPEARANCE
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_ambush import HUNT_RULE as REBEL_HUNT
 from girlframe.engine.m3_rebel_ambush import RULE as REBEL_AMBUSH
+from girlframe.engine.m3_rebel_base_capture import RULE as REBEL_BASE_CAPTURE
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_rebel_strafe import RULE as REBEL_STRAFE
 from girlframe.engine.m3_rebel_taunt import RULE as REBEL_TAUNT
@@ -77,6 +78,19 @@ class EffectService:
                 raise WorkflowError("This effect belongs to its assigned Handler.")
             body = json.loads(row["body_json"])
             state = load_state(c, self.store.campaign_id)
+            captured_base = None
+            if body["rule_id"] == REBEL_BASE_CAPTURE:
+                from girlframe.engine.m3_handler_consequences import same_handler_body
+                from girlframe.engine.m3_rebel_base_capture import captures
+
+                actual = next((x for x in captures(state) if x.id == identity), None)
+                if actual is not None and same_handler_body(state, actual.handler):
+                    captured_base = dict(
+                        base=actual.base,
+                        frame=actual.frame.frame_instance,
+                        freed=len(actual.released),
+                        dead=len(actual.killed),
+                    )
             supply = next((x for x in state.supply_losses if x.id == identity), None)
             label = "Original character"
             if supply is not None:
@@ -94,6 +108,7 @@ class EffectService:
                 "rule_id": body["rule_id"],
                 "supported": body["rule_id"] in rules.SUPPORTED or body["rule_id"] == VOID_SPREAD,
                 "game_revision": state.revision,
+                **({"captured_base": captured_base} if captured_base is not None else {}),
                 **(
                     {
                         "spread": body.get("spread"),
@@ -296,6 +311,41 @@ class EffectService:
                         raise WorkflowError(
                             "Choose an actual original Girl from this preparing period"
                         )
+            base_capture = choice.rule_id == REBEL_BASE_CAPTURE
+            if base_capture and choice.target and choice.victim:
+                from girlframe.engine.m2 import GameState
+                from girlframe.engine.m3_rebel_base_capture import frames, occupants, rebel
+                from girlframe.engine.m3_rebel_base_capture import site as overrun_site
+                from girlframe.services.handler_setup import HandlerService
+                from girlframe.services.m3_prisoner_escape import _custody
+
+                captured_base = overrun_site(state, choice.target)
+                controller = rebel(state, choice.victim, captured_base).controller
+                if not HandlerService(self.store)._member(c, controller):
+                    raise WorkflowError("Recover the actual joined Rebel controlling the takeover")
+                parked = next(
+                    (
+                        x
+                        for x in frames(state, captured_base)
+                        if x.frame_instance == choice.captured_frame
+                    ),
+                    None,
+                )
+                if parked is None:
+                    raise WorkflowError("Recover the original unoccupied Frame at the overrun base")
+                archive = c.scalar(
+                    sa.select(t.m2["m2_state_history"].c.body_json).where(
+                        t.m2["m2_state_history"].c.campaign_id == self.store.campaign_id,
+                        t.m2["m2_state_history"].c.event_id == parked.source_event,
+                    )
+                )
+                if (
+                    archive is None
+                    or parked not in GameState.model_validate_json(archive).parked_frames
+                ):
+                    raise WorkflowError("Recover the actual custody source of this parked Frame")
+                for prisoner in occupants(state, captured_base)[0]:
+                    _custody(self.game, c, state, ActorRef(kind="npc", entity=prisoner.id))
             if choice.rule_id == VOID_RIFT:
                 from girlframe.engine.m3_void_rift import pending as pending_arrival
 
@@ -579,7 +629,7 @@ class EffectService:
                     raise WorkflowError(
                         "Choose the present original NPC at the introduction's actual location."
                     )
-            if aggressive_arrival:
+            if aggressive_arrival or base_capture:
                 from girlframe.services.m3_battle_director import bind_legacy_context_bodies
 
                 state = bind_legacy_context_bodies(self.game, c, state)
@@ -799,7 +849,7 @@ class EffectService:
                 from girlframe.services.m3_void_examination import schedule
 
                 schedule(c, self.strain.periods, row, updated, event)
-            if aggressive_arrival:
+            if aggressive_arrival or base_capture:
                 from girlframe.services.m3_battle import synchronize_casts
                 from girlframe.services.m3_battle_director import create_replacements
                 from girlframe.services.m3_handler_void import synchronize_endings

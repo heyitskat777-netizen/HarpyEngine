@@ -959,3 +959,24 @@ The verified ending is voluntary abandonment confirmed by the human GM.
 An absent Girl's threat, forced capture, other methods of permanently
 stopping a Rebel and external Defeat still require their own checks.
 [High Rebellion p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) · [Recurring pursuit test](../../tests/rules/test_rebel_ambush.py)
+
+## High Rebellion base overrun
+
+The base is `5749e19`. High Rebellion 2.1 requires the original Handler
+to be elsewhere and the selected Rebel to be present at an operational
+Foundation base. It records actual control loss, frees server-introduced
+prisoners, applies the deaths of original local staff, and transfers the
+original unoccupied parked Frame to the attacking faction's custody.
+Released prisoners retain their other jobs, Tags and identity. The parked
+Frame comes from its verified earlier state. A later receipt keeps that
+exact Frame and its original custodian while removing it from Foundation
+parking. The original Girls and unrelated sites retain their resources.
+
+All 22 selected tests passed, including the native prepared result, real
+custody release, removal of the dead staff actor from the cast, private
+readback, present Handler rejection, stale and duplicate submissions,
+safety pause, reopening and actual Off-Duty activation afterward. Source
+mypy passed on four modules. Active or carried Frames, linked JANUS Cores,
+overlapping prison escape work and subsequent recovery or reassignment
+remain open variants.
+[High Rebellion p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) · [Base overrun test](../../tests/rules/test_rebel_base_capture.py)
