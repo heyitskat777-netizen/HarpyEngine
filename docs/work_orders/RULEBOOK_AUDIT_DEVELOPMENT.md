@@ -3286,3 +3286,24 @@ Handler award on an actual selected two-Permission grant. The
 remaining printed Requisitions, elective picks and follow-on scene
 still require source-specific paths.
 [Timeskip p. 197](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=199) · [Native case](../../tests/rules/test_timeskip.py)
+
+### Timeskip’s optional Foundation Ancillary and follow-on scene
+
+Base `cfc7611`. Each original player can pass or, with the existing
+optional module and creation approvals, propose an Ancillary Girl and
+describe why she matters. The original Handler issues her specific
+invitation at the new Foundation base. The choice only settles once
+the actual original recipient completes ordinary creation. The
+Handler sets the new circumstances in a newly bound native scene.
+Each original participant joins before viewing the opening or
+writing their own character’s reintroduction.
+
+**One end-to-end Timeskip case passed in 17.52 seconds**. It
+verified default optional denial, approved Soldier creation, the
+private invitation, and a real follow-on scene with all original
+participants' introductions. The existing native Soldier creation
+case also passed independently in **6.25 seconds**. The normal
+implemented path can reach completion. Rebel-based optional
+introductions, other printed elective benefits and independent
+release review remain open.
+[Timeskip p. 197](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=199) · [Native case](../../tests/rules/test_timeskip.py)

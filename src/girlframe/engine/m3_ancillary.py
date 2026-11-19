@@ -196,6 +196,7 @@ class Offer(Model):
     contacts: tuple[ActorRef, ...] = ()
     phase: Literal["offered", "accepted", "declined"] = "offered"
     decision_event: str | None = None
+    timeskip: str | None = Field(default=None, min_length=1, exclude_if=lambda value: value is None)
 
 
 def offers(state: GameState) -> tuple[Offer, ...]:

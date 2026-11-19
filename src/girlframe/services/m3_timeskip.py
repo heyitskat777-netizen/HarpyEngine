@@ -113,6 +113,9 @@ class Timeskip(Model):
         "identities",
         "benefits",
         "electives",
+        "opening",
+        "introductions",
+        "complete",
         "declined",
     ]
     city_ruin: str | None = None
@@ -135,12 +138,25 @@ class Timeskip(Model):
     rewrites: dict[str, str] = {}
     requisitions: dict[str, str] = {}
     handler_award: str | None = None
+    electives: dict[str, str] = {}
+    ancillary_requests: dict[str, str] = {}
+    ancillary_offers: dict[str, str] = {}
+    opening_eligible: str | None = None
+    opening_channel: int | None = None
+    opening_scene: str | None = None
+    opening_text: str | None = None
+    introductions: dict[str, str] = {}
 
 
 def records(state: GameState) -> tuple[Timeskip, ...]:
     return tuple(
         Timeskip.model_validate_json(row["body"]) for row in state.facts if row.get("kind") == KIND
     )
+
+
+def put_case(state: GameState, case: Timeskip) -> None:
+    state.facts = [x for x in state.facts if (x.get("kind"), x.get("id")) != (KIND, case.id)]
+    state.facts.append(dict(kind=KIND, id=case.id, body=case.model_dump_json()))
 
 
 def _local_npcs(state: GameState, cell: Cell) -> dict[str, str]:
@@ -250,8 +266,7 @@ class TimeskipService:
         operation: str,
         event: str,
     ) -> dict[str, Any]:
-        state.facts = [x for x in state.facts if (x.get("kind"), x.get("id")) != (KIND, case.id)]
-        state.facts.append(dict(kind=KIND, id=case.id, body=case.model_dump_json()))
+        put_case(state, case)
         self.game.event(
             c,
             viewer.user_id,
@@ -269,7 +284,7 @@ class TimeskipService:
             state = load_state(c, self.store.campaign_id)
             if MedicalService(self.store)._handler(c)[0] != viewer.user_id or state.world is None:
                 raise WorkflowError("The human GM proposes the Timeskip for the existing world")
-            if any(case.step != "declined" for case in records(state)):
+            if any(case.step not in ("declined", "complete") for case in records(state)):
                 raise WorkflowError("Continue the original Timeskip in your private Inbox")
             return state.revision
 
@@ -285,7 +300,7 @@ class TimeskipService:
                 or state.world is None
                 or state.revision != revision
                 or months not in DURATIONS
-                or any(case.step != "declined" for case in records(state))
+                or any(case.step not in ("declined", "complete") for case in records(state))
             ):
                 raise WorkflowError("Propose one printed duration for the current original world")
             voters = tuple(dict.fromkeys((gm, *state.order)))
@@ -343,8 +358,15 @@ class TimeskipService:
         )
 
     def _step(self, case: Timeskip, user: int) -> str | None:
-        if case.step == "declined":
+        if case.step in ("declined", "complete"):
             return None
+        if case.step == "electives" and str(user) not in case.electives:
+            if str(user) not in case.ancillary_requests:
+                return "choose_elective"
+            if user != case.gm:
+                return None
+        if case.step == "introductions" and str(user) not in case.introductions:
+            return "introduce_self"
         if case.step == "newgirl" and any(
             actor.entity == str(user) and actor.token not in case.baselines
             for actor in case.graduates
@@ -409,6 +431,10 @@ class TimeskipService:
                 data["nominee"] = self._nominees(c, state, case).get(case.death)
             if step == "replacement":
                 data["can_continue"] = self._replacement_ready(state, case)
+            if step in ("electives", "choose_elective", "introduce_self"):
+                from girlframe.services.m3_timeskip_electives import TimeskipElectives
+
+                data.update(TimeskipElectives(self).menu(c, state, case, viewer, step))
             if step in ("benefits", "choose_requisition"):
                 from girlframe.services.m3_timeskip_rewards import TimeskipRewards
 

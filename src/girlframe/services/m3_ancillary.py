@@ -121,6 +121,17 @@ class AncillaryService:
     ) -> dict[str, Any]:
         def authorize(c: Connection) -> None:
             self._access(c, viewer)
+            if payload.get("timeskip") or (
+                event == RESPONDED
+                and any(
+                    x.id == payload["id"] and x.controller == viewer.user_id and x.timeskip
+                    for x in rules.offers(load_state(c, self.store.campaign_id))
+                )
+            ):
+                from girlframe.services.m3_access import Access
+                from girlframe.services.m3_timeskip_electives import RULE
+
+                Access(self.store).require_specialist_rule(RULE)
             self.game.unpaused(c)
 
         try:
@@ -145,6 +156,8 @@ class AncillaryService:
         site: str,
         faction: str | None = None,
         contacts: tuple[ActorRef, ...] = (),
+        *,
+        timeskip: str | None = None,
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             state = self._state(c, expected)
@@ -176,7 +189,12 @@ class AncillaryService:
                 faction=faction,
                 books=books,
                 contacts=contacts,
+                timeskip=timeskip,
             )
+            if timeskip:
+                from girlframe.services.m3_timeskip_electives import bind_invite
+
+                bind_invite(self.game, c, state, value, viewer)
             rules.put_offer(state, value)
             self.game.event(
                 c,
@@ -199,7 +217,8 @@ class AncillaryService:
                 site=site,
                 faction=faction,
                 contacts=tuple(x.model_dump(mode="json") for x in contacts),
-            ),
+            )
+            | (dict(timeskip=timeskip) if timeskip is not None else {}),
             operation,
         )
 
@@ -309,6 +328,10 @@ class AncillaryService:
                         state = set_depth(state, actor, target, 1, event)
             phase = "accepted" if draft is not None else "declined"
             rules.put_offer(state, value.model_copy(update=dict(phase=phase, decision_event=event)))
+            if value.timeskip:
+                from girlframe.services.m3_timeskip_electives import settle_invite
+
+                settle_invite(self.game, c, state, value, viewer, actor, event)
             self.game.event(
                 c,
                 viewer.user_id,

@@ -3,6 +3,7 @@
 import asyncio
 
 import pytest
+from test_ancillary_creation import enable as enable_ancillary
 from test_creation import selected
 from test_harpy_flirt import submit_form
 from test_ledger import ADMIN, OTHER, PLAYER
@@ -17,6 +18,7 @@ from girlframe.discord_adapter.m3_handler_advancements import open_grant
 from girlframe.discord_adapter.m3_punishments import Picker
 from girlframe.discord_adapter.m3_timeskip import open_timeskip
 from girlframe.discord_adapter.m3_world import open_world
+from girlframe.engine import m3_ancillary as ancillary
 from girlframe.engine.bonds import BondProposal
 from girlframe.engine.cadre_history import PriorMission
 from girlframe.engine.drafts import DraftInput
@@ -30,19 +32,23 @@ from girlframe.services.creation import CreationService
 from girlframe.services.creation_review import CreationReviewService
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.inbox import InboxService
+from girlframe.services.m3_ancillary import AncillaryService
 from girlframe.services.m3_careers import CareerService
 from girlframe.services.m3_girl_transition import GirlTransitionService, baseline_id
 from girlframe.services.m3_handler_advancements import HandlerAdvancementService
+from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_off_duty import OffDutyService
 from girlframe.services.m3_privileges import purchase_proof
 from girlframe.services.m3_strain import StrainService
 from girlframe.services.m3_timeskip import RULE, Arrival, TimeskipService, records
+from girlframe.services.m3_timeskip_electives import RULE as ANCILLARY_RULE
+from girlframe.services.m3_timeskip_electives import TimeskipElectives
 from girlframe.services.m3_world import WorldService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.shared_setup import SharedSetupService
 
 
-def test_native_timeskip_agreement_and_ordered_world_changes(ledger):
+def test_native_timeskip_agreement_and_ordered_world_changes(ledger, tmp_path, monkeypatch):
     missions, game = mission_service(ledger, girl="NEWGIRL")
     policy = ledger.policy.m3_approval
     ledger.policy = ledger.policy.model_copy(
@@ -508,3 +514,83 @@ def test_native_timeskip_agreement_and_ordered_world_changes(ledger):
     assert records(finished)[0].step == "electives"
     assert finished.sheets["2"].permissions == before_grant.sheets["2"].permissions + 2
     assert finished.sheets["3"].permissions == before_grant.sheets["3"].permissions
+
+    elect = TimeskipElectives(service)
+    assert service.get(PLAYER, case.id)["ancillary"] is False
+    with pytest.raises(WorkflowError, match="MODULE_DISABLED"):
+        elect.choose(PLAYER, "elective-disabled", case.id, finished.revision, "A genuine idea.")
+    enable_ancillary(ledger, game, tmp_path, monkeypatch, extra=(ANCILLARY_RULE,))
+    native(
+        PLAYER,
+        dict(choice=("ancillary",), text="The new Soldier survived one of the fall’s evacuations."),
+        93408,
+    )
+    native(OTHER, dict(choice=("pass",)), 93412)
+    native(ADMIN, dict(choice=("pass",)), 93416)
+
+    async def sponsor(click):
+        await open_timeskip(click, service, case.id)
+        picker = click.edit_original_response.call_args.kwargs["view"]
+        assert isinstance(picker, Picker) and set(dict(picker.options)) == {str(PLAYER.user_id)}
+        await picker.open_item(click, str(PLAYER.user_id))
+
+    asyncio.run(submit_form(ADMIN, sponsor, dict(decision=("send",)), 93420))
+    ledger.engine.dispose()
+    waiting = state(game)
+    (offer,) = ancillary.offers(waiting)
+    assert offer.timeskip == case.id and offer.controller == PLAYER.user_id
+    assert records(waiting)[0].step == "electives" and len(records(waiting)[0].electives) == 2
+    inbox = InboxService(ledger)
+    assert any(
+        x.identity == offer.id and x.task == "m3_ancillary_invitation" for x in inbox.items(PLAYER)
+    )
+    assert not any(x.identity == offer.id for x in inbox.items(OTHER))
+    old_bond = current_ref(waiting, OTHER.user_id)
+    choices = ancillary.frame_assets("SOLDIER", "SOLDIER_3")[:2]
+    draft = ancillary.Draft(
+        name="Timeskip Soldier",
+        book="SOLDIER",
+        bond=old_bond,
+        frame_catalogue="SOLDIER_3",
+        girl_assets=tuple(
+            ancillary.NamedAsset(name=x, description="Actual Girl Asset")
+            for x in ancillary.STARTERS["SOLDIER"].assets[:2]
+        ),
+        frame_assets=tuple(
+            ancillary.NamedAsset(name=x, description="Actual Frame Asset") for x in choices
+        ),
+    )
+    AncillaryService(MissionService(ledger)).respond(
+        PLAYER,
+        "accept-actual-timeskip-ancillary",
+        offer.id,
+        waiting.revision,
+        draft,
+    )
+    opening = state(game)
+    assert records(opening)[0].step == "opening"
+    (soldier,) = ancillary.records(opening)
+    assert soldier.draft.name == "Timeskip Soldier" and soldier.controller == PLAYER.user_id
+    assert any(
+        x.get("kind") == "timeskip_ancillary_introduced" and "evacuations" in x.get("reason", "")
+        for x in opening.facts
+    )
+
+    with pytest.raises(WorkflowError, match="newly bound scene"):
+        elect.open_scene(ADMIN, "wrong-old-scene", case.id, opening.revision, 900, "Old scene")
+    game.close_scene(ADMIN, "close-the-old-scene", 900)
+    bound_scene = game.bind_scene(ADMIN, "bind-follow-on", 900)
+    game.join_scene(ADMIN, "handler-in-follow-on", 900)
+    native(ADMIN, dict(text="The new base opens at dawn."), 93424)
+    assert service.get(PLAYER, case.id)["opening"] is None
+    for viewer, sequence in ((OTHER, 93428), (PLAYER, 93432)):
+        game.join_scene(viewer, "join-actual-follow-on-" + str(viewer.user_id), 900)
+        assert service.get(viewer, case.id)["opening"] == "The new base opens at dawn."
+        native(viewer, dict(text="I explain the change in my own character."), sequence)
+    native(ADMIN, dict(text="The original Handler explains the change in their duties."), 93436)
+    done = state(game)
+    assert (
+        records(done)[0].step == "complete"
+        and records(done)[0].opening_scene == bound_scene["scene"]
+        and len(records(done)[0].introductions) == 3
+    )

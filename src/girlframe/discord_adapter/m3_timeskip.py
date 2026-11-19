@@ -10,8 +10,12 @@ from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.m3_punishments import Picker
 from girlframe.discord_adapter.m3_world import TYPES, coordinates
+from girlframe.discord_adapter.member_names import member_label
 from girlframe.discord_adapter.onboarding import reply
+from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.playbooks import FRAME_TYPES, GIRL_TYPES
+from girlframe.services.m3_ancillary import AncillaryService
+from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_timeskip import (
     BASE_JOBS,
     DURATIONS,
@@ -20,6 +24,7 @@ from girlframe.services.m3_timeskip import (
     RebelSuccessor,
     TimeskipService,
 )
+from girlframe.services.m3_timeskip_electives import TimeskipElectives
 from girlframe.services.m3_timeskip_rewards import TimeskipRewards
 
 
@@ -82,8 +87,11 @@ async def open_timeskip(
     if step in ("benefits", "choose_requisition"):
         await _open_rewards(interaction, TimeskipRewards(service), case, title, data)
         return
-    if step == "electives":
-        await reply(interaction, "The Timeskip awaits the original table’s elective choices.")
+    if step in ("electives", "choose_elective", "opening", "introduce_self"):
+        await _open_electives(interaction, TimeskipElectives(service), case, title, data)
+        return
+    if step == "introductions":
+        await reply(interaction, "The original players are reintroducing their characters.")
         return
     if step == "create_contact":
         await _open_contact(interaction, service, case, title, data)
@@ -491,3 +499,103 @@ async def _open_rewards(
         interaction.user.id, title, "Review the original Timeskip benefit.", fields, confirm
     )
     await reply(interaction, form.text(), form)
+
+
+async def _open_electives(
+    interaction: discord.Interaction,
+    service: TimeskipElectives,
+    identity: str,
+    title: str,
+    data: dict[str, Any],
+) -> None:
+    step = data["step"]
+    if step == "electives":
+        await _offer_ancillary(interaction, service, identity, title, data)
+        return
+    if step == "introduce_self" and not data["ready"]:
+        await reply(interaction, "Join the original follow-on scene to reintroduce your character.")
+        return
+    if step == "opening" and interaction.channel_id is None:
+        await reply(interaction, "Open your Timeskip Inbox item from the actual new scene.")
+        return
+
+    if step == "choose_elective":
+        options: tuple[tuple[str, str], ...] = (("pass", "Pass on the elective"),)
+        if data["ancillary"]:
+            options += (("ancillary", "Propose an Ancillary Girl"),)
+        fields = [Field("choice", "Your original decision", options)]
+        if data["ancillary"]:
+            fields.append(
+                Field("text", "Why the Ancillary Girl matters", paragraph=True, required=False)
+            )
+        instructions = "You may pass or choose an available elective."
+    elif step == "opening":
+        fields = [Field("text", "Describe the new circumstances", paragraph=True)]
+        instructions = "Open this control in the newly bound scene you joined as Handler."
+    else:
+        fields = [Field("text", "How your own character has changed", paragraph=True)]
+        instructions = clean(data["opening"])
+
+    async def confirm(click: discord.Interaction, values: dict[str, Any]) -> str:
+        args = viewer_from_interaction(click), str(click.id), identity, data["revision"]
+        if step == "choose_elective":
+            reason = values.get("text", "") if values["choice"][0] == "ancillary" else None
+            await asyncio.to_thread(service.choose, *args, reason)
+            return (
+                "The original Handler can review your Ancillary proposal."
+                if reason
+                else "Your elective decision is saved."
+            )
+        if step == "opening":
+            if click.channel_id is None:
+                raise ValueError("Open this control from the newly bound scene")
+            await asyncio.to_thread(service.open_scene, *args, click.channel_id, values["text"])
+            return "The actual follow-on scene is saved for its participants."
+        await asyncio.to_thread(service.introduce, *args, values["text"])
+        return "Your own reintroduction is saved."
+
+    form = NativeForm(interaction.user.id, title, instructions, fields, confirm)
+    await reply(interaction, form.text(), form)
+
+
+async def _offer_ancillary(
+    interaction: discord.Interaction,
+    service: TimeskipElectives,
+    identity: str,
+    title: str,
+    data: dict[str, Any],
+) -> None:
+    options = tuple((user, member_label(user)) for user in data["nominees"])
+    if not options:
+        await reply(interaction, "The original table is considering or completing its electives.")
+        return
+    invites = AncillaryService(MissionService(service.store))
+
+    async def open_proposal(click: discord.Interaction, user: str) -> None:
+        fields = [Field("decision", "Send the original invitation", (("send", "Send"),))]
+        contacts = tuple(data["contacts"].items())
+        if contacts:
+            fields.append(
+                Field("contacts", "Disclose eligible Patrons", contacts, 0, 20, required=False)
+            )
+
+        async def send(confirm: discord.Interaction, values: dict[str, Any]) -> str:
+            await asyncio.to_thread(
+                invites.invite,
+                viewer_from_interaction(confirm),
+                str(confirm.id),
+                data["revision"],
+                int(user),
+                data["site"],
+                contacts=tuple(ActorRef(kind="npc", entity=x) for x in values.get("contacts", ())),
+                timeskip=identity,
+            )
+            return "The original player can create their actual character in the private Inbox."
+
+        form = NativeForm(click.user.id, title, clean(data["nominees"][user]), fields, send)
+        await reply(click, form.text(), form)
+
+    picker = Picker(
+        interaction.user.id, "Review an original Ancillary proposal.", options, open_proposal
+    )
+    await picker.show(interaction)
