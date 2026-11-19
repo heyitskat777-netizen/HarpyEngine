@@ -1880,6 +1880,11 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_handler_plays import HandlerPlayService
 
             await open_notice(interaction, HandlerPlayService(self.service.store), item.identity)
+        elif item.task == "m3_last_resort":
+            from girlframe.discord_adapter.m3_last_resort import open_reserve
+            from girlframe.services.m3_last_resort import LastResortService
+
+            await open_reserve(interaction, LastResortService(self.service.store), item.identity)
         elif item.task == "m3_successor":
             from girlframe.discord_adapter.m3_successor import open_successor
             from girlframe.services.m3_successor import SuccessorService

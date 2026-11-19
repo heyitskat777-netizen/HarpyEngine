@@ -533,6 +533,12 @@ class AcquireMore(discord.ui.Button[NativeForm]):
 
                 await open_purchase(current, SuccessorService(self.service.store), self.identity)
                 return
+            if values["advancement"][0] == "last_resort":
+                from girlframe.discord_adapter.m3_last_resort import open_purchase as reserve_frame
+                from girlframe.services.m3_last_resort import LastResortService
+
+                await reserve_frame(current, LastResortService(self.service.store), self.identity)
+                return
             if values["advancement"][0] == "opportunity":
                 from girlframe.discord_adapter.m3_promotional_opportunity import open_opportunity
                 from girlframe.services.m3_promotional_opportunity import (
@@ -569,6 +575,7 @@ class AcquireMore(discord.ui.Button[NativeForm]):
                         ("marriage", "Intracadre Marriage"),
                         ("opportunity", "Promotional Opportunity"),
                         ("successor", "Successor"),
+                        ("last_resort", "Last / Resort"),
                     ),
                 )
             ],

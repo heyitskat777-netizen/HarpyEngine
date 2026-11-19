@@ -238,6 +238,10 @@ class HandlerAdvancementService:
                     from girlframe.engine.m3_successor import acquisitions as successor_acquisitions
 
                     receipts = successor_acquisitions(spent)
+                elif value.acquired_rule == "handler-advancement.handler-advancement.last-resort":
+                    from girlframe.engine.m3_last_resort import acquisitions as resort_acquisitions
+
+                    receipts = resort_acquisitions(spent)
                 else:
                     from girlframe.engine.m3_supply_drop import (
                         acquisitions as drop_acquisitions,

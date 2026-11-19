@@ -1453,3 +1453,19 @@ The selected advancement, Handler, Inbox and engine regression passed
 **144 tests in 124.68 seconds** before the removal timing check. The revised
 focused case passed **1 test in 9.20 seconds**.
 [Rulebook p. 153](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=155) · [Tests](../../tests/rules/test_successor.py)
+
+### Last / Resort reserve and Cadre loss threshold
+
+Base `4429ec7dfbef6e182c6255a62a8829b574ab8a72`. An actual held
+advancement now establishes the original Handler's private chassis
+reserve at an operational base under their responsibility. The native
+Inbox reports the current death threshold using the distinct actual
+original and later Cadre roster. A real death or execution contributes
+once. Betrayal, owned Link and equipment choices, actual Frame entry,
+succession and later discovery by the Foundation remain open.
+
+The focused cases checked actual award consumption, wrong owner, wrong
+site, private Inbox, restart, duplicate purchase and an actual original
+Girl's death. The selected Handler, advancement, career and Inbox
+regression passed **56 tests in 90.75 seconds**.
+[Rulebook p. 157](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=159) · [Tests](../../tests/rules/test_last_resort.py)

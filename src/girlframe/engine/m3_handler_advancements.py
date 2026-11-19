@@ -75,6 +75,7 @@ class Award(Model):
             "handler-advancement.handler-advancement.intracadre-marriage",
             "handler-advancement.handler-advancement.promotional-opportunity",
             "handler-advancement.handler-advancement.successor",
+            "handler-advancement.handler-advancement.last-resort",
         ]
         | None
     ) = Field(default=None, exclude_if=lambda value: value is None)

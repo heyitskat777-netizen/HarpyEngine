@@ -20380,14 +20380,16 @@
         "heading": "Last Resort"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_last_resort.py::test_last_resort_reserve_is_owned_and_counts_actual_cadre_death"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

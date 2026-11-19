@@ -2904,6 +2904,7 @@ class InboxService:
             from girlframe.engine.m3_handler_consequences import (
                 active_handler as current_successor_handler,
             )
+            from girlframe.engine.m3_last_resort import acquisitions as last_resort_acquisitions
             from girlframe.engine.m3_successor import acquisitions as successor_acquisitions
             from girlframe.services.m3_frantic_breakdown import FranticBreakdownService
             from girlframe.services.m3_frantic_crisis import CrisisService
@@ -2913,6 +2914,28 @@ class InboxService:
             from girlframe.services.m3_privacy_trouble import PrivacyTroubleService
             from girlframe.services.m3_scene_requisitions import SceneRequisitionService
 
+            for value in last_resort_acquisitions(canon):
+                if value.handler == current_successor_handler(
+                    canon
+                ) and value.handler.entity == str(viewer.user_id):
+                    items.append(
+                        InboxItem(
+                            "last-resort:" + value.id,
+                            "last_resort",
+                            value.id,
+                            canon.revision,
+                            "playbook",
+                            "Private Last / Resort reserve",
+                            "Your original Handler",
+                            "available",
+                            True,
+                            False,
+                            "Review your actual reserve and Cadre losses.",
+                            "Linking and succession require their separate source.",
+                            "Review Last / Resort",
+                            task="m3_last_resort",
+                        )
+                    )
             for value in successor_acquisitions(canon):
                 if value.handler == current_successor_handler(
                     canon
