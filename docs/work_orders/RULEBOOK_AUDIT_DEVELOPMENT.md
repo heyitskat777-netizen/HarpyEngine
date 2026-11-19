@@ -3687,3 +3687,19 @@ live cast role without duplicating the NPC. Linked historical
 jobs, certain legacy resources, full Girl creation and other
 Candidate variants remain open.
 [Pilot Candidate p. 189](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=191) · [Ancillary p. 93](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=95) · [Native case](../../tests/rules/test_pilot_candidate_promotion.py)
+
+### Abyssal Acolyte’s Void-Drunk low Dive
+
+Base `bf0e3f3`. A nearby original Acolyte can follow a saved
+low Dive. The diver chooses zero primary outcomes, and the
+original Handler keeps her printed choice. The Acolyte can
+choose an actually observed unmarked Tag. The Tag and
+Helplessness apply only when the original Dive completes and
+the same diver resurfaces.
+
+**One focused case passed in 5.42 seconds.** It proved the
+observed Tag audience, preserved the real Handler consequence,
+and verified both effects only after completion. Mid and high
+Dives, Apometanoia interception, and cockpit or shadow
+emergence remain open.
+[Void-Drunk p. 109](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=111) · [Dive Deep p. 22](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=24) · [Native case](../../tests/rules/test_void_drunk.py)

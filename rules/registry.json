@@ -15841,14 +15841,42 @@
         "heading": "Void-Drunk"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original Acolyte is actually nearby when a standard Pilot makes an approved low Dive Deep.",
+        "actor_type": "Original Acolyte and original standard Pilot",
+        "pre_roll_sources": [
+          "Approved optional role and rule",
+          "Exact saved low Dive and original cast",
+          "An actual observed unmarked Tag when chosen"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "low": [
+            "The diver chooses zero primary outcomes; the original Acolyte can pass or latch",
+            "The Acolyte can mark an observed Tag on resurfacing and make the original diver Helpless"
+          ]
+        },
+        "choice_ownership": "Original Acolyte owns the latch and optional Tag. The underlying Handler retains their ordinary low Dive choice.",
+        "target_policy": "Actual original same-scene local actors and observed Tags only.",
+        "post_roll_effects": [
+          "Mark the exact real Tag and apply Helplessness only after the original Dive consequences and resurfacing."
+        ],
+        "mandatory_followups": [
+          "Mid and high Dive outcomes, Apometanoia interception, shadow or cockpit emergence and nonstandard divers remain open."
+        ],
+        "handler_or_gm_intervention": "The original Handler still chooses the low Dive consequence under the existing workflow.",
+        "test_fixture_ids": [
+          "tests/rules/test_void_drunk.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_void_drunk.py"],
       "m2_play_id": null,
       "module": "ancillary"
     },

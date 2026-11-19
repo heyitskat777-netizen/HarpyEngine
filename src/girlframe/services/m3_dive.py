@@ -330,6 +330,10 @@ def _next(
     meta = action["data"]["dive"]
     if game.pending(c, action["id"]):
         return
+    from girlframe.services import m3_void_drunk as void_drunk
+
+    if void_drunk.open_choices(game, c, state, action):
+        return
     completed = meta["completed_steps"]
     groups = _groups(action)
     if completed < len(groups):
@@ -379,6 +383,9 @@ def _next(
             )
         meta["thresholds_opened"] = True
         return
+    event = completion_event or action["data"]["response_event"]
+    if not void_drunk.complete(game, c, state, action, event):
+        return
     action["data"]["result"]["dive_steps"] = [
         dict(option=x["option"], choice_owner=x["chooser"]) for x in meta["steps"]
     ]
@@ -422,6 +429,10 @@ def projection(
     action: dict[str, Any],
     request: dict[str, Any],
 ) -> dict[str, Any]:
+    if request["kind"] == "dive_void_drunk":
+        from girlframe.services import m3_void_drunk as void_drunk
+
+        return void_drunk.project(game, c, state, action, request)
     actor, handler, npcs = _context(action)
     body = json.loads(request["body_json"])
     step = body["step"]
@@ -681,6 +692,12 @@ def apply(
     request: dict[str, Any],
     answer: ChoiceAnswer,
 ) -> None:
+    if request["kind"] == "dive_void_drunk":
+        from girlframe.services import m3_void_drunk as void_drunk
+
+        void_drunk.select(game, c, state, action, request, answer)
+        _next(game, c, state, action)
+        return
     meta = action["data"]["dive"]
     body = json.loads(request["body_json"])
     if request["kind"] == "dive_handler_void":

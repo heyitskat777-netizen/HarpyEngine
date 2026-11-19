@@ -36,6 +36,32 @@ async def open_dive(
     data = await asyncio.to_thread(game.decision, viewer_from_interaction(interaction), identity)
     detail = data["dive"]
     kind = data["kind"]
+    if kind == "dive_void_drunk":
+        fields = [
+            Field("choice", "Your original decision", (("pass", "Pass"), ("latch", "Latch on"))),
+        ]
+        if detail["tags"]:
+            fields.append(Field(
+                "tag", "Observed Tag to mark as they resurface", tuple(detail["tags"].items()),
+                0, 1, required=False,
+            ))
+
+        async def void_drunk(current: discord.Interaction, values: dict[str, Any]) -> str:
+            await asyncio.to_thread(
+                game.respond, viewer_from_interaction(current), str(current.id), identity,
+                data["revision"], ChoiceAnswer(
+                    options=values["choice"], denied=values.get("tag", ()),
+                ),
+            )
+            return "Your original choice is saved."
+
+        form = NativeForm(
+            interaction.user.id, "Void-Drunk",
+            "You can follow " + clean(detail["target"]) + " on the original Dive.",
+            fields, void_drunk,
+        )
+        await reply(interaction, form.text(), form)
+        return
     if kind == "dive_call":
         from girlframe.discord_adapter.m3_mockingbird_communion import open_call
         from girlframe.services.m3_mockingbird_communion import CallService
