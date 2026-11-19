@@ -567,6 +567,9 @@ class CastService:
 
                     guard(c, self.store, cast.id, ref)
                     if ref.kind == "pilot":
+                        from girlframe.services.campaign_time_history import require_reserved
+
+                        require_reserved(c, self.store.campaign_id, cast.id, actor.controller)
                         scenes = t.m2["m2_scenes"]
                         others = c.execute(
                             sa.select(scenes).where(

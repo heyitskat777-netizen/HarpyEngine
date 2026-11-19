@@ -858,7 +858,9 @@ class GameService:
             authorize=authorize,
         )
 
-    def scene(self, c: Connection, channel: int | str) -> dict[str, Any]:
+    def scene(
+        self, c: Connection, channel: int | str, *, check_slot: bool = True
+    ) -> dict[str, Any]:
         table = t.m2["m2_scenes"]
         row = (
             c.execute(
@@ -873,6 +875,10 @@ class GameService:
         )
         if row is None:
             raise WorkflowError("Bind an open M2 scene channel first.")
+        if check_slot:
+            from girlframe.services.campaign_time_history import require_due
+
+            require_due(c, self.store.campaign_id, row["id"])
         return dict(row) | {"participants": json.loads(row["participants_json"])}
 
     def bind_scene(self, viewer: GuildViewer, key: str, channel: int) -> dict[str, Any]:
@@ -955,6 +961,9 @@ class GameService:
                 )
             table = t.m2["m2_scenes"]
             if str(viewer.user_id) in state.sheets:
+                from girlframe.services.campaign_time_history import require_reserved
+
+                require_reserved(c, self.store.campaign_id, scene["id"], viewer.user_id)
                 rows = c.execute(
                     sa.select(table).where(
                         table.c.campaign_id == self.store.campaign_id, table.c.open.is_(True)
@@ -6906,6 +6915,118 @@ class GameService:
             authorize=authorize,
         )
 
+    def _require_scene_close(self, c: Connection, scene: dict[str, Any]) -> None:
+        from girlframe.engine.m3_deep_brain_spikes import require_return
+        from girlframe.services.p1_source_pause import require_clear as require_source_clear
+
+        require_source_clear(self, c, int(scene["channel_id"]))
+        try:
+            require_return(load_state(c, self.store.campaign_id), scene["id"])
+        except ValueError as error:
+            raise WorkflowError(str(error)) from None
+        lock = self.lock(c, scene["channel_id"])
+        if lock and lock["state"] != "released":
+            raise WorkflowError("Resolve or recover the pending action before closing this scene.")
+        actions = t.m2["m2_actions"]
+        for body in c.scalars(
+            sa.select(actions.c.body_json).where(
+                actions.c.campaign_id == self.store.campaign_id,
+                actions.c.scene_id == scene["id"],
+                actions.c.state == "aborted",
+            )
+        ):
+            saved = json.loads(body)
+            if saved.get("shared_recovery"):
+                raise WorkflowError("Resume or cancel the saved Play before closing its scene.")
+            if saved.get("receipt") and (saved.get("m3_recovery") or saved.get("actor_recovery")):
+                raise WorkflowError(
+                    "Resume the actual known roll before closing its original scene."
+                )
+        work = t.m3["m3_required_work"]
+        latest = {
+            x["id"]: x
+            for x in c.execute(
+                sa.select(work)
+                .where(
+                    work.c.campaign_id == self.store.campaign_id,
+                )
+                .order_by(work.c.revision)
+            ).mappings()
+        }
+        if any(x["scene_id"] == scene["id"] and x["state"] != "resolved" for x in latest.values()):
+            raise WorkflowError("Resolve the actual source-bound scene work before closing it.")
+
+    def _scene_close_effects(
+        self, c: Connection, scene: dict[str, Any], close_event: str
+    ) -> GameState | None:
+        state = load_state(c, self.store.campaign_id)
+        cast = next((x for x in state.scene_casts if x.id == scene["id"] and x.open), None)
+        if cast:
+            state.scene_casts = [
+                x.model_copy(update={"open": False, "revision": x.revision + 1})
+                if x.id == cast.id
+                else x
+                for x in state.scene_casts
+            ]
+        from girlframe.services.m3_ankou import expire_scene as expire_ankou_scene
+        from girlframe.services.m3_changeling_effects import expire_scene as expire_eyes
+
+        drugs_changed = expire_ankou_scene(self, c, state, scene["id"], close_event)
+        drugs_changed = expire_eyes(self, c, state, scene["id"], close_event) or drugs_changed
+        if any(x.get("kind") == "stim_sex_drug" for x in state.facts):
+            from girlframe.services.m3_stim_sex import expire_scene as expire_stim
+
+            drugs_changed = expire_stim(self, c, state, scene, close_event) or drugs_changed
+        if any(x.get("kind") == "dose_up_result" for x in state.facts):
+            from girlframe.services.m3_dose_up import expire_scene
+
+            drugs_changed = expire_scene(self, c, state, scene, close_event) or drugs_changed
+        return state if cast or drugs_changed else None
+
+    def scene_close_state(
+        self, c: Connection, scene: dict[str, Any], close_event: str
+    ) -> GameState | None:
+        """Preview close effects without retaining any writes."""
+        self._require_scene_close(c, scene)
+        preview = c.begin_nested()
+        try:
+            return self._scene_close_effects(c, scene, close_event)
+        finally:
+            preview.rollback()
+
+    def record_scene_close(
+        self,
+        c: Connection,
+        actor: int,
+        key: str,
+        scene: dict[str, Any],
+        close_event: str,
+        *,
+        apply_effects: bool,
+        event_index: int = 0,
+    ) -> None:
+        table = t.m2["m2_scenes"]
+        c.execute(
+            table.update()
+            .where(
+                table.c.campaign_id == self.store.campaign_id,
+                table.c.id == scene["id"],
+            )
+            .values(open=False)
+        )
+        state = self._scene_close_effects(c, scene, close_event) if apply_effects else None
+        self.event(
+            c,
+            actor,
+            key,
+            "m2.scene_closed",
+            state,
+            channel=int(scene["channel_id"]),
+            scene_id=scene["id"],
+            event_index=event_index,
+            event_id=close_event,
+        )
+
     def close_scene(
         self,
         viewer: GuildViewer,
@@ -6921,55 +7042,10 @@ class GameService:
             self.store.administrator(viewer)
 
         def operation(c: Connection) -> dict[str, Any]:
-            scene = self.scene(c, channel)
+            scene = self.scene(c, channel, check_slot=False)
             if director_scene is not None and director_scene != (scene["id"], scene["revision"]):
                 raise WorkflowError("STALE_SCENE: reopen the original scene for closeout.")
-            from girlframe.services.p1_source_pause import require_clear as require_source_clear
-
-            require_source_clear(self, c, channel)
-            from girlframe.engine.m3_deep_brain_spikes import require_return
-
-            try:
-                require_return(load_state(c, self.store.campaign_id), scene["id"])
-            except ValueError as error:
-                raise WorkflowError(str(error)) from None
-            lock = self.lock(c, channel)
-            if lock and lock["state"] != "released":
-                raise WorkflowError(
-                    "Resolve or recover the pending action before closing this scene."
-                )
-            actions = t.m2["m2_actions"]
-            for body in c.scalars(
-                sa.select(actions.c.body_json).where(
-                    actions.c.campaign_id == self.store.campaign_id,
-                    actions.c.scene_id == scene["id"],
-                    actions.c.state == "aborted",
-                )
-            ):
-                saved = json.loads(body)
-                if saved.get("shared_recovery"):
-                    raise WorkflowError("Resume or cancel the saved Play before closing its scene.")
-                if saved.get("receipt") and (
-                    saved.get("m3_recovery") or saved.get("actor_recovery")
-                ):
-                    raise WorkflowError(
-                        "Resume the actual known roll before closing its original scene."
-                    )
-            work = t.m3["m3_required_work"]
-            latest = {
-                x["id"]: x
-                for x in c.execute(
-                    sa.select(work)
-                    .where(
-                        work.c.campaign_id == self.store.campaign_id,
-                    )
-                    .order_by(work.c.revision)
-                ).mappings()
-            }
-            if any(
-                x["scene_id"] == scene["id"] and x["state"] != "resolved" for x in latest.values()
-            ):
-                raise WorkflowError("Resolve the actual source-bound scene work before closing it.")
+            self._require_scene_close(c, scene)
             close_event = str(uuid4())
             closeout = {}
             if director_scene is not None:
@@ -6982,46 +7058,7 @@ class GameService:
                     ),
                     "scene_id": scene["id"],
                 }
-            table = t.m2["m2_scenes"]
-            c.execute(
-                table.update()
-                .where(
-                    table.c.campaign_id == self.store.campaign_id,
-                    table.c.channel_id == str(channel),
-                )
-                .values(open=False)
-            )
-            state = load_state(c, self.store.campaign_id)
-            cast = next((x for x in state.scene_casts if x.id == scene["id"] and x.open), None)
-            if cast:
-                state.scene_casts = [
-                    x.model_copy(update={"open": False, "revision": x.revision + 1})
-                    if x.id == cast.id
-                    else x
-                    for x in state.scene_casts
-                ]
-            from girlframe.services.m3_ankou import expire_scene as expire_ankou_scene
-            from girlframe.services.m3_changeling_effects import expire_scene as expire_eyes
-
-            drugs_changed = expire_ankou_scene(self, c, state, scene["id"], close_event)
-            drugs_changed = expire_eyes(self, c, state, scene["id"], close_event) or drugs_changed
-            if any(x.get("kind") == "stim_sex_drug" for x in state.facts):
-                from girlframe.services.m3_stim_sex import expire_scene as expire_stim
-
-                drugs_changed = expire_stim(self, c, state, scene, close_event) or drugs_changed
-            if any(x.get("kind") == "dose_up_result" for x in state.facts):
-                from girlframe.services.m3_dose_up import expire_scene
-
-                drugs_changed = expire_scene(self, c, state, scene, close_event) or drugs_changed
-            self.event(
-                c,
-                viewer.user_id,
-                key,
-                "m2.scene_closed",
-                state if cast or drugs_changed else None,
-                channel=channel,
-                event_id=close_event,
-            )
+            self.record_scene_close(c, viewer.user_id, key, scene, close_event, apply_effects=True)
             return {"channel": channel, "closed": True, **closeout}
 
         return self.store._write(
