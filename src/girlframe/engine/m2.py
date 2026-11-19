@@ -606,6 +606,13 @@ def mark_identity(
     identity = next((x for x in sheet.identities if x.id == entry), None)
     if identity is None or identity.marked:
         raise ValueError("Choose an unmarked Identity")
+    if state is not None and sheet.character_id is not None:
+        from girlframe.engine.m3_actor_state import ActorRef
+        from girlframe.engine.m3_parasite_infection import controls_identity
+
+        actor = ActorRef(kind="pilot", entity=str(sheet.owner), incarnation=sheet.character_id)
+        if controls_identity(state, actor, entry):
+            raise ValueError("The original Parasite controls this Identity until excision")
     if not set(sheet.obsession_sources) <= set(identity.obsession_sources):
         raise ValueError("Only an actual source-qualifying obsessed Identity can generate Heat")
     from girlframe.engine.m3_girl_runtime_state import has_rule, relation_current

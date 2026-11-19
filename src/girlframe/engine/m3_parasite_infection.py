@@ -1,6 +1,7 @@
 """The original bodies and receipts for Parasite infection (p. 174)."""
 
 from typing import Literal
+from uuid import NAMESPACE_URL, uuid5
 
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, Model
@@ -38,6 +39,7 @@ class Infection(Model):
     void_asset: str | None = None
     void_event: str | None = None
     void_work: str | None = None
+    controlled_identities: tuple[str, ...] = ()
     surgery_required: bool = False
     excision: Excision | None = None
     resolved: str | None = None
@@ -79,3 +81,37 @@ def assets(state: GameState, girl: ActorView, *, damaged_connection: bool) -> di
         and (not damaged_connection or not x.damaged)
         and (x.family == "girl" or girl.piloting is True)
     }
+
+
+def identity_parts(state: GameState, case: Infection) -> dict[str, tuple[str, str]]:
+    sheet = state.sheets.get(case.girl.entity)
+    if sheet is None or sheet.character_id != case.girl.incarnation:
+        return {}
+    held = {
+        identity
+        for other in records(state)
+        if other.girl == case.girl and other.surgery_required
+        for identity in other.controlled_identities
+    }
+    return {
+        str(uuid5(NAMESPACE_URL, f"girlframe:infection:{case.action}:{item.id}")): (
+            item.id,
+            f"Original Identity {index + 1}",
+        )
+        for index, item in enumerate(sheet.identities)
+        if item.id not in held and not item.protected
+    }
+
+
+def controls_identity(state: GameState, girl: ActorRef, identity: str) -> bool:
+    return any(
+        x.girl == girl and x.surgery_required and identity in x.controlled_identities
+        for x in records(state)
+    )
+
+
+def inhabits_original_body(state: GameState, source: ActorRef) -> bool:
+    return any(
+        x.source == source and x.surgery_required and x.controlled_identities
+        for x in records(state)
+    )

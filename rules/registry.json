@@ -22518,10 +22518,10 @@
             "Apply ordinary Void and record the partial infestation and pending surgery."
           ],
           "low": [
-            "Save the exact roll and keep the private sheet-control consequence pending."
+            "The original Parasite selects three actual unheld ordinary Identities. Their use is blocked until excision. Unsupported sheet parts stay under private review."
           ]
         },
-        "choice_ownership": "The Parasite initiates. The original Girl identifies the exact Voided Asset privately, spends Heat, owns her mid-tier loss, and describes her high-tier Void.",
+        "choice_ownership": "The Parasite initiates. The original Girl identifies the exact Voided Asset privately, spends Heat, owns her mid-tier loss, and describes her high-tier Void. The original Parasite chooses the low-tier affected sheet parts.",
         "target_policy": "Living same-square original Girl in the actual scene with known occupancy. Other bodies' corruption is excluded from the source actor's target preview.",
         "post_roll_effects": [
           "Original loss and repelled Parasite or actual ordinary Void and persistent partial infestation."
@@ -22530,7 +22530,7 @@
           "Resolve actual damage work before rolling.",
           "Complete any ordinary Void threshold. The patient may consent to experimental excision by an actual local doctor. Verify the actual surgery before removing the infestation."
         ],
-        "handler_or_gm_intervention": "The procedural human GM verifies performed excision after the original patient consents in the actual scene. Private low-tier sheet control remains open.",
+        "handler_or_gm_intervention": "The procedural human GM verifies performed excision after the original patient consents in the actual scene. Alternate low-tier parts and active use of them remain open.",
         "test_fixture_ids": [
           "tests/rules/test_gorgon_runtime.py"
         ]

@@ -3748,14 +3748,48 @@ def test_parasite_infect_damages_an_actual_voided_asset_before_the_owned_roll(le
             assert VoidService(ledger).get(PLAYER, work)["stage"] == "prevented"
     else:
         reviewed = next(x for x in game.choices(ADMIN) if x["kind"] == LOW_REVIEW)
-        assert game.decision(ADMIN, reviewed["id"])["detail"]["roll"]["faces"] == [1, 2]
-        with pytest.raises(WorkflowError, match="awaits private human review"):
+        detail = game.decision(ADMIN, reviewed["id"])["detail"]
+        assert detail["roll"]["faces"] == [1, 2]
+        with pytest.raises(WorkflowError, match="exactly three"):
             answer(game, ADMIN, LOW_REVIEW, text="Acknowledged.")
         assert get(state(game), parent).resolved is None
         assert game.inspect(PLAYER, parent)["state"] == "awaiting_choices"
-    if tier != "low":
-        assert get(state(game), parent).resolved is not None
-        assert game.inspect(PLAYER, parent)["state"] == "complete"
+
+        async def select_parts():
+            interaction = current(ADMIN.user_id, 87906)
+            await interaction.response.defer(ephemeral=True)
+            await open_choice(interaction, game, reviewed["id"])
+            form = interaction.edit_original_response.call_args.kwargs["view"]
+            assert all(label.startswith("Original Identity") for label in detail["parts"].values())
+            form.values["options"] = tuple(detail["parts"])[:3]
+            await form.confirm.callback(current(ADMIN.user_id, 87907))
+            assert form.completed
+
+        asyncio.run(select_parts())
+        controlled = get(state(game), parent)
+        assert controlled.surgery_required and len(controlled.controlled_identities) == 3
+        tick(worker, gateway, 5)
+        identity = controlled.controlled_identities[0]
+        cast = CastService(ActorService(MissionService(ledger)))
+        change(cast, ADMIN, "withdraw", original.actor)
+        with pytest.raises(WorkflowError, match="Parasite controls this Identity"):
+            game.begin(
+                PLAYER,
+                "controlled-identity",
+                900,
+                state(game).sheets["2"].revision,
+                PlayInput(
+                    play="keep_your_head",
+                    heat=0,
+                    identity=identity,
+                    gain=1,
+                    context="I try to invoke my controlled Identity.",
+                    trigger_confirmed=True,
+                ),
+            )
+        assert game.dice.calls == 1
+    assert get(state(game), parent).resolved is not None
+    assert game.inspect(PLAYER, parent)["state"] == "complete"
     with pytest.raises(WorkflowError, match="original source-table"):
         game.inspect(OTHER, parent)
     tick(worker, gateway, 5)

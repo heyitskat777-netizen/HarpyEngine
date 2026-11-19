@@ -589,15 +589,23 @@ async def open_infection(
 
         await open_void(interaction, VoidService(game.store), detail["work"])
         return
-    if kind == "infection_low_review":
-        await reply(
-            interaction,
-            "The original low roll is saved. Review the original sheet control privately. "
-            "The infection remains pending while that consequence is unresolved.",
-        )
-        return
     fields: list[Field] = []
-    if kind == "infection_heat":
+    if kind == "infection_low_review":
+        if detail["transfer"]:
+            message = "Pass the saved consequence to the original Parasite controller."
+            fields = [Field("options", "Original choice owner", (("transfer", "Return choice"),))]
+        elif len(detail["parts"]) >= 3:
+            message = "Choose three original Identity slots to control until excision."
+            fields = [
+                Field("options", "Original sheet parts", tuple(detail["parts"].items()), 3, 3)
+            ]
+        else:
+            await reply(
+                interaction,
+                "The original low roll is saved. The available parts need private human review.",
+            )
+            return
+    elif kind == "infection_heat":
         message = f"You have {detail['heat']} available Heat. Choose how much to spend."
         fields.append(Field("heat", "Your Heat spend"))
     elif kind == "infection_loss":

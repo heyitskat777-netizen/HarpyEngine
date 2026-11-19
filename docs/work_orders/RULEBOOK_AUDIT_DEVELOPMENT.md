@@ -2196,6 +2196,27 @@ older Sentinel regression and the broad Parasite/Growth selection
 were interrupted without recording a complete passing run.
 [Parasite p. 174](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=176) · [Native case](../../tests/rules/test_gorgon_runtime.py)
 
+### Parasite control of three original Identity slots
+
+Base `ed44f14`. The exact saved low result gives the actual Parasite
+controller three original ordinary Identity slots to choose. The
+private selector hides their names. The canonical Identity spend
+port blocks the chosen slots while that source remains active.
+The Parasite's independent native Gorgon Plays remain unavailable
+until the original case is excised. The marks and prior rolls
+are preserved. Other sheet parts and Gorgon-initiated use of a
+controlled part still need their source adapters.
+
+**One focused low-outcome case passed in 4.83 seconds**. It verified
+the three native choices and a refusal through the ordinary Play
+entry point when the Girl tried to mark a controlled Identity.
+The interrupted regression also found that ending a Girl could
+drop her human's existing scene membership when that human also
+controlled a different NPC. Commit `ed44f14` preserves that existing
+membership. **Three focused cases passed in 6.59 seconds**, including
+the failing foreign-role case and both private Gorgon ending cases.
+[Parasite p. 174](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=176) · [Native cases](../../tests/rules/test_gorgon_runtime.py) · [Career regression](../../tests/rules/test_career_foreign_roles.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

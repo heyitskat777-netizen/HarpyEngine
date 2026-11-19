@@ -9,7 +9,7 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_parasite_infection as rules
-from girlframe.engine.m2 import ChoiceAnswer, GameState
+from girlframe.engine.m2 import ChoiceAnswer, GameState, spend_heat
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, SceneCast
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_hallucinations import Roll
@@ -102,7 +102,8 @@ def apply(
     ):
         raise WorkflowError("Recover the active infection and its original bodies")
     if kind == LOW_REVIEW:
-        raise WorkflowError("The original low result awaits private human review of sheet control")
+        _control(game, c, state, action, case, body, row, answer, event)
+        return
     if (
         row["actor_id"] != str(girl.controller)
         or answer.denied
@@ -223,15 +224,61 @@ def _roll(
         and holds(state, girl.ref, "trapped")
     ):
         raise WorkflowError("Only the original target can spend her actual Heat on this infection")
+    spend_heat(sheet, heat)
     roll = Roll(faces=game.dice.roll(), heat=heat, event=event)
     if heat:
-        sheet.heat -= heat
         sheet.revision += 1
     rules.put(state, case.model_copy(update=dict(roll=roll)))
     if roll.result == "low":
-        game.request(c, action, action["data"]["gorgon_play"]["procedural_gm"], LOW_REVIEW)
+        game.request(c, action, action["data"]["gorgon_play"]["controller"], LOW_REVIEW)
     else:
         game.request(c, action, girl.controller, LOSS if roll.result == "mid" else VOID)
+
+
+def _control(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    case: rules.Infection,
+    source: ActorView,
+    row: dict[str, Any],
+    answer: ChoiceAnswer,
+    event: str,
+) -> None:
+    if case.roll is None or case.roll.result != "low":
+        raise WorkflowError("Recover the actual Parasite's saved low roll")
+    if row["actor_id"] != str(source.controller):
+        # Previously saved review tasks belong to the GM; hand back the unmade choice.
+        if row["actor_id"] == str(
+            action["data"]["gorgon_play"]["procedural_gm"]
+        ) and answer == ChoiceAnswer(options=("transfer",)):
+            game.request(c, action, source.controller, LOW_REVIEW)
+            return
+        raise WorkflowError("Pass this still-pending choice to the original Parasite controller")
+    options = rules.identity_parts(state, case)
+    if (
+        len(answer.options) != 3
+        or not set(answer.options) <= set(options)
+        or answer.denied
+        or answer.flag is not None
+        or answer.number is not None
+        or answer.member is not None
+        or answer.fields
+        or answer.text
+    ):
+        raise WorkflowError("Choose exactly three actual supported parts of the original sheet")
+    rules.put(
+        state,
+        case.model_copy(
+            update=dict(
+                controlled_identities=tuple(options[x][0] for x in answer.options),
+                surgery_required=True,
+                resolved=event,
+            )
+        ),
+    )
+    action["data"]["result"]["parasite_folded"] = True
 
 
 def _void(
@@ -317,6 +364,13 @@ def project(
         )
     if kind in (LOSS, LOW_REVIEW) and case.roll:
         result["roll"] = case.roll.model_dump(mode="json")
+    if kind == LOW_REVIEW:
+        result["transfer"] = row["actor_id"] != str(action["data"]["gorgon_play"]["controller"])
+        result["parts"] = (
+            {key: value[1] for key, value in rules.identity_parts(state, case).items()}
+            if not result["transfer"]
+            else {}
+        )
     return result
 
 

@@ -113,7 +113,10 @@ class GorgonPlayService:
                 if not _visible(state, role.actor, viewer.user_id):
                     continue
                 visible[role.actor.token] = actual
-                owned = actual.controller == viewer.user_id
+                owned = actual.controller == viewer.user_id and not (
+                    role.actor.kind == "gorgon"
+                    and infection.inhabits_original_body(state, role.actor)
+                )
                 if (
                     owned
                     and role.actor.kind == "gorgon"
@@ -173,7 +176,11 @@ class GorgonPlayService:
                 for actor in state.world.gorgons:
                     token = ActorRef(kind="gorgon", entity=actor.id).token
                     caster = visible.get(token)
-                    if caster is None or caster.controller != viewer.user_id:
+                    if (
+                        caster is None
+                        or caster.controller != viewer.user_id
+                        or infection.inhabits_original_body(state, caster.ref)
+                    ):
                         continue
                     if actor.alive and "parasite" in actor.types and not caster.offstage_source:
                         if parasite.active(state, caster.ref):
@@ -345,6 +352,10 @@ class GorgonPlayService:
             )
             from girlframe.engine.m3_janus_pandora import require_can_harm, vicious
 
+            if infection.inhabits_original_body(state, actual.ref):
+                raise WorkflowError(
+                    "The original Parasite is folded inside its host until excision"
+                )
             if declaration.kind in parasite.PLAYS:
                 riding = parasite.active(state, actual.ref) is not None
                 if (
