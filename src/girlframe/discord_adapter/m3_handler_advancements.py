@@ -122,16 +122,17 @@ async def open_advancement(
         )
         return
     if data.get("acquired_rule"):
+        label = {
+            "cute-uniforms": "Cute Uniforms",
+            "girl-insurance": "Girl Insurance",
+            "successor": "Successor",
+            "last-resort": "Last / Resort",
+            "take-a-play": "a borrowed Handler Play",
+        }.get(data["acquired_rule"].rsplit(".", 1)[-1], "Supply Drop")
         await reply(
             interaction,
             "This advancement acquired "
-            + (
-                "Cute Uniforms"
-                if data["acquired_rule"].endswith("cute-uniforms")
-                else "Girl Insurance"
-                if data["acquired_rule"].endswith("girl-insurance")
-                else "Supply Drop"
-            )
+            + label
             + ". Its original acquisition source is saved; open the acquired rule to use it.",
         )
         return
@@ -539,6 +540,14 @@ class AcquireMore(discord.ui.Button[NativeForm]):
 
                 await reserve_frame(current, LastResortService(self.service.store), self.identity)
                 return
+            if values["advancement"][0] == "borrow":
+                from girlframe.discord_adapter.m3_handler_borrowed import open_borrow
+                from girlframe.services.m3_handler_borrowed import BorrowedHandlerService
+
+                await open_borrow(
+                    current, BorrowedHandlerService(self.service.store), self.identity
+                )
+                return
             if values["advancement"][0] == "opportunity":
                 from girlframe.discord_adapter.m3_promotional_opportunity import open_opportunity
                 from girlframe.services.m3_promotional_opportunity import (
@@ -576,6 +585,7 @@ class AcquireMore(discord.ui.Button[NativeForm]):
                         ("opportunity", "Promotional Opportunity"),
                         ("successor", "Successor"),
                         ("last_resort", "Last / Resort"),
+                        ("borrow", "Take a Play from a different book"),
                     ),
                 )
             ],

@@ -1,6 +1,6 @@
 """Owned Handler Plays: fictional effects and source-limited human authority."""
 
-from typing import Literal
+from typing import Final, Literal
 
 from pydantic import Field, model_validator
 
@@ -25,7 +25,7 @@ EXTRA = (
     ("dress_them_down", "Dress Them Down"),
     ("successor_advice", "Give advice on how to lead"),
 )
-DRESS_RULE = "handler-playbook.dogrunner.dress-them-down"
+DRESS_RULE: Final = "handler-playbook.dogrunner.dress-them-down"
 SUCCESSOR_ADVICE = "handler-advancement.handler-advancement.successor"
 DRESS_STEPS = (
     ("competency", "Insult their competency"),

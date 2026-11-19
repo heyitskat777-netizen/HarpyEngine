@@ -1469,3 +1469,18 @@ site, private Inbox, restart, duplicate purchase and an actual original
 Girl's death. The selected Handler, advancement, career and Inbox
 regression passed **56 tests in 90.75 seconds**.
 [Rulebook p. 157](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=159) · [Tests](../../tests/rules/test_last_resort.py)
+
+### Borrowed Handler Play
+
+Base `ca7d18d521e8a610b347597166076ed1b3305a12`. A Handler outside
+Dogrunner can spend an actual held advancement to learn Dress Them Down.
+The original Play keeps its native controls, source scene, private
+audience, Status effect and real Tag when the Girl becomes Dog. The
+purchase preserves the original Handler book and its passive entitlements.
+Other borrowed Plays remain open.
+
+The selected regression passed **73 tests in 92.32 seconds** during
+implementation. The focused route verifies a real ordinary award,
+wrong audience, passive selection rejection, retry, restart and a
+stale effect application.
+[Rulebook p. 151](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=153) · [Tests](../../tests/rules/test_handler_borrowed.py)

@@ -20048,6 +20048,34 @@
       "module": "core"
     },
     {
+      "id": "handler-advancement.handler-advancement.take-a-play",
+      "title": "Take a Play from a different Handler Playbook",
+      "scope": "handler-advancement",
+      "kind": "mechanic",
+      "source": {
+        "document": "rulebook",
+        "pdf_page": 153,
+        "printed_page": 151,
+        "heading": "Take a play from a different Handler Playbook"
+      },
+      "required": true,
+      "implementation": "subset",
+      "source_audit": "inventoried",
+      "independent_review": "pending",
+      "reviewer": null,
+      "review_reference": null,
+      "contract": null,
+      "dependencies": [
+        "source.handler-advancement-triggers",
+        "handler-playbook.dogrunner.dress-them-down"
+      ],
+      "test_evidence": [
+        "tests/rules/test_handler_borrowed.py::test_borrowed_dress_them_down_uses_original_play_and_ordinary_rank"
+      ],
+      "m2_play_id": null,
+      "module": "core"
+    },
+    {
       "id": "handler-advancement.handler-advancement.successor",
       "title": "Successor",
       "scope": "handler-advancement",

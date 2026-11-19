@@ -2914,15 +2914,15 @@ class InboxService:
             from girlframe.services.m3_privacy_trouble import PrivacyTroubleService
             from girlframe.services.m3_scene_requisitions import SceneRequisitionService
 
-            for value in last_resort_acquisitions(canon):
-                if value.handler == current_successor_handler(
+            for reserve in last_resort_acquisitions(canon):
+                if reserve.handler == current_successor_handler(
                     canon
-                ) and value.handler.entity == str(viewer.user_id):
+                ) and reserve.handler.entity == str(viewer.user_id):
                     items.append(
                         InboxItem(
-                            "last-resort:" + value.id,
+                            "last-resort:" + reserve.id,
                             "last_resort",
-                            value.id,
+                            reserve.id,
                             canon.revision,
                             "playbook",
                             "Private Last / Resort reserve",
@@ -2936,15 +2936,15 @@ class InboxService:
                             task="m3_last_resort",
                         )
                     )
-            for value in successor_acquisitions(canon):
-                if value.handler == current_successor_handler(
+            for star_record in successor_acquisitions(canon):
+                if star_record.handler == current_successor_handler(
                     canon
-                ) and value.handler.entity == str(viewer.user_id):
+                ) and star_record.handler.entity == str(viewer.user_id):
                     items.append(
                         InboxItem(
-                            "successor:" + value.id,
+                            "successor:" + star_record.id,
                             "successor",
-                            value.id,
+                            star_record.id,
                             canon.revision,
                             "playbook",
                             "Successor Gold Stars",

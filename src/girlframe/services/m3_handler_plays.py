@@ -93,6 +93,15 @@ def _ordinary_scene_idle(c: Connection, game: "GameService") -> None:
         )
 
 
+def _can_dress(
+    c: Connection, game: "GameService", state: GameState, handler: ActorRef | None
+) -> bool:
+    from girlframe.services.m3_handler_borrowed import owned
+
+    role = active_book(game, c, state, book="Dogrunner", rule=DRESS_RULE)
+    return (role is not None and role[0] == handler) or owned(game, c, state, handler, DRESS_RULE)
+
+
 def _original_scene(
     c: Connection,
     game: "GameService",
@@ -105,9 +114,8 @@ def _original_scene(
     if handler is None or target.kind != "pilot":
         raise WorkflowError("Use the actual original Handler and Girl")
     if rule == DRESS_RULE:
-        book = active_book(game, c, state, book="Dogrunner", rule=DRESS_RULE)
-        if book is None or book[0] != handler:
-            raise WorkflowError("Only the current Dogrunner may dress down an actual Girl")
+        if not _can_dress(c, game, state, handler):
+            raise WorkflowError("Use your original Dogrunner or paid Dress Them Down ability")
     elif rule == SUCCESSOR_ADVICE:
         from girlframe.services.m3_successor import owned
 
@@ -1162,8 +1170,7 @@ class HandlerPlayService:
                     self.game, c, state, book="Frantic", rule=breakdown_rule
                 )
                 is not None,
-                dress_them_down=active_book(self.game, c, state, book="Dogrunner", rule=DRESS_RULE)
-                is not None,
+                dress_them_down=_can_dress(c, self.game, state, active_handler(state)),
                 targets=[
                     dict(
                         ref=ActorRef(

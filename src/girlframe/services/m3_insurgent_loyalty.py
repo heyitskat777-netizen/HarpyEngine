@@ -119,6 +119,9 @@ def decide(
         raise WorkflowError("Recover the actual observed refusal and original Insurgent")
     girl = ActorRef.model_validate(source["actor"])
     observer = ActorRef.model_validate(source["handler"])
+    character = girl.incarnation
+    if girl.kind != "pilot" or character is None:
+        raise WorkflowError("Recover the original Girl from the witnessed refusal")
     actual = labels(state, girl)
     watching = request["kind"] == WATCH
     if watching:
@@ -160,5 +163,5 @@ def decide(
             witness,
             cause=RULE,
             source_pdf="135",
-            character_id=girl.incarnation,
+            character_id=character,
         )

@@ -253,7 +253,7 @@ class FranticBreakdownService:
                 debts = []
                 for target in targets:
                     owner = int(target.entity)
-                    if target != current_ref(state, owner):
+                    if target.incarnation is None or target != current_ref(state, owner):
                         raise WorkflowError("No replacement may inherit the breakdown's discipline")
                     debts.append(
                         self.game.obligation(

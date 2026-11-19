@@ -18,6 +18,25 @@ if TYPE_CHECKING:
     from girlframe.services.m2_game import GameService
 
 
+def book_rule_available(game: "GameService", rule: str) -> bool:
+    policy = game.store.policy.m3_approval
+    if (
+        policy is None
+        or "plays" not in policy.subsystems
+        or game.store.policy.owner_m3_rulings is None
+    ):
+        return False
+    registry = Access(game.store).registry
+    if registry is None or digest(registry) != policy.registry_sha256:
+        return False
+    entry = registry.entry(rule)
+    return (
+        entry.implementation != "unimplemented"
+        and entry.module in registry.enabled_modules
+        and (policy.scope != "core_complete" or entry.verified)
+    )
+
+
 def active_book(
     game: "GameService",
     c: Connection,
@@ -30,22 +49,9 @@ def active_book(
     handler = active_handler(state)
     if persona is None or persona.draft.playbook != book or handler is None:
         return None
-    policy = game.store.policy.m3_approval
-    if (
-        policy is None
-        or "plays" not in policy.subsystems
-        or game.store.policy.owner_m3_rulings is None
-    ):
-        return None
-    registry = Access(game.store).registry
-    if registry is None or digest(registry) != policy.registry_sha256:
-        return None
-    entry = registry.entry(rule)
     setup = HandlerService(game.store)
     if (
-        entry.implementation == "unimplemented"
-        or entry.module not in registry.enabled_modules
-        or (policy.scope == "core_complete" and not entry.verified)
+        not book_rule_available(game, rule)
         or setup.current(c)[1].handler_id != int(handler.entity)
         or not setup._member(c, int(handler.entity))
     ):
