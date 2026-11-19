@@ -299,14 +299,19 @@ def embrace(
         }
         if original is None or len(replaced) != count or not set(replaced) <= removable:
             raise ValueError("Choose the actual marked Tag and any required ordinary replacement")
+        retained = tuple(x for x in ancillary.identities if x.id not in replaced)
+        slot = next(
+            (x.slot for x in ancillary.identities if x.id in replaced),
+            next((i for i in range(limit) if all(x.slot != i for x in retained)), None),
+        )
         put_ancillary(
             state,
             ancillary.model_copy(
                 update=dict(
                     tags=tuple(x for x in ancillary.tags if x.id != tag_id),
                     identities=(
-                        *tuple(x for x in ancillary.identities if x.id not in replaced),
-                        IdentityState(id=str(uuid4()), name=original.label),
+                        *retained,
+                        IdentityState(id=str(uuid4()), name=original.label, slot=slot),
                     ),
                 )
             ),

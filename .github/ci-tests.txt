@@ -203,6 +203,7 @@ tests/rules/test_sniff_out.py
 tests/rules/test_timeskip.py
 tests/rules/test_warboy_hate.py
 tests/rules/test_ancillary_traits.py
+tests/rules/test_easily_broken.py
 tests/rules/test_ancillary_cadre.py
 tests/rules/test_abysstech.py
 tests/rules/test_harpy_intimacy.py

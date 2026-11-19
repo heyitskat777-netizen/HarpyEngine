@@ -103,6 +103,19 @@ class ActorPlayService:
                 raise WorkflowError(str(error)) from None
         return True
 
+    def _easily_broken(self, state: GameState, actor: ActorRef) -> bool:
+        from girlframe.engine.m3_ancillary import find
+        from girlframe.services.m3_access import Access
+
+        original = find(state, actor)
+        if original is None or original.draft.book != "REVOLUTIONARY IDEALIST":
+            return False
+        try:
+            Access(self.store).require_specialist_rule("ancillary.revolutionary-idealist.easily-broken")
+        except (WorkflowError, ValueError):
+            return False
+        return True
+
     def _soldier_surgery(self, state: GameState, actor: ActorRef) -> bool:
         from girlframe.engine.m3_ancillary import SOLDIER_SIMPLIFICATION, find
         from girlframe.services.m3_access import Access
@@ -1266,9 +1279,12 @@ class ActorPlayService:
             }
         )
         if repeated:
-            self.game.request(
-                c, action, int(action["actor_id"]), "tag_resolution", {"tag": selected["tag"]}
-            )
+            body = {"tag": selected["tag"]}
+            chooser = int(action["actor_id"])
+            if self._easily_broken(state, ref) and saved_marker is not None:
+                chooser = selected["controller"]
+                body["original_marker"] = saved_marker
+            self.game.request(c, action, chooser, "tag_resolution", body)
         else:
             self.results(c, action, state=state)
 
@@ -1466,13 +1482,37 @@ class ActorPlayService:
                     )
                 else:
                     self.game.request(c, action, judge, "actor_tag_selection")
-        elif kind == "tag_resolution" and owner == actor.controller:
+        elif kind == "tag_resolution":
+            marker_source = body.get("original_marker")
+            if marker_source is None:
+                if owner != actor.controller:
+                    raise WorkflowError("Only the original Tag bearer owns this resolution.")
+            else:
+                from girlframe.services.m3_tag_markers import current as current_markers
+
+                if not self._easily_broken(state, actor.ref) or not any(
+                    x.model_dump(mode="json") == marker_source
+                    for x in current_markers(self.game, c, state, action, owner)
+                ):
+                    raise WorkflowError("Recover the actual original marker for this Tag.")
             tag = next(x for x in rules.tags(state, actor.ref) if x.id == body["tag"])
+            if marker_source is not None and (
+                answer.fields or answer.text or answer.number is not None or answer.flag is not None
+                or answer.member is not None
+                or not set(answer.denied) <= {
+                    x.id for x in actor.identities if not x.protected and not x.paired
+                }
+            ):
+                raise WorkflowError("Choose only the original marker's allowed Tag resolution.")
             if answer.options == ("embrace",):
                 rules.embrace(state, actor.ref, tag.id, answer.denied)
                 from girlframe.engine.m3_harpy_flirt import clear_tag_debt
 
                 clear_tag_debt(state, actor.ref, tag.id)
+                if marker_source is not None:
+                    from girlframe.services.m3_revolutionary_identity import note_loss
+
+                    note_loss(self.game, c, state, actor.ref, action["data"]["response_event"])
             elif answer.options == ("reject",) and not answer.denied:
                 if actor.ref.kind == "external_pilot" and actor.rules != "ancillary":
                     from girlframe.services.m3_tag_permissions import PermissionService
@@ -1691,6 +1731,11 @@ class ActorPlayService:
             from girlframe.services.m3_battle import damage_projection
 
             result["battle"] = damage_projection(self.game, c, state, action, row)
+        if row["kind"] == "tag_resolution" and result["body"].get("original_marker"):
+            result["revolutionary_replacement"] = [
+                item.model_dump(mode="json") for item in actor.identities
+                if not item.protected and not item.paired
+            ] if len(actor.identities) >= 4 else []
         if row["kind"] == "tag_resolution" and actor.ref.kind == "clone_am":
             result["copy_identity_cap"] = 1
         if row["kind"] == "actor_keep" and own and self._soldier_surgery(state, actor.ref):

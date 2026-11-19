@@ -813,6 +813,10 @@ class AncillaryIntimacyService:
                         picks,
                         event,
                     )
+                    if update.get("disposition") == "identities_erased":
+                        from girlframe.services.m3_revolutionary_identity import note_loss
+
+                        note_loss(self.game, c, state, actual.ref, event)
             elif case.book == "PRODIGY" and case.step.startswith("prodigy_"):
                 state, update = _prodigy(state, case, choice, account.strip(), event)
             elif case.book == "MERCENARY" and case.step.startswith("mercenary_"):

@@ -286,6 +286,14 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
         ]
     elif kind == "gender_animal_tag":
         fields = [text("text", "Give the non-Animal partner an ordinary Tag")]
+    elif kind == "tag_resolution" and "revolutionary_replacement" in decision:
+        fields = [menu("options", "Choose what the Revolutionary does with that Tag",
+                       ("embrace", "reject"))]
+        if decision["revolutionary_replacement"]:
+            fields.append(entities(
+                "denied", "Original Identity to replace if embracing",
+                decision["revolutionary_replacement"], 0, 1, False,
+            ))
     elif kind == "tag_resolution":
         fields = [
             menu("options", "Resolve the repeated marked Tag", ("embrace", "reject")),
@@ -1155,7 +1163,9 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
             "\nTag proposals and their relevance are shared with all scene participants. "
             "Pass without selecting a role or modifier."
         )
-        if decision["kind"] == "tag_resolution":
+        if decision["kind"] == "tag_resolution" and "revolutionary_replacement" in decision:
+            instructions += " The original marker chooses. The Revolutionary owns any later action."
+        elif decision["kind"] == "tag_resolution":
             instructions += (
                 " Embracing replaces this copy's sole Identity. "
                 if decision.get("copy_identity_cap") == 1

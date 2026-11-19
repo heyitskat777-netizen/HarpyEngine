@@ -3651,3 +3651,20 @@ the actual roll, then observed the original Soldier advance
 from second to first and deepen a real Personal Bond to Intense.
 Direct high verification and the low result remain open.
 [Soldier p. 95](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=97) · [Native case](../../tests/rules/test_soldier_private_play.py)
+
+### Revolutionary Idealist’s Easily Broken
+
+Base `da2c91f`. The original marker of an already-marked Tag
+owns the resolution on the original Revolutionary. An embrace
+places the Tag in the actual chosen Identity slot. A rejection
+opens the original Revolutionary’s own future action. When the
+last original Identity is gone, the exact creation snapshot
+proves the loss and retains its source event.
+
+**One focused case passed in 3.98 seconds.** It used a saved
+native roll and repeated Tag, verified the other player’s
+choice, denied the original bearer access to that choice,
+replaced the exact original slot and recorded original loss.
+Later Handler succession, other Tag producers and direct
+rejection verification remain open.
+[Easily Broken p. 100](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=102) · [Native case](../../tests/rules/test_easily_broken.py)
