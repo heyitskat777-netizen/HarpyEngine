@@ -29,6 +29,8 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
         options.append(("advice", "Give advice on how to lead in this scene"))
     if data.get("frantic_breakdown") and interaction.channel_id is not None:
         options.append(("frantic_breakdown", "Break Down in this scene"))
+    if data.get("advocate_alone") and interaction.channel_id is not None:
+        options.append(("advocate_alone", "Get Them Alone in this scene"))
     options.extend(
         ("warp:" + x["id"], "Warp area: " + x["label"]) for x in data.get("warp_zones", [])
     )
@@ -52,6 +54,17 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
             await open_start(
                 current,
                 FranticBreakdownService(service.store, service.game),
+                data["game_revision"],
+                interaction.channel_id,
+            )
+        elif identity == "advocate_alone":
+            from girlframe.discord_adapter.m3_advocate_alone import open_question
+            from girlframe.services.m3_advocate_alone import AdvocateAloneService
+
+            assert interaction.channel_id is not None
+            await open_question(
+                current,
+                AdvocateAloneService(service.store, service.game),
                 data["game_revision"],
                 interaction.channel_id,
             )

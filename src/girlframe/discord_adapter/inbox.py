@@ -1902,6 +1902,13 @@ class InboxView(discord.ui.View):
             await open_breakdown(
                 interaction, FranticBreakdownService(self.service.store), item.identity
             )
+        elif item.task == "m3_advocate_alone":
+            from girlframe.discord_adapter.m3_advocate_alone import open_response as open_advocate
+            from girlframe.services.m3_advocate_alone import AdvocateAloneService
+
+            await open_advocate(
+                interaction, AdvocateAloneService(self.service.store), item.identity
+            )
         elif item.task == "m3_handler_play":
             from girlframe.discord_adapter.m3_handler_plays import open_play as open_handler_play
             from girlframe.services.m3_handler_plays import HandlerPlayService

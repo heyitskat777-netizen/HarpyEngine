@@ -2906,6 +2906,7 @@ class InboxService:
             )
             from girlframe.engine.m3_last_resort import acquisitions as last_resort_acquisitions
             from girlframe.engine.m3_successor import acquisitions as successor_acquisitions
+            from girlframe.services.m3_advocate_alone import AdvocateAloneService
             from girlframe.services.m3_frantic_breakdown import FranticBreakdownService
             from girlframe.services.m3_frantic_crisis import CrisisService
             from girlframe.services.m3_handler_plays import HandlerPlayService
@@ -3016,6 +3017,29 @@ class InboxService:
                         "Office discovery and actual Punishment have separate owners.",
                         "Review breakdown",
                         task="m3_frantic_breakdown",
+                    )
+                )
+            for conversation, can_issue in AdvocateAloneService(self.store)._tasks(
+                connection, viewer, canon
+            ):
+                items.append(
+                    InboxItem(
+                        "advocate-alone:" + conversation,
+                        "advocate_alone",
+                        conversation,
+                        canon.revision,
+                        "plays",
+                        "Get Them Alone",
+                        "Original two participants",
+                        "pending",
+                        True,
+                        False,
+                        "Choose the Tag and issue the order."
+                        if can_issue
+                        else "Answer the question.",
+                        "The private answer is held for its original audience.",
+                        "Open private conversation",
+                        task="m3_advocate_alone",
                     )
                 )
             for request in HandlerPlayService(self.store)._tasks(connection, viewer):

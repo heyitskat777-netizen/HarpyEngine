@@ -1159,12 +1159,15 @@ class HandlerPlayService:
             self.game.authorize(c, viewer, game=False)
             HandlerService(self.store).authorize(c, viewer)
             state = load_state(c, self.store.campaign_id)
+            from girlframe.engine.m3_advocate_alone import RULE as alone_rule
             from girlframe.services.m3_contaminant_zone import warp_options
             from girlframe.services.m3_successor import owned as owned_successor
 
             return dict(
                 game_revision=state.revision,
                 plays=BASIC,
+                advocate_alone=active_book(self.game, c, state, book="Advocate", rule=alone_rule)
+                is not None,
                 successor=owned_successor(self.game, c, state, active_handler(state)) is not None,
                 frantic_breakdown=active_book(
                     self.game, c, state, book="Frantic", rule=breakdown_rule

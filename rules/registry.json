@@ -16620,14 +16620,16 @@
         "heading": "Get Them Alone"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_advocate_alone.py::test_private_advocate_question_and_order_require_exact_original_audience"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

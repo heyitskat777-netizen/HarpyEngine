@@ -5952,9 +5952,12 @@ class GameService:
         *,
         dose_up: bool = False,
         conditioning_phrase: str | None = None,
+        advocate_conversation: tuple[str, int, str] | None = None,
     ) -> dict[str, Any]:
         if not text.strip() or len(text) > 1200:
             raise WorkflowError("Provide a direct order in 1–1200 characters.")
+        if advocate_conversation is not None and (dose_up or conditioning_phrase is not None):
+            raise WorkflowError("Choose one source for this direct order")
 
         def operation(c: Connection) -> dict[str, Any]:
             self.unpaused(c)
@@ -5975,11 +5978,12 @@ class GameService:
                 require_successor(state)
             from girlframe.services.m3_bonded_support import issue_requested_order
 
-            requested = issue_requested_order(
-                self, c, state, viewer, key, channel, target, text, dose_up=dose_up
-            )
-            if requested is not None:
-                return requested
+            if advocate_conversation is None:
+                requested = issue_requested_order(
+                    self, c, state, viewer, key, channel, target, text, dose_up=dose_up
+                )
+                if requested is not None:
+                    return requested
             authority = None
             am_secret = None
             from girlframe.services.m3_gender_designation import (
@@ -6039,6 +6043,22 @@ class GameService:
                     viewer.user_id,
                     target,
                     conditioning_phrase,
+                    order_id,
+                    order_event,
+                )
+            if advocate_conversation is not None:
+                from girlframe.services.m3_advocate_alone import stage_order as stage_advocate_order
+
+                order_event = str(uuid4())
+                stage_advocate_order(
+                    self,
+                    c,
+                    state,
+                    viewer,
+                    advocate_conversation,
+                    channel,
+                    target,
+                    text,
                     order_id,
                     order_event,
                 )
@@ -6144,7 +6164,9 @@ class GameService:
                 viewer.user_id,
                 key,
                 "m2.order_issued",
-                state if dose_order or stim_authority or taunt_works else None,
+                state
+                if dose_order or stim_authority or taunt_works or advocate_conversation
+                else None,
                 event_id=order_event,
                 action_id=identity,
                 **order_source_payload,
@@ -6160,7 +6182,12 @@ class GameService:
                 "m2.order_issued",
                 {"channel": channel, "target": target, "text": text}
                 | ({"dose_up": True} if dose_up else {})
-                | ({"conditioning_phrase": conditioning_phrase} if conditioning_phrase else {}),
+                | ({"conditioning_phrase": conditioning_phrase} if conditioning_phrase else {})
+                | (
+                    {"advocate_conversation": advocate_conversation}
+                    if advocate_conversation
+                    else {}
+                ),
                 operation,
                 auto_audit=False,
                 authorize=lambda c: self.authorize(c, viewer),

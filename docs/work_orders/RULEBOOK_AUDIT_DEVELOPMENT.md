@@ -1500,3 +1500,20 @@ The selected regression passed **73 tests in 105.18 seconds**, including
 wrong owner, safety pause, stale choice, retry and restart in the native
 Inbox path. Scoped type checks passed.
 [Rulebook p. 151](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=153) · [Tests](../../tests/rules/test_handler_book_swap.py)
+
+### Advocate's private question and direct order
+
+Base `b6d85c5fcf366388e52f1f8ea916c0b436287746`. An original Advocate
+can choose the printed question and either the amusing or nondisclosure
+order. Only the original Girl can supply her answer. When the Advocate
+chooses an actual Tag from it, that Tag and the new Receive Orders action
+commit in one write. The Girl still owns her response. Each stage checks
+the original one-on-one cast. The remaining printed combinations need
+their own effect and authorization paths.
+
+The selected regression passed **145 tests in 100.26 seconds** during
+implementation. The revised focused tests exercised both orders,
+third-party entry and departure, private native screens, restart,
+safety pause, stale input, a duplicate request and the actual
+Receive Orders completion.
+[Rulebook p. 138](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=140) · [Tests](../../tests/rules/test_advocate_alone.py)
