@@ -4118,6 +4118,29 @@ class InboxService:
             from girlframe.services.m3_harpy_gaze import GazeService
             from girlframe.services.m3_harpy_song import HarpySongService
             from girlframe.services.m3_harpy_visions import VisionsService
+            from girlframe.services.m3_npc_handover import LABELS as HANDOVER_LABELS
+            from girlframe.services.m3_npc_handover import NpcHandoverService
+
+            handover = NpcHandoverService(GameService(self.store))
+            for offer in handover.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "npc-handover:" + offer.id,
+                        "npc_handover",
+                        offer.id,
+                        canon.revision,
+                        "plays",
+                        HANDOVER_LABELS[offer.job],
+                        "Original NPC scene",
+                        "pending",
+                        True,
+                        False,
+                        "Choose whether the existing possession changes hands.",
+                        "This choice belongs to the original Girl.",
+                        "Open your choice",
+                        task="m3_npc_handover",
+                    )
+                )
 
             visions = VisionsService(GameService(self.store))
             for vision, step in visions.tasks(connection, canon, viewer):

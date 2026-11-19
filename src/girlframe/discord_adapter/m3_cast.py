@@ -16,6 +16,8 @@ from girlframe.engine.m3_journalist import Job
 from girlframe.services.m3_cast import CastService
 from girlframe.services.m3_conditioning import ConditioningService
 from girlframe.services.m3_harpy_creation import HarpyCreationService
+from girlframe.services.m3_npc_handover import LABELS as HANDOVER_LABELS
+from girlframe.services.m3_npc_handover import Job as HandoverJob
 from girlframe.services.onboarding import WorkflowError
 
 NPC_REQUEST_LABELS: dict[Job, str] = {
@@ -37,6 +39,7 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
     options: list[tuple[str, str]] = []
     actions: dict[str, tuple[str, ActorRef | None]] = {}
     npc_requests: dict[str, tuple[Job, ActorRef]] = {}
+    handovers: dict[str, tuple[HandoverJob, ActorRef]] = {}
     prompt_roles = {}
     for role in owned["actors"]:
         if role["token"] not in own_cast:
@@ -85,6 +88,11 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
                     request = job + ":" + token
                     options.append((request, label + role["label"][:55]))
                     npc_requests[request] = (job, ActorRef.model_validate(role["ref"]))
+            for handover, label in HANDOVER_LABELS.items():
+                if handover in role["job_prompts"]:
+                    key = "handover:" + handover + ":" + token
+                    options.append((key, label))
+                    handovers[key] = (handover, ActorRef.model_validate(role["ref"]))
             if "handler" in role["job_prompts"]:
                 order = "npc-handler-order:" + token
                 options.append((order, "Send a Girl as " + role["label"][:60]))
@@ -181,6 +189,13 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
             await open_ask(
                 current, JournalistService(service.game), channel, requester, job=requested_job
             )
+            return
+        if token in handovers:
+            from girlframe.discord_adapter.m3_npc_handover import open_handover
+            from girlframe.services.m3_npc_handover import NpcHandoverService
+
+            handover, npc = handovers[token]
+            await open_handover(current, NpcHandoverService(service.game), channel, npc, handover)
             return
         action, ref = actions[token]
         if action == "only_she":

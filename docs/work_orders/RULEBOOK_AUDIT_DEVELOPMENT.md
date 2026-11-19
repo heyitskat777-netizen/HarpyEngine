@@ -2927,3 +2927,22 @@ inventing Broken. The synthetic delivery audience was the
 issuer/facilitator and recipient. The test does not establish
 remote Orders, Rebel authority or real Discord delivery.
 [Handler Job p. 188](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=190) · [Native case](../../tests/rules/test_npc_handler_order.py)
+
+### Fan, Patron and Smuggler’s local possessions
+
+Base `d930957`. An actual local Fan can attempt to take
+something personal. Only the original Girl reviews her
+inventory and chooses one actual item or declines. A Patron
+can offer its own existing possession. A Smuggler controlled
+by the original human GM can offer its own possession after
+the GM records why the Girl cannot normally have it. The
+original Girl’s private decision is the only trigger for
+the canonical physical custody change.
+
+**Three focused cases passed in 7.57 seconds**. Each uses a
+proved ordinary original object, the native offer form and
+private Inbox. The cases verify unauthorized viewing,
+unchanged custody before approval, exact transfer history,
+and replay of the same confirmed choice. Mechanical Assets
+and hiding people or objects require separate effects.
+[Fan p. 188](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=190) · [Patron and Smuggler p. 189](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=191) · [Native cases](../../tests/rules/test_npc_job_handover.py)

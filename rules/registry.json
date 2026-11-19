@@ -23828,14 +23828,36 @@
         "heading": "Fan"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "An original Fan in the scene tries to take something personal.",
+        "actor_type": "Actual original local NPC and addressed original Girl",
+        "pre_roll_sources": [
+          "Current same-square original Cast and role controllers",
+          "Proven physical custody of the actual carried item"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {},
+        "choice_ownership": "The original Girl chooses an eligible possession from her own inventory or declines. The Fan does not receive the private inventory.",
+        "target_policy": "Private native offer to the original local Girl outside her Frame.",
+        "post_roll_effects": [
+          "Transfer the selected existing ordinary object to the original Fan."
+        ],
+        "mandatory_followups": [
+          "Intrusion permissions and NPC or mechanical Asset theft remain open. Questions and unusual appearances remain available as fiction prompts."
+        ],
+        "handler_or_gm_intervention": "Human GM retains adjudication and independent review; only owned selections affect custody.",
+        "test_fixture_ids": [
+          "tests/rules/test_npc_job_handover.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_npc_job_handover.py::test_actual_npc_possession_changes_hands_only_after_original_girl_chooses[fan]"],
       "m2_play_id": null,
       "module": "core"
     },
@@ -24023,14 +24045,36 @@
         "heading": "Patron"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "An original Patron in the scene offers an actual ordinary possession the local Girl wants.",
+        "actor_type": "Actual original local NPC and addressed original Girl",
+        "pre_roll_sources": [
+          "Current same-square original Cast and role controllers",
+          "Proven physical custody of the actual carried item"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {},
+        "choice_ownership": "The original Patron selects its own held object. The original Girl decides whether she wants to receive that exact item.",
+        "target_policy": "Private native offer to the original local Girl outside her Frame.",
+        "post_roll_effects": [
+          "Transfer the original ordinary object from the Patron to the actual Girl."
+        ],
+        "mandatory_followups": [
+          "Other goods, resource grants and negotiated favours remain open. Indulgence and requests remain available as fiction prompts."
+        ],
+        "handler_or_gm_intervention": "Human GM retains adjudication and independent review; only owned selections affect custody.",
+        "test_fixture_ids": [
+          "tests/rules/test_npc_job_handover.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_npc_job_handover.py::test_actual_npc_possession_changes_hands_only_after_original_girl_chooses[patron]"],
       "m2_play_id": null,
       "module": "core"
     },
@@ -24239,14 +24283,36 @@
         "heading": "Smuggler"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "An original Smuggler in the scene offers a specific item that the human GM establishes the local Girl is forbidden to have.",
+        "actor_type": "Actual original local NPC and addressed original Girl",
+        "pre_roll_sources": [
+          "Current same-square original Cast and role controllers",
+          "Proven physical custody of the actual carried item"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {},
+        "choice_ownership": "The human GM controls the original NPC and records the actual restriction in the offer. The original recipient accepts or declines.",
+        "target_policy": "Private native offer to the original local Girl outside her Frame.",
+        "post_roll_effects": [
+          "Transfer the exact existing ordinary object to the actual Girl while preserving its immutable source."
+        ],
+        "mandatory_followups": [
+          "Formal legal designations, coercive transfers, mechanical Assets and hiding a person or object remain open."
+        ],
+        "handler_or_gm_intervention": "Human GM retains adjudication and independent review; only owned selections affect custody.",
+        "test_fixture_ids": [
+          "tests/rules/test_npc_job_handover.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_npc_job_handover.py::test_actual_npc_possession_changes_hands_only_after_original_girl_chooses[smuggler]"],
       "m2_play_id": null,
       "module": "core"
     },
