@@ -225,6 +225,13 @@ class CastService:
                             "stale": role.controller != actor.controller,
                             "own": role.controller == viewer.user_id,
                             **({"job_prompts": prompts} if prompts else {}),
+                            **(
+                                {"director_phone": True}
+                                if owned_npc
+                                and actor.rules == "director"
+                                and viewer.user_id != state.handler
+                                else {}
+                            ),
                         }
                     )
                 if (

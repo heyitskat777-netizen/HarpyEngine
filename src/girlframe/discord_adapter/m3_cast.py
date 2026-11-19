@@ -47,6 +47,10 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
         key = "withdraw:" + token
         options.append((key, "Withdraw " + role["label"][:75]))
         actions[key] = ("withdraw", ActorRef.model_validate(role["ref"]))
+        if role.get("director_phone"):
+            phone = "phone:" + token
+            options.append((phone, "Call the Handler as " + role["label"][:55]))
+            actions[phone] = ("phone", ActorRef.model_validate(role["ref"]))
         if role.get("job_prompts"):
             prompt_key = "prompts:" + token
             options.append((prompt_key, "Review job prompts for " + role["label"][:65]))
@@ -119,6 +123,18 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
             )
             return
         action, ref = actions[token]
+        if action == "phone":
+            from girlframe.discord_adapter.m3_director_strain import open_phone
+            from girlframe.services.m3_director_strain import DirectorStrainService
+            from girlframe.services.m3_off_duty import OffDutyService
+            from girlframe.services.m3_strain import StrainService
+
+            assert ref is not None
+            phone_service = DirectorStrainService(
+                StrainService(OffDutyService(service.actors.missions))
+            )
+            await open_phone(current, phone_service, channel, ref)
+            return
         if action == "jobs":
             from girlframe.services.m3_npc_roles import NpcRoleService
             from girlframe.services.m3_world import WorldService

@@ -740,3 +740,22 @@ review and owner protection, stale requests, pause, replay and reopening.
 Arbitrary new mechanical effect types remain open. The independent gate
 was approved only in the synthetic test registry.
 [Custom Events p. 141](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=143) · [Custom event tests](../../tests/rules/test_custom_strain.py)
+
+## The fictional Director's calls
+
+The base is `106d1233e97d2c3670f10794f0108aea8f1c6032`.
+The joined independent controller of the living Director can set a
+printed track High or Low. Unrolled starting requests follow that level.
+Saved dice and fixed table cascades retain their original severity.
+Existing temporary Void relief still applies to the effective table.
+The same office can trigger a supported printed event during actual
+preparation. This creates original Handler-owned required work without
+rolling a die. The native effect receipt determines when it is resolved.
+The actual original caller and Handler can reopen the private call.
+
+All 38 selected tests passed. They exercised the native role controls,
+saved die, stale request after a severity change, wrong or withdrawn caller,
+pause, replay, reopen, private recipients and the actual triggered Disobey
+bonus. Six direct trigger consumers are enabled. Replacement and new track
+creation have their own acceptance checks below as work continues.
+[Director phone powers p. 190](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=192) · [Phone tests](../../tests/rules/test_director_strain_calls.py)

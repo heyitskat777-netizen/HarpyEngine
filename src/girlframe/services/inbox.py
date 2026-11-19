@@ -2950,6 +2950,7 @@ class InboxService:
             from girlframe.engine.m3_benevolent_contact import contacts as benevolent_contacts
             from girlframe.engine.m3_cadre_leak import leaks as cadre_leaks
             from girlframe.engine.m3_civic_directive import cases as civic_directives
+            from girlframe.engine.m3_director_strain import calls as director_strain_calls
             from girlframe.engine.m3_doppelganger_reveal import reveals as disguise_reveals
             from girlframe.engine.m3_harpy_raid import raids as harpy_raids
             from girlframe.engine.m3_journalist import questions as journalist_questions
@@ -2968,6 +2969,26 @@ class InboxService:
             from girlframe.services.m3_rebel_escape_offer import visible as visible_escape_offers
 
             journalism = JournalistService(GameService(self.store))
+            for phone_call in director_strain_calls(canon):
+                if viewer.user_id in (phone_call.controller, int(phone_call.handler.entity)):
+                    items.append(
+                        InboxItem(
+                            "director-strain-call:" + phone_call.id,
+                            "observation",
+                            phone_call.id,
+                            1,
+                            "world",
+                            "Director’s call",
+                            "Original participants",
+                            "resolved",
+                            False,
+                            False,
+                            "Read the original call.",
+                            "",
+                            "Open call",
+                            task="m3_director_strain_call",
+                        )
+                    )
             for question in journalist_questions(canon):
                 if viewer.user_id not in (question.controller, int(question.girl.entity)):
                     continue

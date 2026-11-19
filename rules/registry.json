@@ -22987,6 +22987,29 @@
       "module": "core"
     },
     {
+      "id": "director.director.strain-phone-calls",
+      "title": "Director Strain phone calls",
+      "scope": "director",
+      "kind": "mechanic",
+      "source": {
+        "document": "rulebook",
+        "pdf_page": 192,
+        "printed_page": 190,
+        "heading": "The Director’s Rules"
+      },
+      "required": true,
+      "implementation": "subset",
+      "source_audit": "inventoried",
+      "independent_review": "pending",
+      "reviewer": null,
+      "review_reference": null,
+      "contract": null,
+      "dependencies": [],
+      "test_evidence": ["tests/rules/test_director_strain_calls.py"],
+      "m2_play_id": null,
+      "module": "core"
+    },
+    {
       "id": "situational.situational.expanded-status",
       "title": "Expanded Status",
       "scope": "situational",

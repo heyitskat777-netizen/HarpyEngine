@@ -253,6 +253,10 @@ class EffectService:
             row = self._row(c, identity)
             self.strain._check(c, viewer, row, revision)
             state = self.strain._state(c, game_revision)
+            if json.loads(row["body_json"]).get("director_call"):
+                from girlframe.services.m3_director_strain import prove_trigger
+
+                prove_trigger(c, self.strain, state, row)
             from girlframe.engine.m3_promotional_opportunity import in_responsibility
 
             if state.world is not None and state.world.regions:
