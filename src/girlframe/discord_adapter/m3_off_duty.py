@@ -93,6 +93,7 @@ async def open_period(interaction: discord.Interaction, service: OffDutyService)
         actions.append(("refresh_rewards", "Refresh current Frame bonus tasks"))
     if data["phase"] == "preparing" and viewer.user_id == progress["handler"]:
         actions.append(("activate", "Finish preparation and begin Off-Duty"))
+        actions.append(("custom_strain", "Author a custom Strain event"))
     elif data["phase"] == "active":
         own = progress["own"]
         if progress["sheet"] is not None and not (own and own["recovered"]):
@@ -139,6 +140,13 @@ async def open_period(interaction: discord.Interaction, service: OffDutyService)
 
     async def choose(current: discord.Interaction, identity: str) -> None:
         if identity.startswith("action:"):
+            if identity == "action:custom_strain":
+                from girlframe.discord_adapter.m3_custom_strain import open_custom
+                from girlframe.services.m3_custom_strain import CustomStrainService
+                from girlframe.services.m3_strain import StrainService
+
+                await open_custom(current, CustomStrainService(StrainService(service)), data["id"])
+                return
             if identity in ("action:observation_order", "action:observation_hiding"):
                 from girlframe.discord_adapter.m3_observation import open_order
                 from girlframe.services.m3_observation import ObservationService

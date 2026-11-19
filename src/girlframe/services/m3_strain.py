@@ -455,6 +455,7 @@ class StrainService:
             cascade = False
             event_id = str(uuid4())
             rift_duration = None
+            custom_applied = False
             if endgame:
                 request = next((x for x in state.strain.requests if x.id == identity), None)
                 if request and request.track == "rebellion":
@@ -474,7 +475,30 @@ class StrainService:
             else:
                 if faction is not None:
                     raise WorkflowError("An ordinary event does not select an Endgame group")
-                state.strain = rules.choose(state.strain, identity, option)
+                from girlframe.engine import m3_custom_strain as custom
+
+                original_roll = next((x for x in state.strain.events if x.id == identity), None)
+                history = custom.occurrences(state)
+                slot = (
+                    custom.replacement(state, original_roll, 1 if option == 1 else 2)
+                    if original_roll is not None and type(option) is int and option in (1, 2)
+                    else None
+                )
+                state.strain = rules.choose(
+                    state.strain,
+                    identity,
+                    option,
+                    use_printed=slot is None,
+                    replaced_rolls=frozenset(
+                        x.source_work for x in history if x.replaces and x.source_work is not None
+                    ),
+                    extra_events=sum(
+                        original_roll is not None
+                        and x.track == original_roll.track
+                        and not x.replaces
+                        for x in history
+                    ),
+                )
                 selected = next(x for x in state.strain.events if x.id == identity)
                 selected_rule = selected.rule_id
                 assert selected_rule is not None
@@ -483,6 +507,40 @@ class StrainService:
                     rules.PAGES[(selected.track, selected.severity)],
                 )
                 cascade = selected.severity == "high" and selected.face == 6 and option == 2
+                if slot is not None:
+                    from girlframe.engine.m3_handler_consequences import active_handler
+                    from girlframe.services.m3_custom_strain import prove_slot
+
+                    self.missions.access.authorize(c, viewer, "world")
+                    prove_slot(c, self, slot)
+                    author = active_handler(state)
+                    if author is None:
+                        raise WorkflowError("Recover the actual Handler applying this custom event")
+                    custom.apply(
+                        state,
+                        custom.Occurrence(
+                            id=event_id,
+                            mode="replace_slot",
+                            actor=author,
+                            controller=viewer.user_id,
+                            period=selected.period_id,
+                            track=selected.track,
+                            source_work=identity,
+                            replaces=slot.id,
+                            target_controller=slot.target_controller,
+                            design=slot.design,
+                        ),
+                    )
+                    if any(x.replaces == slot.id for x in history):
+                        state.strain = rules.copy(
+                            state.strain, repeated=state.strain.repeated | {selected.track}
+                        )
+                    rule_id, source_pdf, cascade, custom_applied = (
+                        custom.RULE,
+                        custom.PAGE,
+                        False,
+                        True,
+                    )
                 if rule_id == rift_rules.RULE:
                     rift_duration = self.dice.roll_d6()
                     rift_rules.open_rift(state, selected, event_id, rift_duration, self.rng_source)
@@ -511,7 +569,7 @@ class StrainService:
             for request in state.strain.requests:
                 if request.id not in old_requests:
                     self._request(c, row, request, event)
-            if not cascade:
+            if not cascade and not custom_applied:
                 related(
                     c,
                     self.store,
@@ -528,7 +586,7 @@ class StrainService:
                 "state": "resolved",
                 "game_revision": state.revision,
                 "rule_id": rule_id,
-                "effects_pending": True,
+                "effects_pending": not custom_applied,
             }
 
         return self.missions._write(
@@ -634,10 +692,20 @@ class StrainService:
                             + " + ".join(sources),
                         )
                     )
+            custom_columns = {}
+            if row["kind"] == "strain_roll" and state.strain is not None:
+                from girlframe.engine.m3_custom_strain import replacement
+
+                saved_roll = next((x for x in state.strain.events if x.id == identity), None)
+                if saved_roll is not None and saved_roll.column is None:
+                    for column in (1, 2):
+                        if slot := replacement(state, saved_roll, column):
+                            custom_columns[str(column)] = slot.design.title
             return {
                 "budget_death_exemptions": exemptions,
                 **{k: row[k] for k in ("id", "revision", "kind", "state", "off_duty_id")},
                 "body": json.loads(row["body_json"]),
+                **({"custom_columns": custom_columns} if custom_columns else {}),
                 "game_revision": state.revision,
                 "period_revision": period.revision,
                 "canonical_facts": {

@@ -173,11 +173,12 @@ async def open_work(
             )
     elif kind == "strain_roll" and body.get("stage") == "column":
         row = ROWS[(body["track"], body["severity"])][body["face"] - 1]
+        custom = data.get("custom_columns", {})
         fields = [
             Field(
                 "option",
                 "Choose the actual event column",
-                tuple((str(i), label) for i, label in enumerate(row, 1)),
+                tuple((str(i), custom.get(str(i), label)) for i, label in enumerate(row, 1)),
             )
         ]
         instructions = (
@@ -187,7 +188,7 @@ async def open_work(
         )
 
         async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
-            await asyncio.to_thread(
+            result = await asyncio.to_thread(
                 service.choose,
                 viewer_from_interaction(current),
                 str(current.id),
@@ -196,6 +197,8 @@ async def open_work(
                 data["game_revision"],
                 int(values["option"][0]),
             )
+            if not result["effects_pending"]:
+                return "The original die and column are saved. The custom event took place."
             return "Event column saved. Its effects and any recursive rolls remain required work."
     elif kind == "strain_endgame":
         options = tuple((str(i), ENDGAMES[body["track"]][i - 1]) for i in data["endgame_options"])

@@ -134,7 +134,15 @@ def roll(state: State, request_id: str, face: int) -> State:
     )
 
 
-def choose(state: State, event_id: str, column: int) -> State:
+def choose(
+    state: State,
+    event_id: str,
+    column: int,
+    *,
+    use_printed: bool = True,
+    replaced_rolls: frozenset[str] = frozenset(),
+    extra_events: int = 0,
+) -> State:
     event = next((x for x in state.events if x.id == event_id), None)
     if event is None or event.column is not None or column not in (1, 2) or type(column) is not int:
         raise ValueError("The Handler must choose one pending die's actual event column")
@@ -142,12 +150,19 @@ def choose(state: State, event_id: str, column: int) -> State:
         event.model_copy(update={"column": column}).model_dump_json()
     )
     repeated = state.repeated
-    if any(x.rule_id == selected.rule_id for x in state.events if x.column is not None):
+    if use_printed and any(
+        x.rule_id == selected.rule_id
+        for x in state.events
+        if x.column is not None and x.id not in replaced_rolls
+    ):
         repeated |= {event.track}
     requests = state.requests
-    if (event.severity, event.face, column) == ("high", 6, 2):
+    if use_printed and (event.severity, event.face, column) == ("high", 6, 2):
         # Both lists remain available on each actual table roll. No substitute or reroll.
-        other = sum(x.track == event.track and x.column is not None for x in state.events)
+        other = (
+            sum(x.track == event.track and x.column is not None for x in state.events)
+            + extra_events
+        )
         if other <= 2:
             requests += tuple(
                 Request(

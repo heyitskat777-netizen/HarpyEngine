@@ -720,3 +720,23 @@ controls, duplicate submissions, safety pause, recovery of saved state, and
 the original medical response. Read-only Off-Duty routing now also reopens
 the existing laboratory and retirement Endgames.
 [Void Endgame p. 144](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=146) · [Concealment tests](../../tests/rules/test_void_privacy.py)
+
+## Custom Strain events
+
+The base is `82dc2863022926e69ba07f6aace43f951aead351`.
+The original Handler can apply an additional event, use one instead of an
+unrolled die, or write a replacement for an actual rolled slot. The first
+approved effect shape adds a real Tag to an original living local NPC in
+the Handler's control. A saved replacement keeps the die, chosen column
+and original table history. The replacement effect applies when that slot
+is chosen. The original printed consequence and its cascade do not run.
+The source stores the replacement definition and each actual application.
+Alternatives to a die satisfy Off-Duty only after the actual Tag and
+original work closure are both proven.
+
+All 129 selected tests passed. The native path verifies the three distinct
+routes, original dice, unchanged neighboring work, first application,
+review and owner protection, stale requests, pause, replay and reopening.
+Arbitrary new mechanical effect types remain open. The independent gate
+was approved only in the synthetic test registry.
+[Custom Events p. 141](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=143) · [Custom event tests](../../tests/rules/test_custom_strain.py)

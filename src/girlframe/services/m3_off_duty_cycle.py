@@ -324,12 +324,19 @@ class CycleService:
             ):
                 raise WorkflowError("Finish the real world setup and Strain cycle first.")
             base = [x for x in strain.events if x.period_id == identity and x.parent is None]
+            from girlframe.services.m3_custom_strain import completed_replacements
+            from girlframe.services.m3_strain import StrainService
+
+            custom_events = completed_replacements(c, StrainService(self.periods), state, identity)
+            tracks = [x.track for x in base] + [x.track for x in custom_events]
             if (
-                len(base) != 3
-                or {x.track for x in base} != set(TRACKS)
+                len(tracks) != 3
+                or set(tracks) != set(TRACKS)
                 or any(x.column is None for x in base)
             ):
-                raise WorkflowError("All three real Strain rolls need saved column choices.")
+                raise WorkflowError(
+                    "Each Strain track needs a saved choice or performed custom event."
+                )
             work = self.periods._pending(c, identity)
             start = [x for x in work if x["kind"] == "off_duty_strain_start"]
             blockers = frozenset(
@@ -369,7 +376,15 @@ class CycleService:
             ):
                 raise WorkflowError("Resolve actual start triggers and immediate sheet work first.")
             updated = rules.activate(period, period.revision, pending_preparation=blockers)
-            return updated, state, start, {"source_pdf": 142, "strain_events": [x.id for x in base]}
+            return (
+                updated,
+                state,
+                start,
+                (
+                    {"source_pdf": 142, "strain_events": [x.id for x in base]}
+                    | ({"custom_events": [x.id for x in custom_events]} if custom_events else {})
+                ),
+            )
 
         return self._change(
             viewer, key, identity, expected, game_revision, "m3.off_duty_activated", {}, change
