@@ -34,6 +34,7 @@ def candidate_source_gate(monkeypatch):
             "gorgon-type.sentinel.sentinel-type",
             "gorgon-type.incubus.incubus-type",
             "gorgon-type.mother.mother-type",
+            "gorgon-type.growth.growth-type",
         }:
             return next(x for x in registry.entries if x.id == identity)
         return actual(registry, identity)
@@ -1167,3 +1168,135 @@ def test_actual_girl_native_dropdown_accepts_blow_and_chooses_real_owned_asset(l
     assert next(x for x in state(game).sheets["2"].assets if x.id == selected).damaged
     with ledger.engine.connect() as c:
         assert game.action(c, parent)["state"] == "complete"
+
+
+def test_native_growth_preserves_old_damage_and_changes_actual_core_requirements(ledger):
+    import asyncio
+
+    from test_mission_ui import current
+
+    from girlframe.delivery.m2_worker import GameWorker
+    from girlframe.discord_adapter.m2_forms import NativeForm
+    from girlframe.discord_adapter.m3_gorgon_play import open_gorgon_play
+    from girlframe.engine.m3_growth import Adaptation, Regrowth
+    from girlframe.engine.m3_world import damage_gorgon, expose_gorgon
+    from girlframe.engine.m3_world_state import CorePlan
+    from girlframe.services.m2_game import GameService
+    from girlframe.services.m3_world import WorldService
+    from girlframe.services.onboarding import WorkflowError
+
+    game, _, gateway, _, original = gorgon_source(
+        ledger, kind="warp", types=("growth",), damaged=True, begin=False
+    )
+    actor = original.actor
+    initial = next(x for x in state(game).world.gorgons if x.id == actor.entity)
+    old, new_guard, *_ = initial.assets
+    assert old.damaged and not new_guard.damaged
+    exposed = expose_gorgon(state(game).world, actor.entity, "Original weakness")
+    assert next(x for x in exposed.gorgons if x.id == actor.entity).exposed
+
+    def data(kind):
+        options = GorgonPlayService(game).preview(ADMIN, 900)
+        item = next(x for x in options["actors"] if x["token"] == actor.token)
+        assert kind in options["growth"][actor.token]
+        return options["revision"], item["source_sha256"]
+
+    async def native(kind, sequence, **choices):
+        owner = current(ADMIN.user_id, sequence)
+        owner.channel_id = 900
+        await owner.response.defer(ephemeral=True)
+        await open_gorgon_play(owner, game)
+        form = owner.edit_original_response.call_args.kwargs["view"]
+        assert isinstance(form, NativeForm)
+        form.values.update(actor=(actor.token,), play=(kind,))
+        select = current(ADMIN.user_id, sequence + 1)
+        await select.response.defer(ephemeral=True)
+        await form.confirm.callback(select)
+        confirm = select.edit_original_response.call_args.kwargs["view"]
+        confirm.values.update(account=original.account, reach=("confirmed",), **choices)
+        sent = current(ADMIN.user_id, sequence + 2)
+        await confirm.confirm.callback(sent)
+        assert confirm.completed, sent.followup.send.call_args
+
+    service = GorgonPlayService(game)
+    adapt_rev, adapt_sha = data("growth_adapt")
+    guards = CorePlan(assets=(new_guard.id,), weakness="Strike between the paired new ribs")
+    adaptation = Adaptation(guards=guards, tag="Hardened unexpectedly")
+    declaration = original.model_copy(
+        update=dict(kind="growth_adapt", actor_sha256=adapt_sha, adaptation=adaptation)
+    )
+    with pytest.raises(WorkflowError, match="actual owned"):
+        service.begin(PLAYER, "take-grow", 900, adapt_rev, declaration)
+    with pytest.raises(WorkflowError, match="STALE_GORGON_PLAY"):
+        service.begin(ADMIN, "old-grow", 900, adapt_rev - 1, declaration)
+    asyncio.run(
+        native(
+            "growth_adapt",
+            92000,
+            guards=guards.assets,
+            weakness=guards.weakness,
+            growth_tag=adaptation.tag,
+        )
+    )
+    first = service.begin(ADMIN, "92002", 900, adapt_rev, declaration)
+    assert next(x for x in state(game).world.gorgons if x.id == actor.entity) == initial
+    ledger.safety(PLAYER, "hold-growth", ledger.status(PLAYER)["revision"], pause=True)
+    tick(GameWorker(game), gateway, 4)
+    assert next(x for x in state(game).world.gorgons if x.id == actor.entity) == initial
+    ledger.safety(PLAYER, "resume-growth", ledger.status(PLAYER)["revision"], pause=False)
+
+    def finish(action):
+        recovered = GameService(ledger, dice=game.dice)
+        runner = GameWorker(recovered)
+        tick(runner, gateway, 5)
+        with ledger.engine.connect() as c:
+            receipt = recovered.action(c, action)
+        if not receipt["data"]["gorgon_play"]["started"]:
+            recovered.roll(ADMIN, str(uuid4()), action)
+        tick(runner, gateway, 5)
+        with ledger.engine.connect() as c:
+            assert recovered.action(c, action)["state"] == "complete"
+        return next(x for x in state(recovered).world.gorgons if x.id == actor.entity)
+
+    adapted = finish(first["action_id"])
+    assert adapted.core_plan == guards and adapted.assets == initial.assets
+    assert [(tag.label, tag.giver_entity) for tag in adapted.tags] == [
+        (adaptation.tag, actor.entity)
+    ]
+    with pytest.raises(ValueError, match="designated Core-protecting Assets"):
+        expose_gorgon(state(game).world, actor.entity, "Original weakness")
+    public = WorldService(MissionService(ledger)).get(PLAYER)
+    assert guards.weakness not in str(public)
+    assert adaptation.tag not in str(public)
+
+    regrow_rev, regrow_sha = data("growth_regrow")
+    regrowth = Regrowth(asset=old.id, name="New plates", description="Ribs fuse into plates")
+    picked = original.model_copy(
+        update=dict(kind="growth_regrow", actor_sha256=regrow_sha, regrowth=regrowth)
+    )
+    bogus = picked.model_copy(
+        update=dict(regrowth=regrowth.model_copy(update=dict(asset=new_guard.id)))
+    )
+    with pytest.raises(WorkflowError, match="current damaged Asset"):
+        service.begin(ADMIN, "undamaged", 900, regrow_rev, bogus)
+    asyncio.run(
+        native(
+            "growth_regrow",
+            92010,
+            eaten=(old.id,),
+            replacement=regrowth.name,
+            description=regrowth.description,
+        )
+    )
+    second = service.begin(ADMIN, "92012", 900, regrow_rev, picked)
+    changed = finish(second["action_id"])
+    assert changed.destroyed_assets == (old,)
+    assert old.id not in {x.id for x in changed.assets}
+    assert len(changed.assets) == len(initial.assets)
+    new = changed.assets[0]
+    assert (new.name, new.description, new.damaged) == (regrowth.name, regrowth.description, False)
+    assert changed.core_plan == guards and changed.tags == adapted.tags
+    world = damage_gorgon(state(game).world, actor.entity, new_guard.id, indirect=True)
+    world = expose_gorgon(world, actor.entity, guards.weakness)
+    assert next(x for x in world.gorgons if x.id == actor.entity).exposed
+    assert game.dice.calls == 0

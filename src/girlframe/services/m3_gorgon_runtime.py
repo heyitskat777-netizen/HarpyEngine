@@ -9,10 +9,12 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_battle as battle
+from girlframe.engine import m3_growth as growth
 from girlframe.engine.m2 import ChoiceAnswer, GameState
 from girlframe.engine.m3_actor_state import ActorRef, SceneCast
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_collateral import Selection, Source, perform
+from girlframe.engine.m3_gorgon_play_state import Declaration
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_world_state import Asset
 from girlframe.services.m2_state import load_state
@@ -104,6 +106,18 @@ def start(game: Any, c: Connection, state: GameState, action: dict[str, Any]) ->
             state.world, actual, cell, action["id"], action["scene_id"], _event(action)
         )
         action["data"]["result"]["corrupted"] = cell
+        return
+    if meta["kind"] in growth.KINDS:
+        declaration = Declaration.model_validate_json(json.dumps(meta["declaration"]))
+        assert state.world is not None
+        if declaration.adaptation is not None:
+            changed = growth.adapt(actual, declaration.adaptation, action["id"])
+            action["data"]["result"]["growth_tag"] = changed.tags[-1].id
+        else:
+            assert declaration.regrowth is not None
+            changed = growth.regrow(actual, declaration.regrowth, action["id"])
+            action["data"]["result"]["regrown_asset"] = "growth:" + action["id"]
+        state.world = growth.save(state.world, changed)
         return
     if meta["kind"] == "warp":
         if not actual.exposed:

@@ -1895,6 +1895,23 @@ The remaining word-based Helplessness and source-locked or
 concealed Asset variants require their own effects and checks.
 [Conditioning p. 198](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=200)
 
+### Growth Core adaptation and regrowth
+
+Base `cadc749474613354a69a9919e46f54df2d1151ee`. A living,
+positioned Growth can take a Tag to change its unexposed Core's
+actual requirements. The normal exposure procedure consumes the
+new requirements. The Growth can also consume a damaged owned
+Asset and replace it with a fresh one. The old Asset remains in
+the original destroyed history, and regrowth preserves the current
+Core plan and other sources.
+
+**70 selected tests passed in 90.83 seconds** across Gorgon runtime,
+world operations, battles, Leviathan and registry checks. The
+native scenario exercised actual Core guards, rejected an intact
+regrowth source, and covered wrong owner, staleness, safety pause,
+resume and duplicate delivery. Grow Unreal remains separate.
+[Growth p. 173](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=175)
+
 ### Spoken Conditioning word
 
 Base `121d2898d8e7e8ef65e590ccaf098edef481cf17`. The original trainer

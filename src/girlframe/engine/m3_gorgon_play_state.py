@@ -6,10 +6,14 @@ from pydantic import Field, model_validator
 
 from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_gorgon_type_tags import LABELS, TypeTag
+from girlframe.engine.m3_growth import Adaptation, Regrowth
 
 
 class Declaration(Model):
-    kind: Literal["attack", "collateral", "warp", "corrupt"] | TypeTag
+    kind: (
+        Literal["attack", "collateral", "warp", "corrupt", "growth_adapt", "growth_regrow"]
+        | TypeTag
+    )
     actor: ActorRef
     assets: tuple[str, ...] = ()
     actor_sha256: str = Field(min_length=64, max_length=64)
@@ -18,6 +22,8 @@ class Declaration(Model):
     account: str = Field(min_length=1, max_length=1200)
     reach_confirmed: Literal[True]
     tag: str | None = Field(default=None, max_length=40, exclude_if=lambda value: value is None)
+    adaptation: Adaptation | None = Field(default=None, exclude_if=lambda value: value is None)
+    regrowth: Regrowth | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def source_shape(self) -> "Declaration":
@@ -37,4 +43,8 @@ class Declaration(Model):
                 raise ValueError("Choose a printed Tag for this Gorgon effect")
         elif self.tag is not None:
             raise ValueError("This Gorgon Play has no direct Tag choice")
+        if (self.adaptation is not None) != (self.kind == "growth_adapt") or (
+            self.regrowth is not None
+        ) != (self.kind == "growth_regrow"):
+            raise ValueError("Use this exact Growth Play's owned choices")
         return self

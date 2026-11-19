@@ -11,6 +11,9 @@ from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_gorgon_play_state import Declaration
 from girlframe.engine.m3_gorgon_type_tags import LABELS as TYPE_TAG_LABELS
+from girlframe.engine.m3_growth import KINDS as GROWTH_KINDS
+from girlframe.engine.m3_growth import Adaptation, Regrowth
+from girlframe.engine.m3_world_state import CorePlan
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_gorgon_play import GorgonPlayService
 
@@ -27,6 +30,8 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
     async def choose(current: discord.Interaction, values: dict[str, Any]) -> str | None:
         actor = next(x for x in own if x["token"] == values["actor"][0])
         kind = values["play"][0]
+        if kind in GROWTH_KINDS and kind not in data["growth"].get(actor["token"], ()):
+            return "Choose a Growth whose current Core or damaged Assets permit this Play."
         targets = [x for x in data["actors"] if x["ref"] != actor["ref"]]
         type_tag = kind in TYPE_TAG_LABELS
         if type_tag:
@@ -48,6 +53,24 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
             )
         if type_tag:
             fields.append(Field("tag", "Choose the printed effect", TYPE_TAG_LABELS[kind]))
+        if kind == "growth_adapt":
+            guards = tuple((x["id"], x["name"]) for x in actor["assets"])
+            fields.extend(
+                (
+                    Field("guards", "New Core-protecting Assets", guards, 1, min(2, len(guards))),
+                    Field("weakness", "New Core weakness", paragraph=True),
+                    Field("growth_tag", "Tag the Growth takes"),
+                )
+            )
+        if kind == "growth_regrow":
+            damaged = tuple((x["id"], x["name"]) for x in actor["assets"] if x["damaged"])
+            fields.extend(
+                (
+                    Field("eaten", "Current damaged Asset to consume", damaged),
+                    Field("replacement", "Name the new Asset"),
+                    Field("description", "Describe the actual new Asset", paragraph=True),
+                )
+            )
         if kind in ("attack", "collateral"):
             fields.append(
                 Field(
@@ -91,6 +114,19 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
                     account=details["account"],
                     reach_confirmed=True,
                     tag=(details.get("tag") or (None,))[0],
+                    adaptation=Adaptation(
+                        guards=CorePlan(assets=details["guards"], weakness=details["weakness"]),
+                        tag=details["growth_tag"],
+                    )
+                    if kind == "growth_adapt"
+                    else None,
+                    regrowth=Regrowth(
+                        asset=details["eaten"][0],
+                        name=details["replacement"],
+                        description=details["description"],
+                    )
+                    if kind == "growth_regrow"
+                    else None,
                 ),
             )
             return (

@@ -9,6 +9,7 @@ from pydantic import ValidationError
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
+from girlframe.engine import m3_growth as growth
 from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, SceneCast
 from girlframe.engine.m3_actors import fingerprint, resolve
@@ -32,7 +33,9 @@ RULES: dict[str, str] = {
     "collateral": "gorgon.gorgon.collateral-damage",
     "warp": "gorgon.gorgon.warp",
     "corrupt": corrupt_rule,
-    **TYPE_TAG_RULES,
+    "growth_adapt": growth.RULE,
+    "growth_regrow": growth.RULE,
+    **{str(kind): rule for kind, rule in TYPE_TAG_RULES.items()},
 }
 
 
@@ -70,12 +73,29 @@ class GorgonPlayService:
             rows = []
             visible: dict[str, ActorView] = {}
             can_corrupt = False
+            can_grow: dict[str, list[str]] = {}
             for role in cast.roles:
                 actual = resolve(state, role.actor, bound, require_current_profile=False)
                 if not _visible(state, role.actor, viewer.user_id):
                     continue
                 visible[role.actor.token] = actual
                 owned = actual.controller == viewer.user_id
+                if (
+                    owned
+                    and role.actor.kind == "gorgon"
+                    and actual.cell is not None
+                    and state.world
+                ):
+                    body = next(x for x in state.world.gorgons if x.id == role.actor.entity)
+                    if body.alive and "growth" in body.types and not actual.offstage_source:
+                        can_grow[role.actor.token] = [
+                            k
+                            for k, available in (
+                                ("growth_adapt", not body.exposed and bool(body.assets)),
+                                ("growth_regrow", any(x.damaged for x in body.assets)),
+                            )
+                            if available
+                        ]
                 if (
                     owned
                     and role.actor.kind == "gorgon"
@@ -126,6 +146,8 @@ class GorgonPlayService:
                     continue
                 if kind in TAG_TYPES and not any(kind in x for x in typed_targets.values()):
                     continue
+                if kind in growth.KINDS and not any(kind in x for x in can_grow.values()):
+                    continue
                 try:
                     access.registry.require_available(identity)
                 except ValueError:
@@ -138,6 +160,7 @@ class GorgonPlayService:
                 actors=rows,
                 plays=plays,
                 typed_targets=typed_targets,
+                growth=can_grow,
             )
 
     def begin(
@@ -182,6 +205,13 @@ class GorgonPlayService:
                 or already_corrupted(state.world, actual.cell)
             ):
                 raise WorkflowError("Use the actual Sentinel standing in a clear map square")
+            if declaration.kind in growth.KINDS:
+                if actual.cell is None:
+                    raise WorkflowError("Use the actual original Growth's established map square")
+                if declaration.adaptation is not None:
+                    growth.adapt(gorgon, declaration.adaptation, "preview")
+                if declaration.regrowth is not None:
+                    growth.regrow(gorgon, declaration.regrowth, "preview")
 
             if (
                 gorgon.gorgon_class == "benevolent"
