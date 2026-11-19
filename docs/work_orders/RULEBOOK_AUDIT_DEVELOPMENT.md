@@ -538,3 +538,18 @@ suspicion and concealment in conversation remain open. The safety entry
 records existing participant-owned pause, release, retry and recovery.
 The table's safety discussion remains with the participants.
 [Bonded p. 55](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=57) · [Hiding Void p. 18](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=20) · [Safety p. 110](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=112)
+
+## Gorgon Tags
+
+The base is `84d22fb8d8b27280b89262bcc445901e183a88b8`.
+An original Girl can apply a distinct +1 or -1 for each known Gorgon
+Tag to the existing roll. Knowledge comes from the original giver or
+an actual disclosure to her character. After two or more uses, only
+the actual Gorgon controller can remove a single Tag. In the approved
+synthetic scope, the native Engage tests covered the disclosure,
+single negative use, combined positive uses, optional removal,
+updated tier, unchanged dice, wrong owner, private Tags, safety pause,
+replay and database reopening. Default review denial passed. The
+battle hook also reaches Assault and Core. They need direct fixtures
+of Tag use in those Plays.
+[Gorgon Tags p. 10](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=12) · [Gorgon Tag tests](../../tests/rules/test_gorgon_tags.py)

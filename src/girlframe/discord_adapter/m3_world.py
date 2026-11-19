@@ -290,6 +290,61 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
                 + status,
             )
             return
+        if action == "share_gorgon_tag":
+            from girlframe.services.m3_gorgon_tags import GorgonTagService
+
+            if current.channel_id is None:
+                raise WorkflowError("Open this control in the original Gorgon scene.")
+            channel = current.channel_id
+            tags = GorgonTagService(service.game)
+            menu = await asyncio.to_thread(tags.view, viewer_from_interaction(current), channel)
+            if not menu["gorgons"] or not menu["girls"]:
+                raise WorkflowError("Join with your actual Gorgon and its intended witnesses.")
+
+            async def show_tags(click: discord.Interaction, target: str) -> None:
+                async def submit(confirm: discord.Interaction, values: dict[str, Any]) -> str:
+                    await asyncio.to_thread(
+                        tags.disclose,
+                        viewer_from_interaction(confirm),
+                        str(confirm.id),
+                        channel,
+                        menu["revision"],
+                        target,
+                        values["tag"][0],
+                        values["audience"],
+                        values["account"],
+                    )
+                    return (
+                        "The original witnesses can use this Tag when they roll against the Gorgon."
+                    )
+
+                form = NativeForm(
+                    viewer.user_id,
+                    "Share an observed Gorgon Tag",
+                    "Choose the Girls who actually observed it in this scene.",
+                    [
+                        Field("tag", "Actual Tag", menu["gorgons"][target]["tags"]),
+                        Field(
+                            "audience",
+                            "Original witnesses",
+                            menu["girls"],
+                            1,
+                            min(len(menu["girls"]), 25),
+                        ),
+                        Field("account", "What did they observe?", paragraph=True),
+                    ],
+                    submit,
+                )
+                await reply(click, form.text(), form)
+
+            picker = Picker(
+                viewer.user_id,
+                "Choose the Gorgon whose Tag was observed.",
+                tuple((identity, data["name"]) for identity, data in menu["gorgons"].items()),
+                show_tags,
+            )
+            await picker.show(current)
+            return
         if action == "gorgon_position":
             offstage = {
                 x["entity"] for x in fresh.get("offstage_world", ()) if x["kind"] == "gorgon"
@@ -454,6 +509,11 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
             ("npc", "Introduce an NPC"),
             ("npc_invite", "Invite someone to play an NPC / Director"),
             ("reveal", "Reveal a Gorgon encountered by the Cadre"),
+            *(
+                (("share_gorgon_tag", "Share an observed Gorgon Tag"),)
+                if any(x["tags"] for x in data["world"]["gorgons"])
+                else ()
+            ),
             ("gorgon_attack", "Gorgon Attack on an ordinary NPC"),
             ("gorgon_contest", "Pit two Gorgons' actual Assets"),
             ("gorgon_core", "Confirm actual Gorgon Core exposure"),

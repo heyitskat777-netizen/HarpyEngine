@@ -596,6 +596,14 @@ class ChoiceEngine:
 
             apply_discussion(self.game, c, state, action, request, answer)
             return
+        if kind in ("gorgon_tag_selection", "gorgon_tag_removal"):
+            from girlframe.services.m3_gorgon_tags import apply as apply_gorgon_tags
+
+            if apply_gorgon_tags(self.game, c, state, action, kind, owner, answer):
+                self.results(c, state, action)
+            else:
+                self.set_total(action)
+            return
         if kind.startswith("engage_"):
             from girlframe.services.m3_engage import apply as apply_engage
 
@@ -1610,6 +1618,11 @@ class ChoiceEngine:
         action["data"]["result"].update(total=total, tier=tier(total))
 
     def results(self, c: Connection, state: GameState, action: dict[str, Any]) -> None:
+        if action["data"].get("battle") or action["data"].get("engage"):
+            from girlframe.services.m3_gorgon_tags import stage as stage_gorgon_tags
+
+            if stage_gorgon_tags(self.game, c, state, action):
+                return
         if action["data"].get("learned_keep_rider") and action["data"]["play"] == "flirt":
             from girlframe.services.m3_learned_plays import finish_beautiful_flirt
 

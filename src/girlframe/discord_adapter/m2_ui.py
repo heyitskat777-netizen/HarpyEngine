@@ -124,7 +124,30 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
         return Field("flag", label, YES)
 
     fields = []
-    if kind == "tag_window":
+    if kind == "gorgon_tag_selection":
+        available = decision["gorgon_tags"]
+        maximum = min(len(available), 25)
+        fields = [
+            entities(
+                "options", "Relevant Gorgon Tags adding +1 each", available, 0, maximum, False
+            ),
+            entities(
+                "denied", "Relevant Gorgon Tags subtracting 1 each", available, 0, maximum, False
+            ),
+            text("text", "Why do the selected Tags apply?", False),
+        ]
+    elif kind == "gorgon_tag_removal":
+        fields = [
+            entities(
+                "options",
+                "Remove one Gorgon Tag or keep them all",
+                decision["gorgon_tags"],
+                0,
+                1,
+                False,
+            )
+        ]
+    elif kind == "tag_window":
         partner_tags = decision.get("gender_man_tags", ())
         options: tuple[str, ...] = (
             ("pass", "tag", "gender_man") if partner_tags else ("pass", "tag")

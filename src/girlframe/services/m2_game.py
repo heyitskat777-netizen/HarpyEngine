@@ -7762,6 +7762,12 @@ class GameService:
                 result["tag_marker_discussion"] = discussion_projection(
                     self, c, state, action, viewer.user_id
                 )
+            if row["kind"] in ("gorgon_tag_selection", "gorgon_tag_removal"):
+                from girlframe.services.m3_gorgon_tags import projection as gorgon_tags
+
+                result["gorgon_tags"] = gorgon_tags(
+                    self, c, state, action, row["kind"], viewer.user_id
+                )
             if row["kind"] in ("actor_keep", "handler_keep") and action["data"].get(
                 "cute_uniforms"
             ):
