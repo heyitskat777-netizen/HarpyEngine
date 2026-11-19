@@ -227,6 +227,12 @@ def source(
             assert proof is not None
             prove_hallucinations(game, c, proof, first, body, actor)
             return current, body, actor
+        if body.get("reason") == "harpy_gaze":
+            from girlframe.services.m3_harpy_gaze import prove_void as prove_gaze_void
+
+            assert proof is not None
+            prove_gaze_void(game, c, proof, first, body, actor)
+            return current, body, actor
         if body.get("reason") == "scientist_private_void":
             from girlframe.services.m3_scientist_private_scene import (
                 prove_threshold as prove_scientist_threshold,
@@ -612,6 +618,7 @@ def complete(
             "doctor_wings",
             "doctor_wings_return",
             "scientist_private_void",
+            "harpy_gaze",
         ):
             # These sources have no parent Play to resume after the owned outcome.
             continue
@@ -777,6 +784,10 @@ class VoidService:
         ):
             parent = self.game.action(c, body["source_action"])
             handler = viewer.user_id in parent["data"].get("private_audience", ())
+        if handler and body.get("reason") == "harpy_gaze":
+            from girlframe.services.m3_harpy_gaze import void_audience
+
+            handler = viewer.user_id in void_audience(self.game, c, state, body)
         if handler and body.get("reason") == "scientist_private_void":
             from girlframe.engine.m3_handler_consequences import active_handler
             from girlframe.engine.m3_handler_private_scene import records as private_scenes

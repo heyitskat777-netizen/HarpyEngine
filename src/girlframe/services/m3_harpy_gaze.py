@@ -8,11 +8,12 @@ import sqlalchemy as sa
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
-from girlframe.engine.m2 import GameState
+from girlframe.engine.m2 import GameState, PlayInput
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, Model, SceneCast
-from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_harpy_advancements import MANIC_PIXIE
 from girlframe.engine.m3_harpy_defeat import give_tag
+from girlframe.engine.m3_janus_storage import alter, effective_assets
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
@@ -20,6 +21,7 @@ from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_battle import _cast
 from girlframe.services.m3_harpy_advancements import advancement_source, scene_harpy
 from girlframe.services.m3_medical import MedicalService
+from girlframe.services.m3_work import related
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.p1_facilitator import require_scene_clear
 from girlframe.services.read_only_bot import GuildViewer
@@ -29,6 +31,7 @@ CHOICES = {
     "hands": "Take the Harpy’s hands",
     "promise": "Make a promise",
     "focus": "Lose track of everything else",
+    "keep": "Keep Your Head",
 }
 
 
@@ -48,6 +51,13 @@ class Gaze(Model):
     response: str | None = None
     broken: str | None = None
     tagged: str | None = None
+    keep_action: str | None = None
+    keep_binding: str | None = None
+    keep_event: str | None = None
+    enough: bool | None = None
+    void_event: str | None = None
+    void_asset: str | None = None
+    void_work: str | None = None
 
 
 def records(state: GameState) -> tuple[Gaze, ...]:
@@ -122,6 +132,11 @@ class GazeService:
         except ValueError as error:
             raise WorkflowError(str(error)) from None
 
+    @staticmethod
+    def _put(state: GameState, case: Gaze) -> None:
+        state.facts = [x for x in state.facts if (x.get("kind"), x.get("id")) != (KIND, case.event)]
+        state.facts.append(dict(kind=KIND, id=case.event, body=case.model_dump_json()))
+
     def _persist(
         self,
         c: Connection,
@@ -132,8 +147,7 @@ class GazeService:
         key: str,
         step: str,
     ) -> dict[str, Any]:
-        state.facts = [x for x in state.facts if (x.get("kind"), x.get("id")) != (KIND, case.event)]
-        state.facts.append(dict(kind=KIND, id=case.event, body=case.model_dump_json()))
+        self._put(state, case)
         self.game.event(
             c,
             viewer.user_id,
@@ -208,13 +222,14 @@ class GazeService:
         if original is None or original.character_id != case.target.incarnation:
             return None
         if viewer.user_id == case.target_controller:
-            return (
-                "choose"
-                if not case.response
-                else "break"
-                if case.promise and not case.broken
-                else None
-            )
+            if not case.response:
+                return "choose"
+            if "keep" in case.choices:
+                if not case.keep_action:
+                    return "keep"
+                if case.enough is False and not case.void_event:
+                    return "void"
+            return "break" if case.promise and not case.broken else None
         return "tag"
 
     def tasks(
@@ -261,7 +276,18 @@ class GazeService:
                 else None
             )
 
-        original = case.model_copy(
+        chosen = case.model_copy(
+            update=dict(
+                keep_action=None,
+                keep_binding=None,
+                keep_event=None,
+                enough=None,
+                void_event=None,
+                void_asset=None,
+                void_work=None,
+            )
+        )
+        original = chosen.model_copy(
             update=dict(
                 choices=(), reply=None, promise=None, response=None, broken=None, tagged=None
             )
@@ -271,12 +297,12 @@ class GazeService:
             or (
                 case.response
                 and receipt(case.response, "choose", case.target_controller)
-                != case.model_copy(update=dict(broken=None, tagged=None))
+                != chosen.model_copy(update=dict(broken=None, tagged=None))
             )
             or (
                 case.broken
                 and receipt(case.broken, "break", case.target_controller)
-                != case.model_copy(update=dict(tagged=None))
+                != chosen.model_copy(update=dict(tagged=None))
             )
         ):
             raise WorkflowError("Recover the actual original gaze and promise receipts")
@@ -287,9 +313,16 @@ class GazeService:
             self._gate(c, viewer)
             state = load_state(c, self.store.campaign_id)
             case, step = self._case(c, state, viewer, identity)
-            return dict(
-                revision=state.revision, step=step, account=case.account, promise=case.promise
+            result = dict(
+                revision=state.revision,
+                step=step,
+                account=case.account,
+                promise=case.promise,
+                channel=case.channel,
             )
+            if step == "void":
+                result["assets"] = self._eligible_void(c, state, case)
+            return result
 
     def respond(
         self,
@@ -344,6 +377,8 @@ class GazeService:
                         response=event,
                     )
                 )
+            elif step == "void" and not promise:
+                updated = self._gain_void(c, state, case, choices, account, event)
             elif step == "break" and not (choices or account or promise):
                 updated = case.model_copy(update=dict(broken=event))
             elif step == "tag" and not choices and not promise and 0 < len(account.strip()) <= 1200:
@@ -381,7 +416,10 @@ class GazeService:
                 updated = case.model_copy(update=dict(tagged=event))
             else:
                 raise WorkflowError("Use the original owned response to this gaze or promise")
-            return self._persist(c, state, updated, event, viewer, key, step)
+            result = self._persist(c, state, updated, event, viewer, key, step)
+            if step == "void" and updated.void_work:
+                self._materialize_void(c, updated, event)
+            return result
 
         return self._write(
             viewer,
@@ -396,3 +434,292 @@ class GazeService:
             ),
             operation,
         )
+
+    def _eligible_void(self, c: Connection, state: GameState, case: Gaze) -> dict[str, str]:
+        girl = resolve(
+            state, case.target, profiles(c, self.store.campaign_id), require_current_profile=False
+        )
+        return {
+            x.id: x.name
+            for x in effective_assets(state, girl.ref)
+            if not x.void and (x.family == "girl" or girl.piloting is True)
+        }
+
+    def _gain_void(
+        self,
+        c: Connection,
+        state: GameState,
+        case: Gaze,
+        choices: tuple[str, ...],
+        account: str,
+        event: str,
+    ) -> Gaze:
+        from girlframe.engine.m3_void import FINAL
+
+        if (
+            case.enough is not False
+            or not case.keep_event
+            or not case.keep_action
+            or len(choices) != 1
+            or choices[0] not in self._eligible_void(c, state, case)
+            or not 0 < len(account.strip()) <= 1200
+            or any(x.actor == case.target and x.stage not in FINAL for x in state.void_thresholds)
+        ):
+            raise WorkflowError(
+                "Choose the actual ordinary Void gain from the failed Keep Your Head"
+            )
+        action = self.game.action(c, case.keep_action)
+        if (
+            action["state"] != "complete"
+            or action["data"].get("harpy_gaze_keep", {}).get("case") != case.event
+            or action["data"]["result"].get("enough") is not False
+        ):
+            raise WorkflowError("Recover the actual failed original Play before applying Void")
+        girl = resolve(
+            state, case.target, profiles(c, self.store.campaign_id), require_current_profile=False
+        )
+        selected = choices[0]
+        family = next(x.family for x in state.sheets[girl.ref.entity].assets if x.id == selected)
+        updated, effects = alter(
+            state,
+            girl.ref,
+            selected,
+            account.strip(),
+            action["id"],
+            event,
+            piloting=girl.piloting is True,
+        )
+        for field in GameState.model_fields:
+            setattr(state, field, getattr(updated, field))
+        applied = any(x.id == selected and x.void for x in effective_assets(state, girl.ref))
+        work = None
+        if applied and any(
+            x.kind == f"{family}_void_threshold"
+            or family == "frame"
+            and x.kind == "mockingbird_resist"
+            for x in effects
+        ):
+            work = f"{case.event}:gaze:void:{family}"
+        return case.model_copy(
+            update=dict(
+                void_asset=selected if applied else None,
+                void_event=event,
+                void_work=work,
+            )
+        )
+
+    def _materialize_void(self, c: Connection, case: Gaze, event: str) -> None:
+        assert case.void_work is not None
+        related(
+            c,
+            self.store,
+            dict(campaign_id=self.store.campaign_id, scene_id=case.scene),
+            case.void_work,
+            case.target_controller,
+            case.target_controller,
+            "void_threshold",
+            dict(
+                owner=case.target.model_dump(mode="json"),
+                character=case.target.incarnation,
+                source_action=None,
+                source_pdf=19,
+                reason="harpy_gaze",
+                case=case.event,
+                details=dict(family=case.void_work.rsplit(":", 1)[-1]),
+            ),
+            event,
+        )
+
+
+def prepare_keep(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    viewer: GuildViewer,
+    prepared: PlayInput,
+    channel: int,
+) -> dict[str, Any] | None:
+    if not prepared.source_work:
+        return None
+    initial = next((x for x in records(state) if x.event == prepared.source_work), None)
+    if initial is None:
+        return None
+    service = GazeService(game)
+    service._gate(c, viewer)
+    case, step = service._case(c, state, viewer, initial.event)
+    if (
+        step != "keep"
+        or prepared.play != "keep_your_head"
+        or prepared.parent
+        or prepared.target
+        or prepared.target_actor
+        or prepared.order_id
+        or prepared.witnessed
+        or channel != case.channel
+    ):
+        raise WorkflowError("Use this exact original Girl and her actual Keep Your Head choice")
+    cast = _cast(game, c, state, channel)
+    gm, appointment = MedicalService(game.store)._handler(c)
+    source, advancement = scene_harpy(
+        game,
+        c,
+        state,
+        case.controller,
+        cast,
+        case.harpy,
+        MANIC_PIXIE,
+    )
+    if (
+        cast.id != case.scene
+        or cast.facilitator != gm
+        or advancement != case.advancement
+        or case.target.token not in service._targets(c, state, cast, source)
+    ):
+        raise WorkflowError("Recover the actual original gaze and adjudicator")
+    return dict(
+        case=case.event,
+        actor=case.target.model_dump(mode="json"),
+        cast=cast.model_dump(mode="json"),
+        cast_sha256=fingerprint(cast),
+        gm=gm,
+        appointment=appointment,
+        audience=sorted({gm, case.controller, case.target_controller}),
+    )
+
+
+def bind_keep(state: GameState, scope: dict[str, Any], identity: str, event: str) -> None:
+    case = next(x for x in records(state) if x.event == scope["case"])
+    GazeService._put(state, case.model_copy(update=dict(keep_action=identity, keep_binding=event)))
+
+
+def validate_keep(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any]
+) -> Gaze:
+    scope = action["data"]["harpy_gaze_keep"]
+    case = next((x for x in records(state) if x.event == scope["case"]), None)
+    if (
+        case is None
+        or case.keep_action != action["id"]
+        or case.keep_binding is None
+        or "keep" not in case.choices
+    ):
+        raise WorkflowError("Recover the original gaze-bound Play")
+    cast = _cast(game, c, state, case.channel)
+    history = t.m2["m2_state_history"]
+    raw = c.scalar(
+        sa.select(history.c.body_json)
+        .join(t.events, t.events.c.id == history.c.event_id)
+        .where(
+            history.c.campaign_id == game.store.campaign_id,
+            history.c.event_id == case.keep_binding,
+            t.events.c.campaign_id == game.store.campaign_id,
+            t.events.c.kind == "m3.play_confirmed",
+            t.events.c.actor_id == case.target.entity,
+        )
+    )
+    expected = sorted({scope["gm"], case.controller, case.target_controller})
+    if (
+        raw is None
+        or case not in records(GameState.model_validate_json(raw))
+        or case.target.model_dump(mode="json") != scope["actor"]
+        or action["actor_id"] != case.target.entity
+        or action["scene_id"] != case.scene
+        or fingerprint(cast) != scope["cast_sha256"]
+        or MedicalService(game.store)._handler(c) != (scope["gm"], scope["appointment"])
+        or any(action["data"].get(k) != expected for k in ("private_audience", "participants"))
+    ):
+        raise WorkflowError("Recover the actual original gaze receipt and private source table")
+    return case
+
+
+def finish_keep(
+    game: GameService,
+    c: Connection,
+    action: dict[str, Any],
+    event: str,
+    viewer: GuildViewer,
+    key: str,
+) -> None:
+    state = load_state(c, game.store.campaign_id)
+    case = validate_keep(game, c, state, action)
+    enough = action["data"]["result"].get("enough")
+    if type(enough) is not bool or not action["data"].get("receipt"):
+        raise WorkflowError("Apply the original human ruling and actual saved roll first")
+    recorded = str(uuid4())
+    updated = case.model_copy(update=dict(keep_event=recorded, enough=enough))
+    GazeService._put(state, updated)
+    index = c.scalar(
+        sa.select(sa.func.max(t.events.c.event_index)).where(
+            t.events.c.campaign_id == game.store.campaign_id,
+            t.events.c.command_key == key,
+        )
+    )
+    game.event(
+        c,
+        viewer.user_id,
+        key,
+        "m3.harpy_gaze_keep_resolved",
+        state,
+        event_id=recorded,
+        event_index=index + 1 if index is not None else 0,
+        source=case.event,
+        action_id=action["id"],
+        source_event=event,
+    )
+
+
+def prove_void(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    row: dict[str, Any],
+    body: dict[str, Any],
+    actor: ActorRef,
+) -> None:
+    case = next((x for x in records(state) if x.event == body.get("case")), None)
+    if (
+        case is None
+        or case.target != actor
+        or case.enough is not False
+        or not case.keep_action
+        or case.void_event != row["event_id"]
+        or case.void_work != row["id"]
+        or case.scene != row["scene_id"]
+        or case.void_asset is None
+    ):
+        raise WorkflowError("Recover the actual failed gaze Play and original owned Void gain")
+    action = game.action(c, case.keep_action)
+    marker = c.execute(
+        sa.select(t.events.c.kind, t.events.c.actor_id).where(
+            t.events.c.campaign_id == game.store.campaign_id,
+            t.events.c.id == case.void_event,
+        )
+    ).first()
+    if (
+        action["state"] != "complete"
+        or action["data"].get("harpy_gaze_keep", {}).get("case") != case.event
+        or action["data"]["result"].get("enough") is not False
+        or not action["data"].get("receipt")
+        or not marker
+        or tuple(marker) != ("m3.harpy_gaze_void", actor.entity)
+    ):
+        raise WorkflowError("Recover the original failure and owned action receipt")
+
+
+def void_audience(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    body: dict[str, Any],
+) -> list[int]:
+    case = next((x for x in records(state) if x.event == body.get("case")), None)
+    if case is None or case.keep_action is None:
+        raise WorkflowError("Recover the original private gaze consequence")
+    scope = game.action(c, case.keep_action)["data"].get("harpy_gaze_keep")
+    if (
+        not scope
+        or scope.get("case") != case.event
+        or MedicalService(game.store)._handler(c) != (scope["gm"], scope["appointment"])
+    ):
+        raise WorkflowError("Recover the actual original human GM appointment")
+    return sorted({case.target_controller, scope["gm"]})

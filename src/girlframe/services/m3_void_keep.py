@@ -141,6 +141,10 @@ def prepare_keep(
     scene = game.scene(c, channel)
     if viewer.user_id not in scene["participants"] or updated.handler not in scene["participants"]:
         raise WorkflowError("The original Girl and actual Handler must join this bound scene.")
+    if body.get("reason") == "harpy_gaze":
+        from girlframe.services.m3_harpy_gaze import void_audience
+
+        meta["private_audience"] = void_audience(game, c, updated, body)
     if prepared.parent:
         parent = game.action(c, prepared.parent)
         if body.get("reason") in (
@@ -229,6 +233,12 @@ def authorize_keep(
             action["data"].get(key) != official for key in ("private_audience", "participants")
         ):
             raise WorkflowError("Recover the original contact's private resistance audience")
+    if body.get("reason") == "harpy_gaze":
+        from girlframe.services.m3_harpy_gaze import void_audience
+
+        audience = void_audience(game, c, state, body)
+        if any(action["data"].get(k) != audience for k in ("private_audience", "participants")):
+            raise WorkflowError("Recover the original gaze’s private Void resistance audience")
     if blocked_play(state.sheets[action["actor_id"]], "keep_your_head") is not None:
         raise WorkflowError("The actual original Girl no longer has this optional rolled ability.")
 

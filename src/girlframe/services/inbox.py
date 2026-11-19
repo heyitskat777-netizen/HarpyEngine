@@ -4135,6 +4135,8 @@ class InboxService:
                             "choose": "Choose two actual responses to the original gaze.",
                             "break": "Review your original promise and withdraw if you back down.",
                             "tag": "Give a Tag for the original promise that was withdrawn.",
+                            "keep": "Make the original Keep Your Head Play.",
+                            "void": "Resolve the original ordinary Void gain.",
                         }[step],
                         "This decision is private to its original role.",
                         "Open your choice",

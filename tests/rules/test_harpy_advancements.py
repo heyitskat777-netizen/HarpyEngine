@@ -951,3 +951,105 @@ def test_harpy_gaze_records_owned_promise_and_only_then_the_actual_tag(ledger):
     tags = [x for x in state(game).sheets["3"].tags if x.id == "gaze:" + identity]
     assert len(tags) == 1 and tags[0].giver_actor == harpy
     assert set(tags[0].observers) == {PLAYER.user_id, OTHER.user_id}
+
+
+def test_harpy_gaze_failed_keep_applies_actual_owned_void(ledger):
+    from test_physical_operations import place
+
+    from girlframe.engine.m3_harpy_advancements import MANIC_PIXIE
+    from girlframe.services.m3_harpy_gaze import GazeService, records
+    from girlframe.services.m3_void import VoidService
+
+    _, game, _, harpy = ready(ledger)
+    policy = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update=dict(
+            m3_approval=policy.model_copy(
+                update=dict(
+                    activity_specialist_rules=policy.activity_specialist_rules | {MANIC_PIXIE},
+                )
+            ),
+        )
+    )
+    HarpyAdvancementService(ledger).select(
+        PLAYER,
+        "learn-gaze-for-keep",
+        harpy.entity,
+        state(game).revision,
+        MANIC_PIXIE,
+    )
+    with ledger.transaction() as c:
+        canon = place(state(game), OTHER.user_id, mode="outside_frame")
+        sheet = canon.sheets["3"]
+        sheet.girl = "PRINCESS"
+        sheet.girl_runtime = None
+        assets = [x for x in sheet.assets if x.family == "girl"]
+        for x in assets[:-1]:
+            x.void = True
+        game.event(c, ADMIN.user_id, "synthetic-gaze-keep", "synthetic.position", canon)
+    recipient = current_ref(state(game), OTHER.user_id)
+    service = GazeService(game)
+    source = service.start(
+        PLAYER,
+        "original-gaze-keep",
+        900,
+        harpy,
+        state(game).revision,
+        recipient.token,
+        "The Harpy meets the original Girl’s eyes.",
+    )["id"]
+    service.respond(
+        OTHER,
+        "choose-actual-resistance",
+        source,
+        state(game).revision,
+        "choose",
+        choices=("hands", "keep"),
+        account="I take her hands and try to clear my head.",
+    )
+    assert service.get(OTHER, source)["step"] == "keep"
+    from test_privacy_game_delivery import PrivateGateway
+
+    worker, gateway = GameWorker(game), PrivateGateway()
+    child = game.begin(
+        OTHER,
+        "original-gaze-resistance",
+        900,
+        state(game).sheets["3"].revision,
+        PlayInput(
+            play="keep_your_head",
+            heat=0,
+            source_work=source,
+            context="I try to keep my head through the original gaze.",
+            trigger_confirmed=True,
+        ),
+    )["action_id"]
+    tick(worker, gateway, 5)
+    for player in (OTHER, PLAYER, ADMIN):
+        answer(game, player, "tag_window", options=("pass",))
+    answer(game, OTHER, "actor_keep", options=("in_control",))
+    answer(game, ADMIN, "handler_keep", flag=False, text="The danger was too strong.")
+    tick(worker, gateway, 5)
+    canon = state(game)
+    case = records(canon)[0]
+    assert case.keep_action == child and case.enough is False
+    assert case.void_event is None
+    data = service.get(OTHER, source)
+    assert data["step"] == "void"
+    actual = next(iter(data["assets"]))
+    service.respond(
+        OTHER,
+        "original-gaze-void",
+        source,
+        data["revision"],
+        "void",
+        choices=(actual,),
+        account="The original Asset twists toward the Harpy’s voice.",
+    )
+    final = state(game)
+    assert next(x for x in final.sheets["3"].assets if x.id == actual).void
+    case = records(final)[0]
+    assert case.void_asset == actual and case.void_work
+    assert VoidService(ledger).get(OTHER, case.void_work)["stage"] == "allured"
+    with pytest.raises(WorkflowError):
+        VoidService(ledger).get(PLAYER, case.void_work)

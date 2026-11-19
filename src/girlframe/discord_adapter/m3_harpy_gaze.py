@@ -61,7 +61,33 @@ async def open_gaze_response(
 ) -> None:
     data = await asyncio.to_thread(service.get, viewer_from_interaction(interaction), identity)
     step = data["step"]
-    if step == "choose":
+    if step == "keep":
+        from girlframe.discord_adapter.m2_ui import open_play
+
+        await open_play(
+            interaction,
+            service.game,
+            _pilot=True,
+            parent=dict(
+                kind="harpy_gaze_keep",
+                channel=data["channel"],
+                parent=None,
+                body=dict(source_work=identity),
+            ),
+        )
+        return
+    if step == "void":
+        if not data["assets"]:
+            await reply(
+                interaction, "The original Void consequence awaits an actual eligible Asset."
+            )
+            return
+        text = "Choose the original ordinary Void gain after Keep Your Head failed."
+        fields = [
+            Field("choices", "Your actual eligible Asset", tuple(data["assets"].items())),
+            Field("account", "Describe the change", paragraph=True),
+        ]
+    elif step == "choose":
         text = data["account"]
         fields = [
             Field("choices", "Two actual responses", tuple(CHOICES.items()), 2, 2),

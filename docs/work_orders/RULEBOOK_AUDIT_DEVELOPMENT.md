@@ -2454,6 +2454,24 @@ Void branch, third-party evidence of broken promises and
 other recipient types remain open.
 [Harpy advancements p. 183](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=185) · [Native case](../../tests/rules/test_harpy_advancements.py)
 
+### Manic Pixie Dream Monster’s actual Keep Your Head and Void
+
+Base `aa412f89a83f7ba47308b3e7109fa754e8c5b1ae`. The original
+Girl can choose the printed Keep Your Head response. Her
+private decision opens the ordinary Play with the exact
+gaze source, original audience and human GM. Only a failed
+actual ruling opens her ordinary Void gain. A generated
+threshold stays pending and its content stays with the
+original Girl and human GM.
+
+**One focused case passed in 4.16 seconds**, exercising
+the genuine basic Play, human ruling, exact Asset
+gain and a whole-Girl threshold kept from the Harpy.
+Follow-through to rebirth uses the existing threshold
+workflow. NPC recipients and recovered or interrupted Play
+variants remain outside this direct evidence.
+[Harpy advancements p. 183](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=185) · [Native case](../../tests/rules/test_harpy_advancements.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

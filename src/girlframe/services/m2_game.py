@@ -1581,6 +1581,9 @@ class GameService:
             )
 
             gorgon_response = prepare_gorgon_response(self, c, viewer, prepared, state, channel)
+            from girlframe.services.m3_harpy_gaze import prepare_keep as prepare_gaze_keep
+
+            gaze_keep = prepare_gaze_keep(self, c, state, viewer, prepared, channel)
             from girlframe.services.m3_secretary import (
                 prepare_response as prepare_secretary_response,
             )
@@ -1629,6 +1632,7 @@ class GameService:
             elif (
                 prepared.play == "keep_your_head"
                 and prepared.source_work is not None
+                and gaze_keep is None
                 and bomb_collar_source is None
                 and princess_child is None
                 and easy_target_child is None
@@ -1684,6 +1688,7 @@ class GameService:
                 mockingbird = prepare_mockingbird(self, c, viewer, prepared, state, channel=channel)
             elif (
                 prepared.source_work is not None
+                and gaze_keep is None
                 and harpy_followthrough is None
                 and void_frame_entry is None
                 and bomb_collar_source is None
@@ -2068,6 +2073,7 @@ class GameService:
                         alpha_counter_scope,
                         npc_order_scope,
                         gorgon_response,
+                        gaze_keep,
                         secretary_scope,
                         npc_flirt,
                         harpy_flirt,
@@ -2120,6 +2126,8 @@ class GameService:
                     source_cast = SceneCast.model_validate_json(json.dumps(princess_child["cast"]))
                 elif gorgon_response is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(gorgon_response["cast"]))
+                elif gaze_keep is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(gaze_keep["cast"]))
                 elif secretary_scope is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(secretary_scope["cast"]))
                 elif scoped_defeat:
@@ -3373,6 +3381,20 @@ class GameService:
                     data["private_audience"] = list(void_keep["private_audience"])
             if secretary_response is not None:
                 data["secretary_response"] = secretary_response
+            if gaze_keep is not None:
+                data["harpy_gaze_keep"] = gaze_keep
+                data["participants"] = data["private_audience"] = gaze_keep["audience"]
+                data["character_ids"] = {
+                    gaze_keep["actor"]["entity"]: gaze_keep["actor"]["incarnation"]
+                }
+                data["tag_context"] = dict(
+                    actor=gaze_keep["actor"],
+                    handler=None,
+                    gm_controller=gaze_keep["gm"],
+                    table=gaze_keep["audience"],
+                    cast=gaze_keep["cast"],
+                    cast_sha256=gaze_keep["cast_sha256"],
+                )
             if gorgon_response is not None and gorgon_response.get("private_audience"):
                 audience = list(gorgon_response["private_audience"])
                 data["participants"] = data["private_audience"] = audience
@@ -3481,6 +3503,7 @@ class GameService:
             begin_source_event = (
                 str(uuid4())
                 if remote_sex_link is not None
+                or gaze_keep is not None
                 or secretary_response is not None
                 or princess_child
                 or princess_sex
@@ -3749,6 +3772,11 @@ class GameService:
 
                 assert begin_source_event is not None
                 link_response(state, secretary_response["gunpoint"], identity, begin_source_event)
+            if gaze_keep is not None:
+                from girlframe.services.m3_harpy_gaze import bind_keep as bind_gaze_keep
+
+                assert begin_source_event is not None
+                bind_gaze_keep(state, gaze_keep, identity, begin_source_event)
             event = self.event(
                 c,
                 viewer.user_id,
@@ -3808,6 +3836,7 @@ class GameService:
                 or npc_order_scope is not None
                 or engage is not None
                 or void_keep is not None
+                or gaze_keep is not None
                 or dampener is not None
                 or kicked_puppy is not None
                 or nightmare_core is not None
@@ -3816,6 +3845,7 @@ class GameService:
                 state
                 if (
                     void_frame_entry is not None
+                    or gaze_keep is not None
                     or void_keep is not None
                     or alpha_sex is not None
                     or dose_up is not None
@@ -4172,6 +4202,10 @@ class GameService:
                 raise WorkflowError("This action is diceless.")
             state = load_state(c, self.store.campaign_id)
             self.action_characters(c, action, state)
+            if action["data"].get("harpy_gaze_keep"):
+                from girlframe.services.m3_harpy_gaze import validate_keep as validate_gaze_keep
+
+                validate_gaze_keep(self, c, state, action)
             if action["data"].get("harpy_beneath"):
                 from girlframe.services.m3_harpy_beneath import validate as validate_harpy_beneath
 
@@ -5750,6 +5784,12 @@ class GameService:
 
                 synchronize_keep(self, c, action, event, viewer, key)
             current_action = self.action(c, action["id"])
+            if current_action["state"] == "complete" and current_action["data"].get(
+                "harpy_gaze_keep"
+            ):
+                from girlframe.services.m3_harpy_gaze import finish_keep as finish_gaze_keep
+
+                finish_gaze_keep(self, c, current_action, event, viewer, key)
             if current_action["state"] == "complete" and current_action["data"].get(
                 "gorgon_counter_source"
             ):

@@ -1356,6 +1356,8 @@ async def open_play(
             "unassuming_doll",
         )
     )
+    if parent and parent["kind"] == "harpy_gaze_keep":
+        plays = ("keep_your_head",)
     if parent and parent["kind"] == "am_code_prepare":
         plays = ("am_just_code",)
     if parent and parent["kind"] == "am_prepare":
@@ -1898,6 +1900,8 @@ async def open_play(
             or (
                 parent["detail"]["danger"]
                 if parent and parent["kind"] == "wyvern_child"
+                else parent["body"]["source_work"]
+                if parent and parent["kind"] == "harpy_gaze_keep"
                 else parent["body"]["source_work"]
                 if parent and parent["kind"] in ("wyvern_replacement", "wyvern_pin_response")
                 else parent["body"]["work"]
