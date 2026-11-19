@@ -150,8 +150,8 @@ class ActorService:
             }
 
     def inspect(self, viewer: GuildViewer, ref: ActorRef) -> dict[str, Any]:
+        from girlframe.services.m3_ancillary_traits import pronouns
         from girlframe.services.m3_expanded_status import ExpandedStatusService
-        from girlframe.services.m3_warboy_boy import pronouns
 
         with self.store.engine.connect() as c:
             self.game.authorize(c, viewer, game=False)

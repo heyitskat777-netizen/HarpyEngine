@@ -1219,26 +1219,29 @@ class ActorPlayService:
             self.game.request(c, action, selected["controller"], "tag_window")
             return
         # Revalidate the actual proposal and Bond immediately before applying it.
-        from girlframe.services import m3_warboy_boy as boy
+        from girlframe.services import m3_ancillary_traits as traits
 
         proposer = ActorRef.model_validate(selected["ref"]) if selected["ref"] else None
-        is_pronoun = selected["tag"] == boy.identifier(ref)
-        if is_pronoun:
+        trait = traits.approved(self.game, state, ref)
+        if trait is not None and selected["tag"] == trait.identifier(ref):
             target = self.validate(c, state, action)
-            amount = boy.amount(
+            amount = traits.amount(
                 self.game,
                 c,
                 state,
                 action,
                 target,
+                trait,
                 proposer,
                 selected["controller"],
                 selected["direction"],
                 selected["account"],
             )
-            boy.mark(state, action, ref)
+            traits.mark(state, action, ref, trait)
             repeated = False
+            source = trait.key
         else:
+            source = "girl_tag"
             amount = rules.proposal(
                 state,
                 ref,
@@ -1256,7 +1259,7 @@ class ActorPlayService:
             repeated = rules.mark(state, ref, selected["tag"], action["scene_id"])
         action["data"]["modifiers"].append(
             {
-                "source": "warboy_pronouns" if is_pronoun else "girl_tag",
+                "source": source,
                 "amount": amount,
                 "tag": selected["tag"],
                 "actor_ref": selected["ref"],
@@ -1384,15 +1387,17 @@ class ActorPlayService:
                     or answer.member
                 ):
                     raise ValueError("Choose one of your actual cast roles for this proposal")
-                from girlframe.services import m3_warboy_boy as boy
+                from girlframe.services import m3_ancillary_traits as traits
 
-                if answer.denied[0] == boy.identifier(actor.ref):
-                    boy.amount(
+                trait = traits.approved(self.game, state, actor.ref)
+                if trait is not None and answer.denied[0] == trait.identifier(actor.ref):
+                    traits.amount(
                         self.game,
                         c,
                         state,
                         action,
                         actor,
+                        trait,
                         marker.actor,
                         owner,
                         answer.number,
@@ -1593,7 +1598,7 @@ class ActorPlayService:
         state = load_state(c, self.store.campaign_id)
         actor = self.validate(c, state, action)
         cast, actual = self.actors(c, state, int(action["channel_id"]), fresh=False)
-        from girlframe.services import m3_warboy_boy as boy
+        from girlframe.services import m3_ancillary_traits as traits
 
         own = actor.controller == viewer.user_id
         selected = action["data"].get("tag_candidate")
@@ -1609,18 +1614,19 @@ class ActorPlayService:
             if (row["kind"] == "tag_window")
             else ()
         )
-        boy_id = boy.identifier(actor.ref)
-        if boy.observed(self.game, state, actor):
+        if trait := traits.observed(self.game, state, actor):
             local_roles = {marker.actor for marker in markers}
-            label = "Pronouns (" + boy.PRONOUNS + ")"
-            tag_labels[boy_id] = label
+            trait_id = trait.identifier(actor.ref)
+            tag_labels[trait_id] = trait.label
             if (
                 not own
-                and boy.available(state, actor.ref, action["scene_id"])
+                and traits.available(state, actor.ref, action["scene_id"], trait)
                 and actor.cell is not None
                 and any(x.ref in local_roles and x.cell == actor.cell for x in actual)
             ):
-                displayed.append(dict(id=boy_id, label=label, marked=False, scene_used=None))
+                displayed.append(
+                    dict(id=trait_id, label=trait.label, marked=False, scene_used=None)
+                )
         result = dict(row) | {
             "actor_basic": True,
             "body": json.loads(row["body_json"]),

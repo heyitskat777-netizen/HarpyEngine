@@ -15294,17 +15294,17 @@
         "actor_type": "Original owned Chained Darling and original human facilitator",
         "pre_roll_sources": ["Approved optional sheet and rule", "Original Frame and actual owned pose", "Current private factual review"],
         "roll_kind": "diceless",
-        "allowed_modifiers": [],
+        "allowed_modifiers": ["Pilot status may be used as an adverse ordinary Tag"],
         "tier_options": {"position": ["Establish original actual placement", "Review original owner’s voluntary exit"]},
         "choice_ownership": "The original controller proposes her own position or exit. The original facilitator verifies it.",
         "target_policy": "Actual living Chained Darling and her own Frame, with original scene and authority. Preserve the parked Frame and physical inventory.",
-        "post_roll_effects": ["Treat the Chained Darling as Helpless while the confirmed original body is outside her Frame."],
-        "mandatory_followups": ["Assisted re-entry, nonstandard occupancy, the optional private-encounter exception and Pilot status as a Tag remain open."],
+        "post_roll_effects": ["Treat the Chained Darling as Helpless while the confirmed original body is outside her Frame. A disclosed actual Pilot can be given a negative Tag modifier for that status by the original local marker."],
+        "mandatory_followups": ["Assisted re-entry, nonstandard occupancy, the optional private-encounter exception and repeated trait resolution remain open."],
         "handler_or_gm_intervention": "The human facilitator observes the exact factual posture independently of the fictional Handler.",
-        "test_fixture_ids": ["tests/rules/test_chained_darling.py"]
+        "test_fixture_ids": ["tests/rules/test_chained_darling.py", "tests/rules/test_ancillary_traits.py"]
       },
       "dependencies": [],
-      "test_evidence": ["tests/rules/test_chained_darling.py"],
+      "test_evidence": ["tests/rules/test_chained_darling.py", "tests/rules/test_ancillary_traits.py"],
       "m2_play_id": null,
       "module": "ancillary"
     },
@@ -15360,10 +15360,10 @@
         "post_roll_effects": ["Apply the actual numeric modifier and record that the pronouns were used in this scene."],
         "mandatory_followups": ["An Ancillary Cadre Dog needs actual actor-level Status support. Repeated use across scenes stays a modifier; the compatibility of forced Tag resolution with printed fixed pronouns remains for human review."],
         "handler_or_gm_intervention": "No independent new roll. The native Play still governs dice and later resolution.",
-        "test_fixture_ids": ["tests/rules/test_warboy_boy.py"]
+        "test_fixture_ids": ["tests/rules/test_ancillary_traits.py"]
       },
       "dependencies": [],
-      "test_evidence": ["tests/rules/test_warboy_boy.py"],
+      "test_evidence": ["tests/rules/test_ancillary_traits.py"],
       "m2_play_id": null,
       "module": "ancillary"
     },

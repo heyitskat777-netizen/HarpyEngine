@@ -3451,7 +3451,7 @@ the absence of a new owned Tag resource. Ancillary Cadre membership
 and Dog Status still require actor-level support. The printed
 second-use interaction with fixed pronouns remains a human ruling
 question. The implemented modifier can be used once per scene.
-[Warboy p. 106](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=108) · [Native case](../../tests/rules/test_warboy_boy.py)
+[Warboy p. 106](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=108) · [Native case](../../tests/rules/test_ancillary_traits.py)
 
 ### Chained Darling’s Inherently Dangerous
 
@@ -3466,6 +3466,12 @@ Canonical Helplessness follows the original confirmed outside pose.
 Cast and Inbox, denied a third party, reopened the pending exit,
 verified the parked Frame and showed that ordinary unsupported
 movement was blocked by the actual Helplessness. Assisted return,
-nonstandard occupancy, the private-play exception and using Pilot
-status as a Tag remain open.
+nonstandard occupancy and the private-play exception remained open.
+
+Follow-up on base `c69941c` added Pilot status as an adverse Tag
+for an actual disclosed Chained Darling. The same native proposal
+and Bond rules used for the Warboy govern it. **Two focused cases
+passed in 5.93 seconds**, including rejection of a beneficial
+modifier for Pilot status and preservation of the Warboy path.
+[Shared Tag cases](../../tests/rules/test_ancillary_traits.py)
 [Chained Darling p. 105](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=107) · [Native case](../../tests/rules/test_chained_darling.py)
