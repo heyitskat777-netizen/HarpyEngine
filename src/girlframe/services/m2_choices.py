@@ -653,7 +653,9 @@ class ChoiceEngine:
             if not self.game.pending(c, action["id"]):
                 self.finish(c, state, action)
             return
-        if kind in ("trainer_speak_answer", "trainer_speak_heard", "trainer_sit"):
+        from girlframe.services.m3_trainer_phrases import RESPONSE_CHOICES as TRAINER_CHOICES
+
+        if kind in TRAINER_CHOICES:
             from girlframe.services.m3_trainer_phrases import choose as choose_phrase
 
             choose_phrase(self.game, c, state, action, request, answer)

@@ -6152,8 +6152,10 @@ class GameService:
     ) -> dict[str, Any]:
         if not text.strip() or len(text) > 1200:
             raise WorkflowError("Provide a direct order in 1–1200 characters.")
-        if phrase_target is not None and conditioning_phrase != "play_gentle":
-            raise WorkflowError("Only Play Gentle uses a separate nominated Girl")
+        from girlframe.engine.m3_trainer_phrases import TARGETED
+
+        if phrase_target is not None and conditioning_phrase not in TARGETED:
+            raise WorkflowError("Only a targeted Conditioning Phrase nominates another Girl")
         if advocate_conversation is not None and (dose_up or conditioning_phrase is not None):
             raise WorkflowError("Choose one source for this direct order")
         if dress_order is not None and (dose_up or conditioning_phrase or advocate_conversation):
@@ -7076,10 +7078,12 @@ class GameService:
                 return SpriteService(self.store).decision(viewer, choice_id)
             action = self.action(c, row["action_id"])
             if row["kind"] == "trainer_flirt_play":
-                from girlframe.services.m3_trainer_phrases import prove_gentle
+                from girlframe.services.m3_trainer_phrases import prove_counterpart
 
-                prove_gentle(self, c, load_state(c, self.store.campaign_id), action, dict(row))
-            if row["kind"] in ("trainer_speak_answer", "trainer_speak_heard", "trainer_sit"):
+                prove_counterpart(self, c, load_state(c, self.store.campaign_id), action, dict(row))
+            from girlframe.services.m3_trainer_phrases import RESPONSE_CHOICES as TRAINER_CHOICES
+
+            if row["kind"] in TRAINER_CHOICES:
                 from girlframe.services.m3_trainer_phrases import display as display_phrase
 
                 return dict(row) | dict(

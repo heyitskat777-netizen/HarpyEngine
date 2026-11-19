@@ -244,7 +244,7 @@ def test_original_speak_order_uses_its_own_phrasing_and_saved_refusal(ledger, re
         )
 
 
-@pytest.mark.parametrize("phrase", ("speak", "sit"))
+@pytest.mark.parametrize("phrase", ("speak", "sit", "play_rough"))
 def test_actual_off_duty_speak_installation_needs_both_originals_and_can_trigger(ledger, phrase):
     from test_physical_operations import place
 
@@ -277,7 +277,7 @@ def test_actual_off_duty_speak_installation_needs_both_originals_and_can_trigger
             participants=("3",),
             summary="PRIVATE_TRAINING_SCENE",
         )
-        if phrase == "sit":
+        if phrase != "speak":
             form.values["phrase"] = (phrase,)
         form.controls()
         sent = current(1, 47301)
@@ -294,9 +294,15 @@ def test_actual_off_duty_speak_installation_needs_both_originals_and_can_trigger
         x.pilot.entity == "3" and phrase in x.phrases
         for x in state(game).handler_persona.conditioning
     )
-    with pytest.raises(WorkflowError, match=f"installed {phrase.title()}"):
+    with pytest.raises(WorkflowError, match=f"installed {phrase.replace('_', ' ').title()}"):
         game.issue_order(
-            ADMIN, "premature-speak-command", 900, 3, "Test", conditioning_phrase=phrase
+            ADMIN,
+            "premature-speak-command",
+            900,
+            3,
+            "Test",
+            conditioning_phrase=phrase,
+            phrase_target=2 if phrase == "play_rough" else None,
         )
     ledger.engine.dispose()
     pending = cycle.review(OTHER, period)
@@ -322,14 +328,20 @@ def test_actual_off_duty_speak_installation_needs_both_originals_and_can_trigger
     assert spell[0].source_event != state(game).handler_persona.source_event
     worker, gateway = GameWorker(game), Gateway()
     issued = game.issue_order(
-        ADMIN, "later-valid-speak", 900, 3, "PRIVATE_FOLLOWUP", conditioning_phrase=phrase
+        ADMIN,
+        "later-valid-speak",
+        900,
+        3,
+        "PRIVATE_FOLLOWUP",
+        conditioning_phrase=phrase,
+        phrase_target=2 if phrase == "play_rough" else None,
     )
     tick(worker, gateway, 3)
     answer(game, OTHER, "order_response", options=("immediate",))
     if phrase == "speak":
         answer(game, OTHER, SPEAK, text="Yes.")
         answer(game, ADMIN, HEAR, flag=True)
-    else:
+    elif phrase == "sit":
         girl = current_ref(state(game), 3)
         assert sitting(state(game), girl) is None
         choice = next(x["id"] for x in game.choices(OTHER) if x["kind"] == SIT)
@@ -362,6 +374,35 @@ def test_actual_off_duty_speak_installation_needs_both_originals_and_can_trigger
         assert movement.move(
             OTHER, "after-leave", state(game).revision, 900, girl, (1, 0), account="I move."
         )["destination"] == [1, 0]
+    else:
+        from test_harpy_flirt import submit_form
+
+        from girlframe.services.m3_trainer_phrases import ROUGH_HEARD, ROUGH_OFFER, ROUGH_REPLY
+
+        original = state(game)
+        inbox = InboxService(ledger)
+
+        def native(viewer, kind, answer_flag, number):
+            (pending,) = (x for x in game.choices(viewer) if x["kind"] == kind)
+            with pytest.raises(WorkflowError):
+                game.decision(ADMIN, pending["id"])
+
+            async def route(click):
+                item = next(x for x in inbox.items(viewer) if x.identity == pending["id"])
+                await InboxView(inbox, viewer.user_id).route(click, item)
+
+            return asyncio.run(submit_form(viewer, route, dict(flag=(answer_flag,)), number))
+
+        assert not any(x["kind"] == ROUGH_REPLY for x in game.choices(PLAYER))
+        native(OTHER, ROUGH_OFFER, "yes", 47360)
+        ledger.engine.dispose()
+        native(PLAYER, ROUGH_REPLY, "no", 47364)
+        (receipt,) = (x for x in game.choices(OTHER) if x["kind"] == ROUGH_HEARD)
+        assert "declined" in game.decision(OTHER, receipt["id"])["conditioning_text"]
+        native(OTHER, ROUGH_HEARD, "yes", 47368)
+        actual = state(game)
+        assert actual.sheets == original.sheets and actual.bonds == original.bonds
+        assert game.dice.calls == 0
     assert game.inspect(OTHER, issued["action_id"])["state"] == "complete"
 
 

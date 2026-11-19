@@ -244,6 +244,14 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
         fields = [text("text", "Describe your character sitting")]
     elif kind == "trainer_speak_heard":
         fields = [Field("flag", "Confirm you heard this answer", (("yes", "I heard it"),))]
+    elif kind == "trainer_rough_offer":
+        fields = [
+            Field("flag", "Private scene invitation", (("yes", "Send invitation"), ("no", "Pass")))
+        ]
+    elif kind == "trainer_rough_reply":
+        fields = [Field("flag", "Your consent", (("yes", "Accept"), ("no", "Decline")))]
+    elif kind == "trainer_rough_heard":
+        fields = [Field("flag", "Your counterpart's reply", (("yes", "I read the reply"),))]
     elif kind == "insurgent_surveillance":
         fields = [
             flags("Did the observed act demonstrate a lapse in Foundation loyalty?"),
@@ -1154,7 +1162,7 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
             instructions += "\n" + clean(reward["account"])
         if reward.get("tag"):
             instructions += "\nMatching Tag " + clean(reward["tag"])
-    if decision["kind"] in ("trainer_speak_answer", "trainer_speak_heard", "trainer_sit"):
+    if decision.get("conditioning_text"):
         instructions += "\n" + clean(decision["conditioning_text"])
     if decision["kind"] == "prodigy_confidence_roll":
         instructions += f"\nSaved total after Tags: {decision['body']['original_total']}."
@@ -2957,6 +2965,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
             app_commands.Choice(name="Conditioning Phrase (Speak)", value="trainer_speak"),
             app_commands.Choice(name="Conditioning Phrase (Sit)", value="trainer_sit"),
             app_commands.Choice(name="Conditioning Phrase (Play Gentle)", value="trainer_gentle"),
+            app_commands.Choice(name="Conditioning Phrase (Play Rough)", value="trainer_rough"),
             app_commands.Choice(name="Grant leave after Sit", value="trainer_leave"),
             app_commands.Choice(name="Echoes of Old Command", value="harpy_echoes"),
         ]
@@ -2975,6 +2984,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
             "trainer_speak": "speak",
             "trainer_sit": "sit",
             "trainer_gentle": "play_gentle",
+            "trainer_rough": "play_rough",
         }.get(use)
         echoes = purpose is not None and purpose.value == "harpy_echoes"
         if as_npc and (typed_dose or phrase or use == "trainer_leave"):

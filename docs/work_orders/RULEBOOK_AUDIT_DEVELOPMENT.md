@@ -1421,6 +1421,16 @@ the fixed Play and target, one saved roll and ordinary follow-through.
 Other counterpart types and Punishment-time installation remain open.
 [Play Gentle case](../../tests/rules/test_trainer_phrases.py)
 
+Play Rough uses a private invitation controlled by the affected Girl's
+player. The nominated original Girl independently accepts or declines, and
+the first player reads that exact reply. Any scene afterward uses the usual
+consent and character controls. The Order itself resolves the invitation
+and preserves existing resources. One focused case passed in 7.27 seconds
+using `python -m pytest -q --tb=short tests/rules/test_trainer_phrases.py -k play_rough`
+with `PYTHONPATH="$PWD/src"`, including Off-Duty installation, private
+invitation, restart, decline and receipt. The case covers a nominated
+original Pilot counterpart. [Play Rough case](../../tests/rules/test_trainer_phrases.py)
+
 ### Scientist's initial laboratory Project step
 
 Base `06aa08cbeb9592c1d3d1a86dbd081f710098d371`. Head to the Lab can

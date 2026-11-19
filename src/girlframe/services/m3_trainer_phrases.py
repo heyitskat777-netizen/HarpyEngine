@@ -14,7 +14,13 @@ from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_handler_state import Conditioning
 from girlframe.engine.m3_leviathan_obsession import allowed_gain
 from girlframe.engine.m3_off_duty import Period
-from girlframe.engine.m3_trainer_phrases import PHRASE_LABELS, Seated, save_sitting, sitting
+from girlframe.engine.m3_trainer_phrases import (
+    PHRASE_LABELS,
+    TARGETED,
+    Seated,
+    save_sitting,
+    sitting,
+)
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
@@ -30,6 +36,11 @@ SPEAK = "trainer_speak_answer"
 HEAR = "trainer_speak_heard"
 SIT = "trainer_sit"
 FLIRT = "trainer_flirt_play"
+ROUGH_OFFER = "trainer_rough_offer"
+ROUGH_REPLY = "trainer_rough_reply"
+ROUGH_HEARD = "trainer_rough_heard"
+ROUGH_CHOICES = (ROUGH_OFFER, ROUGH_REPLY, ROUGH_HEARD)
+RESPONSE_CHOICES = (SPEAK, HEAR, SIT, *ROUGH_CHOICES)
 
 
 def _installation(
@@ -183,8 +194,8 @@ def stage(
         raise WorkflowError(f"Use an installed {label} phrase and its actual higher-Status issuer")
     if phrase == "sit":
         _seat_body(state, girl)
-    if (counterpart is not None) != (phrase == "play_gentle"):
-        raise WorkflowError("Choose another actual Girl for the Play Gentle phrase")
+    if (counterpart is not None) != (phrase in TARGETED):
+        raise WorkflowError("Choose a nominated Girl only for a phrase that names a counterpart")
     nominated = None
     if counterpart is not None:
         if (
@@ -285,10 +296,14 @@ def offer_phrase(
     if original is None:
         return False
     _, saved = original
-    if saved["phrase"] == "play_gentle":
+    if saved["phrase"] in TARGETED:
         target = int(saved["counterpart"]["entity"])
         game.request(
-            c, action, int(saved["target"]["entity"]), FLIRT, dict(source=saved, target=target)
+            c,
+            action,
+            int(saved["target"]["entity"]),
+            FLIRT if saved["phrase"] == "play_gentle" else ROUGH_OFFER,
+            dict(source=saved, target=target),
         )
         return True
     game.request(
@@ -301,7 +316,7 @@ def offer_phrase(
     return True
 
 
-def prove_gentle(
+def prove_counterpart(
     game: "GameService",
     c: Connection,
     state: GameState,
@@ -311,10 +326,13 @@ def prove_gentle(
     original = _original(game, c, state, parent)
     body = json.loads(request["body_json"])
     if original is None or original[1] != body.get("source"):
-        raise WorkflowError("Recover the original Play Gentle order")
+        raise WorkflowError("Recover the original Conditioning Phrase order")
     _, saved = original
-    if saved["phrase"] != "play_gentle" or request["actor_id"] != saved["target"]["entity"]:
-        raise WorkflowError("Only the original Girl can make this required Flirt")
+    kind = request["kind"]
+    phrase = "play_gentle" if kind == FLIRT else "play_rough"
+    owner = saved.get("counterpart") if kind == ROUGH_REPLY else saved["target"]
+    if saved["phrase"] != phrase or owner is None or request["actor_id"] != owner["entity"]:
+        raise WorkflowError("Only the original participant owns this Conditioning Phrase choice")
     other = ActorRef.model_validate(saved["counterpart"])
     target = int(other.entity)
     scene = game.scene(c, parent["channel_id"])
@@ -325,7 +343,7 @@ def prove_gentle(
         or current_ref(state, target) != other
         or not HandlerService(game.store)._member(c, target)
     ):
-        raise WorkflowError("Recover the exact original Play Gentle counterpart")
+        raise WorkflowError("Recover the exact original Conditioning Phrase counterpart")
     game.pilot_cast(c, state, scene, owners=(target,))
     return target
 
@@ -340,7 +358,7 @@ def validate_gentle(
 ) -> None:
     if (
         prepared.play != "flirt"
-        or prepared.target != prove_gentle(game, c, state, parent, request)
+        or prepared.target != prove_counterpart(game, c, state, parent, request)
         or prepared.target_actor is not None
     ):
         raise WorkflowError("Make the original Play Gentle Flirt with its exact counterpart")
@@ -367,6 +385,10 @@ def choose(
         or answer.member is not None
     ):
         raise WorkflowError("Use only the original phrase response fields")
+    if request["kind"] in ROUGH_CHOICES:
+        target = prove_counterpart(game, c, state, action, request)
+        _rough_response(game, c, action, request["kind"], answer, target, body)
+        return
     if request["kind"] == SIT:
         if saved["phrase"] != "sit" or not answer.text.strip() or answer.flag is not None:
             raise WorkflowError("Describe how the original Girl actually sits")
@@ -401,6 +423,33 @@ def choose(
     action["data"]["trainer_heard_event"] = action["data"]["response_event"]
 
 
+def _rough_response(
+    game: "GameService",
+    c: Connection,
+    action: dict[str, Any],
+    kind: str,
+    answer: ChoiceAnswer,
+    target: int,
+    body: dict[str, Any],
+) -> None:
+    if answer.flag is None or answer.text:
+        raise WorkflowError("Only give your own private invitation decision")
+    data, event = action["data"], action["data"]["response_event"]
+    if kind == ROUGH_OFFER:
+        data["trainer_rough"] = dict(invited=event) if answer.flag else dict(passed=event)
+        if answer.flag:
+            game.request(c, action, target, ROUGH_REPLY, body)
+        return
+    invitation = data.get("trainer_rough", {})
+    if kind == ROUGH_REPLY and invitation.get("invited") and not invitation.get("answered"):
+        invitation.update(accepted=answer.flag, answered=event)
+        game.request(c, action, int(body["source"]["target"]["entity"]), ROUGH_HEARD, body)
+    elif kind == ROUGH_HEARD and answer.flag is True and invitation.get("answered"):
+        invitation["heard"] = event
+    else:
+        raise WorkflowError("Recover the original invitation and its actual response")
+
+
 def display(
     game: "GameService",
     c: Connection,
@@ -412,6 +461,21 @@ def display(
     if original is None or original[1] != json.loads(request["body_json"])["source"]:
         raise WorkflowError("Recover this original private Conditioning Phrase")
     root, saved = original
+    if request["kind"] in ROUGH_CHOICES:
+        target = prove_counterpart(game, c, state, action, request)
+        invitation = action["data"].get("trainer_rough", {})
+        if request["kind"] == ROUGH_OFFER:
+            return "The original order nominates " + state.sheets[str(target)].callsign + "."
+        if request["kind"] == ROUGH_REPLY and invitation.get("invited"):
+            return (
+                state.sheets[saved["target"]["entity"]].callsign
+                + " invited you to a private scene."
+            )
+        if request["kind"] == ROUGH_HEARD and invitation.get("answered"):
+            if invitation["accepted"]:
+                return "Your counterpart accepted. Use the usual scene controls if you continue."
+            return "Your counterpart declined the invitation."
+        raise WorkflowError("Recover the original invitation and its actual response")
     if request["kind"] in (SPEAK, SIT):
         return str(root["data"]["order_text"])
     spoken = action["data"].get("trainer_spoken", {})
