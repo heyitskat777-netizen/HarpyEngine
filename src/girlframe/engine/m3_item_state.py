@@ -83,6 +83,7 @@ class ItemTransfer(Model):
             "enforcer_snoop",
             "alpha_sex",
             "npc_job_handover",
+            "mercenary_pocket_money",
         ]
         | None
     ) = None

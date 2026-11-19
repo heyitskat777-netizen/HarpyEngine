@@ -233,6 +233,18 @@ async def open_ancillary_intimacy_choice(
             "Ask for a small favour within the scene, or pass.",
             (("ask", "Ask a favour"), ("pass", "Pass")),
         ),
+        "mercenary_low_terms": (
+            "Choose the actual fictional cash, the instruction and the Mercenary’s Tag.",
+            (*tuple(data.get("cash", {}).items()), ("hold", "Hold for the table")),
+        ),
+        "mercenary_low_action": (
+            "Record your own actual action or leave the paid outcome pending.",
+            (("done", "Record what I did"), ("hold", "Hold for the table")),
+        ),
+        "mercenary_low_verify": (
+            "Verify the fictional cash and the original action before applying the effects.",
+            (("confirm", "Confirm action and cash"), ("hold", "Leave pending")),
+        ),
         "mercenary_reply": (
             "Choose whether to decline or describe your own actual fulfilment.",
             (("decline", "Decline"), ("did_it", "Record what I did")),
@@ -431,6 +443,17 @@ async def open_ancillary_intimacy_choice(
                 required=step not in ("mercenary_request", "mercenary_reply"),
             )
         )
+    if step == "mercenary_low_terms" and data["cash"]:
+        fields.append(Field("account", "Your original instruction", paragraph=True, required=False))
+        fields.append(Field("paid_tag", "The original Tag", required=False))
+    if step in ("mercenary_low_action", "mercenary_low_verify"):
+        payment = data["pay_terms"]
+        instructions += "\n" + clean(payment["label"]) + " · " + clean(payment["instruction"])
+        fields.append(
+            Field("account", "Original action or verification", paragraph=True, required=False)
+        )
+    if step == "mercenary_low_verify":
+        instructions += "\nOriginal action — " + clean(data["actual_favor"])
     if step == "abyssal_gain" and data["void_choices"]:
         fields.append(Field("account", "Rewrite the chosen Asset", paragraph=True, required=False))
     if step == "prodigy_low" and data["can_change_status"]:
@@ -460,7 +483,9 @@ async def open_ancillary_intimacy_choice(
             values["choice"][0],
             heat=int(raw),
             account=values.get("account", ""),
-            picks=tuple(values.get("picks", ())),
+            picks=(values["paid_tag"],)
+            if values.get("paid_tag")
+            else tuple(values.get("picks", ())),
         )
         return "Your original choice is saved."
 

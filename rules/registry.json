@@ -14950,7 +14950,7 @@
         ],
         "tier_options": {
           "low": [
-            "Keep the paid Status effect pending"
+            "The counterpart pledges real fictional cash and gives a Tag. The Mercenary records her own action. Verified completion transfers the cash and lowers her original Cadre Status."
           ],
           "mid": [
             "Ask an original small favour or pass; verify actual fulfilment or issue a scoped Tag after refusal"
@@ -14965,7 +14965,7 @@
           "Record a fulfilled small favour or create the actual privately scoped Tag."
         ],
         "mandatory_followups": [
-          "Paid Orders, low Status, 2-cost Requisitions, ordinary modifiers and direct evidence for the fulfilled route remain open."
+          "High Orders and fair recompense, 2-cost Requisitions, ordinary modifiers and direct evidence for the fulfilled middle route remain open."
         ],
         "handler_or_gm_intervention": "The actual facilitator verifies the encounter and any claimed actual fulfilment.",
         "test_fixture_ids": [

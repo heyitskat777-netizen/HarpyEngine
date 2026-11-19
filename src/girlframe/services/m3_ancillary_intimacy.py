@@ -39,6 +39,7 @@ from girlframe.services.m3_ancillary import AncillaryService
 from girlframe.services.m3_battle import _cast
 from girlframe.services.m3_consume_support import knowledge_allowed
 from girlframe.services.m3_medical import MedicalService
+from girlframe.services.m3_mercenary_paid import Payment, cash_options
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.p1_facilitator import require_scene_clear
@@ -77,7 +78,7 @@ RESULTS = {
     },
     "PRODIGY": {"low": "prodigy_low", "mid": "prodigy_rank", "high": "prodigy_choose"},
     "MERCENARY": {
-        "low": "mercenary_low_hold",
+        "low": "mercenary_low_terms",
         "mid": "mercenary_request",
         "high": "mercenary_high_hold",
     },
@@ -147,6 +148,9 @@ class Encounter(Model):
         "prodigy_choose",
         "prodigy_jealous",
         "mercenary_low_hold",
+        "mercenary_low_terms",
+        "mercenary_low_action",
+        "mercenary_low_verify",
         "mercenary_high_hold",
         "mercenary_request",
         "mercenary_reply",
@@ -182,6 +186,7 @@ class Encounter(Model):
     picks: tuple[str, ...] = ()
     reaction_actor: ActorRef | None = None
     reaction_owner: int | None = None
+    payment: Payment | None = None
     transfer_asset: str | None = None
     prodigy_cadre: str | None = None
     prodigy_ace: bool = False
@@ -499,6 +504,7 @@ class AncillaryIntimacyService:
             "revolutionary_release",
             "prodigy_low",
             "mercenary_reply",
+            "mercenary_low_terms",
             "abyssal_reply",
             "abyssal_void_choice",
             "abyssal_swap",
@@ -522,6 +528,7 @@ class AncillaryIntimacyService:
             "prodigy_choose",
             "mercenary_request",
             "mercenary_give_tag",
+            "mercenary_low_action",
             "abyssal_erase_tag",
             "abyssal_leave",
             "abyssal_ask",
@@ -543,6 +550,7 @@ class AncillaryIntimacyService:
                 "prodigy_rank",
                 "mercenary_verify",
                 "mercenary_low_hold",
+                "mercenary_low_verify",
                 "mercenary_high_hold",
                 "abyssal_void_hold",
                 "abyssal_verify",
@@ -683,8 +691,19 @@ class AncillaryIntimacyService:
                 heat=actual.heat if case.step == "roll" else None,
                 account=case.account,
                 actual_favor=case.answer
-                if case.step in ("mercenary_verify", "abyssal_verify")
+                if case.step in ("mercenary_verify", "mercenary_low_verify", "abyssal_verify")
                 else None,
+                pay_terms=case.payment.model_dump(
+                    mode="json", include={"label", "instruction", "tag"}
+                )
+                if case.payment is not None
+                else None,
+                cash={
+                    key: value.name
+                    for key, value in cash_options(self.game, c, state, counterpart.ref).items()
+                }
+                if case.step == "mercenary_low_terms"
+                else {},
                 participants=(actual.label, counterpart.label),
                 tier=case.roll.result if case.roll else None,
                 tag=label,
@@ -805,6 +824,7 @@ class AncillaryIntimacyService:
                     "revolutionary_erase_two",
                     "abyssal_damage",
                     "soldier_repair",
+                    "mercenary_low_terms",
                 )
             ):
                 raise WorkflowError(
@@ -846,6 +866,12 @@ class AncillaryIntimacyService:
                     raise ValueError("Dice source returned invalid faces.")
                 dice = Dice(faces=faces, heat=heat, source=event, rng=self.game.rng_source)
                 update = dict(roll=dice, step=RESULTS[case.book][dice.result])
+                if (
+                    case.book == "MERCENARY"
+                    and dice.result == "low"
+                    and not cadre_rank.current(state, case.actor.actor)
+                ):
+                    update["step"] = "mercenary_low_hold"
                 if case.book == "SOLDIER" and dice.result == "low":
                     group = cadre_rank.current(state, case.actor.actor)
                     if group is not None and case.partner.actor in cadre_rank.actual_members(
@@ -934,7 +960,9 @@ class AncillaryIntimacyService:
             elif case.book == "PRODIGY" and case.step.startswith("prodigy_"):
                 state, update = _prodigy(state, case, choice, account.strip(), event)
             elif case.book == "MERCENARY" and case.step.startswith("mercenary_"):
-                state, update = _mercenary(state, case, choice, account.strip(), event)
+                state, update = _mercenary(
+                    self.game, c, state, case, choice, account.strip(), picks, event
+                )
             elif case.book == "ABYSSAL ACOLYTE" and case.step.startswith("abyssal_"):
                 bindings = profiles(c, self.store.campaign_id)
                 partner = resolve(state, case.partner.actor, bindings)
@@ -1328,12 +1356,49 @@ def _prodigy(
 
 
 def _mercenary(
+    game: GameService,
+    c: Connection,
     state: GameState,
     case: Encounter,
     choice: str,
     account: str,
+    picks: tuple[str, ...],
     event: str,
 ) -> tuple[GameState, dict[str, Any]]:
+    if case.step == "mercenary_low_terms":
+        if choice == "hold" and not account and not picks:
+            return state, dict(step="mercenary_low_hold", disposition="pocket_money_pending")
+        if len(picks) == 1 and choice != "hold":
+            from girlframe.services.m3_mercenary_paid import terms
+
+            payment = terms(
+                game, c, state, case.actor.actor, case.partner.actor, choice, account, picks[0]
+            )
+            return state, dict(step="mercenary_low_action", payment=payment)
+    if case.step == "mercenary_low_action" and case.payment is not None:
+        if choice == "done" and account:
+            return state, dict(step="mercenary_low_verify", answer=account)
+        if choice == "hold" and not account:
+            return state, dict(step="mercenary_low_hold", disposition="pocket_money_pending")
+    if case.step == "mercenary_low_verify" and case.payment is not None and account:
+        if choice == "hold":
+            return state, dict(step="mercenary_low_hold", disposition="pocket_money_pending")
+        if choice == "confirm":
+            from girlframe.services.m3_mercenary_paid import apply as apply_payment
+
+            state, tag = apply_payment(
+                game,
+                c,
+                state,
+                payment=case.payment,
+                mercenary=case.actor.actor,
+                source=case.partner.actor,
+                audience=(case.actor.controller, case.partner.controller),
+                case=case.id,
+                event=event,
+                account=account,
+            )
+            return state, dict(step="closed", tag=tag, disposition="pocket_money_paid")
     if case.step == "mercenary_request":
         if choice == "pass" and not account:
             return state, dict(step="closed", disposition="no_favour")

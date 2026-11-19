@@ -3701,6 +3701,23 @@ access to the replacement, then confirmed the exact replaced
 and transferred Assets. Two existing cases were deselected.
 [Acolyte p. 109](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=111) · [Native case](../../tests/rules/test_abyssal_private_play.py)
 
+### Mercenary pocket money
+
+Base `106df0b7bc8035fba8245287b538873309fa225c`. On the
+saved low result the original counterpart supplies an actual
+confirmed fictional cash object, an instruction and a Tag. The
+Mercenary records her own action. The original facilitator
+verifies the scene and payment, then the engine transfers the
+object, applies the original Tag and lowers her actual Status.
+
+One focused case passed in 5.97 seconds. It denied the
+counterpart control of the Mercenary’s action, kept the
+consequences pending before verification, and proved custody
+through the original before-and-after transfer record. The
+middle case was deselected. High Orders and fair recompense
+remain open.
+[Mercenary p. 97](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=99) · [Native case](../../tests/rules/test_mercenary_private_play.py)
+
 ### Actor-level Ancillary Cadre Status and the Warboy Dog
 
 Base `083b876`. The original facilitator privately proposes a
