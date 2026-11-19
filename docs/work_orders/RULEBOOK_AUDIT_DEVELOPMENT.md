@@ -3178,3 +3178,20 @@ form covers Benevolent, Dormant and Erratic Gorgons. Special bodies,
 non-GM NPCs, protected sites and Armoured interception require further
 source-specific handling.
 [Timeskip p. 197](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=199) · [Native case](../../tests/rules/test_timeskip.py)
+
+### Timeskip’s owned Newgirl transition
+
+Base `5724bc9`. Each original Newgirl chooses her own new book
+through the private Inbox. The actual baseline transition reuses
+the existing configuration, profile synchronization and consent
+controls, with independent source proof for Timeskip and Defeat.
+The same Girl keeps her existing resources. The Timeskip advances
+to the original death decision after this setup and any last-Base
+aftermath genuinely complete. A table without a Newgirl can pass
+this step without an invented transition.
+
+**Two focused cases passed in 11.26 seconds**. The Timeskip
+case selected Oldgen, configured two maxims, preserved the
+original sheet’s resources and held at the actual setup. The
+previous Defeat-origin Oldgen transition also passed.
+[Timeskip p. 197](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=199) · [Native case](../../tests/rules/test_timeskip.py)

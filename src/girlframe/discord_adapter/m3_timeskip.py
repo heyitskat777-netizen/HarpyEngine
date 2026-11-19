@@ -10,6 +10,7 @@ from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.m3_punishments import Picker
 from girlframe.discord_adapter.m3_world import TYPES, coordinates
 from girlframe.discord_adapter.onboarding import reply
+from girlframe.engine.playbooks import GIRL_TYPES
 from girlframe.services.m3_timeskip import DURATIONS, Arrival, TimeskipService
 
 
@@ -54,11 +55,42 @@ async def open_timeskip(
     if step == "declined":
         await reply(interaction, "The table declined this Timeskip.")
         return
-    if step == "newgirl":
+    if step == "death":
+        await reply(interaction, "The Timeskip awaits the table’s decision about who died.")
+        return
+    if step == "newgirl" and not data["can_continue"]:
         await reply(
-            interaction,
-            "World changes are saved. The next step is the original Newgirl’s playbook.",
+            interaction, "The Timeskip awaits the original playbook setup or base aftermath."
         )
+        return
+    if step in ("newgirl", "choose_book"):
+        fields = [
+            Field("confirm", "Proceed to the next printed step", (("continue", "Continue"),))
+            if step == "newgirl"
+            else Field(
+                "book",
+                "Your new playbook",
+                tuple((k, v) for k, v in GIRL_TYPES.items() if k != "NEWGIRL"),
+            )
+        ]
+
+        async def change(click: discord.Interaction, values: dict[str, Any]) -> str:
+            actual = viewer_from_interaction(click)
+            args = actual, str(click.id), case, data["revision"]
+            if step == "newgirl":
+                await asyncio.to_thread(service.advance_newgirl, *args)
+                return "The completed Newgirl step is saved."
+            await asyncio.to_thread(service.choose_book, *args, values["book"][0])
+            return "Open your original playbook setup in the private Inbox."
+
+        form = NativeForm(
+            interaction.user.id,
+            title,
+            "Confirm the Newgirl step." if step == "newgirl" else "Choose your new Girl playbook.",
+            fields,
+            change,
+        )
+        await reply(interaction, form.text(), form)
         return
     if step == "agreement":
         fields = [

@@ -8,20 +8,25 @@ from sqlalchemy import Connection
 
 from girlframe.engine import m3_world as world_rules
 from girlframe.engine.m2 import GameState
+from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_battle import category, end_actor_casts
 from girlframe.engine.m3_battle_director import die as end_director
 from girlframe.engine.m3_collateral import install_budget, stage_loss
 from girlframe.engine.m3_enforcer import end_grasps
+from girlframe.engine.m3_girl_runtime_state import change_playbook_runtime
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_location_build import require_site
 from girlframe.engine.m3_physical import interrupt_journeys
 from girlframe.engine.m3_world_state import Asset, Cell, CorePlan, Gorgon, GorgonType, Location
+from girlframe.engine.playbooks import GIRL_TYPES
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
+from girlframe.services.m3_actors import profiles
+from girlframe.services.m3_girl_transition import GirlTransitionService, baseline_id, stage_baseline
 from girlframe.services.m3_handler_plays import _ordinary_scene_idle
 from girlframe.services.m3_medical import MedicalService
 from girlframe.services.m3_quadrant_loss import materialize_loss, require_aftermath_clear
@@ -56,11 +61,15 @@ class Timeskip(Model):
     voters: tuple[int, ...]
     accepted: tuple[int, ...]
     months: int
-    step: Literal["agreement", "city_ruin", "city_foundation", "base_ruin", "newgirl", "declined"]
+    step: Literal[
+        "agreement", "city_ruin", "city_foundation", "base_ruin", "newgirl", "death", "declined"
+    ]
     city_ruin: str | None = None
     city: str | None = None
     base_ruin: str | None = None
     loss: str | None = None
+    graduates: tuple[ActorRef, ...] = ()
+    baselines: dict[str, str] = {}
 
 
 def records(state: GameState) -> tuple[Timeskip, ...]:
@@ -176,7 +185,15 @@ class TimeskipService:
     ) -> dict[str, Any]:
         state.facts = [x for x in state.facts if (x.get("kind"), x.get("id")) != (KIND, case.id)]
         state.facts.append(dict(kind=KIND, id=case.id, body=case.model_dump_json()))
-        self.game.event(c, viewer.user_id, key, "m3.timeskip_" + operation, state, event_id=event)
+        self.game.event(
+            c,
+            viewer.user_id,
+            key,
+            "m3.timeskip_" + operation,
+            state,
+            event_id=event,
+            timeskip_id=case.id,
+        )
         return dict(id=case.id, step=case.step, event=event)
 
     def start_menu(self, viewer: GuildViewer) -> int:
@@ -258,6 +275,18 @@ class TimeskipService:
             viewer, key, dict(id=identity, revision=revision, accept=accept), operation
         )
 
+    def _step(self, case: Timeskip, user: int) -> str | None:
+        if case.step == "declined":
+            return None
+        if case.step == "newgirl" and any(
+            actor.entity == str(user) and actor.token not in case.baselines
+            for actor in case.graduates
+        ):
+            return "choose_book"
+        if user == case.gm or case.step == "agreement" and user not in case.accepted:
+            return case.step
+        return None
+
     def tasks(
         self, c: Connection, state: GameState, viewer: GuildViewer
     ) -> tuple[tuple[str, str], ...]:
@@ -270,16 +299,11 @@ class TimeskipService:
         except (ValueError, WorkflowError):
             return ()
         return tuple(
-            (case.id, case.step)
+            (case.id, step)
             for case in original
             if (case.gm, case.appointment) == current
             and viewer.user_id in case.voters
-            and case.step != "declined"
-            and (
-                viewer.user_id == case.gm
-                or case.step == "agreement"
-                and viewer.user_id not in case.accepted
-            )
+            and (step := self._step(case, viewer.user_id)) is not None
         )
 
     def get(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
@@ -287,17 +311,17 @@ class TimeskipService:
             self._gate(c, viewer)
             state = load_state(c, self.store.campaign_id)
             case = self._case(c, state, viewer, identity)
-            if state.world is None or (
-                viewer.user_id != case.gm
-                and (case.step != "agreement" or viewer.user_id in case.accepted)
-            ):
+            step = self._step(case, viewer.user_id)
+            if state.world is None or step is None:
                 raise WorkflowError("The original Timeskip choice is unavailable")
             data: dict[str, Any] = dict(
                 revision=state.revision,
-                step=case.step,
+                step=step,
                 duration=DURATIONS[case.months],
                 accepted=viewer.user_id in case.accepted,
             )
+            if step == "newgirl":
+                data["can_continue"] = self._graduated(c, state, case)
             kind = {"city_ruin": "city", "base_ruin": "base"}.get(case.step)
             if kind is not None:
                 data["locations"] = {
@@ -415,7 +439,16 @@ class TimeskipService:
                 update=(
                     dict(step="city_foundation", city_ruin=target.id)
                     if kind == "city"
-                    else dict(step="newgirl", base_ruin=target.id, loss=loss.id if loss else None)
+                    else dict(
+                        step="newgirl",
+                        base_ruin=target.id,
+                        loss=loss.id if loss else None,
+                        graduates=tuple(
+                            current_ref(changed, uid)
+                            for uid in changed.order
+                            if changed.sheets[str(uid)].girl == "NEWGIRL"
+                        ),
+                    )
                 )
             )
             result = self._save(c, changed, viewer, key, case, kind + "_ruined", event)
@@ -481,4 +514,87 @@ class TimeskipService:
             key,
             dict(id=identity, revision=revision, name=name, cell=cell, account=account),
             operation,
+        )
+
+    def choose_book(
+        self, viewer: GuildViewer, key: str, identity: str, revision: int, book: str
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            _ordinary_scene_idle(c, self.game)
+            state = load_state(c, self.store.campaign_id)
+            require_aftermath_clear(state)
+            case = self._case(c, state, viewer, identity)
+            girl = next((x for x in case.graduates if x.entity == str(viewer.user_id)), None)
+            if (
+                case.step != "newgirl"
+                or girl is None
+                or state.revision != revision
+                or girl.token in case.baselines
+                or book not in GIRL_TYPES
+                or book == "NEWGIRL"
+            ):
+                raise WorkflowError("Choose a different book for your original Newgirl")
+            actual = resolve(
+                state, girl, profiles(c, self.store.campaign_id), require_current_profile=False
+            )
+            sheet = state.sheets[girl.entity]
+            if actual.rules != "girl_frame" or sheet.girl != "NEWGIRL":
+                raise WorkflowError("Recover the original Newgirl and her current baseline")
+            event = str(uuid4())
+            state.sheets[girl.entity], fact = change_playbook_runtime(sheet, book, event)
+            state.facts.append(fact)
+            case = case.model_copy(update=dict(baselines=case.baselines | {girl.token: event}))
+            result = self._save(c, state, viewer, key, case, "newgirl_changed", event)
+            stage_baseline(c, self.store, girl, fact, event, identity, timeskip=True)
+            return result
+
+        return self._write(viewer, key, dict(id=identity, revision=revision, book=book), operation)
+
+    def _graduated(self, c: Connection, state: GameState, case: Timeskip) -> bool:
+        try:
+            require_aftermath_clear(state)
+        except WorkflowError:
+            return False
+        transitions = GirlTransitionService(self.store)
+        for girl in case.graduates:
+            event = case.baselines.get(girl.token)
+            if event is None:
+                return False
+            row, body, original = transitions._source(c, baseline_id(case.id, event))
+            sheet = state.sheets.get(girl.entity)
+            if (
+                original != girl
+                or row["state"] != "resolved"
+                or not body.get("complete")
+                or sheet is None
+                or sheet.character_id != girl.incarnation
+                or sheet.girl != body["new_book"]
+                or sheet.girl_runtime is None
+                or sheet.girl_runtime.setup is None
+                or sheet.girl_runtime.setup.epoch != event
+            ):
+                return False
+        return True
+
+    def advance_newgirl(
+        self, viewer: GuildViewer, key: str, identity: str, revision: int
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            _ordinary_scene_idle(c, self.game)
+            state = load_state(c, self.store.campaign_id)
+            case = self._case(c, state, viewer, identity)
+            if (
+                viewer.user_id != case.gm
+                or case.step != "newgirl"
+                or state.revision != revision
+                or not self._graduated(c, state, case)
+            ):
+                raise WorkflowError("Complete the original Newgirl’s baseline before moving on")
+            case = case.model_copy(update=dict(step="death"))
+            return self._save(c, state, viewer, key, case, "newgirl_completed", str(uuid4()))
+
+        return self._write(
+            viewer, key, dict(id=identity, revision=revision, advance=True), operation
         )
