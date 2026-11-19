@@ -6,6 +6,7 @@ from pydantic import Field, model_validator
 
 from girlframe.engine.identity import Snowflake
 from girlframe.engine.m2 import Model
+from girlframe.engine.m3_actor_state import ActorRef
 
 Response = Literal["accept", "decline"]
 AcePolicy = Literal["current_ace", "participants_only"]
@@ -30,6 +31,7 @@ class Mission(Model):
     offered_characters: dict[str, str] = Field(default_factory=dict)
     character_ids: dict[str, str] = Field(default_factory=dict)
     ended_participants: dict[str, str] = Field(default_factory=dict)
+    capture_target: ActorRef | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def consistency(self) -> "Mission":
@@ -41,6 +43,8 @@ class Mission(Model):
             raise ValueError("Offer to a distinct nonempty Pilot set, excluding the Handler")
         if not set(self.responses) <= {str(x) for x in self.offered_to}:
             raise ValueError("Only offered players may respond")
+        if self.capture_target is not None and self.capture_target.kind != "external_pilot":
+            raise ValueError("Capture and conversion must target an actual external Pilot")
         if (
             not set(self.offered_characters) <= {str(x) for x in self.offered_to}
             or not set(self.character_ids) <= {str(x) for x in self.participants}

@@ -60,7 +60,7 @@ def native(service, identity, viewer, number, **values):
     asyncio.run(run())
 
 
-def actual_captured(store, tmp_path, monkeypatch):
+def actual_captured(store, tmp_path, monkeypatch, before_capture=None):
     void, game, worker, gateway, root, work = ready(store)
     approved(store, game, tmp_path, monkeypatch, extra=(rules.RULE, ordinary_rules.RULE))
     store.policy = store.policy.model_copy(
@@ -107,26 +107,33 @@ def actual_captured(store, tmp_path, monkeypatch):
     agree(creation)
     data = creation.view(ADMIN)
     creation.activate(ADMIN, str(uuid4()), data["revision"], data["game_revision"], True)
-    with store.transaction() as c:
-        canon = state(game)
-        scene = game.scene(c, 900)
-        canon.scene_casts = [
-            SceneCast(
-                id=scene["id"],
-                channel=900,
-                roles=tuple(
-                    CastRole(actor=ref, controller=uid, source_event="actual-cast-source")
-                    for ref, uid in (
-                        (current_ref(canon, 1), 1),
-                        (actor, 2),
-                        (current_ref(canon, 3), 3),
-                    )
-                ),
-                facilitator=1,
-                facilitator_source="actual-cast-source",
-            )
-        ]
-        game.event(c, 1, str(uuid4()), "synthetic.actual_reborn_cast", canon)
+
+    def place_cast():
+        with store.transaction() as c:
+            canon = state(game)
+            scene = game.scene(c, 900)
+            canon.scene_casts = [
+                SceneCast(
+                    id=scene["id"],
+                    channel=900,
+                    roles=tuple(
+                        CastRole(actor=ref, controller=uid, source_event="actual-cast-source")
+                        for ref, uid in (
+                            (current_ref(canon, 1), 1),
+                            (actor, 2),
+                            (current_ref(canon, 3), 3),
+                        )
+                    ),
+                    facilitator=1,
+                    facilitator_source="actual-cast-source",
+                )
+            ]
+            game.event(c, 1, str(uuid4()), "synthetic.actual_reborn_cast", canon)
+
+    if before_capture is not None:
+        before_capture(game, actor, place_cast)
+    else:
+        place_cast()
     # Genuine existing Handler Plays damage real original Harpy Frame resources.
     plays = HandlerPlayService(store)
     for asset in tuple(harpy(state(game), actor).assets):
@@ -187,10 +194,145 @@ def actual_captured(store, tmp_path, monkeypatch):
     return game, worker, gateway, actor
 
 
+def dispatch_conversion_mission(store, game, actor, place_cast):
+    from test_off_duty_cycle import activate, call, movement, roll_for
+    from test_strain_service import D6, prepared
+    from test_world import gorgon
+
+    from girlframe.discord_adapter.m3_strain_effects import DependentForm
+    from girlframe.engine.m3_budget_conversion import RULE, orders
+    from girlframe.engine.m3_off_duty import RecoveryChoice
+    from girlframe.engine.m3_strain_effects import Choice
+    from girlframe.services.m3_mission_control import MissionControlService
+    from girlframe.services.m3_missions import MissionService
+    from girlframe.services.m3_off_duty import OffDutyService
+    from girlframe.services.m3_off_duty_cycle import CycleService
+    from girlframe.services.m3_strain import StrainService
+    from girlframe.services.m3_strain_effects import EffectService
+    from integrations.activity.mission_desk import MissionDesk
+
+    policy = store.policy.m3_approval
+    store.policy = store.policy.model_copy(
+        update={
+            "m3_approval": policy.model_copy(
+                update={"subsystems": policy.subsystems | {"missions", "off_duty", "strain"}}
+            )
+        }
+    )
+    missions = MissionService(store)
+    periods = OffDutyService(missions)
+    strain = StrainService(periods, dice=D6())
+    effects = EffectService(strain)
+    cycle = CycleService(periods)
+    with store.transaction() as c:
+        canon = state(game)
+        for entry in canon.sheets["3"].assets:
+            entry.void = False
+        game.event(c, 1, "nonvoid-survivor", "synthetic.nonvoid_cadre", canon)
+    period = prepared(strain, game, frozenset({"budget"}))
+
+    async def confirm_demand(identity, account, key):
+        inbox = InboxService(store)
+        assert not any(x.identity == identity for x in inbox.items(OTHER))
+        entry = next(x for x in inbox.items(ADMIN) if x.identity == identity)
+        click = current(ADMIN.user_id, 39301)
+        click.channel_id = 900
+        await click.response.defer(ephemeral=True)
+        await InboxView(inbox, ADMIN.user_id).route(click, entry)
+        form = click.edit_original_response.call_args.kwargs["view"]
+        assert isinstance(form, DependentForm)
+        form.values["account"] = account
+        await form.confirm.callback(current(ADMIN.user_id, int(key)))
+        assert form.completed
+
+    for track, die, column, choice in (
+        (
+            "void",
+            2,
+            1,
+            Choice(
+                rule_id="strain.void.low.2.1",
+                account="A Gorgon arrives nearby.",
+                gorgon=gorgon("dormant", "near-base", (0, 1)),
+            ),
+        ),
+        ("rebellion", 1, 2, Choice(rule_id="strain.rebellion.low.1.2", account="Control slips.")),
+        ("budget", 2, 1, Choice(rule_id=RULE, account="Higher-ups demand a conversion mission.")),
+    ):
+        request = next(x for x in state(game).strain.requests if x.track == track)
+        strain.dice.face = die
+        strain.roll(ADMIN, "conversion-roll-" + track, request.id, 1, state(game).revision)
+        strain.choose(
+            ADMIN, "conversion-choice-" + track, request.id, 2, state(game).revision, column
+        )
+        revision = state(game).revision
+        key = "conversion-effect-" + track
+        if track == "budget":
+            with pytest.raises(WorkflowError):
+                effects.apply(
+                    OTHER, "wrong-demand-owner", request.id + ":effect", 1, revision, choice
+                )
+            key = "39302"
+            asyncio.run(confirm_demand(request.id + ":effect", choice.account, key))
+        receipt = effects.apply(ADMIN, key, request.id + ":effect", 1, revision, choice)
+        assert receipt["state"] == "resolved"
+        assert receipt == effects.apply(ADMIN, key, request.id + ":effect", 1, revision, choice)
+    (demand,) = orders(state(game))
+    assert demand.dispatched is None and demand.period == period and strain.dice.calls == 3
+    activate(cycle, game, period)
+    roll_for(cycle, game, period, OTHER, (2, 2), reviewers=(OTHER, ADMIN))
+    call(cycle, game, OTHER, period, "scene", None, (), "")
+    call(cycle, game, OTHER, period, "recover", RecoveryChoice())
+    call(cycle, game, ADMIN, period, "handler_scene", "routine", (1, 3), "Actual routine")
+    for viewer in (ADMIN, OTHER):
+        call(cycle, game, viewer, period, "acknowledge", None)
+    call(cycle, game, ADMIN, period, "review_status", (3,), "Actual performance review")
+    assert call(cycle, game, ADMIN, period, "finish", movement(game))["phase"] == "complete"
+    place_cast()
+    controls = MissionControlService(missions)
+    view = controls.view(ADMIN)
+    assert view["desk"]["capture_targets"] == ((actor.entity, harpy(state(game), actor).name),)
+    assert controls.view(OTHER)["desk"] is None
+    with pytest.raises(WorkflowError, match="next mission must target"):
+        missions.offer(ADMIN, "unrelated-mission", "Survey the relay", (3,))
+    desk = MissionDesk(missions)
+    offered = desk.perform(
+        ADMIN,
+        "conversion-offer",
+        dict(
+            action="offer",
+            objective="Recover the original survivor",
+            pilots=["3"],
+            capture_target=actor.entity,
+        ),
+    )
+    with pytest.raises(WorkflowError):
+        missions.get(PLAYER, offered["id"])
+    revision = missions.respond(OTHER, "conversion-accept", offered["id"], 1, "accept")["revision"]
+    with pytest.raises(WorkflowError, match="STALE_MISSION"):
+        missions.start(ADMIN, "stale-conversion-start", offered["id"], 1)
+    mission = missions.start(ADMIN, "conversion-start", offered["id"], revision)
+    assert missions.start(ADMIN, "conversion-start", offered["id"], revision) == mission
+    bound = orders(state(game))[0]
+    assert bound.target == actor and bound.mission == mission["id"] and bound.dispatched
+    with pytest.raises(WorkflowError, match="actual in-mission capture and conversion"):
+        missions.end(ADMIN, "no-conversion", mission["id"], mission["revision"], True)
+    return mission
+
+
+@pytest.mark.parametrize("budget_demand", [False, True])
 def test_actual_capture_treatment_installs_one_real_mockingbird_then_award_spend_history(
-    ledger, tmp_path, monkeypatch
+    ledger, tmp_path, monkeypatch, budget_demand
 ):
-    game, worker, gateway, actor = actual_captured(ledger, tmp_path, monkeypatch)
+    mission = None
+
+    def dispatch(game, actor, place_cast):
+        nonlocal mission
+        mission = dispatch_conversion_mission(ledger, game, actor, place_cast)
+
+    game, worker, gateway, actor = actual_captured(
+        ledger, tmp_path, monkeypatch, dispatch if budget_demand else None
+    )
     service = HandlerConversionService(ledger)
     session_native(HandlerOrdinaryService(ledger), "Actual capture/conversion Session", 39100)
     before = harpy(state(game), actor)
@@ -271,6 +413,20 @@ def test_actual_capture_treatment_installs_one_real_mockingbird_then_award_spend
     converted = current_ref(canon, 2)
     sheet = canon.sheets["2"]
     assert value.resulting_actor == converted and converted.incarnation != before.origin.incarnation
+    if mission is not None:
+        from girlframe.engine.m3_budget_conversion import orders
+        from girlframe.services.m3_missions import MissionService
+
+        missions = MissionService(ledger)
+        ledger.engine.dispose()
+        result = missions.end(ADMIN, "settle-conversion", mission["id"], mission["revision"], True)
+        assert result["rewards_committed"]
+        assert (
+            missions.end(ADMIN, "settle-conversion", mission["id"], mission["revision"], True)
+            == result
+        )
+        (paid,) = orders(state(game))
+        assert paid.conversion == value.completion_event and paid.settled
     assert tuple(canon.career_archives) == original_archives
     assert not any(x.id == actor.entity for x in canon.harpy_states)
     assert sheet.girl == "MOCKINGBIRD" and tuple(x.name for x in sheet.identities) == tuple(

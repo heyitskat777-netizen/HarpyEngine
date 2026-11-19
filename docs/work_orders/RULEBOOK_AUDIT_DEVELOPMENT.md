@@ -676,3 +676,25 @@ remains in force. The existing Smooth Things Over remains independent.
 All 42 selected tests passed, including both mechanical outcomes, wrong
 owner, stale and withdrawn access, safety pause, replay and reopening.
 [Public Relations p. 189](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=191) · [NPC request tests](../../tests/rules/test_journalist.py)
+
+## High Budget capture and conversion mission
+
+The base is `8e9026f3b9f9bd4b2e83a1dc9189ebf08a3f0d89`.
+High Budget 2.1 records a binding mission demand through the original
+Handler's private Strain control. Off-Duty can proceed once the durable
+demand exists. The next offer must name an actual known eligible Harpy.
+The dispatch binds that original target. A success requires an attributable
+capture by the original Handler or dispatched Girl and a completed native
+repossession after dispatch. A recorded mission failure consumes the attempt.
+Target and result remain in the existing private mission audience.
+
+The test exercises the actual Strain rolls, native private Inbox, completed
+Off-Duty, Activity adapter offer, original invitation, rejected unrelated
+mission, stale dispatch, premature success, real capture and Mockingbird
+conversion, database reopening and replay. The regression passed all 45
+tests. The Activity offer selector patch also applied cleanly to the archived
+source and passed JavaScript syntax validation. Its authenticated browser
+behavior and live Discord remain separate. The implemented target scope is
+reborn original Pilots with a native conversion workflow. Other Harpies,
+Rebel Pilots and competing demands after a Handler succession remain open.
+[High Budget p. 149](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=151) · [Capture and conversion tests](../../tests/rules/test_handler_conversion.py)

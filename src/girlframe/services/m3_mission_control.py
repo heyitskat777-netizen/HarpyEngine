@@ -121,8 +121,16 @@ class MissionControlService:
                 roster = ()
             with missions.store.engine.connect() as c:
                 offer_reason = self._blocked(c, viewer, partial(missions._not_off_duty, c))
+            capture_targets = None
+            if offer_reason is None:
+                try:
+                    capture_targets = missions.capture_options(viewer)
+                except WorkflowError as error:
+                    offer_reason = str(error)
             if offer_reason is None and not roster:
                 offer_reason = "No eligible active Pilots are available for an invitation."
+            if offer_reason is None and capture_targets == ():
+                offer_reason = "The next mission requires a known Harpy available for conversion."
             desk = {
                 "pilots": roster,
                 "can_offer": offer_reason is None,
@@ -131,4 +139,6 @@ class MissionControlService:
                 "can_begin_off_duty": reason is None,
                 "off_duty_blocker": reason,
             }
+            if capture_targets is not None:
+                desk["capture_targets"] = capture_targets
         return {"offers": offers, "desk": desk}

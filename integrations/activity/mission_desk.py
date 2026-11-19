@@ -41,11 +41,16 @@ class MissionDesk:
             self.missions._handler(c, viewer)
         action = data.get("action")
         fields = data.keys() - {"action"}
-        if action == "offer" and fields == {"objective", "pilots"}:
+        if action == "offer" and fields in (
+            {"objective", "pilots"},
+            {"objective", "pilots", "capture_target"},
+        ):
             objective, pilots = data["objective"], data["pilots"]
+            capture_target = data.get("capture_target")
             if (
                 not isinstance(objective, str)
                 or not isinstance(pilots, list)
+                or ("capture_target" in fields and not isinstance(capture_target, str))
                 or any(
                     not isinstance(uid, str)
                     or not uid.isascii()
@@ -56,7 +61,9 @@ class MissionDesk:
                 )
             ):
                 raise ValueError("Use the current pilot roster and an objective.")
-            return self.missions.offer(viewer, key, objective, tuple(map(int, pilots)))
+            return self.missions.offer(
+                viewer, key, objective, tuple(map(int, pilots)), capture_target=capture_target
+            )
         if action == "off_duty" and not fields:
             return self.periods.begin(viewer, key)
         if action == "reaction" and fields == {

@@ -47,6 +47,12 @@ transition. Keep using the supplied `mission.actions` list for buttons. These ar
 presentation changes; command eligibility remains in HarpyEngine. The supplied
 Python tests verify the returned controls, not this browser presentation change.
 
+The optional Handler-only `desk.capture_targets` field appears when a High
+Budget capture-and-conversion mission is due. The P2 patch shows these options
+as a required selector and submits the selected ID as `capture_target` on the
+normal mission offer. When the field is absent, keep the original offer shape.
+When the engine blocks the offer, display its supplied explanation.
+
 The source-only bundle omits artwork, the browser SDK and installed browser test
 dependencies. Python adapter verification uses an empty artwork catalog and an
 inert SDK file. It supplies no artwork, browser rendering or live Discord evidence.

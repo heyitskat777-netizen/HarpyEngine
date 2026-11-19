@@ -348,6 +348,7 @@ class MissionService:
         players: tuple[int, ...],
         *,
         assassination: str | None = None,
+        capture_target: str | None = None,
     ) -> dict[str, Any]:
         if not objective.strip() or len(objective) > 1200:
             raise WorkflowError("Describe the mission objective in 1–1200 characters.")
@@ -356,6 +357,21 @@ class MissionService:
             self._handler(c, viewer)
             self._not_off_duty(c)
             state = load_state(c, self.store.campaign_id)
+            from girlframe.services import m3_budget_conversion as capture
+
+            capture_actor = None
+            written_objective = objective.strip()
+            if capture_target is not None:
+                self.access.authorize(c, viewer, "strain")
+                label = dict(capture.targets(state)).get(capture_target)
+                if label is None:
+                    raise WorkflowError(
+                        "Choose an actual known free Harpy for capture and conversion"
+                    )
+                capture_actor = ActorRef(kind="external_pilot", entity=capture_target)
+                written_objective = "Capture and convert " + label + ". " + written_objective
+                if len(written_objective) > 1200:
+                    raise WorkflowError("Shorten the mission plan to fit the required objective")
             if not players or len(players) > 25 or len(set(players)) != len(players):
                 raise WorkflowError("Select one to 25 distinct active Pilots.")
             setup = HandlerService(self.store)
@@ -373,7 +389,8 @@ class MissionService:
             mission = rules.Mission(
                 id=str(uuid4()),
                 handler=viewer.user_id,
-                objective=objective.strip(),
+                objective=written_objective,
+                capture_target=capture_actor,
                 offered_to=players,
                 offered_characters={
                     str(uid): self.game.character_binding(
@@ -382,6 +399,7 @@ class MissionService:
                     for uid in players
                 },
             )
+            capture.check_dispatch(c, self.game, state, mission)
             if assassination is not None:
                 from girlframe.services.m3_budget_assassination import bind
 
@@ -404,7 +422,8 @@ class MissionService:
             key,
             "m3.mission_offered",
             {"objective": objective, "players": list(players)}
-            | ({"assassination": assassination} if assassination is not None else {}),
+            | ({"assassination": assassination} if assassination is not None else {})
+            | ({"capture_target": capture_target} if capture_target is not None else {}),
             operation,
             lambda c: HandlerService(self.store).authorize(c, viewer),
         )
@@ -575,6 +594,9 @@ class MissionService:
                 "Original accepted characters changed; cancel and reoffer the mission."
             )
         updated.character_ids = actual
+        from girlframe.services.m3_budget_conversion import check_dispatch
+
+        check_dispatch(c, self.game, state, updated)
         # A Pilot cannot be dispatched into two active missions at once.
         table = t.m3["m3_missions"]
         for other_body in c.scalars(
@@ -596,11 +618,13 @@ class MissionService:
             from girlframe.engine.m3_budget_anarchy import dispatch as bind_protests
             from girlframe.engine.m3_orbital_threat import dispatch as bind_orbital_threats
             from girlframe.engine.m3_repairs import dispatch as bind_shortages
+            from girlframe.services.m3_budget_conversion import bind as bind_capture
 
             dispatch_event = str(uuid4())
             bound = bind_shortages(state, identity, dispatch_event)
             bind_orbital_threats(bound, identity, dispatch_event)
             bind_protests(bound, identity, dispatch_event)
+            bind_capture(bound, updated, dispatch_event)
             event = self.game.event(
                 c,
                 viewer.user_id,
@@ -656,8 +680,11 @@ class MissionService:
                 raise WorkflowError("Record an explicit mission success or failure.")
             state = load_state(c, self.store.campaign_id)
             from girlframe.services.m3_budget_assassination import before_rewards
+            from girlframe.services.m3_budget_conversion import outcome as capture_outcome
 
             before_rewards(c, self.store, state, mission, success)
+            if success and mission.capture_target is not None:
+                capture_outcome(c, self.game, state, mission)
             from girlframe.services.m3_supply_drop import expire_mission
 
             expiry_work = expire_mission(self.game, c, mission, viewer, key)
@@ -735,7 +762,9 @@ class MissionService:
         event_id = str(uuid4())
         from girlframe.engine.m3_budget_anarchy import deadline as protest_deadline
         from girlframe.engine.m3_orbital_threat import settle as settle_orbital_threats
+        from girlframe.services.m3_budget_conversion import settle as settle_capture
 
+        settle_capture(c, self.game, state, mission, success, event_id)
         protest_deadline(state, mission.id, event_id)
         loss = None
         if settle_orbital_threats(state, mission.id, event_id):
@@ -975,6 +1004,18 @@ class MissionService:
                 and not sheet.frame_scrapped
                 and not self.game.immediate_work(c, int(uid))
             )
+
+    def capture_options(self, viewer: GuildViewer) -> tuple[tuple[str, str], ...] | None:
+        from girlframe.services.m3_budget_conversion import pending, targets
+
+        with self.store.engine.connect() as c:
+            self._authorize(c, viewer)
+            self._handler(c, viewer)
+            state = load_state(c, self.store.campaign_id)
+            if not pending(state):
+                return None
+            self.access.authorize(c, viewer, "strain")
+            return targets(state)
 
     def owned_work(self, viewer: GuildViewer) -> builtins.list[dict[str, Any]]:
         with self.store.engine.connect() as c:

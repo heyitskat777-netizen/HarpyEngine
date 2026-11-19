@@ -137,6 +137,7 @@ tests/rules/test_strain_void_rift.py
 tests/rules/test_void_lab_portal.py
 tests/rules/test_gorgon_tags.py
 tests/rules/test_handler_retirement.py
+tests/rules/test_handler_conversion.py
 tests/rules/test_erratic_gorgon.py
 tests/rules/test_journalist.py
 tests/rules/test_psychologist.py

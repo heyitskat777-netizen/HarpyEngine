@@ -19122,14 +19122,16 @@
         "heading": "Budget high: die 2, column 1"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_handler_conversion.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

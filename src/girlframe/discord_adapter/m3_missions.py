@@ -205,9 +205,15 @@ def register_missions(
     async def offer(interaction: discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
         try:
-            roster = await asyncio.to_thread(service.roster, viewer_from_interaction(interaction))
+            viewer = viewer_from_interaction(interaction)
+            roster = await asyncio.to_thread(service.roster, viewer)
             if not roster:
                 raise WorkflowError("Activate the participating Pilots before offering a mission.")
+            targets = await asyncio.to_thread(service.capture_options, viewer)
+            if targets == ():
+                raise WorkflowError(
+                    "The next mission requires a known Harpy available for conversion."
+                )
 
             async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
                 result = await asyncio.to_thread(
@@ -216,6 +222,7 @@ def register_missions(
                     str(current.id),
                     values["objective"],
                     tuple(int(x) for x in values["players"]),
+                    capture_target=next(iter(values.get("capture_target", ())), None),
                 )
                 return (
                     "Offer saved. Each invited player must answer through /mission inbox. Mission `"
@@ -233,7 +240,12 @@ def register_missions(
                 [
                     Field("players", "Invite Pilots", roster, 1, min(25, len(roster))),
                     Field("objective", "Mission objective", paragraph=True),
-                ],
+                ]
+                + (
+                    [Field("capture_target", "Harpy to capture and convert", targets)]
+                    if targets
+                    else []
+                ),
                 submit,
             )
             await reply(interaction, form.text(), form)

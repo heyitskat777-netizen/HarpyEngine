@@ -366,3 +366,59 @@
              **(
                  {"girls": GIRL_TYPES, "frames": FRAME_TYPES}
                  if self.bound_roster
+--- a/mission-desk.js
++++ b/mission-desk.js
+@@ -37,13 +37,27 @@
+   });
+ }
+
+-function offerForm(pilots, send) {
++function offerForm(pilots, captureTargets, send) {
+   const form = element("form");
+   const objective = element("textarea");
+   objective.name = "objective";
+   objective.required = true;
+   objective.maxLength = 1200;
+-  field(form, "Mission objective", objective);
++  field(form, captureTargets ? "Mission plan" : "Mission objective", objective);
++  if (captureTargets) {
++    const target = element("select");
++    target.name = "capture_target";
++    target.required = true;
++    const prompt = element("option", "Select a Harpy");
++    prompt.value = "";
++    target.append(prompt);
++    for (const [id, name] of captureTargets) {
++      const option = element("option", name);
++      option.value = id;
++      target.append(option);
++    }
++    field(form, "Harpy to capture and convert", target);
++  }
+   const choices = element("fieldset");
+   choices.append(element("legend", "Invite pilots"));
+   for (const [id, callsign] of pilots) {
+@@ -60,6 +74,7 @@
+   form.append(choices);
+   submit(form, "File mission offer", send, values => ({
+     action: "offer", objective: values.get("objective"), pilots: values.getAll("pilots"),
++    ...(captureTargets ? {capture_target: values.get("capture_target")} : {}),
+   }));
+   return form;
+ }
+@@ -128,10 +143,13 @@
+       if (data.desk.can_begin_off_duty) {
+         target.append(button("Prepare Off-Duty", control => send({action: "off_duty"}, control), true));
+       }
+-      if (data.desk.pilots.length) {
++      if (data.desk.can_offer ?? data.desk.pilots.length > 0) {
+         const offer = element("details");
+-        offer.append(element("summary", "New mission offer"), offerForm(data.desk.pilots, send));
++        offer.append(element("summary", "New mission offer"),
++          offerForm(data.desk.pilots, data.desk.capture_targets, send));
+         target.append(offer);
++      } else if (data.desk.offer_blocker) {
++        target.append(element("p", data.desk.offer_blocker));
+       }
+     }
+   }
