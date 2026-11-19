@@ -429,6 +429,7 @@ class ActorService:
         account: str,
         *,
         actual: bool,
+        siege_case: str | None = None,
     ) -> dict[str, Any]:
         from uuid import uuid4
 
@@ -467,6 +468,45 @@ class ActorService:
                     "inventory once"
                 )
             event = str(uuid4())
+            from girlframe.engine.m3_rebel_ambush import ambushes, sieges
+
+            introduced = next(
+                (x for x in ambushes(state) if x.attacker == actor and x.introduced), None
+            )
+            if siege_case is not None or introduced is not None:
+                from girlframe.engine.m3_handler_consequences import active_handler
+                from girlframe.engine.m3_leviathan_arrival import install_external_pose
+                from girlframe.services.m3_handler_advancements import _history
+                from girlframe.services.m3_off_duty import OffDutyService
+
+                siege = next(
+                    (x for x in sieges(state) if introduced and x.id == introduced.siege), None
+                )
+                if (
+                    introduced is None
+                    or siege is None
+                    or introduced.id != siege_case
+                    or introduced.controller != viewer.user_id
+                    or siege.completed
+                    or pilot.cell != siege.cell
+                    or active_handler(state) != siege.handler
+                    or OffDutyService(self.missions)._get(c, siege.period).phase != "preparing"
+                    or introduced not in ambushes(_history(c, self.game, introduced.source))
+                ):
+                    raise WorkflowError(
+                        "Use the original introduced Rebel's preparing siege assignment"
+                    )
+                state = install_external_pose(
+                    state,
+                    actor,
+                    siege.cell,
+                    siege.cell,
+                    "piloting",
+                    event,
+                    account.strip(),
+                    owner=viewer.user_id,
+                    judge=int(siege.handler.entity),
+                )
             inventory = RebelInventory(
                 actor=actor,
                 controller=viewer.user_id,
@@ -500,7 +540,8 @@ class ActorService:
                 heat=heat,
                 account=account,
                 actual=actual,
-            ),
+            )
+            | ({"siege_case": siege_case} if siege_case is not None else {}),
             operation,
             authorize=lambda c: self.missions.access.authorize(c, viewer, "world"),
             auto_audit=False,

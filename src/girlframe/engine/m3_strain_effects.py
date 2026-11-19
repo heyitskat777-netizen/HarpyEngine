@@ -183,6 +183,9 @@ class Choice(Model):
     interest_manifestation: str | None = Field(default=None, exclude_if=lambda x: x is None)
     leak_parties: tuple[ActorRef, ...] = Field(default=(), exclude_if=lambda x: not x)
     leak_report: str | None = Field(default=None, max_length=1200, exclude_if=lambda x: x is None)
+    siege_recruits: tuple[AdversaryPilot, ...] = Field(
+        default=(), max_length=3, exclude_if=lambda x: not x
+    )
 
 
 def fields(choice: Choice, allowed: set[str]) -> None:
@@ -277,7 +280,7 @@ def apply(
         if not choice.target or not choice.victim:
             raise ValueError("Choose the original base and actual Foundation Pilot")
     elif rule == REBEL_SIEGE:
-        fields(choice, {"target"})
+        fields(choice, {"target", "siege_recruits", "faction"})
         if not choice.target:
             raise ValueError("Choose the operational base currently occupied by the original Cadre")
     elif rule == REBEL_AMBUSH:

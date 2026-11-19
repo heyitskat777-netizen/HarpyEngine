@@ -405,6 +405,26 @@ def effect_form(
                 continue
             theft_bases[eligible_base.id] = eligible_base
 
+    siege_seed = rule == REBEL_SIEGE and not any(
+        x["kind"] == "rebel" and x["alive"] for x in world["pilots"]
+    )
+    siege_groups: tuple[tuple[str, str], ...] = ()
+    siege_controllers: tuple[tuple[str, str], ...] = ()
+    if siege_seed:
+        from girlframe.services.m3_npc_roles import NpcRoleService
+
+        siege_groups = tuple(
+            (x["id"], x["name"]) for x in world["factions"] if x["kind"] == "rebel" and x["active"]
+        )
+        ace = str(state.order[0]) if state.order else None
+        siege_controllers = tuple(
+            (uid, label)
+            for uid, label in NpcRoleService(WorldService(service.strain.missions)).members(viewer)[
+                "members"
+            ]
+            if uid != ace
+        )
+
     foundation_pilots = []
     if rule == FOUNDATION_ATTACK:
         from girlframe.engine.m3_foundation_attack import pilot as foundation_actor
@@ -799,6 +819,41 @@ def effect_form(
                     tuple((site.id, site.name) for site in theft_bases.values()) or WAIT,
                 )
             )
+            if siege_seed:
+                if siege_groups:
+                    fields.append(
+                        Field(
+                            "siege_faction", "Active group for the three new Rebels", siege_groups
+                        )
+                    )
+                else:
+                    fields.extend(
+                        (
+                            Field("siege_group_name", "Name the new Rebel group"),
+                            Field(
+                                "siege_group_site",
+                                "Where does the new group have influence?",
+                                options(regional_locations),
+                            ),
+                        )
+                    )
+                for i in range(1, 4):
+                    fields.extend(
+                        (
+                            Field(f"siege_{i}_name", f"Name of Rebel {i}"),
+                            Field(
+                                f"siege_{i}_controller",
+                                f"Controller of Rebel {i}",
+                                siege_controllers or WAIT,
+                            ),
+                            Field(f"siege_{i}_frame", f"Frame of Rebel {i}"),
+                            Field(
+                                f"siege_{i}_asset",
+                                f"Operating Frame Asset of Rebel {i}",
+                                paragraph=True,
+                            ),
+                        )
+                    )
         if rule == FOUNDATION_ATTACK:
             fields.extend(
                 (
@@ -1569,7 +1624,47 @@ def effect_form(
                 captured_frame=values["overrun_frame"][0],
             )
         if rule == REBEL_SIEGE:
-            payload["target"] = values["siege_base"][0]
+            base_id = values["siege_base"][0]
+            payload["target"] = base_id
+            if siege_seed:
+                if base_id not in theft_bases:
+                    raise WorkflowError("Choose the actual base and active Rebel group")
+                cell = theft_bases[base_id].cell
+                if siege_groups:
+                    faction = values["siege_faction"][0]
+                else:
+                    assert state.world is not None
+                    territory = next(
+                        x for x in state.world.locations if x.id == values["siege_group_site"][0]
+                    )
+                    faction = stable(identity, "new siege faction")
+                    payload["faction"] = Faction(
+                        id=faction,
+                        name=values["siege_group_name"],
+                        kind="rebel",
+                        cells=(territory.cell,),
+                    )
+                payload["siege_recruits"] = tuple(
+                    AdversaryPilot(
+                        id=stable(identity, f"new siege Pilot {i}"),
+                        kind="rebel",
+                        name=values[f"siege_{i}_name"],
+                        controller=int(values[f"siege_{i}_controller"][0]),
+                        girl="MOCKINGBIRD",
+                        frame=values[f"siege_{i}_frame"],
+                        cell=cell,
+                        faction=faction,
+                        assets=(
+                            Asset(
+                                id=stable(identity, f"new siege Frame Asset {i}"),
+                                name=values[f"siege_{i}_asset"],
+                                description=values[f"siege_{i}_asset"],
+                                family="frame",
+                            ),
+                        ),
+                    )
+                    for i in range(1, 4)
+                )
         if rule == FOUNDATION_ATTACK:
             payload.update(target=values["attacked_base"][0], victim=values["foundation_pilot"][0])
         if rule == REBEL_FRAME_THEFT:

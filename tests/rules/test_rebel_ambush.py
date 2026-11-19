@@ -39,8 +39,11 @@ from girlframe.services.m3_strain_effects import EffectService
 from girlframe.services.onboarding import WorkflowError
 
 
-@pytest.mark.parametrize("rule", (RULE, HUNT_RULE, SIEGE_RULE))
-def test_actual_rebel_attacks_use_original_roles(ledger, rule):
+@pytest.mark.parametrize(
+    "rule,introduce",
+    ((RULE, False), (HUNT_RULE, False), (SIEGE_RULE, False), (SIEGE_RULE, True)),
+)
+def test_actual_rebel_attacks_use_original_roles(ledger, rule, introduce):
     pursuit, siege = rule == HUNT_RULE, rule == SIEGE_RULE
     strain, game = ready(ledger)
     policy = ledger.policy.m3_approval
@@ -85,62 +88,71 @@ def test_actual_rebel_attacks_use_original_roles(ledger, rule):
     with ledger.transaction() as c:
         canon = state(game)
         canon.world = initial().model_copy(
-            update=dict(pilots=(rebel, second_rebel) if siege else (rebel,), factions=(faction,))
+            update=dict(
+                pilots=() if introduce else (rebel, second_rebel) if siege else (rebel,),
+                factions=() if introduce else (faction,),
+            )
         )
         canon = place(place(canon, 2), 3)
-        canon = install_external_pose(
-            canon,
-            actor,
-            (0, 0),
-            (0, 0),
-            "piloting",
-            "fixture-ambush-pose",
-            "Actual Rebel cockpit",
-            owner=3,
-            judge=1,
-        )
-        if siege:
+        if not introduce:
             canon = install_external_pose(
                 canon,
-                second_actor,
+                actor,
                 (0, 0),
                 (0, 0),
                 "piloting",
-                "fixture-second-siege-pose",
-                "Second original Rebel cockpit",
+                "fixture-ambush-pose",
+                "Actual Rebel cockpit",
                 owner=3,
                 judge=1,
             )
+        if siege:
+            if not introduce:
+                canon = install_external_pose(
+                    canon,
+                    second_actor,
+                    (0, 0),
+                    (0, 0),
+                    "piloting",
+                    "fixture-second-siege-pose",
+                    "Second original Rebel cockpit",
+                    owner=3,
+                    judge=1,
+                )
             reserve = next(x for x in canon.sheets["2"].assets if x.family == "frame")
-            canon.sheets["2"].assets.append(
-                reserve.model_copy(update=dict(id="ace-reserve-frame-asset", name="Reserve Plate"))
-            )
+            for index in range(2 if introduce else 1):
+                canon.sheets["2"].assets.append(
+                    reserve.model_copy(
+                        update=dict(id=f"ace-reserve-frame-asset-{index}", name="Reserve Plate")
+                    )
+                )
         for sheet in canon.sheets.values():
             for asset in sheet.assets:
                 asset.void = False
         game.event(c, 1, "ambush-original-pose", "synthetic.original_rebel_roster", canon)
     actors = ActorService(strain.missions)
-    actors.confirm_rebel_inventory(
-        OTHER,
-        "ambush-actual-pool",
-        state(game).revision,
-        actor,
-        (IdentityState(id="independent-identity", name="Driven", slot=1),),
-        2,
-        "My original Rebel's own Heat and Identity",
-        actual=True,
-    )
-    if siege:
+    if not introduce:
         actors.confirm_rebel_inventory(
             OTHER,
-            "second-siege-actual-pool",
+            "ambush-actual-pool",
             state(game).revision,
-            second_actor,
-            (),
+            actor,
+            (IdentityState(id="independent-identity", name="Driven", slot=1),),
             2,
-            "I confirm the second independently controlled Rebel's Heat",
+            "My original Rebel's own Heat and Identity",
             actual=True,
         )
+        if siege:
+            actors.confirm_rebel_inventory(
+                OTHER,
+                "second-siege-actual-pool",
+                state(game).revision,
+                second_actor,
+                (),
+                2,
+                "I confirm the second independently controlled Rebel's Heat",
+                actual=True,
+            )
     period = prepared(strain, game, high=frozenset({"rebellion"}) if rule != RULE else frozenset())
     effects = EffectService(strain)
     for track, face, column, choice in (
@@ -191,6 +203,18 @@ def test_actual_rebel_attacks_use_original_roles(ledger, rule):
             submitted.followup.send.call_args,
         )
 
+    recruits = {}
+    if introduce:
+        recruits.update(siege_group_name="Three original Rebels", siege_group_site=("city0",))
+        for i in range(1, 4):
+            recruits.update(
+                {
+                    f"siege_{i}_name": f"Original Siege Rebel {i}",
+                    f"siege_{i}_controller": ("3",),
+                    f"siege_{i}_frame": "JANUS",
+                    f"siege_{i}_asset": f"Operable Asset {i}",
+                }
+            )
     asyncio.run(
         native_form(
             ADMIN,
@@ -199,6 +223,7 @@ def test_actual_rebel_attacks_use_original_roles(ledger, rule):
             account="PRIVATE_AMBUSH_SOURCE",
             **({"siege_base": ("base0",)} if siege else {"ambusher": (actor.entity,)}),
             **({"hunt_victim": ("2",)} if pursuit else {}),
+            **recruits,
         )
     )
     assert not any(x.mission for x in ambushes(state(game)))
@@ -208,7 +233,38 @@ def test_actual_rebel_attacks_use_original_roles(ledger, rule):
         with pytest.raises(WorkflowError, match="Strain"):
             activate(cycle, game, period)
         (plan,) = sieges(state(game))
-        assert plan.attackers == (actor, second_actor) and plan.target.entity == "2"
+        if introduce:
+            actor, second_actor, third_actor = plan.attackers
+            bodies = {x.id: x for x in state(game).world.pilots}
+            assert len(bodies) == 3 and len({x.faction for x in bodies.values()}) == 1
+            assert all(not x.revealed for x in bodies.values())
+            weapon = bodies[actor.entity].assets[0]
+            second_weapon = bodies[second_actor.entity].assets[0]
+            third_weapon = bodies[third_actor.entity].assets[0]
+            siege_inbox = InboxService(ledger)
+            for number, recruit in enumerate(plan.attackers):
+                case = next(x for x in ambushes(state(game)) if x.attacker == recruit)
+                assert case.introduced and not rebel_inventory(state(game), recruit)
+
+                async def confirm_recruit(click, case=case):
+                    entry = next(x for x in siege_inbox.items(OTHER) if x.identity == case.id)
+                    await InboxView(siege_inbox, 3).route(click, entry)
+
+                asyncio.run(
+                    native_form(
+                        OTHER,
+                        40500 + number * 2,
+                        confirm_recruit,
+                        identities="Defiant",
+                        heat="2",
+                        account="Original piloting confirmed",
+                    )
+                )
+                inventory = rebel_inventory(state(game), recruit)
+                assert inventory is not None and inventory.heat == 2
+        else:
+            assert plan.attackers == (actor, second_actor)
+        assert plan.target.entity == "2"
         with pytest.raises(WorkflowError, match="every original Rebel attack"):
             SiegeService(strain).finish(ADMIN, "premature-siege", identity, state(game).revision)
     else:
@@ -349,6 +405,30 @@ def test_actual_rebel_attacks_use_original_roles(ledger, rule):
         assert review.get(ADMIN, root)["resolved"] == 2
         assert rebel_inventory(state(game), second_actor).heat == 1
         tick(worker, gateway, 5)
+        if introduce:
+            with pytest.raises(WorkflowError, match="every original Rebel attack"):
+                review.finish(ADMIN, "two-attacks-insufficient", root, state(game).revision)
+            with pytest.raises(WorkflowError, match="Strain"):
+                activate(cycle, game, period)
+            third = next(x for x in ambushes(state(game)) if x.attacker == third_actor)
+            change(cast, OTHER, "join", third_actor)
+            identity = third.id
+            asyncio.run(
+                native_form(
+                    OTHER, 40520, inbox_open, target=("2",), account="Third original attack"
+                )
+            )
+            remaining = next(
+                x.id
+                for x in state(game).sheets["2"].assets
+                if x.family == "frame" and not x.damaged
+            )
+            assault(
+                40522, remaining, vast=False, assailant=third_actor, attacking_asset=third_weapon.id
+            )
+            assert review.get(ADMIN, root)["resolved"] == 3
+            assert rebel_inventory(state(game), third_actor).heat == 1
+            tick(worker, gateway, 5)
         revision = state(game).revision
         asyncio.run(
             native_form(

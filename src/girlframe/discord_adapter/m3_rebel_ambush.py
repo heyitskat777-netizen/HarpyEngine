@@ -8,6 +8,10 @@ import discord
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
+from girlframe.engine.m2 import IdentityState
+from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.services.m3_actors import ActorService
+from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_rebel_ambush import AmbushService, HuntService, SiegeService
 
 
@@ -23,6 +27,45 @@ async def open_ambush(
     siege = data["siege"]
     if data["complete"]:
         await reply(interaction, "The original attack is complete.")
+        return
+    if data.get("inventory_actor"):
+        actor = ActorRef.model_validate(data["inventory_actor"])
+
+        async def confirm_inventory(click: discord.Interaction, values: dict[str, Any]) -> str:
+            names = tuple(x.strip() for x in values.get("identities", "").splitlines() if x.strip())
+            await asyncio.to_thread(
+                ActorService(MissionService(service.store)).confirm_rebel_inventory,
+                viewer_from_interaction(click),
+                str(click.id),
+                data["revision"],
+                actor,
+                tuple(
+                    IdentityState(id=f"{actor.token}:identity:{i}", name=x, slot=i)
+                    for i, x in enumerate(names)
+                ),
+                int(values["heat"]),
+                values["account"],
+                actual=True,
+                siege_case=identity,
+            )
+            return "Resources and piloting saved. Reopen the attack in the siege scene."
+
+        await NativeForm(
+            interaction.user.id,
+            "Confirm your original siege Pilot",
+            "Confirm your own Rebel's starting resources and presence in the Frame at the base.",
+            [
+                Field(
+                    "identities",
+                    "Up to four existing Identities, one per line",
+                    paragraph=True,
+                    required=False,
+                ),
+                Field("heat", "Current Heat"),
+                Field("account", "Describe the actual piloting and combat opening", paragraph=True),
+            ],
+            confirm_inventory,
+        ).present(interaction)
         return
     if data["opened"]:
         await reply(interaction, "Use the original scene's battle control to resolve the Assault.")

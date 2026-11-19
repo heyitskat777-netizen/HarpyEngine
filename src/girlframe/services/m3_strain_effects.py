@@ -702,7 +702,15 @@ class EffectService:
 
                 assert choice.target
                 stage_siege(
-                    c, self.strain, updated, row, event_id, choice.target, choice.account.strip()
+                    c,
+                    self.strain,
+                    updated,
+                    row,
+                    event_id,
+                    choice.target,
+                    choice.account.strip(),
+                    recruits=choice.siege_recruits,
+                    faction=choice.faction,
                 )
             needs_foundation_attack = choice.rule_id == FOUNDATION_ATTACK
             if needs_foundation_attack:

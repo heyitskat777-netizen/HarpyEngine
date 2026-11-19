@@ -18,6 +18,8 @@ from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_handler_consequences import active_handler, same_handler_body
 from girlframe.engine.m3_missions import Mission
 from girlframe.engine.m3_rebel_frame_theft import base as require_base
+from girlframe.engine.m3_world import update
+from girlframe.engine.m3_world_state import AdversaryPilot, Faction
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
@@ -51,6 +53,9 @@ def stage_siege(
     source: str,
     base: str,
     account: str,
+    *,
+    recruits: tuple[AdversaryPilot, ...] = (),
+    faction: Faction | None = None,
 ) -> None:
     site = require_base(state, base)
     period = strain.periods._get(c, row["off_duty_id"])
@@ -75,13 +80,58 @@ def stage_siege(
         raise WorkflowError("Choose the operational base the original Ace actually occupies")
     assert state.world is not None
     factions = {x.id for x in state.world.factions if x.active and x.kind == "rebel"}
+    living = tuple(x for x in state.world.pilots if x.kind == "rebel" and x.alive)
+    if faction is not None:
+        if (
+            factions
+            or living
+            or len(recruits) != 3
+            or faction.kind != "rebel"
+            or not faction.active
+            or not faction.cells
+            or any(not state.world.board.contains(cell) for cell in faction.cells)
+            or any(x.id == faction.id for x in state.world.factions)
+            or {x.faction for x in recruits} != {faction.id}
+        ):
+            raise WorkflowError(
+                "Create a new active siege group only when the original world has none"
+            )
+        state.world = update(state.world, factions=(*state.world.factions, faction))
+        factions.add(faction.id)
+    if recruits:
+        if (
+            living
+            or len(recruits) != 3
+            or len({x.id for x in recruits}) != 3
+            or len({x.name.casefold() for x in recruits}) != 3
+            or len({x.faction for x in recruits}) != 1
+            or any(
+                x.kind != "rebel"
+                or x.custody != "free"
+                or not x.alive
+                or x.faction not in factions
+                or x.cell != site.cell
+                or x.girl != "MOCKINGBIRD"
+                or x.revealed
+                or x.exposed
+                or x.tags
+                or x.rebel_resources_json is not None
+                or not any(asset.family == "frame" and not asset.damaged for asset in x.assets)
+                for x in recruits
+            )
+        ):
+            raise WorkflowError(
+                "Introduce exactly three distinct new siege Pilots from an active group "
+                "when there are no living Rebels"
+            )
+        state.world = update(state.world, pilots=(*state.world.pilots, *recruits))
     roster = tuple(
         (ActorRef(kind="external_pilot", entity=x.id), x.controller)
         for x in state.world.pilots
         if x.kind == "rebel" and x.alive and x.custody == "free" and x.faction in factions
     )
     if not roster:
-        raise WorkflowError("The printed three-Rebel introduction requires its own setup")
+        raise WorkflowError("Select three original Rebel recruits if none exist")
     siege = rules.Siege(
         id=row["id"],
         period=period.id,
@@ -104,8 +154,10 @@ def stage_siege(
             controller=controller,
             account=account,
             siege=siege.id,
+            introduced=bool(recruits),
         )
-        _resources(c, strain.game, state, attempt)
+        if not recruits:
+            _resources(c, strain.game, state, attempt)
         rules.save(state, attempt)
     rules.save_siege(state, siege)
 
@@ -343,11 +395,16 @@ class AmbushService:
             self.game.authorize(c, viewer, game=False)
             state = load_state(c, self.store.campaign_id)
             case = _case(state, viewer, identity)
+            needs_inventory = (
+                case.introduced
+                and case.controller == viewer.user_id
+                and rebel_inventory(state, case.attacker) is None
+            )
             cast = (
                 _cast(self.game, c, state, channel) if viewer.user_id == case.controller else None
             )
             targets: tuple[tuple[str, str], ...] = ()
-            if case.opening is None and cast is not None:
+            if not needs_inventory and case.opening is None and cast is not None:
                 targets = tuple(
                     (x.entity, state.sheets[x.entity].callsign)
                     for x in _active_targets(c, self.game, state, case, cast)
@@ -359,6 +416,7 @@ class AmbushService:
                 used=bool(case.action),
                 complete=bool(case.completed),
                 siege=case.siege is not None,
+                inventory_actor=case.attacker.model_dump(mode="json") if needs_inventory else None,
             )
 
     def open(
@@ -424,6 +482,16 @@ class AmbushService:
                     "and an operating Frame"
                 )
             event = str(uuid4())
+            if case.introduced and state.world is not None:
+                state.world = update(
+                    state.world,
+                    pilots=tuple(
+                        x.model_copy(update=dict(revealed=True))
+                        if x.id == case.attacker.entity
+                        else x
+                        for x in state.world.pilots
+                    ),
+                )
             rules.save(
                 state,
                 case.model_copy(

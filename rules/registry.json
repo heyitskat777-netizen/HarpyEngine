@@ -18190,11 +18190,29 @@
       },
       "required": true,
       "implementation": "subset",
-      "source_audit": "inventoried",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The saved High Rebellion die 1, column 1 targets the original occupied base.",
+        "actor_type": "The original Handler stages the event. Each actual independently controlled Rebel Pilot owns its attack.",
+        "pre_roll_sources": [
+          "Original saved Strain die and selected column, the operational base and present original Ace, and exact original living Rebel roster.",
+          "If no living Rebel Pilot exists, introduce exactly three distinct ordinary Rebel Pilots. Each human confirms their original role and actual own resources."
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "diceless": ["Use each living eligible Rebel or introduce the required three when none exists."]
+        },
+        "choice_ownership": "The campaign Handler chooses the actual base and presentation. Each attacking role owns its Assault, and the actual table owns its rulings.",
+        "target_policy": "The original Ace at the selected actual operational base. The alternate original Handler target remains outside this port.",
+        "post_roll_effects": ["The original Strain work stays pending until every original attack and resulting consequence is completed."],
+        "mandatory_followups": ["Use the existing owned Assault workflow. Other Rebel resource ports and the alternate Handler target require native coverage."],
+        "handler_or_gm_intervention": "Every attack retains its original human controller and actual native table decisions.",
+        "test_fixture_ids": ["tests/rules/test_rebel_ambush.py"]
+      },
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_rebel_ambush.py"

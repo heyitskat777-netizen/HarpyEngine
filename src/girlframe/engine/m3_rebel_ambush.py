@@ -26,6 +26,7 @@ class Ambush(Model):
     account: str = Field(min_length=1, max_length=1200)
     pursuit: str | None = Field(default=None, exclude_if=lambda x: x is None)
     siege: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    introduced: bool = Field(default=False, exclude_if=lambda x: not x)
     mission: str | None = None
     dispatch: str | None = None
     channel: int | None = None

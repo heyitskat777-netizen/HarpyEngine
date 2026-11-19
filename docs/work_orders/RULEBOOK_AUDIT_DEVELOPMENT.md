@@ -1811,3 +1811,21 @@ repeated submissions, safety pause, restart and a blocked attempt to
 derive Order authority from a higher level. Cross-role Order consumers
 still require explicit source authorization and implementation.
 [Expanded Status p. 193](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=195)
+
+### High Rebellion siege with no existing Rebel Pilots
+
+Base `bc37bd299a5d74c46ea5ef02e7e940f6e86bdccb`. The existing
+siege supports exactly three new original ordinary Rebel Pilots when
+there are no living Rebel Pilots. The native Strain form records them
+with an existing active Rebel group, or creates the actual group
+when none exists. Their controller confirms each role's own original
+inventory and piloting through the private Inbox. Their bodies remain
+concealed until their respective openings.
+
+**86 selected tests passed in 110.05 seconds**. The new scenario
+retains the saved die and column, uses each independent Assault and
+its actual consequence, preserves the original target, and blocks
+Off-Duty after the first and second attacks. The Handler resolves the
+real siege after all three. The alternate original Handler target
+and other external Rebel resource ports remain open.
+[High Rebellion p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148)
