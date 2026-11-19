@@ -2126,6 +2126,14 @@ class InboxView(discord.ui.View):
             await open_escape_choice(
                 interaction, EscapeService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_harpy_intimacy":
+            from girlframe.discord_adapter.m3_harpy_intimacy import open_intimacy_choice
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_harpy_intimacy import HarpyIntimacyService
+
+            await open_intimacy_choice(
+                interaction, HarpyIntimacyService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_abysstech":
             from girlframe.discord_adapter.m3_abysstech import open_abysstech_contact
             from girlframe.services.m2_game import GameService

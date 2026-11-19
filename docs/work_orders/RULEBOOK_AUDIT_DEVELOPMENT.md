@@ -3341,3 +3341,23 @@ damaging her Asset. Live roll adjustment, forced Dive Deep, other
 Asset sources and direct verification of the damage alternative remain
 open.
 [Experimental Abysstech p. 108](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=110) · [Native case](../../tests/rules/test_abysstech.py)
+
+### The original Harpy intimacy and escape
+
+Base `0812cdd`. The original Harpy can offer a private encounter to a
+current Girl in the same actual scene and square. The original Girl
+can accept, decline, withdraw before the escape Play, or attempt to
+escape with a native Keep Your Head. The original human facilitator
+rules the actual saved roll. The initial Bond determines the result.
+A weak Bond deepens through existing Bond rules. Failure adds an
+owned ordinary Void choice. A failed Intense encounter opens the
+original Girl’s Apometanoia with her own Frame and five owned answers.
+The original case waits through actual required work.
+
+**Three focused cases passed in 13.18 seconds**. They covered the
+no-Bond actual failed Keep and applied Void, the Intense branch with
+a genuine owned Frame entry and complete rebirth, and the existing
+Manic Pixie private Keep regression. Other kinds of escape Plays and
+nonstandard bodies remain open. The Personal-to-Intense transition
+uses ordinary Sin of Temptation and still needs direct verification.
+[Harpy p. 178](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=180) · [Native cases](../../tests/rules/test_harpy_intimacy.py)

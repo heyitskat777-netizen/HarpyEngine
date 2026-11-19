@@ -4119,6 +4119,7 @@ class InboxService:
             from girlframe.services.m3_escape import EscapeService
             from girlframe.services.m3_harpy_eagle import EagleService
             from girlframe.services.m3_harpy_gaze import GazeService
+            from girlframe.services.m3_harpy_intimacy import HarpyIntimacyService
             from girlframe.services.m3_harpy_mask import MaskService
             from girlframe.services.m3_harpy_rewrite import RewriteService
             from girlframe.services.m3_harpy_song import HarpySongService
@@ -4130,6 +4131,32 @@ class InboxService:
             from girlframe.services.m3_timeskip import TimeskipService
             from girlframe.services.m3_voidspace_invasion import InvasionService
             from girlframe.services.m3_warboy_hate import ConditionedHateService
+
+            intimacies = HarpyIntimacyService(GameService(self.store))
+            for intimacy_id, intimacy_step in intimacies.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "harpy-intimacy:" + intimacy_id,
+                        "harpy_intimacy",
+                        intimacy_id,
+                        canon.revision,
+                        "plays",
+                        "Private Harpy encounter",
+                        "Original participant",
+                        "pending",
+                        True,
+                        False,
+                        {
+                            "consent": "Make your own private consent decision.",
+                            "escape": "Choose whether to attempt the original escape.",
+                            "void": "Choose the actual owned Void gain.",
+                            "rebirth": "Open the original Apometanoia.",
+                        }[intimacy_step],
+                        "The original Girl owns this decision.",
+                        "Open your private choice",
+                        task="m3_harpy_intimacy",
+                    )
+                )
 
             abysstech = AbysstechService(GameService(self.store))
             for abysstech_id, abysstech_step in abysstech.tasks(connection, canon, viewer):

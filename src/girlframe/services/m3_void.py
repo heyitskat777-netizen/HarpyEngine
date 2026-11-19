@@ -117,6 +117,13 @@ def source(
                 raise ValueError()
             prove_frame_rebirth(game, c, proof, first, body, actor)
             return current, body, actor
+        if body.get("reason") == "harpy_intimacy_rebirth":
+            from girlframe.services.m3_harpy_intimacy import prove_void as prove_intimacy_rebirth
+
+            if proof is None or sheet is None or sheet.character_id != actor.incarnation:
+                raise ValueError()
+            prove_intimacy_rebirth(game, c, proof, first, body, actor)
+            return current, body, actor
         from girlframe.engine.m3_janus_storage import effective_assets, for_family
 
         assets = [x for x in effective_assets(proof, actor) if x.family == family] if proof else []
@@ -226,6 +233,12 @@ def source(
 
             assert proof is not None
             prove_hallucinations(game, c, proof, first, body, actor)
+            return current, body, actor
+        if body.get("reason") == "harpy_intimacy":
+            from girlframe.services.m3_harpy_intimacy import prove_void as prove_intimacy_void
+
+            assert proof is not None
+            prove_intimacy_void(game, c, proof, first, body, actor)
             return current, body, actor
         if body.get("reason") == "harpy_gaze":
             from girlframe.services.m3_harpy_gaze import prove_void as prove_gaze_void
@@ -606,6 +619,10 @@ def complete(
             from girlframe.services.m3_janus_storage import complete_replug
 
             complete_replug(game, c, identity, event, viewer, key)
+        elif body.get("reason") in ("harpy_intimacy", "harpy_intimacy_rebirth"):
+            from girlframe.services.m3_harpy_intimacy import settle as settle_intimacy
+
+            settle_intimacy(game, c, body, event, viewer, key)
         elif body.get("reason") == "call_guest":
             from girlframe.services.m3_mockingbird_communion import complete_call_guest_void
 
@@ -805,6 +822,10 @@ class VoidService:
         ):
             parent = self.game.action(c, body["source_action"])
             handler = viewer.user_id in parent["data"].get("private_audience", ())
+        if handler and body.get("reason") in ("harpy_intimacy", "harpy_intimacy_rebirth"):
+            from girlframe.services.m3_harpy_intimacy import void_audience as intimacy_audience
+
+            handler = viewer.user_id in intimacy_audience(self.game, c, state, body)
         if handler and body.get("reason") == "harpy_gaze":
             from girlframe.services.m3_harpy_gaze import void_audience
 

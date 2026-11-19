@@ -298,6 +298,20 @@ class CastService:
                             )
                         except (ValueError, WorkflowError):
                             pass
+                    if (
+                        actor.girl == "harpy"
+                        and actor.controller == role.controller == viewer.user_id
+                    ):
+                        from girlframe.services.m3_harpy_intimacy import HarpyIntimacyService
+
+                        intimacy = HarpyIntimacyService(self.game)
+                        try:
+                            intimacy._gate(c, viewer)
+                            _, _, _, intimate_people = intimacy._where(c, state, channel, actor.ref)
+                            if intimate_people:
+                                harpy_actions["harpy_intimacy"] = True
+                        except (ValueError, WorkflowError):
+                            pass
                     known_refs.add(actor.ref)
                     visible.append(
                         {

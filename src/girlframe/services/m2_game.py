@@ -1619,7 +1619,7 @@ class GameService:
             )
 
             gorgon_response = prepare_gorgon_response(self, c, viewer, prepared, state, channel)
-            from girlframe.services.m3_harpy_gaze import prepare_keep as prepare_gaze_keep
+            from girlframe.services.m3_private_harpy_keep import prepare_keep as prepare_gaze_keep
 
             gaze_keep = prepare_gaze_keep(self, c, state, viewer, prepared, channel)
             from girlframe.services.m3_secretary import (
@@ -3812,7 +3812,7 @@ class GameService:
                 assert begin_source_event is not None
                 link_response(state, secretary_response["gunpoint"], identity, begin_source_event)
             if gaze_keep is not None:
-                from girlframe.services.m3_harpy_gaze import bind_keep as bind_gaze_keep
+                from girlframe.services.m3_private_harpy_keep import bind_keep as bind_gaze_keep
 
                 assert begin_source_event is not None
                 bind_gaze_keep(state, gaze_keep, identity, begin_source_event)
@@ -4242,7 +4242,9 @@ class GameService:
             state = load_state(c, self.store.campaign_id)
             self.action_characters(c, action, state)
             if action["data"].get("harpy_gaze_keep"):
-                from girlframe.services.m3_harpy_gaze import validate_keep as validate_gaze_keep
+                from girlframe.services.m3_private_harpy_keep import (
+                    validate_keep as validate_gaze_keep,
+                )
 
                 validate_gaze_keep(self, c, state, action)
             if action["data"].get("harpy_beneath"):
@@ -5826,7 +5828,7 @@ class GameService:
             if current_action["state"] == "complete" and current_action["data"].get(
                 "harpy_gaze_keep"
             ):
-                from girlframe.services.m3_harpy_gaze import finish_keep as finish_gaze_keep
+                from girlframe.services.m3_private_harpy_keep import finish_keep as finish_gaze_keep
 
                 finish_gaze_keep(self, c, current_action, event, viewer, key)
             if current_action["state"] == "complete" and current_action["data"].get(
