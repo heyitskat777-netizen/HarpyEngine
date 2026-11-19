@@ -150,12 +150,17 @@ class ActorService:
             }
 
     def inspect(self, viewer: GuildViewer, ref: ActorRef) -> dict[str, Any]:
+        from girlframe.services.m3_expanded_status import ExpandedStatusService
+
         with self.store.engine.connect() as c:
             self.game.authorize(c, viewer, game=False)
             state = load_state(c, self.store.campaign_id)
+            actor = self._actor(c, viewer, state, ref)
+            status = ExpandedStatusService(self.game)
             return {
                 "game_revision": state.revision,
-                "actor": self._actor(c, viewer, state, ref).model_dump(mode="json"),
+                "actor": actor.model_dump(mode="json"),
+                **({"expanded_status": status.view(c, state, actor)} if status.enabled() else {}),
             }
 
     def known(

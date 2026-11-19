@@ -226,6 +226,7 @@ class MapPages(discord.ui.View):
 
 async def open_world(interaction: discord.Interaction, service: WorldService) -> None:
     from girlframe.services.m3_ancillary import AncillaryService
+    from girlframe.services.m3_expanded_status import ExpandedStatusService
 
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(service.get, viewer, private=True)
@@ -234,6 +235,8 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
         return
     ancillary = AncillaryService(service.missions)
     ancillary_options = await asyncio.to_thread(ancillary.invite_options, viewer)
+    standing = ExpandedStatusService(service.game)
+    standing_enabled = await asyncio.to_thread(standing.enabled)
 
     async def choose(current: discord.Interaction, action: str) -> None:
         fresh = await asyncio.to_thread(service.get, viewer_from_interaction(current), private=True)
@@ -244,6 +247,11 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
             from girlframe.discord_adapter.m3_ancillary import open_offer
 
             await open_offer(current, ancillary, ancillary_options)
+            return
+        if action == "expanded_status" and standing_enabled:
+            from girlframe.discord_adapter.m3_expanded_status import open_status
+
+            await open_status(current, standing)
             return
         if action == "location_build":
             from girlframe.discord_adapter.m3_location_build import open_build
@@ -529,6 +537,7 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
                 else ()
             ),
             ("reveal", "Reveal a Gorgon encountered by the Cadre"),
+            *((("expanded_status", "Review Expanded Status"),) if standing_enabled else ()),
             *(
                 (("share_gorgon_tag", "Share an observed Gorgon Tag"),)
                 if any(x["tags"] for x in data["world"]["gorgons"])

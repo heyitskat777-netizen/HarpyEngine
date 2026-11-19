@@ -1795,3 +1795,19 @@ Harpy and Actor Play paths, and the optional module's denial of Dive
 Deep. The other shared Plays, Defeat and Off-Duty actions require
 their own source ports.
 [Keep Your Head p. 19](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=21) · [Ancillary p. 93](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=95)
+
+### Expanded Status
+
+Base `4408bdf4da42bc6dc887519cc61cee2575642a62`. Foundation standings
+use the six suggested levels, with Rebels and Harpies outside the
+hierarchy. The actual human GM can designate a level for an original
+actor from the native world menu. The actor's controller can see that
+standing privately. Designations use persistent source evidence and
+leave Cadre rank and Order authority in their existing workflows.
+
+**103 selected tests passed in 88.79 seconds**, including each level,
+an unauthorized fictional Director controller, an outsider, stale and
+repeated submissions, safety pause, restart and a blocked attempt to
+derive Order authority from a higher level. Cross-role Order consumers
+still require explicit source authorization and implementation.
+[Expanded Status p. 193](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=195)

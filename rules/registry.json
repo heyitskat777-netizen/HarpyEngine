@@ -23370,14 +23370,33 @@
         "heading": "Expanded Status"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Review the actual role's Foundation standing or record the human GM's explicit designation.",
+        "actor_type": "Original human rules-table GM; each controller can inspect the standing of their own eligible actor.",
+        "pre_roll_sources": [
+          "Approved optional rules scope, true original role and current affiliations, and the actual GM appointment for designations."
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "diceless": ["Read the six printed standing levels or designate an exact original actor to an eligible level."]
+        },
+        "choice_ownership": "The actual human GM owns any designation.",
+        "target_policy": "Actual Foundation roles only. Rebels and Harpies are outside Foundation Status.",
+        "post_roll_effects": [
+          "Store and show the approved standing separately from Cadre rank. Existing Order authority remains in its actual source workflow."
+        ],
+        "mandatory_followups": ["Additional cross-role Receive or Disobey Orders require their own source authorization."],
+        "handler_or_gm_intervention": "The fictional office and the software Director do not acquire rules-table designation authority.",
+        "test_fixture_ids": ["tests/rules/test_expanded_status.py"]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_expanded_status.py"],
       "m2_play_id": null,
       "module": "core"
     },
