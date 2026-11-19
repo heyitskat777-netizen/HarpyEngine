@@ -6018,12 +6018,16 @@ class GameService:
 
                 require_successor(state)
             from girlframe.services.m3_bonded_support import issue_requested_order
+            from girlframe.services.m3_sentinel import require_order_communication
 
             if advocate_conversation is None:
                 requested = issue_requested_order(
                     self, c, state, viewer, key, channel, target, text, dose_up=dose_up
                 )
                 if requested is not None:
+                    require_order_communication(
+                        c, self.store.campaign_id, state, viewer.user_id, target
+                    )
                     return requested
             authority = None
             am_secret = None
@@ -6055,6 +6059,7 @@ class GameService:
                         raise WorkflowError(
                             "A current superior or qualifying order source is required."
                         )
+            require_order_communication(c, self.store.campaign_id, state, viewer.user_id, target)
             lock = self.lock(c, channel)
             if lock and lock["state"] != "released":
                 raise WorkflowError("SCENE_BUSY: resolve the current action first.")

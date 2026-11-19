@@ -213,8 +213,17 @@ class HandlerDeliveryService:
                 raise WorkflowError("HANDLER_DELIVERY_SOURCE: re-review the original turn.")
             handler = ActorRef.model_validate(plan["handler"])
             recipients = tuple(ActorRef.model_validate(x) for x in plan["recipients"])
+            from girlframe.services.m3_sentinel import require_communication
+
             if self._audience(c, scene, (handler, *recipients)) != plan["controllers"]:
                 raise WorkflowError("HANDLER_DELIVERY_AUDIENCE: the approved controllers changed.")
+            require_communication(
+                c,
+                self.store.campaign_id,
+                load_state(c, self.store.campaign_id),
+                handler,
+                recipients,
+            )
             current = self.context._current(c, scene)
             reply = ConversationReply.model_validate_json(json.dumps(draft["reply"]))
             if any(

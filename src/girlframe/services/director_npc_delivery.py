@@ -161,6 +161,16 @@ class NpcDeliveryService:
             )
             if actual != plan:
                 raise WorkflowError("STALE_NPC_DELIVERY: preserve the exact approved listeners.")
+            from girlframe.services.m2_state import load_state
+            from girlframe.services.m3_sentinel import require_communication
+
+            require_communication(
+                c,
+                self.store.campaign_id,
+                load_state(c, self.store.campaign_id),
+                ActorRef.model_validate(plan["actor"]),
+                tuple(ActorRef.model_validate(x) for x in plan["recipients"]),
+            )
             episode = "npc-heard-episode:" + _digest(
                 {
                     "actor": plan["actor"],

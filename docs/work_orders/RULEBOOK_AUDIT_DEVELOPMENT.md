@@ -2051,3 +2051,23 @@ in 178.12 seconds**, covering the true damage-to-Defeat route, both
 private response outcomes, wrong owner, stale request, safety pause,
 restart, replay, private Inbox and the wider Gorgon/Director checks.
 [Soldier p. 94](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=96)
+
+### Sentinel communication boundaries
+
+Base `01142c296d5ab354c1ed6b63743d251e9954b0ce`. Corrupted
+squares now block native direct Orders and reviewed shadow
+dialogue when the source and recipient would cross their boundary.
+The check runs against actual current roles and positions before
+the Order or simulated hearing is saved. A known Corrupted
+endpoint without a verified route also blocks the delivery.
+Same-square direct communication continues through its current
+controls. Previously accepted audience and hearing records remain
+recoverable.
+
+**150 selected tests passed in 244.03 seconds**. Tests exercise
+both Order directions, the same-square exception, existing Sensors,
+refusal to deliver across an already Corrupted boundary, and
+re-review when the terrain changes after approval. They include
+the existing Director, activity-shadow, private recovery and ordinary
+Roll suites. The terrain Tag and shell mechanics remain separate.
+[Sentinel p. 171](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=173)

@@ -358,6 +358,58 @@ def test_sentinel_native_corruption_preserves_position_owner_privacy_and_restart
     assert unaffected["action_id"] != action and game.dice.calls == 0
 
 
+def test_sentinel_prevents_orders_across_corrupted_square_boundary(ledger):
+    import json
+
+    from test_ledger import OTHER
+
+    from girlframe.engine.m3_actor_bonds import current_ref
+    from girlframe.services.onboarding import WorkflowError
+
+    game, worker, gateway, action, declaration = gorgon_source(
+        ledger,
+        kind="corrupt",
+        types=("sentinel",),
+        other_cell=(2, 0),
+    )
+    tick(worker, gateway, 6)
+    assert game.inspect(ADMIN, action)["state"] == "complete"
+    cast = CastService(ActorService(MissionService(ledger)))
+    change(cast, ADMIN, "withdraw", declaration.actor)
+
+    def place_handler(cell):
+        with ledger.transaction() as c:
+            saved = state(game)
+            saved.facts.append(
+                dict(
+                    kind="ordinary_handler_movement",
+                    actor=current_ref(saved, 1).model_dump_json(),
+                    cell=json.dumps(cell),
+                    event="synthetic-source-position",
+                )
+            )
+            game.event(c, 1, str(uuid4()), "synthetic.actual_handler_position", saved)
+
+    place_handler((2, 0))
+    with pytest.raises(
+        WorkflowError,
+        match="No verified communication route",
+    ):
+        game.issue_order(ADMIN, "blocked-into", 900, 2, "Move to the original waypoint.")
+    place_handler((0, 0))
+    with pytest.raises(
+        WorkflowError,
+        match="No verified communication route",
+    ):
+        game.issue_order(ADMIN, "blocked-out-of", 900, OTHER.user_id, "Move to the waypoint.")
+    with ledger.engine.connect() as c:
+        lock = game.lock(c, 900)
+        assert lock is None or lock["state"] == "released"
+    # Neither endpoint crosses the boundary in this actual in-person Order.
+    local = game.issue_order(ADMIN, "same-square", 900, 2, "Hold your position here.")
+    assert local["order_id"] and game.dice.calls == 0
+
+
 @pytest.mark.parametrize(
     "kind,gorgon_type,selection,label,npc",
     [

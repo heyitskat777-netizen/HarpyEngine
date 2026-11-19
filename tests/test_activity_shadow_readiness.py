@@ -283,8 +283,8 @@ def test_parallel_activity_review_only_learns_approved_closeout(fixture):
     assert "APPROVED_PILOT_REPORT" in after and "PRIVATE_DISCOVERY" not in after
 
 
-@pytest.mark.parametrize("cast_changes", [False, True])
-def test_simulated_npc_delivery_binds_controller_and_hearing(fixture, cast_changes):
+@pytest.mark.parametrize("change", ["none", "cast", "corruption", "later_corruption"])
+def test_simulated_npc_delivery_binds_controller_and_hearing(fixture, change):
     app, scene, game, _, _, _, dice = fixture
     opt(app, scene)
     configure(app, scene)
@@ -309,6 +309,27 @@ def test_simulated_npc_delivery_binds_controller_and_hearing(fixture, cast_chang
         ),
     )
     npc_roles.respond(OTHER, "accept-mechanic", offer["id"], state(game).revision, "accept")
+    if change in ("corruption", "later_corruption"):
+        from test_physical_operations import place
+        from test_world import gorgon
+
+        from girlframe.engine.m3_sentinel import corrupt
+        from girlframe.engine.m3_world import update
+
+        with game.store.transaction() as c:
+            original = place(state(game), PLAYER.user_id, cell=(2, 0), mode="outside_frame")
+            sentinel = gorgon("erratic", "signal-sentinel", types=("sentinel",))
+            original.world = update(original.world, gorgons=(*original.world.gorgons, sentinel))
+            if change == "corruption":
+                original.world = corrupt(
+                    original.world,
+                    sentinel,
+                    sentinel.cell,
+                    "synthetic-action",
+                    scene,
+                    "start-effect",
+                )
+            game.event(c, 1, "position-recipients", "synthetic.original_positions", original)
     _, early = submission(
         app, scene, PLAYER, "before-npc-joins", "This was said before Mora arrived."
     )
@@ -363,7 +384,7 @@ def test_simulated_npc_delivery_binds_controller_and_hearing(fixture, cast_chang
     delivery = {"proposal": proposal}
     with pytest.raises(WorkflowError, match="NOT_OWNED"):
         app.write(ADMIN, "wrong-speaker", scene, "npc-deliver", delivery)
-    if cast_changes:
+    if change == "cast":
         current = cast.view(PLAYER, 900)
         cast.change(
             PLAYER,
@@ -376,6 +397,30 @@ def test_simulated_npc_delivery_binds_controller_and_hearing(fixture, cast_chang
         )
         with pytest.raises(WorkflowError, match="STALE_NPC_DELIVERY|DISABLED"):
             app.write(OTHER, "removed-listener", scene, "npc-deliver", delivery)
+        return
+    if change == "later_corruption":
+        from girlframe.engine.m3_sentinel import corrupt
+
+        with game.store.transaction() as c:
+            original = state(game)
+            sentinel = next(x for x in original.world.gorgons if x.id == "signal-sentinel")
+            original.world = corrupt(
+                original.world,
+                sentinel,
+                sentinel.cell,
+                "synthetic-action",
+                scene,
+                "synthetic-effect",
+            )
+            game.event(c, 1, "terrain-now-corrupted", "synthetic.corrupted_after_review", original)
+        with pytest.raises(WorkflowError, match="STALE_REACTION"):
+            app.write(OTHER, "blocked-hearing", scene, "npc-deliver", delivery)
+        assert text not in json.dumps(app.timeline(PLAYER, scene))
+        return
+    if change == "corruption":
+        with pytest.raises(WorkflowError, match="No verified communication route"):
+            app.write(OTHER, "blocked-hearing", scene, "npc-deliver", delivery)
+        assert text not in json.dumps(app.timeline(PLAYER, scene))
         return
     before = state(game)
     delivered = app.write(OTHER, "deliver-synthetic", scene, "npc-deliver", delivery)
