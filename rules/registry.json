@@ -7812,14 +7812,17 @@
         "heading": "NPC Tags"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_battle_npc.py",
+        "tests/rules/test_malleable.py::test_actual_npc_alteration_tag_and_foundation_off_duty_procedure"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -7976,14 +7979,17 @@
         "heading": "Handler Assets"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_handler_consequences.py",
+        "tests/rules/test_handler_consequence_service.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -8024,14 +8030,16 @@
         "heading": "NPC Assets"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_battle_npc.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -8278,14 +8286,17 @@
         "heading": "Handler"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_handler_void.py",
+        "tests/rules/test_strain_void_spread_gain.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -8402,7 +8413,7 @@
         "heading": "NPCs"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
@@ -8410,7 +8421,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_princess_npc_conversation.py"
+        "tests/rules/test_princess_npc_conversation.py",
+        "tests/rules/test_strain_void_spread_gain.py"
       ],
       "m2_play_id": null,
       "module": "core"

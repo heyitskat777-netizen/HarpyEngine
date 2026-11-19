@@ -396,3 +396,19 @@ no automatic replacement recipient.
 Both the stay and defection paths passed through actual Off-Duty
 completion, with saved dice, idempotent retry and private readback.
 [Low Rebellion p. 145](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=147) · [Defection tests](../../tests/rules/test_strain_rebel_defection.py)
+
+## Existing core rules reconciled
+
+The base is `3659103c558a33922e0fb856990bf231b8309b92`.
+Five core entries marked unimplemented already have native behavior.
+The Handler owns the actual opportunity, injury or death that replaces
+damage. An attacker owns the NPC's injury with Tag, advantage or death.
+Foundation staff can remove actual work-affecting NPC Tags during
+Off-Duty. Handler Void has the knife, drugs and surgery choices. An
+ordinary NPC's Void is recorded as the chosen manifestation Tag.
+
+The registry now links these partial implementations to their source
+tests. General NPC Tag roll modifiers, ordinary NPC discovery and surgery
+and wider Handler medical enforcement still need dedicated coverage.
+Independent review and admission checks retain their original requirements.
+[NPC Tags p. 10](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=12) · [Assets p. 13](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=15) · [Void pp. 17–18](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=19)
