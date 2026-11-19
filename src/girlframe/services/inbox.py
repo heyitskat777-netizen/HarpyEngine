@@ -2912,6 +2912,7 @@ class InboxService:
             from girlframe.services.m3_handler_plays import HandlerPlayService
             from girlframe.services.m3_insurgent_cover import CoverService
             from girlframe.services.m3_medical import MedicalService
+            from girlframe.services.m3_mistress_favor import FavorService
             from girlframe.services.m3_privacy_trouble import PrivacyTroubleService
             from girlframe.services.m3_scene_requisitions import SceneRequisitionService
 
@@ -3040,6 +3041,25 @@ class InboxService:
                         "The private answer is held for its original audience.",
                         "Open private conversation",
                         task="m3_advocate_alone",
+                    )
+                )
+            for favor in FavorService(self.store)._tasks(viewer, canon):
+                items.append(
+                    InboxItem(
+                        "mistress-favor:" + favor,
+                        "mistress_favor",
+                        favor,
+                        canon.revision,
+                        "plays",
+                        "Private Mistress choice",
+                        "Original participants",
+                        "pending",
+                        True,
+                        False,
+                        "Open your own saved choice.",
+                        "Fictional consent, performance and the favor have separate steps.",
+                        "Open private choice",
+                        task="m3_mistress_favor",
                     )
                 )
             for request in HandlerPlayService(self.store)._tasks(connection, viewer):

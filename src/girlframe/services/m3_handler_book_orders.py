@@ -13,6 +13,7 @@ from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m3_access import Access, digest
+from girlframe.services.onboarding import WorkflowError
 
 if TYPE_CHECKING:
     from girlframe.services.m2_game import GameService
@@ -72,6 +73,26 @@ def active_book(
         )
     )
     return (handler, activation) if activation is not None else None
+
+
+def private_handler_scene(
+    game: "GameService", c: Connection, state: GameState, channel: int, handler: ActorRef
+) -> tuple[dict[str, Any], ActorRef]:
+    scene = game.scene(c, channel)
+    handler_id = int(handler.entity)
+    others = set(scene["participants"]) - {handler_id}
+    if len(others) != 1 or handler_id not in scene["participants"]:
+        raise WorkflowError("Join the actual one-on-one scene between the Handler and a Girl")
+    (owner,) = others
+    if owner not in state.order or not HandlerService(game.store)._member(c, owner):
+        raise WorkflowError("Only the original active Girl can be in this one-on-one scene")
+    game.pilot_cast(c, state, scene, owners=(handler_id, owner))
+    girl = current_ref(state, owner)
+    game.character_binding(c, state, owner, require_current_profile=False)
+    cast = next((x for x in state.scene_casts if x.id == scene["id"] and x.open), None)
+    if cast is not None and tuple(x.actor for x in cast.roles) != (girl,):
+        raise WorkflowError("Wait for a one-on-one scene with the original Girl alone")
+    return scene, girl
 
 
 def direct_order_source(

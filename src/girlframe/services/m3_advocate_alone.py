@@ -8,37 +8,14 @@ from sqlalchemy import Connection
 
 from girlframe.engine import m3_advocate_alone as rules
 from girlframe.engine.m2 import GameState
-from girlframe.engine.m3_actor_bonds import current_ref
-from girlframe.engine.m3_actor_state import ActorRef
-from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_choices import ChoiceEngine
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_frantic_breakdown import _history
-from girlframe.services.m3_handler_book_orders import active_book
+from girlframe.services.m3_handler_book_orders import active_book, private_handler_scene
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
-
-
-def _private_scene(
-    game: GameService, c: Connection, state: GameState, channel: int, handler: ActorRef
-) -> tuple[dict[str, Any], ActorRef]:
-    scene = game.scene(c, channel)
-    handler_id = int(handler.entity)
-    others = set(scene["participants"]) - {handler_id}
-    if len(others) != 1 or handler_id not in scene["participants"]:
-        raise WorkflowError("Join the actual one-on-one scene between the Advocate and a Girl")
-    (owner,) = others
-    if owner not in state.order or not HandlerService(game.store)._member(c, owner):
-        raise WorkflowError("Only the original active Girl can be in this one-on-one scene")
-    game.pilot_cast(c, state, scene, owners=(handler_id, owner))
-    girl = current_ref(state, owner)
-    game.character_binding(c, state, owner, require_current_profile=False)
-    cast = next((x for x in state.scene_casts if x.id == scene["id"] and x.open), None)
-    if cast is not None and tuple(x.actor for x in cast.roles) != (girl,):
-        raise WorkflowError("Wait for a one-on-one scene with the original Girl alone")
-    return scene, girl
 
 
 def _current(
@@ -50,7 +27,7 @@ def _current(
     owned = active_book(game, c, state, book="Advocate", rule=rules.RULE)
     if owned is None or owned[0] != value.handler:
         raise WorkflowError("Recover the original Advocate and appointment")
-    scene, girl = _private_scene(game, c, state, value.channel, value.handler)
+    scene, girl = private_handler_scene(game, c, state, value.channel, value.handler)
     if scene["id"] != value.scene or girl != value.girl:
         raise WorkflowError("Reopen the original one-on-one scene with its original Girl")
     born = _history(game, c, value.event, "m3.advocate_question_asked")
@@ -141,7 +118,7 @@ class AdvocateAloneService:
                 raise WorkflowError(
                     "Only the original Advocate can choose these two private effects"
                 )
-            scene, girl = _private_scene(self.game, c, canon, channel, owned[0])
+            scene, girl = private_handler_scene(self.game, c, canon, channel, owned[0])
             lock = self.game.lock(c, channel)
             if lock and lock["state"] != "released":
                 raise WorkflowError("Finish the pending Play in this one-on-one scene")

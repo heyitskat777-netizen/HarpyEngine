@@ -1567,3 +1567,20 @@ focused case checks the actual native activity and result, the occupied
 Session limit, the separate criterion, retry and restart. Scoped type
 checks passed.
 [Rulebook pp. 139 and 151](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=141) · [Tests](../../tests/rules/test_handler_pr.py)
+
+### Mistress's favor and private consent
+
+Base `783c2038ff74b32c7e6dc7703ac8853a8ad0131f`. The original Mistress
+can invite a Girl into the printed private scene. The original Girl
+chooses whether to take part, and both separately attest that the scene
+happened before the Mistress can ask a favor. The Girl can decline.
+Acceptance promotes her to Ace. Her recorded failure or an authorized
+human finding demotes her to Dog. A claim of fulfillment requires a later
+completed owned Play and a human decision before it closes the favor.
+Shared rank cases remain unsupported.
+
+The selected regression passed **149 tests in 163.84 seconds**. The
+focused cases use native private controls for consent, withdrawal,
+performance, the favor, a real later Play, rank changes and restart.
+They also cover wrong owner, stale submissions, pause and retries.
+[Rulebook p. 123](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=125) · [Tests](../../tests/rules/test_mistress_favor.py)

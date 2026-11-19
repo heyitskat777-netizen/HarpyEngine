@@ -15867,14 +15867,16 @@
         "heading": "Sex Play"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_mistress_favor.py::test_mistress_favor_preserves_consent_and_applies_actual_rank"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

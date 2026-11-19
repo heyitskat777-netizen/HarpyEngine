@@ -33,6 +33,8 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
         options.append(("advocate_alone", "Get Them Alone in this scene"))
     if data.get("casualty_parts"):
         options.append(("casualty_parts", "Casualty: damage an original part"))
+    if data.get("mistress_favor") and interaction.channel_id is not None:
+        options.append(("mistress_favor", "Mistress: offer a private scene"))
     options.extend(
         ("warp:" + x["id"], "Warp area: " + x["label"]) for x in data.get("warp_zones", [])
     )
@@ -79,6 +81,17 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
                 casualty.menu, viewer_from_interaction(current), int(interaction.channel_id or 0)
             )
             await open_part_damage(current, casualty, menu, handler_play=True)
+        elif identity == "mistress_favor":
+            from girlframe.discord_adapter.m3_mistress_favor import open_invite
+            from girlframe.services.m3_mistress_favor import FavorService
+
+            assert interaction.channel_id is not None
+            await open_invite(
+                current,
+                FavorService(service.store, service.game),
+                data["game_revision"],
+                interaction.channel_id,
+            )
         elif identity == "off_duty":
             from girlframe.discord_adapter.m3_off_duty import open_period
             from girlframe.services.m3_missions import MissionService

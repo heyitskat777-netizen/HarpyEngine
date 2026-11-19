@@ -1909,6 +1909,11 @@ class InboxView(discord.ui.View):
             await open_advocate(
                 interaction, AdvocateAloneService(self.service.store), item.identity
             )
+        elif item.task == "m3_mistress_favor":
+            from girlframe.discord_adapter.m3_mistress_favor import open_favor
+            from girlframe.services.m3_mistress_favor import FavorService
+
+            await open_favor(interaction, FavorService(self.service.store), item.identity)
         elif item.task == "m3_handler_play":
             from girlframe.discord_adapter.m3_handler_plays import open_play as open_handler_play
             from girlframe.services.m3_handler_plays import HandlerPlayService

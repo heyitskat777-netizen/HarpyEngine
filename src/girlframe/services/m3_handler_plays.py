@@ -1161,6 +1161,7 @@ class HandlerPlayService:
             HandlerService(self.store).authorize(c, viewer)
             state = load_state(c, self.store.campaign_id)
             from girlframe.engine.m3_advocate_alone import RULE as alone_rule
+            from girlframe.engine.m3_mistress_favor import RULE as favor_rule
             from girlframe.services.m3_contaminant_zone import warp_options
             from girlframe.services.m3_handler_book_orders import book_rule_available
             from girlframe.services.m3_successor import owned as owned_successor
@@ -1171,6 +1172,8 @@ class HandlerPlayService:
                 casualty_parts=book_rule_available(self.game, SOURCE_RULE)
                 and any(x.girl == "CASUALTY" for x in state.sheets.values()),
                 advocate_alone=active_book(self.game, c, state, book="Advocate", rule=alone_rule)
+                is not None,
+                mistress_favor=active_book(self.game, c, state, book="Mistress", rule=favor_rule)
                 is not None,
                 successor=owned_successor(self.game, c, state, active_handler(state)) is not None,
                 frantic_breakdown=active_book(
