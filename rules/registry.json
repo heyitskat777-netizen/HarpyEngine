@@ -24615,14 +24615,31 @@
         "heading": "Captured!"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original facilitator records an actual narrated capture of the original Girl at an operating base of the active Rebel group. The original Girl confirms.",
+        "actor_type": "Actual captured Girl, original Rebel captor, and original human facilitator",
+        "pre_roll_sources": ["Original real role, faction and operating Base", "Canonical source-specific custody and Helplessness", "Exact original Girl Heat"],
+        "roll_kind": "2d6",
+        "allowed_modifiers": ["Owned Heat, except on the next roll after a completed high"],
+        "tier_options": {
+          "mid": ["Set the actual escaped scene in the original square, or another fighting-chance scene that clears capture-imposed Helplessness."],
+          "high": ["The facilitator selects a genuine punishment scene. Erase one exact eligible original Identity and block Heat on the next roll."],
+          "low": ["Save the exact outcome pending actual Ancillary conversion."]
+        },
+        "choice_ownership": "The original Girl confirms her capture, owns her roll and mid scene, and selects the actual erased Identity. The original facilitator sets high scenes.",
+        "target_policy": "Original captive incarnation and verified custody. Normal Go Off-Duty is unavailable during that capture.",
+        "post_roll_effects": ["Preserve the original roll, source-only Helplessness, ownership and actual custody. No outside Frame is moved."],
+        "mandatory_followups": ["Other printed mid continuations, captured low and additional Defeat sources remain open."],
+        "handler_or_gm_intervention": "Human facilitator supplies the actual event and high scene. The software Director does not choose a character's response.",
+        "test_fixture_ids": ["tests/rules/test_captured.py"]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_captured.py"],
       "m2_play_id": null,
       "module": "core"
     },

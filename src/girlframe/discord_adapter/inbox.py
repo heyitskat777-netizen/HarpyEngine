@@ -2110,6 +2110,14 @@ class InboxView(discord.ui.View):
             await open_mask_response(
                 interaction, MaskService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_captured":
+            from girlframe.discord_adapter.m3_captured import open_capture_choice
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_captured import CapturedService
+
+            await open_capture_choice(
+                interaction, CapturedService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_npc_handover":
             from girlframe.discord_adapter.m3_npc_handover import open_handover_choice
             from girlframe.services.m2_game import GameService

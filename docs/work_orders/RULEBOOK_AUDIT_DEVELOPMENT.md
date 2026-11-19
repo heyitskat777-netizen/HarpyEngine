@@ -3058,3 +3058,23 @@ choice. Giggling Orders, the remaining normal Girl Plays,
 and appearance at the original rebirth need separate
 adapters.
 [Harpy p. 181](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=183) · [Native case](../../tests/rules/test_harpy_advancements.py)
+
+### Captured! at an actual Rebel base
+
+Base `663ba2d`. The original human facilitator records a
+narrated capture at an operating base of an active Rebel
+group. The original Girl confirms the event. Actual custody
+and source-specific Helplessness apply, and Go Off-Duty
+routes the captive to Captured! instead. On high, an actual
+GM scene and owned erasure remove one eligible original
+Identity. The next roll cannot spend Heat. A supported
+mid escape removes the actual custody and its own
+Helplessness, leaving the original Frame in place.
+
+**One focused native case passed in 8.70 seconds**. It ran
+the entire high result, denied Heat on the next attempt,
+reopened after restart, then resolved the mid escape.
+Low remains visible in the private Inbox with its saved
+roll pending Ancillary conversion. Other mid scenes and
+the Defeat-produced capture route remain open.
+[Captured! p. 196](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=198) · [Native case](../../tests/rules/test_captured.py)

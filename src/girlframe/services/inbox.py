@@ -4114,6 +4114,7 @@ class InboxService:
                     )
                 )
             from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_captured import CapturedService
             from girlframe.services.m3_harpy_eagle import EagleService
             from girlframe.services.m3_harpy_gaze import GazeService
             from girlframe.services.m3_harpy_mask import MaskService
@@ -4124,6 +4125,34 @@ class InboxService:
             from girlframe.services.m3_npc_handover import LABELS as HANDOVER_LABELS
             from girlframe.services.m3_npc_handover import NpcHandoverService
             from girlframe.services.m3_npc_intelligence import IntelligenceService
+
+            captive = CapturedService(GameService(self.store))
+            for capture_case, capture_step in captive.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "captured:" + capture_case.id,
+                        "captured",
+                        capture_case.id,
+                        canon.revision,
+                        "plays",
+                        "Captured!",
+                        "Original Rebel base",
+                        "pending",
+                        True,
+                        False,
+                        {
+                            "consent": "Confirm the original narrated capture.",
+                            "roll": "Roll Captured! with your actual permitted Heat.",
+                            "mid": "Set your original fighting-chance scene.",
+                            "high_scene": "Set an actual punishment scene at the Rebel base.",
+                            "erase": "Choose your exact original Identity to erase.",
+                            "low_review": "The original low awaits the Ancillary consequence.",
+                        }[capture_step],
+                        "This choice belongs to the original participant.",
+                        "Open your choice",
+                        task="m3_captured",
+                    )
+                )
 
             masks = MaskService(GameService(self.store))
             for mask_case, mask_step in masks.tasks(connection, canon, viewer):

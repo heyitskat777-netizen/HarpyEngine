@@ -1424,6 +1424,12 @@ class GameService:
             from girlframe.engine.m3_plays import GIRL_ROLL_RULES
 
             original_sheet = state.sheets.get(str(mechanical_owner))
+            if prepared.play == "go_off_duty" and original_sheet and original_sheet.character_id:
+                from girlframe.engine.m3_actor_bonds import current_ref as captured_actor
+                from girlframe.engine.m3_captured import active as captured_active
+
+                if captured_active(state, captured_actor(state, mechanical_owner)):
+                    raise WorkflowError("Use the original Girl’s Captured! choice while held.")
             if visions_blocked(state, original_sheet, prepared.play):
                 raise WorkflowError("This Girl’s Play requires Foundation reconditioning.")
             if (

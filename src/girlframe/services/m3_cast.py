@@ -146,6 +146,15 @@ class CastService:
             state = load_state(c, self.store.campaign_id)
             cast, legacy = self._current(c, state, channel)
             bindings = profiles(c, self.store.campaign_id)
+            from girlframe.services.m3_captured import CapturedService
+
+            capture_service: CapturedService | None = None
+            if viewer.user_id == cast.facilitator:
+                capture_service = CapturedService(self.game)
+                try:
+                    capture_service._gate(c, viewer)
+                except (ValueError, WorkflowError):
+                    capture_service = None
             visible = []
             offers = []
             known_refs = set()
@@ -220,6 +229,15 @@ class CastService:
                         else {}
                     )
                     harpy_actions: dict[str, bool] = {}
+                    can_capture = False
+                    if capture_service and actor.ref.kind in ("npc", "external_pilot"):
+                        try:
+                            _, _, _, _, candidates = capture_service._source(
+                                c, state, channel, actor.ref
+                            )
+                            can_capture = bool(candidates)
+                        except (ValueError, WorkflowError):
+                            pass
                     if (
                         actor.ref.kind == "external_pilot"
                         and actor.girl == "harpy"
@@ -264,6 +282,7 @@ class CastService:
                             "own": role.controller == viewer.user_id,
                             **({"job_prompts": prompts} if prompts else {}),
                             **harpy_actions,
+                            **({"capture_source": True} if can_capture else {}),
                             **(
                                 {"director_phone": True}
                                 if owned_npc

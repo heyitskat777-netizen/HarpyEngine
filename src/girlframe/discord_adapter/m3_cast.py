@@ -112,6 +112,11 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
     if data["may_facilitate"] and not data["own_facilitator"]:
         options.append(("facilitate", "Join as facilitator (no fictional character)"))
         actions["facilitate"] = ("facilitate", None)
+    for role in data["roles"]:
+        if role.get("capture_source"):
+            key = "capture:" + role["token"]
+            options.append((key, "Record a capture at the Rebel base"))
+            actions[key] = ("captured", ActorRef.model_validate(role["ref"]))
     if data["own_facilitator"]:
         options.append(("withdraw_facilitator", "Stop facilitating this scene"))
         actions["withdraw_facilitator"] = ("withdraw_facilitator", None)
@@ -258,6 +263,13 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
 
             assert ref is not None
             await open_mask(current, MaskService(service.game), channel, ref)
+            return
+        if action == "captured":
+            from girlframe.discord_adapter.m3_captured import open_capture
+            from girlframe.services.m3_captured import CapturedService
+
+            assert ref is not None
+            await open_capture(current, CapturedService(service.game), channel, ref)
             return
         if action == "npc_handler_order":
             from girlframe.discord_adapter.m3_npc_orders import open_handler_order
