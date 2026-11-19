@@ -2663,9 +2663,19 @@ the exact matching command now returns its original receipt after
 checking both the original authorized inflictor and the applied event.
 **45 selected tests passed in 37.36 seconds**. They cover the original
 branches, real roll denial without dice, source ownership and
-mandatory adjudication. Frame-specific ownership and additional
-memory representations remain separate.
+mandatory adjudication. Additional memory representations remain separate.
 [Lobotomy p. 194](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=196)
+
+The Nanobot Injection case, based on `4d90fb182d4acf7173d2c8de2f48ba94c2bd8f0f`,
+adds the innate DoctorDoctor roll for the original pilot of an installed
+Frame. After the original patient supplies the printed responses and the
+inflictor finishes the procedure, trying the removed Play is rejected before
+any dice or other resource changes. Acquired Frame abilities and other
+Frame-specific rolls need their own ownership checks. One focused synthetic
+case passed in 3.59 seconds using
+`python -m pytest -q --tb=short tests/rules/test_handler_plays.py -k frame-roll`
+with `PYTHONPATH="$PWD/src"`.
+[Nanobot Injection p. 70](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=72)
 
 ### Scientist laboratory dissection
 

@@ -66,3 +66,6 @@ GIRL_ROLL_RULES = {
     "bonded_side": "girl.bonded.always-by-her-side",
     "bonded_sex": "girl.bonded.sex-play",
 }
+
+# Base Frame rolls whose entitlement is the named installed Frame, without buying an ability.
+FRAME_ROLL_BOOKS = {"nanobot_injection": "DOCTORDOCTOR MK. II"}

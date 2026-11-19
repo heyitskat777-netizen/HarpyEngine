@@ -1442,7 +1442,7 @@ class GameService:
             )
             from girlframe.engine.m3_harpy_visions import blocked as visions_blocked
             from girlframe.engine.m3_lobotomy import blocked_play
-            from girlframe.engine.m3_plays import GIRL_ROLL_RULES
+            from girlframe.engine.m3_plays import FRAME_ROLL_BOOKS, GIRL_ROLL_RULES
 
             original_sheet = state.sheets.get(str(mechanical_owner))
             if original_sheet and original_sheet.character_id:
@@ -1466,7 +1466,7 @@ class GameService:
                 raise WorkflowError("This Girl’s Play requires Foundation reconditioning.")
             if (
                 original_sheet is not None
-                and prepared.play in GIRL_ROLL_RULES
+                and (prepared.play in GIRL_ROLL_RULES or prepared.play in FRAME_ROLL_BOOKS)
                 and blocked_play(original_sheet, prepared.play) is not None
             ):
                 raise WorkflowError(

@@ -8,7 +8,7 @@ from girlframe.engine.m3_actor_bonds import current_ref, migrate_actor, set_dept
 from girlframe.engine.m3_girl_runtime_state import has_rule
 from girlframe.engine.m3_identity_slots import bind, replacement_slot
 from girlframe.engine.m3_lobotomy_state import BlockedPlay, Plan, Response, Surgery
-from girlframe.engine.m3_plays import GIRL_ROLL_RULES
+from girlframe.engine.m3_plays import FRAME_ROLL_BOOKS, GIRL_ROLL_RULES
 
 ROLLABLE = (
     "keep_your_head",
@@ -39,6 +39,11 @@ def rollable(sheet: PilotSheet) -> tuple[str, ...]:
             play
             for play, source in GIRL_ROLL_RULES.items()
             if (book := rule_book(source)) is not None and has_rule(sheet, source, book)
+        ),
+        *(
+            play
+            for play, frame in FRAME_ROLL_BOOKS.items()
+            if frame == sheet.frame and not sheet.frame_scrapped
         ),
     )
 

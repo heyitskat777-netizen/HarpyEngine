@@ -25154,7 +25154,7 @@
         "choice_ownership": "The original inflictor chooses the plan. The original patient supplies their printed descriptions.",
         "target_policy": "The original patient and selected actual body, Identities, Bonds and capabilities. Preserve protected and source-locked resources.",
         "post_roll_effects": [
-          "Apply the selected mechanics atomically, including a prohibition on an owned ordinary or native Girl playbook roll."
+          "Apply the selected mechanics atomically, including a prohibition on an owned ordinary roll, native Girl playbook roll, or innate DoctorDoctor Nanobot Injection."
         ],
         "mandatory_followups": [
           "A mandatory prohibited basic Play uses its existing discrete no-roll adjudication. Additional Frame abilities need ownership-specific verification."
@@ -25166,6 +25166,7 @@
       "test_evidence": [
         "tests/rules/test_lobotomy.py",
         "tests/rules/test_lobotomy_service.py",
+        "tests/rules/test_handler_plays.py::test_same_handler_lobotomy_uses_real_saved_surgery_and_patient_response[frame-roll]",
         "tests/rules/test_dormant_adjudication.py",
         "tests/rules/test_harpy_ended_director_procedures.py",
         "tests/rules/test_harpy_defeat.py"

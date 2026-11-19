@@ -26,8 +26,8 @@ from girlframe.services.onboarding import WorkflowError
 ledger = ledger_fixture
 
 
-def ready(store):
-    _, game = world_ready(store)
+def ready(store, *, frame="JANUS"):
+    _, game = world_ready(store, frame=frame)
     approval = store.policy.m3_approval
     store.policy = store.policy.model_copy(
         update={
@@ -694,16 +694,18 @@ def test_source_notice_reaches_only_affected_original_humans_without_private_npc
     assert state(game) == before
 
 
-def test_same_handler_lobotomy_uses_real_saved_surgery_and_patient_response(ledger):
+@pytest.mark.parametrize("frame", ("JANUS", "DOCTORDOCTOR MK. II"), ids=("name-only", "frame-roll"))
+def test_same_handler_lobotomy_uses_real_saved_surgery_and_patient_response(ledger, frame):
     from test_role_punishments import change
 
+    from girlframe.engine.m2 import PlayInput
     from girlframe.engine.m3_lobotomy_state import Plan
     from girlframe.engine.m3_punishments import Details
     from girlframe.engine.m3_role_punishment_state import Instruction
     from girlframe.services.m3_lobotomy import LobotomyService
     from girlframe.services.m3_role_punishments import RolePunishmentService
 
-    svc, game = ready(ledger)
+    svc, game = ready(ledger, frame=frame)
     identity = begin(svc, game)
     before = state(game)
     svc.submit(
@@ -736,12 +738,16 @@ def test_same_handler_lobotomy_uses_real_saved_surgery_and_patient_response(ledg
         and rules.record(state(game), identity).state == "awaiting_effect"
     )
     surgery = LobotomyService(ledger)
+    rolls = surgery.get(ADMIN, result["surgery"])["plays"]
+    blocking_frame_roll = frame == "DOCTORDOCTOR MK. II"
+    assert ("nanobot_injection" in rolls) == blocking_frame_roll
     plan = Plan(
-        options=("name",),
+        options=("name", "play") if blocking_frame_roll else ("name",),
         room="Actual room",
         restraints="Actual restraints",
         tools="Actual tools",
         new_name="RENAMED",
+        forbidden_play="nanobot_injection" if blocking_frame_roll else None,
     )
     surgery.prepare(ADMIN, "own-actual-plan", result["surgery"], state(game).revision, plan)
     surgery.respond(
@@ -749,7 +755,10 @@ def test_same_handler_lobotomy_uses_real_saved_surgery_and_patient_response(ledg
         "own-patient-description",
         result["surgery"],
         state(game).revision,
-        {"name": "The actual original patient supplies the printed description"},
+        {
+            key: "The actual original patient supplies the printed description"
+            for key in plan.options
+        },
     )
     surgery.finish(ADMIN, "actual-complete-surgery", result["surgery"])
     after = state(game)
@@ -758,3 +767,22 @@ def test_same_handler_lobotomy_uses_real_saved_surgery_and_patient_response(ledg
         and rules.record(after, identity).state == "complete"
     )
     assert after.role_punishments[-1].completion_event and after.lobotomies[-1].phase == "applied"
+    if blocking_frame_roll:
+        (removal,) = after.sheets["2"].blocked_plays
+        assert removal.play == "nanobot_injection" and removal.surgery == result["surgery"]
+        assert not after.sheets["3"].blocked_plays
+        with pytest.raises(WorkflowError, match="cannot roll that Play after actual surgery"):
+            game.begin(
+                PLAYER,
+                "blocked-frame-roll",
+                900,
+                after.sheets["2"].revision,
+                PlayInput(
+                    play="nanobot_injection",
+                    trigger_confirmed=True,
+                    context="Begin the owned medical Play.",
+                    heat=0,
+                    target_actor=current_ref(after, 3),
+                ),
+            )
+        assert game.dice.calls == 0 and state(game) == after
