@@ -345,3 +345,18 @@ The three High 6 cascade entries now cite the existing saved-roll,
 recursive choice and completion evidence. Their child effects and
 Endgames retain their individual coverage.
 [High Void p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) · [Cult tests](../../tests/rules/test_strain_cult_occupation.py) · [Cascade tests](../../tests/rules/test_strain_cascade_completion.py)
+
+## Low Void Sprite escort
+
+The base is `4ab54acc2c9f0fa4b3a3b08e8df48e7e208662e4`.
+Low Void 2.2 saves an escort with two authored group Assets and the Core
+weakness. It adds no bodies to the map until an actual Strain introduction
+or re-emergence. At that point a Sprite group appears with the arrival
+and inherits its non-Sprite leader's Types. A group that appears in orbit
+receives its first map position with the original arrival. Every group
+retains its original work and arrival events. A campaign setup roster and
+the disclosure of a Gorgon already on the map leave the escort available.
+The native test resolves the originating event and a later re-emergence
+with both saved dice intact. The orbital test checks joint landing and
+that another introduction cannot reuse the same escort.
+[Low Void p. 142](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=144) · [Sprite classes pp. 163–164](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=166) · [Sprite escort tests](../../tests/rules/test_strain_sprite_escort.py)

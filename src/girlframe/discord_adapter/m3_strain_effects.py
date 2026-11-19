@@ -23,7 +23,7 @@ from girlframe.engine.m3_orbital_threat import RULE as ORBITAL_THREAT
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_scientific_observation import Demand
-from girlframe.engine.m3_strain_effects import Choice, TagChoice
+from girlframe.engine.m3_strain_effects import SPRITE_ESCORT, Choice, TagChoice
 from girlframe.engine.m3_void_revelation import PLAYS as REVELATIONS
 from girlframe.engine.m3_void_revelation import RULE as VOID_REVELATION
 from girlframe.engine.m3_void_signal import RULE as VOID_SIGNAL
@@ -38,6 +38,7 @@ from girlframe.engine.m3_world_state import (
     Goal,
     Gorgon,
     Location,
+    SpriteEscortDesign,
 )
 from girlframe.services.m3_strain_effects import EffectService
 from girlframe.services.m3_world import WorldService
@@ -312,6 +313,18 @@ def effect_form(
 
     def build(values: dict[str, Any]) -> list[Field]:
         fields: list[Field] = []
+        if rule == SPRITE_ESCORT:
+            fields += [
+                Field("sprite_name", "Name the Sprite group"),
+                Field("sprite_first", "First group Asset"),
+                Field("sprite_second", "Second group Asset"),
+                Field(
+                    "sprite_core",
+                    "Which Assets protect its Core?",
+                    (("first", "The first Asset"), ("both", "Both Assets")),
+                ),
+                Field("sprite_weakness", "Describe the Core weakness", paragraph=True),
+            ]
         if rule == CULT_OCCUPATION:
             sites = [
                 x
@@ -934,6 +947,13 @@ def effect_form(
 
     def apply(actor: GuildViewer, key: str, values: dict[str, Any]) -> str:
         payload: dict[str, Any] = {"rule_id": rule, "account": values["account"]}
+        if rule == SPRITE_ESCORT:
+            payload["sprite_escort"] = SpriteEscortDesign(
+                name=values["sprite_name"],
+                assets=(values["sprite_first"], values["sprite_second"]),
+                weakness=values["sprite_weakness"],
+                both_assets=values["sprite_core"] == ("both",),
+            )
         if rule == CULT_OCCUPATION:
             selected = values["cult_harpy"][0]
             site_id = values["cult_site"][0]

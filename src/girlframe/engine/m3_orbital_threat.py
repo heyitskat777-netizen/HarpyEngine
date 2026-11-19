@@ -67,7 +67,7 @@ def introduce(
     ):
         raise ValueError("Choose a new Directed Gorgon in orbit over a surviving location")
     assert goal.entity_id is not None
-    state.world = introduce_gorgon(world, gorgon).world
+    state.world = introduce_gorgon(world, gorgon, event=event).world
     save(
         state,
         Threat(

@@ -16498,14 +16498,16 @@
         "heading": "Void low: die 2, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain_sprite_escort.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

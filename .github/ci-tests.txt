@@ -125,3 +125,4 @@ tests/rules/test_contaminant_zone.py::test_actual_group_harpy_study_warp_protect
 # Source-bound Strain consequences and actual Off-Duty activation.
 tests/rules/test_strain_cascade_completion.py
 tests/rules/test_strain_cult_occupation.py
+tests/rules/test_strain_sprite_escort.py

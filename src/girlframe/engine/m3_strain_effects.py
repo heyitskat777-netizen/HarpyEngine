@@ -35,14 +35,18 @@ from girlframe.engine.m3_world_state import (
     GorgonType,
     Location,
     NpcRecruitment,
+    SpriteEscort,
+    SpriteEscortDesign,
 )
 
 VOID_EXAMINATION = "strain.void.low.6.2"
+SPRITE_ESCORT = "strain.void.low.2.2"
 
 SUPPORTED = frozenset(
     {
         "strain.void.low.1.1",
         "strain.void.low.2.1",
+        SPRITE_ESCORT,
         "strain.void.low.4.1",
         "strain.void.low.5.1",
         ORBITAL_THREAT,
@@ -128,6 +132,7 @@ class Choice(Model):
     new_raid_harpy: AdversaryPilot | None = Field(default=None, exclude_if=lambda x: x is None)
     cult_harpy: str | None = Field(default=None, exclude_if=lambda x: x is None)
     new_cult_harpy: AdversaryPilot | None = Field(default=None, exclude_if=lambda x: x is None)
+    sprite_escort: SpriteEscortDesign | None = Field(default=None, exclude_if=lambda x: x is None)
     leak_parties: tuple[ActorRef, ...] = Field(default=(), exclude_if=lambda x: not x)
     leak_report: str | None = Field(default=None, max_length=1200, exclude_if=lambda x: x is None)
 
@@ -174,6 +179,17 @@ def apply(
             raise ValueError("Supply the actual orbital Gorgon, period and event")
         introduce(state, choice.gorgon, source_work, period_id, source_event, choice.account)
         world = state.world
+    elif rule == SPRITE_ESCORT:
+        fields(choice, {"sprite_escort"})
+        if source_event is None or choice.sprite_escort is None:
+            raise ValueError("Record the original pending Sprite group and source")
+        world = world_rules.update(
+            world,
+            sprite_escorts=(
+                *world.sprite_escorts,
+                SpriteEscort(work=source_work, event=source_event, design=choice.sprite_escort),
+            ),
+        )
     elif rule == VOID_REVELATION:
         from girlframe.engine.m3_void_revelation import commit
 
@@ -536,7 +552,7 @@ def apply(
                 or incoming.cell not in {x.cell for x in bases}
             ):
                 raise ValueError("A single Sprite has entered an actual base")
-        outcome = world_rules.introduce_gorgon(world, incoming)
+        outcome = world_rules.introduce_gorgon(world, incoming, event=source_event)
         world = outcome.world
         if rule == "strain.void.low.4.1":
             event_city = next(x for x in cities if x.cell == incoming.cell)
@@ -663,6 +679,7 @@ def apply(
                 for x in world.gorgons
             ),
         )
+        world = world_rules.arrive_with_sprites(world, returned, source_event)
     elif rule == "strain.rebellion.low.1.1":
         fields(choice, {"target", "faction"})
         city = next(

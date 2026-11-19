@@ -226,6 +226,40 @@ class CorePlan(Model):
         return self
 
 
+class SpriteEscortDesign(Model):
+    name: str = Field(min_length=1, max_length=120)
+    assets: tuple[str, str]
+    weakness: str = Field(min_length=1, max_length=1200)
+    both_assets: bool = False
+
+    @model_validator(mode="after")
+    def distinct(self) -> "SpriteEscortDesign":
+        if (
+            not self.name.strip()
+            or not self.weakness.strip()
+            or len({x.strip().casefold() for x in self.assets}) != 2
+            or any(not 0 < len(x.strip()) <= 120 for x in self.assets)
+        ):
+            raise ValueError("Name two distinct actual Sprite group Assets and its Core weakness")
+        return self
+
+
+class SpriteEscort(Model):
+    work: str = Field(min_length=1)
+    event: str = Field(min_length=1)
+    design: SpriteEscortDesign
+    incoming: str | None = None
+    group: str | None = None
+    arrival_event: str | None = None
+
+    @model_validator(mode="after")
+    def paired(self) -> "SpriteEscort":
+        fields = (self.incoming, self.group, self.arrival_event)
+        if any(x is not None for x in fields) and not all(fields):
+            raise ValueError("A consumed Sprite escort needs the actual arrival and group")
+        return self
+
+
 class Gorgon(Entity):
     tags: tuple[WorldTag, ...] = ()
     cell: Cell | None = None
@@ -424,6 +458,7 @@ class World(Model):
     rooms: tuple[tuple[Snowflake, ...], ...] = ()
     starting_npc_links: tuple[StartingNpcLink, ...] = ()
     npc_role_offers: tuple[NpcRoleOffer, ...] = ()
+    sprite_escorts: tuple[SpriteEscort, ...] = Field(default=(), exclude_if=lambda x: not x)
 
     @model_validator(mode="after")
     def references(self) -> "World":
@@ -537,6 +572,14 @@ class World(Model):
             ):
                 raise ValueError("Faction areas use distinct actual map squares")
         gorgons = {x.id: x for x in self.gorgons}
+        if len({x.work for x in self.sprite_escorts}) != len(self.sprite_escorts) or any(
+            escort.group not in gorgons
+            or escort.incoming not in gorgons
+            or not gorgons[escort.group].sprite_group
+            for escort in self.sprite_escorts
+            if escort.group is not None
+        ):
+            raise ValueError("Each Sprite escort retains its distinct original world arrival")
         locations = {x.id for x in self.locations}
         if any(x.captive_of is not None and x.captive_of not in gorgons for x in self.npcs):
             raise ValueError("An NPC captive must have an actual Gorgon captor")
