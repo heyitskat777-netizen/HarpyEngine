@@ -772,6 +772,13 @@ response, and confirm expiry closes new Order authority. All six selected
 learned and direct Stim NPC Order tests passed. Gameplay code is unchanged.
 [Prior integration scope](../../reports/GIRL_FRAME_INTEGRATION_HANDOFF.md#stim-blissed-pilot-to-ordinary-npc-orders) · [Learned Stim tests](../../tests/rules/test_learned_stim_npc.py)
 
+The same historical run found the obsolete Orders rejection in the
+direct Malleable test. The failure reproduced on that commit and on the
+development branch. The test now isolates the original Helpless effect,
+the Tag it creates and its protection after expiry. The independent native
+Orders tests remain in place. All seven selected Stim tests passed.
+[Direct Malleable test](../../tests/rules/test_stim_npc_malleable.py) · [Direct Orders test](../../tests/rules/test_stim_npc_orders.py)
+
 ## Fictional Director slot replacement
 
 The base is `c1c513789e06ed368cb20e103b31cd4847bbc4f7`.
