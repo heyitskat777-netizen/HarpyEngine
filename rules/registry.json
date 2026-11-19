@@ -16001,16 +16001,16 @@
         "tier_options": {
           "low": [
             "The diver chooses zero primary outcomes; the original Acolyte can pass or latch",
-            "The Acolyte can mark an observed Tag on resurfacing and make the original diver Helpless"
+            "The Acolyte can mark an observed Tag on resurfacing and make the original diver Helpless, or emerge from shadow beside her"
           ]
         },
-        "choice_ownership": "Original Acolyte owns the latch and optional Tag. The underlying Handler retains their ordinary low Dive choice.",
+        "choice_ownership": "Original Acolyte owns the latch and optional Tag or shadow emergence. The underlying Handler retains their ordinary low Dive choice.",
         "target_policy": "Actual original same-scene local actors and observed Tags only.",
         "post_roll_effects": [
-          "Mark the exact real Tag and apply Helplessness only after the original Dive consequences and resurfacing."
+          "When the original diver resurfaces, apply the exact selected Tag and Helplessness or place the Acolyte beside her outside the original parked Frame."
         ],
         "mandatory_followups": [
-          "Mid and high Dive outcomes, Apometanoia interception, shadow or cockpit emergence and nonstandard divers remain open."
+          "Mid and high Dive outcomes, Apometanoia interception, cockpit emergence and nonstandard divers remain open."
         ],
         "handler_or_gm_intervention": "The original Handler still chooses the low Dive consequence under the existing workflow.",
         "test_fixture_ids": [

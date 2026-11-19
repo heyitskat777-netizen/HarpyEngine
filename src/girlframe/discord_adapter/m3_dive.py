@@ -37,11 +37,12 @@ async def open_dive(
     detail = data["dive"]
     kind = data["kind"]
     if kind == "dive_void_drunk":
-        fields = [
-            Field("choice", "Your original decision", (("pass", "Pass"), ("latch", "Latch on"))),
-        ]
+        choices: tuple[tuple[str, str], ...] = (("pass", "Pass"), ("latch", "Latch on"))
+        if detail.get("shadow"):
+            choices += (("shadow", "Latch on and emerge beside her from shadow"),)
+        follower_fields = [Field("choice", "Your original decision", choices)]
         if detail["tags"]:
-            fields.append(Field(
+            follower_fields.append(Field(
                 "tag", "Observed Tag to mark as they resurface", tuple(detail["tags"].items()),
                 0, 1, required=False,
             ))
@@ -58,7 +59,7 @@ async def open_dive(
         form = NativeForm(
             interaction.user.id, "Void-Drunk",
             "You can follow " + clean(detail["target"]) + " on the original Dive.",
-            fields, void_drunk,
+            follower_fields, void_drunk,
         )
         await reply(interaction, form.text(), form)
         return

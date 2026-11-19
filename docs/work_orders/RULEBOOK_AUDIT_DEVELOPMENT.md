@@ -3749,6 +3749,22 @@ the original case completed. The Order landed in a later change.
 Other Bond sources and direct Asset-damage evidence remain open.
 [Isolation Protocol p. 104](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=106) · [Native case](../../tests/rules/test_chained_isolation.py)
 
+### Void-Drunk shadow emergence
+
+Base `c0b2cdc08affdedcad9e009b63495b8b4b00da9a`. A nearby
+Acolyte with a current verified external body placement may
+emerge from shadow as the low Dive resolves. The action updates
+her actual body placement beside the diver and preserves the
+Frame at its saved location. It leaves the diver's original
+position and ordinary Handler consequence intact.
+
+One focused case passed in 7.10 seconds. It kept the Acolyte
+piloting while the Dive was pending, then confirmed the actual
+out-of-cockpit position and parked Frame. The existing Tag
+variant was deselected. Cockpit and Apometanoia options,
+other result tiers and additional body types remain open.
+[Void-Drunk p. 109](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=111) · [Native case](../../tests/rules/test_void_drunk.py)
+
 ### Illegal Girl and Made For Service Orders
 
 Base `21562bef839b590432f8276569581b23d1ab20da`. The
