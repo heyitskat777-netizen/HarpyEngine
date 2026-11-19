@@ -132,7 +132,7 @@ def test_actual_harpy_core_mid_kills_actual_npc_without_touching_controllers_pc(
 def test_harpy_cannot_pay_for_same_humans_different_declared_actor(ledger):
     plays, game, actor, target, own, prepared = context(ledger, pc_actor=True)
     before = state(game)
-    with pytest.raises(WorkflowError, match="this exact Harpy body"):
+    with pytest.raises(WorkflowError, match="this exact original body"):
         begin(plays, actor, own, prepared)
     assert state(game) == before and not game.dice.calls
 
