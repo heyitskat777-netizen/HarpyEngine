@@ -2,7 +2,7 @@
 
 import json
 from collections.abc import Callable
-from typing import Any, Literal
+from typing import Any, Final, Literal
 from uuid import uuid4
 
 from sqlalchemy import Connection
@@ -52,7 +52,7 @@ from girlframe.services.m3_quadrant_loss import materialize_loss, require_afterm
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
-RULE = "situational.situational.timeskip"
+RULE: Final = "situational.situational.timeskip"
 KIND = "timeskip"
 BASE_JOBS = tuple(job for job in NPC_JOBS if job not in ("director", "prisoner"))
 DURATIONS = {
@@ -112,6 +112,7 @@ class Timeskip(Model):
         "rebel_succession",
         "identities",
         "benefits",
+        "electives",
         "declined",
     ]
     city_ruin: str | None = None
@@ -132,6 +133,8 @@ class Timeskip(Model):
     new_rebel_girl: str | None = None
     rewrite_targets: tuple[ActorRef, ...] = ()
     rewrites: dict[str, str] = {}
+    requisitions: dict[str, str] = {}
+    handler_award: str | None = None
 
 
 def records(state: GameState) -> tuple[Timeskip, ...]:
@@ -217,6 +220,8 @@ class TimeskipService:
     ) -> dict[str, Any]:
         def authorize(c: Connection) -> None:
             self._gate(c, viewer)
+            if "requisition" in payload or "finish_benefits" in payload:
+                Access(self.store).authorize(c, viewer, "economy", director_response=True)
             if "id" in payload:
                 self._case(c, load_state(c, self.store.campaign_id), viewer, payload["id"])
             elif MedicalService(self.store)._handler(c)[0] != viewer.user_id:
@@ -353,6 +358,10 @@ class TimeskipService:
             x.entity == str(user) and x.token not in case.rewrites for x in case.rewrite_targets
         ):
             return "replace_identities"
+        if case.step == "benefits" and any(
+            x.entity == str(user) and x.token not in case.requisitions for x in case.rewrite_targets
+        ):
+            return "choose_requisition"
         if user == case.gm or case.step == "agreement" and user not in case.accepted:
             return case.step
         return None
@@ -400,6 +409,14 @@ class TimeskipService:
                 data["nominee"] = self._nominees(c, state, case).get(case.death)
             if step == "replacement":
                 data["can_continue"] = self._replacement_ready(state, case)
+            if step in ("benefits", "choose_requisition"):
+                from girlframe.services.m3_timeskip_rewards import TimeskipRewards
+
+                data.update(
+                    TimeskipRewards(self).menu(
+                        c, state, case, viewer, choose_requisition=step == "choose_requisition"
+                    )
+                )
             if step == "replace_identities":
                 girl, identities, tags = self._rewrite_choices(c, state, case, viewer.user_id)
                 data["identities"] = {x.id: x.name for x in identities.values()}

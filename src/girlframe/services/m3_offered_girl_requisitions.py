@@ -35,6 +35,13 @@ EVENT = "m3.girl_requisition_accepted"
 def prove_receipt(game: GameService, c: Connection, state: GameState, receipt: GiftReceipt) -> None:
     if receipt.source_offer is None or receipt.price != 0:
         raise WorkflowError("Recover the actual source-funded offered receipt")
+    if receipt.source_offer.startswith("timeskip:"):
+        from girlframe.services.m3_timeskip_rewards import prove_timeskip_requisition
+
+        if isinstance(receipt, RetirementReceipt):
+            raise WorkflowError("This Timeskip source does not fund Retirement")
+        prove_timeskip_requisition(game, c, state, receipt)
+        return
     accepted = next(
         (
             x

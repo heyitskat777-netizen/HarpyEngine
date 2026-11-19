@@ -9,7 +9,7 @@ from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
-from girlframe.engine.m3_handler_advancements import PermissionGrant
+from girlframe.engine.m3_handler_advancements import TIMESKIP_RULE, PermissionGrant
 from girlframe.services.m3_handler_advancements import HandlerAdvancementService
 from girlframe.services.onboarding import WorkflowError
 
@@ -160,6 +160,8 @@ async def open_advancement(
                 "scientist_dissection": "Scientist dissection",
             }[ordinary_source["trigger"]]
             if ordinary_source
+            else "Original Timeskip advancement"
+            if data["rule"] == TIMESKIP_RULE
             else "Void Endgame " + data["rule"].rsplit(".", 1)[1]
         )
         if interaction.response.is_done():

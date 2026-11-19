@@ -13,6 +13,7 @@ from girlframe.engine.m3_location_build import Effect as LocationBuildEffect
 from girlframe.engine.m3_location_rebuild import Effect as LocationRebuildEffect
 
 RULES = ("strain.void.endgame.6", "strain.void.endgame.7")
+TIMESKIP_RULE = "situational.situational.timeskip"
 
 
 class PermissionGrant(Model):
@@ -41,7 +42,10 @@ class PermissionEffect(PermissionGrant):
 class Award(Model):
     id: str = Field(min_length=1)
     rule: Literal[
-        "strain.void.endgame.6", "strain.void.endgame.7", "source.handler-advancement-triggers"
+        "strain.void.endgame.6",
+        "strain.void.endgame.7",
+        "source.handler-advancement-triggers",
+        "situational.situational.timeskip",
     ]
     handler: ActorRef
     appointment: str = Field(min_length=1)
@@ -104,6 +108,14 @@ class Award(Model):
                 or self.id != "ordinary:" + self.ordinary_source.review
             ):
                 raise ValueError("Keep the genuine ordinary source without a fabricated work row")
+        elif self.rule == TIMESKIP_RULE:
+            if (
+                self.source_work is None
+                or self.ordinary_source is not None
+                or self.id != "timeskip:" + self.source_work
+                or self.source_event != self.award_event
+            ):
+                raise ValueError("Keep the actual original Timeskip advancement source")
         elif self.id != self.source_work or self.ordinary_source is not None:
             raise ValueError("Keep this exact actual original Void award work")
         variants = (

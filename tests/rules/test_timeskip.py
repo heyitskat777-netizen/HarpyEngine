@@ -13,6 +13,7 @@ from test_world import initial as initial_world
 
 from girlframe.discord_adapter.m3_careers import open_replacement
 from girlframe.discord_adapter.m3_girl_transition import open_configuration
+from girlframe.discord_adapter.m3_handler_advancements import open_grant
 from girlframe.discord_adapter.m3_punishments import Picker
 from girlframe.discord_adapter.m3_timeskip import open_timeskip
 from girlframe.discord_adapter.m3_world import open_world
@@ -31,7 +32,9 @@ from girlframe.services.handler_setup import HandlerService
 from girlframe.services.inbox import InboxService
 from girlframe.services.m3_careers import CareerService
 from girlframe.services.m3_girl_transition import GirlTransitionService, baseline_id
+from girlframe.services.m3_handler_advancements import HandlerAdvancementService
 from girlframe.services.m3_off_duty import OffDutyService
+from girlframe.services.m3_privileges import purchase_proof
 from girlframe.services.m3_strain import StrainService
 from girlframe.services.m3_timeskip import RULE, Arrival, TimeskipService, records
 from girlframe.services.m3_world import WorldService
@@ -45,7 +48,9 @@ def test_native_timeskip_agreement_and_ordered_world_changes(ledger):
     ledger.policy = ledger.policy.model_copy(
         update=dict(
             m3_approval=policy.model_copy(
-                update=dict(subsystems=policy.subsystems | {"world", "strain", "playbooks"})
+                update=dict(
+                    subsystems=policy.subsystems | {"world", "strain", "playbooks", "economy"}
+                )
             )
         )
     )
@@ -455,3 +460,51 @@ def test_native_timeskip_agreement_and_ordered_world_changes(ledger):
             assert not any(x.id == "old-tag" for x in after.tags)
     (rewritten,) = records(state(game))
     assert rewritten.step == "benefits" and len(rewritten.rewrites) == 2
+
+    native(ADMIN, dict(choice=("confirm",)), 93388)
+    (awarded,) = records(state(game))
+    assert awarded.handler_award
+    assert not service.get(ADMIN, case.id)["can_continue"]
+    advances = HandlerAdvancementService(ledger)
+    held = advances.view(ADMIN, awarded.handler_award)
+    assert held["phase"] == "held"
+    assert any(
+        x.task == "m3_handler_advancements" and x.identity == awarded.handler_award
+        for x in InboxService(ledger).items(ADMIN)
+    )
+    native(
+        PLAYER,
+        dict(choice=("creature_comforts",), account="The original Girl obtained a better bunk."),
+        93392,
+    )
+    active = current_ref(state(game), PLAYER.user_id)
+    native(
+        OTHER,
+        dict(
+            choice=("privacy",),
+            companion=(active.token,),
+            account="The original Girl arranged to use the private room with her colleague.",
+        ),
+        93396,
+    )
+    before_grant = state(game)
+    with ledger.engine.connect() as c:
+        for receipt in before_grant.requisitions:
+            assert receipt.price == 0
+            purchase_proof(c, ledger, receipt)
+    assert not service.get(ADMIN, case.id)["can_continue"]
+    held = advances.view(ADMIN, awarded.handler_award)
+    one = [x for x in held["candidates"] if x["token"] == active.token]
+    asyncio.run(
+        submit_form(
+            ADMIN,
+            lambda click: open_grant(click, advances, held, one),
+            {active.token: ("2",), "account": "The Handler grants two actual Permissions."},
+            93400,
+        )
+    )
+    native(ADMIN, dict(choice=("confirm",)), 93404)
+    finished = state(game)
+    assert records(finished)[0].step == "electives"
+    assert finished.sheets["2"].permissions == before_grant.sheets["2"].permissions + 2
+    assert finished.sheets["3"].permissions == before_grant.sheets["3"].permissions

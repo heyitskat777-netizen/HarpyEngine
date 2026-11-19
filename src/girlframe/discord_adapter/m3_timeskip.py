@@ -20,6 +20,7 @@ from girlframe.services.m3_timeskip import (
     RebelSuccessor,
     TimeskipService,
 )
+from girlframe.services.m3_timeskip_rewards import TimeskipRewards
 
 
 async def open_timeskip_start(interaction: discord.Interaction, service: TimeskipService) -> None:
@@ -78,8 +79,11 @@ async def open_timeskip(
     if step == "replace_identities":
         await _open_identity_changes(interaction, service, case, title, data)
         return
-    if step == "benefits":
-        await reply(interaction, "The Timeskip awaits the original Requisitions and advancement.")
+    if step in ("benefits", "choose_requisition"):
+        await _open_rewards(interaction, TimeskipRewards(service), case, title, data)
+        return
+    if step == "electives":
+        await reply(interaction, "The Timeskip awaits the original table’s elective choices.")
         return
     if step == "create_contact":
         await _open_contact(interaction, service, case, title, data)
@@ -434,5 +438,56 @@ async def _open_identity_changes(
         "Choose two distinct Identities and supply one replacement source for each.",
         fields,
         confirm,
+    )
+    await reply(interaction, form.text(), form)
+
+
+async def _open_rewards(
+    interaction: discord.Interaction,
+    service: TimeskipRewards,
+    identity: str,
+    title: str,
+    data: dict[str, Any],
+) -> None:
+    choose = data["step"] == "choose_requisition"
+    finish = not choose and data["award"] != "claim"
+    if finish and not data["can_continue"]:
+        await reply(
+            interaction,
+            "The Timeskip awaits the original players’ receipts or the Handler’s spend.",
+        )
+        return
+    if choose:
+        options = tuple(data["requisitions"].items())
+        companions = tuple(data["companions"].items())
+        if not companions:
+            options = tuple(x for x in options if x[0] != "privacy")
+        fields = [Field("choice", "Actual Requisition", options)]
+        if companions:
+            fields.append(
+                Field("companion", "Other Girl for Privacy", companions, 0, required=False)
+            )
+        fields.append(Field("account", "Record how you obtained it", paragraph=True))
+    else:
+        label = "Finish the actual benefit step" if finish else "Claim the original advancement"
+        fields = [Field("choice", label, (("confirm", label),))]
+
+    async def confirm(click: discord.Interaction, values: dict[str, Any]) -> str:
+        args = viewer_from_interaction(click), str(click.id), identity, data["revision"]
+        if choose:
+            companions = values.get("companion") or (None,)
+            await asyncio.to_thread(
+                service.requisition, *args, values["choice"][0], companions[0], values["account"]
+            )
+            return "Your Requisition receipt is saved without a Permission charge."
+        await asyncio.to_thread(service.award, *args, finish=finish)
+        return (
+            "The Timeskip can proceed to elective choices."
+            if finish
+            else "Open the original Handler advancement in your private Inbox."
+        )
+
+    form = NativeForm(
+        interaction.user.id, title, "Review the original Timeskip benefit.", fields, confirm
     )
     await reply(interaction, form.text(), form)

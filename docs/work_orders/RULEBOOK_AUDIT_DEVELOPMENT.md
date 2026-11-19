@@ -3267,3 +3267,22 @@ its own placement validation and order effect.
 the two private owner changes and the existing Vatgrown activation
 with its distinct Frame and original witness notice.
 [Timeskip p. 197](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=199) · [Native case](../../tests/rules/test_timeskip.py)
+
+### Timeskip’s actual Requisitions and Handler advancement
+
+Base `d190d75`. Each original Girl can claim Creature Comforts,
+Privacy or Visiting Home with the original Timeskip as the source.
+The actual zero-cost receipt qualifies for its existing later
+Off-Duty behavior. Privacy still uses the original owner’s specific
+companion and the scene’s separate consent. The original Handler
+claims a finite source-proved advancement through the existing
+award controls. This step waits for the actual spend and all
+original Girl receipts before offering the elective choices.
+
+**One focused case passed in 14.54 seconds**. Native controls
+obtained the Comforts and Privacy receipts, verified both against
+their genuine source and no Permission payment, and spent the
+Handler award on an actual selected two-Permission grant. The
+remaining printed Requisitions, elective picks and follow-on scene
+still require source-specific paths.
+[Timeskip p. 197](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=199) · [Native case](../../tests/rules/test_timeskip.py)
