@@ -32,6 +32,24 @@ async def open_search(
     elif data.get("review"):
         step, text = "discover", data["bait_account"]
         fields = [Field("account", "Describe the actual encounter", paragraph=True)]
+        if "disruptions" in data:
+            if not data["disruptions"]:
+                await reply(
+                    interaction, "The search awaits the selected actual community disruption."
+                )
+                return
+            fields.insert(
+                0,
+                Field(
+                    "selected",
+                    "Actual qualifying event",
+                    tuple(data["disruptions"].items()),
+                ),
+            )
+    elif data.get("tier") == "high" and not data["bait"]:
+        step = "bait_and_disruption"
+        text = "Choose to serve as bait and require the community’s normal routine to be upended."
+        fields = [Field("account", "Describe how you volunteer as bait", paragraph=True)]
     elif data.get("tier") == "mid" and not data["bait"]:
         step, text = "bait", "You can volunteer your own Girl as bait to draw the Gorgon out."
         fields = [Field("account", "Describe how you serve as bait", paragraph=True)]

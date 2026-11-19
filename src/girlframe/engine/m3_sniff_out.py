@@ -21,6 +21,8 @@ class Search(Model):
     roll: Roll | None = None
     bait: str | None = None
     bait_account: str | None = None
+    disruption: str | None = None
+    disruption_event: str | None = None
     discovered: str | None = None
     name: str | None = None
     proof: str | None = None

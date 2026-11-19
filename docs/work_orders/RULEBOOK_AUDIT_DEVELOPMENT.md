@@ -2326,6 +2326,23 @@ lower tier combinations, and a global physical reveal remain
 open. Their original receipts stay pending.
 [Dopplegänger p. 168](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=170) · [Native case](../../tests/rules/test_sniff_out.py)
 
+### Sniff You Out’s high result with bait and community disruption
+
+Base `632ed35113f83fe7555d019605815c76912b4e6b`. The original
+investigator can choose herself as bait and require that the
+community be upended. The private GM confirmation requires an
+actual completed source in the original scene after the roll.
+The current qualifying source is a real city destruction by
+Collateral Damage. The recorded discovery retains the actual
+event used to satisfy the printed requirement.
+
+**One focused high case passed in 5.75 seconds**. It rejected
+an invented source, resolved a separate real Gorgon Collateral
+Damage action against the city, then allowed the original Girl
+to learn the guise privately. Further kinds of disruption and
+other condition combinations remain open.
+[Dopplegänger p. 168](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=170) · [Native case](../../tests/rules/test_sniff_out.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

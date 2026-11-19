@@ -11,6 +11,7 @@ from girlframe.engine import m3_sniff_out as rules
 from girlframe.engine.m2 import GameState, spend_heat
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, SceneCast
 from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_collateral import Source as CollateralSource
 from girlframe.engine.m3_hallucinations import Roll
 from girlframe.engine.m3_sentinel_shell import holds
 from girlframe.services.m2_game import GameService
@@ -122,7 +123,14 @@ class SniffOutService:
         ).first()
         original = case.model_copy(
             update=dict(
-                roll=None, bait=None, bait_account=None, discovered=None, name=None, proof=None
+                roll=None,
+                bait=None,
+                bait_account=None,
+                disruption=None,
+                disruption_event=None,
+                discovered=None,
+                name=None,
+                proof=None,
             )
         )
         if (
@@ -131,6 +139,65 @@ class SniffOutService:
             or (marker.kind, marker.actor_id) != ("m3.sniff_out_offered", str(case.gm))
         ):
             raise WorkflowError("Recover the actual sealed Dopplegänger search")
+
+    def _disruptions(
+        self,
+        c: Connection,
+        state: GameState,
+        case: rules.Search,
+        hunter: ActorView,
+    ) -> dict[str, tuple[str, str]]:
+        if case.roll is None or state.world is None:
+            return {}
+        from girlframe.services.m3_gorgon_play import GorgonPlayService
+
+        history = t.m2["m2_state_history"]
+        rolled_revision = c.scalar(
+            sa.select(history.c.revision).where(
+                history.c.campaign_id == self.store.campaign_id,
+                history.c.event_id == case.roll.event,
+            )
+        )
+        if rolled_revision is None:
+            return {}
+        performed = {x["id"]: x for x in state.facts if x.get("kind") == "collateral_performed"}
+        locations = {
+            x.id: x
+            for x in state.world.locations
+            if x.kind == "city" and x.cell == hunter.cell and x.condition == "destroyed"
+        }
+        result: dict[str, tuple[str, str]] = {}
+        for record in state.facts:
+            if (
+                record.get("kind") != "structure_destroyed_source"
+                or record.get("entity") not in locations
+            ):
+                continue
+            effect = performed.get(record["source"])
+            if effect is None or effect["event"] != record["event"]:
+                continue
+            source = CollateralSource.model_validate_json(effect["source"])
+            if source.event != record["event"]:
+                continue
+            revision = c.scalar(
+                sa.select(history.c.revision).where(
+                    history.c.campaign_id == self.store.campaign_id,
+                    history.c.event_id == source.event,
+                )
+            )
+            if revision is None or revision <= rolled_revision:
+                continue
+            action = self.game.action(c, source.action)
+            if (
+                action["state"] != "complete"
+                or action["scene_id"] != case.scene
+                or not action["data"].get("gorgon_play")
+                or GorgonPlayService(self.game).source(c, action)["kind"] != "collateral"
+            ):
+                continue
+            location = locations[record["entity"]]
+            result[record["id"]] = (record["event"], location.name)
+        return result
 
     def _step_receipt(
         self, c: Connection, case: rules.Search, event: str, gm: bool, step: str
@@ -222,7 +289,13 @@ class SniffOutService:
         if current.roll:
             self._step_receipt(c, current, current.roll.event, False, "roll")
         if current.bait:
-            self._step_receipt(c, current, current.bait, False, "bait")
+            self._step_receipt(
+                c,
+                current,
+                current.bait,
+                False,
+                "bait_and_disruption" if current.disruption else "bait",
+            )
         if current.discovered:
             self._step_receipt(c, current, current.discovered, True, "discover")
         return current
@@ -249,6 +322,13 @@ class SniffOutService:
             )
             if result["review"] and not case.discovered:
                 result["bait_account"] = case.bait_account
+                if case.disruption:
+                    cast = self._cast(state, case.scene, case.gm)
+                    hunter = self._hunter(c, state, cast, case.hunter.token)
+                    result["disruptions"] = {
+                        key: value[1]
+                        for key, value in self._disruptions(c, state, case, hunter).items()
+                    }
             if case.discovered:
                 result.update(found=case.name, event=case.discovered)
             elif case.roll is None and viewer.user_id == int(case.hunter.entity):
@@ -376,30 +456,46 @@ class SniffOutService:
                 update=dict(roll=Roll(faces=self.game.dice.roll(), heat=heat, event=event))
             )
         if (
-            step == "bait"
+            step in ("bait", "bait_and_disruption")
             and owner
             and case.roll
-            and case.roll.result == "mid"
+            and case.roll.result == ("mid" if step == "bait" else "high")
             and not case.bait
             and not selected
             and heat is None
             and 0 < len(account.strip()) <= 1200
             and hunter.custody in (None, "free")
         ):
-            return case.model_copy(update=dict(bait=event, bait_account=account.strip()))
+            return case.model_copy(
+                update=dict(
+                    bait=event,
+                    bait_account=account.strip(),
+                    disruption="community" if step == "bait_and_disruption" else None,
+                )
+            )
         if (
             step == "discover"
             and viewer.user_id == case.gm
             and case.bait
-            and not selected
+            and (bool(selected) == bool(case.disruption))
             and heat is None
             and 0 < len(account.strip()) <= 1200
         ):
             world = state.world
             assert world is not None
             actual = next(x for x in world.npcs if x.id == case.guise.entity)
+            disruption = (
+                self._disruptions(c, state, case, hunter).get(selected) if selected else None
+            )
+            if case.disruption and disruption is None:
+                raise WorkflowError("Resolve actual new same-scene disruption before discovery")
             return case.model_copy(
-                update=dict(discovered=event, name=actual.name, proof=account.strip())
+                update=dict(
+                    discovered=event,
+                    name=actual.name,
+                    proof=account.strip(),
+                    disruption_event=disruption[0] if disruption else None,
+                )
             )
         raise WorkflowError(
             "Complete this saved search's actual original choice or keep it pending"
