@@ -1312,3 +1312,117 @@ def test_visions_mid_suspends_actual_play_until_verified_foundation_care(ledger)
     assert restrictions(state(game))[0].restored is not None
     action = game.begin(OTHER, "keep-after-care", 900, state(game).sheets["3"].revision, play)
     assert action["action_id"]
+
+
+def test_nothing_opens_only_owned_slots_for_one_minute_before_actual_approval(ledger):
+    from test_cast_service import change
+    from test_harpy_flirt import submit_form
+    from test_physical_operations import place
+
+    from girlframe.discord_adapter.m3_harpy_rewrite import open_rewrite_response
+    from girlframe.engine.m3_actor_bonds import set_depth
+    from girlframe.engine.m3_harpy_advancements import NOTHING
+    from girlframe.services.m3_harpy_rewrite import RewriteService, records
+
+    _, game, cast, harpy = ready(ledger)
+    policy = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update=dict(
+            m3_approval=policy.model_copy(
+                update=dict(activity_specialist_rules=policy.activity_specialist_rules | {NOTHING})
+            )
+        )
+    )
+    HarpyAdvancementService(ledger).select(
+        PLAYER, "learn-owned-rewrite", harpy.entity, state(game).revision, NOTHING
+    )
+    change(cast, PLAYER, "withdraw", current_ref(state(game), PLAYER.user_id))
+    with ledger.transaction() as c:
+        canon = place(state(game), OTHER.user_id, mode="outside_frame")
+        girl = current_ref(canon, OTHER.user_id)
+        canon = set_depth(canon, harpy, girl, 2, "synthetic-existing-intense-bond")
+        game.event(c, ADMIN.user_id, "rewrite-encounter-setup", "synthetic.position", canon)
+    original = state(game).sheets[girl.entity]
+    selected, hidden = original.identities[:2]
+    now = [ledger.clock()]
+    ledger.clock = lambda: now[0]
+    service = RewriteService(game)
+
+    def open_window(sequence):
+        case = service.start(
+            PLAYER,
+            f"real-encounter-{sequence}",
+            900,
+            harpy,
+            state(game).revision,
+            girl.token,
+            "We meet at the edge of the empty bay.",
+        )["id"]
+        service.respond(
+            ADMIN,
+            f"verified-encounter-{sequence}",
+            case,
+            state(game).revision,
+            "verify",
+            allow=True,
+            account="I verify they are alone and no help is coming.",
+        )
+        service.respond(
+            OTHER,
+            f"open-single-slot-{sequence}",
+            case,
+            state(game).revision,
+            "authorize",
+            allow=True,
+            selected=(selected.id,),
+        )
+        return case
+
+    expired = open_window(1)
+    draft = service.get(PLAYER, expired)
+    assert draft["slots"] == {selected.id: selected.name} and hidden.id not in draft["slots"]
+    now[0] += 61
+    with pytest.raises(WorkflowError, match="Refresh"):
+        service.respond(
+            PLAYER,
+            "late-draft-denied",
+            expired,
+            draft["revision"],
+            "draft",
+            changes={selected.id: "Late change"},
+        )
+    service.respond(PLAYER, "close-expired", expired, state(game).revision, "expire")
+    assert state(game).sheets[girl.entity] == original
+
+    case = open_window(2)
+    ledger.engine.dispose()
+    assert [
+        x.identity for x in InboxService(ledger).items(PLAYER) if x.task == "m3_harpy_rewrite"
+    ] == [case]
+    asyncio.run(
+        submit_form(
+            PLAYER,
+            lambda click: open_rewrite_response(click, service, case),
+            {selected.id: "New reflection"},
+            90910,
+        )
+    )
+    assert state(game).sheets[girl.entity] == original
+    with pytest.raises(WorkflowError, match="unavailable"):
+        service.get(ADMIN, case)
+    assert service.get(OTHER, case)["changes"] == {selected.id: "New reflection"}
+    asyncio.run(
+        submit_form(
+            OTHER,
+            lambda click: open_rewrite_response(click, service, case),
+            {"allow": ("yes",)},
+            90914,
+        )
+    )
+    final = state(game)
+    sheet = final.sheets[girl.entity]
+    assert next(x for x in sheet.identities if x.id == selected.id) == selected.model_copy(
+        update={"name": "New reflection"}
+    )
+    assert next(x for x in sheet.identities if x.id == hidden.id) == hidden
+    assert next(x for x in records(final) if x.id == case).applied

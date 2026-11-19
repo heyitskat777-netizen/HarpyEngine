@@ -72,6 +72,10 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
             key = "visions:" + token
             options.append((key, "Use Visions of Infinity as " + role["label"][:52]))
             actions[key] = ("harpy_visions", ActorRef.model_validate(role["ref"]))
+        if role.get("harpy_rewrite"):
+            key = "rewrite:" + token
+            options.append((key, "Propose the one-minute edit as " + role["label"][:55]))
+            actions[key] = ("harpy_rewrite", ActorRef.model_validate(role["ref"]))
         if role.get("director_phone"):
             phone = "phone:" + token
             options.append((phone, "Call the Handler as " + role["label"][:55]))
@@ -236,6 +240,13 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
 
             assert ref is not None
             await open_visions(current, VisionsService(service.game), channel, ref)
+            return
+        if action == "harpy_rewrite":
+            from girlframe.discord_adapter.m3_harpy_rewrite import open_rewrite
+            from girlframe.services.m3_harpy_rewrite import RewriteService
+
+            assert ref is not None
+            await open_rewrite(current, RewriteService(service.game), channel, ref)
             return
         if action == "npc_handler_order":
             from girlframe.discord_adapter.m3_npc_orders import open_handler_order

@@ -3022,3 +3022,21 @@ Harpy and NPC Scientist thresholds, which have no parent
 Dive action. Other kinds of travel or forced rescue still
 need separate producers.
 [Harpy pp. 177–178](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=179) · [Native case](../../tests/rules/test_harpy_defeat.py)
+
+### Nothing Can Ever Be As Important As Us
+
+Base `df1309a2d1fe8a8fa04da9f9599877eb4875908b`. The
+original Harpy needs the actual advancement, an Intense
+Bond and a verified encounter alone. The original human
+facilitator verifies that no help is coming. The original
+Girl chooses which ordinary Identities to open. Only
+those names are shown to the Harpy during the one-minute
+editing window. The owner can then accept the exact draft.
+
+**One focused native case passed in 5.97 seconds**. It
+verified server-side expiration, reopening, exact private
+scope, a restart, and the actual approved name replacement.
+Marks, ids and the other original Identities were preserved.
+Unrestricted or conflicting mechanical adjustments still
+require human review under their own rules and ownership.
+[Harpy p. 182](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=184) · [Native case](../../tests/rules/test_harpy_advancements.py)

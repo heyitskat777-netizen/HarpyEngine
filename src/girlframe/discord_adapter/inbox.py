@@ -2094,6 +2094,14 @@ class InboxView(discord.ui.View):
             await open_passage(
                 interaction, HarpyVoidspaceService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_harpy_rewrite":
+            from girlframe.discord_adapter.m3_harpy_rewrite import open_rewrite_response
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_harpy_rewrite import RewriteService
+
+            await open_rewrite_response(
+                interaction, RewriteService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_npc_handover":
             from girlframe.discord_adapter.m3_npc_handover import open_handover_choice
             from girlframe.services.m2_game import GameService

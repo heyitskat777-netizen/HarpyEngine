@@ -4116,12 +4116,40 @@ class InboxService:
             from girlframe.services.m2_game import GameService
             from girlframe.services.m3_harpy_eagle import EagleService
             from girlframe.services.m3_harpy_gaze import GazeService
+            from girlframe.services.m3_harpy_rewrite import RewriteService
             from girlframe.services.m3_harpy_song import HarpySongService
             from girlframe.services.m3_harpy_visions import VisionsService
             from girlframe.services.m3_harpy_voidspace import HarpyVoidspaceService
             from girlframe.services.m3_npc_handover import LABELS as HANDOVER_LABELS
             from girlframe.services.m3_npc_handover import NpcHandoverService
             from girlframe.services.m3_npc_intelligence import IntelligenceService
+
+            rewrite = RewriteService(GameService(self.store))
+            for edit, edit_step in rewrite.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "harpy-rewrite:" + edit.id,
+                        "harpy_rewrite",
+                        edit.id,
+                        canon.revision,
+                        "plays",
+                        "Nothing Can Ever Be As Important As Us",
+                        "Original Harpy encounter",
+                        "pending",
+                        True,
+                        False,
+                        {
+                            "verify": "Verify the pair are alone and no help is coming.",
+                            "authorize": "Choose which of your Girl’s Identities to open.",
+                            "draft": "Submit your accepted scope of edits within one minute.",
+                            "apply": "Review the original Harpy’s proposed edits.",
+                            "expire": "Close the elapsed editing window.",
+                        }[edit_step],
+                        "This choice belongs to the original participants.",
+                        "Open your choice",
+                        task="m3_harpy_rewrite",
+                    )
+                )
 
             passages = HarpyVoidspaceService(GameService(self.store))
             for passage_id, passage_step in passages.tasks(connection, canon, viewer):
