@@ -2406,6 +2406,23 @@ the shared response form. The selectable acceptance value is
 now the same value the form submits.
 [Harpy advancements p. 182](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=184) · [Native cases](../../tests/rules/test_harpy_advancements.py)
 
+### Eagle Cracks the Shell holds the original exposed cockpit
+
+Base `8b74ed2e7f03a56155fb85a6f5ec99128a7631fe`. The actual
+Harpy uses a prior receipt exposing the original occupied
+Frame’s Core to it. It marks one Tag it actually gave the Girl.
+The exact cockpit and Girl are tracked together. The original
+Frame stays parked. The Harpy can hold a single Girl this way
+and can release her at its actual location. The original Frame
+requires its missing cockpit before it can be entered.
+
+**One focused native case passed in 4.28 seconds**, verifying
+the original exposure, marked Tag, held body, parked Frame,
+single-captive limit and release after restart. Recovery of
+the exact cockpit is tracked separately. Alternative sources
+for the Tag and forcibly recovering the captive remain open.
+[Harpy advancements p. 181](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=183) · [Native case](../../tests/rules/test_harpy_advancements.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

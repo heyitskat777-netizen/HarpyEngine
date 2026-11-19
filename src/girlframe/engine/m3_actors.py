@@ -383,6 +383,19 @@ def resolve(
                     ).hexdigest()
                 }
             )
+    from girlframe.engine.m3_harpy_eagle import held as held_by_harpy
+
+    enclosed_cockpit = held_by_harpy(state, ref) if ref.kind == "pilot" else None
+    if enclosed_cockpit is not None:
+        actual = actual.model_copy(
+            update=dict(
+                cell=None, inside_frame=True, piloting=False,
+                occupied_frame_instance=enclosed_cockpit.frame,
+                offstage_source=enclosed_cockpit.event,
+                custody="harpy:" + enclosed_cockpit.harpy.entity,
+            )
+        )
+
     from girlframe.engine.m3_consume import InternalCustody
     from girlframe.engine.m3_consume import records as consumption_records
 

@@ -440,6 +440,10 @@ def cockpit_enter(
     placement = next((x for x in state.placements if x.actor == actor), None)
     if placement is None or type(pilot) is not bool:
         raise ValueError("Record the actual original physical facts first")
+    from girlframe.engine.m3_harpy_eagle import missing
+
+    if missing(state, actor, placement.frame_instance):
+        raise ValueError("Recover the original cockpit removed by the Harpy before entering it")
     if pilot:
         from girlframe.engine.m3_casualty import can_pilot
         from girlframe.engine.m3_frame_control import active_takeover

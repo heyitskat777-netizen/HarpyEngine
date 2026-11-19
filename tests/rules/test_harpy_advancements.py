@@ -743,3 +743,109 @@ def test_song_of_love_lost_crowd_adds_only_the_actual_local_npcs(ledger):
     assert result.reaction and {x.entity for x in result.audience} == {"Broker", "Cook"}
     scene = next(x for x in updated.scene_casts if x.id == result.scene)
     assert {x.actor.entity for x in scene.roles if x.actor.kind == "npc"} == {"Broker", "Cook"}
+
+
+def test_eagle_cracks_the_actual_exposed_cockpit_and_holds_the_original_girl(ledger):
+    from test_physical_operations import place
+
+    from girlframe.discord_adapter.m3_harpy_eagle import open_eagle
+    from girlframe.engine.m2 import TagState
+    from girlframe.engine.m3_actors import resolve
+    from girlframe.engine.m3_harpy_advancements import EAGLE
+    from girlframe.engine.m3_harpy_eagle import held, missing
+    from girlframe.services.m3_actors import profiles
+    from girlframe.services.m3_battle import BattleService
+    from girlframe.services.m3_harpy_eagle import EagleService
+
+    _, game, _, harpy = ready(ledger)
+    policy = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update=dict(
+            m3_approval=policy.model_copy(
+                update=dict(
+                    activity_specialist_rules=policy.activity_specialist_rules | {EAGLE},
+                )
+            ),
+        )
+    )
+    HarpyAdvancementService(ledger).select(
+        PLAYER,
+        "learn-eagle",
+        harpy.entity,
+        state(game).revision,
+        EAGLE,
+    )
+    target = current_ref(state(game), OTHER.user_id)
+    with ledger.transaction() as c:
+        canon = place(state(game), OTHER.user_id)
+        canon.sheets["3"].tags.append(
+            TagState(
+                id="actual-harpy-tag",
+                label="An exposed flaw",
+                giver=PLAYER.user_id,
+                giver_actor=harpy,
+                observers=(PLAYER.user_id, OTHER.user_id),
+            ),
+        )
+        game.event(c, ADMIN.user_id, "synthetic-eagle-setup", "synthetic.position", canon)
+    service = EagleService(game)
+    assert service.get(PLAYER, 900, harpy)["targets"] == {}
+    with ledger.engine.connect() as c:
+        scene = game.scene(c, 900)["id"]
+    exposure = BattleService(game.store).expose(
+        OTHER,
+        "expose-original-for-harpy",
+        state(game).revision,
+        target,
+        "The Girl willingly exposes this exact cockpit's Core to the Harpy.",
+        opponent=harpy,
+        willing=True,
+        scene=scene,
+    )
+    view = service.get(PLAYER, 900, harpy)
+    key = next(iter(view["targets"]))
+
+    async def capture():
+        interaction = current(PLAYER.user_id, 89800)
+        await interaction.response.defer(ephemeral=True)
+        await open_eagle(interaction, service, 900, harpy)
+        form = interaction.edit_original_response.call_args.kwargs["view"]
+        form.values.update(target=(key,), account="The Harpy takes the actual exposed cockpit.")
+        await form.confirm.callback(current(PLAYER.user_id, 89801))
+        assert form.completed
+
+    asyncio.run(capture())
+    captured = state(game)
+    record = held(captured, target)
+    assert record.harpy == harpy and record.exposure == exposure["event"]
+    assert next(x for x in captured.sheets["3"].tags if x.id == record.tag).marked
+    with ledger.engine.connect() as c:
+        actual = resolve(captured, target, profiles(c, ledger.campaign_id))
+    assert actual.cell is None and actual.frame_cell == (0, 0) and actual.offstage_source
+    assert actual.piloting is False and missing(captured, target, record.frame)
+    ledger.engine.dispose()
+    with pytest.raises(WorkflowError, match="hold only one"):
+        service.act(
+            PLAYER,
+            "second-cockpit",
+            900,
+            harpy,
+            state(game).revision,
+            key,
+            "A second attempt.",
+        )
+    service.act(
+        PLAYER,
+        "release-original-cockpit",
+        900,
+        harpy,
+        state(game).revision,
+        "release",
+        "The Harpy releases the actual original Girl into the square.",
+    )
+    returned = state(game)
+    assert held(returned, target) is None and missing(returned, target, record.frame)
+    with ledger.engine.connect() as c:
+        actual = resolve(returned, target, profiles(c, ledger.campaign_id))
+    assert actual.cell == (0, 0) and not actual.inside_frame
+    assert game.dice.calls == 0

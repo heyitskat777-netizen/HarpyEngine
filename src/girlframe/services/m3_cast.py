@@ -221,6 +221,7 @@ class CastService:
                         and actor.controller == role.controller == viewer.user_id
                     ):
                         from girlframe.engine.m3_harpy_advancements import (
+                            EAGLE,
                             ONLY_SHE_MATTERS,
                             SONG_OF_LOVE_LOST,
                         )
@@ -229,6 +230,7 @@ class CastService:
                         for tag, rule in (
                             ("only_she_matters", ONLY_SHE_MATTERS),
                             ("harpy_song", SONG_OF_LOVE_LOST),
+                            ("harpy_eagle", EAGLE),
                         ):
                             try:
                                 scene_harpy(

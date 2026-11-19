@@ -8,11 +8,13 @@ SPARROWS = "harpy.harpy.sparrows-led-you-over-the-black-earth"
 ECHOES = "harpy.harpy.echoes-of-old-command"
 ONLY_SHE_MATTERS = "harpy.harpy.only-she-matters"
 SONG_OF_LOVE_LOST = "harpy.harpy.a-song-of-love-lost"
+EAGLE = "harpy.harpy.eagle-cracks-the-shell"
 ADVANCEMENTS = (
     (SPARROWS, "Sparrows Led You Over the Black Earth"),
     (ECHOES, "Echoes of Old Command"),
     (ONLY_SHE_MATTERS, "Only She Matters"),
     (SONG_OF_LOVE_LOST, "A Song of Love Lost"),
+    (EAGLE, "Eagle Cracks the Shell"),
 )
 SPARROWS_CHOICES = (
     ("shadow", "I’m a shadow in the corner of their eye"),
