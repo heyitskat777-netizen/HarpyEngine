@@ -247,7 +247,7 @@ def prove_award(
 
         prove_conversion(game, c, state, award)
         return
-    if source.trigger == "public_relations":
+    if source.trigger in ("public_relations", "advocate_pride_parade"):
         from girlframe.services.m3_handler_pr import prove_award as prove_pr
 
         prove_pr(game, c, state, award)

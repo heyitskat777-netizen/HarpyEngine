@@ -38,29 +38,43 @@ async def open_pr(
                 values["objective"],
                 values["context"],
                 people,
+                occasion=values.get("occasion", ("public_relations",))[0],
             )
-            return (
-                "PR planned. Actual hosting, Cadre activity and public result are still required."
-            )
+            return "Event planned. Record hosting, Cadre activity and the public result."
 
-        await NativeForm(
-            interaction.user.id,
-            "Plan actual Foundation media PR",
-            "Plan a real fundraiser/photoshoot. Planning grants no award or public posting. "
-            "Activity and result may span real campaign Sessions.",
-            [
-                Field("objective", "Concrete Foundation public objective", paragraph=True),
-                Field("context", "Actual media event context", paragraph=True),
+        fields = [
+            Field("objective", "Concrete public objective", paragraph=True),
+            Field("context", "Actual event context", paragraph=True),
+            Field(
+                "people",
+                "Original participating Girls",
+                tuple((x["token"], x["label"]) for x in data["people"]),
+                1,
+                len(data["people"]),
+            ),
+        ]
+        if data["pride_parade"]:
+            fields.insert(
+                0,
                 Field(
-                    "people",
-                    "Original participating Girls",
-                    tuple((x["token"], x["label"]) for x in data["people"]),
-                    1,
-                    len(data["people"]),
+                    "occasion",
+                    "Actual event",
+                    (
+                        ("public_relations", "Foundation public relations"),
+                        ("advocate_pride_parade", "Advocate pride parade"),
+                    ),
                 ),
-            ],
+            )
+        form = NativeForm(
+            interaction.user.id,
+            "Plan a public event",
+            "Hosting, Cadre activity and public result may span real campaign Sessions.",
+            fields,
             plan,
-        ).present(interaction)
+        )
+        if data["pride_parade"]:
+            form.values["occasion"] = ("public_relations",)
+        await form.present(interaction)
         return
     if data["phase"] == "complete":
         text = (
@@ -73,6 +87,8 @@ async def open_pr(
             text += " One genuine ordinary award is saved."
         elif data["successful"]:
             text += " Success is preserved without an award; ordinary slot/mark rules apply."
+        elif data["occasion"] == "advocate_pride_parade":
+            text += " The performed parade can count when an advancement slot is available."
         if not data["claimable"]:
             await reply(interaction, text)
             return
@@ -85,19 +101,17 @@ async def open_pr(
                 identity,
                 data["revision"],
             )
-            return (
-                "Successful source claimed once in this actual free Session; one advancement held."
-            )
+            return "The performed event was claimed in this Session. One advancement is held."
 
         await NativeForm(
             interaction.user.id,
-            "Claim saved successful PR",
+            "Claim the performed event",
             text,
             [
                 Field(
                     "claim",
                     "Actual ordinary source",
-                    (("claim", "Claim this successful event in the current free Session"),),
+                    (("claim", "Claim this performed event in the current free Session"),),
                 )
             ],
             claim,

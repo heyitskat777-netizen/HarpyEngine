@@ -16588,6 +16588,33 @@
       "module": "core"
     },
     {
+      "id": "handler-playbook.advocate.advancement-triggers",
+      "title": "Advocate Advancement Triggers",
+      "scope": "handler-playbook",
+      "kind": "mechanic",
+      "source": {
+        "document": "rulebook",
+        "pdf_page": 141,
+        "printed_page": 139,
+        "heading": "Advocate Advancement Triggers"
+      },
+      "required": true,
+      "implementation": "subset",
+      "source_audit": "inventoried",
+      "independent_review": "pending",
+      "reviewer": null,
+      "review_reference": null,
+      "contract": null,
+      "dependencies": [
+        "source.handler-advancement-triggers"
+      ],
+      "test_evidence": [
+        "tests/rules/test_handler_pr.py::test_performed_advocate_parade_uses_own_criterion_and_shared_session_cap"
+      ],
+      "m2_play_id": null,
+      "module": "core"
+    },
+    {
       "id": "handler-playbook.advocate.conditional-empathy",
       "title": "Conditional Empathy",
       "scope": "handler-playbook",

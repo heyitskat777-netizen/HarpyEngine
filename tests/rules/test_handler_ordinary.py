@@ -24,10 +24,10 @@ from girlframe.services.m3_handler_ordinary import HandlerOrdinaryService, evide
 from girlframe.services.onboarding import WorkflowError
 
 
-def setup(store, tmp_path, monkeypatch):
+def setup(store, tmp_path, monkeypatch, *, playbook="Scientist"):
     creation, game = ready(store)
     approved(store, game, tmp_path, monkeypatch, extra=(rules.RULE,))
-    save(creation, complete(creation, "Scientist"))
+    save(creation, complete(creation, playbook))
     agree(creation)
     data = creation.view(ADMIN)
     creation.activate(ADMIN, str(uuid4()), data["revision"], data["game_revision"], True)

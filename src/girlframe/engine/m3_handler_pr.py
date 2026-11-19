@@ -7,6 +7,9 @@ from pydantic import Field
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model
 
+ADVOCATE_RULE = "handler-playbook.advocate.advancement-triggers"
+Occasion = Literal["public_relations", "advocate_pride_parade"]
+
 
 class Activity(Model):
     actor: ActorRef
@@ -24,6 +27,9 @@ class Event(Model):
     objective: str = Field(min_length=1, max_length=1200)
     context: str = Field(min_length=1, max_length=1200)
     people: tuple[ActorRef, ...]
+    occasion: Occasion = Field(
+        default="public_relations", exclude_if=lambda value: value == "public_relations"
+    )
     phase: Literal["planned", "conduct", "result", "complete"] = "planned"
     hosting: Activity | None = None
     activities: tuple[Activity, ...] = ()
@@ -38,6 +44,12 @@ class Event(Model):
     award_session: str | None = None
     award_event: str | None = None
     award_blocked: str | None = None
+
+    @property
+    def qualifies(self) -> bool:
+        return self.phase == "complete" and (
+            self.successful is True or self.occasion == "advocate_pride_parade"
+        )
 
 
 def events(state: GameState) -> tuple[Event, ...]:

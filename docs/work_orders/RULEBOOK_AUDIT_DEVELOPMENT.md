@@ -1550,3 +1550,20 @@ The selected regression passed **62 tests in 76.43 seconds**. The
 focused case exercises the real part change, wrong target, retry, stale
 choice, private Inbox and restart. Scoped type checks passed.
 [Rulebook p. 118](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=120) · [Tests](../../tests/rules/test_casualty.py)
+
+### Advocate pride parade advancement
+
+Base `154ce0444002d82b93451035ca1ac594ff5a59f5`. The native public-event
+workflow can distinguish an actual Advocate parade from ordinary public
+relations. The original Advocate and Girl each record their own activity,
+and the authorized human records the public result. Page 139 awards
+holding the parade. A performed parade can meet the criterion when the
+public turnout objective failed. It has its own permanent mark and uses
+the same one-award Session limit as the ordinary criteria. The other
+Advocate advancement triggers remain open.
+
+The selected regression passed **44 tests in 107.25 seconds**. The
+focused case checks the actual native activity and result, the occupied
+Session limit, the separate criterion, retry and restart. Scoped type
+checks passed.
+[Rulebook pp. 139 and 151](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=141) · [Tests](../../tests/rules/test_handler_pr.py)

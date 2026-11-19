@@ -151,13 +151,13 @@ async def open_advancement(
         ]
         ordinary_source = data.get("ordinary_source")
         content = "**Handler advancement spent**\n" + (
-            (
-                "Ordinary public-relations accomplishment"
-                if ordinary_source["trigger"] == "public_relations"
-                else "Ordinary capture and conversion accomplishment"
-                if ordinary_source["trigger"] == "capture_convert"
-                else "Ordinary starting-Identity accomplishment"
-            )
+            {
+                "public_relations": "Ordinary public-relations accomplishment",
+                "capture_convert": "Ordinary capture and conversion accomplishment",
+                "identities_useful": "Ordinary starting-Identity accomplishment",
+                "dogrunner_all_dogs": "Dogrunner Cadre accomplishment",
+                "advocate_pride_parade": "Advocate pride parade",
+            }[ordinary_source["trigger"]]
             if ordinary_source
             else "Void Endgame " + data["rule"].rsplit(".", 1)[1]
         )
