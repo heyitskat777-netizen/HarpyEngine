@@ -56,6 +56,7 @@ def stage_siege(
     *,
     recruits: tuple[AdversaryPilot, ...] = (),
     faction: Faction | None = None,
+    victim: str = "ace",
 ) -> None:
     site = require_base(state, base)
     period = strain.periods._get(c, row["off_duty_id"])
@@ -64,20 +65,23 @@ def stage_siege(
     ace = next((str(uid) for uid in state.order if str(uid) not in period.ended_characters), None)
     if (
         handler is None
-        or ace is None
-        or ace not in period.character_ids
-        or not members._member(c, int(ace))
+        or victim not in ("ace", "handler")
         or any(x.id == row["id"] for x in rules.sieges(state))
     ):
-        raise WorkflowError("Recover the actual original Handler and present Ace")
-    target = ActorRef(kind="pilot", entity=ace, incarnation=period.character_ids[ace])
+        raise WorkflowError("Recover the actual original Handler and the intended siege target")
+    if victim == "handler":
+        target = handler
+    else:
+        if ace is None or ace not in period.character_ids or not members._member(c, int(ace)):
+            raise WorkflowError("Recover the actual present Ace")
+        target = ActorRef(kind="pilot", entity=ace, incarnation=period.character_ids[ace])
     if (
         resolve(
             state, target, profiles(c, strain.store.campaign_id), require_current_profile=False
         ).cell
         != site.cell
     ):
-        raise WorkflowError("Choose the operational base the original Ace actually occupies")
+        raise WorkflowError("Choose the operational base the selected original target occupies")
     assert state.world is not None
     factions = {x.id for x in state.world.factions if x.active and x.kind == "rebel"}
     living = tuple(x for x in state.world.pilots if x.kind == "rebel" and x.alive)
@@ -143,7 +147,7 @@ def stage_siege(
         attackers=tuple(actor for actor, _controller in roster),
     )
     for actor, controller in roster:
-        if controller in (state.handler, int(ace)) or not members._member(c, controller):
+        if controller in (state.handler, int(target.entity)) or not members._member(c, controller):
             raise WorkflowError("Recover each original Rebel's independent campaign controller")
         attempt = rules.Ambush(
             id=siege.id + ":" + actor.entity,
@@ -257,8 +261,14 @@ def _active_targets(
     period = OffDutyService(MissionService(game.store))._get(c, siege.period)
     if (
         period.phase != "preparing"
-        or period.character_ids.get(siege.target.entity) != siege.target.incarnation
-        or siege.target.entity in period.ended_characters
+        or (
+            siege.target.kind == "pilot"
+            and (
+                period.character_ids.get(siege.target.entity) != siege.target.incarnation
+                or siege.target.entity in period.ended_characters
+            )
+        )
+        or (siege.target.kind != "pilot" and siege.target != siege.handler)
         or not any(x.actor == case.attacker and x.controller == case.controller for x in cast.roles)
         or not any(
             x.actor == siege.target and x.controller == int(siege.target.entity) for x in cast.roles
@@ -405,8 +415,9 @@ class AmbushService:
             )
             targets: tuple[tuple[str, str], ...] = ()
             if not needs_inventory and case.opening is None and cast is not None:
+                bound = profiles(c, self.store.campaign_id)
                 targets = tuple(
-                    (x.entity, state.sheets[x.entity].callsign)
+                    (x.entity, resolve(state, x, bound, require_current_profile=False).label)
                     for x in _active_targets(c, self.game, state, case, cast)
                 )
             return dict(
@@ -431,7 +442,7 @@ class AmbushService:
     ) -> dict[str, Any]:
         account = account.strip()
         if not 0 < len(account) <= 1200:
-            raise WorkflowError("Describe the actual attempt to capture the original Girl")
+            raise WorkflowError("Describe the actual attack on the original target")
         missions = MissionService(self.store)
 
         def authorize(c: Connection) -> None:

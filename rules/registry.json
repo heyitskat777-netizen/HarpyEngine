@@ -18225,7 +18225,7 @@
         "trigger": "The saved High Rebellion die 1, column 1 targets the original occupied base.",
         "actor_type": "The original Handler stages the event. Each actual independently controlled Rebel Pilot owns its attack.",
         "pre_roll_sources": [
-          "Original saved Strain die and selected column, the operational base and present original Ace, and exact original living Rebel roster.",
+          "Original saved Strain die and selected column, the operational base and present original Ace or Handler, and exact original living Rebel roster.",
           "If no living Rebel Pilot exists, introduce exactly three distinct ordinary Rebel Pilots. Each human confirms their original role and actual own resources."
         ],
         "roll_kind": "diceless",
@@ -18233,10 +18233,10 @@
         "tier_options": {
           "diceless": ["Use each living eligible Rebel or introduce the required three when none exists."]
         },
-        "choice_ownership": "The campaign Handler chooses the actual base and presentation. Each attacking role owns its Assault, and the actual table owns its rulings.",
-        "target_policy": "The original Ace at the selected actual operational base. The alternate original Handler target remains outside this port.",
+        "choice_ownership": "The campaign Handler chooses the occupied base and target. Each attacking role owns its Assault, the actual table owns its rulings and the original Handler owns any Handler-body consequence.",
+        "target_policy": "The original Ace or Handler at the selected operational base. The latter's actual body must be positioned and cast.",
         "post_roll_effects": ["The original Strain work stays pending until every original attack and resulting consequence is completed."],
-        "mandatory_followups": ["Use the existing owned Assault workflow. Other Rebel resource ports and the alternate Handler target require native coverage."],
+        "mandatory_followups": ["Use the actual owned Assault and any resulting original Defender consequence. Other Rebel resource families need separate coverage."],
         "handler_or_gm_intervention": "Every attack retains its original human controller and actual native table decisions.",
         "test_fixture_ids": ["tests/rules/test_rebel_ambush.py"]
       },

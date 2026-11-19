@@ -280,9 +280,9 @@ def apply(
         if not choice.target or not choice.victim:
             raise ValueError("Choose the original base and actual Foundation Pilot")
     elif rule == REBEL_SIEGE:
-        fields(choice, {"target", "siege_recruits", "faction"})
-        if not choice.target:
-            raise ValueError("Choose the operational base currently occupied by the original Cadre")
+        fields(choice, {"target", "victim", "siege_recruits", "faction"})
+        if not choice.target or choice.victim not in (None, "ace", "handler"):
+            raise ValueError("Choose the actual occupied base and its original Ace or Handler")
     elif rule == REBEL_AMBUSH:
         from girlframe.engine.m3_rebel_ambush import arm as arm_ambush
 

@@ -1,6 +1,8 @@
 """Low Rebellion opens a private next-mission attack using the original Rebel's resources."""
 
 import asyncio
+import json
+from uuid import uuid4
 
 import pytest
 from test_cast_service import change
@@ -17,9 +19,10 @@ from test_world import gorgon, initial
 from girlframe.delivery.m2_worker import GameWorker
 from girlframe.discord_adapter.inbox import InboxView
 from girlframe.discord_adapter.m2_forms import NativeForm
-from girlframe.discord_adapter.m3_battle import open_context
+from girlframe.discord_adapter.m3_battle import open_context, open_declaration
 from girlframe.discord_adapter.m3_strain_effects import open_effect
 from girlframe.engine.m2 import IdentityState
+from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_resources import rebel_inventory
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_battle_state import Declaration
@@ -32,6 +35,7 @@ from girlframe.services.inbox import InboxService
 from girlframe.services.m3_actors import ActorService
 from girlframe.services.m3_battle import BattleService
 from girlframe.services.m3_cast import CastService
+from girlframe.services.m3_handler_consequences import HandlerConsequenceService
 from girlframe.services.m3_off_duty_cycle import CycleService
 from girlframe.services.m3_punishments import PunishmentService
 from girlframe.services.m3_rebel_ambush import AmbushService, HuntService, SiegeService
@@ -40,11 +44,18 @@ from girlframe.services.onboarding import WorkflowError
 
 
 @pytest.mark.parametrize(
-    "rule,introduce",
-    ((RULE, False), (HUNT_RULE, False), (SIEGE_RULE, False), (SIEGE_RULE, True)),
+    "rule,introduce,target_handler",
+    (
+        (RULE, False, False),
+        (HUNT_RULE, False, False),
+        (SIEGE_RULE, False, False),
+        (SIEGE_RULE, True, False),
+        (SIEGE_RULE, False, True),
+    ),
 )
-def test_actual_rebel_attacks_use_original_roles(ledger, rule, introduce):
+def test_actual_rebel_attacks_use_original_roles(ledger, rule, introduce, target_handler):
     pursuit, siege = rule == HUNT_RULE, rule == SIEGE_RULE
+    target_id = "1" if target_handler else "2"
     strain, game = ready(ledger)
     policy = ledger.policy.m3_approval
     ledger.policy = ledger.policy.model_copy(
@@ -119,6 +130,16 @@ def test_actual_rebel_attacks_use_original_roles(ledger, rule, introduce):
                     owner=3,
                     judge=1,
                 )
+        if target_handler:
+            canon.facts.append(
+                dict(
+                    kind="ordinary_handler_movement",
+                    actor=current_ref(canon, 1).model_dump_json(),
+                    cell=json.dumps((0, 0)),
+                    event="fixture-present-handler",
+                )
+            )
+        if siege and not target_handler:
             reserve = next(x for x in canon.sheets["2"].assets if x.family == "frame")
             for index in range(2 if introduce else 1):
                 canon.sheets["2"].assets.append(
@@ -222,6 +243,7 @@ def test_actual_rebel_attacks_use_original_roles(ledger, rule, introduce):
             lambda click: open_effect(click, effects, identity),
             account="PRIVATE_AMBUSH_SOURCE",
             **({"siege_base": ("base0",)} if siege else {"ambusher": (actor.entity,)}),
+            **({"siege_target": ("handler",)} if target_handler else {}),
             **({"hunt_victim": ("2",)} if pursuit else {}),
             **recruits,
         )
@@ -233,6 +255,8 @@ def test_actual_rebel_attacks_use_original_roles(ledger, rule, introduce):
         with pytest.raises(WorkflowError, match="Strain"):
             activate(cycle, game, period)
         (plan,) = sieges(state(game))
+        assert plan.target.entity == target_id
+        assert plan.target.kind == ("handler" if target_handler else "pilot")
         if introduce:
             actor, second_actor, third_actor = plan.attackers
             bodies = {x.id: x for x in state(game).world.pilots}
@@ -264,7 +288,6 @@ def test_actual_rebel_attacks_use_original_roles(ledger, rule, introduce):
                 assert inventory is not None and inventory.heat == 2
         else:
             assert plan.attackers == (actor, second_actor)
-        assert plan.target.entity == "2"
         with pytest.raises(WorkflowError, match="every original Rebel attack"):
             SiegeService(strain).finish(ADMIN, "premature-siege", identity, state(game).revision)
     else:
@@ -298,6 +321,9 @@ def test_actual_rebel_attacks_use_original_roles(ledger, rule, introduce):
         service.get(PLAYER, identity, 900)
     cast = CastService(actors)
     change(cast, OTHER, "join", actor)
+    if target_handler:
+        assert service.get(OTHER, identity, 900)["targets"] == ()
+        change(cast, ADMIN, "join", plan.target)
     revision = state(game).revision
     with pytest.raises(WorkflowError, match="actual (mission|base) cast"):
         service.open(OTHER, "not-a-mission-target", identity, revision, 900, "3", "Invalid attempt")
@@ -306,7 +332,7 @@ def test_actual_rebel_attacks_use_original_roles(ledger, rule, introduce):
     ledger.safety(PLAYER, "pause-ambush", ledger.status(PLAYER)["revision"], pause=True)
     with pytest.raises(WorkflowError, match="SAFETY_PAUSED"):
         service.open(
-            OTHER, "paused-ambush", identity, revision, 900, "2", "Actual original attempt"
+            OTHER, "paused-ambush", identity, revision, 900, target_id, "Actual original attempt"
         )
     ledger.safety(PLAYER, "resume-ambush", ledger.status(PLAYER)["revision"], pause=False)
 
@@ -317,11 +343,13 @@ def test_actual_rebel_attacks_use_original_roles(ledger, rule, introduce):
         await InboxView(inbox, 3).route(click, entry)
 
     asyncio.run(
-        native_form(OTHER, 40410, inbox_open, target=("2",), account="Actual original attempt")
+        native_form(
+            OTHER, 40410, inbox_open, target=(target_id,), account="Actual original attempt"
+        )
     )
-    assert service.open(OTHER, "40411", identity, revision, 900, "2", "Actual original attempt")[
-        "opened"
-    ]
+    assert service.open(
+        OTHER, "40411", identity, revision, 900, target_id, "Actual original attempt"
+    )["opened"]
     ledger.engine.dispose()
     asset = next(x.id for x in state(game).sheets["2"].assets if x.family == "frame")
     worker, gateway = GameWorker(game), Gateway()
@@ -331,7 +359,12 @@ def test_actual_rebel_attacks_use_original_roles(ledger, rule, introduce):
         fight = BattleService(ledger)
         data = fight.preview(OTHER, 900)
         fighter = next(x for x in data["actors"] if x["ref"]["entity"] == assailant.entity)
-        chased = next(x for x in data["actors"] if x["ref"]["entity"] == "2")
+        chased = next(x for x in data["actors"] if x["ref"]["entity"] == target_id)
+        account = (
+            "I close on the original Handler in the occupied base."
+            if target_handler
+            else "I flank the transport, aiming to capture the Girl."
+        )
         declaration = Declaration(
             play="all_out_assault",
             actor=assailant,
@@ -340,11 +373,38 @@ def test_actual_rebel_attacks_use_original_roles(ledger, rule, introduce):
             target_asset=target_asset,
             actor_sha256=fighter["sha256"],
             target_sha256=chased["sha256"],
-            account="I flank the transport, aiming to capture the Girl.",
+            account=account,
         )
-        offered = fight.propose(
-            OTHER, f"ambush-declaration-{number}", data["revision"], 900, declaration
-        )
+        proposal_key = f"ambush-declaration-{number}"
+        if target_handler:
+            sequence = 10_000 + number
+            proposal_key = str(sequence + 2)
+
+            async def native_declaration():
+                click = current(OTHER.user_id, sequence)
+                click.channel_id = 900
+                await click.response.defer(ephemeral=True)
+                await open_declaration(click, fight)
+                form = click.edit_original_response.call_args.kwargs["view"]
+                form.values.update(
+                    actor=(assailant.token,),
+                    target=(chased["token"],),
+                    play=("all_out_assault",),
+                )
+                choose = current(OTHER.user_id, sequence + 1)
+                choose.channel_id = 900
+                await choose.response.defer(ephemeral=True)
+                await form.confirm.callback(choose)
+                confirm = choose.edit_original_response.call_args.kwargs["view"]
+                assert isinstance(confirm, NativeForm)
+                assert "target_asset" not in {f.key for f in confirm.fields}
+                confirm.values.update(asset=(attacking_asset,), account=account)
+                sent = current(OTHER.user_id, sequence + 2)
+                await confirm.confirm.callback(sent)
+                assert confirm.completed, sent.followup.send.call_args
+
+            asyncio.run(native_declaration())
+        offered = fight.propose(OTHER, proposal_key, data["revision"], 900, declaration)
         fight.confirm(
             ADMIN,
             f"ambush-review-{number}",
@@ -373,12 +433,32 @@ def test_actual_rebel_attacks_use_original_roles(ledger, rule, introduce):
         for member in (ADMIN, PLAYER, OTHER):
             answer(game, member, "battle_assault_table", flag=vast, text="Original table view")
 
-    assault(40420, asset, vast=False)
+    def settle_body():
+        if target_handler:
+            body = HandlerConsequenceService(ledger)
+            consequence = next(x for x in body.tasks(ADMIN) if x["trigger"] == "asset_damage")
+            preview = body.get(ADMIN, consequence["id"])
+            body.respond(
+                ADMIN,
+                str(uuid4()),
+                consequence["id"],
+                preview["game_revision"],
+                "injury",
+                "The original Handler suffers the actual combat injury.",
+            )
+
+    initial_girl = state(game).sheets["2"].model_copy(deep=True)
+    assault(40420, None if target_handler else asset, vast=False)
+    settle_body()
     completed_attack = next(x for x in ambushes(state(game)) if x.attacker == actor)
     assert completed_attack.action and completed_attack.completed is None
     assert game.inspect(OTHER, completed_attack.action)["state"] == "complete"
     canon = state(game)
-    assert next(x for x in canon.sheets["2"].assets if x.id == asset).damaged
+    if target_handler:
+        assert canon.sheets["2"] == initial_girl
+        assert canon.handler_injuries[-1].actor == plan.target
+    else:
+        assert next(x for x in canon.sheets["2"].assets if x.id == asset).damaged
     assert canon.sheets["3"] == old_other
     assert rebel_inventory(canon, actor).heat == 1
     tick(worker, gateway, 5)
@@ -394,14 +474,21 @@ def test_actual_rebel_attacks_use_original_roles(ledger, rule, introduce):
         change(cast, OTHER, "join", second_actor)
         identity = second.id
         asyncio.run(
-            native_form(OTHER, 40434, inbox_open, target=("2",), account="Second original attack")
+            native_form(
+                OTHER, 40434, inbox_open, target=(target_id,), account="Second original attack"
+            )
         )
         remaining = next(
             x.id for x in state(game).sheets["2"].assets if x.family == "frame" and not x.damaged
         )
         assault(
-            40436, remaining, vast=False, assailant=second_actor, attacking_asset=second_weapon.id
+            40436,
+            None if target_handler else remaining,
+            vast=False,
+            assailant=second_actor,
+            attacking_asset=second_weapon.id,
         )
+        settle_body()
         assert review.get(ADMIN, root)["resolved"] == 2
         assert rebel_inventory(state(game), second_actor).heat == 1
         tick(worker, gateway, 5)

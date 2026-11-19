@@ -91,17 +91,17 @@ async def open_ambush(
             values["account"],
         )
         return (
-            "The opening is recorded. Declare the Assault against this Girl in the battle control."
+            "The opening is recorded. Declare the Assault against this actor in the battle control."
         )
 
     await NativeForm(
         interaction.user.id,
         "Open a Rebel siege attack" if siege else "Open the original ambush",
-        "Confirm the original Ace your Rebel is attacking."
+        "Confirm the original siege target your Rebel is attacking."
         if siege
         else "Choose an original mission participant you are attempting to capture.",
         [
-            Field("target", "Original Girl", data["targets"]),
+            Field("target", "Original siege target" if siege else "Original Girl", data["targets"]),
             Field("account", "Describe your actual ambush", paragraph=True),
         ],
         submit,

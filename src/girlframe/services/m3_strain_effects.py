@@ -711,6 +711,7 @@ class EffectService:
                     choice.account.strip(),
                     recruits=choice.siege_recruits,
                     faction=choice.faction,
+                    victim=choice.victim or "ace",
                 )
             needs_foundation_attack = choice.rule_id == FOUNDATION_ATTACK
             if needs_foundation_attack:

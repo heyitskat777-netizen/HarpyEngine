@@ -819,6 +819,15 @@ def effect_form(
                     tuple((site.id, site.name) for site in theft_bases.values()) or WAIT,
                 )
             )
+            fields.append(
+                Field(
+                    "siege_target",
+                    "Who are the original Rebels trying to kill?",
+                    (("ace", "The original Ace"), ("handler", "The original Handler")),
+                    0,
+                    required=False,
+                )
+            )
             if siege_seed:
                 if siege_groups:
                     fields.append(
@@ -1626,6 +1635,8 @@ def effect_form(
         if rule == REBEL_SIEGE:
             base_id = values["siege_base"][0]
             payload["target"] = base_id
+            if values.get("siege_target"):
+                payload["victim"] = values["siege_target"][0]
             if siege_seed:
                 if base_id not in theft_bases:
                     raise WorkflowError("Choose the actual base and active Rebel group")

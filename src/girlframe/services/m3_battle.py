@@ -474,12 +474,20 @@ def prepare(
     if (
         acting.ref.kind == "external_pilot"
         and rebel_inventory(state, acting.ref) is not None
-        and target.ref.kind == "pilot"
+        and target.ref.kind in ("pilot", "handler")
         and prepared.play == "all_out_assault"
     ):
         from girlframe.services.m3_rebel_ambush import context as ambush_context
 
         ambush = ambush_context(c, game, state, acting.ref, target.ref, cast)
+    if (
+        prepared.play == "all_out_assault"
+        and declaration.target_asset is None
+        and (ambush is None or ambush.siege is None or target.rules != "handler")
+    ):
+        raise WorkflowError(
+            "Use an assetless strike only against the original Handler in its siege."
+        )
     for body, outside in (
         (acting, context.actor_outside_frame),
         (target, context.target_outside_frame),
@@ -691,8 +699,7 @@ def pre_roll(
                 rules.intact_assets(original, context.declaration.target, bound)
             ):
                 raise WorkflowError("Preserve the genuine initial Core Asset penalty")
-        else:
-            assert context.declaration.target_asset is not None
+        elif context.declaration.target_asset is not None:
             rules.owned_asset(
                 state, context.declaration.target, context.declaration.target_asset, bound
             )
@@ -3179,6 +3186,9 @@ class BattleService:
                     state, required_actor, bound, require_current_profile=False
                 ).controller
             actors = []
+            from girlframe.engine.m3_rebel_ambush import ambushes
+
+            openings = ambushes(state)
             for role in cast.roles:
                 if not _visible(state, role.actor, viewer.user_id):
                     continue
@@ -3204,6 +3214,18 @@ class BattleService:
                         girl=actual.girl,
                         piloting=actual.piloting,
                         heat=actual.heat,
+                        rebel_targets=tuple(
+                            x.target.token
+                            for x in openings
+                            if owned
+                            and x.attacker == role.actor
+                            and x.controller == viewer.user_id
+                            and x.opening is not None
+                            and x.action is None
+                            and x.scene == cast.id
+                            and x.channel == cast.channel
+                            and x.target is not None
+                        ),
                         gorgon_class=next(
                             (
                                 x.gorgon_class
@@ -3379,6 +3401,12 @@ class BattleService:
                     raise WorkflowError(
                         "The opposing Asset must actually be revealed in Conversation."
                     )
+            elif declaration.play == "all_out_assault":
+                from girlframe.services.m3_rebel_ambush import context as ambush_context
+
+                siege_source = ambush_context(c, self.game, state, actor.ref, target.ref, cast)
+                if siege_source.siege is None or target.rules != "handler":
+                    raise WorkflowError("Use the original living Handler in its actual siege.")
             try:
                 core = (
                     rules.core_available(state, declaration.target, declaration.actor, bound)

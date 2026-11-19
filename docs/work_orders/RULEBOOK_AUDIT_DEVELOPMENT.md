@@ -1689,6 +1689,27 @@ communication boundaries, the terrain Tag, fouled footing, and the
 Shell's owned Heat roll and consequences.
 [Sentinel p. 171](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=173)
 
+### High Rebellion siege against the Handler
+
+Base `8ddda3fbc1db2078aa10e31e07d9af13f723bcbd`. High Rebellion
+1.1 can send the original Rebels against either the Ace or the
+original Handler at the occupied base. The native declaration uses
+the actual attacker and target in the same cast and verifies the
+saved siege again at the Play. A successful strike against the
+ordinary Handler routes to the Handler's own body consequence in
+the private Inbox. Each attacker retains their separate source.
+Off-Duty can begin after the original attacks are genuinely
+resolved. Early target death before the remaining attacks still
+needs a verified succession path.
+
+**72 selected tests passed in 169.87 seconds**. The new native
+scenario used two independently controlled Rebels and the original
+Handler. The selection included the existing Ace, newly enrolled
+Rebels, wrong owner, stale state, pause, restart, prior Foundation
+attack, Battle and Handler consequence cases. Ruff and scoped mypy
+passed.
+[High Rebellion p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) · [Handler p. 13](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=15)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

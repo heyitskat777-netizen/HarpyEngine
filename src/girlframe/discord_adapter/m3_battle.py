@@ -61,8 +61,7 @@ async def open_declaration(
         and (
             x["ref"]["kind"] == "pilot"
             or x["ref"]["kind"] == "external_pilot"
-            and x["girl"] == "harpy"
-            and x["heat"] is not None
+            and (x["girl"] == "harpy" and x["heat"] is not None or x.get("rebel_targets"))
         )
     ]
     targets = [x for x in data["actors"] if x["ref"]["kind"] != "pilot" or not x["owned"]]
@@ -83,6 +82,10 @@ async def open_declaration(
         actor = next(x for x in own if x["token"] == values["actor"][0])
         target = next(x for x in targets if x["token"] == values["target"][0])
         play = values["play"][0]
+        rebel = actor.get("rebel_targets", ())
+        if rebel and (play != "all_out_assault" or target["token"] not in rebel):
+            return "Use the original Rebel's actual opened Assault target."
+        body_assault = target["rules"] == "handler" and target["token"] in rebel
 
         async def declare(next_interaction: discord.Interaction, details: dict[str, Any]) -> str:
             proposal = Declaration(
@@ -90,7 +93,7 @@ async def open_declaration(
                 actor=ActorRef.model_validate(actor["ref"]),
                 target=ActorRef.model_validate(target["ref"]),
                 attacking_asset=details["asset"][0],
-                target_asset=details["target_asset"][0] if play == "all_out_assault" else None,
+                target_asset=(details.get("target_asset") or (None,))[0],
                 actor_sha256=actor["sha256"],
                 target_sha256=target["sha256"],
                 account=details["account"],
@@ -133,15 +136,16 @@ async def open_declaration(
             )
         ]
         if play == "all_out_assault":
-            if not target["assets"]:
+            if not target["assets"] and not body_assault:
                 return "All Out Assault needs an actual opposing Asset; this actor has none."
-            fields.append(
-                Field(
-                    "target_asset",
-                    "Actual opposing Asset",
-                    tuple((x["id"], x["name"]) for x in target["assets"]),
+            if target["assets"]:
+                fields.append(
+                    Field(
+                        "target_asset",
+                        "Actual opposing Asset",
+                        tuple((x["id"], x["name"]) for x in target["assets"]),
+                    )
                 )
-            )
         fields.append(Field("account", "Describe your opening and decisive action", paragraph=True))
         form = NativeForm(
             current.user.id,
