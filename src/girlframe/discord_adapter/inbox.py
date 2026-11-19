@@ -2150,8 +2150,10 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_ancillary_intimacy import AncillaryIntimacyService
 
             await open_ancillary_intimacy_choice(
-                interaction, AncillaryIntimacyService(GameService(self.service.store)),
-                item.identity, item.source.removeprefix("ancillary_private_"),
+                interaction,
+                AncillaryIntimacyService(GameService(self.service.store)),
+                item.identity,
+                item.source.removeprefix("ancillary_private_"),
             )
         elif item.task == "m3_soldier_surgery":
             from girlframe.discord_adapter.m3_soldier_surgery import open_soldier_surgery
@@ -2174,8 +2176,9 @@ class InboxView(discord.ui.View):
             from girlframe.services.m2_game import GameService
             from girlframe.services.m3_chained_isolation import IsolationService
 
-            await open_isolation(interaction, IsolationService(GameService(self.service.store)),
-                                 item.identity)
+            await open_isolation(
+                interaction, IsolationService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_chained_placement":
             from girlframe.discord_adapter.m3_chained_darling import open_chained_review
             from girlframe.services.m2_game import GameService
@@ -2208,7 +2211,9 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_mercenary_patron import MercenaryPatronService
 
             await open_patron_inbox(
-                interaction, MercenaryPatronService(GameService(self.service.store)), item.identity,
+                interaction,
+                MercenaryPatronService(GameService(self.service.store)),
+                item.identity,
                 item.source.removeprefix("mercenary_patron_"),
             )
         elif item.task == "m3_harpy_kiss":
@@ -2461,6 +2466,17 @@ class InboxView(discord.ui.View):
                 raise WorkflowError("Refresh your actual owned Tag action.")
             await open_actor_play(
                 interaction, game, ActorRef.model_validate_json(record["details"]["actor"])
+            )
+        elif item.task == "trainer_heel":
+            from girlframe.discord_adapter.m3_movement import open_movement
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_movement import MovementService
+            from girlframe.services.m3_trainer_phrases import heel_task
+
+            game = GameService(self.service.store)
+            work = await asyncio.to_thread(heel_task, game, viewer, item.identity)
+            await open_movement(
+                interaction, MovementService(game), channel=work.channel, actor=work.target
             )
         elif item.task == "m2_choice":
             from girlframe.discord_adapter.m2_ui import open_choice

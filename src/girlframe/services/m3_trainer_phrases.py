@@ -10,20 +10,25 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput, higher, shift_status
 from girlframe.engine.m3_actor_bonds import current_ref
-from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_actor_state import ActorRef, ActorView
+from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_handler_state import Conditioning
 from girlframe.engine.m3_leviathan_obsession import allowed_gain
 from girlframe.engine.m3_off_duty import Period
 from girlframe.engine.m3_trainer_phrases import (
     PHRASE_LABELS,
     TARGETED,
+    Heel,
     Seated,
+    pending_heel,
+    save_heel,
     save_sitting,
     sitting,
 )
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
+from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_handler_book_orders import active_book
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
@@ -35,12 +40,13 @@ RULE = "handler-playbook.trainer.conditioning-phrases"
 SPEAK = "trainer_speak_answer"
 HEAR = "trainer_speak_heard"
 SIT = "trainer_sit"
+HEEL = "trainer_heel_response"
 FLIRT = "trainer_flirt_play"
 ROUGH_OFFER = "trainer_rough_offer"
 ROUGH_REPLY = "trainer_rough_reply"
 ROUGH_HEARD = "trainer_rough_heard"
 ROUGH_CHOICES = (ROUGH_OFFER, ROUGH_REPLY, ROUGH_HEARD)
-RESPONSE_CHOICES = (SPEAK, HEAR, SIT, *ROUGH_CHOICES)
+RESPONSE_CHOICES = (SPEAK, HEAR, SIT, HEEL, *ROUGH_CHOICES)
 
 
 def _installation(
@@ -194,6 +200,8 @@ def stage(
         raise WorkflowError(f"Use an installed {label} phrase and its actual higher-Status issuer")
     if phrase == "sit":
         _seat_body(state, girl)
+    if phrase == "heel":
+        _heel_bodies(game, c, state, girl, current_ref(state, issuer))
     if (counterpart is not None) != (phrase in TARGETED):
         raise WorkflowError("Choose a nominated Girl only for a phrase that names a counterpart")
     nominated = None
@@ -310,7 +318,7 @@ def offer_phrase(
         c,
         action,
         int(saved["target"]["entity"]),
-        SIT if saved["phrase"] == "sit" else SPEAK,
+        {"sit": SIT, "heel": HEEL}.get(saved["phrase"], SPEAK),
         dict(source=saved),
     )
     return True
@@ -405,6 +413,29 @@ def choose(
             ),
         )
         return
+    if request["kind"] == HEEL:
+        if saved["phrase"] != "heel" or not answer.text.strip() or answer.flag is not None:
+            raise WorkflowError("Describe how the original Girl actually answers Heel")
+        girl = ActorRef.model_validate(saved["target"])
+        issuer = ActorRef.model_validate(saved["issuer"])
+        body, caller = _heel_bodies(game, c, state, girl, issuer)
+        event = action["data"]["response_event"]
+        seated = sitting(state, girl)
+        if seated is not None:
+            save_sitting(state, seated.model_copy(update=dict(released=event)))
+        save_heel(
+            state,
+            Heel(
+                target=girl,
+                issuer=issuer,
+                order=saved["order"],
+                event=event,
+                scene=action["scene_id"],
+                channel=int(action["channel_id"]),
+                reached=event if body.cell == caller.cell else None,
+            ),
+        )
+        return
     if request["kind"] == SPEAK:
         if not answer.text.strip() or answer.flag is not None:
             raise WorkflowError("Only the Girl chooses what answer she actually gives")
@@ -476,12 +507,68 @@ def display(
                 return "Your counterpart accepted. Use the usual scene controls if you continue."
             return "Your counterpart declined the invitation."
         raise WorkflowError("Recover the original invitation and its actual response")
-    if request["kind"] in (SPEAK, SIT):
+    if request["kind"] in (SPEAK, SIT, HEEL):
         return str(root["data"]["order_text"])
     spoken = action["data"].get("trainer_spoken", {})
     if spoken.get("source") != saved:
         raise WorkflowError("Only the original recipient can recover this actual answer")
     return str(spoken["answer"])
+
+
+def _heel_bodies(
+    game: "GameService", c: Connection, state: GameState, girl: ActorRef, issuer: ActorRef
+) -> tuple[ActorView, ActorView]:
+    bound = profiles(c, game.store.campaign_id)
+    try:
+        body = resolve(state, girl, bound, require_current_profile=False)
+        caller = resolve(state, issuer, bound, require_current_profile=False)
+    except ValueError as exc:
+        raise WorkflowError("Recover the original Heel participants") from exc
+    if (
+        body.cell is None
+        or caller.cell is None
+        or body.inside_frame is not False
+        or body.offstage_source
+        or caller.offstage_source
+        or body.custody not in (None, "free")
+    ):
+        raise WorkflowError("Heel requires the two original bodies with known positions")
+    return body, caller
+
+
+def reach_heel(
+    game: "GameService", c: Connection, state: GameState, girl: ActorRef, scene: str, event: str
+) -> None:
+    work = pending_heel(state, girl)
+    if work is None or work.scene != scene:
+        return
+    current = game.scene(c, work.channel)
+    if current["id"] != work.scene or int(work.issuer.entity) not in current["participants"]:
+        return
+    try:
+        body, caller = _heel_bodies(game, c, state, girl, work.issuer)
+    except WorkflowError:
+        return
+    if body.cell == caller.cell:
+        save_heel(state, work.model_copy(update=dict(reached=event)))
+
+
+def heel_task(game: "GameService", viewer: GuildViewer, event: str) -> Heel:
+    with game.store.engine.connect() as c:
+        game.authorize(c, viewer, game=False)
+        state = load_state(c, game.store.campaign_id)
+        if viewer.user_id not in state.order:
+            raise WorkflowError("Recover your own original Heel order")
+        work = pending_heel(state, current_ref(state, viewer.user_id))
+        if work is None or work.event != event:
+            raise WorkflowError("Recover your own original Heel order")
+        scene = game.scene(c, work.channel)
+        if scene["id"] != work.scene or not {viewer.user_id, int(work.issuer.entity)} <= set(
+            scene["participants"]
+        ):
+            raise WorkflowError("Recover the active original Heel scene and issuer")
+        _heel_bodies(game, c, state, work.target, work.issuer)
+        return work
 
 
 def _seat_body(state: GameState, girl: ActorRef) -> None:

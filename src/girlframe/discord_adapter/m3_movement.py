@@ -13,10 +13,20 @@ from girlframe.services.m3_movement import MovementService
 from girlframe.services.onboarding import WorkflowError
 
 
-async def open_movement(interaction: discord.Interaction, service: MovementService) -> None:
+async def open_movement(
+    interaction: discord.Interaction,
+    service: MovementService,
+    *,
+    channel: int | None = None,
+    actor: ActorRef | None = None,
+) -> None:
     data = await asyncio.to_thread(
-        service.menu, viewer_from_interaction(interaction), int(interaction.channel_id or 0)
+        service.menu,
+        viewer_from_interaction(interaction),
+        channel or int(interaction.channel_id or 0),
     )
+    if actor is not None:
+        data["actors"] = [x for x in data["actors"] if x["id"] == actor.token]
     if not data["actors"]:
         raise WorkflowError("Establish your actual role and physical position first")
     choices = {x["id"]: ActorRef.model_validate(x["ref"]) for x in data["actors"]}

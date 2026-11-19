@@ -242,6 +242,8 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
         fields = [text("text", "Your own answer to Speak")]
     elif kind == "trainer_sit":
         fields = [text("text", "Describe your character sitting")]
+    elif kind == "trainer_heel_response":
+        fields = [text("text", "Describe your response to Heel")]
     elif kind == "trainer_speak_heard":
         fields = [Field("flag", "Confirm you heard this answer", (("yes", "I heard it"),))]
     elif kind == "trainer_rough_offer":
@@ -2964,6 +2966,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
             app_commands.Choice(name="Dose Up (typed cocktail order)", value="dose_up"),
             app_commands.Choice(name="Conditioning Phrase (Speak)", value="trainer_speak"),
             app_commands.Choice(name="Conditioning Phrase (Sit)", value="trainer_sit"),
+            app_commands.Choice(name="Conditioning Phrase (Heel)", value="trainer_heel"),
             app_commands.Choice(name="Conditioning Phrase (Play Gentle)", value="trainer_gentle"),
             app_commands.Choice(name="Conditioning Phrase (Play Rough)", value="trainer_rough"),
             app_commands.Choice(name="Grant leave after Sit", value="trainer_leave"),
@@ -2983,6 +2986,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         phrase = {
             "trainer_speak": "speak",
             "trainer_sit": "sit",
+            "trainer_heel": "heel",
             "trainer_gentle": "play_gentle",
             "trainer_rough": "play_rough",
         }.get(use)

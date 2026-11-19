@@ -553,6 +553,33 @@ class InboxService:
                         task="m2_choice",
                     )
                 )
+            from girlframe.engine.m3_trainer_phrases import pending_heel
+
+            sheet = canon.sheets.get(str(viewer.user_id))
+            if viewer.user_id in canon.order and sheet is not None and sheet.character_id:
+                from girlframe.engine.m3_actor_bonds import current_ref
+
+                heel = pending_heel(canon, current_ref(canon, viewer.user_id))
+                if heel is not None:
+                    items.append(
+                        InboxItem(
+                            "trainer-heel:" + heel.event,
+                            "trainer_heel",
+                            heel.event,
+                            canon.revision,
+                            "plays",
+                            "Heel",
+                            "Original issuer",
+                            "pending",
+                            True,
+                            False,
+                            "Go to the original issuer's side.",
+                            "Record your actual movement in the source scene.",
+                            "Record movement",
+                            task="trainer_heel",
+                        )
+                    )
+
             from girlframe.services.m3_gorgon_contact_disclosure import (
                 FrameContactDisclosureService,
             )
@@ -4199,7 +4226,8 @@ class InboxService:
                         "pending",
                         True,
                         False,
-                        "Withdraw from your original encounter." if private_step == "withdraw"
+                        "Withdraw from your original encounter."
+                        if private_step == "withdraw"
                         else "Review only the original choice assigned to you.",
                         "Only the original participants control their choices.",
                         "Open private choice",

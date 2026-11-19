@@ -17461,7 +17461,8 @@
         "tests/rules/test_trainer_phrases.py::test_actual_off_duty_speak_installation_needs_both_originals_and_can_trigger",
         "tests/rules/test_trainer_phrases.py::test_actual_off_duty_speak_installation_needs_both_originals_and_can_trigger[sit]",
         "tests/rules/test_trainer_phrases.py::test_actual_off_duty_speak_installation_needs_both_originals_and_can_trigger[play_rough]",
-        "tests/rules/test_trainer_phrases.py::test_play_gentle_requires_the_original_girls_flirt_with_the_issued_target"
+        "tests/rules/test_trainer_phrases.py::test_play_gentle_requires_the_original_girls_flirt_with_the_issued_target",
+        "tests/rules/test_trainer_phrases.py::test_heel_ends_the_prior_sit_and_waits_for_real_movement_to_the_issuer"
       ],
       "m2_play_id": null,
       "module": "core"

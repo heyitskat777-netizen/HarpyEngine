@@ -25,7 +25,7 @@ from girlframe.services.m3_trainer_phrases import HEAR, SPEAK
 from girlframe.services.onboarding import WorkflowError
 
 
-def create_trainer(ledger, *, start_with_speak):
+def create_trainer(ledger, *, start_with_speak, dog_prompt=None):
     creation = HandlerCreationService(ledger)
     approval, rulings = ledger.policy.m3_approval, ledger.policy.owner_m3_rulings
     ledger.policy = ledger.policy.model_copy(
@@ -39,9 +39,12 @@ def create_trainer(ledger, *, start_with_speak):
         )
     )
     draft = complete(creation, "Trainer")
-    if start_with_speak:
+    if start_with_speak or dog_prompt is not None:
         ace, dog = draft.starting
-        draft = draft.model_copy(update=dict(starting=(ace, dog.model_copy(update=dict(prompt=2)))))
+        prompt = 2 if start_with_speak else dog_prompt
+        draft = draft.model_copy(
+            update=dict(starting=(ace, dog.model_copy(update=dict(prompt=prompt))))
+        )
     save(creation, draft)
     agree(creation)
     preview = creation.view(ADMIN)
@@ -483,3 +486,74 @@ def test_play_gentle_requires_the_original_girls_flirt_with_the_issued_target(le
         x.kind == "flirt_followthrough" and x.owner == 3 and x.target == 2
         for x in state(game).obligations
     )
+
+
+def test_heel_ends_the_prior_sit_and_waits_for_real_movement_to_the_issuer(ledger):
+    from test_harpy_flirt import submit_form
+    from test_physical_operations import place
+
+    from girlframe.engine.m3_actor_bonds import current_ref
+    from girlframe.engine.m3_trainer_phrases import pending_heel, sitting
+    from girlframe.services.m3_trainer_phrases import HEEL, SIT
+
+    _, game = ready(ledger)
+    create_trainer(ledger, start_with_speak=False, dog_prompt=0)
+    approval = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update=dict(
+            m3_approval=approval.model_copy(update=dict(subsystems=approval.subsystems | {"world"}))
+        )
+    )
+    with ledger.transaction() as c:
+        placed = place(
+            place(state(game), 2, mode="outside_frame"), 3, mode="outside_frame", cell=(1, 0)
+        )
+        game.event(c, 1, "heel-original-positions", "synthetic.placement", placed)
+    girl = current_ref(state(game), 3)
+    worker, gateway = GameWorker(game), Gateway()
+    game.issue_order(ADMIN, "prior-sit", 900, 3, "Sit here.", conditioning_phrase="sit")
+    tick(worker, gateway, 3)
+    answer(game, OTHER, "order_response", options=("obedient",))
+    answer(game, OTHER, SIT, text="I sit here.")
+    tick(worker, gateway, 4)
+    assert sitting(state(game), girl) is not None
+    issued = game.issue_order(
+        PLAYER, "heel-order", 900, 3, "Come to my side.", conditioning_phrase="heel"
+    )
+    tick(worker, gateway, 3)
+    answer(game, OTHER, "order_response", options=("immediate",))
+    before = state(game).placements
+    answer(game, OTHER, HEEL, text="I get up to come over.")
+    tick(worker, gateway, 4)
+    ledger.engine.dispose()
+    held = state(game)
+    assert sitting(held, girl) is None and held.placements == before
+    work = pending_heel(held, girl)
+    assert work.order == issued["order_id"]
+    inbox = InboxService(ledger)
+    assert not any(item.task == "trainer_heel" for item in inbox.items(PLAYER))
+
+    async def route(click):
+        item = next(item for item in inbox.items(OTHER) if item.task == "trainer_heel")
+        await InboxView(inbox, 3).route(click, item)
+
+    asyncio.run(
+        submit_form(
+            OTHER,
+            route,
+            dict(
+                actor=(girl.token,),
+                mode=("body",),
+                x=("0",),
+                y=("0",),
+                account="I walk to her side.",
+            ),
+            47380,
+        )
+    )
+    after = state(game)
+    assert pending_heel(after, girl) is None
+    original = next(x for x in before if x.actor == girl)
+    actual = next(x for x in after.placements if x.actor == girl)
+    assert actual.girl_cell == (0, 0) and actual.frame_cell == original.frame_cell
+    assert game.dice.calls == 0

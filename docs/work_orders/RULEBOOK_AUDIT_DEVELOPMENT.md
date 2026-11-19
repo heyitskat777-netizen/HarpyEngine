@@ -1431,6 +1431,15 @@ with `PYTHONPATH="$PWD/src"`, including Off-Duty installation, private
 invitation, restart, decline and receipt. The case covers a nominated
 original Pilot counterpart. [Play Rough case](../../tests/rules/test_trainer_phrases.py)
 
+Heel, based on `4f9f96a9c2938efcccd6a8bdf7082746daf58ec4`, halts an
+earlier Sit and gives the original Girl her own Movement task in the
+shared scene. The task resolves when native movement reaches the
+original issuer's current square. The Girl's parked Frame stays put.
+One focused case passed in 4.27 seconds using
+`python -m pytest -q --tb=short tests/rules/test_trainer_phrases.py -k heel_ends`
+with `PYTHONPATH="$PWD/src"`, including restart, private Inbox access and
+the movement itself. [Heel case](../../tests/rules/test_trainer_phrases.py)
+
 ### Scientist's initial laboratory Project step
 
 Base `06aa08cbeb9592c1d3d1a86dbd081f710098d371`. Head to the Lab can

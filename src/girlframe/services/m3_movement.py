@@ -266,6 +266,12 @@ def apply_reviewed_movement(
     _apply_context(state, context, event)
     stage_movement(game, c, before, state, context, travel, event)
     stage_escape(game, c, before, state, context, event)
+    if context["actor"]["kind"] == "pilot":
+        from girlframe.services.m3_trainer_phrases import reach_heel
+
+        reach_heel(
+            game, c, state, ActorRef.model_validate(context["actor"]), context["scene"], event
+        )
     if context["actor"]["kind"] == "gorgon":
         from girlframe.engine.m3_mother_sprite import travel as sprite_travel
 
