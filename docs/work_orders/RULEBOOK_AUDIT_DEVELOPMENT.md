@@ -1321,8 +1321,8 @@ this signature Play from the native Handler menu in an actual jointly attended
 scene. The exact original Girl and Handler stay bound to the private Inbox
 grant. The competency, appearance, inherent-trait and dog-language options
 each lower actual Status by one position and require the actual Tag if the
-Girl becomes a Dog. She keeps her own actions. The physical, third-party
-and demeaning-order branches remain open.
+Girl becomes a Dog. She keeps her own actions. The physical contact and
+third-party branches remain open.
 
 The focused cases covered the native menu and Inbox, the required Tag,
 wrong owner, unrelated readers, wrong scene, restart, safety pause, retries
@@ -1348,6 +1348,14 @@ native test passed in 5.03 seconds. It verified a private refusal choice,
 no premature response, wrong owner, wrong scene, retry, reopening, stale
 revision and safety pause. The command was
 `python -m pytest -q --tb=short tests/rules/test_dogrunner_status.py -k dismissal`
+with `PYTHONPATH="$PWD/src"`.
+
+The demeaning Order uses the existing direct Order and Disobey workflow.
+The original Girl owns her response and roll. Discovery by the original
+Handler creates the ordinary Punishment obligation with that refusal as
+its source. An immediate Punishment or second Order needs a separate
+sequence when selected alongside this step. One native case passed in
+5.93 seconds using `python -m pytest -q --tb=short tests/rules/test_dogrunner_status.py -k demeaning`
 with `PYTHONPATH="$PWD/src"`.
 
 ### Trainer Speak and Off-Duty installation

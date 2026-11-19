@@ -390,7 +390,7 @@ async def effect_form(
             [
                 Field("dress_steps", "Choose one to three printed steps", DRESS_STEPS, maximum=3),
                 Field("tag", "Tag only if they become the Dog", required=False),
-                Field("detail", "Dismissal order, if chosen", paragraph=True, required=False),
+                Field("detail", "Direct Order text, if chosen", paragraph=True, required=False),
             ]
         )
     elif kind == "tag":

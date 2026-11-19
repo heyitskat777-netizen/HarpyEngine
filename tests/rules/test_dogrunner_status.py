@@ -152,7 +152,9 @@ def test_dogrunner_keeps_raised_dogs_and_mission_punishes_each_original_once(led
 
 
 @pytest.mark.parametrize(
-    "ending", ("dog", "punishment", "dismissal"), ids=("tag-only", "proper-punishment", "dismissal")
+    "ending",
+    ("dog", "punishment", "dismissal", "demeaning"),
+    ids=("tag-only", "proper-punishment", "dismissal", "demeaning"),
 )
 def test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_dog(ledger, ending):
     game, worker, gateway, _ = dogrunner_ready(ledger)
@@ -186,7 +188,9 @@ def test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_do
         account="PRIVATE_ACTUAL_DRESSING",
         dress_steps=("competency", ending),
         tag="PRIVATE_NEW_DOG_TAG",
-        detail="Get out of my sight." if ending == "dismissal" else "",
+        detail={"dismissal": "Get out of my sight.", "demeaning": "Scrub my boots."}.get(
+            ending, ""
+        ),
     )
     information = service.get(ADMIN, identity)
     revision = information["game_revision"]
@@ -220,7 +224,7 @@ def test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_do
         form.values.update(
             target=(actor.token,),
             dress_steps=tuple(reversed(effect.dress_steps))
-            if ending != "dog"
+            if ending in ("punishment", "dismissal")
             else effect.dress_steps,
             account=effect.account,
             tag=effect.tag,
@@ -269,7 +273,7 @@ def test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_do
         assert grant.state == "complete"
         assert grant.completed_event == completed.role_punishments[-1].completion_event
         assert completed.sheets["2"].heat == 7 and owners(completed) == (4,)
-    if ending == "dismissal":
+    if effect.dress_order:
         assert not canonical.role_punishments
         assert not game.choices(PLAYER)
         tick(worker, gateway, 3)
@@ -279,6 +283,35 @@ def test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_do
             game.decision(OTHER, choice["id"])
         answer(game, PLAYER, "order_response", options=("disobey",))
         assert handler_plays.record(state(game), identity).state == "complete"
+    if ending == "demeaning":
+        decision = game.decision(
+            PLAYER, next(x["id"] for x in game.choices(PLAYER) if x["kind"] == "order_disobey")
+        )
+        refusal = game.begin(
+            PLAYER,
+            "refuse-original-demeaning-order",
+            900,
+            state(game).sheets["2"].revision,
+            PlayInput(
+                play="disobey_orders",
+                context="I refuse the original demeaning demand.",
+                trigger_confirmed=True,
+                heat=0,
+                order_id=decision["body"]["order_id"],
+                parent=decision["parent"],
+                witnessed=False,
+            ),
+        )["action_id"]
+        tick(worker, gateway, 3)
+        pass_tags(game)
+        answer(game, FOUR, "tag_window", options=("pass",))
+        answer(game, PLAYER, "actor_disobey", options=("tag_heat",), number=1, text="Defiant")
+        answer(game, ADMIN, "handler_disobey", flag=True)
+        assert game.inspect(PLAYER, refusal)["result"]["can_disobey"]
+        assert any(
+            ob.kind == "punishment" and ob.owner == 2 and ob.action == refusal
+            for ob in state(game).obligations
+        )
 
 
 def test_dogrunner_all_dogs_uses_actual_status_and_the_ordinary_award_slot(

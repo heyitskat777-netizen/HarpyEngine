@@ -16907,7 +16907,8 @@
       "test_evidence": [
         "tests/rules/test_dogrunner_status.py::test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_dog",
         "tests/rules/test_dogrunner_status.py::test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_dog[proper-punishment]",
-        "tests/rules/test_dogrunner_status.py::test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_dog[dismissal]"
+        "tests/rules/test_dogrunner_status.py::test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_dog[dismissal]",
+        "tests/rules/test_dogrunner_status.py::test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_dog[demeaning]"
       ],
       "m2_play_id": null,
       "module": "core"

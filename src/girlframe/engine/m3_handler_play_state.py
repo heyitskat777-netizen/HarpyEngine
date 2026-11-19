@@ -33,11 +33,15 @@ DRESS_STEPS = (
     ("appearance", "Insult their appearance"),
     ("identity", "Dismiss them for an inherent trait"),
     ("dog", "Call them a dog, mutt or stray"),
+    ("demeaning", "Order them to do something demeaning or risk Punishment"),
     ("dismissal", "End with an order to get out of your sight"),
     ("punishment", "End by deciding they deserve a proper Punishment"),
 )
 DRESS_ENDINGS = frozenset(("dismissal", "punishment"))
-DressStep = Literal["competency", "appearance", "identity", "dog", "dismissal", "punishment"]
+DRESS_ORDERS = frozenset(("dismissal", "demeaning"))
+DressStep = Literal[
+    "competency", "appearance", "identity", "dog", "demeaning", "dismissal", "punishment"
+]
 Play = Literal[
     "brief",
     "punish",
@@ -94,6 +98,10 @@ class Effect(Model):
     @property
     def opens_punishment(self) -> bool:
         return self.kind == "punish" or self.dress_steps[-1:] == ("punishment",)
+
+    @property
+    def dress_order(self) -> DressStep | None:
+        return next((step for step in self.dress_steps if step in DRESS_ORDERS), None)
 
     @model_validator(mode="after")
     def actual_effect(self) -> "Effect":
@@ -166,10 +174,13 @@ class Effect(Model):
         endings = DRESS_ENDINGS.intersection(self.dress_steps)
         if len(endings) > 1 or (endings and self.dress_steps[-1] not in endings):
             raise ValueError("Choose only one ending and put it last in the dressing down")
-        if self.kind == "dress_them_down" and (
-            ("dismissal" in endings) != bool(self.detail.strip())
-        ):
-            raise ValueError("Supply the actual dismissal order only for that ending")
+        if self.kind == "dress_them_down":
+            if bool(self.dress_order) != bool(self.detail.strip()):
+                raise ValueError("Supply the direct Order text for the chosen Order step")
+            if len(DRESS_ORDERS.intersection(self.dress_steps)) > 1 or (
+                self.dress_order is not None and self.opens_punishment
+            ):
+                raise ValueError("Choose one direct Order or immediate Punishment for this Play")
         return self
 
 

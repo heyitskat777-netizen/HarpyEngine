@@ -6142,21 +6142,24 @@ class GameService:
         dose_up: bool = False,
         conditioning_phrase: str | None = None,
         advocate_conversation: tuple[str, int, str] | None = None,
-        dismissal: tuple[str, int, "Effect"] | None = None,
+        dress_order: tuple[str, int, "Effect"] | None = None,
     ) -> dict[str, Any]:
         if not text.strip() or len(text) > 1200:
             raise WorkflowError("Provide a direct order in 1–1200 characters.")
         if advocate_conversation is not None and (dose_up or conditioning_phrase is not None):
             raise WorkflowError("Choose one source for this direct order")
-        if dismissal is not None and (dose_up or conditioning_phrase or advocate_conversation):
+        if dress_order is not None and (dose_up or conditioning_phrase or advocate_conversation):
             raise WorkflowError("Choose one source for this direct order")
+        dress_step = dress_order[2].dress_order if dress_order is not None else None
+        if dress_order is not None and dress_step is None:
+            raise WorkflowError("Choose the actual direct Order option for Dress Them Down")
 
         def authorize(c: Connection) -> None:
             self.authorize(c, viewer)
-            if dismissal is not None:
-                from girlframe.services.m3_handler_plays import authorize_dismissal
+            if dress_order is not None:
+                from girlframe.services.m3_handler_plays import authorize_dress_order
 
-                authorize_dismissal(self, c, viewer, dismissal[0])
+                authorize_dress_order(self, c, viewer, dress_order[0])
 
         def operation(c: Connection) -> dict[str, Any]:
             self.unpaused(c)
@@ -6178,10 +6181,10 @@ class GameService:
             from girlframe.services.m3_bonded_support import issue_requested_order
             from girlframe.services.m3_sentinel import require_order_communication
 
-            if dismissal is not None:
-                from girlframe.services.m3_handler_plays import stage_dismissal
+            if dress_order is not None:
+                from girlframe.services.m3_handler_plays import stage_dress_order
 
-                stage_dismissal(self, c, state, dismissal, scene, target, text)
+                stage_dress_order(self, c, state, dress_order, scene, target, text)
             elif advocate_conversation is None:
                 requested = issue_requested_order(
                     self, c, state, viewer, key, channel, target, text, dose_up=dose_up
@@ -6383,11 +6386,11 @@ class GameService:
             )
             if taunt_works:
                 materialize(self, c, viewer.user_id, applied_event, taunt_works)
-            if dismissal is not None:
-                from girlframe.services.m3_handler_plays import complete_dismissal
+            if dress_order is not None:
+                from girlframe.services.m3_handler_plays import complete_dress_order
 
-                return complete_dismissal(
-                    self, c, state, viewer, key, dismissal, order_id, applied_event
+                return complete_dress_order(
+                    self, c, state, viewer, key, dress_order, order_id, applied_event
                 )
             return {"action_id": identity, "order_id": order_id}
 
@@ -6406,13 +6409,13 @@ class GameService:
                 )
                 | (
                     {
-                        "dismissal": [
-                            dismissal[0],
-                            dismissal[1],
-                            dismissal[2].model_dump(mode="json"),
+                        dress_step: [
+                            dress_order[0],
+                            dress_order[1],
+                            dress_order[2].model_dump(mode="json"),
                         ]
                     }
-                    if dismissal is not None
+                    if dress_order is not None and dress_step is not None
                     else {}
                 ),
                 operation,

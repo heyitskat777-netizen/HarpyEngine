@@ -791,30 +791,30 @@ def validate_role_case(
         raise WorkflowError("This exact Handler Play cannot authorize another Punishment or body.")
 
 
-def authorize_dismissal(
+def authorize_dress_order(
     game: "GameService", c: Connection, viewer: GuildViewer, identity: str
 ) -> tuple[GameState, HandlerPlay]:
     Access(game.store).authorize(c, viewer, "plays")
     game.unpaused(c)
     state, grant = _source(c, game, identity)
     if grant.clause != DRESS_RULE or grant.chooser_controller != viewer.user_id:
-        raise WorkflowError("Only the original Dogrunner owns this dismissal")
+        raise WorkflowError("Only the original Dogrunner owns this Dress Them Down Order")
     _authority(c, game, state, grant)
     return state, grant
 
 
-def stage_dismissal(
+def stage_dress_order(
     game: "GameService",
     c: Connection,
     state: GameState,
-    dismissal: tuple[str, int, Effect],
+    dress_order: tuple[str, int, Effect],
     scene: dict[str, Any],
     target: int,
     text: str,
 ) -> None:
     from girlframe.services.m3_wyvern_combat import require_targetable
 
-    identity, expected, effect = dismissal
+    identity, expected, effect = dress_order
     grant = rules.record(state, identity)
     _ordinary_scene_idle(c, game)
     if (
@@ -823,31 +823,31 @@ def stage_dismissal(
         or effect.target not in grant.targets
         or effect.target is None
         or effect.target.entity != str(target)
-        or effect.dress_steps[-1:] != ("dismissal",)
+        or effect.dress_order is None
         or effect.detail != text
         or (
             effect.source_label is not None
             and effect.source_label not in dict(source_labels(state, grant))
         )
     ):
-        raise WorkflowError("Reopen the dismissal for the actual original Girl and scene")
+        raise WorkflowError("Reopen the Order for the actual original Girl and scene")
     require_targetable(game, c, state, effect.target)
     resolve(
         state, effect.target, profiles(c, game.store.campaign_id), require_current_profile=False
     )
 
 
-def complete_dismissal(
+def complete_dress_order(
     game: "GameService",
     c: Connection,
     state: GameState,
     viewer: GuildViewer,
     key: str,
-    dismissal: tuple[str, int, Effect],
+    dress_order: tuple[str, int, Effect],
     order_id: str,
     order_event: str,
 ) -> dict[str, Any]:
-    identity, _, effect = dismissal
+    identity, _, effect = dress_order
     event = str(uuid4())
     state = rules.select(state, identity, "dress_them_down", effect, event)
     state = rules.direct(state, identity, event)
@@ -1693,11 +1693,11 @@ class HandlerPlayService:
         effect: Effect,
     ) -> dict[str, Any]:
         effect = Effect.model_validate_json(effect.model_dump_json())
-        if effect.dress_steps[-1:] == ("dismissal",):
+        if effect.dress_order is not None:
             if play != "dress_them_down" or effect.target is None:
-                raise WorkflowError("Use the original Dress Them Down dismissal")
+                raise WorkflowError("Use the original Dress Them Down Order")
             with self.store.engine.connect() as c:
-                _, grant = authorize_dismissal(self.game, c, viewer, identity)
+                _, grant = authorize_dress_order(self.game, c, viewer, identity)
                 scenes = t.m2["m2_scenes"]
                 channel = c.scalar(
                     sa.select(scenes.c.channel_id).where(
@@ -1706,14 +1706,14 @@ class HandlerPlayService:
                     )
                 )
             if channel is None:
-                raise WorkflowError("Recover the original dismissal's scene")
+                raise WorkflowError("Recover the original Order's scene")
             return self.game.issue_order(
                 viewer,
                 key,
                 int(channel),
                 int(effect.target.entity),
                 effect.detail,
-                dismissal=(identity, expected, effect),
+                dress_order=(identity, expected, effect),
             )
 
         def access(c: Connection) -> None:
