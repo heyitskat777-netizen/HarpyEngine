@@ -4114,7 +4114,29 @@ class InboxService:
                     )
                 )
             from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_harpy_eagle import EagleService
             from girlframe.services.m3_harpy_song import HarpySongService
+
+            eagle = EagleService(GameService(self.store))
+            for cockpit in eagle.restoration_tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "eagle-cockpit:" + cockpit.event,
+                        "eagle_cockpit",
+                        cockpit.event,
+                        canon.revision,
+                        "world",
+                        "Reinstall recovered cockpit",
+                        "Original Frame",
+                        "pending",
+                        True,
+                        False,
+                        "Verify the actual recovered cockpit was fitted.",
+                        "This review uses the human GM role.",
+                        "Review reinstallation",
+                        task="m3_eagle_restore",
+                    )
+                )
 
             for song in HarpySongService(GameService(self.store)).tasks(connection, canon, viewer):
                 items.append(

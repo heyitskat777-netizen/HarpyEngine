@@ -22,6 +22,7 @@ from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_battle import _cast
 from girlframe.services.m3_harpy_advancements import scene_harpy
+from girlframe.services.m3_medical import MedicalService
 from girlframe.services.m3_wyvern_combat import require_damage_allowed, require_free
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.p1_facilitator import require_scene_clear
@@ -247,3 +248,115 @@ class EagleService:
             )
         )
         state.placements = [replacement if x.actor == case.girl else x for x in state.placements]
+
+    def _original_cockpit(
+        self,
+        c: Connection,
+        state: GameState,
+        viewer: GuildViewer,
+        case: rules.Cockpit,
+    ) -> SceneCast:
+        cast = next((x for x in state.scene_casts if x.id == case.scene and x.open), None)
+        gm, _ = MedicalService(self.store)._handler(c)
+        if (
+            not case.released
+            or case.restored
+            or gm != viewer.user_id
+            or cast is None
+            or cast.facilitator != gm
+        ):
+            raise WorkflowError("Recover this original cockpit through its human GM")
+        history = t.m2["m2_state_history"]
+        raw = c.scalar(
+            sa.select(history.c.body_json)
+            .join(t.events, t.events.c.id == history.c.event_id)
+            .where(
+                history.c.campaign_id == self.store.campaign_id,
+                history.c.event_id == case.released,
+                t.events.c.campaign_id == self.store.campaign_id,
+                t.events.c.kind == "m3.harpy_eagle_released",
+                t.events.c.actor_id == str(case.controller),
+            )
+        )
+        saved = GameState.model_validate_json(raw) if raw else None
+        original = (
+            next((x for x in saved.placements if x.actor == case.girl), None) if saved else None
+        )
+        present = next((x for x in state.placements if x.actor == case.girl), None)
+        if (
+            saved is None
+            or case not in rules.records(saved)
+            or original is None
+            or original.girl_cell is None
+            or present is None
+            or present.frame_instance != case.frame
+            or present.frame_cell != original.girl_cell
+            or not any(
+                x.actor == case.girl and x.controller == int(case.girl.entity) for x in cast.roles
+            )
+            or (sheet := state.sheets.get(case.girl.entity)) is None
+            or sheet.character_id != case.girl.incarnation
+            or sheet.frame_scrapped
+        ):
+            raise WorkflowError("The actual original Frame and recovered cockpit must be together")
+        return cast
+
+    def restoration_tasks(
+        self,
+        c: Connection,
+        state: GameState,
+        viewer: GuildViewer,
+    ) -> tuple[rules.Cockpit, ...]:
+        pending = tuple(x for x in rules.records(state) if x.released and not x.restored)
+        if not pending:
+            return ()
+        try:
+            self._gate(c, viewer)
+        except (WorkflowError, ValueError):
+            return ()
+        result = []
+        for case in pending:
+            try:
+                self._original_cockpit(c, state, viewer, case)
+            except WorkflowError:
+                continue
+            result.append(case)
+        return tuple(result)
+
+    def restore(
+        self, viewer: GuildViewer, key: str, identity: str, revision: int, account: str
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            state = load_state(c, self.store.campaign_id)
+            case = next((x for x in rules.records(state) if x.event == identity), None)
+            if case is None or state.revision != revision or not 0 < len(account.strip()) <= 1200:
+                raise WorkflowError("Review the current exact cockpit and actual reinstallation")
+            cast = self._original_cockpit(c, state, viewer, case)
+            require_scene_clear(self.game, c, cast.channel)
+            lock = self.game.lock(c, cast.channel)
+            if lock and lock["state"] != "released":
+                raise WorkflowError("Wait for the original scene to release before reinstallation")
+            event = str(uuid4())
+            rules.put(state, case.model_copy(update=dict(restored=event)))
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.harpy_eagle_cockpit_restored",
+                state,
+                event_id=event,
+                capture=identity,
+                account=account.strip(),
+            )
+            return dict(event=event, capture=identity)
+
+        return self.store._write(
+            viewer,
+            key,
+            "m3.harpy_eagle_cockpit_restored",
+            dict(id=identity, revision=revision, account=account),
+            operation,
+            authorize=lambda c: self._gate(c, viewer),
+            auto_audit=False,
+        )

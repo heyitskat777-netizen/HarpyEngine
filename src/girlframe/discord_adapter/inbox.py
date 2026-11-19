@@ -2076,6 +2076,17 @@ class InboxView(discord.ui.View):
             await open_enforcer_task(
                 interaction, EnforcerService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_eagle_restore":
+            from girlframe.discord_adapter.m3_harpy_eagle import open_restore
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_harpy_eagle import EagleService
+
+            await open_restore(
+                interaction,
+                EagleService(GameService(self.service.store)),
+                item.identity,
+                item.revision,
+            )
         elif item.task == "m3_harpy_song":
             from girlframe.discord_adapter.m3_harpy_song import open_song_response
             from girlframe.services.m2_game import GameService

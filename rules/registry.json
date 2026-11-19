@@ -23259,8 +23259,8 @@
         "choice_ownership": "The original Harpy chooses and marks a Tag it actually gave. The original Girl retains her identity and other decisions.",
         "target_policy": "The original co-located occupied Frame and current same-Harpy exposed Core.",
         "post_roll_effects": ["Move the actual Girl into typed custody and leave the original Frame parked with its cockpit absent.", "Release the actual captive at the Harpy’s location."],
-        "mandatory_followups": ["Recover the actual original removed cockpit before returning to the original Frame."],
-        "handler_or_gm_intervention": "Earlier approved Core exposure remains authoritative. Other Tag provenance and damaged cockpit recovery variants remain open.",
+        "mandatory_followups": ["The human GM can verify actual reinstallation after the original cockpit is released into the same square as its Frame."],
+        "handler_or_gm_intervention": "Earlier approved Core exposure remains authoritative. Other Tag provenance, forced recovery and remote cockpit transport remain open.",
         "test_fixture_ids": ["tests/rules/test_harpy_advancements.py"]
       },
       "dependencies": [],

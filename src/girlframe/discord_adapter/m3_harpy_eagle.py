@@ -57,3 +57,31 @@ async def open_eagle(
         submit,
     )
     await reply(interaction, form.text(), form)
+
+
+async def open_restore(
+    interaction: discord.Interaction,
+    service: EagleService,
+    identity: str,
+    revision: int,
+) -> None:
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        await asyncio.to_thread(
+            service.restore,
+            viewer_from_interaction(current),
+            str(current.id),
+            identity,
+            revision,
+            values["account"],
+        )
+        return "The original recovered cockpit was reinstalled."
+
+    fields = [Field("account", "Describe the actual reinstallation", paragraph=True)]
+    form = NativeForm(
+        interaction.user.id,
+        "Reinstall the recovered cockpit",
+        "Verify that the actual recovered cockpit was fitted to its original Frame.",
+        fields,
+        submit,
+    )
+    await reply(interaction, form.text(), form)

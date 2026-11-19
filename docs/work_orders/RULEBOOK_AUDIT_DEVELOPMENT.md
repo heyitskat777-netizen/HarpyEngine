@@ -2423,6 +2423,21 @@ the exact cockpit is tracked separately. Alternative sources
 for the Tag and forcibly recovering the captive remain open.
 [Harpy advancements p. 181](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=183) · [Native case](../../tests/rules/test_harpy_advancements.py)
 
+### Restore the exact cockpit removed by Eagle Cracks the Shell
+
+Base `dcb41295d4f02056b8b2738f460790d103e1035e`. The original
+human GM can restore the original Frame’s cockpit after the
+Harpy releases it in the same square. The Inbox action recovers
+the immutable release event and the original Frame instance.
+Reinstallation removes only the cockpit-entry block from this
+source. The original custody, exposure and Tag receipts remain
+in history. Remote transport still needs its actual source.
+
+**One focused case passed in 4.08 seconds**, including the
+failed entry while the cockpit was missing and actual entry
+after the human GM reinstalled it.
+[Harpy advancements p. 181](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=183) · [Native case](../../tests/rules/test_harpy_advancements.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

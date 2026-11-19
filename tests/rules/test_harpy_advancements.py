@@ -753,9 +753,11 @@ def test_eagle_cracks_the_actual_exposed_cockpit_and_holds_the_original_girl(led
     from girlframe.engine.m3_actors import resolve
     from girlframe.engine.m3_harpy_advancements import EAGLE
     from girlframe.engine.m3_harpy_eagle import held, missing
+    from girlframe.engine.m3_physical_state import CockpitAction
     from girlframe.services.m3_actors import profiles
     from girlframe.services.m3_battle import BattleService
     from girlframe.services.m3_harpy_eagle import EagleService
+    from girlframe.services.m3_physical import PhysicalService
 
     _, game, _, harpy = ready(ledger)
     policy = ledger.policy.m3_approval
@@ -848,4 +850,26 @@ def test_eagle_cracks_the_actual_exposed_cockpit_and_holds_the_original_girl(led
     with ledger.engine.connect() as c:
         actual = resolve(returned, target, profiles(c, ledger.campaign_id))
     assert actual.cell == (0, 0) and not actual.inside_frame
+    command = CockpitAction(
+        actor=target,
+        operation="sit",
+        expected_position=actual.position_sha256,
+        account="I try to return to the original cockpit.",
+        confirmed=True,
+    )
+    physical = PhysicalService(ledger)
+    with pytest.raises(WorkflowError, match="cockpit removed"):
+        physical.operate(OTHER, "eagle-missing-cockpit", returned.revision, command, channel=900)
+    service.restore(
+        ADMIN,
+        "reinstall-original-eagle-cockpit",
+        record.event,
+        returned.revision,
+        "The actual recovered cockpit was fitted to its original Frame in this square.",
+    )
+    fixed = state(game)
+    assert not missing(fixed, target, record.frame)
+    physical.operate(OTHER, "eagle-restored-cockpit", fixed.revision, command, channel=900)
+    assert next(x for x in state(game).placements if x.actor == target).mode == "inside_frame"
+
     assert game.dice.calls == 0
