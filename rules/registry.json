@@ -14989,14 +14989,41 @@
         "heading": "Earned Confidence"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Another actual member of the original approved Ancillary Cadre undergoes a committed native social Punishment.",
+        "actor_type": "Original Prodigy and source Cadre member",
+        "pre_roll_sources": [
+          "Original approved optional rule",
+          "Original Cadre and actual native Punishment execution"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "notch": [
+            "Record one notch per actual other-member Punishment",
+            "Spend one unspent original notch to advance current optional Status"
+          ]
+        },
+        "choice_ownership": "The actual Prodigy owns spending that original notch.",
+        "target_policy": "Actual active scope only and never a notch for your own punishment.",
+        "post_roll_effects": [
+          "Commit source-bound notch and actual actor-level Status change."
+        ],
+        "mandatory_followups": [
+          "The Ace roll override, NPC reaction, other punishment producers and mixed Cadres remain open."
+        ],
+        "handler_or_gm_intervention": "The original Handler executes the native real social consequence.",
+        "test_fixture_ids": [
+          "tests/rules/test_prodigy_discipline.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_prodigy_discipline.py"],
       "m2_play_id": null,
       "module": "ancillary"
     },
@@ -15096,14 +15123,41 @@
         "heading": "The Favourite"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original Handler would Punish the Prodigy, or actual native social Punishment is committed against that Prodigy.",
+        "actor_type": "Actual Prodigy and original Cadre Handler",
+        "pre_roll_sources": [
+          "Original approved optional rule",
+          "Original actual Cadre and source actors"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "punishment": [
+            "The actual Handler cannot open that Punishment against their Ace",
+            "An actual applied supported Punishment makes the original Prodigy Helpless"
+          ]
+        },
+        "choice_ownership": "Original scope and approvals govern existing discipline steps.",
+        "target_policy": "Actual current actor-level Cadre and exact original NPC or Foundation Handler.",
+        "post_roll_effects": [
+          "Prevent unauthorised Ace discipline or apply actual scoped Helplessness."
+        ],
+        "mandatory_followups": [
+          "Other Punishment producers and the printed earlier facing moment outside supported social execution remain open."
+        ],
+        "handler_or_gm_intervention": "The ordinary source execution workflow governs timing and participation.",
+        "test_fixture_ids": [
+          "tests/rules/test_prodigy_discipline.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_prodigy_discipline.py"],
       "m2_play_id": null,
       "module": "ancillary"
     },

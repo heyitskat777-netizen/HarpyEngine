@@ -105,6 +105,7 @@ def open_case(
         "trainee",
         "succubus_npc_disobey",
         "harpy_beneath",
+        "ancillary_cadre",
     ],
     action: str | None,
     source_event: str,
@@ -468,6 +469,11 @@ def current(c: Connection, game: GameService, state: GameState, case: RolePunish
         or target.controller != case.subject_controller
     ):
         raise WorkflowError("Recover the actual original executor, Frame and affected person.")
+    if case.source_kind == "ancillary_cadre":
+        from girlframe.services.m3_ancillary_discipline import prove_case
+
+        prove_case(game, c, state, case)
+        return
     if case.source_kind == "harpy_beneath":
         from girlframe.services.m3_harpy_beneath import prove_punishment
 
@@ -1171,6 +1177,10 @@ class RolePunishmentService:
                     str(uuid4()),
                     source_kind=case.source_kind,
                 )
+                if case.source_kind == "ancillary_cadre":
+                    from girlframe.services.m3_ancillary_discipline import applied_consequences
+
+                    state = applied_consequences(self.game, state, case, event)
                 case = case.model_copy(update=dict(effect_event=event, execution_account=account))
                 kind = "executed"
             _replace(state, case)

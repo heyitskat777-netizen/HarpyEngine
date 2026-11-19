@@ -88,6 +88,10 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
             key = "mask:" + token
             options.append((key, "Use A Human Mask as " + role["label"][:65]))
             actions[key] = ("harpy_mask", ActorRef.model_validate(role["ref"]))
+        if role.get("spend_prodigy_confidence"):
+            key = "prodigy-confidence:" + token
+            options.append((key, "Spend confidence as " + role["label"][:65]))
+            actions[key] = ("prodigy_confidence", ActorRef.model_validate(role["ref"]))
         if role.get("ancillary_intimacy"):
             key = "ancillary-private-play:" + token
             options.append((key, "Open a private invitation as " + role["label"][:50]))
@@ -157,6 +161,8 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
             key = "capture:" + role["token"]
             options.append((key, "Record a capture at the Rebel base"))
             actions[key] = ("captured", ActorRef.model_validate(role["ref"]))
+    if data.get("can_punish_ancillary_cadre"):
+        options.append(("ancillary-cadre-punishment", "Punish an Ancillary Cadre member"))
     if data.get("can_form_ancillary_cadre"):
         options.append(("form-ancillary-cadre", "Form an Ancillary Cadre"))
     if data["own_facilitator"]:
@@ -198,6 +204,14 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
         return role
 
     async def choose(current: discord.Interaction, token: str) -> None:
+        if token == "ancillary-cadre-punishment":
+            from girlframe.discord_adapter.m3_ancillary_discipline import open_cadre_punishment
+            from girlframe.services.m3_ancillary_discipline import AncillaryDisciplineService
+
+            await open_cadre_punishment(
+                current, AncillaryDisciplineService(service.game), channel
+            )
+            return
         if token == "form-ancillary-cadre":
             from girlframe.discord_adapter.m3_ancillary_cadre import open_ancillary_cadre
             from girlframe.services.m3_ancillary_cadre import AncillaryCadreService
@@ -332,6 +346,13 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
 
             assert ref is not None
             await open_capture(current, CapturedService(service.game), channel, ref)
+            return
+        if action == "prodigy_confidence":
+            from girlframe.discord_adapter.m3_ancillary_discipline import open_confidence
+            from girlframe.services.m3_ancillary_discipline import AncillaryDisciplineService
+
+            assert ref is not None
+            await open_confidence(current, AncillaryDisciplineService(service.game), ref)
             return
         if action == "ancillary_intimacy":
             from girlframe.discord_adapter.m3_ancillary_intimacy import open_ancillary_intimacy

@@ -3703,3 +3703,22 @@ and verified both effects only after completion. Mid and high
 Dives, Apometanoia interception, and cockpit or shadow
 emergence remain open.
 [Void-Drunk p. 109](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=111) · [Dive Deep p. 22](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=24) · [Native case](../../tests/rules/test_void_drunk.py)
+
+### Prodigy’s Earned Confidence and The Favourite
+
+Base `bbe4fdf`. The actual Ancillary Cadre Handler can open
+a supported social Punishment with the existing instruction,
+independent attendance and execution receipts. Another current
+Cadre member’s applied Punishment earns the original Prodigy
+one source-linked notch. The original Prodigy can spend it to
+advance her actual rank. The Favourite makes a non-Ace
+Prodigy Helpless after actual execution and prevents the
+original Handler from starting a Punishment against their Ace.
+
+**One focused case passed in 6.54 seconds.** It used two
+original native Punishment workflows, confirmed there was
+no notch for the Prodigy’s own Punishment, spent the exact
+other-member notch, and exercised the resulting Ace protection.
+The Ace’s roll override, the NPC reaction spend, other
+Punishment producers and earlier facing moments remain open.
+[Prodigy pp. 98–99](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=100) · [Native case](../../tests/rules/test_prodigy_discipline.py)

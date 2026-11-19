@@ -397,6 +397,23 @@ class CastService:
                             )
                         except (ValueError, WorkflowError):
                             pass
+                    can_confidence = False
+                    if (
+                        actor.controller == role.controller == viewer.user_id
+                        and actor.girl == "PRODIGY"
+                    ):
+                        from girlframe.services.m3_ancillary_discipline import (
+                            AncillaryDisciplineService,
+                        )
+
+                        try:
+                            can_confidence = bool(
+                                AncillaryDisciplineService(self.game).confidence(
+                                    c, state, viewer, actor.ref
+                                )
+                            )
+                        except (ValueError, WorkflowError):
+                            pass
                     known_refs.add(actor.ref)
                     visible.append(
                         {
@@ -417,6 +434,7 @@ class CastService:
                             **({"chronically_online": True} if can_recall else {}),
                             **({"chained_placement": True} if can_chained_placement else {}),
                             **({"ancillary_intimacy": True} if can_ancillary_intimacy else {}),
+                            **({"spend_prodigy_confidence": True} if can_confidence else {}),
                             **({"capture_source": True} if can_capture else {}),
                             **(
                                 {"director_phone": True}
@@ -450,6 +468,18 @@ class CastService:
                     )
                 except (ValueError, WorkflowError):
                     pass
+            from girlframe.services.m3_ancillary_discipline import AncillaryDisciplineService
+
+            can_cadre_punish = False
+            if cast.facilitator == viewer.user_id or any(
+                x.controller == viewer.user_id and x.actor.kind == "npc" for x in cast.roles
+            ):
+                try:
+                    can_cadre_punish = bool(
+                        AncillaryDisciplineService(self.game).options(c, state, viewer, channel)
+                    )
+                except (ValueError, WorkflowError):
+                    pass
             return {
                 "scene": cast.id,
                 "channel": channel,
@@ -460,6 +490,7 @@ class CastService:
                 "facilitator": cast.facilitator,
                 "own_facilitator": cast.facilitator == viewer.user_id,
                 "can_form_ancillary_cadre": can_form_cadre,
+                "can_punish_ancillary_cadre": can_cadre_punish,
                 "may_facilitate": state.handler == viewer.user_id,
                 "adjudicator": cast.adjudicator.model_dump(mode="json")
                 if cast.adjudicator in known_refs

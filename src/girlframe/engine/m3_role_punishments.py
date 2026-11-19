@@ -146,9 +146,10 @@ def social(
                 "Quality Time gives its actual chosen Tag and deepens the executor Bond"
             )
         state = change(state, bond_ref(state, subject), bond_ref(state, executor), 1, event)
+        from girlframe.engine.m3_ancillary import find as optional_actor
         from girlframe.engine.m3_janus import find as core_body
 
-        if core_body(state, subject) is not None:
+        if core_body(state, subject) is not None or optional_actor(state, subject) is not None:
             from girlframe.engine.m3_harpy_defeat import give_tag
 
             return give_tag(

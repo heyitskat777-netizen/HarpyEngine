@@ -32,6 +32,7 @@ class RolePunishment(Model):
         "trainee",
         "succubus_npc_disobey",
         "harpy_beneath",
+        "ancillary_cadre",
     ]
     action: str | None = None
     source_work: str | None = None
@@ -68,6 +69,14 @@ class RolePunishment(Model):
             raise ValueError(
                 "Only an unperformed Virus consequence ends without a fabricated effect"
             )
+        if self.source_kind == "ancillary_cadre" and (
+            self.executor.kind not in ("handler", "npc")
+            or self.chooser != self.executor
+            or self.subject.kind != "external_pilot"
+            or not self.source_work
+            or self.action is not None
+        ):
+            raise ValueError("Preserve the original Ancillary Cadre and actual source roles.")
         if self.source_kind == "succubus_npc_disobey" and (
             self.executor.kind != "handler"
             or self.subject.kind != "npc"
@@ -166,6 +175,7 @@ class RolePunishment(Model):
                 "vatgrown_plays",
                 "prince",
                 "trainee",
+                "ancillary_cadre",
             )
             and (self.executor.kind not in ("pilot", "external_pilot") or self.chooser is None)
         ):
