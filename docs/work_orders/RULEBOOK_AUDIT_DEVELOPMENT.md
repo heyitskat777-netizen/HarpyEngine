@@ -2254,6 +2254,24 @@ The previous low-ejection case passed in 5.68 seconds. Full
 regression is deferred per the owner.
 [Mother p. 170](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=172) · [Native cases](../../tests/rules/test_gorgon_runtime.py)
 
+### Mother’s low outcome when the original Girl remains in her Frame
+
+Base `c1e6029bcd4c845954cc240ca88d1119f02bbed2`. The original
+Girl owns her immediate ejection choice. The human GM can verify
+that the original Girl remained inside the original cockpit.
+That opens the existing owned Harpy rebirth workflow with exact
+source and audience proof. The original Girl writes her own
+transformation answers. The Play releases only after the actual
+Harpy exists and the original career is archived.
+
+**Two focused cases passed in 7.01 seconds** for immediate ejection
+and remaining inside through actual rebirth. The test checked the
+original Frame, omitted automatic player answers, and rejected
+access from a different participant. Forced inability to eject
+needs additional direct verification. Outside-Frame pursuit,
+alternate high/mid Plays and exposure by report remain open.
+[Mother p. 170](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=172) · [Native cases](../../tests/rules/test_gorgon_runtime.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

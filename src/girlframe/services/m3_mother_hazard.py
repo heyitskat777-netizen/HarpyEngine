@@ -17,6 +17,7 @@ from girlframe.engine.m3_hallucinations import Roll
 from girlframe.engine.m3_janus_storage import alter, effective_assets
 from girlframe.engine.m3_physical import cockpit_exit
 from girlframe.engine.m3_sentinel_shell import holds
+from girlframe.engine.m3_void_state import VoidThreshold
 from girlframe.services.m2_choices import ChoiceEngine
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_actors import profiles
@@ -122,7 +123,10 @@ def apply(
         )
     ):
         raise WorkflowError("Recover the actual marked Tag and source of this exposure")
-    if kind in (REVIEW, THRESHOLD):
+    if kind == REVIEW:
+        _review_rebirth(state, action, case, girl, row, answer, event)
+        return
+    if kind == THRESHOLD:
         raise WorkflowError("The saved original hazard needs its actual outstanding consequence")
     owner = mother.controller if kind == PICK_PLAY else girl.controller
     if (
@@ -164,10 +168,14 @@ def apply(
             or case.frame != girl.frame_instance
             or not _actual_cockpit(state, girl)
             or not answer.text.strip()
-            or answer.options
+            or answer.options not in ((), ("eject",), ("remain",))
             or answer.number is not None
         ):
-            raise WorkflowError("Eject the original Girl from her actual still-occupied Frame")
+            raise WorkflowError("Use the original Girl's actual still-occupied Frame decision")
+        if answer.options == ("remain",):
+            rules.put(state, case.model_copy(update=dict(remain_event=event)))
+            game.request(c, action, action["data"]["gorgon_play"]["procedural_gm"], REVIEW)
+            return
         changed = cockpit_exit(
             state,
             profiles(c, game.store.campaign_id),
@@ -181,6 +189,60 @@ def apply(
         action["data"]["result"]["mother_hazard_ejected"] = True
     else:
         raise WorkflowError("Recover the actual outstanding Memetic Hazard decision")
+
+
+def _review_rebirth(
+    state: GameState,
+    action: dict[str, Any],
+    case: rules.Exposure,
+    girl: ActorView,
+    row: dict[str, Any],
+    answer: ChoiceAnswer,
+    event: str,
+) -> None:
+    from girlframe.engine.m3_void import FINAL
+
+    source = action["data"]["gorgon_play"]
+    if (
+        row["actor_id"] != str(source["procedural_gm"])
+        or case.roll is None
+        or case.roll.result != "low"
+        or case.ejected
+        or case.rebirth_event
+        or case.frame is None
+        or case.frame != girl.frame_instance
+        or girl.occupied_frame_instance != case.frame
+        or girl.inside_frame is not True
+        or girl.vitals_active is False
+        or (case.remain_event is None and _actual_cockpit(state, girl))
+        or any(x.actor == girl.ref and x.stage not in FINAL for x in state.void_thresholds)
+        or answer.flag is not True
+        or not answer.text.strip()
+        or answer.options
+        or answer.number is not None
+        or answer.denied
+        or answer.fields
+        or answer.member is not None
+    ):
+        raise WorkflowError("Verify the original low result and actual in-Frame failure to eject")
+    work = f"{action['id']}:hazard:rebirth"
+    state.void_thresholds.append(
+        VoidThreshold(
+            id="void:" + work,
+            actor=girl.ref,
+            frame_instance=case.frame,
+            family="frame",
+            source_event=event,
+            source_action=action["id"],
+            source_works=(work,),
+            sheet_json=state.sheets[girl.ref.entity].model_dump_json(),
+            stage="rebirth",
+            enclosed=True,
+            forced_by=rules.KIND,
+        )
+    )
+    rules.put(state, case.model_copy(update=dict(rebirth_event=event, void_work=work)))
+    source["followups"].append(work)
 
 
 def _roll(
@@ -361,9 +423,21 @@ def project(
         return result | dict(work=case.void_work)
     if kind == PICK_PLAY:
         return result | dict(options=(SUPPORTED_PLAY,))
-    if kind == REVIEW:
-        return result | dict(roll=case.roll.model_dump(mode="json") if case.roll else None)
+    original = state.sheets.get(case.girl.entity)
+    if kind == REVIEW and (original is None or original.character_id != case.girl.incarnation):
+        return result | dict(can_review_rebirth=False)
     _, girl = _originals(game, c, state, action)
+    if kind == REVIEW:
+        return result | dict(
+            roll=case.roll.model_dump(mode="json") if case.roll else None,
+            can_review_rebirth=bool(
+                case.roll
+                and case.roll.result == "low"
+                and case.frame is not None
+                and case.frame == girl.frame_instance == girl.occupied_frame_instance
+                and (case.remain_event or not _actual_cockpit(state, girl))
+            ),
+        )
     if kind == VOID:
         return result | dict(assets=_void_assets(state, girl))
     if kind == HEAT:
@@ -383,7 +457,7 @@ def materialize(
     event: str,
 ) -> None:
     case = rules.get(state, action["id"])
-    if not case or case.void_event != event or not case.void_work:
+    if not case or event not in (case.void_event, case.rebirth_event) or not case.void_work:
         return
     table = t.m3["m3_required_work"]
     if c.scalar(
@@ -394,6 +468,7 @@ def materialize(
     ):
         return
     owner = int(case.girl.entity)
+    rebirth = case.rebirth_event == event
     related(
         c,
         game.store,
@@ -407,8 +482,8 @@ def materialize(
             character=case.girl.incarnation,
             source_action=action["id"],
             source_pdf=19,
-            reason=rules.KIND,
-            details=dict(family=case.void_work.rsplit(":", 1)[-1]),
+            reason="mother_memetic_hazard_rebirth" if rebirth else rules.KIND,
+            details=dict(family="frame" if rebirth else case.void_work.rsplit(":", 1)[-1]),
         ),
         event,
     )
@@ -524,7 +599,18 @@ def complete_void(
     )
     action = game.action(c, parent)
     recorded = str(uuid4())
-    _after_void(game, c, state, action, case, recorded)
+    if case.rebirth_event:
+        if not any(
+            x.source_works == (work,) and x.stage == "converted" and x.resulting_actor is not None
+            for x in state.void_thresholds
+        ):
+            raise WorkflowError(
+                "Finish the actual original Mother rebirth before closing the source"
+            )
+        rules.put(state, case.model_copy(update=dict(completed=recorded)))
+        action["data"]["result"]["mother_hazard_rebirth"] = True
+    else:
+        _after_void(game, c, state, action, case, recorded)
     _record(game, c, state, case, recorded, event, viewer, key, "m3.mother_hazard_void_resolved")
     game.save_action(c, action)
     GorgonPlayService(game).synchronize(c, action, event, viewer, key)
@@ -559,3 +645,59 @@ def complete_response(
     )
     parent["data"]["result"]["mother_hazard_resolved"] = True
     game.save_action(c, parent)
+
+
+def prove_rebirth(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    row: dict[str, Any],
+    body: dict[str, Any],
+    girl: ActorRef,
+) -> None:
+    from girlframe.services.m3_gorgon_play import GorgonPlayService
+
+    action = game.action(c, body["source_action"])
+    original = GorgonPlayService(game).source(c, action)
+    case = rules.get(state, action["id"])
+    threshold = next((x for x in state.void_thresholds if x.source_works == (row["id"],)), None)
+    responses, choices = t.m2["m2_responses"], t.m2["m2_choices"]
+    answer = c.scalar(
+        sa.select(responses.c.answer_json)
+        .join(
+            choices,
+            sa.and_(
+                responses.c.campaign_id == choices.c.campaign_id,
+                responses.c.choice_id == choices.c.id,
+            ),
+        )
+        .where(
+            responses.c.campaign_id == game.store.campaign_id,
+            responses.c.event_id == row["event_id"],
+            responses.c.actor_id == str(original["procedural_gm"]),
+            choices.c.kind == REVIEW,
+            choices.c.action_id == action["id"],
+        )
+    )
+    if (
+        original["kind"] != rules.PLAY
+        or case is None
+        or case.girl != girl
+        or case.ejected
+        or case.roll is None
+        or case.roll.result != "low"
+        or case.rebirth_event != row["event_id"]
+        or case.void_work != row["id"]
+        or case.scene != row["scene_id"]
+        or threshold is None
+        or threshold.actor != girl
+        or threshold.forced_by != rules.KIND
+        or threshold.stage != "rebirth"
+        or threshold.frame_instance != case.frame
+        or threshold.source_action != action["id"]
+        or answer is None
+        or json.loads(answer).get("flag") is not True
+    ):
+        raise WorkflowError(
+            "Recover the original low Mother roll and actual in-Frame rebirth source"
+        )

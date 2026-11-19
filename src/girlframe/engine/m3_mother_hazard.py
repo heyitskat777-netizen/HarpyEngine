@@ -21,6 +21,8 @@ class Exposure(Model):
     roll: Roll | None = None
     frame: str | None = None
     ejected: str | None = None
+    remain_event: str | None = None
+    rebirth_event: str | None = None
     void_asset: str | None = None
     void_event: str | None = None
     void_work: str | None = None

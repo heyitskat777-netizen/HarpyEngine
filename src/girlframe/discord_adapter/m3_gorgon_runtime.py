@@ -729,8 +729,17 @@ async def open_hazard(
         text = f"You have {detail['heat']} available Heat. Choose how much to spend."
         fields = [Field("heat", "Your Heat spend")]
     elif kind == "hazard_eject":
-        text = "Your low roll is saved. You can eject your Girl from her actual Vital Frame now."
-        fields = [Field("account", "Describe your immediate ejection", paragraph=True)]
+        text = "Choose whether your Girl immediately ejects from her actual Vital Frame."
+        fields = [
+            Field("options", "Your choice", (("eject", "Eject now"), ("remain", "Remain inside"))),
+            Field("account", "Describe what your Girl does", paragraph=True),
+        ]
+    elif kind == "hazard_review" and detail.get("can_review_rebirth"):
+        text = "Verify what happened to the original Girl who did not eject."
+        fields = [
+            Field("confirm", "Original outcome", (("remained", "Verify that she remained"),)),
+            Field("account", "Describe the actual original failure to eject", paragraph=True),
+        ]
     elif kind == "hazard_mid":
         text = "Choose the actual consequence of your saved roll."
         fields = [
@@ -773,6 +782,7 @@ async def open_hazard(
             number=int(heat) if kind == "hazard_heat" else None,
             text=values.get("account", ""),
             options=tuple(values.get("options", ())),
+            flag=True if values.get("confirm") == ("remained",) else None,
         )
         await asyncio.to_thread(
             game.respond,

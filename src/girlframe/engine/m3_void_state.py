@@ -190,9 +190,9 @@ class VoidThreshold(Model):
     allure_persists: bool = False
     protection_release_event: str | None = None
 
-    forced_by: Literal["gorgon_frame_contact", "incubus_conditioning"] | None = Field(
-        default=None, exclude_if=lambda value: value is None
-    )
+    forced_by: (
+        Literal["gorgon_frame_contact", "incubus_conditioning", "mother_memetic_hazard"] | None
+    ) = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def actual_sequence(self) -> "VoidThreshold":

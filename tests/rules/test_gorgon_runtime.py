@@ -3854,7 +3854,7 @@ def test_parasite_infect_damages_an_actual_voided_asset_before_the_owned_roll(le
         assert next(x for x in final.sheets["2"].assets if x.id == selected).void
 
 
-@pytest.mark.parametrize("tier", ("low", "high"))
+@pytest.mark.parametrize("tier", ("low", "high", "remain"))
 def test_mother_local_hazard_applies_owned_ejection_or_both_high_effects(ledger, tier):
     import asyncio
 
@@ -3862,6 +3862,7 @@ def test_mother_local_hazard_applies_owned_ejection_or_both_high_effects(ledger,
     from test_m2_game import Dice
     from test_mission_ui import current
     from test_privacy_game_delivery import PrivateGateway
+    from test_void_service import respond as respond_void
 
     from girlframe.discord_adapter.m2_ui import open_choice
     from girlframe.engine.m2 import PlayInput
@@ -3869,8 +3870,9 @@ def test_mother_local_hazard_applies_owned_ejection_or_both_high_effects(ledger,
     from girlframe.engine.m3_mother_hazard import get, immune
     from girlframe.engine.m3_physical_state import CockpitAction
     from girlframe.services.m3_actors import profiles
-    from girlframe.services.m3_mother_hazard import EJECT, HEAT, PICK_PLAY, VOID
+    from girlframe.services.m3_mother_hazard import EJECT, HEAT, PICK_PLAY, REVIEW, VOID
     from girlframe.services.m3_physical import PhysicalService
+    from girlframe.services.m3_void import VoidService
     from girlframe.services.onboarding import WorkflowError
 
     game, worker, _, _, mutation = gorgon_source(
@@ -3926,7 +3928,7 @@ def test_mother_local_hazard_applies_owned_ejection_or_both_high_effects(ledger,
     operate("pilot", "enter-before-hazard")
     frame = actor().occupied_frame_instance
     assert frame and actor().piloting
-    game.dice = Dice((1, 2) if tier == "low" else (5, 6))
+    game.dice = Dice((5, 6) if tier == "high" else (1, 2))
     view = service.preview(ADMIN, 900)
     people = {x["token"]: x for x in view["actors"]}
     assert view["hazard_tags"][mutation.actor.token] == {
@@ -4000,11 +4002,44 @@ def test_mother_local_hazard_applies_owned_ejection_or_both_high_effects(ledger,
         await interaction.response.defer(ephemeral=True)
         await open_choice(interaction, game, choice["id"])
         form = interaction.edit_original_response.call_args.kwargs["view"]
-        form.values["account"] = "I eject immediately, leaving the Frame in place."
+        form.values["options"] = ("remain",) if tier == "remain" else ("eject",)
+        form.values["account"] = (
+            "I do not eject." if tier == "remain" else "I eject, leaving the actual Frame in place."
+        )
         await form.confirm.callback(current(PLAYER.user_id, 88101))
         assert form.completed
 
     asyncio.run(eject())
+    if tier == "remain":
+        assert actor().inside_frame and "2" in state(game).sheets
+        with pytest.raises(WorkflowError):
+            answer(game, ADMIN, REVIEW, flag=True)
+        answer(
+            game,
+            ADMIN,
+            REVIEW,
+            flag=True,
+            text="The actual Girl is still in her own Vital Frame after declining to eject.",
+        )
+        case = get(state(game), parent)
+        service = VoidService(ledger)
+        view = service.get(PLAYER, case.void_work)
+        assert view["stage"] == "rebirth" and not view["threshold"]["answers"]
+        assert game.inspect(PLAYER, parent)["state"] == "awaiting_choices"
+        with pytest.raises(WorkflowError):
+            service.get(OTHER, case.void_work)
+        rewrite = view["rebirth_choice"] | dict(
+            new_identities=["Unfolded"],
+            account="My original character is reborn.",
+        )
+        respond_void(
+            service, case.void_work, "rebirth", dict(choice=rewrite, account=rewrite["account"])
+        )
+        canon = state(game)
+        assert any(x.origin == mutation.target for x in canon.harpy_states)
+        assert "2" not in canon.sheets and game.dice.calls == 1
+        assert game.inspect(ADMIN, parent)["state"] == "complete"
+        return
     original = actor()
     case = get(state(game), parent)
     assert original.inside_frame is False and original.frame_instance == frame
