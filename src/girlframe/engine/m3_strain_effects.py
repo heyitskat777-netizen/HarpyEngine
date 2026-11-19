@@ -8,6 +8,9 @@ from pydantic import Field
 from girlframe.engine import m3_world as world_rules
 from girlframe.engine.m2 import GameState, Model, TagState, pair_key
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_benevolent_contact import RULE as BENEVOLENT_CONTACT
+from girlframe.engine.m3_benevolent_contact import Contact
+from girlframe.engine.m3_benevolent_contact import Play as ContactPlay
 from girlframe.engine.m3_budget_anarchy import REBELLION as REBEL_PROTEST
 from girlframe.engine.m3_budget_sabotage import Pin
 from girlframe.engine.m3_cadre_leak import RULE as CADRE_LEAK
@@ -48,6 +51,7 @@ SUPPORTED = frozenset(
         "strain.void.low.2.1",
         SPRITE_ESCORT,
         "strain.void.low.4.1",
+        BENEVOLENT_CONTACT,
         "strain.void.low.5.1",
         ORBITAL_THREAT,
         VOID_EXAMINATION,
@@ -133,6 +137,8 @@ class Choice(Model):
     cult_harpy: str | None = Field(default=None, exclude_if=lambda x: x is None)
     new_cult_harpy: AdversaryPilot | None = Field(default=None, exclude_if=lambda x: x is None)
     sprite_escort: SpriteEscortDesign | None = Field(default=None, exclude_if=lambda x: x is None)
+    contact_play: ContactPlay | None = Field(default=None, exclude_if=lambda x: x is None)
+    contact_channel: int | None = Field(default=None, ge=1, exclude_if=lambda x: x is None)
     leak_parties: tuple[ActorRef, ...] = Field(default=(), exclude_if=lambda x: not x)
     leak_report: str | None = Field(default=None, max_length=1200, exclude_if=lambda x: x is None)
 
@@ -161,6 +167,7 @@ def apply(
     cleanup_index: int | None = None,
     cleanup_rng: Literal["os", "test_injected"] | None = None,
     revelation: Revelation | None = None,
+    contact: Contact | None = None,
 ) -> GameState:
     if choice.rule_id not in SUPPORTED:
         raise ValueError("UNSUPPORTED_RULE: this Strain effect has no complete typed resolver")
@@ -190,6 +197,23 @@ def apply(
                 SpriteEscort(work=source_work, event=source_event, design=choice.sprite_escort),
             ),
         )
+    elif rule == BENEVOLENT_CONTACT:
+        from girlframe.engine.m3_benevolent_contact import commit as commit_contact
+
+        fields(choice, {"target", "victim", "contact_play", "contact_channel"})
+        if (
+            contact is None
+            or contact.id != source_work
+            or contact.grant != source_work
+            or contact.event != source_event
+            or contact.speaker.actor.entity != choice.target
+            or contact.speaker.controller != state.handler
+            or contact.recipient.actor.entity != choice.victim
+            or contact.play != choice.contact_play
+            or contact.account != choice.account.strip()
+        ):
+            raise ValueError("Recover the performed original Benevolent Gorgon Play")
+        commit_contact(state, contact)
     elif rule == VOID_REVELATION:
         from girlframe.engine.m3_void_revelation import commit
 

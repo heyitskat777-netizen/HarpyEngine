@@ -1566,6 +1566,21 @@ class InboxView(discord.ui.View):
                 StrainService(OffDutyService(MissionService(self.service.store)))
             )
             await open_escape_offer(interaction, escape_service, item.identity)
+        elif item.task == "m3_benevolent_contact":
+            from girlframe.discord_adapter.m3_benevolent_contact import (
+                open_contact as open_gorgon_contact,
+            )
+            from girlframe.services.m3_benevolent_contact import (
+                ContactService as GorgonContactService,
+            )
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_off_duty import OffDutyService
+            from girlframe.services.m3_strain import StrainService
+
+            gorgon_contact = GorgonContactService(
+                StrainService(OffDutyService(MissionService(self.service.store)))
+            )
+            await open_gorgon_contact(interaction, gorgon_contact, item.identity)
         elif item.task in ("m3_strain_revelation", "m3_strain_disguise_revelation"):
             from girlframe.engine.m3_void_revelation import PLAYS
             from girlframe.services.m3_missions import MissionService

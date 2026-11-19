@@ -11,6 +11,7 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_strain_effects as rules
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_benevolent_contact import RULE as BENEVOLENT_CONTACT
 from girlframe.engine.m3_cadre_leak import RULE as CADRE_LEAK
 from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_contraband_state import ContrabandFind
@@ -247,6 +248,32 @@ class EffectService:
             cleanup_index = None
             cleanup_rng = None
             revelation = None
+            contact = None
+            if choice.rule_id == BENEVOLENT_CONTACT:
+                from girlframe.services.m3_benevolent_contact import ContactService
+
+                if (
+                    not choice.target
+                    or not choice.victim
+                    or choice.contact_play is None
+                    or choice.contact_channel is None
+                ):
+                    raise WorkflowError(
+                        "Choose the actual Benevolent Gorgon, Girl and printed Play"
+                    )
+                contact = ContactService(self.strain).performed(
+                    c,
+                    state,
+                    viewer,
+                    identity=identity,
+                    event=event_id,
+                    grant=identity,
+                    play=choice.contact_play,
+                    gorgon=ActorRef(kind="gorgon", entity=choice.target),
+                    girl=choice.victim,
+                    channel=choice.contact_channel,
+                    account=choice.account,
+                )
             if choice.rule_id == VOID_REVELATION:
                 from girlframe.services.m3_actors import ActorService
                 from girlframe.services.m3_cast import CastService
@@ -501,6 +528,7 @@ class EffectService:
                 cleanup_index=cleanup_index,
                 cleanup_rng=cleanup_rng,
                 revelation=revelation,
+                contact=contact,
             )
             needs_offer = choice.rule_id == REBEL_ESCAPE_OFFER
             if needs_offer:

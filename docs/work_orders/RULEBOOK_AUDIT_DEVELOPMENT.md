@@ -360,3 +360,19 @@ The native test resolves the originating event and a later re-emergence
 with both saved dice intact. The orbital test checks joint landing and
 that another introduction cannot reuse the same escort.
 [Low Void p. 142](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=144) · [Sprite classes pp. 163–164](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=166) · [Sprite escort tests](../../tests/rules/test_strain_sprite_escort.py)
+
+## Low Void Benevolent Gorgon contact
+
+The base is `6bf724350925e9ae5fd074ad3a2f21fef0cd476f`.
+Low Void 4.2 grants the selected actual Benevolent Gorgon one of the
+two printed Plays and immediately records its use toward the addressed
+Girl. Both roles must be in the actual scene. The original speaker and
+addressee have the private Inbox receipt. An offer records the speaker's
+terms and creates no accepted favour. Interest creates no Bond or
+player response. The same Gorgon controller can use the granted Play
+again from the original Inbox record with a current eligible cast.
+Controller transfer keeps the existing private history and has no
+new-controller grant handoff in this scope.
+Both choices passed native first use, original command replay, a second
+addressed use and original-participant visibility checks.
+[Low Void p. 142](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=144) · [Contact tests](../../tests/rules/test_strain_benevolent_contact.py)

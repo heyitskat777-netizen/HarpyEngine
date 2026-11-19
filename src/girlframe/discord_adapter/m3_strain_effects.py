@@ -11,6 +11,8 @@ from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.m3_world import TYPES, coordinates, squares
 from girlframe.discord_adapter.onboarding import reply
+from girlframe.engine.m3_benevolent_contact import PLAYS as CONTACT_PLAYS
+from girlframe.engine.m3_benevolent_contact import RULE as BENEVOLENT_CONTACT
 from girlframe.engine.m3_budget_anarchy import REBELLION as REBEL_PROTEST
 from girlframe.engine.m3_cadre_leak import RULE as CADRE_LEAK
 from girlframe.engine.m3_civic_directive import PROTEST as CIVIC_PROTEST
@@ -324,6 +326,27 @@ def effect_form(
                     (("first", "The first Asset"), ("both", "Both Assets")),
                 ),
                 Field("sprite_weakness", "Describe the Core weakness", paragraph=True),
+            ]
+        if rule == BENEVOLENT_CONTACT:
+            fields += [
+                Field(
+                    "contact_gorgon",
+                    "Which joined Benevolent Gorgon speaks?",
+                    options(
+                        [
+                            x
+                            for x in world["gorgons"]
+                            if x["alive"] and x["gorgon_class"] == "benevolent"
+                        ]
+                    ),
+                ),
+                Field(
+                    "contact_girl",
+                    "Which Girl does it actually address?",
+                    tuple((str(uid), state.sheets[str(uid)].callsign) for uid in state.order),
+                ),
+                Field("contact_channel", "Where does it make the Play?", channels),
+                Field("contact_play", "Which printed Play does it gain and make?", CONTACT_PLAYS),
             ]
         if rule == CULT_OCCUPATION:
             sites = [
@@ -953,6 +976,13 @@ def effect_form(
                 assets=(values["sprite_first"], values["sprite_second"]),
                 weakness=values["sprite_weakness"],
                 both_assets=values["sprite_core"] == ("both",),
+            )
+        if rule == BENEVOLENT_CONTACT:
+            payload.update(
+                target=values["contact_gorgon"][0],
+                victim=values["contact_girl"][0],
+                contact_channel=int(values["contact_channel"][0]),
+                contact_play=values["contact_play"][0],
             )
         if rule == CULT_OCCUPATION:
             selected = values["cult_harpy"][0]

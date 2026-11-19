@@ -2926,6 +2926,7 @@ class InboxService:
                         task="m3_handler_notice",
                     )
                 )
+            from girlframe.engine.m3_benevolent_contact import contacts as benevolent_contacts
             from girlframe.engine.m3_cadre_leak import leaks as cadre_leaks
             from girlframe.engine.m3_civic_directive import cases as civic_directives
             from girlframe.engine.m3_doppelganger_reveal import reveals as disguise_reveals
@@ -2936,6 +2937,38 @@ class InboxService:
             from girlframe.services.m3_handler_tags import HandlerTagService
             from girlframe.services.m3_pilot_fears import access as fear_access
             from girlframe.services.m3_rebel_escape_offer import visible as visible_escape_offers
+
+            contact_notices = [
+                x
+                for x in benevolent_contacts(canon)
+                if viewer.user_id in (x.speaker.controller, x.recipient.controller)
+            ]
+            grants = [
+                x
+                for x in contact_notices
+                if x.id == x.grant and x.speaker.controller == viewer.user_id
+            ]
+            for contact_notice in contact_notices[-25:] + [
+                x for x in grants if x not in contact_notices[-25:]
+            ]:
+                items.append(
+                    InboxItem(
+                        "benevolent-contact:" + contact_notice.id,
+                        "benevolent_contact",
+                        contact_notice.id,
+                        canon.revision,
+                        "plays",
+                        "Private Benevolent Gorgon Play",
+                        "Original speaker and addressee",
+                        "resolved",
+                        False,
+                        False,
+                        "Read this original Gorgon contact.",
+                        "",
+                        "Review contact",
+                        task="m3_benevolent_contact",
+                    )
+                )
 
             for revelation in revelations(canon)[-25:]:
                 if any(role.controller == viewer.user_id for role in revelation.recipients):
