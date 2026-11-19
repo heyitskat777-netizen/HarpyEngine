@@ -16224,7 +16224,9 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_frantic_crisis.py::test_actual_frantic_tag_opens_one_crisis_and_each_raise_is_finite"
+        "tests/rules/test_frantic_crisis.py::test_actual_frantic_tag_opens_one_crisis_and_each_raise_is_finite",
+        "tests/rules/test_frantic_crisis.py::test_each_immediate_crisis_roll_is_native_and_saved_once",
+        "tests/rules/test_frantic_crisis.py::test_each_printed_city_and_base_ruin_applies_and_keeps_aftermath"
       ],
       "m2_play_id": null,
       "module": "core"

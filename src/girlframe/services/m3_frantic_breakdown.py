@@ -108,60 +108,65 @@ class FranticBreakdownService:
             raise WorkflowError("STALE_STATE: reopen this Frantic breakdown")
         return state
 
+    def plan_roll(
+        self, c: Connection, state: GameState, viewer: GuildViewer, channel: int, account: str
+    ) -> rules.Breakdown:
+        owned = active_book(self.game, c, state, book="Frantic", rule=rules.RULE)
+        if (
+            owned is None
+            or owned[0].entity != str(viewer.user_id)
+            or state.world is None
+            or not account.strip()
+        ):
+            raise WorkflowError(
+                "Only the original Frantic may declare a breakdown in the actual world"
+            )
+        if any(
+            x.handler == owned[0] and rules.phase(state, x) != "complete"
+            for x in rules.records(state)
+        ):
+            raise WorkflowError("Continue the actual existing Frantic breakdown first")
+        scene = self.game.scene(c, channel)
+        if viewer.user_id not in scene["participants"]:
+            raise WorkflowError("Join the actual breakdown scene")
+        lock = self.game.lock(c, channel)
+        if lock is not None and lock["state"] != "released":
+            raise WorkflowError("Finish the actual pending Play in this scene first")
+        self.game.pilot_cast(c, state, scene, owners=(viewer.user_id,))
+        groups = status_groups(state)
+        if len(groups) < 2 or len(groups[0]) != 1 or len(groups[-1]) != 1:
+            raise WorkflowError("Recover the single original Ace and Dog before this roll")
+        if not {groups[0][0], groups[-1][0]} <= set(scene["participants"]):
+            raise WorkflowError("The original Ace and Dog must join the breakdown scene")
+        cadre = tuple(current_ref(state, x) for x in state.order)
+        event, identity = str(uuid4()), str(uuid4())
+        return rules.Breakdown(
+            id=identity,
+            source_event=event,
+            handler=owned[0],
+            scene=scene["id"],
+            channel=channel,
+            faces=self.game.dice.roll(),
+            bases=tuple(
+                x.id
+                for x in state.world.locations
+                if x.kind == "base"
+                and x.foundation_operational
+                and in_responsibility(state, x.cell)
+            ),
+            cadre=cadre,
+            in_scene=tuple(x for x in cadre if int(x.entity) in scene["participants"]),
+            ace=current_ref(state, groups[0][0]),
+            dog=current_ref(state, groups[-1][0]),
+            account=account.strip(),
+        )
+
     def start(
         self, viewer: GuildViewer, key: str, expected: int, channel: int, account: str
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             state = self._state(c, expected)
-            owned = active_book(self.game, c, state, book="Frantic", rule=rules.RULE)
-            if (
-                owned is None
-                or owned[0].entity != str(viewer.user_id)
-                or state.world is None
-                or not account.strip()
-            ):
-                raise WorkflowError(
-                    "Only the original Frantic may declare a breakdown in the actual world"
-                )
-            if any(
-                x.handler == owned[0] and rules.phase(state, x) != "complete"
-                for x in rules.records(state)
-            ):
-                raise WorkflowError("Continue the actual existing Frantic breakdown first")
-            scene = self.game.scene(c, channel)
-            if viewer.user_id not in scene["participants"]:
-                raise WorkflowError("Join the actual breakdown scene")
-            lock = self.game.lock(c, channel)
-            if lock is not None and lock["state"] != "released":
-                raise WorkflowError("Finish the actual pending Play in this scene first")
-            self.game.pilot_cast(c, state, scene, owners=(viewer.user_id,))
-            groups = status_groups(state)
-            if len(groups) < 2 or len(groups[0]) != 1 or len(groups[-1]) != 1:
-                raise WorkflowError("Recover the single original Ace and Dog before this roll")
-            if not {groups[0][0], groups[-1][0]} <= set(scene["participants"]):
-                raise WorkflowError("The original Ace and Dog must join the breakdown scene")
-            cadre = tuple(current_ref(state, x) for x in state.order)
-            event, identity = str(uuid4()), str(uuid4())
-            value = rules.Breakdown(
-                id=identity,
-                source_event=event,
-                handler=owned[0],
-                scene=scene["id"],
-                channel=channel,
-                faces=self.game.dice.roll(),
-                bases=tuple(
-                    x.id
-                    for x in state.world.locations
-                    if x.kind == "base"
-                    and x.foundation_operational
-                    and in_responsibility(state, x.cell)
-                ),
-                cadre=cadre,
-                in_scene=tuple(x for x in cadre if int(x.entity) in scene["participants"]),
-                ace=current_ref(state, groups[0][0]),
-                dog=current_ref(state, groups[-1][0]),
-                account=account.strip(),
-            )
+            value = self.plan_roll(c, state, viewer, channel, account)
             rules.put(state, value)
             self.game.event(
                 c,
@@ -169,10 +174,10 @@ class FranticBreakdownService:
                 key,
                 "m3.frantic_breakdown_rolled",
                 state,
-                event_id=event,
-                breakdown=identity,
+                event_id=value.source_event,
+                breakdown=value.id,
             )
-            return dict(id=identity, game_revision=state.revision, total=value.total)
+            return dict(id=value.id, game_revision=state.revision, total=value.total)
 
         return self._write(
             viewer,

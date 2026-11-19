@@ -1517,3 +1517,19 @@ third-party entry and departure, private native screens, restart,
 safety pause, stale input, a duplicate request and the actual
 Receive Orders completion.
 [Rulebook p. 138](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=140) · [Tests](../../tests/rules/test_advocate_alone.py)
+
+### Frantic immediate breakdown and site ruin
+
+Base `2c62da3246088b413b79c76354b30e121fd6f6d8`. The original Frantic
+can use either printed immediate Break Down slot. Each saves the real
+Break Down roll and preserves its ordinary choice owners and unresolved
+effects. The printed City and three Base ruin slots apply actual site
+destruction, schedule the normal Budget trigger and open the existing
+quadrant-loss work after the final Foundation Base is lost. Armoured and
+quarantined sites retain their existing protections. Other Crisis slots
+remain open.
+
+The focused regression passed **6 tests in 24.84 seconds**, covering both
+immediate rolls, all four ruin slots, retries, stale and paused controls,
+restart, private choices and the actual aftermath.
+[Rulebook pp. 130–131](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=132) · [Tests](../../tests/rules/test_frantic_crisis.py)

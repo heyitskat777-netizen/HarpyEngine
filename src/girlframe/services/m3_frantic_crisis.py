@@ -7,20 +7,41 @@ import sqlalchemy as sa
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
+from girlframe.engine import m3_frantic_breakdown as breakdown_rules
 from girlframe.engine import m3_frantic_crisis as rules
 from girlframe.engine.m2 import GameState
+from girlframe.engine.m3_collateral import stage_loss
 from girlframe.engine.m3_handler_consequences import active_handler
+from girlframe.engine.m3_promotional_opportunity import in_responsibility
 from girlframe.engine.m3_strain import effective_levels, set_level
-from girlframe.engine.m3_strain_state import Track
+from girlframe.engine.m3_strain_state import Track, Trigger
+from girlframe.engine.m3_world import destroy
+from girlframe.engine.m3_world_state import Location
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
+from girlframe.services.m3_frantic_breakdown import FranticBreakdownService
 from girlframe.services.m3_handler_book_orders import active_book
+from girlframe.services.m3_medical import MedicalService
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_off_duty import OffDutyService
 from girlframe.services.m3_strain import StrainService
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
+
+
+def ruin_sites(state: GameState) -> tuple[Location, ...]:
+    if state.world is None:
+        return ()
+    return tuple(
+        x
+        for x in state.world.locations
+        if x.kind in ("city", "base")
+        and x.condition != "destroyed"
+        and not x.protection_sources
+        and (not x.ship or not x.ship.armoured)
+        and in_responsibility(state, x.cell)
+    )
 
 
 def observe_births(
@@ -47,8 +68,8 @@ def observe_births(
 
 
 class CrisisService:
-    def __init__(self, store: OnboardingStore):
-        self.store, self.game = store, GameService(store)
+    def __init__(self, store: OnboardingStore, game: GameService | None = None):
+        self.store, self.game = store, game or GameService(store)
         self.strain = StrainService(OffDutyService(MissionService(store)))
 
     def _current(
@@ -111,7 +132,22 @@ class CrisisService:
                 tag=label,
                 slot=value.slot,
                 track=value.track,
+                breakdown=value.breakdown,
+                location=value.location,
                 available=tuple(x for x in rules.RAISE_SLOTS if x not in used),
+                immediate=tuple(x for x in rules.BREAK_SLOTS if x not in used),
+                ruins=tuple(
+                    (
+                        slot,
+                        tuple(
+                            (x.id, x.name)
+                            for x in ruin_sites(state)
+                            if x.kind == ("city" if slot == "city" else "base")
+                        ),
+                    )
+                    for slot in rules.RUIN_SLOTS
+                    if slot not in used
+                ),
                 low=tuple(x for x, y in state.strain.levels.items() if y == "low")
                 if state.strain
                 else (),
@@ -171,6 +207,161 @@ class CrisisService:
             key,
             "m3.frantic_crisis_raised",
             dict(id=identity, expected=expected, slot=slot, track=track),
+            operation,
+            authorize=access,
+            auto_audit=False,
+        )
+
+    def break_now(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        identity: str,
+        expected: int,
+        slot: rules.BreakSlot,
+        channel: int,
+        account: str,
+    ) -> dict[str, Any]:
+        def access(c: Connection) -> None:
+            Access(self.store).authorize(c, viewer, "plays")
+            self.game.unpaused(c)
+
+        def operation(c: Connection) -> dict[str, Any]:
+            state, value, _ = self._current(c, viewer, identity)
+            if state.revision != expected or value.slot is not None:
+                raise WorkflowError("STALE_STATE: reopen the actual remaining Crisis choice")
+            owned = active_book(self.game, c, state, book="Frantic", rule=rules.RULE)
+            if (
+                owned is None
+                or owned[0] != value.handler
+                or slot not in rules.BREAK_SLOTS
+                or any(x.handler == value.handler and x.slot == slot for x in rules.records(state))
+                or not 1 <= len(account.strip()) <= 1200
+            ):
+                raise WorkflowError("Choose an unused immediate Break Down slot as its Frantic")
+            roll = FranticBreakdownService(self.store, self.game).plan_roll(
+                c, state, viewer, channel, account
+            )
+            breakdown_rules.put(state, roll)
+            rules.put(
+                state,
+                value.model_copy(
+                    update=dict(slot=slot, breakdown=roll.id, effect_event=roll.source_event)
+                ),
+            )
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.frantic_breakdown_rolled",
+                state,
+                event_id=roll.source_event,
+                crisis=identity,
+                breakdown=roll.id,
+            )
+            return dict(id=identity, breakdown=roll.id, revision=state.revision)
+
+        return self.store._write(
+            viewer,
+            key,
+            "m3.frantic_breakdown_rolled",
+            dict(id=identity, expected=expected, slot=slot, channel=channel, account=account),
+            operation,
+            authorize=access,
+            auto_audit=False,
+        )
+
+    def ruin(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        identity: str,
+        expected: int,
+        slot: rules.RuinSlot,
+        location: str,
+        account: str,
+    ) -> dict[str, Any]:
+        def access(c: Connection) -> None:
+            gate = Access(self.store)
+            gate.authorize(c, viewer, "plays")
+            gate.authorize(c, viewer, "world")
+            self.game.unpaused(c)
+
+        def operation(c: Connection) -> dict[str, Any]:
+            state, value, _ = self._current(c, viewer, identity)
+            if state.revision != expected or value.slot is not None:
+                raise WorkflowError("STALE_STATE: reopen the actual remaining Crisis choice")
+            owned = active_book(self.game, c, state, book="Frantic", rule=rules.RULE)
+            site = next((x for x in ruin_sites(state) if x.id == location), None)
+            if (
+                owned is None
+                or owned[0] != value.handler
+                or slot not in rules.RUIN_SLOTS
+                or any(x.handler == value.handler and x.slot == slot for x in rules.records(state))
+                or site is None
+                or site.kind != ("city" if slot == "city" else "base")
+                or not 1 <= len(account.strip()) <= 1200
+                or state.world is None
+                or state.strain is None
+            ):
+                raise WorkflowError("Choose an unused printed ruin and a suitable original site")
+            if self.game.pending_actions(c):
+                raise WorkflowError("Finish the pending Play before destroying this site")
+            changed = state.model_copy(deep=True)
+            outcome = destroy(state.world, location, gorgon_cause=False)
+            changed.world = outcome.world
+            event = str(uuid4())
+            judge, appointment = MedicalService(self.store)._handler(c)
+            loss = stage_loss(
+                state,
+                changed,
+                source="frantic-crisis:" + identity,
+                event=event,
+                judge=judge,
+                appointment=appointment,
+                handler=value.handler,
+            )
+            triggers = tuple(
+                Trigger(
+                    id=identity + ":structure:" + x.entity,
+                    kind="structure_destroyed",
+                    entity=x.entity,
+                    source_event=event,
+                )
+                for x in outcome.followups
+                if x.kind == "budget_structure_destroyed"
+            )
+            changed.strain = state.strain.model_copy(
+                update=dict(triggers=state.strain.triggers + triggers)
+            )
+            rules.put(
+                changed,
+                value.model_copy(update=dict(slot=slot, location=location, effect_event=event)),
+            )
+            changed.facts.append(
+                dict(kind="frantic_crisis_ruin", id=identity, event=event, account=account.strip())
+            )
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.frantic_crisis_ruin",
+                changed,
+                event_id=event,
+                crisis=identity,
+                location=location,
+            )
+            if loss is not None:
+                from girlframe.services.m3_quadrant_loss import materialize_loss
+
+                materialize_loss(self.game, c, loss, event)
+            return dict(id=identity, state="complete", location=location, revision=changed.revision)
+
+        return self.store._write(
+            viewer,
+            key,
+            "m3.frantic_crisis_ruin",
+            dict(id=identity, expected=expected, slot=slot, location=location, account=account),
             operation,
             authorize=access,
             auto_audit=False,

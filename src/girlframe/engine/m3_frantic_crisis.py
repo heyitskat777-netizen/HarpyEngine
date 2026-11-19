@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model
@@ -11,6 +11,10 @@ from girlframe.engine.m3_strain_state import Track
 RULE = "handler-playbook.frantic.crisis-management"
 RaiseSlot = Literal["raise_first", "raise_second"]
 RAISE_SLOTS: tuple[RaiseSlot, ...] = ("raise_first", "raise_second")
+BreakSlot = Literal["break_first", "break_second"]
+BREAK_SLOTS: tuple[BreakSlot, ...] = ("break_first", "break_second")
+RuinSlot = Literal["city", "base_first", "base_second", "base_third"]
+RUIN_SLOTS: tuple[RuinSlot, ...] = ("city", "base_first", "base_second", "base_third")
 
 
 class Crisis(Model):
@@ -18,8 +22,10 @@ class Crisis(Model):
     handler: ActorRef
     tag: str
     source_event: str
-    slot: RaiseSlot | None = None
+    slot: RaiseSlot | BreakSlot | RuinSlot | None = None
     track: Track | None = None
+    breakdown: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    location: str | None = Field(default=None, exclude_if=lambda value: value is None)
     effect_event: str | None = None
 
     @model_validator(mode="after")
@@ -27,7 +33,9 @@ class Crisis(Model):
         pending = self.slot is None
         if (
             self.handler.kind != "handler"
-            or (self.track is None) != pending
+            or (self.track is not None) != (self.slot in RAISE_SLOTS)
+            or (self.breakdown is not None) != (self.slot in BREAK_SLOTS)
+            or (self.location is not None) != (self.slot in RUIN_SLOTS)
             or (self.effect_event is None) != pending
         ):
             raise ValueError(
