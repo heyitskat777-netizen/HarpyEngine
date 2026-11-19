@@ -38,6 +38,7 @@ def candidate_source_gate(monkeypatch):
             "gorgon-type.jackdaw.jackdaw-type",
             "gorgon-type.jackdaw.hallucinations",
             "gorgon-type.incubus.incubus-type",
+            "gorgon-type.incubus.emotional-conditioning",
             "gorgon-type.mother.mother-type",
             "gorgon-type.growth.growth-type",
             "gorgon-type.doppleganger.doppleganger-type",
@@ -3164,3 +3165,216 @@ def test_sentinel_shell_real_owned_roll_and_physical_consequences(ledger, faces,
             account="The original Girl moves her Frame after the release.",
         )
         assert moved["destination"] == [1, 0] and game.dice.calls == 1
+
+
+@pytest.mark.parametrize(
+    "erase,tier", [(False, "mid"), (True, "mid"), (False, "high"), (False, "low")]
+)
+def test_incubus_marks_only_its_actual_known_tag_and_the_girl_owns_results(ledger, erase, tier):
+    import asyncio
+
+    from test_ledger import OTHER
+    from test_m2_game import Dice
+    from test_mission_ui import current
+    from test_privacy_game_delivery import PrivateGateway
+    from test_void_service import respond as respond_void
+
+    from girlframe.discord_adapter.m3_gorgon_play import open_gorgon_play
+    from girlframe.discord_adapter.m3_gorgon_runtime import open_choice
+    from girlframe.engine.m2 import ChoiceAnswer, PlayInput, TagState
+    from girlframe.engine.m3_handler_consequences import active_handler
+    from girlframe.engine.m3_incubus_conditioning import get
+    from girlframe.services.m3_incubus_conditioning import ERASE, HEAT, REVIEW, THRESHOLD, VOID
+    from girlframe.services.m3_void import VoidService
+    from girlframe.services.onboarding import WorkflowError
+
+    game, worker, gateway, initial, applied = gorgon_source(
+        ledger,
+        kind="incubus_inflict",
+        types=("incubus",),
+        tag="touch",
+    )
+    tick(worker, gateway, 5)
+    assert game.inspect(ADMIN, initial)["state"] == "complete"
+    gateway = PrivateGateway()
+    game.dice = Dice(dict(mid=(3, 4), high=(5, 5), low=(1, 2))[tier])
+    hidden = "private-other-role"
+    with ledger.transaction() as c:
+        canon = state(game)
+        original_sheet = canon.sheets["2"]
+        original_sheet.heat = 2
+        original_sheet.tags.append(
+            TagState(
+                id=hidden,
+                label="Different Role's Knowledge",
+                giver=ADMIN.user_id,
+                giver_actor=active_handler(canon),
+                observers=(1, 2),
+            )
+        )
+        game.event(c, ADMIN.user_id, "synthetic-incubus-heat", "synthetic.heat", canon)
+    before = state(game)
+    actual_tag = next(x for x in before.sheets["2"].tags if x.giver_actor == applied.actor)
+    service = GorgonPlayService(game)
+    view = service.preview(ADMIN, 900)
+    assert view["conditioning_tags"][applied.actor.token] == {
+        applied.target.token: [(actual_tag.id, actual_tag.label)]
+    }
+    people = {x["token"]: x for x in view["actors"]}
+    declared = Declaration(
+        kind="incubus_conditioning",
+        actor=applied.actor,
+        target=applied.target,
+        actor_sha256=people[applied.actor.token]["source_sha256"],
+        target_sha256=people[applied.target.token]["source_sha256"],
+        tag=actual_tag.id,
+        account="The Incubus uses its original known Tag.",
+        reach_confirmed=True,
+    )
+    with pytest.raises(WorkflowError, match="actual unmarked Tag"):
+        service.begin(
+            ADMIN,
+            "unknown-to-incubus",
+            900,
+            before.revision,
+            declared.model_copy(update=dict(tag=hidden)),
+        )
+
+    async def native():
+        start = current(ADMIN.user_id, 87700)
+        start.channel_id = 900
+        await start.response.defer(ephemeral=True)
+        await open_gorgon_play(start, game)
+        form = start.edit_original_response.call_args.kwargs["view"]
+        form.values.update(actor=(applied.actor.token,), play=("incubus_conditioning",))
+        selected = current(ADMIN.user_id, 87701)
+        await selected.response.defer(ephemeral=True)
+        await form.confirm.callback(selected)
+        details = selected.edit_original_response.call_args.kwargs["view"]
+        options = next(x for x in details.fields if x.key == "known_tag").options
+        assert len(options) == 1 and actual_tag.label in options[0][1]
+        details.values.update(
+            known_tag=(options[0][0],), account=declared.account, reach=("confirmed",)
+        )
+        await details.confirm.callback(current(ADMIN.user_id, 87702))
+        assert details.completed
+
+    asyncio.run(native())
+    action = service.begin(ADMIN, "87702", 900, before.revision, declared)["action_id"]
+    tick(worker, gateway, 5)
+    if not any(x["kind"] == HEAT for x in game.choices(PLAYER)):
+        game.roll(ADMIN, "advance-incubus", action)
+    chosen = next(x for x in state(game).sheets["2"].tags if x.id == actual_tag.id)
+    assert chosen.marked and game.dice.calls == 0
+    assert not next(x for x in state(game).sheets["2"].tags if x.id == hidden).marked
+    step = next(x for x in game.choices(PLAYER) if x["kind"] == HEAT)
+    ledger.safety(OTHER, "pause-conditioning", ledger.status(OTHER)["revision"], pause=True)
+    with pytest.raises(WorkflowError, match="SAFETY_PAUSED"):
+        game.respond(PLAYER, "paused-heat", step["id"], step["revision"], ChoiceAnswer(number=1))
+    ledger.safety(OTHER, "resume-conditioning", ledger.status(OTHER)["revision"], pause=False)
+    with pytest.raises(WorkflowError, match="another player"):
+        game.respond(OTHER, "wrong-heat", step["id"], step["revision"], ChoiceAnswer(number=1))
+    rolled = game.respond(PLAYER, "pay-heat", step["id"], step["revision"], ChoiceAnswer(number=1))
+    assert (
+        game.respond(PLAYER, "pay-heat", step["id"], step["revision"], ChoiceAnswer(number=1))
+        == rolled
+    )
+    assert game.dice.calls == 1 and state(game).sheets["2"].heat == 1
+    ledger.engine.dispose()
+    if tier == "low":
+        review = next(x for x in game.choices(ADMIN) if x["kind"] == REVIEW)
+        assert game.decision(ADMIN, review["id"])["detail"]["can_transform"]
+        with pytest.raises(WorkflowError, match="verify the immediate original"):
+            answer(game, ADMIN, REVIEW, flag=True)
+        answer(
+            game,
+            ADMIN,
+            REVIEW,
+            flag=True,
+            text="The original Girl remained conscious, alive and free in her Frame.",
+        )
+        choice = next(x for x in game.choices(PLAYER) if x["kind"] == THRESHOLD)
+        work = game.decision(PLAYER, choice["id"])["detail"]["work"]
+        service = VoidService(ledger)
+        pending = service.get(PLAYER, work)
+        assert pending["stage"] == "rebirth" and not pending["threshold"]["answers"]
+        assert game.inspect(PLAYER, action)["state"] == "awaiting_choices"
+        with pytest.raises(WorkflowError, match="private Void"):
+            service.get(OTHER, work)
+        rewrite = pending["rebirth_choice"] | dict(
+            new_identities=["Soft Static"],
+            account="I author my actual original transformation.",
+        )
+        respond_void(service, work, "rebirth", dict(choice=rewrite, account=rewrite["account"]))
+        reborn = state(game)
+        (harpy,) = reborn.harpy_states
+        assert harpy.origin == applied.target and "2" not in reborn.sheets
+        assert any(x.name == "Soft Static" for x in harpy.identities)
+        assert game.inspect(ADMIN, action)["state"] == "complete" and game.dice.calls == 1
+        assert reborn.sheets["3"] == before.sheets["3"]
+        return
+    if tier == "high":
+        gain = next(x for x in game.choices(PLAYER) if x["kind"] == VOID)
+        detail = game.decision(PLAYER, gain["id"])["detail"]
+        asset = next(iter(detail["assets"]))
+        result = answer(
+            game, PLAYER, VOID, options=(asset,), text="It begins to pulse in darkness."
+        )
+        assert result["action_id"] == action
+        interim = state(game)
+        assert next(x for x in interim.sheets["2"].assets if x.id == asset).void
+        assert get(interim, action).void_asset == asset and get(interim, action).completed is None
+        assert game.inspect(PLAYER, action)["state"] == "awaiting_choices"
+        game.dice.faces = (3, 4)
+        child = game.begin(
+            PLAYER,
+            "act-on-incubus-tag",
+            900,
+            interim.sheets["2"].revision,
+            PlayInput(
+                play="keep_your_head",
+                heat=0,
+                parent=action,
+                context="I act on the actual marked Tag while trying to keep control.",
+                trigger_confirmed=True,
+            ),
+        )["action_id"]
+        tick(worker, gateway, 5)
+        assert not game.choices(OTHER)
+        with pytest.raises(WorkflowError, match="not visible"):
+            game.inspect(OTHER, child)
+        for participant in (PLAYER, ADMIN):
+            answer(game, participant, "tag_window", options=("pass",))
+        answer(game, PLAYER, "actor_keep", options=("in_control",))
+        answer(game, ADMIN, "handler_keep", flag=True, text="The actual response held.")
+        tick(worker, gateway, 5)
+        after = state(game)
+        committed = get(after, action)
+        assert committed.child == child and committed.completed and committed.roll.result == "high"
+        assert not committed.tag_erased and game.dice.calls == 2
+        assert game.inspect(ADMIN, action)["state"] == "complete"
+        assert {recipient for recipient, _ in gateway.private} == {ADMIN.user_id, PLAYER.user_id}
+        return
+    finish = next(x for x in game.choices(PLAYER) if x["kind"] == ERASE)
+
+    async def owned():
+        handoff = current(PLAYER.user_id, 87703)
+        await handoff.response.defer(ephemeral=True)
+        await open_choice(handoff, game, finish["id"])
+        form = handoff.edit_original_response.call_args.kwargs["view"]
+        form.values.update(choice=("yes" if erase else "no",))
+        await form.confirm.callback(current(PLAYER.user_id, 87704))
+        assert form.completed
+
+    asyncio.run(owned())
+    after = state(game)
+    committed = get(after, action)
+    assert committed.girl == applied.target and committed.tag == actual_tag.id
+    assert committed.roll.result == "mid" and committed.tag_erased == erase and committed.completed
+    assert (actual_tag.id in {x.id for x in after.sheets["2"].tags}) is not erase
+    assert after.sheets["3"] == before.sheets["3"]
+    assert game.inspect(ADMIN, action)["state"] == "complete"
+    with pytest.raises(WorkflowError, match="original source-table"):
+        game.inspect(OTHER, action)
+    tick(worker, gateway, 5)
+    assert {recipient for recipient, _ in gateway.private} == {ADMIN.user_id, PLAYER.user_id}

@@ -143,7 +143,7 @@ def prepare_keep(
         raise WorkflowError("The original Girl and actual Handler must join this bound scene.")
     if prepared.parent:
         parent = game.action(c, prepared.parent)
-        if body.get("reason") == "gorgon_frame_contact_consequence":
+        if body.get("reason") in ("gorgon_frame_contact_consequence", "incubus_conditioning"):
             from girlframe.services.m3_gorgon_play import GorgonPlayService
 
             original = GorgonPlayService(game).source(c, parent)
@@ -165,6 +165,7 @@ def prepare_keep(
                 "gorgon_hallucinations_void",
                 "gorgon_contact_frame_void",
                 "gorgon_shell_threshold",
+                "gorgon_conditioning_threshold",
             )
             and x["actor_id"] == actor.entity
             and json.loads(x["body_json"]).get("work_id") == row["id"]
@@ -206,7 +207,7 @@ def authorize_keep(
         )
     ):
         raise WorkflowError("Recover the exact pending source of this resistance.")
-    if body.get("reason") == "gorgon_frame_contact_consequence":
+    if body.get("reason") in ("gorgon_frame_contact_consequence", "incubus_conditioning"):
         from girlframe.services.m3_gorgon_play import GorgonPlayService
 
         parent = game.action(c, body["source_action"])

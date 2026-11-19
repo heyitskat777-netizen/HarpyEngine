@@ -20,6 +20,7 @@ from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_collateral import Selection, Source, perform
 from girlframe.engine.m3_gorgon_play_state import Declaration
 from girlframe.engine.m3_handler_consequences import active_handler
+from girlframe.engine.m3_incubus_conditioning import PLAY as incubus_play
 from girlframe.engine.m3_world_state import Asset
 from girlframe.services import m3_gorgon_contact as contact
 from girlframe.services import m3_gorgon_frame_contact as frame_contact
@@ -141,6 +142,11 @@ def start(game: Any, c: Connection, state: GameState, action: dict[str, Any]) ->
             victims=people,
         )
         action["data"]["result"]["catatonia" if people else "audible_communication_blocked"] = True
+        return
+    if meta["kind"] == incubus_play:
+        from girlframe.services.m3_incubus_conditioning import start as condition
+
+        condition(game, c, state, action)
         return
     if meta["kind"] == shell.RELEASE:
         shell.release(
@@ -444,6 +450,11 @@ def apply(
     meta, event = _meta(action), _event(action)
     body = json.loads(row["body_json"])
     kind = row["kind"].removeprefix("gorgon_")
+    if kind.startswith("conditioning_"):
+        from girlframe.services.m3_incubus_conditioning import apply as settle_conditioning
+
+        settle_conditioning(game, c, state, action, row, answer)
+        return
     if kind.startswith("shell_"):
         from girlframe.services.m3_sentinel_shell import apply as apply_shell
 
@@ -791,6 +802,10 @@ def projection(
     body = json.loads(row["body_json"])
     kind = row["kind"].removeprefix("gorgon_")
     result: dict[str, Any] = dict(kind=kind, account=action["data"].get("context", ""))
+    if kind.startswith("conditioning_"):
+        from girlframe.services.m3_incubus_conditioning import project as project_conditioning
+
+        return project_conditioning(game, c, state, action, row)
     if kind.startswith("shell_"):
         from girlframe.services.m3_sentinel_shell import project as project_shell
 
@@ -916,6 +931,11 @@ def complete_response(
         .values(state="completed_by_work", revision=choices.c.revision + 1)
     )
     state = load_state(c, game.store.campaign_id)
+    if meta["kind"] == incubus_play and source.get("conditioning_tag"):
+        from girlframe.services.m3_incubus_conditioning import complete_response as finish
+
+        finish(game, c, state, parent, child, event, viewer, key)
+        return
     if meta.get("frame_intervention"):
         frame_contact.finish_intervention(game, c, state, parent, child, event)
         return
@@ -1007,6 +1027,10 @@ def synchronize(
     materialize_dormant(game, c, action, event)
     synchronize_damage(game, c, event)
     state = load_state(c, game.store.campaign_id)
+    if meta["kind"] == incubus_play:
+        from girlframe.services.m3_incubus_conditioning import materialize as materialize_incubus
+
+        materialize_incubus(game, c, state, action, event)
     if meta["kind"] == shell.PLAY:
         from girlframe.services.m3_sentinel_shell import materialize as materialize_shell
 
@@ -1033,6 +1057,7 @@ def synchronize(
                     "gorgon_hallucinations_void",
                     frame_contact.FRAME_VOID,
                     "gorgon_shell_threshold",
+                    "gorgon_conditioning_threshold",
                 ):
                     c.execute(
                         choices.update()

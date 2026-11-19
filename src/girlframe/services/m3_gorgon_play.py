@@ -12,6 +12,7 @@ from girlframe.database import tables as t
 from girlframe.engine import m3_gorgon_frame_contact as frame_contact
 from girlframe.engine import m3_growth as growth
 from girlframe.engine import m3_hallucinations as hallucinations
+from girlframe.engine import m3_incubus_conditioning as incubus
 from girlframe.engine import m3_jackdaw as jackdaw
 from girlframe.engine import m3_mother_sprite as mother_sprite
 from girlframe.engine import m3_parasite as parasite
@@ -46,6 +47,7 @@ RULES: dict[str, str] = {
     "warp": "gorgon.gorgon.warp",
     "corrupt": corrupt_rule,
     shell.PLAY: shell.RULE,
+    incubus.PLAY: incubus.RULE,
     shell.RELEASE: shell.RULE,
     "growth_adapt": growth.RULE,
     "growth_regrow": growth.RULE,
@@ -56,6 +58,9 @@ RULES: dict[str, str] = {
     **dict.fromkeys(parasite.PLAYS, parasite.RULE),
     **{str(kind): rule for kind, rule in TYPE_TAG_RULES.items()},
 }
+
+
+PRIVATE_PLAYS = (*contact_plays, incubus.PLAY)
 
 
 class GorgonPlayService:
@@ -156,6 +161,7 @@ class GorgonPlayService:
             typed_targets: dict[str, dict[str, list[str]]] = {}
             parasite_choices: dict[str, dict[str, list[str]]] = {}
             exposure_days: dict[str, dict[str, int]] = {}
+            conditioning_tags: dict[str, dict[str, list[tuple[str, str]]]] = {}
             if state.world is not None:
                 for actor in state.world.gorgons:
                     token = ActorRef(kind="gorgon", entity=actor.id).token
@@ -226,6 +232,14 @@ class GorgonPlayService:
                         for x in shell.active(state)
                         if x.source == caster.ref and x.scene == cast.id and x.girl.token in visible
                     ]
+                    if actor.alive and "incubus" in actor.types:
+                        known = {
+                            girl.ref.token: [(x.id, x.label) for x in tags]
+                            for girl in visible.values()
+                            if (tags := incubus.available(state, caster, girl))
+                        }
+                        conditioning_tags[token] = known
+                        options[incubus.PLAY] = list(known)
                     typed_targets[token] = {
                         kind: targets for kind, targets in options.items() if targets
                     }
@@ -239,7 +253,7 @@ class GorgonPlayService:
                     kind in TAG_TYPES
                     or kind in hallucinations.PLAYS
                     or kind in contact_plays
-                    or kind in (shell.PLAY, shell.RELEASE)
+                    or kind in (shell.PLAY, shell.RELEASE, incubus.PLAY)
                 ) and not any(kind in x for x in typed_targets.values()):
                     continue
                 if kind in parasite.PLAYS and not any(kind in x for x in parasite_choices.values()):
@@ -267,6 +281,7 @@ class GorgonPlayService:
                 jam=can_jam,
                 parasite=parasite_choices,
                 exposure_days=exposure_days,
+                conditioning_tags=conditioning_tags,
             )
 
     def begin(
@@ -381,6 +396,10 @@ class GorgonPlayService:
                         raise WorkflowError(
                             "Use the next fictional day with the original Girl still in range"
                         )
+                if declaration.kind == incubus.PLAY and not any(
+                    x.id == declaration.tag for x in incubus.available(state, actual, target)
+                ):
+                    raise WorkflowError("Choose one actual unmarked Tag this Incubus gave the Girl")
                 if declaration.kind == shell.PLAY:
                     present = tuple(
                         resolve(state, role.actor, bound, require_current_profile=False)
@@ -544,7 +563,7 @@ class GorgonPlayService:
                     cast_sha256=meta["cast_sha256"],
                 ),
             )
-            if declaration.kind in contact_plays and target_view is not None:
+            if declaration.kind in PRIVATE_PLAYS and target_view is not None:
                 audience = sorted({viewer.user_id, target_view.controller, gm})
                 meta["private_audience"] = data["private_audience"] = audience
             state.facts.append(
@@ -945,7 +964,7 @@ def prepare_response(
     parent = game.action(c, prepared.parent)
     source = parent["data"].get("gorgon_play")
     if not source or (
-        source["kind"] in (*hallucinations.PLAYS, frame_contact.PLAY, shell.PLAY)
+        source["kind"] in (*hallucinations.PLAYS, frame_contact.PLAY, shell.PLAY, incubus.PLAY)
         and prepared.play == "keep_your_head"
         and prepared.source_work is not None
     ):
@@ -975,8 +994,9 @@ def prepare_response(
         cast=cast.model_dump(mode="json"),
         cast_sha256=fingerprint(cast),
         private_audience=source.get("private_audience")
-        if source.get("frame_intervention")
+        if source.get("frame_intervention") or source["kind"] == incubus.PLAY
         else None,
+        conditioning_tag=json.loads(row["body_json"]).get("conditioning_tag"),
         table=sorted(
             {role.controller for role in cast.roles}
             | ({cast.facilitator} if cast.facilitator else set())

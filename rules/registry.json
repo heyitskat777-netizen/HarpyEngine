@@ -21918,14 +21918,49 @@
         "heading": "Emotional Conditioning"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The actual Incubus marks an unmarked Tag it originally gave a living Girl in actual reach.",
+        "actor_type": "Original Incubus, original Girl and human GM",
+        "pre_roll_sources": [
+          "Actual source-known unmarked Tag and physically present original Girl",
+          "Original paid Heat"
+        ],
+        "roll_kind": "2d6",
+        "allowed_modifiers": [
+          "Owned Heat"
+        ],
+        "tier_options": {
+          "mid": [
+            "The original Girl may erase the actual marked Tag, subject to separate explicit protections"
+          ],
+          "high": [
+            "Apply ordinary Void and complete an immediate real Play on the marked Tag"
+          ],
+          "low": [
+            "If original conscious and free in her actual Frame after the immediate aftermath, open her owned rebirth"
+          ]
+        },
+        "choice_ownership": "The original Incubus selects its known Tag. The Girl chooses Heat, her own Tag erasure, Asset rewrite, immediate Play and resulting original Harpy resources.",
+        "target_policy": "Original present Girl. A shared human controller does not grant cross-role Tag knowledge.",
+        "post_roll_effects": [
+          "Save the mark and paid roll as immutable original source context"
+        ],
+        "mandatory_followups": [
+          "Resolve actual Void thresholds and any original immediate Play",
+          "Use the owned actual rebirth when the human GM verifies the uninterrupted source"
+        ],
+        "handler_or_gm_intervention": "Human GM role verifies actual aftermath. Profiles outside the original cockpit and interruption branches remain limited.",
+        "test_fixture_ids": [
+          "tests/rules/test_gorgon_runtime.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_gorgon_runtime.py::test_incubus_marks_only_its_actual_known_tag_and_the_girl_owns_results"],
       "m2_play_id": null,
       "module": "core"
     },

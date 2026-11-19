@@ -15,6 +15,7 @@ from girlframe.engine.m3_gorgon_type_tags import TYPES as TAG_TYPES
 from girlframe.engine.m3_growth import KINDS as GROWTH_KINDS
 from girlframe.engine.m3_growth import Adaptation, Regrowth
 from girlframe.engine.m3_hallucinations import PLAYS as HALLUCINATIONS_PLAYS
+from girlframe.engine.m3_incubus_conditioning import PLAY as incubus_play
 from girlframe.engine.m3_jackdaw import EFFECTS as JACKDAW_EFFECTS
 from girlframe.engine.m3_jackdaw import Range as JackdawRange
 from girlframe.engine.m3_mother_sprite import BirthPlan
@@ -79,8 +80,35 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
             return "Join the actual eligible target to the scene before declaring this Play."
         if kind in ("attack", "collateral") and not actor["assets"]:
             return "Declare actual owned Gorgon Assets for this Play."
+        conditioning = kind == incubus_play
+        known = data["conditioning_tags"].get(actor["token"], {})
+        tag_choices = (
+            {
+                str(i): (girl, tag, label)
+                for i, (girl, tag, label) in enumerate(
+                    (girl, tag, label)
+                    for girl in targets
+                    for tag, label in known.get(girl["token"], ())
+                )
+            }
+            if conditioning
+            else {}
+        )
+        if conditioning and not tag_choices:
+            return "This actual Incubus has no known unmarked Tag to choose."
         fields: list[Field] = []
-        if targeted:
+        if conditioning:
+            fields.append(
+                Field(
+                    "known_tag",
+                    "Original Girl and known Tag",
+                    tuple(
+                        (key, f"{value[0]['label']} - {value[2]}")
+                        for key, value in tag_choices.items()
+                    ),
+                )
+            )
+        elif targeted:
             fields.append(
                 Field(
                     "target",
@@ -152,8 +180,13 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
         )
 
         async def declare(next_interaction: discord.Interaction, details: dict[str, Any]) -> str:
+            selected_tag = tag_choices[details["known_tag"][0]] if conditioning else None
             target = (
-                next(x for x in targets if x["token"] == details["target"][0]) if targeted else None
+                selected_tag[0]
+                if selected_tag
+                else next(x for x in targets if x["token"] == details["target"][0])
+                if targeted
+                else None
             )
             result = await asyncio.to_thread(
                 service.begin,
@@ -170,7 +203,9 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
                     target_sha256=target["source_sha256"] if target else None,
                     account=details["account"],
                     reach_confirmed=True,
-                    tag=details.get("bond_tag")
+                    tag=selected_tag[1]
+                    if selected_tag
+                    else details.get("bond_tag")
                     if kind == "doppleganger_bond"
                     else (details.get("tag") or (None,))[0],
                     adaptation=Adaptation(

@@ -31,6 +31,7 @@ class Declaration(Model):
             "intimate_frame_contact",
             "sentinel_withdraw",
             "sentinel_release",
+            "incubus_conditioning",
             "parasite_detach",
         ]
         | TypeTag
@@ -70,6 +71,7 @@ class Declaration(Model):
             "intimate_frame_contact",
             "sentinel_withdraw",
             "sentinel_release",
+            "incubus_conditioning",
         ):
             if self.target is None or self.target_sha256 is None or self.target == self.actor:
                 raise ValueError("This Play needs its actual distinct target body and source")
@@ -78,9 +80,9 @@ class Declaration(Model):
         if self.kind in ("incubus_inflict", "mother_mutation"):
             if self.tag not in dict(LABELS[self.kind]):
                 raise ValueError("Choose a printed Tag for this Gorgon effect")
-        elif self.kind == "doppleganger_bond":
+        elif self.kind in ("doppleganger_bond", "incubus_conditioning"):
             if not self.tag or not self.tag.strip():
-                raise ValueError("Describe the Tag from this actual Dopplegänger interaction")
+                raise ValueError("Use the actual owned Tag for this Gorgon Play")
         elif self.tag is not None:
             raise ValueError("This Gorgon Play has no direct Tag choice")
         if (self.adaptation is not None) != (self.kind == "growth_adapt") or (

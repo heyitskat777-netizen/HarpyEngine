@@ -2001,10 +2001,10 @@ class GameService:
                 raise WorkflowError("STALE_HANDLER: canonical Handler replacement needs review.")
             scene = self.scene(c, channel)
             if prepared.heat and any(x.get("kind") == "sentinel_shell" for x in state.facts):
-                from girlframe.engine.m3_actor_bonds import current_ref
+                from girlframe.engine.m3_actor_bonds import current_ref as trapped_pilot_ref
                 from girlframe.engine.m3_sentinel_shell import holds
 
-                if holds(state, current_ref(state, mechanical_owner), "trapped"):
+                if holds(state, trapped_pilot_ref(state, mechanical_owner), "trapped"):
                     raise WorkflowError("This original Girl cannot spend Heat until she is freed")
             scoped_defeat = False
             if defeat is not None and defeat.get("source_work"):
@@ -2405,6 +2405,7 @@ class GameService:
                                 "gorgon_hallucinations_void",
                                 "gorgon_contact_frame_void",
                                 "gorgon_shell_threshold",
+                                "gorgon_conditioning_threshold",
                                 "snoop_item_void_threshold",
                                 "gorgon_response_play",
                             )
@@ -2481,6 +2482,7 @@ class GameService:
                     "gorgon_hallucinations_void",
                     "gorgon_contact_frame_void",
                     "gorgon_shell_threshold",
+                    "gorgon_conditioning_threshold",
                     "snoop_item_void_threshold",
                 ) and (void_keep is None or prepared.play != "keep_your_head"):
                     raise WorkflowError("Use the actual source-owned Void resistance controls.")
@@ -3126,6 +3128,10 @@ class GameService:
                 data["gorgon_counter_source"] = {
                     k: gorgon_response[k] for k in ("choice", "actor", "attacker")
                 }
+                if gorgon_response.get("conditioning_tag"):
+                    data["gorgon_counter_source"]["conditioning_tag"] = gorgon_response[
+                        "conditioning_tag"
+                    ]
                 data["participants"] = list(gorgon_response["table"])
                 handler_body = active_handler(state)
                 data["tag_context"] = dict(
@@ -6428,15 +6434,14 @@ class GameService:
                 from girlframe.services.m3_leviathan_obsession import ObsessionService
 
                 return ObsessionService(self).inspect(viewer, identity)
-            from girlframe.services.m3_gorgon_contact import PLAYS as private_gorgon_contact
-
             snoop = action["data"].get("snoop")
             allowed = set(action["data"]["participants"])
-            if (action["data"].get("gorgon_play") or {}).get("kind") in private_gorgon_contact:
-                from girlframe.services.m3_gorgon_play import GorgonPlayService
+            if gorgon_source := action["data"].get("gorgon_play"):
+                from girlframe.services.m3_gorgon_play import PRIVATE_PLAYS, GorgonPlayService
 
-                GorgonPlayService(self).authorize(c, viewer, action)
-                allowed = set(action["data"]["private_audience"])
+                if gorgon_source.get("kind") in PRIVATE_PLAYS:
+                    GorgonPlayService(self).authorize(c, viewer, action)
+                    allowed = set(action["data"]["private_audience"])
             if snoop:
                 allowed.update((snoop["target_controller"], snoop["procedural_gm"]))
             if viewer.user_id not in allowed:

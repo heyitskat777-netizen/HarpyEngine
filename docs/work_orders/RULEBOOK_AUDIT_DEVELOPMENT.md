@@ -2104,6 +2104,34 @@ seconds**. These are offline runs. The pinned trial and live
 data were untouched.
 [Sentinel p. 171](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=173) · [Native tests](../../tests/rules/test_gorgon_runtime.py)
 
+### Incubus Emotional Conditioning
+
+Base `925a03c40dc8b3331474acbffdd919f78839b139`. The native
+Incubus can choose one actual unmarked Tag it gave the original
+Girl. A Tag known only to the human's separate Handler role stays
+out of the menu and cannot be supplied directly. The original
+Girl spends her own Heat after the mark is committed. The mid
+result lets her erase the original Tag or keep it. A protected
+Tag retains its original source restriction.
+
+On high, the Girl resolves ordinary Void and then completes a
+real owned Play on the exact marked Tag. A saved choice does not
+finish that requirement. Both the Void and the response preserve
+the original private scene audience. On low, the human GM can
+verify a surviving, conscious, free original Girl in her actual
+Frame. The Girl then owns the already implemented rebirth
+choices. Existing special protections and the original archive
+are preserved. Other actual interruption routes and out-of-Frame
+rebirth remain pending.
+
+**Four focused cases passed in 17.26 seconds**, including both
+mid outcomes, an actual completed Keep Your Head on high and
+owned original Harpy rebirth on low. They cover wrong owner,
+private access, pause, retry and restart. The preceding Sentinel
+selection passed **111 tests in 207.07 seconds**. Its separate
+detached regression collected **3,833 tests**.
+[Incubus p. 167](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=169) · [Native tests](../../tests/rules/test_gorgon_runtime.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab
