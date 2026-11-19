@@ -1272,6 +1272,17 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_rebel_merge import MergerService
 
             await open_merger(interaction, MergerService(self.service.store), item.identity)
+        elif item.task == "m3_rebel_takeover":
+            from girlframe.discord_adapter.m3_rebel_takeover import open_takeover
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_off_duty import OffDutyService
+            from girlframe.services.m3_rebel_takeover import TakeoverService
+            from girlframe.services.m3_strain import StrainService
+
+            takeover_service = TakeoverService(
+                StrainService(OffDutyService(MissionService(self.service.store)))
+            )
+            await open_takeover(interaction, takeover_service, item.identity)
         elif item.task == "m3_rebel_succession":
             from girlframe.discord_adapter.m3_rebel_succession import open_succession
             from girlframe.services.m3_missions import MissionService

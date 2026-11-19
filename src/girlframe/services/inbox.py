@@ -2990,8 +2990,28 @@ class InboxService:
             from girlframe.services.m3_rebel_frame_theft import visible as visible_thefts
             from girlframe.services.m3_rebel_funding import visible as visible_participation
             from girlframe.services.m3_rebel_succession import visible as visible_succession
+            from girlframe.services.m3_rebel_takeover import visible as visible_takeovers
 
             journalism = JournalistService(GameService(self.store))
+            for takeover in visible_takeovers(canon, viewer):
+                items.append(
+                    InboxItem(
+                        "rebel-takeover:" + takeover.id,
+                        "work",
+                        takeover.id,
+                        canon.revision,
+                        "off_duty",
+                        "Rebel Group takeover",
+                        "Actual original participants",
+                        "resolved" if takeover.completed else "pending",
+                        not bool(takeover.completed),
+                        False,
+                        "Review the original takeover.",
+                        "",
+                        "Open takeover",
+                        task="m3_rebel_takeover",
+                    )
+                )
             for succession in visible_succession(canon, viewer):
                 items.append(
                     InboxItem(
@@ -4604,6 +4624,15 @@ class InboxService:
                     ):
                         continue
                     primary, task_name = "Convene the new Foundation court", "m3_rebel_succession"
+                elif (
+                    kind == "strain_endgame_effect"
+                    and json.loads(work["body_json"]).get("rule_id") == "strain.rebellion.endgame.8"
+                ):
+                    if any(
+                        x.identity == work["id"] and x.task == "m3_rebel_takeover" for x in items
+                    ):
+                        continue
+                    primary, task_name = "Write up the new Rebel Group", "m3_rebel_takeover"
                 elif (
                     kind == "strain_endgame_effect"
                     and json.loads(work["body_json"]).get("rule_id") == "strain.void.endgame.2"

@@ -39,7 +39,8 @@ Off-Duty resumes only at its genuine completion boundary.
 
 The registry tracks each source's current scope and its acceptance tests.
 Every ordinary core Strain column has an effect path. Several have incomplete
-branches. Rebellion Endgames 3 and 8 are awaiting their first effect routes.
+branches. Rebellion Endgame 3 depends on the optional Ancillary playbook
+entry and Play acquisition workflows. The default gate stays closed.
 Current subset limitations include
 the High Budget hearing's Severe finding and the High Void bunk's separate
 contact Play. The individual receipts below retain the rest of the source
@@ -1176,3 +1177,22 @@ typing. This scope uses the original player's appointment for a distinct
 new persona. A different appointment, changing court authority and
 overlapping Handler ending still require a separate path.
 [Rebellion Endgame p. 147](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=149) · [Succession test](../../tests/rules/test_rebel_succession.py)
+
+## Rebellion Endgame replacement group and real captives
+
+The base is `cb730051ff9c0787eff3f984f4339d1e89cf9999`. The original
+Handler writes up the new group. Each actual free Pilot of the old group
+needs an original captor in the new group. Capture changes the existing
+Pilot's custody and preserves the same body and hardware. A separate
+action creates a real, source-scoped Broken condition against the
+original captor and changes their relative Status. The old group
+deactivates only once the required capture and Broken consequences exist.
+
+All 29 selected tests passed in 67.60 seconds. They cover wrong reader,
+wrong actor, original scene, pause, replay, reopening and genuine
+Off-Duty activation after both effects. The seven source files passed
+static typing. This scope uses actual free, revealed outside-Frame Rebel
+Pilots and independently controlled NPC captors. Earlier custody, Frame
+extraction and the external Pilot's later native Disobey removal route
+remain open.
+[Rebellion Endgame p. 147](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=149) · [Broken p. 50](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=52) · [Takeover test](../../tests/rules/test_rebel_takeover.py)
