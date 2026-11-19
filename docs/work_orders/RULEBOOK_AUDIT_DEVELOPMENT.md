@@ -1748,3 +1748,32 @@ resolution. The remaining portable Plays still need their own ports.
 retention paths, wrong owner, duplicate spend, safety pause, recovery,
 later purchase and the native Frantic and Advocate paths.
 [Handler advancements p. 151](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=153)
+
+### Full synthetic regression for the private Handler candidate
+
+All **3,757 tests passed** on exact revision
+`f274757bc36adea4ea1d040754bdaa5a8fff0b13` in four detached processes.
+The longest partition ran **2,327.35 seconds**. The manifests and logs
+are saved under `var/rulebook-full-f274757/`. This revision precedes
+the later Sentinel, laboratory Void, Gorgon type, and Handler
+advancement changes.
+
+### Optional Ancillary character creation
+
+Base `6e0ded6c928ed00993305d49197e49282c3e27c0`. The world sponsor
+invites an actual member to an operating site and discloses specific
+applicable contacts. The human invited chooses the book, assets and
+starting relationships through their private Inbox or declines. All
+eight starting books create an independent castable actor, including
+the Soldier's own Frame catalogue and the Mercenary's separate
+Patron. Each actor has its own Identities and four Assets. The
+source Frame supplies equipment without assigning a Frame playbook.
+
+**83 selected tests passed in 51.98 seconds**. Synthetic approvals
+exercised all eight books, the native invitation-to-Inbox path,
+role isolation, duplicate submission, stale state, wrong owner and
+safety pause. Default configuration and module enablement without
+independent approval both reject creation. Shared gameplay, the
+individual book effects, and Captured!, Timeskip and Rebellion
+Endgame integrations remain separate work.
+[Ancillary playbooks pp. 93–109](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=95)

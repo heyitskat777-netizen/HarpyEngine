@@ -118,6 +118,7 @@ class ActorView(Model):
         "handler",
         "handler_girl",
         "clone_am",
+        "ancillary",
     ]
     girl: str | None = None
     frame: str | None = None

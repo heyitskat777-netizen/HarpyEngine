@@ -476,6 +476,14 @@ class InboxView(discord.ui.View):
             await function(
                 interaction, DirectorService(MissionService(self.service.store)), item.identity
             )
+        elif item.task == "m3_ancillary_invitation":
+            from girlframe.discord_adapter.m3_ancillary import open_invitation as open_ancillary
+            from girlframe.services.m3_ancillary import AncillaryService
+            from girlframe.services.m3_missions import MissionService
+
+            await open_ancillary(
+                interaction, AncillaryService(MissionService(self.service.store)), item.identity
+            )
         elif item.task == "m3_npc_role":
             from girlframe.discord_adapter.m3_npc_roles import open_invitation
             from girlframe.services.m3_missions import MissionService

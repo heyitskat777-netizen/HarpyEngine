@@ -14375,14 +14375,16 @@
         "heading": "SOLDIER"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_ancillary_creation.py"
+      ],
       "m2_play_id": null,
       "module": "ancillary"
     },
@@ -14421,14 +14423,16 @@
         "heading": "MERCENARY"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_ancillary_creation.py"
+      ],
       "m2_play_id": null,
       "module": "ancillary"
     },
@@ -14536,14 +14540,16 @@
         "heading": "PRODIGY"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_ancillary_creation.py"
+      ],
       "m2_play_id": null,
       "module": "ancillary"
     },
@@ -14628,14 +14634,16 @@
         "heading": "REVOLUTIONARY IDEALIST"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_ancillary_creation.py"
+      ],
       "m2_play_id": null,
       "module": "ancillary"
     },
@@ -14720,14 +14728,16 @@
         "heading": "ANGEL-WIFE"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_ancillary_creation.py"
+      ],
       "m2_play_id": null,
       "module": "ancillary"
     },
@@ -14812,14 +14822,16 @@
         "heading": "CHAINED DARLING"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_ancillary_creation.py"
+      ],
       "m2_play_id": null,
       "module": "ancillary"
     },
@@ -14950,14 +14962,16 @@
         "heading": "WARBOY"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_ancillary_creation.py"
+      ],
       "m2_play_id": null,
       "module": "ancillary"
     },
@@ -14996,14 +15010,16 @@
         "heading": "ABYSSAL ACOLYTE"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_ancillary_creation.py"
+      ],
       "m2_play_id": null,
       "module": "ancillary"
     },
@@ -23568,14 +23584,37 @@
         "heading": "Ancillary Playbooks"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original human Handler offers a specific campaign member an approved optional character at an actual counterpart starting site.",
+        "actor_type": "Original world sponsor and invited character controller.",
+        "pre_roll_sources": [
+          "Optional module, exact source review and campaign approval, actual affiliation and site, and authorized names from the original invitation."
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "diceless": ["The invited controller chooses one eligible book and its printed starting choices, or declines."]
+        },
+        "choice_ownership": "The sponsor chooses the location and authorized contacts. Only the invited human creates and controls the character.",
+        "target_policy": "One new source-proved side character, separate from the controller's existing original character.",
+        "post_roll_effects": [
+          "Create the selected book's actual identities, two Girl and two Frame Assets, and applicable starting contact/Bond without a Frame playbook or Permission balance."
+        ],
+        "mandatory_followups": [
+          "Shared Play, Off-Duty, Defeat and promotion differences, and the eight book-specific Play and passive consumers need separate verified coverage."
+        ],
+        "handler_or_gm_intervention": "Native world invitation and private Inbox acceptance use the actual original human authorities.",
+        "test_fixture_ids": ["tests/rules/test_ancillary_creation.py"]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_ancillary_creation.py"
+      ],
       "m2_play_id": null
     },
     {

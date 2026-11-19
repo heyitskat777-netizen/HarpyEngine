@@ -225,17 +225,26 @@ class MapPages(discord.ui.View):
 
 
 async def open_world(interaction: discord.Interaction, service: WorldService) -> None:
+    from girlframe.services.m3_ancillary import AncillaryService
+
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(service.get, viewer, private=True)
     if data["world"] is None:
         await setup_world(interaction, service, data)
         return
+    ancillary = AncillaryService(service.missions)
+    ancillary_options = await asyncio.to_thread(ancillary.invite_options, viewer)
 
     async def choose(current: discord.Interaction, action: str) -> None:
         fresh = await asyncio.to_thread(service.get, viewer_from_interaction(current), private=True)
         world = fresh["world"]
         if world is None:
             raise WorkflowError("Initialize the world first.")
+        if action == "ancillary_invite" and ancillary_options:
+            from girlframe.discord_adapter.m3_ancillary import open_offer
+
+            await open_offer(current, ancillary, ancillary_options)
+            return
         if action == "location_build":
             from girlframe.discord_adapter.m3_location_build import open_build
             from girlframe.services.m3_location_build import LocationBuildService
@@ -514,6 +523,11 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
             ("gorgon_position", "Record an actually unknown Gorgon position"),
             ("npc", "Introduce an NPC"),
             ("npc_invite", "Invite someone to play an NPC / Director"),
+            *(
+                (("ancillary_invite", "Invite an Ancillary character"),)
+                if ancillary_options
+                else ()
+            ),
             ("reveal", "Reveal a Gorgon encountered by the Cadre"),
             *(
                 (("share_gorgon_tag", "Share an observed Gorgon Tag"),)

@@ -486,6 +486,28 @@ class InboxService:
                     )
                 )
             if canon.world is not None:
+                from girlframe.engine.m3_ancillary import offers as ancillary_offers
+
+                for ancillary in ancillary_offers(canon):
+                    if ancillary.controller == viewer.user_id and ancillary.phase == "offered":
+                        items.append(
+                            InboxItem(
+                                "ancillary:" + ancillary.id,
+                                "ancillary",
+                                ancillary.id,
+                                canon.revision,
+                                "world",
+                                "Ancillary invitation",
+                                "Your optional character",
+                                "pending",
+                                True,
+                                False,
+                                "Choose and configure an eligible book or decline.",
+                                "Only the original invited controller owns this decision.",
+                                "Review invitation",
+                                task="m3_ancillary_invitation",
+                            )
+                        )
                 for offer in canon.world.npc_role_offers:
                     if viewer.user_id not in (offer.proposer, offer.npc.controller, canon.handler):
                         continue

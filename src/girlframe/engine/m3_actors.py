@@ -1026,6 +1026,32 @@ def _resolve(
         pilot = next((x for x in world.pilots if x.id == ref.entity), None)
         if pilot is None or (require_alive and not pilot.alive):
             raise ValueError("Choose a living actual external Pilot")
+        if ref.entity.startswith("ancillary:"):
+            from girlframe.engine.m3_ancillary import find
+
+            auxiliary = find(state, ref)
+            if (
+                auxiliary is None
+                or auxiliary.controller != pilot.controller
+                or auxiliary.draft.book != pilot.girl
+            ):
+                raise ValueError("Recover the actual original Ancillary character")
+            return ActorView(
+                ref=ref,
+                controller=pilot.controller,
+                label=pilot.name,
+                alive=pilot.alive,
+                rules="ancillary",
+                girl=pilot.girl,
+                heat=auxiliary.heat,
+                identities=identities(auxiliary.identities),
+                assets=assets(pilot.assets),
+                cell=None if journey else pilot.cell,
+                custody=pilot.custody,
+                source_sha256=hashlib.sha256(
+                    (fingerprint(pilot) + fingerprint(auxiliary)).encode()
+                ).hexdigest(),
+            )
         native = next((x for x in state.native_harpies if x.id == ref.entity), None)
         if native is not None:
             from girlframe.engine.m3_harpy_defeat import harpy as actual_harpy
