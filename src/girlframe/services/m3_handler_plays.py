@@ -19,6 +19,7 @@ from girlframe.engine.m3_handler_play_state import (
     BASIC,
     DRESS_RULE,
     EXTRA,
+    SOURCE_RULE,
     SUCCESSOR_ADVICE,
     Effect,
     HandlerPlay,
@@ -1161,11 +1162,14 @@ class HandlerPlayService:
             state = load_state(c, self.store.campaign_id)
             from girlframe.engine.m3_advocate_alone import RULE as alone_rule
             from girlframe.services.m3_contaminant_zone import warp_options
+            from girlframe.services.m3_handler_book_orders import book_rule_available
             from girlframe.services.m3_successor import owned as owned_successor
 
             return dict(
                 game_revision=state.revision,
                 plays=BASIC,
+                casualty_parts=book_rule_available(self.game, SOURCE_RULE)
+                and any(x.girl == "CASUALTY" for x in state.sheets.values()),
                 advocate_alone=active_book(self.game, c, state, book="Advocate", rule=alone_rule)
                 is not None,
                 successor=owned_successor(self.game, c, state, active_handler(state)) is not None,

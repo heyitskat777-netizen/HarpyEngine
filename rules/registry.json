@@ -15417,14 +15417,16 @@
         "heading": "Extra Handler Plays by Girl and Frame"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_casualty.py::test_extra_handler_play_applies_real_owned_casualty_part_damage"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

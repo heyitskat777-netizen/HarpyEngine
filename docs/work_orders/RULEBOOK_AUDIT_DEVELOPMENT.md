@@ -1531,5 +1531,22 @@ remain open.
 
 The focused regression passed **6 tests in 24.84 seconds**, covering both
 immediate rolls, all four ruin slots, retries, stale and paused controls,
-restart, private choices and the actual aftermath.
+restart, private choices and the actual aftermath. The selected regression
+at `2cd666cb23f5b29355c943da6d3400959ebd3360` passed **70 tests in
+117.29 seconds**.
 [Rulebook pp. 130–131](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=132) · [Tests](../../tests/rules/test_frantic_crisis.py)
+
+### Casualty-specific Handler Play
+
+Base `2cd666cb23f5b29355c943da6d3400959ebd3360`. The native Handler Plays
+menu now opens the existing Casualty part damage controls and records the
+printed source in the actual damage receipt. It changes the named
+original part under the ordinary body rules, including their existing
+downstream effects. Only the original Handler can act on an actual
+Casualty. The printed offer of a fix and the other source prompts remain
+open where their effects lack a dedicated route.
+
+The selected regression passed **62 tests in 76.43 seconds**. The
+focused case exercises the real part change, wrong target, retry, stale
+choice, private Inbox and restart. Scoped type checks passed.
+[Rulebook p. 118](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=120) · [Tests](../../tests/rules/test_casualty.py)

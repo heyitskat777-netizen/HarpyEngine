@@ -31,6 +31,8 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
         options.append(("frantic_breakdown", "Break Down in this scene"))
     if data.get("advocate_alone") and interaction.channel_id is not None:
         options.append(("advocate_alone", "Get Them Alone in this scene"))
+    if data.get("casualty_parts"):
+        options.append(("casualty_parts", "Casualty: damage an original part"))
     options.extend(
         ("warp:" + x["id"], "Warp area: " + x["label"]) for x in data.get("warp_zones", [])
     )
@@ -68,6 +70,15 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
                 data["game_revision"],
                 interaction.channel_id,
             )
+        elif identity == "casualty_parts":
+            from girlframe.discord_adapter.m3_casualty import open_part_damage
+            from girlframe.services.m3_casualty import CasualtyService
+
+            casualty = CasualtyService(service.game)
+            menu = await asyncio.to_thread(
+                casualty.menu, viewer_from_interaction(current), int(interaction.channel_id or 0)
+            )
+            await open_part_damage(current, casualty, menu, handler_play=True)
         elif identity == "off_duty":
             from girlframe.discord_adapter.m3_off_duty import open_period
             from girlframe.services.m3_missions import MissionService

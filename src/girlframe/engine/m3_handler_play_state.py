@@ -27,6 +27,7 @@ EXTRA = (
 )
 DRESS_RULE: Final = "handler-playbook.dogrunner.dress-them-down"
 SUCCESSOR_ADVICE = "handler-advancement.handler-advancement.successor"
+SOURCE_RULE = "source.extra-handler-plays-by-girl-and-frame"
 DRESS_STEPS = (
     ("competency", "Insult their competency"),
     ("appearance", "Insult their appearance"),
