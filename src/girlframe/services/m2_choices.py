@@ -1009,6 +1009,9 @@ class ChoiceEngine:
                 answer.flag is not None, "The Handler must record whether it discovers the refusal."
             )
             if answer.flag:
+                from girlframe.services.m3_advocate_empathy import on_discovery
+
+                on_discovery(self, c, state, action)
                 self.game.obligation(
                     state,
                     action,
@@ -1213,7 +1216,16 @@ class ChoiceEngine:
                     c, action, actor, "order_disobey", {"order_id": action["data"]["order_id"]}
                 )
             else:
-                self.finish(c, state, action)
+                from girlframe.services.m3_advocate_empathy import offer_reward
+
+                if not offer_reward(self.game, c, state, action):
+                    self.finish(c, state, action)
+            return
+        if kind == "advocate_empathy":
+            from girlframe.services.m3_advocate_empathy import apply_reward
+
+            apply_reward(self, c, state, action, request, answer)
+            self.finish(c, state, action)
             return
         if kind in ("escape_play", "order_disobey", "beneath_response_play"):
             raise WorkflowError(

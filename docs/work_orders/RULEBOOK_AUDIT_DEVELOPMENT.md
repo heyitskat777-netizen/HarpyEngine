@@ -1214,3 +1214,19 @@ idempotent replay with exactly one roll. Four source modules passed
 static typing. Refusals against a different order issuer and retained or
 borrowed sources remain open.
 [Mistress p. 123](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=125) · [Conditioning test](../../tests/rules/test_mistress_conditioning.py)
+
+### Advocate obedience and discovered refusal
+
+Base `9522000e64af32499183ceed7f2ddf8894a71428`. Conditional Empathy
+now offers the original Advocate a private response to an original Girl's
+obedience when she lacks the Bad Girl Tag. The native Inbox can record a pass,
+apology, compliment with an actual Tag, or the actual relative Status shift.
+A successful refusal applies the named Tag once when the Handler actually
+discovers the refusal. An undiscovered refusal preserves the separation of
+knowledge. Touch, forms of address, Punishment and learned sources are still
+open.
+
+The two focused cases passed, including a wrong owner, restart, retry and
+separate discovered and undiscovered refusals. The selected Handler, order,
+NPC, ritual and Inbox regression passed **131 tests in 83.28 seconds**.
+[Rulebook p. 138](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=140) · [Tests](../../tests/rules/test_advocate_empathy.py)

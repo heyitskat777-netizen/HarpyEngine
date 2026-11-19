@@ -147,6 +147,14 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
                 False,
             )
         ]
+    elif kind == "advocate_empathy":
+        from girlframe.services.m3_advocate_empathy import REWARDS
+
+        fields = [
+            menu("options", "Choose an Advocate response or pass", REWARDS),
+            text("text", "Your actual apology or compliment", False),
+            text("fields.tag", "Matching Tag for a compliment", False),
+        ]
     elif kind == "mistress_conditioning":
         fields = [
             menu(
