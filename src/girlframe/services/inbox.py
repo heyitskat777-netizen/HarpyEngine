@@ -4138,7 +4138,7 @@ class InboxService:
             from girlframe.services.m3_warboy_hate import ConditionedHateService
 
             placements = ChainedPlacementService(GameService(self.store))
-            for placement_id in placements.tasks(connection, canon, viewer):
+            for placement_id, placement_step in placements.tasks(connection, canon, viewer):
                 items.append(
                     InboxItem(
                         "chained-placement:" + placement_id,
@@ -4147,11 +4147,13 @@ class InboxService:
                         canon.revision,
                         "world",
                         "Chained Darling placement",
-                        "Original facilitator",
+                        "Original helper" if placement_step == "assist" else "Original facilitator",
                         "pending",
                         True,
                         False,
-                        "Verify the actual physical placement or cockpit exit.",
+                        "Choose whether to help this original character."
+                        if placement_step == "assist"
+                        else "Verify the actual placement or cockpit operation.",
                         "Use the original body and Frame.",
                         "Review placement",
                         task="m3_chained_placement",

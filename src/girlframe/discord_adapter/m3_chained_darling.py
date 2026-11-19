@@ -43,24 +43,25 @@ async def open_chained_placement(
             data["revision"],
             values["mode"][0],
             values["account"],
+            helper=values["helper"][0] if values.get("helper") else None,
         )
+        if data["assistance"]:
+            return "The original scene participant has a private request for help."
         return "The original facilitator has a private placement review."
 
-    instructions = (
-        "Record your actual current placement."
-        if data["initial"]
-        else "Record your own exit from your actual Frame."
-    )
-    form = NativeForm(
-        interaction.user.id,
-        TITLE,
-        instructions,
-        [
-            Field("mode", "Actual physical position", tuple((x, LABELS[x]) for x in data["modes"])),
-            Field("account", "What is happening in the scene", paragraph=True),
-        ],
-        submit,
-    )
+    if data["initial"]:
+        instructions = "Record your actual current placement."
+    elif data["assistance"]:
+        instructions = "Ask an actual local character to help you re-enter your own Frame."
+    else:
+        instructions = "Record your actual cockpit operation."
+    fields = [
+        Field("mode", "Actual physical position", tuple((x, LABELS[x]) for x in data["modes"])),
+        Field("account", "What is happening in the scene", paragraph=True),
+    ]
+    if data["assistance"]:
+        fields.insert(1, Field("helper", "Actual local helper", tuple(data["people"].items())))
+    form = NativeForm(interaction.user.id, TITLE, instructions, fields, submit)
     await reply(interaction, form.text(), form)
 
 
@@ -70,7 +71,11 @@ async def open_chained_review(
     identity: str,
 ) -> None:
     data = await asyncio.to_thread(service.review, viewer_from_interaction(interaction), identity)
-    instructions = clean(data["actor"]) + " submits " + clean(LABELS[data["mode"]]) + "."
+    assisting = data["step"] == "assist"
+    if assisting:
+        instructions = clean(data["actor"]) + " asks you to help them return to their own Frame."
+    else:
+        instructions = clean(data["actor"]) + " submits " + clean(LABELS[data["mode"]]) + "."
     instructions += "\n" + clean(data["account"])
 
     async def submit(click: discord.Interaction, values: dict[str, Any]) -> str:
@@ -89,7 +94,11 @@ async def open_chained_review(
         TITLE,
         instructions,
         [
-            Field("choice", "Actual physical review", (("yes", "Verify"), ("no", "Decline"))),
+            Field(
+                "choice",
+                "Your decision",
+                (("yes", "Help them" if assisting else "Verify"), ("no", "Decline")),
+            ),
         ],
         submit,
     )

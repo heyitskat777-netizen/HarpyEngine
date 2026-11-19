@@ -3475,3 +3475,16 @@ passed in 5.93 seconds**, including rejection of a beneficial
 modifier for Pilot status and preservation of the Warboy path.
 [Shared Tag cases](../../tests/rules/test_ancillary_traits.py)
 [Chained Darling p. 105](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=107) · [Native case](../../tests/rules/test_chained_darling.py)
+
+Follow-up on base `132411e` added the return to the same Frame.
+When her body is beside that Frame, the Chained Darling can ask
+a known local person for help. Their own controller chooses
+whether to help. Helplessness continues until the original
+facilitator verifies the actual supported entry. The retained
+Frame and its position are the same after the operation.
+
+**One focused case passed in 7.88 seconds.** It extended the
+same native workload through an original helper's real movement
+and cockpit exit, private approval, and the exact original
+facilitator’s verification. Remote assisted travel, nonstandard
+occupancy and the separate exception remain open.

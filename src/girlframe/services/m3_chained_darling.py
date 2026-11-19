@@ -19,7 +19,8 @@ from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_ancillary import AncillaryService
-from girlframe.services.m3_battle import _cast
+from girlframe.services.m3_battle import _cast, _visible
+from girlframe.services.m3_consume_support import knowledge_allowed
 from girlframe.services.m3_medical import MedicalService
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.onboarding import WorkflowError
@@ -41,6 +42,8 @@ class Placement(Model):
     previous: str
     mode: Mode
     account: str
+    assistant: CastRole | None = None
+    assisted: str | None = None
     decision: str | None = None
     accepted: bool | None = None
 
@@ -91,13 +94,54 @@ class ChainedPlacementService:
         pose = external_pose(state, actor)
         if pose is None:
             return ("piloting", "inside_frame", "outside_frame")
-        if (
-            pose.mode != "outside_frame"
-            and pose.girl_cell == pose.frame_cell
-            and not is_helpless(state, actor)
-        ):
-            return ("outside_frame",)
+        if pose.girl_cell != pose.frame_cell:
+            return ()
+        if pose.mode == "outside_frame":
+            return ("inside_frame",)
+        if not is_helpless(state, actor):
+            options: tuple[Mode, ...] = ("outside_frame",)
+            return (*options, "piloting") if pose.mode == "inside_frame" else options
         return ()
+
+    def _assistants(
+        self,
+        c: Connection,
+        state: GameState,
+        channel: int,
+        actual: ActorView,
+    ) -> dict[str, tuple[CastRole, str]]:
+        cast = _cast(self.game, c, state, channel)
+        helpers = {}
+        for role in cast.roles:
+            if (
+                role.controller == actual.controller
+                or not _visible(state, role.actor, actual.controller)
+                or not knowledge_allowed(state, role.actor)
+            ):
+                continue
+            try:
+                helper = resolve(state, role.actor, profiles(c, self.store.campaign_id))
+            except ValueError:
+                continue
+            if (
+                helper.cell == actual.cell
+                and not helper.offstage_source
+                and helper.alive
+                and helper.controller == role.controller
+                and (
+                    helper.inside_frame is False
+                    or helper.rules in ("npc", "handler", "director")
+                    and helper.inside_frame is None
+                )
+                and helper.custody in (None, "free")
+                and not is_helpless(state, role.actor)
+            ):
+                helpers[role.actor.token] = (role, helper.label)
+        return helpers
+
+    def _assisted(self, state: GameState, actor: ActorRef) -> bool:
+        pose = external_pose(state, actor)
+        return bool(pose and pose.mode == "outside_frame")
 
     def available(
         self,
@@ -108,20 +152,38 @@ class ChainedPlacementService:
         actor: ActorRef,
     ) -> tuple[Mode, ...]:
         self._gate(c, viewer)
-        role, _, _, _, _ = self._scene(c, state, channel, actor)
+        role, actual, gm, appointment, scene = self._scene(c, state, channel, actor)
         if role.controller != viewer.user_id:
             raise WorkflowError("Only the original owner can propose this physical action.")
-        if any(x.role == role and x.decision is None for x in records(state)):
+        if any(
+            x.role == role
+            and x.decision is None
+            and self._consistent(c, state, x, role, actual, gm, appointment, scene)
+            for x in records(state)
+        ):
+            return ()
+        if self._assisted(state, actor) and not self._assistants(c, state, channel, actual):
             return ()
         return self._choices(state, actor)
 
     def menu(self, viewer: GuildViewer, channel: int, actor: ActorRef) -> dict[str, Any]:
         with self.store.engine.connect() as c:
             state = load_state(c, self.store.campaign_id)
+            modes = self.available(c, state, viewer, channel, actor)
+            assistance = self._assisted(state, actor)
+            people = {}
+            if modes and assistance:
+                _, actual, _, _, _ = self._scene(c, state, channel, actor)
+                people = {
+                    token: label
+                    for token, (_, label) in self._assistants(c, state, channel, actual).items()
+                }
             return dict(
                 revision=state.revision,
-                modes=self.available(c, state, viewer, channel, actor),
+                modes=modes,
                 initial=external_pose(state, actor) is None,
+                assistance=assistance,
+                people=people,
             )
 
     def _save(
@@ -135,11 +197,20 @@ class ChainedPlacementService:
     ) -> dict[str, Any]:
         state.facts = [x for x in state.facts if (x.get("kind"), x.get("id")) != (KIND, value.id)]
         state.facts.append(dict(kind=KIND, id=value.id, body=value.model_dump_json()))
+        kind = (
+            "m3.chained_pose_assistance"
+            if value.assistant
+            and viewer.user_id == value.assistant.controller
+            and event == value.assisted
+            else "m3.chained_pose_verified"
+            if value.decision
+            else "m3.chained_pose_proposed"
+        )
         self.game.event(
             c,
             viewer.user_id,
             key,
-            "m3.chained_pose_verified" if value.decision else "m3.chained_pose_proposed",
+            kind,
             state,
             event_id=event,
             scene_id=value.scene,
@@ -175,6 +246,8 @@ class ChainedPlacementService:
         revision: int,
         mode: Mode,
         account: str,
+        *,
+        helper: str | None = None,
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             self.game.unpaused(c)
@@ -190,6 +263,15 @@ class ChainedPlacementService:
                 raise WorkflowError("Choose the actual original position or cockpit exit.")
             role, actual, gm, appointment, scene = self._scene(c, state, channel, actor)
             pose = external_pose(state, actor)
+            assistant = None
+            if self._assisted(state, actor):
+                available = self._assistants(c, state, channel, actual)
+                if helper not in available:
+                    raise WorkflowError("Choose another co-present original role for assistance.")
+                assert helper is not None
+                assistant, _ = available[helper]
+            elif helper is not None:
+                raise WorkflowError("Assistance applies only when returning to the actual Frame.")
             event = str(uuid4())
             value = Placement(
                 id=event,
@@ -201,7 +283,15 @@ class ChainedPlacementService:
                 previous=fingerprint(pose) if pose is not None else actual.source_sha256,
                 mode=mode,
                 account=account.strip(),
+                assistant=assistant,
             )
+            for prior in records(state):
+                if prior.role == role and prior.decision is None:
+                    superseded = prior.model_copy(update=dict(accepted=False, decision=event))
+                    fact = next(
+                        x for x in state.facts if x.get("kind") == KIND and x.get("id") == prior.id
+                    )
+                    fact["body"] = superseded.model_dump_json()
             return self._save(c, state, viewer, key, value, event)
 
         return self._write(
@@ -213,9 +303,15 @@ class ChainedPlacementService:
                 revision=revision,
                 mode=mode,
                 account=account,
+                helper=helper,
             ),
             operation,
         )
+
+    def _step(self, value: Placement) -> tuple[str, int]:
+        if value.assistant is not None and value.assisted is None:
+            return "assist", value.assistant.controller
+        return "verify", value.gm
 
     def _read(
         self,
@@ -223,12 +319,12 @@ class ChainedPlacementService:
         state: GameState,
         viewer: GuildViewer,
         identity: str,
-    ) -> tuple[Placement, ActorView]:
+    ) -> tuple[Placement, ActorView, str]:
         value = next(
             (
                 x
                 for x in records(state)
-                if x.id == identity and x.decision is None and x.gm == viewer.user_id
+                if x.id == identity and x.decision is None and self._step(x)[1] == viewer.user_id
             ),
             None,
         )
@@ -236,19 +332,44 @@ class ChainedPlacementService:
             raise WorkflowError("This original physical review is unavailable.")
         actor = value.role.actor
         role, actual, gm, appointment, scene = self._scene(c, state, value.channel, actor)
-        pose = external_pose(state, actor)
+        if not self._consistent(c, state, value, role, actual, gm, appointment, scene):
+            raise WorkflowError("STALE_CHAINED_POSE: recover the original body and scene.")
+        return value, actual, self._step(value)[0]
+
+    def _consistent(
+        self,
+        c: Connection,
+        state: GameState,
+        value: Placement,
+        role: CastRole,
+        actual: ActorView,
+        gm: int,
+        appointment: str,
+        scene: str,
+    ) -> bool:
+        pose = external_pose(state, role.actor)
         current = fingerprint(pose) if pose is not None else actual.source_sha256
         if (
             (role, gm, appointment, scene) != (value.role, value.gm, value.appointment, value.scene)
             or current != value.previous
-            or value.mode not in self._choices(state, actor)
+            or value.mode not in self._choices(state, role.actor)
         ):
-            raise WorkflowError("STALE_CHAINED_POSE: recover the original body and scene.")
-        return value, actual
+            return False
+        if value.assistant is None:
+            return True
+        assistant = self._assistants(c, state, value.channel, actual).get(
+            value.assistant.actor.token
+        )
+        return assistant is not None and assistant[0] == value.assistant
 
-    def tasks(self, c: Connection, state: GameState, viewer: GuildViewer) -> tuple[str, ...]:
+    def tasks(
+        self,
+        c: Connection,
+        state: GameState,
+        viewer: GuildViewer,
+    ) -> tuple[tuple[str, str], ...]:
         candidates = tuple(
-            x for x in records(state) if x.gm == viewer.user_id and x.decision is None
+            x for x in records(state) if x.decision is None and self._step(x)[1] == viewer.user_id
         )
         if not candidates:
             return ()
@@ -259,20 +380,21 @@ class ChainedPlacementService:
         ready = []
         for value in candidates:
             try:
-                self._read(c, state, viewer, value.id)
+                _, _, step = self._read(c, state, viewer, value.id)
             except (ValueError, WorkflowError):
                 continue
-            ready.append(value.id)
+            ready.append((value.id, step))
         return tuple(ready)
 
     def review(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
         with self.store.engine.connect() as c:
             self._gate(c, viewer)
             state = load_state(c, self.store.campaign_id)
-            value, actual = self._read(c, state, viewer, identity)
+            value, actual, step = self._read(c, state, viewer, identity)
             return dict(
                 revision=state.revision,
                 actor=actual.label,
+                step=step,
                 mode=value.mode,
                 account=value.account,
             )
@@ -288,13 +410,20 @@ class ChainedPlacementService:
         def operation(c: Connection) -> dict[str, Any]:
             self.game.unpaused(c)
             state = load_state(c, self.store.campaign_id)
-            value, actual = self._read(c, state, viewer, identity)
+            value, actual, step = self._read(c, state, viewer, identity)
             MedicalService(self.store)._idle(c)
             require_clear(self.game, c, value.channel)
             require_scene_clear(self.game, c, value.channel)
             if state.revision != revision or type(accepted) is not bool:
                 raise WorkflowError("STALE_CHAINED_POSE: reopen this original physical review.")
             event = str(uuid4())
+            if step == "assist":
+                update = (
+                    dict(assisted=event)
+                    if accepted
+                    else dict(assisted=event, accepted=False, decision=event)
+                )
+                return self._save(c, state, viewer, key, value.model_copy(update=update), event)
             actor = value.role.actor
             pose = external_pose(state, actor)
             if accepted and pose is None:
@@ -312,7 +441,7 @@ class ChainedPlacementService:
                 state.facts.append(dict(kind=rules.KIND, actor=actor.token, source=event))
             elif accepted and pose is not None:
                 changed = pose.model_copy(
-                    update=dict(mode="outside_frame", position_event=event, account=value.account)
+                    update=dict(mode=value.mode, position_event=event, account=value.account)
                 )
                 state.external_poses = [
                     changed if x.actor == actor else x for x in state.external_poses
