@@ -173,7 +173,11 @@ class LobotomyService:
                     dict(ref=x.model_dump(mode="json"), label=name, token=x.token)
                     for x, name in actors
                 ],
-                plays=list(rules.ROLLABLE),
+                plays=[
+                    play
+                    for play in rules.rollable(sheet)
+                    if rules.blocked_play(sheet, play) is None
+                ],
             )
 
     def _write(
@@ -273,6 +277,36 @@ class LobotomyService:
 
         with self.store.engine.connect() as c:
             _, surgery = self._get(c, viewer, identity)
+            if (
+                surgery.phase == "applied"
+                and surgery.applied_event
+                and surgery.inflictor.entity == str(viewer.user_id)
+            ):
+                self.access.authorize(c, viewer, "discipline")
+                saved = c.execute(
+                    sa.select(t.events.c.payload_json, t.commands.c.outcome_json)
+                    .join(
+                        t.commands,
+                        sa.and_(
+                            t.commands.c.campaign_id == t.events.c.campaign_id,
+                            t.commands.c.interaction_key == t.events.c.command_key,
+                        ),
+                    )
+                    .where(
+                        t.events.c.campaign_id == self.store.campaign_id,
+                        t.events.c.id == surgery.applied_event,
+                        t.events.c.command_key == key,
+                        t.events.c.actor_id == surgery.inflictor.entity,
+                        t.events.c.kind == "m3.punishment_applied",
+                    )
+                ).first()
+                if saved is not None:
+                    payload = json.loads(saved.payload_json)
+                    if (
+                        payload.get("work_id") in surgery.work_ids
+                        and payload.get("punishment") == "lobotomization"
+                    ):
+                        return dict(json.loads(saved.outcome_json))
             work = self.discipline.get(viewer, surgery.work_ids[0])
             execution_account = None
             row = self.discipline._row(c, surgery.work_ids[0])

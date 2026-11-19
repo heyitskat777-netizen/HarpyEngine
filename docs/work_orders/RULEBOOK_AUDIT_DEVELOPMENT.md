@@ -1829,3 +1829,22 @@ Off-Duty after the first and second attacks. The Handler resolves the
 real siege after all three. The alternate original Handler target
 and other external Rebel resource ports remain open.
 [High Rebellion p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148)
+
+### Lobotomy and owned Girl playbook rolls
+
+Base `af91d6bb320132ad39e44fd0bd75c64a2678dbf3`. The existing
+surgery can remove a native Girl playbook roll the patient actually
+owns alongside the original Basic Plays. The native menu lists
+eligible capabilities from the current book and retained rules.
+After the original patient supplies her own response, the actual
+effect prevents that Girl from declaring the removed roll. The
+same Play remains available to other Girls.
+
+The final confirmation had recomputed revisions on retry. Reopening
+the exact matching command now returns its original receipt after
+checking both the original authorized inflictor and the applied event.
+**45 selected tests passed in 37.36 seconds**. They cover the original
+branches, real roll denial without dice, source ownership and
+mandatory adjudication. Frame-specific ownership and additional
+memory representations remain separate.
+[Lobotomy p. 194](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=196)

@@ -1413,6 +1413,18 @@ class GameService:
             mechanical_owner = (
                 int(princess_child["actor_controller"]) if princess_child else viewer.user_id
             )
+            from girlframe.engine.m3_lobotomy import blocked_play
+            from girlframe.engine.m3_plays import GIRL_ROLL_RULES
+
+            original_sheet = state.sheets.get(str(mechanical_owner))
+            if (
+                original_sheet is not None
+                and prepared.play in GIRL_ROLL_RULES
+                and blocked_play(original_sheet, prepared.play) is not None
+            ):
+                raise WorkflowError(
+                    "This original Girl cannot roll that Play after actual surgery."
+                )
             if any(x.get("kind") == "fuel_shortage" for x in state.facts):
                 from girlframe.engine.m3_actor_bonds import current_ref as fuel_actor
                 from girlframe.services.m3_fuel_shortage import require_complete as fuel_complete

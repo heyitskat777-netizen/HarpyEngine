@@ -23431,11 +23431,32 @@
       },
       "required": true,
       "implementation": "subset",
-      "source_audit": "inventoried",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "An actual approved Punishment starts the original subject's surgery.",
+        "actor_type": "The original authorized inflictor and the same original patient.",
+        "pre_roll_sources": [
+          "Actual pending Punishment, source-bound patient and inflictor, current role and scene, and exact owned active rolled Play if selected."
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "diceless": ["Choose one to three applicable effects and wait for the patient's own descriptions."]
+        },
+        "choice_ownership": "The original inflictor chooses the plan. The original patient supplies their printed descriptions.",
+        "target_policy": "The original patient and selected actual body, Identities, Bonds and capabilities. Preserve protected and source-locked resources.",
+        "post_roll_effects": [
+          "Apply the selected mechanics atomically, including a prohibition on an owned ordinary or native Girl playbook roll."
+        ],
+        "mandatory_followups": [
+          "A mandatory prohibited basic Play uses its existing discrete no-roll adjudication. Additional Frame abilities need ownership-specific verification."
+        ],
+        "handler_or_gm_intervention": "Use the original authorized inflictor for the final application. Its exact duplicate returns the same scoped receipt.",
+        "test_fixture_ids": ["tests/rules/test_lobotomy.py", "tests/rules/test_lobotomy_service.py"]
+      },
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_lobotomy.py",

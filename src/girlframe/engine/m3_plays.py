@@ -45,3 +45,24 @@ HEAT_IDS = (
 ASSET_IDS = ("defeat",)
 
 JANUS_ROLL_IDS = ("living_battery", "pandora_birth")
+
+GIRL_ROLL_RULES = {
+    "mockingbird_person": "girl.mockingbird.bad-at-being-a-person",
+    "mockingbird_sex": "girl.mockingbird.sex-play",
+    "brutalize": "girl.alpha.brutalize",
+    "alpha_sex": "girl.alpha.sex-play",
+    "am_scrutinized": "girl.am.scrutinized",
+    "am_just_code": "girl.am.just-code",
+    "dose_up": "girl.stim-blissed.dose-up",
+    "princess_sex": "girl.princess.sex-play",
+    "stim_sex": "girl.stim-blissed.sex-play",
+    "old_dog_new_pups": "girl.oldgen.old-dog-new-pups",
+    "oldgen_sex": "girl.oldgen.sex-play",
+    "casualty_sex": "girl.casualty.sex-play",
+    "vatgrown_sex": "girl.vatgrown.sex-play",
+    "newgirl_sex": "girl.newgirl.sex-play",
+    "easy_target": "girl.newgirl.easy-target",
+    "unassuming_doll": "girl.vatgrown.unassuming-doll",
+    "bonded_side": "girl.bonded.always-by-her-side",
+    "bonded_sex": "girl.bonded.sex-play",
+}

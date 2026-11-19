@@ -15,6 +15,7 @@ from girlframe.engine.m3_handler_play_state import (
     SUCCESSOR_ADVICE,
 )
 from girlframe.engine.m3_handler_private_scene import RULES as private_scenes
+from girlframe.engine.m3_plays import GIRL_ROLL_RULES
 from girlframe.engine.m3_red_queen import PLAYS as RED_QUEEN
 from girlframe.engine.m3_wyvern import PLAYS as WYVERN
 from girlframe.engine.rules_registry import Registry
@@ -48,31 +49,14 @@ NATIVE_RULES = {
         )
     },
     "enforcement_initiative": "frame.enforcer.enforcement-initiative",
-    "mockingbird_person": "girl.mockingbird.bad-at-being-a-person",
-    "mockingbird_sex": "girl.mockingbird.sex-play",
     "snoop": "frame.enforcer.snoop",
-    "brutalize": "girl.alpha.brutalize",
-    "alpha_sex": "girl.alpha.sex-play",
-    "am_scrutinized": "girl.am.scrutinized",
-    "am_just_code": "girl.am.just-code",
+    **GIRL_ROLL_RULES,
     "nanobot_injection": "frame.doctordoctor.nanobot-injection",
     "doctor_support": "frame.doctordoctor.here-for-support",
-    "dose_up": "girl.stim-blissed.dose-up",
-    "princess_sex": "girl.princess.sex-play",
-    "stim_sex": "girl.stim-blissed.sex-play",
-    "old_dog_new_pups": "girl.oldgen.old-dog-new-pups",
-    "oldgen_sex": "girl.oldgen.sex-play",
-    "casualty_sex": "girl.casualty.sex-play",
-    "vatgrown_sex": "girl.vatgrown.sex-play",
-    "newgirl_sex": "girl.newgirl.sex-play",
-    "easy_target": "girl.newgirl.easy-target",
-    "unassuming_doll": "girl.vatgrown.unassuming-doll",
     "prince_performer": "frame.prince.performer",
     "ankou_processor": "frame.ankou.processor-core",
     "changeling_blank_slate": "frame.changeling.blank-slate",
     "changeling_body_of_clay": "frame.changeling.body-of-clay",
-    "bonded_side": "girl.bonded.always-by-her-side",
-    "bonded_sex": "girl.bonded.sex-play",
     "living_battery": "frame.janus.living-battery",
     "pandora_birth": "frame.janus.pandora",
     **CONSUME,

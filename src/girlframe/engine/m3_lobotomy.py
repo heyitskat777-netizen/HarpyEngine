@@ -5,8 +5,10 @@ from uuid import NAMESPACE_URL, uuid5
 from girlframe.engine.creation_catalog import CATALOG
 from girlframe.engine.m2 import GameState, IdentityState, PilotSheet
 from girlframe.engine.m3_actor_bonds import current_ref, migrate_actor, set_depth
+from girlframe.engine.m3_girl_runtime_state import has_rule
 from girlframe.engine.m3_identity_slots import bind, replacement_slot
 from girlframe.engine.m3_lobotomy_state import BlockedPlay, Plan, Response, Surgery
+from girlframe.engine.m3_plays import GIRL_ROLL_RULES
 
 ROLLABLE = (
     "keep_your_head",
@@ -26,6 +28,19 @@ ROLLABLE = (
 
 def blocked_play(sheet: PilotSheet, play: str) -> BlockedPlay | None:
     return next((x for x in sheet.blocked_plays if x.play == play), None)
+
+
+def rollable(sheet: PilotSheet) -> tuple[str, ...]:
+    from girlframe.engine.m3_medical import rule_book
+
+    return (
+        *ROLLABLE,
+        *(
+            play
+            for play, source in GIRL_ROLL_RULES.items()
+            if (book := rule_book(source)) is not None and has_rule(sheet, source, book)
+        ),
+    )
 
 
 def name_removal_source(state: GameState, owner: int) -> Surgery | None:
@@ -75,9 +90,9 @@ def prepare(
     surgery = next((x for x in state.lobotomies if x.id == identity), None)
     if surgery is None or surgery.phase != "plan" or not source_event:
         raise ValueError("Prepare the actual pending surgery once")
-    _actual(state, surgery)
-    if plan.forbidden_play is not None and plan.forbidden_play not in ROLLABLE:
-        raise ValueError("Choose an actual known rolled Play, never a passive ability")
+    sheet = _actual(state, surgery)
+    if plan.forbidden_play is not None and plan.forbidden_play not in rollable(sheet):
+        raise ValueError("Choose an actual rolled Play available to the original Girl")
     if plan.other in (surgery.subject, surgery.inflictor):
         raise ValueError("Choose at most one distinct other character for the new Bond")
     # Validate all effects on a private copy before asking for actual descriptions.
@@ -146,7 +161,10 @@ def _effects(
         state.sheets[surgery.subject.entity] = sheet
     if "play" in plan.options:
         assert plan.forbidden_play is not None
-        if blocked_play(sheet, plan.forbidden_play) is not None:
+        if (
+            plan.forbidden_play not in rollable(sheet)
+            or blocked_play(sheet, plan.forbidden_play) is not None
+        ):
             raise ValueError("Choose a Play the actual Girl can still roll")
         sheet.blocked_plays.append(
             BlockedPlay(play=plan.forbidden_play, surgery=surgery.id, source_event=source_event)
