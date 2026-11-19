@@ -574,21 +574,26 @@ class GameService:
                         ],
                     )
             if sheet.owner == viewer.user_id and sheet.character_id:
-                from girlframe.engine.m3_actor_bonds import current_ref as prince_sheet_ref
+                from girlframe.engine.m3_actor_bonds import current_ref as original_sheet_ref
                 from girlframe.engine.m3_prince import official_pronouns
+                from girlframe.services.m3_princess_npc_orders import ace_pronouns
 
-                pronouns = official_pronouns(state, prince_sheet_ref(state, sheet.owner))
+                sheet_actor = original_sheet_ref(state, sheet.owner)
+                pronouns = official_pronouns(state, sheet_actor)
                 if pronouns:
                     data["official_pronouns"] = pronouns
+                optional = ace_pronouns(self, c, state, sheet_actor)
+                if optional:
+                    data["princess_optional_pronouns"] = optional
                 if sheet.frame == "CONSUME":
                     from girlframe.engine.m3_consume import hunger
                     from girlframe.services.m3_consume_support import appearance
 
                     data["consume_runtime"] = dict(
-                        hunger=hunger(state, prince_sheet_ref(state, sheet.owner))
+                        hunger=hunger(state, sheet_actor)
                         if not sheet.frame_scrapped
                         else "Unavailable (scrapped Frame)",
-                        appearance=appearance(state, prince_sheet_ref(state, sheet.owner)),
+                        appearance=appearance(state, sheet_actor),
                     )
             return data
 

@@ -58,6 +58,14 @@ zero refusal dice and an actual Off-Duty close. Changed source type and
 lint checks passed.
 [To a Higher Standard p. 30](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=32)
 
+On base `501b01f`, the original Princess's private sheet now shows that
+she/her is optional while she is Ace during that approved period.
+The same focused case passed in 9.61 seconds after adding sheet, peer
+privacy, loss and recovery of Ace, and actual Off-Duty expiry assertions.
+This is a permission shown to the original player. The game does not
+choose how the player refers to their character in narration.
+[Standards case](../../tests/rules/test_standards.py)
+
 ## 1. Strain and Off-Duty
 
 The table below keeps both printed choices for each of the nine initially

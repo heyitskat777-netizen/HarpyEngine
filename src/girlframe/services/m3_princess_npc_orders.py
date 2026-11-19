@@ -130,6 +130,14 @@ def review_candidates(
     }
 
 
+def ace_pronouns(game: GameService, c: Connection, state: GameState, girl: ActorRef) -> str | None:
+    from girlframe.engine.m3_intracadre_marriage import is_ace
+
+    if not is_ace(state, int(girl.entity)):
+        return None
+    return "she/her" if authority(game, c, state, girl) is not None else None
+
+
 def review(
     periods: OffDutyService,
     viewer: GuildViewer,

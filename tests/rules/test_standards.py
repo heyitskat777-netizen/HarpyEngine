@@ -120,6 +120,7 @@ def test_princess_npc_order_uses_current_off_duty_upkeep_and_private_gm_refusal(
     )["approved"]
     with pytest.raises(WorkflowError, match="current Off-Duty"):
         orders.targets(PLAYER, 900, princess_period=period)
+    assert "princess_optional_pronouns" not in game.sheet(PLAYER)
 
     asyncio.run(
         submit_form(
@@ -130,6 +131,21 @@ def test_princess_npc_order_uses_current_off_duty_upkeep_and_private_gm_refusal(
         )
     )
     assert cycle.review(PLAYER, period)["princess_can_order"]
+    assert game.sheet(PLAYER)["princess_optional_pronouns"] == "she/her"
+    assert "princess_optional_pronouns" not in game.sheet(OTHER, PLAYER.user_id)
+
+    from girlframe.engine.m2 import shift_status
+
+    with ledger.transaction() as c:
+        lower = state(game)
+        shift_status(lower, 2, -1)
+        game.event(c, 1, "standards-ace-lowered", "synthetic.status", lower)
+    assert "princess_optional_pronouns" not in game.sheet(PLAYER)
+    with ledger.transaction() as c:
+        up = state(game)
+        shift_status(up, 2, 1)
+        game.event(c, 1, "standards-ace-restored", "synthetic.status", up)
+    assert game.sheet(PLAYER)["princess_optional_pronouns"] == "she/her"
 
     async def issue():
         click = current(2, 47434)
@@ -190,6 +206,7 @@ def test_princess_npc_order_uses_current_off_duty_upkeep_and_private_gm_refusal(
     call(cycle, game, ADMIN, period, "finish", movement(game))
     with pytest.raises(WorkflowError, match="current Off-Duty"):
         orders.targets(PLAYER, 900, princess_period=period)
+    assert "princess_optional_pronouns" not in game.sheet(PLAYER)
 
 
 def pending(store):

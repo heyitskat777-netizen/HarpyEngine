@@ -2353,6 +2353,12 @@ class StatePages(discord.ui.View):
                 "Official " + part + " pronouns: " + value
                 for part, value in sheet["official_pronouns"].items()
             )
+        if sheet.get("princess_optional_pronouns"):
+            lines.append(
+                "While you are the Ace this Off-Duty, you may use "
+                + sheet["princess_optional_pronouns"]
+                + "."
+            )
         if sheet.get("consume_runtime"):
             lines.append("Hunger: " + sheet["consume_runtime"]["hunger"])
             if sheet["consume_runtime"].get("appearance"):
