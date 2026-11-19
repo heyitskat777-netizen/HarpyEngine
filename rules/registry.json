@@ -22066,12 +22066,12 @@
         "tier_options": {
           "mid": ["The original Girl can volunteer herself as bait before private discovery."],
           "high": ["The original Girl may serve as bait and require actual same-scene community disruption after the roll."],
-          "low": ["Save the original roll for three printed conditions."]
+          "low": ["The Girl may serve as bait, require actual community disruption and investigate two or three real suspects."]
         },
-        "choice_ownership": "The original Girl spends actual Heat and chooses her own use as bait. The actual human GM verifies the original encounter.",
+        "choice_ownership": "The original Girl spends actual Heat and chooses her own use as bait. The actual human GM supplies the unordered suspects and verifies the original encounter.",
         "target_policy": "Original living same-square hidden Dopplegänger and its sealed guise. Only the original Girl and human GM may view the discovery.",
         "post_roll_effects": ["Record the actual scoped discovery without a global map reveal."],
-        "mandatory_followups": ["Save the actual bait and require participated encounter evidence before disclosing the guise."],
+        "mandatory_followups": ["Save the actual bait and require the actual chosen disruption and suspect inquiry where applicable before disclosing the guise."],
         "handler_or_gm_intervention": "The human GM supplies and verifies the sealed source. Other printed condition combinations and wider reveal paths remain open.",
         "test_fixture_ids": ["tests/rules/test_sniff_out.py"]
       },

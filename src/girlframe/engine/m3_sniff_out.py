@@ -8,6 +8,11 @@ RULE = "gorgon-type.doppleganger.sniff-you-out"
 KIND = "sniff_you_out"
 
 
+class Suspect(Model):
+    actor: ActorRef
+    label: str
+
+
 class Search(Model):
     id: str
     scene: str
@@ -23,6 +28,11 @@ class Search(Model):
     bait_account: str | None = None
     disruption: str | None = None
     disruption_event: str | None = None
+    needs_suspects: bool = False
+    suspects: tuple[Suspect, ...] = ()
+    suspects_event: str | None = None
+    inquiry_event: str | None = None
+    inquiry_account: str | None = None
     discovered: str | None = None
     name: str | None = None
     proof: str | None = None

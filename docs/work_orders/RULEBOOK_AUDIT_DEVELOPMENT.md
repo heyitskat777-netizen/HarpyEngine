@@ -2343,6 +2343,22 @@ to learn the guise privately. Further kinds of disruption and
 other condition combinations remain open.
 [Dopplegänger p. 168](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=170) · [Native case](../../tests/rules/test_sniff_out.py)
 
+### Sniff You Out’s low result with three actual conditions
+
+Base `cbc562344c1370731cd98ea6a682d5e66d629d86`. The low result
+supports original bait, verified community disruption and two
+or three actual local suspects. The human GM supplies the
+suspects without identifying the guise. The original Girl records
+actual inquiry. Only then may the GM verify and disclose the
+original guise after the selected disruption has occurred.
+
+**One focused low case passed in 6.46 seconds**. It completed
+the three conditions, withheld identity before the investigator
+acted and preserved the actual post-roll event and unchanged
+public map. Other printed combinations and wider reveal paths
+remain open.
+[Dopplegänger p. 168](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=170) · [Native case](../../tests/rules/test_sniff_out.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

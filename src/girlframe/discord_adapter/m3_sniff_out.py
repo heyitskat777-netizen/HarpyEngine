@@ -29,8 +29,21 @@ async def open_search(
     elif "heat" in data:
         step, text = "roll", data["hook"]
         fields = [Field("heat", f"Your Heat spend (available: {data['heat']})")]
+    elif data.get("inquire"):
+        step, text = "inquire", "Investigate the actual suspects: " + ", ".join(data["suspects"])
+        fields = [Field("account", "Describe what you do to investigate", paragraph=True)]
+    elif "suspect_options" in data:
+        if len(data["suspect_options"]) < 2:
+            await reply(interaction, "The saved search awaits two actual local suspects.")
+            return
+        step, text = (
+            "suspects",
+            "Choose two or three actual people for the investigator to consider.",
+        )
+        options = tuple(data["suspect_options"].items())
+        fields = [Field("selected", "Actual local suspects", options, 2, min(3, len(options)))]
     elif data.get("review"):
-        step, text = "discover", data["bait_account"]
+        step, text = "discover", data["inquiry_account"] or data["bait_account"]
         fields = [Field("account", "Describe the actual encounter", paragraph=True)]
         if "disruptions" in data:
             if not data["disruptions"]:
@@ -46,6 +59,10 @@ async def open_search(
                     tuple(data["disruptions"].items()),
                 ),
             )
+    elif data.get("tier") == "low" and not data["bait"]:
+        step = "bait_disruption_and_suspects"
+        text = "Serve as bait, upend the community’s routine, and investigate the actual suspects."
+        fields = [Field("account", "Describe how you volunteer as bait", paragraph=True)]
     elif data.get("tier") == "high" and not data["bait"]:
         step = "bait_and_disruption"
         text = "Choose to serve as bait and require the community’s normal routine to be upended."
@@ -70,7 +87,7 @@ async def open_search(
             identity,
             data["revision"],
             step,
-            selected=(values.get("selected") or ("",))[0],
+            selected=",".join(values.get("selected", ())),
             account=values.get("account", ""),
             heat=int(heat) if step == "roll" else None,
         )

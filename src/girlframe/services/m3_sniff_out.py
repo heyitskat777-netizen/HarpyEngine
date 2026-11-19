@@ -100,6 +100,30 @@ class SniffOutService:
             for guise, guise_name in guises
         }
 
+    def _suspects(
+        self,
+        state: GameState,
+        cast: SceneCast,
+        hunter: ActorView,
+    ) -> dict[str, rules.Suspect]:
+        if state.world is None:
+            return {}
+        present = {x.actor for x in cast.roles}
+        result = {}
+        for person in state.world.npcs:
+            ref = ActorRef(kind="npc", entity=person.id)
+            if (
+                ref in present
+                and person.alive
+                and not person.captive_of
+                and person.cell == hunter.cell
+                and person.source_kind is None
+                and "director" not in person.jobs
+                and _visible(state, ref, hunter.controller)
+            ):
+                result[ref.token] = rules.Suspect(actor=ref, label=person.name)
+        return result
+
     def _proof(self, c: Connection, case: rules.Search) -> None:
         raw = c.scalar(
             sa.select(t.m2["m2_state_history"].c.body_json).where(
@@ -128,6 +152,11 @@ class SniffOutService:
                 bait_account=None,
                 disruption=None,
                 disruption_event=None,
+                needs_suspects=False,
+                suspects=(),
+                suspects_event=None,
+                inquiry_event=None,
+                inquiry_account=None,
                 discovered=None,
                 name=None,
                 proof=None,
@@ -227,13 +256,20 @@ class SniffOutService:
         result = []
         for case in cases:
             hunter = case.hunter.entity == str(viewer.user_id)
-            review = viewer.user_id == case.gm and case.bait and not case.discovered
+            review = (
+                viewer.user_id == case.gm
+                and case.bait
+                and not case.discovered
+                and (not case.needs_suspects or not case.suspects or case.inquiry_event is not None)
+            )
+            can_inquire = hunter and case.suspects and not case.inquiry_event
             if hunter or review:
                 result.append(
                     dict(
                         id=case.id,
                         revision=state.revision,
-                        pending=not case.discovered and (not case.bait or bool(review)),
+                        pending=not case.discovered
+                        and (not case.bait or bool(review or can_inquire)),
                         label="Your discovered identity" if case.discovered else "Sniff You Out",
                     )
                 )
@@ -294,8 +330,16 @@ class SniffOutService:
                 current,
                 current.bait,
                 False,
-                "bait_and_disruption" if current.disruption else "bait",
+                "bait_disruption_and_suspects"
+                if current.needs_suspects
+                else "bait_and_disruption"
+                if current.disruption
+                else "bait",
             )
+        if current.suspects_event:
+            self._step_receipt(c, current, current.suspects_event, True, "suspects")
+        if current.inquiry_event:
+            self._step_receipt(c, current, current.inquiry_event, False, "inquire")
         if current.discovered:
             self._step_receipt(c, current, current.discovered, True, "discover")
         return current
@@ -318,13 +362,28 @@ class SniffOutService:
                 roll=case.roll.model_dump(mode="json") if case.roll else None,
                 tier=case.roll.result if case.roll else None,
                 bait=case.bait is not None,
-                review=viewer.user_id == case.gm and case.bait is not None,
+                review=viewer.user_id == case.gm
+                and case.bait is not None
+                and (
+                    not case.needs_suspects or not case.suspects or case.inquiry_event is not None
+                ),
             )
+            if case.suspects:
+                result["suspects"] = [x.label for x in case.suspects]
+                result["inquire"] = (
+                    viewer.user_id == int(case.hunter.entity) and not case.inquiry_event
+                )
             if result["review"] and not case.discovered:
                 result["bait_account"] = case.bait_account
-                if case.disruption:
-                    cast = self._cast(state, case.scene, case.gm)
-                    hunter = self._hunter(c, state, cast, case.hunter.token)
+                result["inquiry_account"] = case.inquiry_account
+                cast = self._cast(state, case.scene, case.gm)
+                hunter = self._hunter(c, state, cast, case.hunter.token)
+                if case.needs_suspects and not case.suspects:
+                    result["suspect_options"] = {
+                        key: value.label
+                        for key, value in self._suspects(state, cast, hunter).items()
+                    }
+                elif case.disruption:
                     result["disruptions"] = {
                         key: value[1]
                         for key, value in self._disruptions(c, state, case, hunter).items()
@@ -456,10 +515,15 @@ class SniffOutService:
                 update=dict(roll=Roll(faces=self.game.dice.roll(), heat=heat, event=event))
             )
         if (
-            step in ("bait", "bait_and_disruption")
+            step in ("bait", "bait_and_disruption", "bait_disruption_and_suspects")
             and owner
             and case.roll
-            and case.roll.result == ("mid" if step == "bait" else "high")
+            and case.roll.result
+            == {
+                "bait": "mid",
+                "bait_and_disruption": "high",
+                "bait_disruption_and_suspects": "low",
+            }[step]
             and not case.bait
             and not selected
             and heat is None
@@ -470,13 +534,51 @@ class SniffOutService:
                 update=dict(
                     bait=event,
                     bait_account=account.strip(),
-                    disruption="community" if step == "bait_and_disruption" else None,
+                    disruption=None if step == "bait" else "community",
+                    needs_suspects=step == "bait_disruption_and_suspects",
                 )
+            )
+        if (
+            step == "suspects"
+            and viewer.user_id == case.gm
+            and case.bait
+            and case.needs_suspects
+            and not case.suspects
+            and heat is None
+            and not account
+        ):
+            options = self._suspects(state, cast, hunter)
+            choices = tuple(form for form in selected.split(",") if form)
+            if (
+                len(choices) not in (2, 3)
+                or len(set(choices)) != len(choices)
+                or not set(choices) <= set(options)
+                or case.guise.token not in choices
+            ):
+                raise WorkflowError(
+                    "Choose two or three actual local suspects including the sealed guise"
+                )
+            candidates = tuple(
+                sorted((options[x] for x in choices), key=lambda x: x.label.casefold())
+            )
+            return case.model_copy(update=dict(suspects=candidates, suspects_event=event))
+        if (
+            step == "inquire"
+            and owner
+            and case.suspects
+            and not case.inquiry_event
+            and not selected
+            and heat is None
+            and 0 < len(account.strip()) <= 1200
+        ):
+            return case.model_copy(
+                update=dict(inquiry_event=event, inquiry_account=account.strip())
             )
         if (
             step == "discover"
             and viewer.user_id == case.gm
             and case.bait
+            and (not case.needs_suspects or case.suspects and case.inquiry_event)
             and (bool(selected) == bool(case.disruption))
             and heat is None
             and 0 < len(account.strip()) <= 1200
