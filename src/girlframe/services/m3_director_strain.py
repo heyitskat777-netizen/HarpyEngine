@@ -10,6 +10,8 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_custom_strain as custom
 from girlframe.engine import m3_director_strain as rules
+from girlframe.engine import m3_named_strain as named
+from girlframe.engine import m3_void_rift as rift_rules
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, SceneCast
 from girlframe.engine.m3_civic_directive import director
@@ -173,29 +175,72 @@ class DirectorStrainService:
             event = str(uuid4())
             changed: tuple[Request, ...] = ()
             period, effect, root = None, None, None
+            rolled = None
+            arrivals: tuple[tuple[str, rift_rules.Arrival], ...] = ()
             if command.mode == "severity":
+                assert command.track is not None and command.severity is not None
                 changed = rules.set_level(state, command.track, command.severity)
-            elif command.mode == "replace":
+            elif command.mode in ("replace", "create_track"):
                 registry = self.strain.missions.access.registry
                 assert registry is not None
                 registry.require_available(custom.RULE)
-                assert command.slot is not None and command.design is not None
-                if command.design.npc not in dict(self._targets(state, viewer)):
+                design = command.design or command.new_track
+                assert design is not None
+                if design.npc not in dict(self._targets(state, viewer)):
                     raise WorkflowError("Only a known eligible NPC can be the custom event target")
                 period = self._preparing(c, state)
-                custom.register(
-                    state,
-                    custom.Replacement(
-                        id=event,
-                        slot=command.slot,
-                        actor=sender,
-                        controller=viewer.user_id,
-                        period=period,
-                        roll=None,
-                        target_controller=int(handler.entity),
-                        design=command.design,
-                    ),
-                )
+                if command.mode == "replace":
+                    assert command.slot is not None and command.design is not None
+                    custom.register(
+                        state,
+                        custom.Replacement(
+                            id=event,
+                            slot=command.slot,
+                            actor=sender,
+                            controller=viewer.user_id,
+                            period=period,
+                            roll=None,
+                            target_controller=int(handler.entity),
+                            design=command.design,
+                        ),
+                    )
+                else:
+                    assert command.new_track is not None
+                    if period is None and any(
+                        len(x.arrivals) <= x.duration for x in rift_rules.rifts(state)
+                    ):
+                        raise WorkflowError(
+                            "A live sky rift needs an actual preparation for its arrival"
+                        )
+                    named.register(
+                        state,
+                        named.Table(
+                            id=event,
+                            director=sender,
+                            controller=viewer.user_id,
+                            target_controller=int(handler.entity),
+                            design=command.new_track,
+                            account=command.account.strip(),
+                        ),
+                    )
+                    effect = event + ":die"
+                    rolled = named.SavedRoll(
+                        id=effect,
+                        period_id=period,
+                        track=event,
+                        handler=handler,
+                        source=event,
+                        rng_source=self.strain.rng_source,
+                        face=self.strain.dice.roll_d6(),
+                    )
+                    named.save_roll(state, rolled)
+                    root = (
+                        self.strain._row(c, period + ":off_duty_strain_start:" + handler.entity)
+                        if period
+                        else dict(campaign_id=self.store.campaign_id, campaign_context=True)
+                    )
+                    if period:
+                        arrivals = rift_rules.upcoming(state, effect, period, event)
             else:
                 period = self._preparing(c, state)
                 if period is None or command.target_rule not in rules.DIRECT_EVENTS:
@@ -237,7 +282,24 @@ class DirectorStrainService:
                 if row["state"] != "pending" or saved.get("stage") != "die":
                     raise WorkflowError("Reopen the actual unrolled Strain request")
                 self.strain._save(c, row, event, saved | {"severity": request.severity})
-            if effect is not None and root is not None:
+            if rolled is not None and root is not None:
+                owner = int(handler.entity)
+                related(
+                    c,
+                    self.store,
+                    root,
+                    rolled.id,
+                    owner,
+                    owner,
+                    "named_strain_roll",
+                    dict(
+                        track=rolled.track, stage="column", face=rolled.face, source_pdf=rules.PAGE
+                    ),
+                    event,
+                )
+                self.strain._rift_work(c, root, owner, arrivals, event)
+            elif effect is not None and root is not None:
+                assert command.track is not None and command.severity is not None
                 related(
                     c,
                     self.store,
@@ -254,7 +316,10 @@ class DirectorStrainService:
                     ),
                     event,
                 )
-            return dict(id=event, effect=effect, revision=state.revision)
+            result = dict(id=event, effect=effect, revision=state.revision)
+            if rolled is not None:
+                result["face"] = rolled.face
+            return result
 
         return self.strain.missions._write(
             viewer,

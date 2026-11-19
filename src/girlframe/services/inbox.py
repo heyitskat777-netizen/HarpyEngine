@@ -4265,6 +4265,8 @@ class InboxService:
                         "Claim actual Handler advancement",
                         "m3_handler_advancements",
                     )
+                elif kind == "named_strain_roll":
+                    primary, task_name = "Resolve the named Strain track", "m3_named_strain"
                 elif (
                     kind == "strain_endgame_effect"
                     and json.loads(work["body_json"]).get("rule_id") == "strain.budget.endgame.7"

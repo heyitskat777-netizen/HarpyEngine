@@ -158,6 +158,32 @@ class StrainService:
             event,
         )
 
+    def _rift_work(
+        self,
+        c: Connection,
+        root: dict[str, Any],
+        owner: int,
+        arrivals: tuple[tuple[str, rift_rules.Arrival], ...],
+        event: str,
+    ) -> None:
+        for rift, arrival in arrivals:
+            related(
+                c,
+                self.store,
+                root,
+                arrival.work,
+                owner,
+                owner,
+                "strain_event",
+                dict(
+                    rule_id=rift_rules.RULE,
+                    source_pdf=rift_rules.PAGE,
+                    source_work=rift,
+                    trigger_roll=arrival.roll,
+                ),
+                event,
+            )
+
     def prepare(
         self,
         viewer: GuildViewer,
@@ -317,6 +343,20 @@ class StrainService:
             )
             for request in state.strain.requests:
                 self._request(c, root, request, event)
+            from girlframe.engine.m3_named_strain import tables as named_tables
+
+            for table in named_tables(state):
+                related(
+                    c,
+                    self.store,
+                    root,
+                    period_id + ":named-strain:" + table.id,
+                    viewer.user_id,
+                    viewer.user_id,
+                    "named_strain_roll",
+                    dict(track=table.id, stage="die", source_pdf=192),
+                    event,
+                )
             for sheet in scrapped:
                 related(
                     c,
@@ -382,7 +422,7 @@ class StrainService:
             state.strain = rules.roll(state.strain, identity, self.dice.roll_d6())
             saved = next(x for x in state.strain.events if x.id == identity)
             event_id = str(uuid4())
-            arrivals = rift_rules.upcoming(state, saved, event_id)
+            arrivals = rift_rules.upcoming(state, saved.id, saved.period_id, event_id)
             event = self.game.event(
                 c,
                 viewer.user_id,
@@ -400,23 +440,7 @@ class StrainService:
                 json.loads(row["body_json"])
                 | {"stage": "column", "face": saved.face, "rng_source": self.rng_source},
             )
-            for rift, arrival in arrivals:
-                related(
-                    c,
-                    self.store,
-                    row,
-                    arrival.work,
-                    viewer.user_id,
-                    viewer.user_id,
-                    "strain_event",
-                    {
-                        "rule_id": rift_rules.RULE,
-                        "source_pdf": rift_rules.PAGE,
-                        "source_work": rift,
-                        "trigger_roll": identity,
-                    },
-                    event,
-                )
+            self._rift_work(c, row, viewer.user_id, arrivals, event)
             return {
                 "id": identity,
                 "revision": revision + 1,

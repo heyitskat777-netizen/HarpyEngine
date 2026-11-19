@@ -783,3 +783,23 @@ call before using the new slot. The detector exposes only eligible known
 targets. Three focused tests passed, covering both original phone powers,
 regular custom Strain and Director-authored replacement.
 [Director phone powers p. 190](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=192) · [Phone tests](../../tests/rules/test_director_strain_calls.py)
+
+## New Strain tracks and immediate rolls
+
+The base is `d906fb1587bbd0d05729548ee36da43223b7d625`.
+The Director's fourth power now creates a named track with two authored
+effects per face. One d6 is saved in the transaction that creates the
+track. The original Handler owns the column choice in the private Inbox.
+The track persists and receives its own die request during the next actual
+Off-Duty preparation. A named die also counts toward an open sky rift when
+it can attach its actual arrival to the preparing period. Creation outside
+Off-Duty works when no rift arrival is due.
+
+All 39 selected tests passed, including all four phone powers, creation
+before Off-Duty, duplicate name and die rejection, real column effects,
+an actual rift arrival, later-period scheduling and database reopening.
+Static checking passed on twelve affected modules. New tracks currently
+use one authored table and the approved custom NPC Tag effect shape.
+Named-track severity variants, free-form mechanical effects, additional
+printed trigger consumers and off-period rift arrivals remain open. No independent review or runtime approval was issued.
+[Director phone powers p. 190](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=192) · [Phone tests](../../tests/rules/test_director_strain_calls.py)

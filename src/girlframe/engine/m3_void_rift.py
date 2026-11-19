@@ -56,13 +56,15 @@ def open_rift(
     save(state, Rift(id=selected.id, duration=duration, rng_source=rng_source, arrivals=(arrival,)))
 
 
-def upcoming(state: GameState, roll: Event, source: str) -> tuple[tuple[str, Arrival], ...]:
+def upcoming(
+    state: GameState, roll: str, period: str, source: str
+) -> tuple[tuple[str, Arrival], ...]:
     work = []
     for rift in rifts(state):
-        if len(rift.arrivals) > rift.duration or any(x.roll == roll.id for x in rift.arrivals):
+        if len(rift.arrivals) > rift.duration or any(x.roll == roll for x in rift.arrivals):
             continue
-        identity = str(uuid5(NAMESPACE_URL, f"girlframe:void-rift:{rift.id}:{roll.id}"))
-        arrival = Arrival(work=identity, period=roll.period_id, roll=roll.id, source=source)
+        identity = str(uuid5(NAMESPACE_URL, f"girlframe:void-rift:{rift.id}:{roll}"))
+        arrival = Arrival(work=identity, period=period, roll=roll, source=source)
         save(state, rift.model_copy(update={"arrivals": (*rift.arrivals, arrival)}))
         work.append((rift.id, arrival))
     return tuple(work)
@@ -70,6 +72,12 @@ def upcoming(state: GameState, roll: Event, source: str) -> tuple[tuple[str, Arr
 
 def pending(state: GameState, work: str) -> tuple[Rift, Arrival]:
     if state.strain is not None:
+        from girlframe.engine.m3_named_strain import rolls as named_rolls
+
+        actual_rolls: set[tuple[str, str | None]] = {
+            (x.id, x.period_id) for x in state.strain.events
+        }
+        actual_rolls.update((x.id, x.period_id) for x in named_rolls(state))
         for rift in rifts(state):
             if not any(x.id == rift.id and x.rule_id == RULE for x in state.strain.events):
                 continue
@@ -77,10 +85,7 @@ def pending(state: GameState, work: str) -> tuple[Rift, Arrival]:
                 if (
                     arrival.work == work
                     and not arrival.performed
-                    and any(
-                        x.id == arrival.roll and x.period_id == arrival.period
-                        for x in state.strain.events
-                    )
+                    and (arrival.roll, arrival.period) in actual_rolls
                 ):
                     return rift, arrival
     raise ValueError("Recover the actual rift and unfulfilled original Strain arrival")

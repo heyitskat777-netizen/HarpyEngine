@@ -4,6 +4,7 @@ from typing import Literal
 
 from pydantic import Field, model_validator
 
+from girlframe.engine import m3_named_strain as named
 from girlframe.engine import m3_strain as strain
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model
@@ -25,21 +26,30 @@ DIRECT_EVENTS = frozenset(
 
 
 class Command(Model):
-    mode: Literal["severity", "trigger", "replace"]
-    track: Track
-    severity: Severity
+    mode: Literal["severity", "trigger", "replace", "create_track"]
+    track: Track | None = None
+    severity: Severity | None = None
     slot: Slot | None = None
     design: Design | None = Field(default=None, exclude_if=lambda value: value is None)
+    new_track: named.Design | None = Field(default=None, exclude_if=lambda value: value is None)
     account: str = Field(min_length=1, max_length=1200)
 
     @model_validator(mode="after")
     def actual_authority(self) -> "Command":
+        if not self.account.strip():
+            raise ValueError("Describe the actual call")
+        if self.mode == "create_track":
+            if self.new_track is None or any((self.track, self.severity, self.slot, self.design)):
+                raise ValueError("A new track uses its own table definition")
+            return self
         if (
-            (self.mode in ("trigger", "replace")) != (self.slot is not None)
+            self.new_track is not None
+            or self.track is None
+            or self.severity is None
+            or (self.mode in ("trigger", "replace")) != (self.slot is not None)
             or (self.mode == "replace") != (self.design is not None)
             or self.slot is not None
             and (self.slot.track != self.track or self.slot.severity != self.severity)
-            or not self.account.strip()
         ):
             raise ValueError("Record one actual phone power and its exact scope")
         return self

@@ -51,10 +51,10 @@ class Replacement(Model):
 
 class Occurrence(Model):
     id: str
-    mode: Mode
+    mode: Mode | Literal["named_track"]
     actor: ActorRef
     controller: int
-    period: str
+    period: str | None
     track: Track | None = None
     source_work: str | None = None
     replaces: str | None = None

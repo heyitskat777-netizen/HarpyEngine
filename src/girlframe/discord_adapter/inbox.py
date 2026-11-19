@@ -1235,6 +1235,15 @@ class InboxView(discord.ui.View):
             await open_phone_receipt(
                 interaction, DirectorStrainService(phone_strain), item.identity
             )
+        elif item.task == "m3_named_strain":
+            from girlframe.discord_adapter.m3_named_strain import open_named_strain
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_named_strain import NamedStrainService
+            from girlframe.services.m3_off_duty import OffDutyService
+            from girlframe.services.m3_strain import StrainService
+
+            named_strain = StrainService(OffDutyService(MissionService(self.service.store)))
+            await open_named_strain(interaction, NamedStrainService(named_strain), item.identity)
         elif item.task in ("m3_void_privacy_grant", "m3_void_privacy_notice"):
             from girlframe.discord_adapter.m3_void_privacy import open_concealment, open_void_notice
             from girlframe.services.m3_void_privacy import ConcealmentService

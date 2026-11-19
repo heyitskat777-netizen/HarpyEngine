@@ -13,9 +13,24 @@ from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_custom_strain import Design, Slot
 from girlframe.engine.m3_director_strain import DIRECT_EVENTS, Command
+from girlframe.engine.m3_named_strain import Design as TrackDesign
+from girlframe.engine.m3_named_strain import Option
 from girlframe.engine.m3_strain_catalog import ROWS
 from girlframe.engine.m3_strain_state import TRACKS
 from girlframe.services.m3_director_strain import DirectorStrainService
+from girlframe.services.onboarding import WorkflowError
+
+
+def track_design(name: str, npc: str, raw: str) -> TrackDesign:
+    rows = []
+    for line in raw.strip().splitlines():
+        parts = [x.strip() for x in line.split("|")]
+        if len(parts) != 4 or not all(parts):
+            raise WorkflowError("Enter a title and Tag for each column on every face.")
+        rows.append((Option(title=parts[0], tag=parts[1]), Option(title=parts[2], tag=parts[3])))
+    if len(rows) != 6:
+        raise WorkflowError("Enter six lines in die-face order.")
+    return TrackDesign(name=name.strip(), npc=npc, faces=tuple(rows))
 
 
 async def open_phone(
@@ -26,13 +41,14 @@ async def open_phone(
 ) -> None:
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(service.view, viewer, channel, sender)
-    modes: dict[Literal["severity", "trigger", "replace"], str] = {
+    modes: dict[Literal["severity", "trigger", "replace", "create_track"], str] = {
         "severity": "Set a track High or Low"
     }
     if data["period"]:
         modes["trigger"] = "Trigger a Strain event"
     if data["targets"]:
         modes["replace"] = "Write a replacement Strain event"
+        modes["create_track"] = "Create and roll a new Strain track"
     track_options = tuple((x, x.title()) for x in TRACKS)
 
     async def open_mode(click: discord.Interaction, choice: str) -> None:
@@ -41,6 +57,12 @@ async def open_phone(
             fields = [
                 Field("track", "Strain track", track_options),
                 Field("severity", "New level", (("low", "Low"), ("high", "High"))),
+            ]
+        elif mode == "create_track":
+            fields = [
+                Field("name", "New track name"),
+                Field("npc", "Known NPC who gains the selected Tag", data["targets"]),
+                Field("faces", "Six pairs of events and Tags", paragraph=True),
             ]
         else:
             choices = []
@@ -81,11 +103,15 @@ async def open_phone(
         async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
             slot_data = None
             design = None
-            if mode != "severity":
+            new_track = None
+            if mode in ("trigger", "replace"):
                 _, track, severity, face, column = values["event"][0].split(".")
                 slot_data = dict(track=track, severity=severity, face=int(face), column=int(column))
-            else:
+            elif mode == "severity":
                 track, severity = values["track"][0], values["severity"][0]
+            else:
+                track, severity = None, None
+                new_track = track_design(values["name"], values["npc"][0], values["faces"])
             if mode == "replace":
                 design = Design(
                     title=values["title"].strip(),
@@ -108,18 +134,27 @@ async def open_phone(
                         slot=slot_data,
                         account=values["account"],
                         design=design,
+                        new_track=new_track,
                     )
                 ),
             )
             if mode == "replace":
                 return "The replacement takes effect when the Handler chooses this slot."
+            if mode == "create_track":
+                return f"The new track rolled {result['face']}. The Handler owns its column choice."
             if result["effect"]:
                 return (
                     "The call was filed. The actual effect remains required in the Handler’s Inbox."
                 )
             return "The track’s level changed. Previously saved dice keep their original tables."
 
-        await NativeForm(viewer.user_id, modes[mode], "", fields, submit).present(click)
+        instructions = (
+            "Enter one line per die face, in order from 1 to 6. Use four fields per line:\n"
+            "`Title 1 | Tag 1 | Title 2 | Tag 2`"
+            if mode == "create_track"
+            else ""
+        )
+        await NativeForm(viewer.user_id, modes[mode], instructions, fields, submit).present(click)
 
     await Picker(viewer.user_id, "Call the Handler", tuple(modes.items()), open_mode).show(
         interaction

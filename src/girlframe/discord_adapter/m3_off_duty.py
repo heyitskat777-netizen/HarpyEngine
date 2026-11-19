@@ -204,6 +204,12 @@ async def open_period(interaction: discord.Interaction, service: OffDutyService)
             from girlframe.services.m3_strain import StrainService
 
             await open_work(current, StrainService(service), identity)
+        elif row["kind"] == "named_strain_roll":
+            from girlframe.discord_adapter.m3_named_strain import open_named_strain
+            from girlframe.services.m3_named_strain import NamedStrainService
+            from girlframe.services.m3_strain import StrainService
+
+            await open_named_strain(current, NamedStrainService(StrainService(service)), identity)
         elif row["kind"] in (
             "doctor_frame_replacement",
             "frame_replacement_package",
