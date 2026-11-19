@@ -97,6 +97,7 @@ def social(
     identity: str,
     *,
     source_kind: str | None = None,
+    suppress_bond: bool = False,
 ) -> GameState:
     state = GameState.model_validate_json(original.model_dump_json())
     target = view(state, subject, bindings)
@@ -145,7 +146,10 @@ def social(
             raise ValueError(
                 "Quality Time gives its actual chosen Tag and deepens the executor Bond"
             )
-        state = change(state, bond_ref(state, subject), bond_ref(state, executor), 1, event)
+        if suppress_bond and source_kind != "ancillary_cadre":
+            raise ValueError("The original printed replacement needs its actual source.")
+        if not suppress_bond:
+            state = change(state, bond_ref(state, subject), bond_ref(state, executor), 1, event)
         from girlframe.engine.m3_ancillary import find as optional_actor
         from girlframe.engine.m3_janus import find as core_body
 

@@ -4119,6 +4119,7 @@ class InboxService:
             from girlframe.services.m3_ancillary_intimacy import AncillaryIntimacyService
             from girlframe.services.m3_captured import CapturedService
             from girlframe.services.m3_chained_darling import ChainedPlacementService
+            from girlframe.services.m3_chained_isolation import IsolationService
             from girlframe.services.m3_chronically_online import ChronicallyOnlineService
             from girlframe.services.m3_escape import EscapeService
             from girlframe.services.m3_harpy_eagle import EagleService
@@ -4179,6 +4180,27 @@ class InboxService:
                         "Only the original participants control their choices.",
                         "Open private choice",
                         task="m3_ancillary_private_play",
+                    )
+                )
+
+            isolation = IsolationService(GameService(self.store))
+            for isolation_id in isolation.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "chained-isolation:" + isolation_id,
+                        "chained_isolation",
+                        isolation_id,
+                        canon.revision,
+                        "discipline",
+                        "Isolation Protocol",
+                        "Original Handler",
+                        "pending",
+                        True,
+                        False,
+                        "Choose the replacement for the original blocked Bond.",
+                        "Only the actual original Handler owns this choice.",
+                        "Open replacement",
+                        task="m3_chained_isolation",
                     )
                 )
 

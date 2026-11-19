@@ -3722,3 +3722,20 @@ other-member notch, and exercised the resulting Ace protection.
 The Ace’s roll override, the NPC reaction spend, other
 Punishment producers and earlier facing moments remain open.
 [Prodigy pp. 98–99](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=100) · [Native case](../../tests/rules/test_prodigy_discipline.py)
+
+### Chained Darling’s Isolation Protocol
+
+Base `5cb7b4c`. When original native Quality Time would create
+a new Bond under the actual Cadre Handler, Isolation keeps it
+at zero. The printed original Quality Time Tag is still applied.
+The Handler can then choose a real scoped Tag, eligible Asset
+damage, or pass. The original Punishment stays pending until
+that replacement resolves.
+
+**One focused case passed in 6.61 seconds.** It exercised
+actual instruction and attendance, stopped the new Bond, routed
+the private choice to the original Handler, rejected the Chained
+Darling acting in that role and committed the selected Tag before
+the original case completed. The order to come to their side,
+other Bond sources and direct Asset-damage evidence remain open.
+[Isolation Protocol p. 104](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=106) · [Native case](../../tests/rules/test_chained_isolation.py)

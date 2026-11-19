@@ -746,6 +746,12 @@ def synchronize(
     for case in tuple(state.role_punishments):
         if not case.effect_event or case.completion_event or case.ended_event:
             continue
+        if case.source_kind == "ancillary_cadre":
+            from girlframe.services.m3_chained_isolation import pending as isolation_pending
+
+            if isolation_pending(state, case.id):
+                continue
+
         pending = False
         if case.pc_work:
             work = _latest_work(c, game)
@@ -1167,6 +1173,9 @@ class RolePunishmentService:
                     raise WorkflowError(
                         "Carry out the exact actual instruction after the on-screen scene."
                     )
+                from girlframe.services.m3_chained_isolation import stage
+
+                suppressed = stage(self.game, state, case, event)
                 state = rules.social(
                     state,
                     case.subject,
@@ -1176,6 +1185,7 @@ class RolePunishmentService:
                     event,
                     str(uuid4()),
                     source_kind=case.source_kind,
+                    suppress_bond=suppressed,
                 )
                 if case.source_kind == "ancillary_cadre":
                     from girlframe.services.m3_ancillary_discipline import applied_consequences
