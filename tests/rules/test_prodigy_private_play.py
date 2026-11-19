@@ -8,11 +8,14 @@ from test_ledger import ledger as ledger
 from test_m2_game import Dice, state
 
 from girlframe.engine import m3_ancillary as ancillary
+from girlframe.engine import m3_ancillary_cadre as rank
 from girlframe.engine.m3_actor_bonds import current_ref, set_depth
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_physical_state import CockpitAction
 from girlframe.services.m3_actors import ActorService
 from girlframe.services.m3_ancillary import AncillaryService
+from girlframe.services.m3_ancillary_cadre import AncillaryCadreService
 from girlframe.services.m3_ancillary_intimacy import PRODIGY, AncillaryIntimacyService, records
 from girlframe.services.m3_cast import CastService
 from girlframe.services.m3_chained_darling import ChainedPlacementService
@@ -114,3 +117,75 @@ def test_prodigy_high_tag_and_actual_scoped_living_npc_bond_reaction(ledger, tmp
         x.get("kind") == "prodigy_jealous_bond" and x.get("npc") == PATRON.token
         for x in final.facts
     )
+
+
+def test_middle_prodigy_with_actual_ace_moves_from_dog_to_ace(ledger, tmp_path, monkeypatch):
+    game = scenario(ledger)
+    enable(ledger, game, tmp_path, monkeypatch, extra=(PRODIGY,))
+    missions = MissionService(ledger)
+    creation = AncillaryService(missions)
+    cast = CastService(ActorService(missions))
+
+    def create(viewer, book, name, bond):
+        invite = creation.invite(ADMIN, name, state(game).revision, viewer.user_id, "base0")
+
+        def gear(label):
+            return ancillary.NamedAsset(name=label, description="Actual starting equipment.")
+
+        frame = "SOLDIER_3" if book == "SOLDIER" else "JANUS"
+        draft = ancillary.Draft(
+            name=name,
+            book=book,
+            bond=bond,
+            frame_catalogue=frame,
+            girl_assets=tuple(gear(x) for x in ancillary.STARTERS[book].assets[:2]),
+            frame_assets=tuple(gear(x) for x in ancillary.frame_assets(book, frame)[:2]),
+        )
+        made = creation.respond(viewer, name + "-ok", invite["id"], state(game).revision, draft)
+        actor = ActorRef.model_validate(made["actor"])
+        change(cast, viewer, "join", actor)
+        return actor
+
+    soldier_bond = current_ref(state(game), PLAYER.user_id)
+    ace = create(OTHER, "SOLDIER", "Actual Ace", soldier_bond)
+    other = create(OTHER, "SOLDIER", "Actual Second", soldier_bond)
+    actor = create(PLAYER, "PRODIGY", "Actual Dog", current_ref(state(game), OTHER.user_id))
+    cadres = AncillaryCadreService(game)
+    proposed = cadres.propose(
+        ADMIN,
+        "actual-cadre",
+        900,
+        state(game).revision,
+        active_handler(state(game)).token,
+        (ace.token, other.token, actor.token),
+    )
+    for viewer, member in ((OTHER, ace), (OTHER, other), (PLAYER, actor)):
+        cadres.approve(
+            viewer, member.token, proposed["id"], state(game).revision, member.token, True
+        )
+    assert rank.actual_members(state(game), rank.current(state(game), actor)) == (ace, other, actor)
+    placement = ChainedPlacementService(game)
+    for viewer, member in ((OTHER, ace), (PLAYER, actor)):
+        reading = placement.propose(
+            viewer,
+            "pose-" + member.token,
+            900,
+            member,
+            state(game).revision,
+            "outside_frame",
+            "I am outside my original Frame.",
+        )
+        placement.decide(ADMIN, "see-" + member.token, reading["id"], state(game).revision, True)
+
+    private = AncillaryIntimacyService(game)
+    case = private.offer(PLAYER, "with-ace", 900, actor, state(game).revision, ace.token)["id"]
+    game.dice = Dice((4, 5))
+    for viewer, choice in ((OTHER, "yes"), (ADMIN, "yes"), (PLAYER, "roll")):
+        private.act(viewer, choice + str(viewer.user_id), case, state(game).revision, choice)
+    with pytest.raises(WorkflowError, match="unavailable"):
+        private.get(OTHER, case)
+    assert private.get(ADMIN, case)["become_ace"]
+    private.act(ADMIN, "apply-actual-ace", case, state(game).revision, "raise")
+    final = state(game)
+    assert rank.actual_members(final, rank.current(final, actor)) == (actor, ace, other)
+    assert records(final)[0].disposition == "became_ace" and game.dice.calls == 1

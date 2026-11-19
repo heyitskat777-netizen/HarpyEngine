@@ -78,3 +78,17 @@ def shift(state: GameState, actor: ActorRef, direction: Literal[-1, 1], event: s
     ordered[first], ordered[second] = ordered[second], ordered[first]
     put(state, cadre.model_copy(update=dict(order=tuple(ordered), event=event)))
     return True
+
+
+def become_ace(state: GameState, actor: ActorRef, event: str) -> None:
+    cadre = current(state, actor)
+    if cadre is None:
+        raise ValueError("Recover the original Prodigy's actual Cadre.")
+    members = actual_members(state, cadre)
+    ordered = list(cadre.order)
+    places = [i for i, role in enumerate(ordered) if role.actor in members]
+    roles = [ordered[i] for i in places]
+    own = roles.pop(members.index(actor))
+    for i, role in zip(places, (own, *roles), strict=True):
+        ordered[i] = role
+    put(state, cadre.model_copy(update=dict(order=tuple(ordered), event=event)))

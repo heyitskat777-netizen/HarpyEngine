@@ -15071,8 +15071,8 @@
       "reviewer": null,
       "review_reference": null,
       "contract": {
-        "trigger": "The original Prodigy shares a verified private encounter with a willing original local standard Pilot.",
-        "actor_type": "Original Prodigy, original Pilot, original human facilitator and the selected living NPC controller",
+        "trigger": "The original Prodigy shares a verified private encounter with a willing original local Pilot or an eligible member or Handler of her confirmed Ancillary Cadre.",
+        "actor_type": "Original Prodigy, original counterpart, human facilitator and the selected living NPC controller",
         "pre_roll_sources": [
           "Actual original consent and co-presence",
           "Approved original optional playbook and Play",
@@ -15088,7 +15088,7 @@
             "The other participant can decline or apply the paired Cadre Status drop and Tag"
           ],
           "mid": [
-            "Raise the original Prodigy in an approved Ancillary Cadre for the ordinary standard-counterpart route"
+            "Become Ace of the saved Cadre if the actual counterpart was its Ace or Handler at the roll; otherwise raise Status"
           ],
           "high": [
             "Give the original participant a real scoped Tag, then record an actual reaction from the selected original NPC Bond"
@@ -15100,7 +15100,7 @@
           "Apply the real scoped Tag and record the actual authorised NPC reaction."
         ],
         "mandatory_followups": [
-          "Ace and Handler alternatives, mixed Cadre Status, direct low and middle verification, other counterpart kinds and ordinary modifiers remain open."
+          "Direct Handler and ordinary middle verification, mixed Cadre Status, direct low verification, other counterpart kinds and ordinary modifiers remain open."
         ],
         "handler_or_gm_intervention": "The original facilitator confirms the source; unsupported Status changes remain pending.",
         "test_fixture_ids": [

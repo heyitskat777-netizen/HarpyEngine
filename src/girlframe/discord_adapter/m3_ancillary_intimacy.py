@@ -218,8 +218,10 @@ async def open_ancillary_intimacy_choice(
             (("confirm", "Record the actual reaction"),),
         ),
         "prodigy_rank": (
-            "Apply the actual original Prodigy’s Status advance in her Cadre.",
-            (("raise", "Apply the Status advance"),),
+            "Set the original Prodigy’s rank to Ace."
+            if data.get("become_ace")
+            else "Apply the original Prodigy’s Status advance in her Cadre.",
+            (("raise", "Set Ace" if data.get("become_ace") else "Apply the Status advance"),),
         ),
         "prodigy_low": (
             "You may decline the optional Tag and Status consequence.",

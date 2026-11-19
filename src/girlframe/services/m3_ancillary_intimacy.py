@@ -173,6 +173,8 @@ class Encounter(Model):
     picks: tuple[str, ...] = ()
     reaction_actor: ActorRef | None = None
     reaction_owner: int | None = None
+    prodigy_cadre: str | None = None
+    prodigy_ace: bool = False
     repair_asset: str | None = None
     repair_resource: str | None = None
 
@@ -272,10 +274,32 @@ class AncillaryIntimacyService:
         return first.cell == second.cell and (
             first.inside_frame is second.inside_frame is False
             or (
+                first.inside_frame is False
+                and second.inside_frame is None
+                and second.ref.kind in ("handler", "npc")
+            )
+            or (
                 first.inside_frame is second.inside_frame is True
                 and first.occupied_frame_instance is not None
                 and first.occupied_frame_instance == second.occupied_frame_instance
             )
+        )
+
+    def _supports_partner(
+        self, state: GameState, actor: ActorRef, book: ancillary.Book, partner: ActorView
+    ) -> bool:
+        if partner.ref.kind == "pilot" and partner.rules == "girl_frame":
+            return True
+        if book != "PRODIGY":
+            return False
+        actual = cadre_rank.current(state, actor)
+        if actual is None:
+            return False
+        return (
+            partner.ref == actual.handler
+            and partner.controller == actual.handler_owner
+            or partner.rules == "ancillary"
+            and partner.ref in cadre_rank.actual_members(state, actual)
         )
 
     def options(
@@ -297,17 +321,13 @@ class AncillaryIntimacyService:
         }
         people = {}
         for member in cast.roles:
-            if (
-                member.actor.kind != "pilot"
-                or member.controller == viewer.user_id
-                or member.actor in blocked
-            ):
+            if member.controller == viewer.user_id or member.actor in blocked:
                 continue
             try:
                 _, other = self._person(c, state, cast, member.actor)
             except (ValueError, WorkflowError):
                 continue
-            if other.rules == "girl_frame" and self._together(actual, other):
+            if self._supports_partner(state, actor, book, other) and self._together(actual, other):
                 people[other.ref.token] = other.label
         return people
 
@@ -497,7 +517,7 @@ class AncillaryIntimacyService:
                 "soldier_alone",
             )
             and not self._together(actual, partner)
-            or partner.rules != "girl_frame"
+            or not self._supports_partner(state, actual.ref, book, partner)
         ):
             raise WorkflowError("Recover the original private encounter and both present actors.")
         return actual
@@ -584,6 +604,7 @@ class AncillaryIntimacyService:
                 profiles(c, self.store.campaign_id),
             )
             role = ancillary.find(state, case.actor.actor)
+            group = cadre_rank.current(state, actual.ref)
             label = (
                 next((tag.label for tag in role.tags if tag.id == case.tag), None)
                 if case.step == "reaffirm" and role is not None
@@ -626,7 +647,9 @@ class AncillaryIntimacyService:
                     "soldier_mid",
                     "soldier_high",
                 )
-                and cadre_rank.current(state, actual.ref) is not None,
+                and group is not None
+                and case.prodigy_cadre in (None, group.id),
+                become_ace=case.step == "prodigy_rank" and case.prodigy_ace,
                 soldier_bond=depth(state, actual.ref, counterpart.ref)
                 if case.step == "soldier_mid"
                 else None,
@@ -746,6 +769,14 @@ class AncillaryIntimacyService:
                     raise ValueError("Dice source returned invalid faces.")
                 dice = Dice(faces=faces, heat=heat, source=event, rng=self.game.rng_source)
                 update = dict(roll=dice, step=RESULTS[case.book][dice.result])
+                if case.book == "PRODIGY" and dice.result == "mid":
+                    group = cadre_rank.current(state, case.actor.actor)
+                    if group is not None:
+                        update.update(
+                            prodigy_cadre=group.id,
+                            prodigy_ace=case.partner.actor
+                            in (group.handler, cadre_rank.actual_members(state, group)[0]),
+                        )
             elif case.step == "middle" and choice == "apply" and not account:
                 state = make_helpless(state, case.partner.actor, case.actor.actor, event)
                 state.facts.append(
@@ -1186,6 +1217,12 @@ def _prodigy(
         )
         return state, dict(step="closed", disposition="actual_npc_reaction")
     if case.step == "prodigy_rank" and choice == "raise" and not account:
+        current = cadre_rank.current(state, actor)
+        if current is None or case.prodigy_cadre not in (None, current.id):
+            raise WorkflowError("Recover the original Prodigy's actual saved Cadre.")
+        if case.prodigy_ace:
+            cadre_rank.become_ace(state, actor, event)
+            return state, dict(step="closed", disposition="became_ace")
         cadre_rank.shift(state, actor, -1, event)
         return state, dict(step="closed", disposition="status_applied")
     if case.step == "prodigy_low":

@@ -3765,6 +3765,22 @@ variant was deselected. Cockpit and Apometanoia options,
 other result tiers and additional body types remain open.
 [Void-Drunk p. 109](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=111) · [Native case](../../tests/rules/test_void_drunk.py)
 
+### Prodigy’s middle result with the Ace or Handler
+
+Base `1c3278eb32c7f7a026e8594a77e370f0163d4b3d`. The Prodigy
+can use her Play with a present and consenting original member or
+Handler of her confirmed Ancillary Cadre. A middle result records
+the exact Cadre and whether the counterpart was the Ace or Handler
+at the roll. The human facilitator resolves the saved result by
+promoting the Prodigy to Ace or applying the ordinary advancement.
+
+One focused case passed in 6.31 seconds. It denied the Ace access
+to the facilitator's choice, promoted the original Dog directly
+to Ace, and preserved the relative order of the other members.
+The existing high case was deselected. The Handler variant and
+ordinary middle and low outcomes still need direct verification.
+[Prodigy p. 99](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=101) · [Native case](../../tests/rules/test_prodigy_private_play.py)
+
 ### Illegal Girl and Made For Service Orders
 
 Base `21562bef839b590432f8276569581b23d1ab20da`. The
