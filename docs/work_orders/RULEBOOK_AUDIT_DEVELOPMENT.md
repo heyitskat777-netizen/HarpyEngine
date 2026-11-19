@@ -3195,3 +3195,24 @@ case selected Oldgen, configured two maxims, preserved the
 original sheet’s resources and held at the actual setup. The
 previous Defeat-origin Oldgen transition also passed.
 [Timeskip p. 197](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=199) · [Native case](../../tests/rules/test_timeskip.py)
+
+### Timeskip’s table-owned character ending and replacement
+
+Base `1680b6b`. The original human GM can nominate a current
+eligible Girl or publicly introduced ordinary GM NPC. Every
+original player owns an affirmative ballot. A Girl’s actual
+career ends, with cast and pending work synchronized to the
+original ending. Only her owner can start the Newgirl replacement
+and finish the existing creation, Mentor and Status workflows.
+The next Timeskip step stays pending until the original new
+character is active.
+
+**One focused end-to-end case passed in 8.36 seconds**. It carried
+the original Girl through the vote and archived the exact person.
+Only a Newgirl draft was accepted. The same owner completed the
+fresh Mentor, callsign, Bond, Status and activation flow. The old
+career remained private. NPC endings reuse the tested base-loss
+operation. Vatgrown with its printed replacement requirement
+still needs a human ruling on which replacement rule takes
+precedence. Special and non-GM NPC nominations remain open.
+[Timeskip p. 197](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=199) · [Native case](../../tests/rules/test_timeskip.py)

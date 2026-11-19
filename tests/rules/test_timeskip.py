@@ -3,6 +3,7 @@
 import asyncio
 
 import pytest
+from test_creation import selected
 from test_harpy_flirt import submit_form
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger
@@ -10,18 +11,30 @@ from test_m2_game import state
 from test_mission_service import service as mission_service
 from test_world import initial as initial_world
 
+from girlframe.discord_adapter.m3_careers import open_replacement
 from girlframe.discord_adapter.m3_girl_transition import open_configuration
 from girlframe.discord_adapter.m3_punishments import Picker
 from girlframe.discord_adapter.m3_timeskip import open_timeskip
 from girlframe.discord_adapter.m3_world import open_world
+from girlframe.engine.bonds import BondProposal
+from girlframe.engine.cadre_history import PriorMission
+from girlframe.engine.drafts import DraftInput
+from girlframe.engine.handler_setup import PilotRef
 from girlframe.engine.m3_world_state import Npc
+from girlframe.engine.shared_setup import CallsignChoice
+from girlframe.services.bonds import BondService
+from girlframe.services.creation import CreationService
+from girlframe.services.creation_review import CreationReviewService
+from girlframe.services.handler_setup import HandlerService
 from girlframe.services.inbox import InboxService
+from girlframe.services.m3_careers import CareerService
 from girlframe.services.m3_girl_transition import GirlTransitionService, baseline_id
 from girlframe.services.m3_off_duty import OffDutyService
 from girlframe.services.m3_strain import StrainService
 from girlframe.services.m3_timeskip import RULE, Arrival, TimeskipService, records
 from girlframe.services.m3_world import WorldService
 from girlframe.services.onboarding import WorkflowError
+from girlframe.services.shared_setup import SharedSetupService
 
 
 def test_native_timeskip_agreement_and_ordered_world_changes(ledger):
@@ -238,3 +251,103 @@ def test_native_timeskip_agreement_and_ordered_world_changes(ledger):
     finished = state(game)
     assert records(finished)[0].step == "death"
     assert finished.sheets["2"].girl_runtime.setup.maxims == (1, 4)
+
+    def native(actor, values, sequence):
+        asyncio.run(
+            submit_form(
+                actor, lambda click: open_timeskip(click, service, case.id), values, sequence
+            )
+        )
+
+    native(ADMIN, dict(choice=(ref.token,)), 93336)
+    for viewer, sequence in ((ADMIN, 93340), (OTHER, 93344), (PLAYER, 93348)):
+        assert "2" in state(game).sheets
+        native(viewer, dict(choice=("yes",)), sequence)
+    death = state(game)
+    (lost,) = records(death)
+    assert lost.step == "replacement"
+    assert lost.death == ref and "2" not in death.sheets
+    assert any(x.actor == ref and x.ending == "death" for x in death.career_archives)
+    assert not service.get(ADMIN, case.id)["can_continue"]
+    careers = CareerService(ledger)
+    with pytest.raises(WorkflowError, match="must be a Newgirl"):
+        careers.begin_replacement(
+            PLAYER,
+            "wrong-book",
+            lost.death_archive,
+            death.revision,
+            DraftInput(callsign="Replacement", girl_playbook="OLDGEN", frame_playbook="JANUS"),
+        )
+    with pytest.raises(WorkflowError, match="original human"):
+        careers.get(OTHER, lost.death_archive)
+    asyncio.run(
+        submit_form(
+            PLAYER,
+            lambda click: open_replacement(click, careers, lost.death_archive),
+            dict(callsign="Replacement", girl=("NEWGIRL",), frame=("JANUS",)),
+            93352,
+        )
+    )
+    pending = state(game)
+    assert not service.get(ADMIN, case.id)["can_continue"]
+    correction = HandlerService(ledger)
+    fresh_revision, mentor_revision = (
+        ledger.draft(viewer)["revision"] for viewer in (PLAYER, OTHER)
+    )
+    new_ref = PilotRef(user_id=PLAYER.user_id, character_revision=fresh_revision)
+    mentor_ref = PilotRef(user_id=OTHER.user_id, character_revision=mentor_revision)
+    correction.mentor(
+        ADMIN, "new-mentor", correction.roster(ADMIN)["revision"], new_ref, mentor_ref
+    )
+    contacts = BondService(ledger)
+    request = contacts.propose(
+        PLAYER,
+        "new-bond",
+        fresh_revision,
+        mentor_revision,
+        BondProposal(target_id=OTHER.user_id, prompt=0, context="The new Girl knows her Mentor."),
+    )
+    contacts.decide(OTHER, "accept-new-bond", request["id"], 1, "accept")
+    shared = SharedSetupService(ledger)
+    name = shared.propose(
+        OTHER,
+        "new-name",
+        PLAYER.user_id,
+        "callsign",
+        shared.prepare(OTHER, PLAYER.user_id, "callsign"),
+        CallsignChoice(callsign="REPLACEMENT"),
+    )
+    shared.decide(PLAYER, "accept-new-name", name["id"], 1, "accept")
+    creation = CreationService(ledger)
+    draft = creation.get(PLAYER)
+    chosen = selected("NEWGIRL", "JANUS").model_copy(
+        update=dict(
+            shared_tokens=draft.draft.shared_tokens,
+            cadre_discussed=True,
+            prior_missions=tuple(
+                PriorMission(user_id=uid, character_revision=entry["revision"], missions=0)
+                for uid, entry in creation.cadre(PLAYER).items()
+            ),
+        )
+    )
+    creation.save(PLAYER, "save-new-girl", draft.revision, fresh_revision, chosen)
+    correction.rank(ADMIN, "new-rank", correction.roster(ADMIN)["revision"], (mentor_ref, new_ref))
+    careers.assign_status(
+        ADMIN,
+        "newgirl-status",
+        PLAYER.user_id,
+        pending.incarnation_bindings[-1].character,
+        state(game).revision,
+        1,
+    )
+    review = CreationReviewService(ledger)
+    ready = review.get(PLAYER)
+    assert ready.sheet.ready_for_rules_review, ready.sheet.issues
+    review.save(PLAYER, "save-new-review", ready.saved_revision, ready.fingerprint)
+    game.activate(PLAYER, "activate-timeskip-newgirl", review.get(PLAYER).fingerprint)
+    assert service.get(ADMIN, case.id)["can_continue"]
+    native(ADMIN, dict(confirm=("continue",)), 93356)
+    replaced = state(game)
+    assert records(replaced)[0].step == "base_foundation"
+    assert replaced.sheets["2"].character_id != ref.incarnation
+    assert replaced.sheets["2"].girl == "NEWGIRL" and replaced.sheets["2"].mentor == OTHER.user_id

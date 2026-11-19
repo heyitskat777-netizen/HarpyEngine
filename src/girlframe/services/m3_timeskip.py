@@ -13,12 +13,14 @@ from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_battle import category, end_actor_casts
 from girlframe.engine.m3_battle_director import die as end_director
+from girlframe.engine.m3_careers import binding
 from girlframe.engine.m3_collateral import install_budget, stage_loss
 from girlframe.engine.m3_enforcer import end_grasps
-from girlframe.engine.m3_girl_runtime_state import change_playbook_runtime
+from girlframe.engine.m3_girl_runtime_state import change_playbook_runtime, has_rule
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_location_build import require_site
 from girlframe.engine.m3_physical import interrupt_journeys
+from girlframe.engine.m3_vatgrown_death import RULE as VATGROWN_DEATH_RULE
 from girlframe.engine.m3_world_state import Asset, Cell, CorePlan, Gorgon, GorgonType, Location
 from girlframe.engine.playbooks import GIRL_TYPES
 from girlframe.services.handler_setup import HandlerService
@@ -26,6 +28,7 @@ from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
+from girlframe.services.m3_careers import end_in_transaction, synchronize_end
 from girlframe.services.m3_girl_transition import GirlTransitionService, baseline_id, stage_baseline
 from girlframe.services.m3_handler_plays import _ordinary_scene_idle
 from girlframe.services.m3_medical import MedicalService
@@ -62,7 +65,15 @@ class Timeskip(Model):
     accepted: tuple[int, ...]
     months: int
     step: Literal[
-        "agreement", "city_ruin", "city_foundation", "base_ruin", "newgirl", "death", "declined"
+        "agreement",
+        "city_ruin",
+        "city_foundation",
+        "base_ruin",
+        "newgirl",
+        "death",
+        "replacement",
+        "base_foundation",
+        "declined",
     ]
     city_ruin: str | None = None
     city: str | None = None
@@ -70,6 +81,10 @@ class Timeskip(Model):
     loss: str | None = None
     graduates: tuple[ActorRef, ...] = ()
     baselines: dict[str, str] = {}
+    death: ActorRef | None = None
+    death_ballots: tuple[int, ...] = ()
+    death_event: str | None = None
+    death_archive: str | None = None
 
 
 def records(state: GameState) -> tuple[Timeskip, ...]:
@@ -283,6 +298,8 @@ class TimeskipService:
             for actor in case.graduates
         ):
             return "choose_book"
+        if case.step == "death" and case.death is not None and user not in case.death_ballots:
+            return "death_ballot"
         if user == case.gm or case.step == "agreement" and user not in case.accepted:
             return case.step
         return None
@@ -322,6 +339,14 @@ class TimeskipService:
             )
             if step == "newgirl":
                 data["can_continue"] = self._graduated(c, state, case)
+            if step == "death" and case.death is None:
+                data["people"] = {
+                    x.token: label for x, label in self._nominees(c, state, case).items()
+                }
+            if step in ("death", "death_ballot") and case.death is not None:
+                data["nominee"] = self._nominees(c, state, case).get(case.death)
+            if step == "replacement":
+                data["can_continue"] = self._replacement_ready(state, case)
             kind = {"city_ruin": "city", "base_ruin": "base"}.get(case.step)
             if kind is not None:
                 data["locations"] = {
@@ -597,4 +622,148 @@ class TimeskipService:
 
         return self._write(
             viewer, key, dict(id=identity, revision=revision, advance=True), operation
+        )
+
+    def _nominees(self, c: Connection, state: GameState, case: Timeskip) -> dict[ActorRef, str]:
+        if state.world is None:
+            return {}
+        people = {
+            ActorRef(kind="npc", entity=x.id): x.name
+            for x in state.world.npcs
+            if x.revealed
+            and x.alive
+            and x.controller == case.gm
+            and x.source_kind is None
+            and not x.captive_of
+            and category(state, ActorRef(kind="npc", entity=x.id)) != "harpy"
+        }
+        bound = profiles(c, self.store.campaign_id)
+        for uid in state.order:
+            actor = current_ref(state, uid)
+            sheet = state.sheets[actor.entity]
+            if uid not in case.voters or has_rule(sheet, VATGROWN_DEATH_RULE, "VATGROWN"):
+                continue
+            try:
+                actual = resolve(state, actor, bound, require_current_profile=False)
+            except ValueError:
+                continue
+            if actual.rules == "girl_frame" and not actual.offstage_source:
+                people[actor] = sheet.callsign
+        return people
+
+    def nominate(
+        self, viewer: GuildViewer, key: str, identity: str, revision: int, nominee: str
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            _ordinary_scene_idle(c, self.game)
+            state = load_state(c, self.store.campaign_id)
+            case = self._case(c, state, viewer, identity)
+            if (
+                viewer.user_id != case.gm
+                or case.step != "death"
+                or case.death is not None
+                or state.revision != revision
+            ):
+                raise WorkflowError("Reopen the original Timeskip death decision")
+            selected = next((x for x in self._nominees(c, state, case) if x.token == nominee), None)
+            if selected is None:
+                raise WorkflowError("Choose one actual original character known to the table")
+            case = case.model_copy(update=dict(death=selected, death_ballots=()))
+            return self._save(c, state, viewer, key, case, "death_proposed", str(uuid4()))
+
+        return self._write(
+            viewer, key, dict(id=identity, revision=revision, nominee=nominee), operation
+        )
+
+    def death_vote(
+        self, viewer: GuildViewer, key: str, identity: str, revision: int, accept: bool
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            _ordinary_scene_idle(c, self.game)
+            state = load_state(c, self.store.campaign_id)
+            case = self._case(c, state, viewer, identity)
+            if (
+                case.step != "death"
+                or case.death is None
+                or accept
+                and case.death not in self._nominees(c, state, case)
+                or viewer.user_id in case.death_ballots
+                or state.revision != revision
+                or type(accept) is not bool
+            ):
+                raise WorkflowError("STALE_TIMESKIP: reopen the original death decision")
+            event = str(uuid4())
+            if not accept:
+                case = case.model_copy(update=dict(death=None, death_ballots=()))
+                return self._save(c, state, viewer, key, case, "death_declined", event)
+            ballots = case.death_ballots + (viewer.user_id,)
+            case = case.model_copy(update=dict(death_ballots=ballots))
+            if set(ballots) != set(case.voters):
+                return self._save(c, state, viewer, key, case, "death_voted", event)
+            account = "The original table recorded one death during the Timeskip."
+            actual = case.death
+            assert actual is not None
+            if actual.kind == "npc":
+                state = _end_npcs(state, (actual.entity,), case.gm, event, account)
+                case = case.model_copy(update=dict(step="base_foundation", death_event=event))
+                return self._save(c, state, viewer, key, case, "death_committed", event)
+            archive = str(uuid4())
+            state = end_in_transaction(
+                c,
+                self.game,
+                state,
+                actual,
+                reason="death",
+                source_event=event,
+                account=account,
+                archive_id=archive,
+            )
+            case = case.model_copy(
+                update=dict(step="replacement", death_event=event, death_archive=archive)
+            )
+            result = self._save(c, state, viewer, key, case, "death_committed", event)
+            actual_archive = next(x for x in state.career_archives if x.id == archive)
+            synchronize_end(c, self.game, actual_archive)
+            return result
+
+        return self._write(
+            viewer, key, dict(id=identity, revision=revision, death_vote=accept), operation
+        )
+
+    def _replacement_ready(self, state: GameState, case: Timeskip) -> bool:
+        if not case.death_archive or not case.death or case.death.kind != "pilot":
+            return False
+        current = binding(state, int(case.death.entity))
+        sheet = state.sheets.get(case.death.entity)
+        return bool(
+            current
+            and current.active
+            and current.previous_archive == case.death_archive
+            and sheet
+            and sheet.character_id == current.character
+            and sheet.girl == "NEWGIRL"
+        )
+
+    def advance_replacement(
+        self, viewer: GuildViewer, key: str, identity: str, revision: int
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            _ordinary_scene_idle(c, self.game)
+            state = load_state(c, self.store.campaign_id)
+            case = self._case(c, state, viewer, identity)
+            if (
+                viewer.user_id != case.gm
+                or case.step != "replacement"
+                or state.revision != revision
+                or not self._replacement_ready(state, case)
+            ):
+                raise WorkflowError("Complete the original owner’s actual Newgirl activation")
+            case = case.model_copy(update=dict(step="base_foundation"))
+            return self._save(c, state, viewer, key, case, "replacement_activated", str(uuid4()))
+
+        return self._write(
+            viewer, key, dict(id=identity, revision=revision, activated=True), operation
         )

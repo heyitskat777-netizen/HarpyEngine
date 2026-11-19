@@ -640,6 +640,15 @@ class GameService:
                 raise WorkflowError(
                     "The replacement needs its own explicit current-Handler Status assignment."
                 )
+            if current_career is not None and current_career.previous_archive is not None:
+                from girlframe.services.m3_careers import require_timeskip_replacement
+
+                require_timeskip_replacement(
+                    self.store,
+                    state,
+                    current_career.previous_archive,
+                    review.creation.girl_playbook,
+                )
             absent_careers = {
                 int(x.actor.entity)
                 for x in state.career_archives

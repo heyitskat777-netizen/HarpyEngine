@@ -6,6 +6,7 @@ from typing import Any
 import discord
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.m3_punishments import Picker
 from girlframe.discord_adapter.m3_world import TYPES, coordinates
@@ -55,18 +56,24 @@ async def open_timeskip(
     if step == "declined":
         await reply(interaction, "The table declined this Timeskip.")
         return
-    if step == "death":
-        await reply(interaction, "The Timeskip awaits the table’s decision about who died.")
+    if step in ("death", "death_ballot"):
+        await _open_death(interaction, service, case, title, data)
         return
-    if step == "newgirl" and not data["can_continue"]:
-        await reply(
-            interaction, "The Timeskip awaits the original playbook setup or base aftermath."
+    if step == "base_foundation":
+        await reply(interaction, "The Timeskip awaits the establishment of a new base.")
+        return
+    if step in ("newgirl", "replacement") and not data["can_continue"]:
+        message = (
+            "The Timeskip awaits the original playbook setup or base aftermath."
+            if step == "newgirl"
+            else "The Timeskip awaits the original owner’s Newgirl activation."
         )
+        await reply(interaction, message)
         return
-    if step in ("newgirl", "choose_book"):
+    if step in ("newgirl", "choose_book", "replacement"):
         fields = [
             Field("confirm", "Proceed to the next printed step", (("continue", "Continue"),))
-            if step == "newgirl"
+            if step != "choose_book"
             else Field(
                 "book",
                 "Your new playbook",
@@ -77,16 +84,21 @@ async def open_timeskip(
         async def change(click: discord.Interaction, values: dict[str, Any]) -> str:
             actual = viewer_from_interaction(click)
             args = actual, str(click.id), case, data["revision"]
-            if step == "newgirl":
-                await asyncio.to_thread(service.advance_newgirl, *args)
-                return "The completed Newgirl step is saved."
+            if step != "choose_book":
+                advance = (
+                    service.advance_newgirl if step == "newgirl" else service.advance_replacement
+                )
+                await asyncio.to_thread(advance, *args)
+                return "The Timeskip can proceed to the next printed step."
             await asyncio.to_thread(service.choose_book, *args, values["book"][0])
             return "Open your original playbook setup in the private Inbox."
 
         form = NativeForm(
             interaction.user.id,
             title,
-            "Confirm the Newgirl step." if step == "newgirl" else "Choose your new Girl playbook.",
+            "Choose your new Girl playbook."
+            if step == "choose_book"
+            else "Confirm the original Newgirl setup.",
             fields,
             change,
         )
@@ -204,3 +216,50 @@ async def open_timeskip(
     await Picker(
         interaction.user.id, "Choose the actual location that fell.", options, choose
     ).show(interaction)
+
+
+async def _open_death(
+    interaction: discord.Interaction,
+    service: TimeskipService,
+    identity: str,
+    title: str,
+    data: dict[str, Any],
+) -> None:
+    candidate = data.get("nominee")
+    if data["step"] == "death" and "people" not in data:
+        await reply(interaction, "The original table is considering its decision.")
+        return
+    if data["step"] == "death":
+        options = tuple(data["people"].items())
+        if not options:
+            await reply(interaction, "The original table needs an eligible character.")
+            return
+        instruction = "Choose one character for consideration by the original table."
+    else:
+        options = (
+            (("yes", "Agree"), ("no", "Return to the table"))
+            if candidate
+            else (("no", "Return the unavailable nomination to the table"),)
+        )
+        instruction = (
+            "The proposed character is " + clean(candidate) + "."
+            if candidate
+            else ("The nominee is no longer available.")
+        )
+
+    async def confirm(click: discord.Interaction, values: dict[str, Any]) -> str:
+        args = viewer_from_interaction(click), str(click.id), identity, data["revision"]
+        if data["step"] == "death":
+            await asyncio.to_thread(service.nominate, *args, values["choice"][0])
+        else:
+            await asyncio.to_thread(service.death_vote, *args, values["choice"][0] == "yes")
+        return "Your recorded decision is saved."
+
+    form = NativeForm(
+        interaction.user.id,
+        title,
+        instruction,
+        [Field("choice", "Your decision", options)],
+        confirm,
+    )
+    await reply(interaction, form.text(), form)

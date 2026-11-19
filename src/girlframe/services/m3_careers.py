@@ -23,6 +23,31 @@ from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
 
+def _timeskip_newgirl(state: GameState, archive: CareerArchive) -> bool:
+    if archive.ending != "death":
+        return False
+    from girlframe.services.m3_timeskip import records
+
+    return any(
+        case.death == archive.actor
+        and case.death_archive == archive.id
+        and case.death_event == archive.source_event
+        for case in records(state)
+    )
+
+
+def require_timeskip_replacement(
+    store: OnboardingStore, state: GameState, archive_id: str, girl: str
+) -> None:
+    archive = next((x for x in state.career_archives if x.id == archive_id), None)
+    if archive is not None and _timeskip_newgirl(state, archive):
+        from girlframe.services.m3_timeskip import RULE
+
+        Access(store).require_specialist_rule(RULE)
+        if girl != "NEWGIRL":
+            raise WorkflowError("The original Timeskip replacement must be a Newgirl")
+
+
 def end_in_transaction(
     c: Connection,
     game: GameService,
@@ -359,6 +384,7 @@ class CareerService:
             return dict(
                 archive=archive.model_dump(mode="json"),
                 vatgrown_death_required=required(archive),
+                timeskip_newgirl_required=_timeskip_newgirl(state, archive),
                 game_revision=state.revision,
                 sheet=rules.original_sheet(state, archive.actor).model_dump(mode="json"),
                 can_replace=current is not None
@@ -404,6 +430,7 @@ class CareerService:
             new_revision = profile["revision"] + 1
             from girlframe.services.m3_vatgrown_death import validate_replacement
 
+            require_timeskip_replacement(self.store, state, archive.id, draft.girl_playbook)
             validate_replacement(self.game, c, state, archive, draft)
             changed = rules.replacement(
                 state,
