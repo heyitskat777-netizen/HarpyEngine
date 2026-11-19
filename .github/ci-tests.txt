@@ -148,6 +148,7 @@ tests/rules/test_rebel_assimilation.py
 tests/rules/test_rebel_funding.py
 tests/rules/test_rebel_succession.py
 tests/rules/test_rebel_takeover.py
+tests/rules/test_mistress_conditioning.py
 tests/rules/test_bunk_harpy.py
 tests/rules/test_berserk_frame.py
 tests/rules/test_rebel_ambush.py

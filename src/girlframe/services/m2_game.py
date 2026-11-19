@@ -4826,6 +4826,9 @@ class GameService:
             self.save_action(c, action, state="tag_window")
             for person in action["data"]["participants"]:
                 self.request(c, action, person, "tag_window")
+            from girlframe.services.m3_mistress_conditioning import offer as mistress_conditioning
+
+            mistress_conditioning(self, c, state, action)
             self.queue(
                 c,
                 action,

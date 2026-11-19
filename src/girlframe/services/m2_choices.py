@@ -646,10 +646,17 @@ class ChoiceEngine:
             if not self.game.pending(c, action["id"]):
                 self.finish(c, state, action)
             return
-        if kind == "tag_window":
-            self.tag_proposal(c, state, action, owner, answer, choice=request["id"])
+        from girlframe.services.m3_mistress_conditioning import CHOICE as MISTRESS_CONDITIONING
+
+        if kind in ("tag_window", MISTRESS_CONDITIONING):
+            if kind == "tag_window":
+                self.tag_proposal(c, state, action, owner, answer, choice=request["id"])
+            else:
+                from girlframe.services.m3_mistress_conditioning import apply as condition
+
+                condition(self.game, c, state, action, request, answer)
             if not any(
-                x["kind"] == "tag_window" and x["state"] == "pending"
+                x["kind"] in ("tag_window", MISTRESS_CONDITIONING) and x["state"] == "pending"
                 for x in self.game.pending(c, action["id"])
             ):
                 self.close_tag_window(c, state, action, closing_choice=request["id"])

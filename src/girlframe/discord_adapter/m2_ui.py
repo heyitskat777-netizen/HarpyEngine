@@ -147,6 +147,12 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
                 False,
             )
         ]
+    elif kind == "mistress_conditioning":
+        fields = [
+            menu(
+                "options", "Apply the −2 Insidious Conditioning modifier or pass", ("apply", "pass")
+            )
+        ]
     elif kind == "tag_window":
         partner_tags = decision.get("gender_man_tags", ())
         options: tuple[str, ...] = (

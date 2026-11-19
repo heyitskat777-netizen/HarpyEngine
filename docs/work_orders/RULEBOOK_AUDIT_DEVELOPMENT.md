@@ -1196,3 +1196,21 @@ Pilots and independently controlled NPC captors. Earlier custody, Frame
 extraction and the external Pilot's later native Disobey removal route
 remain open.
 [Rebellion Endgame p. 147](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=149) · [Broken p. 50](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=52) · [Takeover test](../../tests/rules/test_rebel_takeover.py)
+
+## Mistress Insidious Conditioning
+
+The base is `1133bf235855bdb30696c570cc461e230b5aa4d9`. The original
+Mistress can privately elect the printed −2 while the Girl resolves a
+native refusal of the Mistress's direct order. The frozen source includes
+the active persona, actual Girl, order and genuine Intense Bond. The
+saved dice stay intact, and the optional modifier resolves with the
+ordinary Tag window before the resulting tier. A Personal Bond does not
+offer the choice.
+
+All 130 selected tests passed in 72.86 seconds. They cover the −2 actually
+changing a 9 into a 7, declining the modifier, the Personal Bond case,
+native Inbox, denial of the other original actor, database reopening and
+idempotent replay with exactly one roll. Four source modules passed
+static typing. Refusals against a different order issuer and retained or
+borrowed sources remain open.
+[Mistress p. 123](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=125) · [Conditioning test](../../tests/rules/test_mistress_conditioning.py)
