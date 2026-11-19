@@ -141,6 +141,7 @@ tests/rules/test_gorgon_tags.py
 tests/rules/test_handler_retirement.py
 tests/rules/test_void_privacy.py
 tests/rules/test_void_leave.py
+tests/rules/test_budget_hearing.py
 tests/rules/test_handler_conversion.py
 tests/rules/test_erratic_gorgon.py
 tests/rules/test_journalist.py

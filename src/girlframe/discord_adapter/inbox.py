@@ -1633,6 +1633,17 @@ class InboxView(discord.ui.View):
                 StrainService(OffDutyService(MissionService(self.service.store)))
             )
             await open_taunt(interaction, taunt_service, item.identity)
+        elif item.task == "m3_budget_hearing":
+            from girlframe.discord_adapter.m3_budget_hearing import open_hearing
+            from girlframe.services.m3_budget_hearing import HearingService
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_off_duty import OffDutyService
+            from girlframe.services.m3_strain import StrainService
+
+            hearing = HearingService(
+                StrainService(OffDutyService(MissionService(self.service.store)))
+            )
+            await open_hearing(interaction, hearing, item.identity)
         elif item.task == "m3_rebel_voice":
             from girlframe.discord_adapter.m3_rebel_voice import open_voice
             from girlframe.services.m3_missions import MissionService

@@ -12,6 +12,7 @@ from girlframe.database import tables as t
 from girlframe.engine import m3_strain_effects as rules
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_benevolent_contact import RULE as BENEVOLENT_CONTACT
+from girlframe.engine.m3_budget_hearing import RULE as BUDGET_HEARING
 from girlframe.engine.m3_cadre_leak import RULE as CADRE_LEAK
 from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_contraband_state import ContrabandFind
@@ -124,6 +125,8 @@ class EffectService:
                 "awaiting_rebel_taunt": bool(body.get("taunt_requested"))
                 and row["state"] == "pending",
                 "awaiting_rebel_voice": bool(body.get("voice_requested"))
+                and row["state"] == "pending",
+                "awaiting_budget_hearing": bool(body.get("hearing_requested"))
                 and row["state"] == "pending",
                 "supply_outcome": {
                     "recipient": label,
@@ -690,6 +693,14 @@ class EffectService:
                 from girlframe.services.m3_rebel_voice import stage as stage_voice
 
                 stage_voice(c, self.strain, updated, row, event_id, choice.target)
+            needs_hearing = choice.rule_id == BUDGET_HEARING
+            if needs_hearing:
+                from girlframe.services.m3_budget_hearing import stage as stage_hearing
+
+                assert choice.target and choice.victim
+                stage_hearing(
+                    c, self.strain, updated, row, event_id, choice.target, int(choice.victim)
+                )
             pending = (
                 needs_offer
                 or needs_directive
@@ -701,6 +712,7 @@ class EffectService:
                 or needs_strafe
                 or needs_taunt
                 or needs_voice
+                or needs_hearing
             )
             scientific_period, scientific_events = None, []
             if choice.rule_id == "strain.budget.low.3.1":
@@ -921,7 +933,8 @@ class EffectService:
                 | ({"interest_requested": event} if needs_interest else {})
                 | ({"strafe_requested": event} if needs_strafe else {})
                 | ({"taunt_requested": event} if needs_taunt else {})
-                | ({"voice_requested": event} if needs_voice else {}),
+                | ({"voice_requested": event} if needs_voice else {})
+                | ({"hearing_requested": event} if needs_hearing else {}),
                 resolved=not pending,
             )
             return {

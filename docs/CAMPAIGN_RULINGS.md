@@ -4635,3 +4635,14 @@ continuing the campaign. The human table authority chooses the outcome once
 all original players have given their opinions. A change of Handler during
 leave requires human review. This interpretation awaits independent review.
 [Void Endgame p. 144](../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=146)
+
+## High Budget solo hearing authority
+
+High Budget 3.1 puts the Girl before the higher-ups with the Handler's
+hands tied. The general Severe Punishment rule reserves infliction for
+the Handler. The fictional Director can serve or withdraw an accusation.
+A finding that calls for Severe Punishment stays pending until a human
+ruling specifies who may inflict it and how the original Girl's solo
+response remains protected. The ordinary Punishment authority remains in
+force.
+[High Budget p. 149](../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=151) · [Severe Punishment p. 16](../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=18)

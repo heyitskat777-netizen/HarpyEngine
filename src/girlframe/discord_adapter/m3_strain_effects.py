@@ -14,6 +14,7 @@ from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_benevolent_contact import PLAYS as CONTACT_PLAYS
 from girlframe.engine.m3_benevolent_contact import RULE as BENEVOLENT_CONTACT
 from girlframe.engine.m3_budget_anarchy import REBELLION as REBEL_PROTEST
+from girlframe.engine.m3_budget_hearing import RULE as BUDGET_HEARING
 from girlframe.engine.m3_cadre_leak import RULE as CADRE_LEAK
 from girlframe.engine.m3_civic_directive import PROTEST as CIVIC_PROTEST
 from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
@@ -102,6 +103,9 @@ async def open_effect(
             interaction,
             "The original Rebel controller can finish the voice from their private Inbox.",
         )
+        return
+    if data.get("awaiting_budget_hearing"):
+        await reply(interaction, "The original parties have the private hearing in their Inbox.")
         return
     if data["rule_id"] == VOID_SPREAD:
         await open_spread(interaction, service, data, identity)
@@ -542,7 +546,7 @@ def effect_form(
                     ),
                 )
             )
-        if rule in CIVIC_DIRECTIVES or rule in (PILOT_FEARS, CADRE_LEAK):
+        if rule in CIVIC_DIRECTIVES or rule in (PILOT_FEARS, CADRE_LEAK, BUDGET_HEARING):
             fields.append(
                 Field(
                     "civic_director",
@@ -555,6 +559,10 @@ def effect_form(
                             and x["captive_of"] is None
                             and "director" in x["jobs"]
                             and x["controller"] != handler
+                            and (
+                                rule != BUDGET_HEARING
+                                or str(x["controller"]) != values.get("hearing_girl", (None,))[0]
+                            )
                         ]
                     ),
                 )
@@ -575,6 +583,15 @@ def effect_form(
                         ),
                     )
                 )
+        if rule == BUDGET_HEARING:
+            fields.append(
+                Field(
+                    "hearing_girl",
+                    "Which original Girl must attend alone?",
+                    tuple((str(uid), state.sheets[str(uid)].callsign) for uid in state.order)
+                    or WAIT,
+                )
+            )
         if rule == CADRE_LEAK:
             fields.append(
                 Field(
@@ -1260,10 +1277,12 @@ def effect_form(
             payload["target"] = values["signal"][0]
         if rule == PUBLIC_APPEARANCE:
             payload["target"] = values["appearance_city"][0]
-        if rule in CIVIC_DIRECTIVES or rule in (PILOT_FEARS, CADRE_LEAK):
+        if rule in CIVIC_DIRECTIVES or rule in (PILOT_FEARS, CADRE_LEAK, BUDGET_HEARING):
             payload["target"] = values["civic_director"][0]
             if rule == CIVIC_PROTEST:
                 payload["protest_city"] = values["protest_city"][0]
+        if rule == BUDGET_HEARING:
+            payload["victim"] = values["hearing_girl"][0]
         if rule == CADRE_LEAK:
             if any(x not in parties_by_token for x in values["parties"]):
                 raise WorkflowError("Recover the actual original parties of this incident")
@@ -1516,6 +1535,8 @@ def effect_form(
             return "The original recipient can finish the Void change in their private Inbox."
         if rule == PILOT_FEARS:
             return "The original fictional Director can issue the demand in their private Inbox."
+        if rule == BUDGET_HEARING:
+            return "The Director can serve the accusation privately."
         if rule == PUBLIC_APPEARANCE:
             return "The original Cadre can record attendance from their private Inbox."
         if rule == HARPY_RAID:

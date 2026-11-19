@@ -830,3 +830,19 @@ replay and restart. The chosen destination is an attested hometown. It
 is not a newly simulated map. An overlapping Handler loss or replacement
 remains subject to independent review before this workflow can progress.
 [Void Endgame p. 144](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=146) · [Leave tests](../../tests/rules/test_void_leave.py)
+
+## High Budget solo hearing
+
+The base is `1ec89a52b63e7dd5aebf7599fc32d840df019c13`. High Budget 3.1
+keeps the saved die and requires the original Girl to face a separately
+controlled fictional Director. The Director serves the accusation. The Girl
+alone owns her response. The original Director can withdraw the accusation,
+which completes the required work. The Handler sees only the work status.
+
+All 26 selected tests passed. The native Inbox path verified privacy across
+roles, withdrawn access, stale controls, safety pause, replay, reopening,
+and actual Off-Duty activation after withdrawal. A Severe finding remains
+pending. The printed general rule reserves infliction for the Handler and
+the Strain result leaves the Handler's hands tied. No Punishment, roster
+change or Off-Duty closure is applied on referral.
+[High Budget p. 149](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=151) · [Severe Punishment p. 16](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=18) · [Hearing tests](../../tests/rules/test_budget_hearing.py)

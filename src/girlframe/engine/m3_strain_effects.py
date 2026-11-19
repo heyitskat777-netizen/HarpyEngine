@@ -13,6 +13,7 @@ from girlframe.engine.m3_benevolent_contact import Contact
 from girlframe.engine.m3_benevolent_contact import Play as ContactPlay
 from girlframe.engine.m3_budget_anarchy import REBELLION as REBEL_PROTEST
 from girlframe.engine.m3_budget_conversion import RULE as BUDGET_CONVERSION
+from girlframe.engine.m3_budget_hearing import RULE as BUDGET_HEARING
 from girlframe.engine.m3_budget_sabotage import Pin
 from girlframe.engine.m3_cadre_leak import RULE as CADRE_LEAK
 from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
@@ -103,6 +104,7 @@ SUPPORTED = frozenset(
         "strain.budget.low.6.2",
         "strain.budget.high.2.2",
         BUDGET_CONVERSION,
+        BUDGET_HEARING,
         "strain.budget.high.1.1",
         "strain.budget.high.4.2",
         "strain.budget.high.4.1",
@@ -222,6 +224,10 @@ def apply(
         if source_event is None or period_id is None:
             raise ValueError("Recover the actual High Budget source and original period")
         require_next(state, source_work, period_id, source_event, choice.account.strip())
+    elif rule == BUDGET_HEARING:
+        fields(choice, {"target", "victim"})
+        if not choice.target or choice.victim not in {str(x) for x in state.order}:
+            raise ValueError("Choose the original Girl and the fictional Director for the hearing")
     elif rule == ORBITAL_THREAT:
         from girlframe.engine.m3_orbital_threat import introduce
 

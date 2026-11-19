@@ -2964,12 +2964,34 @@ class InboxService:
             from girlframe.engine.m3_void_leave import leaves as void_leaves
             from girlframe.engine.m3_void_revelation import revelations
             from girlframe.engine.m3_void_signal import signals as void_signals
+            from girlframe.services.m3_budget_hearing import options as hearing_options
+            from girlframe.services.m3_budget_hearing import visible as visible_hearings
             from girlframe.services.m3_handler_tags import HandlerTagService
             from girlframe.services.m3_journalist import JournalistService
             from girlframe.services.m3_pilot_fears import access as fear_access
             from girlframe.services.m3_rebel_escape_offer import visible as visible_escape_offers
 
             journalism = JournalistService(GameService(self.store))
+            for hearing in visible_hearings(canon, viewer):
+                actionable = bool(hearing_options(hearing, viewer))
+                items.append(
+                    InboxItem(
+                        "budget-hearing:" + hearing.id,
+                        "work",
+                        hearing.id,
+                        canon.revision,
+                        "off_duty",
+                        "Private higher-ups hearing",
+                        "Original Director and Girl",
+                        "resolved" if hearing.phase == "dismissed" else "pending",
+                        actionable,
+                        False,
+                        "Review the original private hearing.",
+                        "Human rules review required." if hearing.phase == "review" else "",
+                        "Open hearing",
+                        task="m3_budget_hearing",
+                    )
+                )
             for leave in void_leaves(canon):
                 requester = leave.handler.entity == user
                 voter = next((x for x in leave.voters if x.entity == user), None)
