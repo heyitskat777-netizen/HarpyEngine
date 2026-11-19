@@ -281,6 +281,23 @@ class CastService:
                             except (ValueError, WorkflowError):
                                 continue
                             harpy_actions[tag] = True
+                    can_abysstech = False
+                    if (
+                        actor.rules == "ancillary"
+                        and actor.girl == "ABYSSAL ACOLYTE"
+                        and actor.controller == viewer.user_id
+                    ):
+                        from girlframe.services.m3_abysstech import AbysstechService
+
+                        abysstech = AbysstechService(self.game)
+                        try:
+                            abysstech._gate(c, viewer)
+                            original, body, tools = abysstech._acolyte(c, state, channel, actor.ref)
+                            can_abysstech = bool(
+                                tools and abysstech._girls(c, state, original, body)
+                            )
+                        except (ValueError, WorkflowError):
+                            pass
                     known_refs.add(actor.ref)
                     visible.append(
                         {
@@ -294,6 +311,7 @@ class CastService:
                             **({"job_prompts": prompts} if prompts else {}),
                             **harpy_actions,
                             **({"escape_source": True} if can_escape else {}),
+                            **({"abysstech": True} if can_abysstech else {}),
                             **({"capture_source": True} if can_capture else {}),
                             **(
                                 {"director_phone": True}

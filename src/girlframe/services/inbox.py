@@ -4114,6 +4114,7 @@ class InboxService:
                     )
                 )
             from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_abysstech import AbysstechService
             from girlframe.services.m3_captured import CapturedService
             from girlframe.services.m3_escape import EscapeService
             from girlframe.services.m3_harpy_eagle import EagleService
@@ -4129,6 +4130,31 @@ class InboxService:
             from girlframe.services.m3_timeskip import TimeskipService
             from girlframe.services.m3_voidspace_invasion import InvasionService
             from girlframe.services.m3_warboy_hate import ConditionedHateService
+
+            abysstech = AbysstechService(GameService(self.store))
+            for abysstech_id, abysstech_step in abysstech.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "abysstech:" + abysstech_id,
+                        "abysstech",
+                        abysstech_id,
+                        canon.revision,
+                        "plays",
+                        "Experimental Abysstech",
+                        "Original scene contact",
+                        "pending",
+                        True,
+                        False,
+                        {
+                            "contact": "Confirm or decline the original Asset contact.",
+                            "choose": "Choose your actual effect from the confirmed contact.",
+                            "pressure": "Choose your consequence from the original contact.",
+                        }[abysstech_step],
+                        "The original scene roles own their separate responses.",
+                        "Review original choice",
+                        task="m3_abysstech",
+                    )
+                )
 
             hatred = ConditionedHateService(GameService(self.store))
             for hate_id, hate_step in hatred.tasks(connection, canon, viewer):

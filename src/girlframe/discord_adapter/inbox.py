@@ -2126,6 +2126,14 @@ class InboxView(discord.ui.View):
             await open_escape_choice(
                 interaction, EscapeService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_abysstech":
+            from girlframe.discord_adapter.m3_abysstech import open_abysstech_contact
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_abysstech import AbysstechService
+
+            await open_abysstech_contact(
+                interaction, AbysstechService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_warboy_hate":
             from girlframe.discord_adapter.m3_warboy_hate import open_conditioned_hate
             from girlframe.services.m2_game import GameService

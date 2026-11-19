@@ -3324,3 +3324,20 @@ reopening, privacy and actual effect isolation. Sources without
 native scene provenance and other Tag cases remain outside this
 verified slice.
 [Warboy p. 106](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=108) · [Native case](../../tests/rules/test_warboy_hate.py)
+
+### Abyssal Acolyte’s Experimental Abysstech contact
+
+Base `223f513`. An approved Acolyte uses an actual working tool
+on a local out-of-Frame Girl. The Girl privately confirms or declines
+contact with a specific reachable owned Void Asset. Only the original
+Acolyte learns its name after confirmation. The Acolyte can gain two
+Heat or return the printed damage/Helpless choice to that Girl. Damage
+uses the actual Asset port.
+
+**One focused case passed in 6.82 seconds**. It exercised the native
+Cast and Inbox controls, reopening, concealed Asset scope, the actual
+two Heat gain, and the original Girl choosing Helplessness without
+damaging her Asset. Live roll adjustment, forced Dive Deep, other
+Asset sources and direct verification of the damage alternative remain
+open.
+[Experimental Abysstech p. 108](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=110) · [Native case](../../tests/rules/test_abysstech.py)

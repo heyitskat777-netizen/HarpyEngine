@@ -80,6 +80,10 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
             key = "mask:" + token
             options.append((key, "Use A Human Mask as " + role["label"][:65]))
             actions[key] = ("harpy_mask", ActorRef.model_validate(role["ref"]))
+        if role.get("abysstech"):
+            key = "abysstech:" + token
+            options.append((key, "Use Experimental Abysstech as " + role["label"][:56]))
+            actions[key] = ("abysstech", ActorRef.model_validate(role["ref"]))
         if role.get("escape_source"):
             key = "escape:" + token
             options.append((key, "Start Escape as " + role["label"][:65]))
@@ -274,6 +278,13 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
 
             assert ref is not None
             await open_capture(current, CapturedService(service.game), channel, ref)
+            return
+        if action == "abysstech":
+            from girlframe.discord_adapter.m3_abysstech import open_abysstech
+            from girlframe.services.m3_abysstech import AbysstechService
+
+            assert ref is not None
+            await open_abysstech(current, AbysstechService(service.game), channel, ref)
             return
         if action == "escape":
             from girlframe.discord_adapter.m3_escape import open_escape
