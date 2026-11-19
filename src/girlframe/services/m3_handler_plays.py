@@ -812,6 +812,7 @@ def stage_dress_order(
     target: int,
     text: str,
 ) -> None:
+    from girlframe.services.m3_dogrunner_dress import require_performed
     from girlframe.services.m3_wyvern_combat import require_targetable
 
     identity, expected, effect = dress_order
@@ -832,6 +833,7 @@ def stage_dress_order(
     ):
         raise WorkflowError("Reopen the Order for the actual original Girl and scene")
     require_targetable(game, c, state, effect.target)
+    require_performed(game, c, state, grant, effect)
     resolve(
         state, effect.target, profiles(c, game.store.campaign_id), require_current_profile=False
     )
@@ -1691,8 +1693,18 @@ class HandlerPlayService:
         expected: int,
         play: Play,
         effect: Effect,
+        *,
+        performed: bool = False,
     ) -> dict[str, Any]:
         effect = Effect.model_validate_json(effect.model_dump_json())
+        if effect.dress_needs_performance and not performed:
+            from girlframe.services.m3_dogrunner_dress import DressPerformanceService
+
+            if play != "dress_them_down":
+                raise WorkflowError("Use the actual Dress Them Down Play for these steps")
+            return DressPerformanceService(self.game).propose(
+                viewer, key, identity, expected, effect
+            )
         if effect.dress_order is not None:
             if play != "dress_them_down" or effect.target is None:
                 raise WorkflowError("Use the original Dress Them Down Order")
@@ -1730,6 +1742,10 @@ class HandlerPlayService:
                 _ordinary_scene_idle(c, self.game)
             if state.revision != expected:
                 raise WorkflowError("The scene changed; reopen the saved Handler Play.")
+            if effect.kind == "dress_them_down":
+                from girlframe.services.m3_dogrunner_dress import require_performed
+
+                require_performed(self.game, c, state, grant, effect)
             if effect.kind in (
                 "punish",
                 "status",

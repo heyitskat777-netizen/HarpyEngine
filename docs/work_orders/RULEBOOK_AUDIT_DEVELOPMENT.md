@@ -1342,8 +1342,7 @@ this signature Play from the native Handler menu in an actual jointly attended
 scene. The exact original Girl and Handler stay bound to the private Inbox
 grant. The competency, appearance, inherent-trait and dog-language options
 each lower actual Status by one position and require the actual Tag if the
-Girl becomes a Dog. She keeps her own actions. The physical contact and
-third-party branches remain open.
+Girl becomes a Dog. She keeps her own actions.
 
 The focused cases covered the native menu and Inbox, the required Tag,
 wrong owner, unrelated readers, wrong scene, restart, safety pause, retries
@@ -1378,6 +1377,18 @@ its source. An immediate Punishment or second Order needs a separate
 sequence when selected alongside this step. One native case passed in
 5.93 seconds using `python -m pytest -q --tb=short tests/rules/test_dogrunner_status.py -k demeaning`
 with `PYTHONPATH="$PWD/src"`.
+
+The physical and delegated steps, based on `9b96c3e`, use the original
+scene's private Inbox. A separate participant owns a delegated insult or
+physical portrayal, and the affected Girl confirms physical contact before
+it counts. The Dogrunner then applies the saved steps once. Each selected
+step counts once, including a delegated step. The combined case verified
+no early Status change, privacy, safety pause, restart, one new Dog Tag,
+and a real demeaning Order. Two cases passed in 10.36 seconds using
+`python -m pytest -q --tb=short tests/rules/test_dogrunner_status.py -k 'waits_for_the_delegate or demeaning'`
+with `PYTHONPATH="$PWD/src"`. Delegated Orders and Punishment need their
+own authority and sequence ruling before they can be offered in this menu.
+[Dogrunner cases](../../tests/rules/test_dogrunner_status.py)
 
 ### Trainer Speak and Off-Duty installation
 

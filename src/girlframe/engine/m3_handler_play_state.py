@@ -33,6 +33,8 @@ DRESS_STEPS = (
     ("appearance", "Insult their appearance"),
     ("identity", "Dismiss them for an inherent trait"),
     ("dog", "Call them a dog, mutt or stray"),
+    ("physical", "Strike, grab or restrain them"),
+    ("delegate", "Have another participant choose a step"),
     ("demeaning", "Order them to do something demeaning or risk Punishment"),
     ("dismissal", "End with an order to get out of your sight"),
     ("punishment", "End by deciding they deserve a proper Punishment"),
@@ -40,8 +42,18 @@ DRESS_STEPS = (
 DRESS_ENDINGS = frozenset(("dismissal", "punishment"))
 DRESS_ORDERS = frozenset(("dismissal", "demeaning"))
 DressStep = Literal[
-    "competency", "appearance", "identity", "dog", "demeaning", "dismissal", "punishment"
+    "competency",
+    "appearance",
+    "identity",
+    "dog",
+    "physical",
+    "delegate",
+    "demeaning",
+    "dismissal",
+    "punishment",
 ]
+DressContact = Literal["strike", "grab", "restrain"]
+DRESS_CONTACTS = (("strike", "Strike"), ("grab", "Grab"), ("restrain", "Restrain"))
 Play = Literal[
     "brief",
     "punish",
@@ -94,6 +106,8 @@ class Effect(Model):
     )
     cell: Cell | None = Field(default=None, exclude_if=lambda x: x is None)
     dress_steps: tuple[DressStep, ...] = Field(default=(), max_length=3, exclude_if=lambda x: not x)
+    dress_contact: DressContact | None = Field(default=None, exclude_if=lambda x: x is None)
+    dress_delegate: ActorRef | None = Field(default=None, exclude_if=lambda x: x is None)
 
     @property
     def opens_punishment(self) -> bool:
@@ -102,6 +116,10 @@ class Effect(Model):
     @property
     def dress_order(self) -> DressStep | None:
         return next((step for step in self.dress_steps if step in DRESS_ORDERS), None)
+
+    @property
+    def dress_needs_performance(self) -> bool:
+        return bool({"physical", "delegate"}.intersection(self.dress_steps))
 
     @model_validator(mode="after")
     def actual_effect(self) -> "Effect":
@@ -120,7 +138,14 @@ class Effect(Model):
             "tracker_intercept": {"target"},
             "tracker_voyeur": {"target", "detail"},
             "contaminant_warp": {"zone", "cell", "detail"},
-            "dress_them_down": {"target", "tag", "dress_steps", "detail"},
+            "dress_them_down": {
+                "target",
+                "tag",
+                "dress_steps",
+                "detail",
+                "dress_contact",
+                "dress_delegate",
+            },
             "successor_advice": set(),
         }[self.kind] | {"kind", "account", "source_label"}
         baseline = Effect.model_construct(kind=self.kind, account=self.account)
@@ -175,6 +200,12 @@ class Effect(Model):
         if len(endings) > 1 or (endings and self.dress_steps[-1] not in endings):
             raise ValueError("Choose only one ending and put it last in the dressing down")
         if self.kind == "dress_them_down":
+            if (self.dress_contact is not None) != ("physical" in self.dress_steps):
+                raise ValueError("Choose the physical action only for that Dress Them Down step")
+            if (self.dress_delegate is not None) != ("delegate" in self.dress_steps):
+                raise ValueError(
+                    "Choose an actual separate participant only for the delegated step"
+                )
             if bool(self.dress_order) != bool(self.detail.strip()):
                 raise ValueError("Supply the direct Order text for the chosen Order step")
             if len(DRESS_ORDERS.intersection(self.dress_steps)) > 1 or (

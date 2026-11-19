@@ -1970,6 +1970,14 @@ class InboxView(discord.ui.View):
             await open_handler_play(
                 interaction, HandlerPlayService(self.service.store), item.identity
             )
+        elif item.task == "m3_dress_performance":
+            from girlframe.discord_adapter.m3_handler_plays import open_dress_performance
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_dogrunner_dress import DressPerformanceService
+
+            await open_dress_performance(
+                interaction, DressPerformanceService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "handler_creation":
             from girlframe.discord_adapter.m3_handler_creation import open_handler
             from girlframe.services.m3_handler_creation import HandlerCreationService

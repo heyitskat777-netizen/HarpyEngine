@@ -314,6 +314,96 @@ def test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_do
         )
 
 
+def test_dress_them_down_waits_for_the_delegate_and_contact_then_creates_its_order(ledger):
+    from test_harpy_flirt import submit_form
+
+    from girlframe.services.m3_dogrunner_dress import DressPerformanceService
+
+    game, worker, gateway, _ = dogrunner_ready(ledger)
+    service = HandlerPlayService(ledger)
+    inbox = InboxService(ledger)
+    perform = DressPerformanceService(game)
+    original = state(game)
+    girl, delegate = current_ref(original, 2), current_ref(original, 3)
+    proposal = service.start(
+        ADMIN, "prepare-physical-dress", original.revision, (girl,), dress_scene=900
+    )
+    identity = proposal["id"]
+
+    async def propose(click):
+        item = next(x for x in inbox.items(ADMIN) if x.identity == identity)
+        await InboxView(inbox, 1).route(click, item)
+        menu = click.edit_original_response.call_args.kwargs["view"]
+        await menu.open_item(click, "dress_them_down")
+
+    asyncio.run(
+        submit_form(
+            ADMIN,
+            propose,
+            dict(
+                target=(girl.token,),
+                dress_steps=("physical", "delegate", "demeaning"),
+                dress_contact=("grab",),
+                dress_delegate=(delegate.token,),
+                account="The Dogrunner proposes these steps.",
+                tag="The new original Dog",
+                detail="Attend to the equipment.",
+            ),
+            47500,
+        )
+    )
+    assert state(game).order == original.order
+    assert perform.get(OTHER, identity)["phase"] == "delegate"
+    with pytest.raises(WorkflowError):
+        perform.get(PLAYER, identity)
+    with pytest.raises(WorkflowError):
+        perform.get(FOUR, identity)
+
+    def step(owner, i, selection, text=""):
+        async def route(click):
+            item = next(
+                x
+                for x in inbox.items(owner)
+                if x.identity == identity and x.task == "m3_dress_performance"
+            )
+            await InboxView(inbox, owner.user_id).route(click, item)
+
+        return asyncio.run(submit_form(owner, route, dict(step=(selection,), account=text), i))
+
+    step(OTHER, 47510, "competency", "I choose an insult about the previous sortie.")
+    contact = perform.get(PLAYER, identity)
+    assert (contact["phase"], contact["contacts"]) == ("contact", ("grab",))
+    ledger.safety(PLAYER, "pause-physical-dressing", ledger.status(PLAYER)["revision"], pause=True)
+    with pytest.raises(WorkflowError, match="SAFETY_PAUSED"):
+        perform.respond(
+            PLAYER,
+            "paused-contact",
+            identity,
+            contact["revision"],
+            "performed",
+            "The grab occurred.",
+        )
+    ledger.safety(
+        PLAYER, "resume-physical-dressing", ledger.status(PLAYER)["revision"], pause=False
+    )
+    ledger.engine.dispose()
+    step(PLAYER, 47520, "performed", "The grab occurred.")
+    assert state(game).order == original.order
+    assert perform.get(ADMIN, identity)["phase"] == "ready"
+    ready_revision = state(game).revision
+    key = step(ADMIN, 47530, "finish")
+    completed = state(game)
+    replay = perform.finish(ADMIN, key, identity, ready_revision)
+    assert replay["state"] == "complete"
+    assert state(game) == completed and completed.order == (3, 4, 2)
+    assert (
+        len([tag for tag in completed.sheets["2"].tags if tag.label == "The new original Dog"]) == 1
+    )
+    tick(worker, gateway, 3)
+    order = next(x for x in game.choices(PLAYER) if x["kind"] == "order_response")
+    assert "Attend to the equipment." in game.decision(PLAYER, order["id"])["order_text"]
+
+
 def test_dogrunner_all_dogs_uses_actual_status_and_the_ordinary_award_slot(
     ledger, tmp_path, monkeypatch
 ):

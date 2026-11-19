@@ -3024,6 +3024,7 @@ class InboxService:
             from girlframe.engine.m3_successor import acquisitions as successor_acquisitions
             from girlframe.services.m3_advocate_alone import AdvocateAloneService
             from girlframe.services.m3_conditioning import ConditioningService
+            from girlframe.services.m3_dogrunner_dress import DressPerformanceService
             from girlframe.services.m3_frantic_breakdown import FranticBreakdownService
             from girlframe.services.m3_frantic_crisis import CrisisService
             from girlframe.services.m3_handler_plays import HandlerPlayService
@@ -3197,6 +3198,27 @@ class InboxService:
                         "Consent, performance and the playbook decision have separate steps.",
                         "Open private choice",
                         task="m3_mistress_favor",
+                    )
+                )
+            for identity in DressPerformanceService(GameService(self.store)).tasks(
+                connection, viewer, canon
+            ):
+                items.append(
+                    InboxItem(
+                        "dress-performance:" + identity,
+                        "dress_performance",
+                        identity,
+                        canon.revision,
+                        "plays",
+                        "Dress Them Down",
+                        "Original participant",
+                        "pending",
+                        True,
+                        False,
+                        "Open your own performance choice.",
+                        "Status changes apply once the recorded steps finish.",
+                        "Open Dress Them Down",
+                        task="m3_dress_performance",
                     )
                 )
             for request in HandlerPlayService(self.store)._tasks(connection, viewer):

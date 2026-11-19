@@ -1,7 +1,7 @@
 """Native, resumable basic Handler Plays and source-limited final counters."""
 
 import asyncio
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import discord
 
@@ -12,6 +12,7 @@ from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_handler_play_state import (
     BASIC,
+    DRESS_CONTACTS,
     DRESS_ENDINGS,
     DRESS_STEPS,
     EXTRA,
@@ -22,6 +23,9 @@ from girlframe.engine.m3_handler_private_scene import Book
 from girlframe.engine.m3_world_state import Npc
 from girlframe.services.m3_handler_plays import HandlerPlayService
 from girlframe.services.onboarding import WorkflowError
+
+if TYPE_CHECKING:
+    from girlframe.services.m3_dogrunner_dress import DressPerformanceService
 
 
 async def open_handler_plays(interaction: discord.Interaction, service: HandlerPlayService) -> None:
@@ -389,10 +393,27 @@ async def effect_form(
         fields.extend(
             [
                 Field("dress_steps", "Choose one to three printed steps", DRESS_STEPS, maximum=3),
+                Field(
+                    "dress_contact",
+                    "Physical action, if chosen",
+                    DRESS_CONTACTS,
+                    minimum=0,
+                    required=False,
+                ),
                 Field("tag", "Tag only if they become the Dog", required=False),
                 Field("detail", "Direct Order text, if chosen", paragraph=True, required=False),
             ]
         )
+        if data["executors"]:
+            fields.append(
+                Field(
+                    "dress_delegate",
+                    "Other participant, if delegated",
+                    tuple((x["token"], x["label"]) for x in data["executors"]),
+                    minimum=0,
+                    required=False,
+                )
+            )
     elif kind == "tag":
         fields.append(Field("tag", "New Tag"))
     elif kind == "damage":
@@ -494,7 +515,13 @@ async def effect_form(
                 + tuple(x for x in steps if x in DRESS_ENDINGS),
                 tag=values.get("tag", ""),
                 detail=values.get("detail", ""),
+                dress_contact=(values.get("dress_contact") or (None,))[0],
             )
+            if values.get("dress_delegate"):
+                delegate = next(
+                    x for x in data["executors"] if x["token"] == values["dress_delegate"][0]
+                )
+                effect_data["dress_delegate"] = ActorRef.model_validate(delegate["ref"])
         elif kind == "tag":
             effect_data["tag"] = values["tag"]
         elif kind == "damage":
@@ -557,6 +584,54 @@ async def effect_form(
         submit,
         values={"source_label": ("none",), "opponent": ("none",)},
     )
+    await reply(interaction, form.text(), form)
+
+
+async def open_dress_performance(
+    interaction: discord.Interaction, service: "DressPerformanceService", identity: str
+) -> None:
+    from girlframe.discord_adapter.ledger import clean
+    from girlframe.engine.m3_dogrunner_dress import DELEGATE_OPTIONS
+
+    viewer = viewer_from_interaction(interaction)
+    data = await asyncio.to_thread(service.get, viewer, identity)
+    phase = data["phase"]
+    if phase == "ready":
+        instructions = "Apply the recorded steps and their printed Status effects."
+        fields = [
+            Field("step", "Complete the saved Play", (("finish", "Apply the recorded steps"),))
+        ]
+    else:
+        instructions = (
+            "Choose and portray your step involving " + clean(data["target"]) + "."
+            if phase == "delegate"
+            else "Confirm only what took place in the scene. Physical actions selected\n"
+            + ", ".join(dict(DRESS_CONTACTS)[key] for key in data["contacts"])
+        )
+        options = (
+            DELEGATE_OPTIONS if phase == "delegate" else (("performed", "Confirm it took place"),)
+        )
+        fields = [
+            Field("step", "Your choice", (*options, ("decline", "Decline the performance"))),
+            Field("account", "What took place, if confirmed", paragraph=True, required=False),
+        ]
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        identity_args = (
+            viewer_from_interaction(current),
+            str(current.id),
+            identity,
+            data["revision"],
+        )
+        if phase == "ready":
+            await asyncio.to_thread(service.finish, *identity_args)
+        else:
+            await asyncio.to_thread(
+                service.respond, *identity_args, values["step"][0], values.get("account", "")
+            )
+        return "Your Dress Them Down choice was recorded."
+
+    form = NativeForm(viewer.user_id, "Dress Them Down", instructions, fields, submit)
     await reply(interaction, form.text(), form)
 
 
