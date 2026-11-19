@@ -24,7 +24,7 @@ from girlframe.services.m3_world import WorldService
 from girlframe.services.onboarding import WorkflowError
 
 
-def test_actual_endgame_and_native_private_portal_unblock_off_duty_once(ledger):
+def prepare_endgame(ledger, slot):
     strain, game = ready(ledger, face=6)
     approval = ledger.policy.m3_approval
     ledger.policy = ledger.policy.model_copy(
@@ -53,13 +53,10 @@ def test_actual_endgame_and_native_private_portal_unblock_off_duty_once(ledger):
         strain.choose(ADMIN, f"cascade-{index}", request.id, 2, state(game).revision, 2)
         index += 1
     selected = strain.choose(
-        ADMIN, "endgame-slot-two", request.id, 1, state(game).revision, 2, endgame=True
+        ADMIN, "endgame-slot", request.id, 1, state(game).revision, slot, endgame=True
     )
-    assert selected["rule_id"] == RULE
+    assert selected["rule_id"] == f"strain.void.endgame.{slot}"
     identity = request.id + ":effect"
-    service = LabPortalService(ledger)
-    assert service.view(ADMIN, identity)["state"] == "pending" and not portals(state(game))
-    assert not any(x.identity == identity for x in InboxService(ledger).items(PLAYER))
 
     effects = EffectService(strain)
     for index, request in enumerate(state(game).strain.requests):
@@ -89,6 +86,15 @@ def test_actual_endgame_and_native_private_portal_unblock_off_duty_once(ledger):
         effects.apply(
             ADMIN, f"effect-{index}", request.id + ":effect", 1, state(game).revision, choice
         )
+    return strain, game, world, period, identity
+
+
+def test_actual_endgame_and_native_private_portal_unblock_off_duty_once(ledger):
+    strain, game, world, period, identity = prepare_endgame(ledger, slot=2)
+    service = LabPortalService(ledger)
+    assert service.view(ADMIN, identity)["state"] == "pending" and not portals(state(game))
+    assert state(game).strain.endgames[-1].rule_id == RULE
+    assert not any(x.identity == identity for x in InboxService(ledger).items(PLAYER))
 
     cycle = CycleService(strain.periods)
     with pytest.raises(WorkflowError, match="work|Strain"):

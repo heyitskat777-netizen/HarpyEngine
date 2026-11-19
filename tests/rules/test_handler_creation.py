@@ -92,8 +92,10 @@ def save(svc, draft, key=None):
     return svc.save(ADMIN, key or str(uuid4()), preview["revision"], preview["appointment"], draft)
 
 
-def agree(svc):
-    result = svc.propose(ADMIN, "actual-handler-proposals", svc.view(ADMIN)["revision"])
+def agree(svc, *, generation=None):
+    result = svc.propose(
+        ADMIN, "actual-handler-proposals", svc.view(ADMIN)["revision"], generation=generation
+    )
     for identity in result["ids"]:
         owner = int(svc.get_agreement(ADMIN, identity)["proposal"]["bond"]["pilot"]["entity"])
         viewer = PLAYER if owner == 2 else OTHER

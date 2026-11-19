@@ -312,9 +312,11 @@ class OffDutyService:
         from girlframe.services.m3_gorgon_dormant import (
             require_clear as require_gorgon_costs_clear,
         )
+        from girlframe.services.m3_handler_retirement import require_successor
         from girlframe.services.m3_quadrant_loss import require_aftermath_clear
 
         require_aftermath_clear(state)
+        require_successor(state)
         require_gorgon_costs_clear(self.game, c)
         if self.game.pending_actions(c):
             raise WorkflowError("Finish the pending scene Play before starting Off-Duty.")

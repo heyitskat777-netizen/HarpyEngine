@@ -5943,6 +5943,10 @@ class GameService:
                 raise WorkflowError(
                     "Only a current superior in this scene can issue a direct order."
                 )
+            if viewer.user_id == state.handler:
+                from girlframe.services.m3_handler_retirement import require_successor
+
+                require_successor(state)
             from girlframe.services.m3_bonded_support import issue_requested_order
 
             requested = issue_requested_order(

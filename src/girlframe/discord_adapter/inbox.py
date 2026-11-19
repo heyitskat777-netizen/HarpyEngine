@@ -1214,6 +1214,11 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_void_lab_portal import LabPortalService
 
             await open_lab(interaction, LabPortalService(self.service.store), item.identity)
+        elif item.task == "m3_handler_retirement":
+            from girlframe.discord_adapter.m3_handler_retirement import open_retirement
+            from girlframe.services.m3_handler_retirement import RetirementService
+
+            await open_retirement(interaction, RetirementService(self.service.store), item.identity)
         elif item.task == "m3_void_retirement":
             from girlframe.discord_adapter.m3_void_retirement import open_offer
             from girlframe.services.m3_void_retirement import StipendService

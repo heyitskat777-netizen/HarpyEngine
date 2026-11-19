@@ -301,9 +301,12 @@ class MissionService:
         from girlframe.services.m3_gorgon_dormant import (
             require_clear as require_gorgon_costs_clear,
         )
+        from girlframe.services.m3_handler_retirement import require_successor
         from girlframe.services.m3_quadrant_loss import require_aftermath_clear
 
-        require_aftermath_clear(load_state(c, self.store.campaign_id))
+        state = load_state(c, self.store.campaign_id)
+        require_aftermath_clear(state)
+        require_successor(state)
         require_gorgon_costs_clear(self.game, c)
 
     def _write(

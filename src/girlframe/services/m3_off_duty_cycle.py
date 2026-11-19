@@ -1206,6 +1206,7 @@ class CycleService:
                     update={"triggers": updated.strain.triggers + additions}
                 )
             if not severe:
+                from girlframe.engine.m3_handler_retirement import finish as retire_handler
                 from girlframe.engine.m3_rebel_defection import settle as settle_defections
                 from girlframe.engine.m3_repairs import close_period
 
@@ -1222,6 +1223,8 @@ class CycleService:
                         finish_ankou_period(
                             self.game, c, updated, ended_period_actor(updated, uid), identity, event
                         )
+                if loss_episode is None:
+                    updated = retire_handler(updated, identity, event, appointment)
             self.game.event(
                 c,
                 viewer.user_id,
@@ -1233,6 +1236,20 @@ class CycleService:
                 completed=not severe,
             )
             self.periods._save(c, finished, event)
+            retired = next(
+                (
+                    x
+                    for x in updated.handler_archives
+                    if x.source_event == event and x.ending == "retired"
+                ),
+                None,
+            )
+            if retired is not None:
+                from girlframe.services.m3_battle import synchronize_casts
+                from girlframe.services.m3_handler_consequences import end_body_reviews
+
+                synchronize_casts(self.game, c, event)
+                end_body_reviews(self.game, c, retired)
             if loss_episode is not None:
                 from girlframe.services.m3_quadrant_loss import materialize_loss
 

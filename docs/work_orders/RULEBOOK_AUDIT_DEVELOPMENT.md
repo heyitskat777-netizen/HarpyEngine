@@ -553,3 +553,17 @@ replay and database reopening. Default review denial passed. The
 battle hook also reaches Assault and Core. They need direct fixtures
 of Tag use in those Plays.
 [Gorgon Tags p. 10](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=12) · [Gorgon Tag tests](../../tests/rules/test_gorgon_tags.py)
+
+## Void Endgame Handler retirement
+
+The base is `88a44415b6e2d2c071851d85054b8c05bf10f353`.
+Void Endgame 3 records the actual medal and named safe Quadrant home.
+The normal Off-Duty closeout performs the original Handler's retirement.
+This timing allows the original Handler to finish the period's duties.
+The engine archives the original body alive, ends its cast functions
+and keeps the human appointment. The next Off-Duty, mission and direct
+Handler Orders remain held until a fresh Handler persona activates.
+The synthetic test uses the existing appointment and actual original
+owners' starting agreements for the successor. Simultaneous forced
+loss and a change of human appointment need separate review.
+[Void Endgames p. 144](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=146) · [Handler retirement test](../../tests/rules/test_handler_retirement.py)
