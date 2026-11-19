@@ -23,6 +23,20 @@ playbook work and dependent branches, including Rebellion Endgame 3, are
 deferred at the owner's direction. Use one focused synthetic check per change
 and defer the combined regression to a later candidate.
 
+### JANUS PANDORA birthplace
+
+Base `9aa8a085c37d72ad25268ac1755cffe629c192ec`. The low result's child
+is a Class II Gorgon that stays at its birthplace. Ordinary and reviewed
+map movement now enforce the same restriction as Off-Duty advancement.
+The original child remains under its existing controller and keeps the
+same body, Assets and location after an attempted move. The printed Play
+ends with the birth and its three child outcomes. Any later relocation
+through another Play needs authority from that Play.
+One focused case passed in 5.74 seconds using
+`python -m pytest -q --tb=short tests/rules/test_janus_pandora_low.py`
+with `PYTHONPATH="$PWD/src"`.
+[PANDORA p. 67](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=69)
+
 ## 1. Strain and Off-Duty
 
 The table below keeps both printed choices for each of the nine initially

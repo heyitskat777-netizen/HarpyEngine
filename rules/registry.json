@@ -11932,7 +11932,8 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_janus_requisitions.py",
-        "tests/rules/test_janus_core_service.py"
+        "tests/rules/test_janus_core_service.py",
+        "tests/rules/test_janus_pandora_low.py::test_actual_pandora_low_birth_creates_dormant_child_at_original_birthplace"
       ],
       "m2_play_id": null,
       "module": "core",

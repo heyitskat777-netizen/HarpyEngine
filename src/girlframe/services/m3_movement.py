@@ -137,9 +137,14 @@ def _physical_context(
                 "This source body needs its actual carrier or software-access adapter"
             )
     elif actor.kind == "gorgon":
+        from girlframe.engine.m3_janus_pandora import require_can_move
         from girlframe.engine.m3_parasite import active
         from girlframe.engine.m3_parasite_infection import inhabits_original_body
 
+        try:
+            require_can_move(state, actor, destination)
+        except ValueError as error:
+            raise WorkflowError(str(error)) from None
         if inhabits_original_body(state, actor):
             raise WorkflowError("The original Parasite is folded inside its host until excision")
         if active(state, actor) is not None:
