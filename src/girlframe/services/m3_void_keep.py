@@ -149,6 +149,10 @@ def prepare_keep(
         from girlframe.services.m3_harpy_gaze import void_audience
 
         meta["private_audience"] = void_audience(game, c, updated, body)
+    if body.get("reason") == "npc_scientist_void":
+        from girlframe.services.m3_npc_care import void_audience as experiment_audience
+
+        meta["private_audience"] = experiment_audience(game, c, updated, body)
     if prepared.parent:
         parent = game.action(c, prepared.parent)
         if body.get("reason") in (
@@ -243,6 +247,12 @@ def authorize_keep(
         audience = void_audience(game, c, state, body)
         if any(action["data"].get(k) != audience for k in ("private_audience", "participants")):
             raise WorkflowError("Recover the original gaze’s private Void resistance audience")
+    if body.get("reason") == "npc_scientist_void":
+        from girlframe.services.m3_npc_care import void_audience as experiment_audience
+
+        audience = experiment_audience(game, c, state, body)
+        if any(action["data"].get(k) != audience for k in ("private_audience", "participants")):
+            raise WorkflowError("Recover the original experiment’s private Void resistance")
     if blocked_play(state.sheets[action["actor_id"]], "keep_your_head") is not None:
         raise WorkflowError("The actual original Girl no longer has this optional rolled ability.")
     from girlframe.engine.m3_harpy_visions import blocked as visions_blocked

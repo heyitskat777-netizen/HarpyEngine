@@ -233,6 +233,12 @@ def source(
             assert proof is not None
             prove_gaze_void(game, c, proof, first, body, actor)
             return current, body, actor
+        if body.get("reason") == "npc_scientist_void":
+            from girlframe.services.m3_npc_care import prove_void as prove_npc_experiment
+
+            assert proof is not None
+            prove_npc_experiment(game, c, proof, first, body, actor)
+            return current, body, actor
         if body.get("reason") == "scientist_private_void":
             from girlframe.services.m3_scientist_private_scene import (
                 prove_threshold as prove_scientist_threshold,
@@ -788,6 +794,10 @@ class VoidService:
             from girlframe.services.m3_harpy_gaze import void_audience
 
             handler = viewer.user_id in void_audience(self.game, c, state, body)
+        if handler and body.get("reason") == "npc_scientist_void":
+            from girlframe.services.m3_npc_care import void_audience as experiment_audience
+
+            handler = viewer.user_id in experiment_audience(self.game, c, state, body)
         if handler and body.get("reason") == "scientist_private_void":
             from girlframe.engine.m3_handler_consequences import active_handler
             from girlframe.engine.m3_handler_private_scene import records as private_scenes

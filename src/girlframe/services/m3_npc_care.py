@@ -1,4 +1,4 @@
-"""Carry out the printed Doctor or Mechanic move on an actual owned damaged Asset."""
+"""Local NPC care and consented experimentation on the original Girl’s Assets."""
 
 from typing import Any, Literal
 from uuid import uuid4
@@ -22,7 +22,12 @@ from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
 KIND = "npc_care_offer"
-JOBS = {"doctor": ("girl", "Patch someone up"), "mechanic": ("frame", "Fix something")}
+SCIENTIST_VOID = "npc_scientist_void"
+JOBS = {
+    "doctor": ("girl", "Patch someone up"),
+    "mechanic": ("frame", "Fix something"),
+    "scientist": ("girl", "Experiment with Void"),
+}
 
 
 class Offer(Model):
@@ -31,11 +36,16 @@ class Offer(Model):
     npc: ActorRef
     controller: int
     target: ActorRef
-    job: Literal["doctor", "mechanic"]
+    job: Literal["doctor", "mechanic", "scientist"]
     account: str
     event: str
     repaired: str | None = None
     response: str | None = None
+    facilitator: int | None = None
+    appointment: str | None = None
+    void_asset: str | None = None
+    void_work: str | None = None
+    resisted: bool = False
 
 
 def _records(state: GameState) -> tuple[Offer, ...]:
@@ -55,7 +65,11 @@ class NpcCareService:
             if job not in JOBS or access.registry is None:
                 raise WorkflowError("Use a supported printed NPC care job")
             try:
-                access.registry.require_available("npc.npc." + job)
+                rule = "npc.npc." + job
+                if job == "scientist":
+                    access.require_specialist_rule(rule)
+                else:
+                    access.registry.require_available(rule)
             except ValueError as error:
                 raise WorkflowError(str(error)) from None
 
@@ -103,7 +117,7 @@ class NpcCareService:
                 or not _visible(state, actor.ref, target.controller)
             ):
                 continue
-            if job == "doctor":
+            if job in {"doctor", "scientist"}:
                 available = target.inside_frame is False and target.cell == actor.cell
             else:
                 available = (
@@ -126,6 +140,14 @@ class NpcCareService:
         if sheet is None or sheet.character_id != offer.target.incarnation:
             return {}
         family = JOBS[offer.job][0]
+        if offer.job == "scientist":
+            from girlframe.engine.m3_janus_storage import effective_assets
+
+            return {
+                x.id: x.name
+                for x in effective_assets(state, offer.target)
+                if not x.void and x.family == family
+            }
         return {x.id: x.name for x in sheet.assets if x.damaged and x.family == family}
 
     def tasks(self, c: Connection, viewer: GuildViewer, state: GameState) -> list[dict[str, Any]]:
@@ -241,6 +263,7 @@ class NpcCareService:
         target: str | None = None,
         account: str = "",
         asset: str | None = None,
+        alteration: str = "",
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             self.game.unpaused(c)
@@ -255,6 +278,7 @@ class NpcCareService:
                     target not in targets
                     or not 0 < len(account.strip()) <= 1200
                     or asset is not None
+                    or alteration
                 ):
                     raise WorkflowError(
                         "Choose the actual available recipient and describe your NPC's offer"
@@ -267,6 +291,11 @@ class NpcCareService:
                     raise WorkflowError(
                         "This actual NPC already offered this care to the original Girl"
                     )
+                gm = appointment = None
+                if job == "scientist":
+                    gm, appointment = MedicalService(self.store)._handler(c)
+                    if cast.facilitator != gm:
+                        raise WorkflowError("Use the original facilitated experiment scene")
                 offer = Offer.model_validate(
                     dict(
                         id=str(uuid4()),
@@ -277,15 +306,22 @@ class NpcCareService:
                         job=job,
                         account=account.strip(),
                         event=event,
+                        facilitator=gm,
+                        appointment=appointment,
                     )
                 )
                 kind = "m3.npc_care_offered"
             else:
                 existing = self._pending(c, state, viewer, identity)
-                if target is not None or account:
-                    raise WorkflowError("Choose one actual damaged Asset or decline")
+                if (
+                    target is not None
+                    or account
+                    or (alteration and (existing.job != "scientist" or asset is None))
+                ):
+                    raise WorkflowError("Choose one actual original Asset or decline")
+                offer = existing.model_copy(update=dict(response=event))
                 if asset is not None:
-                    _, current, targets = self._source(
+                    cast, current, targets = self._source(
                         c,
                         state,
                         existing.scene,
@@ -301,22 +337,149 @@ class NpcCareService:
                         raise WorkflowError(
                             "Recover the actual source, patient and eligible damaged Asset"
                         )
-                    repair(state, existing.target, (asset,), 1)
-                offer = existing.model_copy(update=dict(repaired=asset, response=event))
+                    if existing.job == "scientist":
+                        state, offer = self._experiment(c, state, cast, offer, asset, alteration)
+                    else:
+                        repair(state, existing.target, (asset,), 1)
+                        offer = offer.model_copy(update=dict(repaired=asset))
                 kind = "m3.npc_care_responded"
             state.facts = [
                 x for x in state.facts if (x.get("kind"), x.get("id")) != (KIND, offer.id)
             ]
             state.facts.append(dict(kind=KIND, id=offer.id, body=offer.model_dump_json()))
             self.game.event(c, viewer.user_id, key, kind, state, event_id=event, offer=offer.id)
-            return dict(id=offer.id, repaired=offer.repaired, pending=offer.response is None)
+            if offer.void_work:
+                self._materialize_void(c, offer, event)
+            result = dict(id=offer.id, repaired=offer.repaired, pending=offer.response is None)
+            if offer.job == "scientist":
+                result.update(
+                    void_asset=offer.void_asset, void_work=offer.void_work, resisted=offer.resisted
+                )
+            return result
 
         return self.store._write(
             viewer,
             key,
             "m3.npc_care_choice",
-            dict(card=identity, revision=revision, target=target, account=account, asset=asset),
+            dict(card=identity, revision=revision, target=target, account=account, asset=asset)
+            | (dict(alteration=alteration) if alteration else {}),
             operation,
             authorize=lambda c: self._gate(c, viewer),
             auto_audit=False,
         )
+
+    def _experiment(
+        self,
+        c: Connection,
+        state: GameState,
+        cast: SceneCast,
+        offer: Offer,
+        asset: str,
+        alteration: str,
+    ) -> tuple[GameState, Offer]:
+        from girlframe.engine.m3_janus_storage import alter, effective_assets
+        from girlframe.engine.m3_void import FINAL
+        from girlframe.services.p1_facilitator import require_scene_clear
+
+        require_scene_clear(self.game, c, cast.channel)
+        if (
+            offer.response is None
+            or (offer.facilitator, offer.appointment) != MedicalService(self.store)._handler(c)
+            or cast.facilitator != offer.facilitator
+            or not 1 <= len(alteration.strip()) <= 1200
+            or any(x.actor == offer.target and x.stage not in FINAL for x in state.void_thresholds)
+        ):
+            raise WorkflowError("Describe the actual owned Void gain in its original scene")
+        try:
+            updated, required = alter(
+                state,
+                offer.target,
+                asset,
+                alteration.strip(),
+                offer.id,
+                offer.response,
+                piloting=False,
+            )
+        except ValueError as error:
+            raise WorkflowError(str(error)) from None
+        applied = any(x.id == asset and x.void for x in effective_assets(updated, offer.target))
+        threshold = any(x.kind == "girl_void_threshold" for x in required)
+        return updated, offer.model_copy(
+            update=dict(
+                void_asset=asset if applied else None,
+                void_work=offer.id + ":void:girl" if applied and threshold else None,
+                resisted=not applied,
+            )
+        )
+
+    def _materialize_void(self, c: Connection, offer: Offer, event: str) -> None:
+        from girlframe.services.m3_work import related
+
+        assert offer.void_work is not None
+        owner = int(offer.target.entity)
+        related(
+            c,
+            self.store,
+            dict(campaign_id=self.store.campaign_id, scene_id=offer.scene),
+            offer.void_work,
+            owner,
+            owner,
+            "void_threshold",
+            dict(
+                owner=offer.target.model_dump(mode="json"),
+                character=offer.target.incarnation,
+                source_action=None,
+                source_pdf=19,
+                reason=SCIENTIST_VOID,
+                case=offer.id,
+                details=dict(family="girl"),
+            ),
+            event,
+        )
+
+
+def void_audience(
+    game: GameService, c: Connection, state: GameState, body: dict[str, Any]
+) -> list[int]:
+    case = next((x for x in _records(state) if x.id == body.get("case")), None)
+    if (
+        case is None
+        or not case.void_work
+        or case.facilitator is None
+        or (case.facilitator, case.appointment) != MedicalService(game.store)._handler(c)
+    ):
+        raise WorkflowError("Recover the original NPC experiment’s private audience")
+    return sorted({int(case.target.entity), case.facilitator})
+
+
+def prove_void(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    row: dict[str, Any],
+    body: dict[str, Any],
+    actor: ActorRef,
+) -> None:
+    case = next((x for x in _records(state) if x.id == body.get("case")), None)
+    if (
+        case is None
+        or case.job != "scientist"
+        or case.target != actor
+        or case.scene != row["scene_id"]
+        or case.response != row["event_id"]
+        or case.void_work != row["id"]
+        or not case.void_asset
+        or not any(
+            asset.id == case.void_asset and asset.void
+            for asset in state.sheets[actor.entity].assets
+        )
+    ):
+        raise WorkflowError("Recover the original owned Scientist experiment and Void gain")
+    result = c.execute(
+        sa.select(t.events.c.kind, t.events.c.actor_id).where(
+            t.events.c.campaign_id == game.store.campaign_id,
+            t.events.c.id == case.response,
+        )
+    ).first()
+    if not result or tuple(result) != ("m3.npc_care_responded", actor.entity):
+        raise WorkflowError("Recover the genuine original NPC experiment receipt")

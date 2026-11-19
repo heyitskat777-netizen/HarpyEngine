@@ -2963,3 +2963,22 @@ and denial to an unrelated player. Other hidden information
 and temporary covers beyond the existing conversation
 prompts remain open.
 [Intelligence Agent p. 188](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=190) · [Native case](../../tests/rules/test_npc_intelligence.py)
+
+### Local NPC Scientist’s Void experiment
+
+Base `5c8ef1ba34111fa1c83df9815c2cbe0262ab9ff8`. The
+original Scientist can propose an experiment to a co-present
+Girl outside her Frame. The Girl chooses whether to allow it,
+then supplies the precise existing clean Girl Asset and its
+description. Ordinary Void, resistance, and threshold rules
+decide the consequence. A threshold remains open and private
+to the Girl and the original human facilitator.
+
+The new focused native case passed in **5.48 seconds**. It
+verified the original Asset, private threshold, restart and
+denial to another player. The two existing Doctor and Mechanic
+cases passed in the initial focused file run. The initial
+Scientist fixture had selected a Mockingbird, which correctly
+did not receive a Girl threshold. The corrected threshold
+fixture uses an ordinary Girl.
+[Scientist p. 189](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=191) · [Native cases](../../tests/rules/test_npc_care.py)
