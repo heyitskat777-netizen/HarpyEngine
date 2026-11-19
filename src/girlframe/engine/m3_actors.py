@@ -120,6 +120,19 @@ def frame_position(
     converted = converted_frame_owner(state, owner, instance)
     if converted is not None and converted != owner:
         return frame_position(state, converted, instance, fallback=fallback)
+    if owner.kind == "pilot":
+        from girlframe.engine.m3_berserk_frame import active as active_berserk
+
+        berserk = active_berserk(state, owner, instance)
+        if berserk is not None and state.world is not None:
+            if any(
+                x.state == "offstage"
+                and x.actor.kind == "gorgon"
+                and x.actor.entity == berserk.design.id
+                for x in state.harpy_travels
+            ):
+                return None
+            return next((x.cell for x in state.world.gorgons if x.id == berserk.design.id), None)
     if owner.kind == "gorgon" and any(
         x.state == "offstage" and x.actor == owner for x in state.harpy_travels
     ):
@@ -684,8 +697,17 @@ def _resolve(
         )
         placement = next((x for x in state.placements if x.actor == ref), None)
         same_frame = placement is not None and placement.frame_instance == frame_instance
+        from girlframe.engine.m3_berserk_frame import threats as berserk_threats
         from girlframe.engine.m3_handler_conversion import frame_shutdown
 
+        berserk_subsumed = bool(
+            placement is not None
+            and placement.subsumed
+            and any(
+                x.activated and x.owner == ref and x.frame == placement.frame_instance
+                for x in berserk_threats(state)
+            )
+        )
         shutdown = frame_shutdown(state, ref, frame_instance)
         cell = placement.girl_cell if placement else None
         occupied_instance = None
@@ -757,12 +779,15 @@ def _resolve(
                 placement.mode == "piloting"
                 and placement.occupied_frame_owner is None
                 and not placement.incapacitated
+                and not berserk_subsumed
                 and not sheet.frame_scrapped
                 and not shutdown
             )
             if placement and same_frame
             else None,
             occupied_frame_instance=occupied_instance,
+            subsumed=True if berserk_subsumed else None,
+            vitals_active=False if berserk_subsumed else None,
             custody="supervised_visit:" + journey.id
             if journey is not None
             else (placement.custody.kind + ":" + placement.custody.entity)

@@ -501,8 +501,12 @@ def cockpit_enter(
         placement.model_copy(update=dict(mode=mode, source_event=source_event, account=account)),
     )
     if pilot:
+        from girlframe.engine.m3_berserk_frame import activate as activate_berserk
         from girlframe.engine.m3_frame_control import recover_control
 
+        berserk = activate_berserk(state, bindings, actor, placement.frame_instance, source_event)
+        if berserk is not None:
+            return berserk
         state = recover_control(state, actor, placement.frame_instance, source_event)
     return _finish(state, actor, source_event, account, "cockpit_enter" if pilot else "cockpit_sit")
 
@@ -902,6 +906,10 @@ def consent_to_extract(
     lock = cockpit_lock(state, *occupied) if occupied else None
     if lock is None or type(allowed) is not bool:
         raise ValueError("The actual occupied cockpit has no active extraction gate")
+    from girlframe.engine.m3_berserk_frame import active as active_berserk
+
+    if active_berserk(state, lock.owner, lock.frame_instance):
+        raise ValueError("Defeat the actual Berserk Gorgon before extraction")
     if frame_voice(state, lock.owner, lock.frame_instance) != controller:
         raise ValueError("Only the actual Frame's human voice can give its extraction consent")
     consent = ExtractionConsent(
@@ -948,6 +956,10 @@ def open_cockpit(
     state = GameState.model_validate_json(original.model_dump_json())
     _source(state, source_event, account, owner)
     lock = cockpit_lock(state, owner, frame_instance)
+    from girlframe.engine.m3_berserk_frame import active as active_berserk
+
+    if active_berserk(state, owner, frame_instance):
+        raise ValueError("Defeat the actual Berserk Gorgon before opening that cockpit")
     if lock is None or frame_voice(state, owner, frame_instance) != controller:
         raise ValueError("Only the actual Frame's human voice can open its active cockpit lock")
     state.frame_locks = [

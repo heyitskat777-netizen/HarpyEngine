@@ -2964,6 +2964,7 @@ class InboxService:
             from girlframe.engine.m3_void_leave import leaves as void_leaves
             from girlframe.engine.m3_void_revelation import revelations
             from girlframe.engine.m3_void_signal import signals as void_signals
+            from girlframe.services.m3_berserk_frame import visible as visible_berserk
             from girlframe.services.m3_budget_hearing import options as hearing_options
             from girlframe.services.m3_budget_hearing import visible as visible_hearings
             from girlframe.services.m3_bunk_harpy import options as bunk_options
@@ -2974,6 +2975,25 @@ class InboxService:
             from girlframe.services.m3_rebel_escape_offer import visible as visible_escape_offers
 
             journalism = JournalistService(GameService(self.store))
+            for berserk in visible_berserk(canon, viewer):
+                items.append(
+                    InboxItem(
+                        "berserk-frame:" + berserk.id,
+                        "work",
+                        berserk.id,
+                        canon.revision,
+                        "campaign",
+                        "Berserk Frame",
+                        "Original Handler and affected Girl",
+                        "resolved" if berserk.defeated else "pending",
+                        False,
+                        False,
+                        "Review the status of the original Berserk Frame.",
+                        "",
+                        "Open Berserk Frame receipt",
+                        task="m3_berserk_frame",
+                    )
+                )
             for hearing in visible_hearings(canon, viewer):
                 actionable = bool(hearing_options(hearing, viewer))
                 items.append(

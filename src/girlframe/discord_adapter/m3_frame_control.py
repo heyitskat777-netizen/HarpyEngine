@@ -127,7 +127,7 @@ async def open_control(
         return
 
     async def relink(current: discord.Interaction, values: dict[str, Any]) -> str:
-        await asyncio.to_thread(
+        result = await asyncio.to_thread(
             service.relink,
             viewer_from_interaction(current),
             str(current.id),
@@ -135,6 +135,8 @@ async def open_control(
             data["revision"],
             values["account"],
         )
+        if result["state"] == "berserk":
+            return "Your Frame went berserk on activation and subsumed your Girl."
         return "Your actual neural relink and restored owned Frame control are recorded."
 
     form = NativeForm(

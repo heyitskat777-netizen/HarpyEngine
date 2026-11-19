@@ -1004,6 +1004,7 @@ class FrameControlService:
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             from girlframe.engine import m3_physical
+            from girlframe.engine.m3_berserk_frame import active as active_berserk
             from girlframe.engine.m3_harpy_defeat import harpy, update
 
             self.game.unpaused(c)
@@ -1075,6 +1076,12 @@ class FrameControlService:
                 raise WorkflowError(
                     "Only the original Pilot or Harpy can resume ordinary owned Frame control"
                 )
+            berserk = (
+                active_berserk(state, actor, actual.frame_instance)
+                if actor.kind == "pilot"
+                else None
+            )
+            activated = berserk is not None and berserk.activated == event
             self.game.event(
                 c,
                 viewer.user_id,
@@ -1084,6 +1091,11 @@ class FrameControlService:
                 event_id=event,
                 original_actor=actor.model_dump(mode="json"),
             )
+            if activated:
+                from girlframe.services.m3_berserk_frame import synchronize as synchronize_berserk
+
+                synchronize_berserk(c, self.game, state, event)
+                return dict(actor=actor.model_dump(mode="json"), state="berserk")
             return dict(actor=actor.model_dump(mode="json"), state="relinked")
 
         return self._write(

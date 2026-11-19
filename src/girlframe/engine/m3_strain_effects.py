@@ -11,6 +11,7 @@ from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_benevolent_contact import RULE as BENEVOLENT_CONTACT
 from girlframe.engine.m3_benevolent_contact import Contact
 from girlframe.engine.m3_benevolent_contact import Play as ContactPlay
+from girlframe.engine.m3_berserk_frame import RULE as BERSERK_FRAME
 from girlframe.engine.m3_budget_anarchy import REBELLION as REBEL_PROTEST
 from girlframe.engine.m3_budget_conversion import RULE as BUDGET_CONVERSION
 from girlframe.engine.m3_budget_hearing import RULE as BUDGET_HEARING
@@ -76,6 +77,7 @@ SUPPORTED = frozenset(
         DOPPELGANGER_REVEAL,
         HARPY_RAID,
         BUNK_HARPY,
+        BERSERK_FRAME,
         CULT_OCCUPATION,
         CADRE_LEAK,
         "strain.rebellion.low.1.1",
@@ -234,6 +236,27 @@ def apply(
         fields(choice, {"target"})
         if not choice.target:
             raise ValueError("Choose the actual independently controlled unlinked Harpy")
+    elif rule == BERSERK_FRAME:
+        from girlframe.engine.m3_berserk_frame import arm
+
+        fields(choice, {"target", "gorgon", "victim"})
+        if (
+            source_event is None
+            or choice.target not in {str(x) for x in state.order}
+            or choice.gorgon is None
+            or not choice.victim
+        ):
+            raise ValueError("Bind the original Frame and actual prepared Aggressive form")
+        assert choice.target is not None
+        arm(
+            state,
+            source_work,
+            source_event,
+            int(choice.target),
+            choice.gorgon,
+            choice.victim,
+            choice.account.strip(),
+        )
     elif rule == ORBITAL_THREAT:
         from girlframe.engine.m3_orbital_threat import introduce
 

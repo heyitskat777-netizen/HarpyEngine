@@ -12,6 +12,7 @@ from girlframe.database import tables as t
 from girlframe.engine import m3_strain_effects as rules
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_benevolent_contact import RULE as BENEVOLENT_CONTACT
+from girlframe.engine.m3_berserk_frame import RULE as BERSERK_FRAME
 from girlframe.engine.m3_budget_hearing import RULE as BUDGET_HEARING
 from girlframe.engine.m3_bunk_harpy import RULE as BUNK_HARPY
 from girlframe.engine.m3_cadre_leak import RULE as CADRE_LEAK
@@ -768,6 +769,10 @@ class EffectService:
                 work_id=identity,
                 rule_id=choice.rule_id,
             )
+            if choice.rule_id == BERSERK_FRAME:
+                from girlframe.services.m3_berserk_frame import schedule as schedule_berserk
+
+                schedule_berserk(c, self.game, updated, event)
             if choice.rule_id == rules.VOID_EXAMINATION:
                 from girlframe.services.m3_void_examination import schedule
 

@@ -13,6 +13,8 @@ from girlframe.discord_adapter.m3_world import TYPES, coordinates, squares
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_benevolent_contact import PLAYS as CONTACT_PLAYS
 from girlframe.engine.m3_benevolent_contact import RULE as BENEVOLENT_CONTACT
+from girlframe.engine.m3_berserk_frame import RULE as BERSERK_FRAME
+from girlframe.engine.m3_berserk_frame import eligible as berserk_frames
 from girlframe.engine.m3_budget_anarchy import REBELLION as REBEL_PROTEST
 from girlframe.engine.m3_budget_hearing import RULE as BUDGET_HEARING
 from girlframe.engine.m3_bunk_harpy import RULE as BUNK_HARPY
@@ -297,6 +299,7 @@ def effect_form(
     ):
         raise WorkflowError("Introduce the actual patron, then reopen this result.")
     orbital = rule == ORBITAL_THREAT
+    berserk = rule == BERSERK_FRAME
     disguise = rule == DOPPELGANGER_REVEAL
     rift = rule == VOID_RIFT
     new_raid_actor = stable(identity, "new raid Harpy")
@@ -308,6 +311,7 @@ def effect_form(
         "strain.void.low.5.1",
         ORBITAL_THREAT,
         DOPPELGANGER_REVEAL,
+        BERSERK_FRAME,
     }
     gorgons = {x["id"]: x for x in world["gorgons"]}
     past_missions = []
@@ -730,6 +734,23 @@ def effect_form(
                 ),
             ]
         elif spawned or rift:
+            if berserk:
+                fields.append(
+                    Field(
+                        "berserk_owner",
+                        "Which original Frame goes berserk on activation?",
+                        tuple(
+                            (
+                                x.entity,
+                                state.sheets[x.entity].callsign
+                                + " · "
+                                + state.sheets[x.entity].frame,
+                            )
+                            for x in berserk_frames(state)
+                        )
+                        or WAIT,
+                    )
+                )
             classes = (
                 ("benevolent", "erratic")
                 if disguise
@@ -851,15 +872,24 @@ def effect_form(
                 cells = tuple(x for x in cells if coordinates(x[0]) in cities)
             else:
                 cells = tuple(x for x in cells if list(coordinates(x[0])) in bases)
-            if not (orbital or disguise):
+            if not (orbital or disguise or berserk):
                 fields.append(Field("cell", "Choose a source-legal map square", cells or WAIT))
             if selected_class == "aggressive" or (selected_class == "sprite" and not rift):
                 selected_cell = values.get("cell", ("",))[0]
+                if berserk:
+                    owner = values.get("berserk_owner", (None,))[0]
+                    placement = next((x for x in state.placements if x.actor.entity == owner), None)
+                    if placement is not None and placement.frame_cell is not None:
+                        selected_cell = f"{placement.frame_cell[0]},{placement.frame_cell[1]}"
                 victims = [
                     x
                     for x in world["npcs"]
                     if x["alive"]
                     and category(state, ActorRef(kind="npc", entity=x["id"])) != "harpy"
+                    and (
+                        not berserk
+                        or category(state, ActorRef(kind="npc", entity=x["id"])) == "npc"
+                    )
                     and x["cell"] is not None
                     and f"{x['cell'][0]},{x['cell'][1]}" == selected_cell
                 ]
@@ -872,13 +902,14 @@ def effect_form(
                         options(victims),
                     )
                 )
-            fields.append(
-                Field(
-                    "revealed",
-                    "Has the Cadre seen this Gorgon?",
-                    (("yes", "Yes"), ("no", "Keep private")),
+            if not berserk:
+                fields.append(
+                    Field(
+                        "revealed",
+                        "Has the Cadre seen this Gorgon?",
+                        (("yes", "Yes"), ("no", "Keep private")),
+                    )
                 )
-            )
         elif rule == "strain.void.high.3.1":
             fields.append(
                 Field(
@@ -1382,17 +1413,23 @@ def effect_form(
                 raise WorkflowError("Recover a bonded NPC under the Handler's actual control.")
             if mask is not None:
                 payload["target"] = mask.id
+            if berserk:
+                payload["target"] = values["berserk_owner"][0]
             payload["gorgon"] = Gorgon(
                 id=mask.id if mask else stable(identity, "gorgon"),
                 name=mask.name if mask else values["name"],
                 gorgon_class=cast(Any, selected_class),
                 types=cast(Any, types),
                 assets=assets,
-                cell=mask.cell if mask else None if orbital else coordinates(values["cell"][0]),
+                cell=mask.cell
+                if mask
+                else None
+                if orbital or berserk
+                else coordinates(values["cell"][0]),
                 core_plan=CorePlan(
                     assets=tuple(asset_ids[x] for x in values["core"]), weakness=values["weakness"]
                 ),
-                revealed=values["revealed"][0] == "yes",
+                revealed=not berserk and values["revealed"][0] == "yes",
                 **setup,
             )
             if "victim" in values:
@@ -1556,6 +1593,8 @@ def effect_form(
             return "The Director can serve the accusation privately."
         if rule == BUNK_HARPY:
             return "The appearance is available to its original Harpy controller."
+        if rule == BERSERK_FRAME:
+            return "The threat is tied to the original Frame's next activation."
         if rule == PUBLIC_APPEARANCE:
             return "The original Cadre can record attendance from their private Inbox."
         if rule == HARPY_RAID:

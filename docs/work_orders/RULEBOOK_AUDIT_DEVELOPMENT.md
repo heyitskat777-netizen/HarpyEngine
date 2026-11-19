@@ -888,3 +888,28 @@ roster and a separately controlled Harpy already outside her Frame.
 Other bunk locations, an initially unknown Harpy, and binding a separate
 printed Play used as the means of contact remain open.
 [High Void p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) · [Bunk encounter tests](../../tests/rules/test_bunk_harpy.py)
+
+## High Void Berserk Frame
+
+The base is `d08b2826c31878188a2589b3a9e1db244ac45094`. High Void 4.1
+binds an existing Frame and prepared Aggressive form to the original
+roll. A Priestess takes precedence when one is available. Sitting in the
+cockpit leaves the trigger armed. The first actual piloting or relink
+activates it instead, subsuming the original Pilot and introducing the
+Gorgon at the Frame's actual square with the printed NPC casualty.
+The Frame follows that Gorgon until defeat. The new campaign-scope work
+stays open across Off-Duty and activates without a duplicate event.
+
+The native fatal Core strike closes the work and preserves the original
+Pilot and remaining cockpit recovery. The private Inbox shows only status
+to the original Handler and, after activation, the original Pilot. All 57
+selected tests passed. They cover the actual saved roll, original owner,
+pause, replay, reopen, native cockpit, Gorgon Asset contests and an actual
+Core strike. Source mypy checks passed on 14 files.
+
+The implemented setup requires an ordinary NPC at the Frame's known square.
+If that person is no longer available on activation, the consequence remains
+pending for human review. Successor Frames, substituted NPCs and overlapping
+forced transformations require separate verification. Defeat applies no
+automatic revival or extraction.
+[High Void p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) · [Aggressive Gorgons p. 163](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=165) · [Berserk Frame test](../../tests/rules/test_berserk_frame.py)

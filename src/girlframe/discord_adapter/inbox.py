@@ -1644,6 +1644,24 @@ class InboxView(discord.ui.View):
                 StrainService(OffDutyService(MissionService(self.service.store)))
             )
             await open_hearing(interaction, hearing, item.identity)
+        elif item.task == "m3_berserk_frame":
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_berserk_frame import view as berserk_view
+
+            data = await asyncio.to_thread(
+                berserk_view,
+                GameService(self.service.store),
+                viewer_from_interaction(interaction),
+                item.identity,
+            )
+            detail = (
+                "The Aggressive Gorgon was defeated. Any cockpit or medical recovery is separate."
+                if data["defeated"]
+                else "The original Frame has become an Aggressive Gorgon."
+                if data["activated"]
+                else "The original Frame's next activation is pending."
+            )
+            await reply(interaction, detail)
         elif item.task == "m3_bunk_harpy":
             from girlframe.discord_adapter.m3_bunk_harpy import open_bunk
             from girlframe.services.m3_bunk_harpy import BunkService

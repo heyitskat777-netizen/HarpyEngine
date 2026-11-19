@@ -246,8 +246,15 @@ class PhysicalService:
                     pilot=command.operation == "pilot",
                 )
             from girlframe.engine import m3_void_frame_entry as entry_rules
+            from girlframe.engine.m3_berserk_frame import active as active_berserk
 
-            entry_source = bool(entry_rules.records(state, entry_rules.Selection))
+            berserk = (
+                active_berserk(updated, command.actor, actual.frame_instance)
+                if actual.frame_instance is not None
+                else None
+            )
+            activated = berserk is not None and berserk.activated == source
+            entry_source = not activated and bool(entry_rules.records(state, entry_rules.Selection))
             if entry_source:
                 from girlframe.services.m3_void_frame_entry import stage_entry, synchronize_entry
 
@@ -271,6 +278,14 @@ class PhysicalService:
                 event_id=source,
                 operation=command.operation,
             )
+            if activated:
+                from girlframe.services.m3_berserk_frame import synchronize as synchronize_berserk
+
+                assert berserk is not None
+                synchronize_berserk(c, self.game, updated, source)
+                return dict(
+                    operation="berserk", revision=updated.revision, gorgon=berserk.design.id
+                )
             void_works = []
             if command.operation != "exit" and occupied != (command.actor, actual.frame_instance):
                 sheet = updated.sheets[command.actor.entity]

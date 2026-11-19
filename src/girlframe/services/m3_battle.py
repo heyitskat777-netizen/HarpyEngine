@@ -1717,8 +1717,10 @@ def _apply_fatal(
                         )
                     }
                 )
+    from girlframe.engine.m3_berserk_frame import record_defeat as record_berserk_defeat
     from girlframe.engine.m3_leviathan_obsession import release_dead_sources
 
+    record_berserk_defeat(state, target, event)
     state = release_dead_sources(state, event)
     meta["fatal_event"] = event
     meta["fatal_pending"] = False
@@ -1749,8 +1751,10 @@ def _apply_fatal(
     )
     synchronize_casts(game, c, event)
     if target.kind == "gorgon":
+        from girlframe.services.m3_berserk_frame import synchronize as synchronize_berserk
         from girlframe.services.m3_gorgon_dormant import synchronize_endings as end_gorgon_costs
 
+        synchronize_berserk(c, game, state, event)
         end_gorgon_costs(game, c, event, viewer, key)
     if target.kind == "external_pilot" and rules.category(state, target) == "harpy":
         from girlframe.services.m3_harpy_rest import synchronize_endings

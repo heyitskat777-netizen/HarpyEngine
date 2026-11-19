@@ -72,6 +72,8 @@ async def open_initial(interaction: discord.Interaction, service: PhysicalServic
                 ),
                 channel=current.channel_id,
             )
+            if result["operation"] == "berserk":
+                return "Your Frame went berserk on activation and subsumed your Girl."
             if result.get("entry_dives"):
                 return (
                     "Your actual cockpit state is saved. Resolve the required Dive Deep "
