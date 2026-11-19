@@ -1219,24 +1219,44 @@ class ActorPlayService:
             self.game.request(c, action, selected["controller"], "tag_window")
             return
         # Revalidate the actual proposal and Bond immediately before applying it.
-        amount = rules.proposal(
-            state,
-            ref,
-            ActorRef.model_validate(selected["ref"]) if selected["ref"] else None,
-            selected["controller"],
-            profiles(c, self.store.campaign_id),
-            selected["tag"],
-            action["scene_id"],
-            selected["direction"],
-            selected["account"],
-            ooc_controller=selected["controller"]
-            if saved_marker is not None and saved_marker["actor"] is None
-            else None,
-        )
-        repeated = rules.mark(state, ref, selected["tag"], action["scene_id"])
+        from girlframe.services import m3_warboy_boy as boy
+
+        proposer = ActorRef.model_validate(selected["ref"]) if selected["ref"] else None
+        is_pronoun = selected["tag"] == boy.identifier(ref)
+        if is_pronoun:
+            target = self.validate(c, state, action)
+            amount = boy.amount(
+                self.game,
+                c,
+                state,
+                action,
+                target,
+                proposer,
+                selected["controller"],
+                selected["direction"],
+                selected["account"],
+            )
+            boy.mark(state, action, ref)
+            repeated = False
+        else:
+            amount = rules.proposal(
+                state,
+                ref,
+                proposer,
+                selected["controller"],
+                profiles(c, self.store.campaign_id),
+                selected["tag"],
+                action["scene_id"],
+                selected["direction"],
+                selected["account"],
+                ooc_controller=selected["controller"]
+                if saved_marker is not None and saved_marker["actor"] is None
+                else None,
+            )
+            repeated = rules.mark(state, ref, selected["tag"], action["scene_id"])
         action["data"]["modifiers"].append(
             {
-                "source": "girl_tag",
+                "source": "warboy_pronouns" if is_pronoun else "girl_tag",
                 "amount": amount,
                 "tag": selected["tag"],
                 "actor_ref": selected["ref"],
@@ -1364,18 +1384,33 @@ class ActorPlayService:
                     or answer.member
                 ):
                     raise ValueError("Choose one of your actual cast roles for this proposal")
-                rules.proposal(
-                    state,
-                    actor.ref,
-                    marker.actor,
-                    owner,
-                    profiles(c, self.store.campaign_id),
-                    answer.denied[0],
-                    action["scene_id"],
-                    answer.number or 0,
-                    answer.text,
-                    ooc_controller=marker.controller if marker.actor is None else None,
-                )
+                from girlframe.services import m3_warboy_boy as boy
+
+                if answer.denied[0] == boy.identifier(actor.ref):
+                    boy.amount(
+                        self.game,
+                        c,
+                        state,
+                        action,
+                        actor,
+                        marker.actor,
+                        owner,
+                        answer.number,
+                        answer.text,
+                    )
+                else:
+                    rules.proposal(
+                        state,
+                        actor.ref,
+                        marker.actor,
+                        owner,
+                        profiles(c, self.store.campaign_id),
+                        answer.denied[0],
+                        action["scene_id"],
+                        answer.number or 0,
+                        answer.text,
+                        ooc_controller=marker.controller if marker.actor is None else None,
+                    )
                 action["data"].setdefault("tag_proposals", []).append(
                     dict(
                         id=row["id"],
@@ -1558,9 +1593,34 @@ class ActorPlayService:
         state = load_state(c, self.store.campaign_id)
         actor = self.validate(c, state, action)
         cast, actual = self.actors(c, state, int(action["channel_id"]), fresh=False)
+        from girlframe.services import m3_warboy_boy as boy
+
         own = actor.controller == viewer.user_id
         selected = action["data"].get("tag_candidate")
         proposals = action["data"].get("tag_proposals", [])
+        tag_labels = {x.id: x.label for x in rules.tags(state, actor.ref)}
+        displayed = [
+            x.model_dump(mode="json")
+            for x in rules.tags(state, actor.ref)
+            if own or viewer.user_id in x.observers
+        ]
+        markers = (
+            current_markers(self.game, c, state, action, viewer.user_id)
+            if (row["kind"] == "tag_window")
+            else ()
+        )
+        boy_id = boy.identifier(actor.ref)
+        if boy.observed(self.game, state, actor):
+            local_roles = {marker.actor for marker in markers}
+            label = "Pronouns (" + boy.PRONOUNS + ")"
+            tag_labels[boy_id] = label
+            if (
+                not own
+                and boy.available(state, actor.ref, action["scene_id"])
+                and actor.cell is not None
+                and any(x.ref in local_roles and x.cell == actor.cell for x in actual)
+            ):
+                displayed.append(dict(id=boy_id, label=label, marked=False, scene_used=None))
         result = dict(row) | {
             "actor_basic": True,
             "body": json.loads(row["body_json"]),
@@ -1580,23 +1640,12 @@ class ActorPlayService:
             }
             if own
             else None,
-            "tags": [
-                x.model_dump(mode="json")
-                for x in rules.tags(state, actor.ref)
-                if own or viewer.user_id in x.observers
-            ],
-            "roles": [
-                {"token": marker.token, "label": marker.label}
-                for marker in current_markers(self.game, c, state, action, viewer.user_id)
-            ]
-            if row["kind"] == "tag_window"
-            else [],
+            "tags": displayed,
+            "roles": [{"token": marker.token, "label": marker.label} for marker in markers],
             "proposals": [
                 {
                     "id": x["id"],
-                    "label": next(
-                        t.label for t in rules.tags(state, actor.ref) if t.id == x["tag"]
-                    ),
+                    "label": tag_labels.get(x["tag"], "Unavailable Tag"),
                     "direction": x["direction"],
                     "account": x["account"],
                 }

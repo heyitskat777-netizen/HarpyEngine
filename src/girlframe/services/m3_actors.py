@@ -151,15 +151,18 @@ class ActorService:
 
     def inspect(self, viewer: GuildViewer, ref: ActorRef) -> dict[str, Any]:
         from girlframe.services.m3_expanded_status import ExpandedStatusService
+        from girlframe.services.m3_warboy_boy import pronouns
 
         with self.store.engine.connect() as c:
             self.game.authorize(c, viewer, game=False)
             state = load_state(c, self.store.campaign_id)
             actor = self._actor(c, viewer, state, ref)
             status = ExpandedStatusService(self.game)
+            language = pronouns(self.game, state, ref)
             return {
                 "game_revision": state.revision,
                 "actor": actor.model_dump(mode="json"),
+                **({"pronouns": language} if language else {}),
                 **({"expanded_status": status.view(c, state, actor)} if status.enabled() else {}),
             }
 

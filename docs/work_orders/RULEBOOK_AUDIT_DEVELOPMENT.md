@@ -3434,3 +3434,21 @@ movement service, and checked both exact Tag labels, their source
 actor and their audience. Cross-scene knowledge, other Pilot
 bodies and cases with fewer than two verified facts remain open.
 [Chronically Online p. 101](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=103) · [Native case](../../tests/rules/test_chronically_online.py)
+
+### Warboy’s Boy
+
+Base `1431b9e`. An approved independent Warboy’s original sheet
+shows he/him. A different actual co-present character can propose
+the disclosed Warboy’s pronouns in the native Tag window. The
+ordinary direction, Bond bonus and table rules govern selection.
+A successful use records the exact original Play and consumes the
+scene’s use of those pronouns.
+
+**One focused case passed in 3.88 seconds.** It checked the native
+sheet projection, a local proposal visible to the original
+co-present character, a saved result changing from 8 to 7, and
+the absence of a new owned Tag resource. Ancillary Cadre membership
+and Dog Status still require actor-level support. The printed
+second-use interaction with fixed pronouns remains a human ruling
+question. The implemented modifier can be used once per scene.
+[Warboy p. 106](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=108) · [Native case](../../tests/rules/test_warboy_boy.py)
