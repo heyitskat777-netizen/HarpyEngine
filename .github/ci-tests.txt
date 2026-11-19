@@ -155,6 +155,7 @@ tests/rules/test_trainer_control.py
 tests/rules/test_mistress_rewards.py
 tests/rules/test_trainer_phrases.py
 tests/rules/test_scientist_lab.py
+tests/rules/test_frantic_breakdown.py
 tests/rules/test_bunk_harpy.py
 tests/rules/test_berserk_frame.py
 tests/rules/test_rebel_ambush.py

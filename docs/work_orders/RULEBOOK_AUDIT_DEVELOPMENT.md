@@ -1327,8 +1327,7 @@ Base `06aa08cbeb9592c1d3d1a86dbd081f710098d371`. Head to the Lab can
 complete the printed first Project node for installing a Void Asset and the
 separate printed laboratory option for removing Void from a different Girl
 Asset. The native Off-Duty scene binds the actual original Scientist and
-one original Girl. She owns the affected Asset selections. Both handlers
-of those two roles attest before the engine enforces the Asset cap, installs
+one original Girl. She owns the affected Asset selections. Both participants attest before the engine enforces the Asset cap, installs
 the named Asset, clears Void from the preserved Asset, and records one
 completed Project step. Other nodes, additional effects, two-patient scenes
 and threshold interactions remain open.
@@ -1339,3 +1338,23 @@ Asset changes. Together with the previous Trainer cases, all five focused
 tests passed. The selected Asset, Void, Handler, Off-Duty, Strain and Inbox
 regression passed **268 tests in 126.61 seconds**.
 [Rulebook pp. 127–128](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=129) · [Tests](../../tests/rules/test_scientist_lab.py)
+
+### Frantic Break Down
+
+Base `62af30894fd8d2455f6e64e3814a8e441d391a39`. The native Handler menu
+starts one real Break Down in an actual scene. The saved receipt uses the
+actual operational Foundation bases in the original Handler's responsibility.
+The original Dog chooses three on 7−, the Frantic chooses two on 8–10, and
+the Frantic and original Ace choose one each on 11+. The office choice needs
+an actual Girl's own discovery. The printed Minor-per-Girl and Moderate-for-one
+branches create separate original discipline debts with enforced severity.
+The effect stage waits for the actual native Punishments. NPC Bond death,
+intimate scenes, other affiliations and changes to the original cast during
+a pending Break Down remain open.
+
+All three synthetic tiers passed, including native menu and Inbox access,
+wrong owner, private scope, pause, restart, retries, stale inputs, discovery,
+real Minor and Moderate effects, and preservation of the original dice.
+The selected Handler, discipline, Strain, Off-Duty and Inbox regression
+passed **225 tests in 110.80 seconds**.
+[Rulebook p. 130](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=132) · [Tests](../../tests/rules/test_frantic_breakdown.py)

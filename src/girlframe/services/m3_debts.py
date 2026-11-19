@@ -213,10 +213,13 @@ def synchronize(c: Connection, store: OnboardingStore, state: GameState, event: 
     from girlframe.services.m3_frame_rewards import synchronize as frame_rewards
 
     frame_rewards(c, store, state, period, event)
+    from girlframe.engine.m3_frantic_breakdown import RULE as breakdown_rule
     from girlframe.services.m2_game import GameService
+    from girlframe.services.m3_frantic_breakdown import discipline_source
     from girlframe.services.m3_show_dog import synchronize as show_dog
 
-    show_dog(GameService(store), c, state, period, event)
+    game = GameService(store)
+    show_dog(game, c, state, period, event)
     _returned_missions(c, store, state, period, event)
     work = t.m3["m3_required_work"]
     for debt in state.obligations:
@@ -237,6 +240,11 @@ def synchronize(c: Connection, store: OnboardingStore, state: GameState, event: 
         identity = period.id + ":m2-punishment:" + debt.id
         if _already_bound(c, store, state, debt.id, debt.owner, identity):
             continue
+        severity = None
+        if debt.details.get("cause") == breakdown_rule:
+            if debt.target != period.handler or state.handler != period.handler:
+                continue
+            severity = discipline_source(game, c, state, debt, period.handler)
         allocation = next((x for x in records(state, Allocation) if x.source_id == debt.id), None)
         subject = int(allocation.subject.entity) if allocation else debt.owner
         actual_character = (
@@ -265,6 +273,7 @@ def synchronize(c: Connection, store: OnboardingStore, state: GameState, event: 
                         "cause": debt.details.get("cause", "m2_play"),
                         "due_stage": "active",
                         "character": actual_character,
+                        **({"required_severity": severity} if severity is not None else {}),
                         **allocation_fields(state, debt.id),
                     },
                     sort_keys=True,

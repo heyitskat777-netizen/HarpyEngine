@@ -13,6 +13,7 @@ from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import owned_refs, resolve
 from girlframe.engine.m3_careers import original_sheet
+from girlframe.engine.m3_frantic_breakdown import RULE as breakdown_rule
 from girlframe.engine.m3_handler_consequences import active_handler, body_original
 from girlframe.engine.m3_handler_play_state import (
     BASIC,
@@ -1141,6 +1142,10 @@ class HandlerPlayService:
             return dict(
                 game_revision=state.revision,
                 plays=BASIC,
+                frantic_breakdown=active_book(
+                    self.game, c, state, book="Frantic", rule=breakdown_rule
+                )
+                is not None,
                 dress_them_down=active_book(self.game, c, state, book="Dogrunner", rule=DRESS_RULE)
                 is not None,
                 targets=[

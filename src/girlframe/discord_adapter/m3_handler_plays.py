@@ -25,6 +25,8 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
     ]
     if data.get("dress_them_down") and interaction.channel_id is not None:
         options.append(("dress", "Dress Them Down in this scene"))
+    if data.get("frantic_breakdown") and interaction.channel_id is not None:
+        options.append(("frantic_breakdown", "Break Down in this scene"))
     options.extend(
         ("warp:" + x["id"], "Warp area: " + x["label"]) for x in data.get("warp_zones", [])
     )
@@ -40,6 +42,17 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
                 identity[5:],
             )
             await open_play(current, service, result["id"])
+        elif identity == "frantic_breakdown":
+            from girlframe.discord_adapter.m3_frantic_breakdown import open_start
+            from girlframe.services.m3_frantic_breakdown import FranticBreakdownService
+
+            assert interaction.channel_id is not None
+            await open_start(
+                current,
+                FranticBreakdownService(service.store, service.game),
+                data["game_revision"],
+                interaction.channel_id,
+            )
         elif identity == "off_duty":
             from girlframe.discord_adapter.m3_off_duty import open_period
             from girlframe.services.m3_missions import MissionService

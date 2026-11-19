@@ -2901,11 +2901,31 @@ class InboxService:
                         task="m3_battle_context",
                     )
                 )
+            from girlframe.services.m3_frantic_breakdown import FranticBreakdownService
             from girlframe.services.m3_handler_plays import HandlerPlayService
             from girlframe.services.m3_medical import MedicalService
             from girlframe.services.m3_privacy_trouble import PrivacyTroubleService
             from girlframe.services.m3_scene_requisitions import SceneRequisitionService
 
+            for request in FranticBreakdownService(self.store)._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "frantic-breakdown:" + request["id"],
+                        "frantic_breakdown",
+                        request["id"],
+                        canon.revision,
+                        "plays",
+                        "Break Down",
+                        "Original Frantic or printed outcome owner",
+                        "pending",
+                        request["can_act"],
+                        False,
+                        "Review the saved roll and your own decision.",
+                        "Office discovery and actual Punishment have separate owners.",
+                        "Review breakdown",
+                        task="m3_frantic_breakdown",
+                    )
+                )
             for request in HandlerPlayService(self.store)._tasks(connection, viewer):
                 items.append(
                     InboxItem(

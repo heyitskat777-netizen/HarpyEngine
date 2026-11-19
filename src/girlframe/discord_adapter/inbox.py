@@ -1869,6 +1869,13 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_handler_plays import HandlerPlayService
 
             await open_notice(interaction, HandlerPlayService(self.service.store), item.identity)
+        elif item.task == "m3_frantic_breakdown":
+            from girlframe.discord_adapter.m3_frantic_breakdown import open_breakdown
+            from girlframe.services.m3_frantic_breakdown import FranticBreakdownService
+
+            await open_breakdown(
+                interaction, FranticBreakdownService(self.service.store), item.identity
+            )
         elif item.task == "m3_handler_play":
             from girlframe.discord_adapter.m3_handler_plays import open_play as open_handler_play
             from girlframe.services.m3_handler_plays import HandlerPlayService

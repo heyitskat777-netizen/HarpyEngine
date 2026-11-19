@@ -193,7 +193,8 @@ class PunishmentService:
             raise WorkflowError(str(error)) from None
 
     def _check(self, c: Connection, row: dict[str, Any], revision: int, game_revision: int) -> None:
-        original = self._body(row).get("character")
+        body = self._body(row)
+        original = body.get("character")
         if (
             original
             and self.game.character_binding(
@@ -209,6 +210,29 @@ class PunishmentService:
             raise WorkflowError("STALE_WORK: reopen the current discipline task.")
         if load_state(c, self.store.campaign_id).revision != game_revision:
             raise WorkflowError("STALE_STATE: sheets or Status changed; review the task again.")
+        from girlframe.engine.m3_frantic_breakdown import RULE as breakdown_rule
+
+        if body.get("cause") == breakdown_rule:
+            from girlframe.services.m3_frantic_breakdown import discipline_source
+
+            state = load_state(c, self.store.campaign_id)
+            debt = next(
+                (
+                    x
+                    for x in state.obligations
+                    if x.id == body.get("obligation_id") and x.state == "pending"
+                ),
+                None,
+            )
+            if (
+                debt is None
+                or debt.target is None
+                or discipline_source(self.game, c, state, debt, debt.target)
+                != body.get("required_severity")
+            ):
+                raise WorkflowError(
+                    "Recover the exact original Frantic responsibility and severity"
+                )
         actions = t.m2["m2_actions"]
         from girlframe.services.m3_beneath import discipline_action, lineage
 
