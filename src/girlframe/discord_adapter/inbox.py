@@ -2076,6 +2076,11 @@ class InboxView(discord.ui.View):
             await open_enforcer_task(
                 interaction, EnforcerService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_npc_care":
+            from girlframe.discord_adapter.m3_npc_care import open_care
+            from girlframe.services.m3_npc_care import NpcCareService
+
+            await open_care(interaction, NpcCareService(self.service.store), item.identity)
         elif item.task == "m3_parasite_excision":
             from girlframe.discord_adapter.m3_gorgon_runtime import open_excision
             from girlframe.services.m3_parasite_excision import ExcisionService

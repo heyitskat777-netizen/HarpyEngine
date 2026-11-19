@@ -2290,6 +2290,25 @@ rebirth to the immediate low outcome when the Girl was already
 inside her Frame.
 [Mother p. 170](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=172) · [Native cases](../../tests/rules/test_gorgon_runtime.py)
 
+### Ordinary Doctor and Mechanic NPC care
+
+Base `c977fa8`. The printed local NPC moves now have private
+Inbox controls. A Doctor can offer to patch up a Girl reached
+outside her Frame. A Mechanic can offer to fix her actual parked
+Frame. The original Girl may decline or select one currently
+damaged eligible Asset. The existing repair reducer applies the
+change after consent. The source leaves Void and other resources
+in place and waits for immediate consequences already owed.
+
+**Two focused native cases passed in 8.06 seconds**. Both used an
+actual NPC controller and recipient, exercised the private Inbox
+and rejected another participant’s access before applying the
+original repair after restart. Other job prompts remain available
+for human narration. The rulebook does not specify a repair count
+for either move. The current scoped ruling uses one actual Asset
+per performed offer.
+[Doctor p. 188 and Mechanic p. 189](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=190) · [Native cases](../../tests/rules/test_npc_care.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

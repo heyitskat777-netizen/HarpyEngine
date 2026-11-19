@@ -4113,7 +4113,28 @@ class InboxService:
                         task="m3_privacy_trouble",
                     )
                 )
+            from girlframe.services.m3_npc_care import NpcCareService
             from girlframe.services.m3_parasite_excision import ExcisionService
+
+            for request in NpcCareService(self.store).tasks(connection, viewer, canon):
+                items.append(
+                    InboxItem(
+                        "npc-care:" + request["id"],
+                        "npc_care",
+                        request["id"],
+                        request["revision"],
+                        "world",
+                        request["label"],
+                        "Original NPC and intended recipient",
+                        "pending",
+                        True,
+                        False,
+                        "Offer or accept care in the actual scene.",
+                        "The original Girl decides whether to repair an actual damaged Asset.",
+                        "Open care",
+                        task="m3_npc_care",
+                    )
+                )
 
             for request in ExcisionService(self.store).tasks(connection, viewer, canon):
                 items.append(

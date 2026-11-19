@@ -23617,14 +23617,39 @@
         "heading": "Doctor"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "An actual local doctor offers the printed Patch someone up move.",
+        "actor_type": "Original NPC doctor and the original Girl",
+        "pre_roll_sources": [
+          "Actual scene roles and physical reach of the Girl"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "direct": [
+            "The original Girl accepts repair of one actually damaged Girl Asset or declines."
+          ]
+        },
+        "choice_ownership": "The NPC controller offers care. The original Girl owns acceptance and the actual Asset selection.",
+        "target_policy": "Original Girl or her same-square parked Frame as appropriate. Other participants cannot inspect the offer.",
+        "post_roll_effects": [
+          "Clear damage from the exact accepted Girl Asset. Preserve Void and other resources."
+        ],
+        "mandatory_followups": [
+          "Actual recipient consent and current physical access. Resolve another immediate consequence first."
+        ],
+        "handler_or_gm_intervention": "Existing role and release approvals remain in force. Other job prompts remain available for narration.",
+        "test_fixture_ids": [
+          "tests/rules/test_npc_care.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_npc_care.py::test_local_npc_care_repairs_only_the_owned_accepted_asset"],
       "m2_play_id": null,
       "module": "core"
     },
@@ -23858,14 +23883,39 @@
         "heading": "Mechanic"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "An actual local mechanic offers the printed Fix something move.",
+        "actor_type": "Original NPC mechanic and the original Girl",
+        "pre_roll_sources": [
+          "Actual scene roles and physical reach of the Frame"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "direct": [
+            "The original Girl accepts repair of one actually damaged Frame Asset or declines."
+          ]
+        },
+        "choice_ownership": "The NPC controller offers care. The original Girl owns acceptance and the actual Asset selection.",
+        "target_policy": "Original Girl or her same-square parked Frame as appropriate. Other participants cannot inspect the offer.",
+        "post_roll_effects": [
+          "Clear damage from the exact accepted Frame Asset. Preserve Void and other resources."
+        ],
+        "mandatory_followups": [
+          "Actual recipient consent and current physical access. Resolve another immediate consequence first."
+        ],
+        "handler_or_gm_intervention": "Existing role and release approvals remain in force. Other job prompts remain available for narration.",
+        "test_fixture_ids": [
+          "tests/rules/test_npc_care.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_npc_care.py::test_local_npc_care_repairs_only_the_owned_accepted_asset"],
       "m2_play_id": null,
       "module": "core"
     },
