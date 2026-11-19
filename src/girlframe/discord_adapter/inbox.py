@@ -2086,6 +2086,14 @@ class InboxView(discord.ui.View):
                 VisionsService(GameService(self.service.store)),
                 item.identity,
             )
+        elif item.task == "m3_harpy_visions_recovery":
+            from girlframe.discord_adapter.m3_harpy_visions import open_visions_recovery
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_harpy_visions import VisionsService
+
+            await open_visions_recovery(
+                interaction, VisionsService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_harpy_gaze":
             from girlframe.discord_adapter.m3_harpy_gaze import open_gaze_response
             from girlframe.services.m2_game import GameService

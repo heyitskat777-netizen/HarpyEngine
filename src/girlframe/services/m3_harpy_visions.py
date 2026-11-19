@@ -200,7 +200,6 @@ class VisionsService:
         step = self._step(state, viewer, case) if case else None
         if case is None or step is None:
             raise WorkflowError("This original private Visions decision is unavailable")
-        history = t.m2["m2_state_history"]
         rolled = case.model_copy(update=dict(plans=(), returned=()))
         roots = [
             (
@@ -222,20 +221,25 @@ class VisionsService:
         for event, kind, author, expected in roots:
             if event is None:
                 continue
-            raw = c.scalar(
-                sa.select(history.c.body_json)
-                .join(t.events, t.events.c.id == history.c.event_id)
-                .where(
-                    history.c.campaign_id == self.store.campaign_id,
-                    history.c.event_id == event,
-                    t.events.c.campaign_id == self.store.campaign_id,
-                    t.events.c.actor_id == str(author),
-                    t.events.c.kind == "m3.harpy_visions_" + kind,
-                )
-            )
-            if raw is None or expected not in rules.records(GameState.model_validate_json(raw)):
+            saved = self._history(c, event, kind, author)
+            if saved is None or expected not in rules.records(saved):
                 raise WorkflowError("Recover the original Visions consent and owned roll")
         return case, step
+
+    def _history(self, c: Connection, event: str, kind: str, author: int) -> GameState | None:
+        history = t.m2["m2_state_history"]
+        raw = c.scalar(
+            sa.select(history.c.body_json)
+            .join(t.events, t.events.c.id == history.c.event_id)
+            .where(
+                history.c.campaign_id == self.store.campaign_id,
+                history.c.event_id == event,
+                t.events.c.campaign_id == self.store.campaign_id,
+                t.events.c.actor_id == str(author),
+                t.events.c.kind == "m3.harpy_visions_" + kind,
+            )
+        )
+        return GameState.model_validate_json(raw) if raw else None
 
     def get(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
         with self.store.engine.connect() as c:
@@ -387,3 +391,216 @@ class VisionsService:
         baseline = rules.baseline(state, case, choices)
         plan = rules.Plan(event=event, baseline=baseline, choices=choices)
         rules.put(state, case.model_copy(update=dict(plans=(*case.plans, plan))))
+
+    @staticmethod
+    def _recovery_step(
+        state: GameState, viewer: GuildViewer, value: rules.Restriction
+    ) -> str | None:
+        sheet = state.sheets.get(value.actor.entity)
+        if (
+            value.restored is not None
+            or sheet is None
+            or sheet.character_id != value.actor.incarnation
+        ):
+            return None
+        if value.recovery is None:
+            return "request" if str(viewer.user_id) == value.actor.entity else None
+        return "verify" if value.recovery.facilitator == viewer.user_id else None
+
+    def recovery_tasks(
+        self, c: Connection, state: GameState, viewer: GuildViewer
+    ) -> tuple[tuple[rules.Restriction, str], ...]:
+        pending = tuple(
+            (x, step)
+            for x in rules.restrictions(state)
+            if (step := self._recovery_step(state, viewer, x))
+        )
+        if pending:
+            try:
+                self._gate(c, viewer)
+            except (ValueError, WorkflowError):
+                return ()
+        return pending
+
+    def _recovery_read(
+        self, c: Connection, state: GameState, viewer: GuildViewer, identity: str
+    ) -> tuple[rules.Restriction, str]:
+        value = next((x for x in rules.restrictions(state) if x.id == identity), None)
+        step = self._recovery_step(state, viewer, value) if value else None
+        if value is None or step is None:
+            raise WorkflowError("This original private reconditioning is unavailable")
+        owner = int(value.actor.entity)
+        original = self._history(c, value.imposed, "confirm", owner)
+        original_restriction = value.model_copy(
+            update=dict(recovery=None, processed=None, verification=None)
+        )
+        if (
+            original is None
+            or original_restriction not in rules.restrictions(original)
+            or not any(
+                case.id == value.case
+                and case.subject == value.actor
+                and case.resolved == value.imposed
+                for case in rules.records(original)
+            )
+        ):
+            raise WorkflowError("Recover the original applied Visions restriction")
+        if value.recovery is not None:
+            request = self._history(c, value.recovery.event, "recondition_request", owner)
+            if request is None or value not in rules.restrictions(request):
+                raise WorkflowError("Recover the original reconditioning request")
+        return value, step
+
+    def _sites(
+        self, c: Connection, state: GameState, actor: ActorRef
+    ) -> dict[str, tuple[SceneCast, str, str, str]]:
+        from girlframe.engine.m3_sentinel_shell import holds
+
+        if state.world is None:
+            return {}
+        actual = resolve(
+            state, actor, profiles(c, self.store.campaign_id), require_current_profile=False
+        )
+        if (
+            not actual.alive
+            or actual.rules != "girl_frame"
+            or actual.inside_frame is not False
+            or actual.offstage_source
+            or actual.custody not in (None, "free")
+            or holds(state, actor, "trapped")
+        ):
+            return {}
+        gm, appointment = MedicalService(self.store)._handler(c)
+        sites = {}
+        for cast in state.scene_casts:
+            if (
+                not cast.open
+                or cast.facilitator != gm
+                or not any(
+                    x.actor == actor and x.controller == actual.controller for x in cast.roles
+                )
+            ):
+                continue
+            try:
+                if _cast(self.game, c, state, cast.channel) != cast:
+                    continue
+            except WorkflowError:
+                continue
+            for base in state.world.locations:
+                if base.kind == "base" and base.cell == actual.cell and base.foundation_operational:
+                    sites[f"{cast.id}:{base.id}"] = cast, base.id, base.name, appointment
+        return sites
+
+    def recovery(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
+        with self.store.engine.connect() as c:
+            self._gate(c, viewer)
+            state = load_state(c, self.store.campaign_id)
+            value, step = self._recovery_read(c, state, viewer, identity)
+            sites = self._sites(c, state, value.actor)
+            return dict(
+                revision=state.revision,
+                step=step,
+                play=rules.REMOVABLE_PLAYS[value.play],
+                sites=(
+                    {key: name for key, (_, _, name, _) in sites.items()}
+                    if step == "request"
+                    else {}
+                ),
+                account=value.recovery.account if step == "verify" and value.recovery else None,
+            )
+
+    def recondition(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        identity: str,
+        revision: int,
+        step: str,
+        *,
+        site: str | None = None,
+        account: str = "",
+        verified: bool | None = None,
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            MedicalService(self.store)._idle(c)
+            state = load_state(c, self.store.campaign_id)
+            value, expected = self._recovery_read(c, state, viewer, identity)
+            if state.revision != revision or step != expected:
+                raise WorkflowError("Refresh the original reconditioning decision")
+            event = str(uuid4())
+            original = value.recovery
+            if step == "request" and site is not None and verified is None:
+                location = self._sites(c, state, value.actor).get(site)
+                if location is None or not 0 < len(account.strip()) <= 1200:
+                    raise WorkflowError("Describe the original Girl’s performed care at her base")
+                cast, base, _, appointment = location
+                if cast.facilitator is None:
+                    raise WorkflowError("Recover the original Foundation scene facilitator")
+                require_scene_clear(self.game, c, cast.channel)
+                value = value.model_copy(
+                    update=dict(
+                        recovery=rules.Recovery(
+                            event=event,
+                            scene=cast.id,
+                            channel=cast.channel,
+                            base=base,
+                            facilitator=cast.facilitator,
+                            appointment=appointment,
+                            account=account.strip(),
+                        ),
+                    )
+                )
+            elif (
+                step == "verify"
+                and original is not None
+                and type(verified) is bool
+                and site is None
+                and 0 < len(account.strip()) <= 1200
+            ):
+                if verified:
+                    location = self._sites(c, state, value.actor).get(
+                        f"{original.scene}:{original.base}"
+                    )
+                    if location is None or (
+                        location[0].channel,
+                        location[0].facilitator,
+                        location[3],
+                    ) != (original.channel, viewer.user_id, original.appointment):
+                        raise WorkflowError("Recover the actual original Foundation care scene")
+                    require_scene_clear(self.game, c, original.channel)
+                value = value.model_copy(
+                    update=dict(
+                        recovery=original if verified else None,
+                        processed=event,
+                        restored=event if verified else None,
+                        verification=account.strip(),
+                    )
+                )
+            else:
+                raise WorkflowError("Record the original reconditioning and actual result")
+            rules.save_restriction(state, value)
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.harpy_visions_recondition_" + step,
+                state,
+                event_id=event,
+                restriction=identity,
+            )
+            return dict(event=event, id=identity)
+
+        return self._write(
+            viewer,
+            key,
+            dict(
+                id=identity,
+                revision=revision,
+                site=site,
+                step=step,
+                account=account,
+                verified=verified,
+            ),
+            operation,
+        )

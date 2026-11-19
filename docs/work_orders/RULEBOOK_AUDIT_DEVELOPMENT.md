@@ -2888,3 +2888,22 @@ view, actual Tags and Bond removal. Memory removal, Play
 restriction and Foundation reconditioning, and Bond changes
 with other people remain open.
 [Harpy p. 182](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=184) · [Native cases](../../tests/rules/test_harpy_advancements.py)
+
+### Visions of Infinity’s actual suspended Play and Foundation care
+
+Base `8d11da2`. The Harpy can select Keep Your Head or
+Flirt as a Visions effect. After the original Girl approves,
+that same incarnation cannot start the affected native Play.
+Only the original Girl can record her reconditioning at an
+actual operational Foundation Base. Her original scene’s
+human facilitator verifies the performed care from the
+private Inbox. A request alone leaves the Play unavailable.
+
+**One focused native case passed in 5.57 seconds**. It exercised
+a mid roll, ordinary Keep Your Head denial, restart before
+care verification, wrong-role read denial, and the ordinary
+Play entry after verified restoration. Flirt shares the gate
+and has no separate direct result here. Other actor types,
+more Plays, and care outside the demonstrated Base case
+remain open.
+[Harpy p. 182](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=184) · [Native case](../../tests/rules/test_harpy_advancements.py)

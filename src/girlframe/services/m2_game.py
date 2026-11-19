@@ -1419,10 +1419,13 @@ class GameService:
             mechanical_owner = (
                 int(princess_child["actor_controller"]) if princess_child else viewer.user_id
             )
+            from girlframe.engine.m3_harpy_visions import blocked as visions_blocked
             from girlframe.engine.m3_lobotomy import blocked_play
             from girlframe.engine.m3_plays import GIRL_ROLL_RULES
 
             original_sheet = state.sheets.get(str(mechanical_owner))
+            if visions_blocked(state, original_sheet, prepared.play):
+                raise WorkflowError("This Girl’s Play requires Foundation reconditioning.")
             if (
                 original_sheet is not None
                 and prepared.play in GIRL_ROLL_RULES

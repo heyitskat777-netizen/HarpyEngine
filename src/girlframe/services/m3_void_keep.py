@@ -116,6 +116,10 @@ def prepare_keep(
         raise WorkflowError(
             "Surgery removed this optional Keep Your Head roll; no ability is restored."
         )
+    from girlframe.engine.m3_harpy_visions import blocked as visions_blocked
+
+    if visions_blocked(state, state.sheets[actor.entity], "keep_your_head"):
+        raise WorkflowError("This Girl’s Play requires Foundation reconditioning.")
     updated, value = prepare_threshold(c, game, prepared.source_work, state)
     if _child(c, game, value.id) is not None:
         raise WorkflowError("Resume the actual saved resistance Play; do not roll a second one.")
@@ -241,6 +245,10 @@ def authorize_keep(
             raise WorkflowError("Recover the original gaze’s private Void resistance audience")
     if blocked_play(state.sheets[action["actor_id"]], "keep_your_head") is not None:
         raise WorkflowError("The actual original Girl no longer has this optional rolled ability.")
+    from girlframe.engine.m3_harpy_visions import blocked as visions_blocked
+
+    if visions_blocked(state, state.sheets[action["actor_id"]], "keep_your_head"):
+        raise WorkflowError("This Girl’s Play requires Foundation reconditioning.")
 
 
 def _ended_handler_cast(

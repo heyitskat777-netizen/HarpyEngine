@@ -4119,9 +4119,8 @@ class InboxService:
             from girlframe.services.m3_harpy_song import HarpySongService
             from girlframe.services.m3_harpy_visions import VisionsService
 
-            for vision, step in VisionsService(GameService(self.store)).tasks(
-                connection, canon, viewer
-            ):
+            visions = VisionsService(GameService(self.store))
+            for vision, step in visions.tasks(connection, canon, viewer):
                 items.append(
                     InboxItem(
                         "harpy-visions:" + vision.id,
@@ -4144,6 +4143,28 @@ class InboxService:
                         "This decision is private to its original role.",
                         "Open your choice",
                         task="m3_harpy_visions",
+                    )
+                )
+
+            for restriction, step in visions.recovery_tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "harpy-visions-reconditioning:" + restriction.id,
+                        "harpy_visions_reconditioning",
+                        restriction.id,
+                        canon.revision,
+                        "plays",
+                        "Foundation reconditioning",
+                        "Original Visions of Infinity consequence",
+                        "pending",
+                        True,
+                        False,
+                        "Record your Girl’s Foundation care."
+                        if step == "request"
+                        else "Verify the original Girl’s actual Foundation care.",
+                        "This decision is private to its original role.",
+                        "Open your choice",
+                        task="m3_harpy_visions_recovery",
                     )
                 )
 

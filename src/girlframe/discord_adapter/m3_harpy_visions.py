@@ -10,7 +10,7 @@ from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_actor_state import ActorRef
-from girlframe.engine.m3_harpy_visions import Adjustment
+from girlframe.engine.m3_harpy_visions import REMOVABLE_PLAYS, Adjustment
 from girlframe.services.m3_harpy_visions import VisionsService
 
 TITLE = "Visions of Infinity"
@@ -20,6 +20,7 @@ ADJUSTMENTS = (
     ("deepen", "Deepen the Bond with your Harpy"),
     ("weaken", "Weaken the Bond with your Harpy"),
     ("remove", "Remove the Bond with your Harpy"),
+    *((f"play:{key}", f"Suspend {label}") for key, label in REMOVABLE_PLAYS.items()),
 )
 
 
@@ -94,7 +95,7 @@ async def open_visions_response(
         )
     elif step == "confirm":
         descriptions = data["descriptions"]
-        options = (("no", "Return the selection"),)
+        options: tuple[tuple[str, str], ...] = (("no", "Return the selection"),)
         if descriptions is None:
             text = "The original choices cannot be applied to your current sheet."
         else:
@@ -122,13 +123,17 @@ async def open_visions_response(
             new_names = iter(names)
             selected_choices = []
             for selection in selections:
-                effect, _, slot = selection.partition(":")
+                effect, _, argument = selection.partition(":")
                 selected_choices.append(
                     Adjustment.model_validate(
                         dict(
                             effect=effect,
-                            slot=int(slot) if slot else None,
-                            name=next(new_names) if effect == "identity" else "",
+                            slot=int(argument) if effect == "tag" else None,
+                            name=next(new_names)
+                            if effect == "identity"
+                            else argument
+                            if effect == "play"
+                            else "",
                         )
                     )
                 )
@@ -147,4 +152,50 @@ async def open_visions_response(
         return "The original private decision is saved."
 
     form = NativeForm(interaction.user.id, TITLE, text, fields, submit)
+    await reply(interaction, form.text(), form)
+
+
+async def open_visions_recovery(
+    interaction: discord.Interaction, service: VisionsService, identity: str
+) -> None:
+    data = await asyncio.to_thread(service.recovery, viewer_from_interaction(interaction), identity)
+    step = data["step"]
+    if step == "request":
+        if not data["sites"]:
+            await reply(
+                interaction,
+                "Open a Foundation care scene at your Girl’s current operational base to continue.",
+            )
+            return
+        fields = [
+            Field("site", "Foundation care site", tuple(data["sites"].items())),
+            Field("account", "Describe the performed care", paragraph=True),
+        ]
+        text = f"Request Foundation reconditioning for {data['play']}."
+    else:
+        fields = [
+            Field(
+                "verified",
+                "Original care outcome",
+                (("yes", "The care restored the Play"), ("no", "Return the care request")),
+            ),
+            Field("account", "Record the actual result", paragraph=True),
+        ]
+        text = f"Review this Girl’s care for {data['play']}.\n{clean(data['account'])}"
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        await asyncio.to_thread(
+            service.recondition,
+            viewer_from_interaction(current),
+            str(current.id),
+            identity,
+            data["revision"],
+            step,
+            site=values["site"][0] if "site" in values else None,
+            verified=values["verified"][0] == "yes" if "verified" in values else None,
+            account=values["account"],
+        )
+        return "The original Foundation care decision is saved."
+
+    form = NativeForm(interaction.user.id, "Foundation reconditioning", text, fields, submit)
     await reply(interaction, form.text(), form)

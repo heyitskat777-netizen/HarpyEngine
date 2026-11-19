@@ -23426,20 +23426,21 @@
         "allowed_modifiers": ["Owned Heat"],
         "tier_options": {
           "low": ["Replace the original Girl’s ordinary Identities with the actual Harpy’s Identities, and expose the actual Harpy Core."],
-          "mid": ["Up to four ordered choices with repetition. Supported choices give an ordinary Identity, convert an ordinary Identity to a Tag, or adjust or remove the original Harpy Bond."],
+          "mid": ["Up to four ordered choices with repetition. Supported choices give an ordinary Identity, convert an ordinary Identity to a Tag, adjust or remove the original Harpy Bond, or suspend Keep Your Head or Flirt."],
           "high": ["Exactly eight ordered choices with repetition, using the same supported choices."]
         },
         "choice_ownership": "The Harpy spends its own Heat and selects the effects. The original Girl consents to the contact and approves the exact consequences.",
         "target_policy": "Actual same-square original off-Frame Girl without protected or otherwise held Identity or lifecycle sources for the verified low case.",
         "post_roll_effects": ["Save the original roll and apply only the actual accepted effects. Ordinary Bond changes use the canonical consequence path."],
-        "mandatory_followups": ["Memory removal, lost Plays, and third-party Bond choices still need actual effects before completion."],
+        "mandatory_followups": ["A suspended Play requires verified Foundation reconditioning. Memory removal, additional Play restrictions and third-party Bond choices still need actual effects before completion."],
         "handler_or_gm_intervention": "Protected Identities, special actor classes and unsupported choices need human review.",
         "test_fixture_ids": ["tests/rules/test_harpy_advancements.py"]
       },
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_harpy_advancements.py::test_visions_of_infinity_low_copies_actual_identities_and_exposes_original_core",
-        "tests/rules/test_harpy_advancements.py::test_visions_high_requires_eight_ordered_private_effects"
+        "tests/rules/test_harpy_advancements.py::test_visions_high_requires_eight_ordered_private_effects",
+        "tests/rules/test_harpy_advancements.py::test_visions_mid_suspends_actual_play_until_verified_foundation_care"
       ],
       "m2_play_id": null,
       "module": "core"

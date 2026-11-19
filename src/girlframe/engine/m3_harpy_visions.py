@@ -5,17 +5,22 @@ from typing import Literal
 
 from pydantic import Field
 
-from girlframe.engine.m2 import GameState, IdentityState
+from girlframe.engine.m2 import GameState, IdentityState, PilotSheet
 from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_hallucinations import Roll
 from girlframe.engine.m3_harpy_defeat import harpy, update
 from girlframe.engine.m3_void_state import HarpyIdentity, HarpyState
 
 KIND = "harpy_visions"
+RESTRICTION = "harpy_visions_restriction"
+REMOVABLE_PLAYS = {
+    "keep_your_head": "Keep Your Head",
+    "flirt": "Flirt",
+}
 
 
 class Adjustment(Model):
-    effect: Literal["identity", "tag", "deepen", "weaken", "remove"]
+    effect: Literal["identity", "tag", "deepen", "weaken", "remove", "play"]
     name: str = Field(default="", max_length=120)
     slot: int | None = Field(default=None, ge=0, le=3)
 
@@ -24,6 +29,28 @@ class Plan(Model):
     event: str
     baseline: str
     choices: tuple[Adjustment, ...]
+
+
+class Recovery(Model):
+    event: str
+    scene: str
+    channel: int
+    base: str
+    facilitator: int
+    appointment: str
+    account: str
+
+
+class Restriction(Model):
+    id: str
+    case: str
+    actor: ActorRef
+    play: str
+    imposed: str
+    recovery: Recovery | None = None
+    processed: str | None = None
+    restored: str | None = None
+    verification: str | None = None
 
 
 class Vision(Model):
@@ -57,6 +84,35 @@ def records(state: GameState) -> tuple[Vision, ...]:
 def put(state: GameState, value: Vision) -> None:
     state.facts = [x for x in state.facts if (x.get("kind"), x.get("id")) != (KIND, value.id)]
     state.facts.append(dict(kind=KIND, id=value.id, body=value.model_dump_json()))
+
+
+def restrictions(state: GameState) -> tuple[Restriction, ...]:
+    return tuple(
+        Restriction.model_validate_json(x["body"])
+        for x in state.facts
+        if x.get("kind") == RESTRICTION
+    )
+
+
+def save_restriction(state: GameState, value: Restriction) -> None:
+    state.facts = [
+        x for x in state.facts if (x.get("kind"), x.get("id")) != (RESTRICTION, value.id)
+    ]
+    state.facts.append(dict(kind=RESTRICTION, id=value.id, body=value.model_dump_json()))
+
+
+def blocked(state: GameState, sheet: PilotSheet | None, play: str) -> bool:
+    return (
+        sheet is not None
+        and play in REMOVABLE_PLAYS
+        and any(
+            x.actor.entity == str(sheet.owner)
+            and x.actor.incarnation == sheet.character_id
+            and x.play == play
+            and x.restored is None
+            for x in restrictions(state)
+        )
+    )
 
 
 def can_replace(state: GameState, case: Vision) -> bool:
@@ -122,6 +178,14 @@ def baseline(state: GameState, case: Vision, choices: tuple[Adjustment, ...]) ->
         material.append(sheet.model_dump_json(include={"identities", "sedation_locked", "frame"}))
     if any(x.effect in {"deepen", "weaken", "remove"} for x in choices):
         material.append(str(depth(state, case.subject, case.harpy)))
+    if any(x.effect == "play" for x in choices):
+        material.append(
+            ",".join(
+                sorted(
+                    x.id for x in restrictions(state) if x.actor == case.subject and not x.restored
+                )
+            )
+        )
     return hashlib.sha256("\0".join(material).encode()).hexdigest()
 
 
@@ -152,9 +216,29 @@ def _apply_adjustment(
     from girlframe.engine.m3_clone_am import additional_identities
     from girlframe.engine.m3_harpy_defeat import give_tag
     from girlframe.engine.m3_identity_slots import bind, replacement_slot
+    from girlframe.engine.m3_lobotomy import blocked_play
     from girlframe.engine.m3_parasite_infection import controls_identity
 
     sheet = state.sheets[case.subject.entity]
+    if item.effect == "play":
+        if (
+            item.name not in REMOVABLE_PLAYS
+            or item.slot is not None
+            or blocked(state, sheet, item.name)
+            or blocked_play(sheet, item.name) is not None
+        ):
+            raise ValueError("Choose an available supported Play")
+        save_restriction(
+            state,
+            Restriction(
+                id=f"{event}:{offset}",
+                case=case.id,
+                actor=case.subject,
+                play=item.name,
+                imposed=event,
+            ),
+        )
+        return state, "Suspend " + REMOVABLE_PLAYS[item.name] + " until Foundation reconditioning"
     if item.effect in {"identity", "tag"}:
         if sheet.frame == "PROJECT ANKOU" or additional_identities(state, sheet.owner):
             raise ValueError("This original Identity adjustment needs lifecycle review")

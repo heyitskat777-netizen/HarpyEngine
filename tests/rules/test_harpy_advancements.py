@@ -1227,3 +1227,88 @@ def test_visions_high_requires_eight_ordered_private_effects(ledger):
         ("Two", harpy),
     ]
     assert depth(final, girl, harpy) == 0
+
+
+def test_visions_mid_suspends_actual_play_until_verified_foundation_care(ledger):
+    from test_cast_service import change
+    from test_harpy_flirt import submit_form
+    from test_physical_operations import place
+
+    from girlframe.discord_adapter.m3_harpy_visions import (
+        open_visions_recovery,
+        open_visions_response,
+    )
+    from girlframe.engine.m3_harpy_advancements import VISIONS
+    from girlframe.engine.m3_harpy_visions import restrictions
+    from girlframe.services.m3_harpy_visions import VisionsService
+
+    _, game, cast, harpy = ready(ledger, faces=(4, 5), heat=0)
+    policy = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update=dict(
+            m3_approval=policy.model_copy(
+                update=dict(activity_specialist_rules=policy.activity_specialist_rules | {VISIONS})
+            )
+        )
+    )
+    HarpyAdvancementService(ledger).select(
+        PLAYER, "learn-mid-visions", harpy.entity, state(game).revision, VISIONS
+    )
+    with ledger.transaction() as c:
+        canon = place(state(game), OTHER.user_id, mode="outside_frame")
+        game.event(c, ADMIN.user_id, "reconditioning-site", "synthetic.position", canon)
+    original = state(game)
+    girl = current_ref(original, OTHER.user_id)
+    service = VisionsService(game)
+    encounter = service.start(
+        PLAYER, "mid-visions", 900, harpy, original.revision, girl.token, "Share a vision."
+    )["id"]
+    service.respond(OTHER, "consent-mid", encounter, state(game).revision, "consent", choice=True)
+    service.respond(PLAYER, "roll-mid", encounter, state(game).revision, "roll", heat=0)
+    assert service.get(PLAYER, encounter)["tier"] == "mid"
+
+    def encounter_view(interaction):
+        return open_visions_response(interaction, service, encounter)
+
+    asyncio.run(submit_form(PLAYER, encounter_view, {"effect_0": ("play:keep_your_head",)}, 90030))
+    asyncio.run(submit_form(OTHER, encounter_view, {"choice": ("yes",)}, 90034))
+    restriction = restrictions(state(game))[0]
+    change(cast, PLAYER, "withdraw", harpy)
+    play = PlayInput(play="keep_your_head", context="A danger", trigger_confirmed=True, heat=0)
+    with pytest.raises(WorkflowError, match="requires Foundation reconditioning"):
+        game.begin(OTHER, "blocked-before-care", 900, state(game).sheets["3"].revision, play)
+
+    notice = next(
+        x for x in InboxService(ledger).items(OTHER) if x.task == "m3_harpy_visions_recovery"
+    )
+    with pytest.raises(WorkflowError, match="unavailable"):
+        service.recovery(PLAYER, notice.identity)
+    view = service.recovery(OTHER, notice.identity)
+    site = next(key for key in view["sites"] if key.endswith(":base0"))
+
+    def recovery_view(interaction):
+        return open_visions_recovery(interaction, service, notice.identity)
+
+    asyncio.run(
+        submit_form(
+            OTHER,
+            recovery_view,
+            {"site": (site,), "account": "I completed a retraining session at the base."},
+            90038,
+        )
+    )
+    assert notice.identity == restriction.id
+    assert restrictions(state(game))[0].restored is None
+    ledger.engine.dispose()
+    assert service.recovery(ADMIN, notice.identity)["step"] == "verify"
+    asyncio.run(
+        submit_form(
+            ADMIN,
+            recovery_view,
+            {"verified": ("yes",), "account": "Confirmed the original session restored the Play."},
+            90042,
+        )
+    )
+    assert restrictions(state(game))[0].restored is not None
+    action = game.begin(OTHER, "keep-after-care", 900, state(game).sheets["3"].revision, play)
+    assert action["action_id"]
