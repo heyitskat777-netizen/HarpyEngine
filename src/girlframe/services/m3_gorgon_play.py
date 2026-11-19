@@ -39,6 +39,7 @@ RULES: dict[str, str] = {
     "growth_regrow": growth.RULE,
     "mother_sprite": mother_sprite.RULE,
     "jackdaw_jam": jackdaw.RULE,
+    "jackdaw_catatonia": jackdaw.RULE,
     **{str(kind): rule for kind, rule in TYPE_TAG_RULES.items()},
 }
 
@@ -166,7 +167,7 @@ class GorgonPlayService:
                     continue
                 if kind == "mother_sprite" and not can_birth:
                     continue
-                if kind == "jackdaw_jam" and not can_jam:
+                if kind in jackdaw.EFFECTS and not can_jam:
                     continue
                 try:
                     access.registry.require_available(identity)
@@ -240,6 +241,11 @@ class GorgonPlayService:
                 mother_sprite.check(gorgon, declaration.birth)
             if declaration.interference is not None:
                 jackdaw.check(state, declaration.actor, actual.cell, declaration.interference)
+                if declaration.kind == "jackdaw_catatonia":
+                    from girlframe.services.m3_jackdaw import targets
+
+                    if not targets(state, cast, bound, declaration.interference):
+                        raise WorkflowError("An actual non-Pilot must be present within this range")
 
             if (
                 gorgon.gorgon_class == "benevolent"

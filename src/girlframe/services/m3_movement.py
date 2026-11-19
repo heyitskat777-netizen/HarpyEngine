@@ -80,6 +80,9 @@ def _physical_context(
         raise WorkflowError("Choose actual current physical movement within the mapped scene")
     bound = profiles(c, game.store.campaign_id)
     actual = resolve(state, actor, bound, require_current_profile=False)
+    from girlframe.services.m3_jackdaw import require_action
+
+    require_action(c, game.store.campaign_id, state, actual)
     if (
         actual.controller != controller
         or actual.cell is None

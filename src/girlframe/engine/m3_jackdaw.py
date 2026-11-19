@@ -1,4 +1,6 @@
-"""A Jackdaw drowns out audible communication in its actual current range."""
+"""A Jackdaw's audible range and effects on actual original bodies."""
+
+from typing import Literal
 
 from pydantic import Field
 
@@ -8,6 +10,7 @@ from girlframe.engine.m3_world_state import Cell
 
 RULE = "gorgon-type.jackdaw.jackdaw-type"
 KIND = "jackdaw_jam"
+EFFECTS = ("jackdaw_jam", "jackdaw_catatonia")
 
 
 class Range(Model):
@@ -21,6 +24,10 @@ class Interference(Model):
     action: str
     scene: str
     event: str
+    effect: Literal["audible", "catatonia"] = Field(
+        default="audible", exclude_if=lambda value: value == "audible"
+    )
+    victims: tuple[ActorRef, ...] = Field(default=(), exclude_if=lambda value: not value)
 
 
 def check(state: GameState, actor: ActorRef, origin: Cell | None, extent: Range) -> Cell:
@@ -49,10 +56,18 @@ def apply(
     action: str,
     scene: str,
     event: str,
+    victims: tuple[ActorRef, ...] = (),
 ) -> Interference:
     original = check(state, actor, origin, extent)
     entry = Interference(
-        actor=actor, origin=original, range=extent, action=action, scene=scene, event=event
+        actor=actor,
+        origin=original,
+        range=extent,
+        action=action,
+        scene=scene,
+        event=event,
+        effect="catatonia" if victims else "audible",
+        victims=victims,
     )
     state.facts.append(dict(kind=KIND, id=entry.event, body=entry.model_dump_json()))
     return entry
@@ -60,8 +75,12 @@ def apply(
 
 def ranges(state: GameState) -> tuple[Interference, ...]:
     latest: dict[ActorRef, Interference] = {}
+    catatonia = []
     for fact in state.facts:
         if fact.get("kind") == KIND:
             entry = Interference.model_validate_json(fact["body"])
-            latest[entry.actor] = entry
-    return tuple(latest.values())
+            if entry.effect == "catatonia":
+                catatonia.append(entry)
+            else:
+                latest[entry.actor] = entry
+    return (*latest.values(), *catatonia)

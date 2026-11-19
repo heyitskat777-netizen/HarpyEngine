@@ -596,6 +596,97 @@ def test_jackdaw_native_jamming_blocks_orders_until_original_girl_leaves_range(l
     assert not any(x["kind"] == "order_response" for x in restarted.choices(OTHER))
 
 
+def test_jackdaw_catatonia_holds_original_non_pilot_without_blocking_girls(ledger):
+    import asyncio
+
+    from test_ledger import OTHER
+    from test_mission_ui import current
+
+    from girlframe.discord_adapter.m3_gorgon_play import open_gorgon_play
+    from girlframe.engine.m3_actor_bonds import current_ref
+    from girlframe.engine.m3_jackdaw import Range, ranges
+    from girlframe.services.m3_movement import MovementService
+    from girlframe.services.m3_sentinel import require_communication
+    from girlframe.services.onboarding import WorkflowError
+
+    game, worker, gateway, _, declaration = gorgon_source(
+        ledger,
+        kind="jackdaw_catatonia",
+        types=("jackdaw",),
+        npc=True,
+        begin=False,
+        interference=Range(cells=((0, 0),)),
+    )
+    npc = ActorRef(kind="npc", entity="actual-guard")
+    original = state(game)
+    player = current_ref(original, PLAYER.user_id)
+    other = current_ref(original, OTHER.user_id)
+
+    async def native():
+        owner = current(ADMIN.user_id, 79900)
+        owner.channel_id = 900
+        await owner.response.defer(ephemeral=True)
+        await open_gorgon_play(owner, game)
+        form = owner.edit_original_response.call_args.kwargs["view"]
+        form.values.update(actor=(declaration.actor.token,), play=("jackdaw_catatonia",))
+        chosen = current(ADMIN.user_id, 79901)
+        await chosen.response.defer(ephemeral=True)
+        await form.confirm.callback(chosen)
+        details = chosen.edit_original_response.call_args.kwargs["view"]
+        details.values.update(
+            account=declaration.account, reach=("confirmed",), audible_range="0,0"
+        )
+        sent = current(ADMIN.user_id, 79902)
+        await details.confirm.callback(sent)
+        assert details.completed, sent.followup.send.call_args
+
+    asyncio.run(native())
+    action = GorgonPlayService(game).begin(ADMIN, "79902", 900, original.revision, declaration)
+    tick(worker, gateway, 5)
+    if not ranges(state(game)):
+        game.roll(ADMIN, "advance-catatonia", action["action_id"])
+        tick(worker, gateway, 5)
+    (effect,) = ranges(state(game))
+    assert effect.victims == (npc,) and effect.effect == "catatonia"
+    assert game.inspect(ADMIN, action["action_id"])["state"] == "complete"
+    assert original.sheets == state(game).sheets and game.dice.calls == 0
+    ledger.engine.dispose()
+    with ledger.engine.connect() as c:
+        with pytest.raises(WorkflowError, match="No verified communication route"):
+            require_communication(c, ledger.campaign_id, state(game), npc, (player,))
+        require_communication(c, ledger.campaign_id, state(game), other, (player,))
+    movement = MovementService(game)
+    with pytest.raises(WorkflowError, match="actual catatonia"):
+        movement.move(
+            OTHER,
+            "blocked-guard",
+            state(game).revision,
+            900,
+            npc,
+            (1, 0),
+            account="The actual guard tries to move.",
+        )
+    movement.move(
+        ADMIN,
+        "source-moves-out",
+        state(game).revision,
+        900,
+        declaration.actor,
+        (1, 0),
+        account="The actual Jackdaw leaves its declared source square.",
+    )
+    promoted = movement.move(
+        OTHER,
+        "released-guard",
+        state(game).revision,
+        900,
+        npc,
+        (1, 0),
+        account="The actual guard regains awareness and moves.",
+    )
+    assert promoted["destination"] == [1, 0] and ranges(state(game)) == (effect,)
+
+
 def test_sentinel_prevents_orders_across_corrupted_square_boundary(ledger):
     import json
 

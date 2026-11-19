@@ -108,12 +108,23 @@ def start(game: Any, c: Connection, state: GameState, action: dict[str, Any]) ->
         )
         action["data"]["result"]["corrupted"] = cell
         return
-    if meta["kind"] == "jackdaw_jam":
+    from girlframe.engine.m3_jackdaw import EFFECTS as JACKDAW_EFFECTS
+
+    if meta["kind"] in JACKDAW_EFFECTS:
         from girlframe.engine.m3_jackdaw import apply as jam
+        from girlframe.services.m3_jackdaw import targets
 
         declaration = Declaration.model_validate_json(json.dumps(meta["declaration"]))
         assert declaration.interference is not None
         cell = resolve(state, declaration.actor, (), require_current_profile=False).cell
+        people: tuple[ActorRef, ...] = ()
+        if meta["kind"] == "jackdaw_catatonia":
+            cast = SceneCast.model_validate_json(json.dumps(meta["cast"]))
+            people = targets(
+                state, cast, profiles(c, game.store.campaign_id), declaration.interference
+            )
+            if not people:
+                raise WorkflowError("Recover the actual non-Pilots present within this range")
         jam(
             state,
             declaration.actor,
@@ -122,8 +133,9 @@ def start(game: Any, c: Connection, state: GameState, action: dict[str, Any]) ->
             action=action["id"],
             scene=action["scene_id"],
             event=_event(action),
+            victims=people,
         )
-        action["data"]["result"]["audible_communication_blocked"] = True
+        action["data"]["result"]["catatonia" if people else "audible_communication_blocked"] = True
         return
     if meta["kind"] in growth.KINDS:
         declaration = Declaration.model_validate_json(json.dumps(meta["declaration"]))

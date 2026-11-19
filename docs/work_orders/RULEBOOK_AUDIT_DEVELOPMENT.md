@@ -1906,6 +1906,27 @@ after the runtime review, with the other's existing Girl sheets
 preserved. Ruff and scoped mypy passed.
 [Harpy p. 176](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=178) · [Native cases](../../tests/rules/test_harpy_creation.py)
 
+The broader creation, Harpy, Cast, NPC role, Inbox and release
+recovery selection passed **110 tests in 165.73 seconds**.
+
+### Jackdaw catatonia
+
+Base `ca2a9009b54eeaf33c4b5f504a00471ef9c6f55f`. The original
+Jackdaw can hold actual ordinary non-Pilots who were present in
+the verified range. The native Play records the affected roles.
+Their ordinary movement and audible communication stay blocked
+while the original source remains in position and they are in
+range. An affected NPC controller's separate Girl retains her
+own ability to act. Supported direct NPC Orders now use the same
+communication check as ordinary Orders and reviewed dialogue.
+
+**Both focused Jackdaw cases passed in 7.00 seconds**. The new
+case verifies the original NPC, unchanged Girl sheets, no dice,
+recall after restart and real movement after the source leaves
+its square. Extra non-Pilot job paths, visual alternatives and
+the separate Hallucinations roll still need coverage.
+[Jackdaw p. 169](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=171) · [Native cases](../../tests/rules/test_gorgon_runtime.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

@@ -14,6 +14,7 @@ from girlframe.engine.m3_gorgon_type_tags import LABELS as TYPE_TAG_LABELS
 from girlframe.engine.m3_gorgon_type_tags import TYPES as TAG_TYPES
 from girlframe.engine.m3_growth import KINDS as GROWTH_KINDS
 from girlframe.engine.m3_growth import Adaptation, Regrowth
+from girlframe.engine.m3_jackdaw import EFFECTS as JACKDAW_EFFECTS
 from girlframe.engine.m3_jackdaw import Range as JackdawRange
 from girlframe.engine.m3_mother_sprite import BirthPlan
 from girlframe.engine.m3_world_state import Cell, CorePlan
@@ -45,7 +46,7 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
             return "Choose a Growth whose current Core or damaged Assets permit this Play."
         if kind == "mother_sprite" and actor["token"] not in data["sprite_birth"]:
             return "Choose the original Mother with an intact Asset."
-        if kind == "jackdaw_jam" and actor["token"] not in data["jam"]:
+        if kind in JACKDAW_EFFECTS and actor["token"] not in data["jam"]:
             return "Choose the actual Jackdaw with an established position."
         targets = [x for x in data["actors"] if x["ref"] != actor["ref"]]
         type_tag = kind in TAG_TYPES
@@ -110,7 +111,7 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
                     Field("sprite_weakness", "The Sprite's Core weakness", paragraph=True),
                 )
             )
-        if kind == "jackdaw_jam":
+        if kind in JACKDAW_EFFECTS:
             fields.append(
                 Field(
                     "audible_range",
@@ -173,7 +174,7 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
                     if kind == "mother_sprite"
                     else None,
                     interference=jackdaw_range(details["audible_range"])
-                    if kind == "jackdaw_jam"
+                    if kind in JACKDAW_EFFECTS
                     else None,
                 ),
             )

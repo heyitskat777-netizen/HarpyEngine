@@ -416,6 +416,8 @@ class NpcOrderService:
             raise WorkflowError("State the actual direct order in 1–1200 characters")
 
         def operation(c: Connection) -> dict[str, Any]:
+            from girlframe.services.m3_sentinel import require_communication
+
             self.game.unpaused(c)
             state = load_state(c, self.store.campaign_id)
             scene = self.game.scene(c, channel)
@@ -430,7 +432,6 @@ class NpcOrderService:
             if origin_kind == "harpy_echoes":
                 from girlframe.services.m3_harpy_echoes import authority as echoes_authority
                 from girlframe.services.m3_harpy_echoes import voices as known_voices
-                from girlframe.services.m3_sentinel import require_communication
 
                 condition_id = echoes_authority(
                     self.game,
@@ -440,7 +441,6 @@ class NpcOrderService:
                     recipient,
                     viewer.user_id,
                 )
-                require_communication(c, self.store.campaign_id, state, issuer, (recipient,))
                 if voice is not None:
                     voice_label = known_voices(self.game, c, state, cast, viewer.user_id).get(voice)
                     if voice_label is None:
@@ -494,6 +494,7 @@ class NpcOrderService:
                 or not any(x.actor == recipient and x.controller == target for x in cast.roles)
             ):
                 raise WorkflowError("STALE_NPC_ORDER: reopen the original NPC and Broken recipient")
+            require_communication(c, self.store.campaign_id, state, issuer, (recipient,))
             lock = self.game.lock(c, channel)
             if lock and lock["state"] != "released":
                 raise WorkflowError("SCENE_BUSY: finish the actual pending Play")
