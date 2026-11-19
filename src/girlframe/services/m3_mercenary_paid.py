@@ -1,5 +1,6 @@
 """The original Mercenary's pocket-money outcome changes actual custody and Status."""
 
+from typing import Literal
 from uuid import uuid4
 
 import sqlalchemy as sa
@@ -18,10 +19,13 @@ from girlframe.services.m3_items import prove_item
 from girlframe.services.onboarding import WorkflowError
 
 
-class Payment(Model):
+class Cash(Model):
     cash: str
     possession: str
     label: str
+
+
+class Payment(Cash):
     cadre: str
     instruction: str
     tag: str
@@ -48,6 +52,15 @@ def cash_options(
     return actual
 
 
+def bind_cash(
+    game: GameService, c: Connection, state: GameState, source: ActorRef, value: str
+) -> Cash:
+    owned = cash_options(game, c, state, source).get(value)
+    if owned is None or not owned.state_event:
+        raise WorkflowError("Choose actual carried and confirmed fictional cash.")
+    return Cash(cash=owned.id, possession=owned.state_event, label=owned.name)
+
+
 def terms(
     game: GameService,
     c: Connection,
@@ -58,24 +71,56 @@ def terms(
     instruction: str,
     tag: str,
 ) -> Payment:
-    item = cash_options(game, c, state, source).get(cash)
+    item = bind_cash(game, c, state, source, cash)
     cadre = rank.current(state, mercenary)
-    if (
-        item is None
-        or cadre is None
-        or not 0 < len(tag.strip()) <= 120
-        or not instruction.strip()
-        or not item.state_event
-    ):
+    if cadre is None or not 0 < len(tag.strip()) <= 120 or not instruction.strip():
         raise WorkflowError("Choose actual carried fictional cash, an instruction and a Tag.")
     return Payment(
-        cash=cash,
-        possession=item.state_event,
-        label=item.name,
+        **item.model_dump(),
         cadre=cadre.id,
         instruction=instruction.strip(),
         tag=tag.strip(),
     )
+
+
+def transfer_cash(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    *,
+    cash: Cash,
+    source: ActorRef,
+    recipient: ActorRef,
+    case: str,
+    event: str,
+    account: str,
+    kind: Literal["mercenary_pocket_money", "mercenary_recompense"],
+) -> GameState:
+    actual = bind_cash(game, c, state, source, cash.cash)
+    if (actual.possession, actual.label) != (cash.possession, cash.label):
+        raise WorkflowError("Recover the exact original reviewed fictional cash.")
+    history = t.m2["m2_state_history"]
+    original = c.scalar(
+        sa.select(history.c.event_id).where(
+            history.c.campaign_id == game.store.campaign_id,
+            history.c.revision == state.revision,
+        )
+    )
+    if original is None:
+        raise WorkflowError("Recover the original physical cash source before transferring it.")
+    state = take(
+        state,
+        source,
+        recipient,
+        profiles(c, game.store.campaign_id),
+        cash.cash,
+        case,
+        event,
+        account,
+        origin_event=original,
+    )
+    state.item_transfers[-1] = state.item_transfers[-1].model_copy(update=dict(source_kind=kind))
+    return state
 
 
 def apply(
@@ -96,28 +141,17 @@ def apply(
     )
     if payment != actual:
         raise WorkflowError("Recover the exact original paid instruction, cash and Cadre.")
-    history = t.m2["m2_state_history"]
-    original = c.scalar(
-        sa.select(history.c.event_id).where(
-            history.c.campaign_id == game.store.campaign_id,
-            history.c.revision == state.revision,
-        )
-    )
-    if original is None:
-        raise WorkflowError("Recover the original physical cash source before transferring it.")
-    state = take(
+    state = transfer_cash(
+        game,
+        c,
         state,
-        source,
-        mercenary,
-        profiles(c, game.store.campaign_id),
-        payment.cash,
-        case,
-        event,
-        account,
-        origin_event=original,
-    )
-    state.item_transfers[-1] = state.item_transfers[-1].model_copy(
-        update=dict(source_kind="mercenary_pocket_money")
+        cash=payment,
+        source=source,
+        recipient=mercenary,
+        case=case,
+        event=event,
+        account=account,
+        kind="mercenary_pocket_money",
     )
     rank.shift(state, mercenary, 1, event)
     tag = str(uuid4())

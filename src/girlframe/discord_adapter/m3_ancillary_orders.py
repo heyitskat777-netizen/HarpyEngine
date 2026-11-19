@@ -161,7 +161,16 @@ async def open_order_response(
         else:
             fields.append(Field("account", "Your immediate action", paragraph=True))
     else:
-        choices = (("unheard", "No authority noticed"), ("hold", "Keep consequences pending"))
+        if data["payment_pending"]:
+            instructions += "\nOriginal action — " + clean(data["actual_follow"])
+        choices = (
+            (
+                ("confirm_follow", "Confirm actual follow-through and transfer the fee"),
+                ("hold", "Leave the payment pending"),
+            )
+            if data["payment_pending"]
+            else (("unheard", "No authority noticed"), ("hold", "Keep consequences pending"))
+        )
         fields.append(Field("account", "Actual scene evidence", paragraph=True))
 
     async def submit(click: discord.Interaction, values: dict[str, Any]) -> str:

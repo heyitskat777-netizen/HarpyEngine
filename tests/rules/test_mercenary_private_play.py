@@ -27,7 +27,9 @@ from girlframe.services.onboarding import WorkflowError
 
 
 @pytest.mark.parametrize(
-    "tier", ("mid", "low", "high"), ids=("original-mid", "pocket-money", "high-refusal")
+    "tier",
+    ("mid", "low", "high", "fee"),
+    ids=("original-mid", "pocket-money", "high-refusal", "high-fee"),
 )
 def test_mercenary_original_private_outcome(ledger, tmp_path, monkeypatch, tier):
     game = scenario(ledger)
@@ -83,7 +85,7 @@ def test_mercenary_original_private_outcome(ledger, tmp_path, monkeypatch, tier)
         channel=900,
     )
     service = AncillaryIntimacyService(game)
-    if tier == "high":
+    if tier in ("high", "fee"):
         game.dice = Dice((6, 6))
         source = service.offer(
             PLAYER, "actual-high", 900, actor, state(game).revision, partner.token
@@ -92,12 +94,68 @@ def test_mercenary_original_private_outcome(ledger, tmp_path, monkeypatch, tier)
             service.act(viewer, choice + str(viewer.user_id), source, state(game).revision, choice)
         request = "Give me that notebook."
         service.act(OTHER, "actual-request", source, state(game).revision, "ask", account=request)
+        if tier == "fee":
+            items = ItemService(game)
+            cash = items.propose(OTHER, "pledged-cash", partner, "My cash", "A folded note.")["id"]
+            items.confirm(
+                ADMIN,
+                "actual-note",
+                cash,
+                items.get(ADMIN, cash)["revision"],
+                exists=True,
+                account="This is actual fictional cash.",
+            )
+            service.act(
+                PLAYER,
+                "fee-demand",
+                source,
+                state(game).revision,
+                "recompense",
+                account="Pay me one note if I give it to you.",
+            )
+            service.act(OTHER, "pledge-note", source, state(game).revision, cash)
+            with pytest.raises(WorkflowError, match="unavailable"):
+                service.get(OTHER, source)
+            service.act(
+                ADMIN,
+                "approve-note",
+                source,
+                state(game).revision,
+                "confirm",
+                account="The note is genuine and meets the request.",
+            )
         service.act(PLAYER, "open-order", source, state(game).revision, "open_order")
         current = records(state(game))[0]
         orders = AncillaryOrderService(game)
         with pytest.raises(WorkflowError, match="unavailable"):
             orders.get(OTHER, current.high_order)
         assert orders.get(PLAYER, current.high_order)["instruction"] == request
+        if tier == "fee":
+            orders.act(
+                PLAYER,
+                "owned-completion",
+                current.high_order,
+                state(game).revision,
+                "follow",
+                account="I hand the original notebook over.",
+            )
+            mid = state(game)
+            assert mid.held_items[0].holder == partner and not mid.item_transfers
+            assert orders.get(ADMIN, current.high_order)["payment_pending"]
+            orders.act(
+                ADMIN,
+                "settle-fee",
+                current.high_order,
+                mid.revision,
+                "confirm_follow",
+                account="The original notebook and agreed cash have changed hands.",
+            )
+            final = state(game)
+            assert final.held_items[0].holder == actor
+            assert final.item_transfers[0].source_kind == "mercenary_recompense"
+            assert records(final)[0].disposition == "mercenary_order_followed"
+            assert game.dice.calls == 1
+            return
         game.dice = Dice((4, 5))
         orders.act(PLAYER, "refuse", current.high_order, state(game).revision, "disobey")
         orders.act(PLAYER, "pass-modifiers", current.high_order, state(game).revision, "pass")

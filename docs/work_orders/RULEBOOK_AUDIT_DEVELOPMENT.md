@@ -3730,7 +3730,22 @@ One focused case passed in 5.17 seconds. The requester could
 not act for the Mercenary. Her saved refusal rolled once,
 applied the middle result’s owned Tag and Heat, and closed the
 linked Play after the witness review. Two prior cases were
-deselected. Fair recompense remains pending for actual payment.
+deselected. Cash recompense landed in the next change.
+[Mercenary p. 97](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=99) · [Native case](../../tests/rules/test_mercenary_private_play.py)
+
+### Mercenary recompense
+
+Base `aa31f2b47eb63f41f26cd25e07496e9a3c18da2d`. The
+Mercenary can demand a fee. The original counterpart may
+pledge an actual carried cash object and the facilitator
+reviews fairness. The cash stays with the payer until the
+original Mercenary follows through and the facilitator verifies
+that action. Refusal leaves the pledged cash with the payer.
+
+Two focused cases passed in 10.01 seconds. They exercised the
+new conditional fee and the existing low payment through the
+shared custody operation. Two other cases were deselected.
+Noncash fees and stale pledges that need new terms remain open.
 [Mercenary p. 97](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=99) · [Native case](../../tests/rules/test_mercenary_private_play.py)
 
 ### Actor-level Ancillary Cadre Status and the Warboy Dog

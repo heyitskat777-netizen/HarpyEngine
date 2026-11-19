@@ -56,6 +56,7 @@ class Order(Model):
     instruction: str
     isolation: str | None = None
     mercenary: str | None = None
+    paid_fee: bool = False
     address: Address | None = None
     stage: Literal["respond", "tag", "outcome", "review", "held", "closed"] = "respond"
     faces: tuple[int, int] | None = None
@@ -366,7 +367,7 @@ class AncillaryOrderService:
             from girlframe.services.m3_ancillary_intimacy import prove_high_order, settle_high_order
 
             case = prove_high_order(self.game, c, state, order)
-            settle_high_order(state, case, order)
+            state = settle_high_order(self.game, c, state, case, order, event)
         self.game.event(
             c,
             viewer.user_id,
@@ -586,6 +587,9 @@ class AncillaryOrderService:
             state = load_state(c, self.store.campaign_id)
             value = self._order(state, identity)
             issuer, target, (forbidden, self_tag) = self._source(c, state, viewer, value)
+            payment_pending = (
+                value.stage == "review" and value.paid_fee and value.consequence == "chosen_follow"
+            )
             return dict(
                 revision=state.revision,
                 stage=value.stage,
@@ -593,6 +597,8 @@ class AncillaryOrderService:
                 instruction=value.instruction,
                 isolation=value.isolation is not None,
                 address=value.address is not None,
+                payment_pending=payment_pending,
+                actual_follow=value.account if payment_pending else None,
                 forbidden=forbidden,
                 heat=target.heat,
                 tags=self._tags(state, value) if self_tag and value.stage == "tag" else {},
@@ -735,7 +741,9 @@ class AncillaryOrderService:
                             )
                         )
                     update = dict(
-                        stage="closed", consequence="chosen_follow", account=account.strip()
+                        stage="review" if order.paid_fee else "closed",
+                        consequence="chosen_follow",
+                        account=account.strip(),
                     )
                 elif choice == "disobey" and not forbidden and not account and not order.faces:
                     from girlframe.services.m3_ancillary_intimacy import (
@@ -827,6 +835,25 @@ class AncillaryOrderService:
                 update = dict(stage="review", consequence="owned_refusal", account=account.strip())
             elif (
                 order.stage == "review"
+                and order.paid_fee
+                and order.consequence == "chosen_follow"
+                and choice in ("confirm_follow", "hold")
+                and not heat
+                and account.strip()
+            ):
+                state.facts.append(
+                    dict(
+                        kind="ancillary_order_followthrough",
+                        order=order.id,
+                        event=event,
+                        account=account.strip(),
+                        decision=choice,
+                    )
+                )
+                update = dict(stage="closed" if choice == "confirm_follow" else "held")
+            elif (
+                order.stage == "review"
+                and order.consequence != "chosen_follow"
                 and choice in ("unheard", "hold")
                 and not heat
                 and account.strip()

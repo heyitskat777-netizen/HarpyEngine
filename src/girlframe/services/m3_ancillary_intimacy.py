@@ -39,7 +39,13 @@ from girlframe.services.m3_ancillary import AncillaryService
 from girlframe.services.m3_battle import _cast
 from girlframe.services.m3_consume_support import knowledge_allowed
 from girlframe.services.m3_medical import MedicalService
-from girlframe.services.m3_mercenary_paid import Payment, cash_options
+from girlframe.services.m3_mercenary_paid import (
+    Cash,
+    Payment,
+    bind_cash,
+    cash_options,
+    transfer_cash,
+)
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.p1_facilitator import require_scene_clear
@@ -157,6 +163,8 @@ class Encounter(Model):
         "mercenary_high_hold",
         "mercenary_high_request",
         "mercenary_high_reply",
+        "mercenary_high_fee",
+        "mercenary_high_fee_review",
         "mercenary_high_order",
         "mercenary_request",
         "mercenary_reply",
@@ -193,6 +201,8 @@ class Encounter(Model):
     reaction_actor: ActorRef | None = None
     reaction_owner: int | None = None
     payment: Payment | None = None
+    fee: Cash | None = None
+    fee_approval: str | None = None
     high_order: str | None = None
     transfer_asset: str | None = None
     prodigy_cadre: str | None = None
@@ -228,6 +238,7 @@ def prove_high_order(
         or case.confirmed is None
         or case.actor != order.target
         or case.partner != order.owner
+        or order.paid_fee != (case.fee is not None and case.fee_approval is not None)
         or (case.scene, case.channel, case.gm, case.appointment)
         != (order.scene, order.channel, order.gm, order.appointment)
         or order.instruction != case.account
@@ -237,10 +248,36 @@ def prove_high_order(
     return case
 
 
-def settle_high_order(state: GameState, case: Encounter, order: "Order") -> None:
+def settle_high_order(
+    game: GameService, c: Connection, state: GameState, case: Encounter, order: "Order", event: str
+) -> GameState:
     if order.consequence not in ("chosen_follow", "owned_refusal"):
         raise WorkflowError(
             "The original requested action or actual refusal still needs resolution."
+        )
+    if order.consequence == "chosen_follow" and case.fee is not None:
+        if (
+            not case.fee_approval
+            or not order.account
+            or not any(
+                x.get("kind") == "mercenary_recompense_review"
+                and x.get("case") == case.id
+                and x.get("event") == case.fee_approval
+                for x in state.facts
+            )
+        ):
+            raise WorkflowError("Recover the original reviewed fee and actual follow-through.")
+        state = transfer_cash(
+            game,
+            c,
+            state,
+            cash=case.fee,
+            source=case.partner.actor,
+            recipient=case.actor.actor,
+            case=case.id,
+            event=event,
+            account=order.account,
+            kind="mercenary_recompense",
         )
     _put(
         state,
@@ -253,6 +290,7 @@ def settle_high_order(state: GameState, case: Encounter, order: "Order") -> None
             )
         ),
     )
+    return state
 
 
 def good_soldier_tag(state: GameState, actor: ActorRef) -> str | None:
@@ -560,6 +598,7 @@ class AncillaryIntimacyService:
             "mercenary_reply",
             "mercenary_low_terms",
             "mercenary_high_request",
+            "mercenary_high_fee",
             "abyssal_reply",
             "abyssal_void_choice",
             "abyssal_swap",
@@ -608,6 +647,7 @@ class AncillaryIntimacyService:
                 "mercenary_low_hold",
                 "mercenary_low_verify",
                 "mercenary_high_hold",
+                "mercenary_high_fee_review",
                 "abyssal_void_hold",
                 "abyssal_verify",
                 "soldier_rank_low",
@@ -754,12 +794,16 @@ class AncillaryIntimacyService:
                 )
                 if case.payment is not None
                 else None,
-                demand=case.answer if case.step == "mercenary_high_hold" else None,
+                demand=case.answer
+                if case.step
+                in ("mercenary_high_hold", "mercenary_high_fee", "mercenary_high_fee_review")
+                else None,
+                fee=case.fee.label if case.fee is not None else None,
                 cash={
                     key: value.name
                     for key, value in cash_options(self.game, c, state, counterpart.ref).items()
                 }
-                if case.step == "mercenary_low_terms"
+                if case.step in ("mercenary_low_terms", "mercenary_high_fee")
                 else {},
                 participants=(actual.label, counterpart.label),
                 tier=case.roll.result if case.roll else None,
@@ -1442,10 +1486,8 @@ def _mercenary(
         if choice == "ask" and account:
             return state, dict(step="mercenary_high_reply", account=account)
     if case.step == "mercenary_high_reply":
-        if choice == "recompense" and account:
-            return state, dict(
-                step="mercenary_high_hold", answer=account, disposition="recompense_pending"
-            )
+        if choice == "recompense" and account and case.fee is None:
+            return state, dict(step="mercenary_high_fee", answer=account)
         if choice == "open_order" and not account and case.account:
             from girlframe.services.m3_ancillary_orders import AncillaryOrderService, Order
 
@@ -1464,9 +1506,32 @@ def _mercenary(
                     source=event,
                     instruction=case.account,
                     mercenary=case.id,
+                    paid_fee=case.fee is not None and case.fee_approval is not None,
                 ),
             )
             return state, dict(step="mercenary_high_order", high_order=event)
+    if case.step == "mercenary_high_fee" and not account:
+        if choice == "decline":
+            return state, dict(step="mercenary_high_reply", disposition="recompense_declined")
+        fee = bind_cash(game, c, state, case.partner.actor, choice)
+        return state, dict(step="mercenary_high_fee_review", fee=fee)
+    if case.step == "mercenary_high_fee_review" and case.fee is not None and account:
+        if choice == "reject":
+            return state, dict(
+                step="mercenary_high_reply", fee=None, disposition="recompense_rejected"
+            )
+        if choice == "confirm" and case.fee == bind_cash(
+            game, c, state, case.partner.actor, case.fee.cash
+        ):
+            state.facts.append(
+                dict(
+                    kind="mercenary_recompense_review",
+                    case=case.id,
+                    event=event,
+                    account=account,
+                )
+            )
+            return state, dict(step="mercenary_high_reply", fee_approval=event)
     if case.step == "mercenary_low_terms":
         if choice == "hold" and not account and not picks:
             return state, dict(step="mercenary_low_hold", disposition="pocket_money_pending")

@@ -254,7 +254,17 @@ async def open_ancillary_intimacy_choice(
         ),
         "mercenary_high_reply": (
             "Open the original Order to follow or roll to refuse. You may also demand recompense.",
-            (("open_order", "Open the Order"), ("recompense", "Demand recompense")),
+            (("open_order", "Open the Order"),)
+            if data.get("fee")
+            else (("open_order", "Open the Order"), ("recompense", "Demand recompense")),
+        ),
+        "mercenary_high_fee": (
+            "Pledge fictional cash for actual follow-through, or decline the fee.",
+            (*tuple(data.get("cash", {}).items()), ("decline", "Decline the fee")),
+        ),
+        "mercenary_high_fee_review": (
+            "Review the exact fictional consideration and whether it meets the demand.",
+            (("confirm", "Approve actual recompense"), ("reject", "Decline the terms")),
         ),
         "mercenary_reply": (
             "Choose whether to decline or describe your own actual fulfilment.",
@@ -469,7 +479,15 @@ async def open_ancillary_intimacy_choice(
         fields.append(Field("account", "Your original request", paragraph=True, required=False))
     if step == "mercenary_high_reply":
         instructions += "\nOriginal request — " + clean(data["account"])
-        fields.append(Field("account", "Requested recompense", paragraph=True, required=False))
+        if data["fee"]:
+            instructions += "\nApproved payment on fulfilment — " + clean(data["fee"])
+        else:
+            fields.append(Field("account", "Requested recompense", paragraph=True, required=False))
+    if step in ("mercenary_high_fee", "mercenary_high_fee_review"):
+        instructions += "\nRequested recompense — " + clean(data["demand"])
+    if step == "mercenary_high_fee_review":
+        instructions += "\nActual offered cash — " + clean(data["fee"])
+        fields.append(Field("account", "Your verification", paragraph=True))
     if step == "abyssal_gain" and data["void_choices"]:
         fields.append(Field("account", "Rewrite the chosen Asset", paragraph=True, required=False))
     if step == "prodigy_low" and data["can_change_status"]:
