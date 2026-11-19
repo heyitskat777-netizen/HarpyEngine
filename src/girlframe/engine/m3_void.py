@@ -600,6 +600,24 @@ def prevent_entry(
     )
 
 
+def smother_apometanoia(
+    original: GameState, identity: str, diver: ActorRef, action: str, event: str
+) -> GameState:
+    state, value = _copy(original, identity, event)
+    if (
+        value.actor != diver
+        or value.source_action != action
+        or value.family != "girl"
+        or value.stage not in ("allured", "questions")
+        or value.free_identity is not None
+        or value.answers
+        or value.forced_by is not None
+        or value.enclosed
+    ):
+        raise ValueError("Interrupt only this Dive’s original Apometanoia before it begins.")
+    return _save(state, value.model_copy(update=dict(stage="prevented", response_event=event)))
+
+
 def overgrown_fate(
     original: GameState,
     identity: str,

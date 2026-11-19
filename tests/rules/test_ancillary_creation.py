@@ -31,8 +31,8 @@ PATRON = ActorRef(kind="npc", entity="foundation-patron")
 HARPY = ActorRef(kind="external_pilot", entity="captive-harpy")
 
 
-def scenario(ledger):
-    game, *_ = prepared(ledger)
+def scenario(ledger, *, girl=None):
+    game, *_ = prepared(ledger, girl=girl)
     approval = ledger.policy.m3_approval
     ledger.policy = ledger.policy.model_copy(
         update=dict(

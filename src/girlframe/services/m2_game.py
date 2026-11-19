@@ -6100,6 +6100,11 @@ class GameService:
                 )
 
                 sync_remote_source(self, c, self.action(c, action["id"]), event)
+            if action["data"].get("dive", {}).get("void_drunk"):
+                from girlframe.services.m3_void_drunk import intercept
+
+                if intercept(self, c, self.action(c, action["id"]), key):
+                    action = self.action(c, action["id"])
             return {"action_id": action["id"], "state": action["state"], "choice_id": choice_id}
 
         try:

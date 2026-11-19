@@ -40,6 +40,7 @@ async def open_dive(
         choices: tuple[tuple[str, str], ...] = (("pass", "Pass"),)
         if not detail["primary"] or detail["primary_assets"] or detail["primary_npcs"]:
             choices += (("latch", "Latch on"),)
+            choices += (("smother", "Latch on and interrupt Apometanoia if it begins"),)
             if detail.get("shadow"):
                 choices += (("shadow", "Latch on and emerge beside her from shadow"),)
         follower_fields = [Field("choice", "Your original decision", choices)]

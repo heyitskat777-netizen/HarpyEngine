@@ -2,9 +2,12 @@
 
 import json
 from typing import TYPE_CHECKING, Any
+from uuid import uuid4
 
+import sqlalchemy as sa
 from sqlalchemy import Connection
 
+from girlframe.database import tables as t
 from girlframe.engine import m3_ancillary as ancillary
 from girlframe.engine import m3_ancillary_void as ancillary_void
 from girlframe.engine import m3_dive as dive_rules
@@ -212,7 +215,7 @@ def select(
     answer: ChoiceAnswer,
 ) -> None:
     target, actor = _owned(game, c, state, action, request)
-    latching = answer.options in (("latch",), ("shadow",))
+    latching = answer.options in (("latch",), ("shadow",), ("smother",))
     primary = latching and action["data"]["result"]["tier"] != "low"
     asset = answer.fields.get("primary_asset")
     npc_primary = answer.fields == {"primary_kind": "npcs"}
@@ -229,7 +232,7 @@ def select(
     elif answer.fields or answer.text:
         raise WorkflowError("This actual choice takes no primary effect.")
     if (
-        answer.options not in (("pass",), ("latch",), ("shadow",))
+        answer.options not in (("pass",), ("latch",), ("shadow",), ("smother",))
         or answer.options == ("shadow",)
         and _shadow_pose(state, actor, target) is None
         or answer.number is not None
@@ -257,6 +260,7 @@ def select(
             latch=latching,
             tag=answer.denied[0] if answer.denied else None,
             shadow=answer.options == ("shadow",),
+            smother=answer.options == ("smother",),
             primary_asset=asset,
             primary_rewrite=answer.text.strip() if asset else None,
             primary_npcs=npc_primary,
@@ -356,6 +360,74 @@ def npc_response(
         for npc, value in answer.fields.items()
     ]
     selected["npc_event"] = response
+
+
+def intercept(
+    game: "GameService",
+    c: Connection,
+    action: dict[str, Any],
+    key: str,
+) -> bool:
+    from girlframe.engine import m3_void as void
+    from girlframe.services.m2_state import load_state
+    from girlframe.services.m3_void import complete, prepare_threshold
+
+    meta = action["data"]["dive"]
+    choices = tuple(x for x in meta.get("void_drunk", ()) if x.get("smother"))
+    if not choices or not meta.get("thresholds_opened") or not _enabled(game):
+        return False
+    work = tuple(x for x in meta["followups"] if x["details"]["family"] == "girl")
+    if len(work) != 1 or work[0].get("completed_event"):
+        return False
+    state = load_state(c, game.store.campaign_id)
+    target, people = _people(game, c, state, action)
+    follower = next((x for x in choices if x["actor"] in people), None)
+    if follower is None:
+        return False
+    body, threshold = prepare_threshold(c, game, work[0]["id"], state)
+    if (
+        threshold.source_works != (work[0]["id"],)
+        or threshold.stage not in ("allured", "questions")
+        or threshold.forced_by
+        or threshold.free_identity
+        or threshold.answers
+        or threshold.enclosed
+    ):
+        return False
+    event = str(uuid4())
+    body = void.smother_apometanoia(body, threshold.id, target.ref, action["id"], event)
+    actual = people[follower["actor"]]
+    body.facts.append(
+        dict(
+            kind="void_drunk_smothered",
+            action=action["id"],
+            threshold=threshold.id,
+            follower=actual.actor.token,
+            target=target.ref.token,
+            choice=follower["choice"],
+            source=follower["source"],
+            event=event,
+        )
+    )
+    prior = c.scalar(
+        sa.select(sa.func.max(t.events.c.event_index)).where(
+            t.events.c.campaign_id == game.store.campaign_id,
+            t.events.c.command_key == key,
+        )
+    )
+    game.event(
+        c,
+        actual.controller,
+        key,
+        "m3.void_drunk_smothered",
+        body,
+        event_id=event,
+        event_index=1 if prior is None else prior + 1,
+        action_id=action["id"],
+        work_id=work[0]["id"],
+    )
+    complete(c, game, void.threshold(body, threshold.id), event, None, key)
+    return True
 
 
 def complete(

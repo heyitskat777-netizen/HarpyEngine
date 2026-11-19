@@ -27,8 +27,8 @@ from girlframe.services.onboarding import WorkflowError
 
 @pytest.mark.parametrize(
     "effect",
-    ("tag", "shadow", "gain", "npc"),
-    ids=("original-tag", "shadow-emergence", "primary-gain", "primary-npc"),
+    ("tag", "shadow", "gain", "npc", "smother"),
+    ids=("original-tag", "shadow-emergence", "primary-gain", "primary-npc", "smother"),
 )
 def test_original_low_dive_retains_handler_choice_and_scoped_acolyte_effect(
     ledger,
@@ -36,7 +36,7 @@ def test_original_low_dive_retains_handler_choice_and_scoped_acolyte_effect(
     monkeypatch,
     effect,
 ):
-    game = scenario(ledger)
+    game = scenario(ledger, girl="ALPHA" if effect == "smother" else None)
     enable(ledger, game, tmp_path, monkeypatch, extra=(RULE,))
     missions = MissionService(ledger)
     creation = AncillaryService(missions)
@@ -90,6 +90,11 @@ def test_original_low_dive_retains_handler_choice_and_scoped_acolyte_effect(
     original_tag, private = "public-to-acolyte", "private-from-acolyte"
     with ledger.transaction() as c:
         canon = state(game)
+        if effect == "smother":
+            own_girl_assets = [x for x in canon.sheets[diver.entity].assets if x.family == "girl"]
+            for x in own_girl_assets[:-1]:
+                x.void = True
+            final_asset = own_girl_assets[-1].id
         if effect == "npc":
             canon.world = update(
                 canon.world,
@@ -112,7 +117,7 @@ def test_original_low_dive_retains_handler_choice_and_scoped_acolyte_effect(
         )
         game.event(c, ADMIN.user_id, "original-tags", "synthetic.existing_tags", canon)
 
-    game.dice = Dice((4, 5) if effect in ("gain", "npc") else (2, 3))
+    game.dice = Dice((4, 5) if effect in ("gain", "npc", "smother") else (2, 3))
     action = game.begin(
         PLAYER,
         "real-low-dive",
@@ -138,7 +143,7 @@ def test_original_low_dive_retains_handler_choice_and_scoped_acolyte_effect(
             game.decision(OTHER, effect_choice["id"])
         answer(game, ADMIN, "dive_void_drunk_npcs", fields={REBEL.entity: "bones"})
         assert not next(x for x in state(game).world.npcs if x.id == REBEL.entity).tags
-    elif effect == "gain":
+    elif effect in ("gain", "smother"):
         detail = game.decision(OTHER, choice["id"])["dive"]
         assert detail["primary"] == 1
         asset = next(iter(detail["primary_assets"]))
@@ -146,11 +151,12 @@ def test_original_low_dive_retains_handler_choice_and_scoped_acolyte_effect(
             game,
             OTHER,
             "dive_void_drunk",
-            options=("latch",),
+            options=("smother" if effect == "smother" else "latch",),
             fields={"primary_asset": asset},
             text="The lens lights up from within.",
         )
-        assert all(x.marked for x in ancillary.find(state(game), acolyte).identities)
+        if effect == "gain":
+            assert all(x.marked for x in ancillary.find(state(game), acolyte).identities)
     elif effect == "shadow":
         assert game.decision(OTHER, choice["id"])["dive"]["shadow"]
         answer(game, OTHER, "dive_void_drunk", options=("shadow",))
@@ -158,8 +164,14 @@ def test_original_low_dive_retains_handler_choice_and_scoped_acolyte_effect(
     else:
         answer(game, OTHER, "dive_void_drunk", options=("latch",), denied=(original_tag,))
     assert not is_helpless(state(game), diver, acolyte)
-    choose(game, PLAYER if effect in ("gain", "npc") else ADMIN, "nearby_npcs_gain_void")
-    answer(game, ADMIN, "dive_effect", fields={REBEL.entity: "brain"})
+    if effect == "smother":
+        choose(game, PLAYER, "void_and_unmark_all")
+        answer(
+            game, PLAYER, "dive_effect", fields={"asset": final_asset}, text="The real last change."
+        )
+    else:
+        choose(game, PLAYER if effect in ("gain", "npc") else ADMIN, "nearby_npcs_gain_void")
+        answer(game, ADMIN, "dive_effect", fields={REBEL.entity: "brain"})
     final = state(game)
     assert game.inspect(PLAYER, action)["state"] == "complete"
     assert is_helpless(final, diver, acolyte) == (effect == "tag")
@@ -180,3 +192,14 @@ def test_original_low_dive_retains_handler_choice_and_scoped_acolyte_effect(
         target = next(x for x in final.world.npcs if x.id == REBEL.entity)
         assert {x.label for x in target.tags} == {"Void of the brain", "Void of the bones"}
         assert len({x.id for x in target.tags}) == 2 and game.dice.calls == 1
+    if effect == "smother":
+        (threshold,) = final.void_thresholds
+        assert threshold.actor == diver and threshold.stage == "prevented"
+        assert threshold.free_identity is None and not threshold.answers
+        assert not final.harpy_states
+        assert all(x.void for x in final.sheets[diver.entity].assets if x.family == "girl")
+        assert not any(x["kind"] == "dive_void_threshold" for x in game.choices(PLAYER))
+        assert any(
+            x.get("kind") == "void_drunk_smothered" and x.get("follower") == acolyte.token
+            for x in final.facts
+        )

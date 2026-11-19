@@ -16012,10 +16012,10 @@
         "choice_ownership": "The Acolyte owns the latch, her primary effect and optional Tag or shadow emergence. The diver and Handler keep their ordinary Dive choices.",
         "target_policy": "Actual original same-scene local actors and observed Tags only.",
         "post_roll_effects": [
-          "When the original diver resurfaces, apply the exact selected Tag and Helplessness or place the Acolyte beside her outside the original parked Frame."
+          "When the original diver resurfaces, apply the selected Tag and Helplessness or place the Acolyte beside her outside the original parked Frame. A previously chosen interruption can prevent the same Dive’s genuine Girl-family Apometanoia before its questions begin."
         ],
         "mandatory_followups": [
-          "Other primary effects, terminal Void, direct high verification, Apometanoia interception, cockpit emergence and nonstandard divers remain open."
+          "Other primary effects, the follower’s terminal Void, direct high verification, cockpit emergence and nonstandard divers remain open."
         ],
         "handler_or_gm_intervention": "The original Handler still chooses the low Dive consequence under the existing workflow.",
         "test_fixture_ids": [

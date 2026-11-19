@@ -3796,6 +3796,24 @@ the real NPC from one roll. Three existing cases were deselected.
 Hidden NPCs, Directors and other primary choices remain open.
 [Void-Drunk p. 109](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=111) · [Dive Deep p. 22](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=24) · [Native case](../../tests/rules/test_void_drunk.py)
 
+### Void-Drunk’s Apometanoia interruption
+
+Base `2d508162ca57e98f06de1b12566d9ee291868d34`. The original
+nearby follower can choose to interrupt an Apometanoia before
+it begins. The engine requires the same Dive’s actual Girl-family
+Void threshold and a persisted source response, then resolves
+the original threshold as prevented. The corrupted Assets stay
+changed. No player answers, replacement Identity or Harpy body
+are created.
+
+One focused case passed in 5.04 seconds. It corrupted the Alpha’s
+last original Girl Asset through her own native Dive choice,
+verified the prevented threshold and closed the held original
+Play. Four earlier cases were deselected. Existing Frame,
+combined and already advanced transformations keep their own
+workflows.
+[Void-Drunk p. 109](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=111) · [Apometanoia p. 177](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=179) · [Native case](../../tests/rules/test_void_drunk.py)
+
 ### Actor-level Ancillary Cadre Status and the Warboy Dog
 
 Base `083b876`. The original facilitator privately proposes a
