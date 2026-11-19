@@ -103,6 +103,21 @@ async def open_ordinary(
     if selected:
 
         async def operate(current: discord.Interaction, values: dict[str, Any]) -> str | None:
+            if values["operation"][0] == "dissection":
+                from girlframe.services.m3_scientist_dissection import DissectionService
+
+                if not values.get("specimen"):
+                    raise WorkflowError("Choose the actual laboratory specimen")
+                await asyncio.to_thread(
+                    DissectionService(service.game).perform,
+                    viewer_from_interaction(current),
+                    str(current.id),
+                    selected["id"],
+                    data["revision"],
+                    values["specimen"][0],
+                    values["account"],
+                )
+                return "The dissection is recorded. Your advancement is held."
             if values["operation"][0] == "dogrunner_award":
                 await asyncio.to_thread(
                     service.claim_all_dogs,
@@ -168,6 +183,11 @@ async def open_ordinary(
                         (("dogrunner_award", "Claim the Dogrunner’s actual Dogs"),)
                         if data.get("dogrunner_award")
                         else ()
+                    )
+                    + (
+                        (("dissection", "Dissect the original specimen"),)
+                        if data.get("specimens")
+                        else ()
                     ),
                 ),
                 Field(
@@ -179,7 +199,20 @@ async def open_ordinary(
                     required=False,
                 ),
                 Field("account", "Actual source account", paragraph=True),
-            ],
+            ]
+            + (
+                [
+                    Field(
+                        "specimen",
+                        "Original laboratory specimen",
+                        data["specimens"],
+                        minimum=0,
+                        required=False,
+                    )
+                ]
+                if data.get("specimens")
+                else []
+            ),
             operate,
         ).present(interaction)
         return

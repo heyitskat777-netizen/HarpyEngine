@@ -157,6 +157,7 @@ async def open_advancement(
                 "identities_useful": "Ordinary starting-Identity accomplishment",
                 "dogrunner_all_dogs": "Dogrunner Cadre accomplishment",
                 "advocate_pride_parade": "Advocate pride parade",
+                "scientist_dissection": "Scientist dissection",
             }[ordinary_source["trigger"]]
             if ordinary_source
             else "Void Endgame " + data["rule"].rsplit(".", 1)[1]

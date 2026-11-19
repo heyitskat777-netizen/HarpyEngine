@@ -785,7 +785,10 @@ def test_real_harpy_losing_last_frame_asset_requires_actual_harpy_defeat(ledger)
     assert state(game).sheets["2"].model_dump_json() == original_pc
 
 
-def test_actual_core_response_kills_original_gorgon_and_stops_its_old_attack(ledger, monkeypatch):
+@pytest.mark.parametrize("research", [False, True])
+def test_actual_core_response_kills_original_gorgon_and_stops_its_old_attack(
+    ledger, tmp_path, monkeypatch, research
+):
     from test_m2_game import pass_tags
 
     import girlframe.services.m2_game as shared
@@ -852,6 +855,75 @@ def test_actual_core_response_kills_original_gorgon_and_stops_its_old_attack(led
     with ledger.engine.connect() as c:
         assert game.action(c, child)["state"] == "complete"
         assert game.action(c, parent)["state"] == "complete"
+    if research:
+        from test_enforcer_requisitions import approved
+        from test_handler_ordinary import session_native
+        from test_ledger import OTHER
+        from test_mission_ui import current
+        from test_scientist_lab import create_scientist
+
+        from girlframe.discord_adapter.m3_handler_ordinary import open_ordinary
+        from girlframe.engine.m3_handler_ordinary import RULE as ORDINARY
+        from girlframe.engine.m3_scientist_dissection import records
+        from girlframe.services.m3_handler_advancements import HandlerAdvancementService
+        from girlframe.services.m3_handler_ordinary import HandlerOrdinaryService
+        from girlframe.services.m3_scientist_dissection import DissectionService
+        from girlframe.services.onboarding import WorkflowError
+
+        approved(ledger, game, tmp_path, monkeypatch, extra=(ORDINARY,))
+        tick(worker, gateway, 5)
+        create_scientist(ledger)
+        ordinary = HandlerOrdinaryService(ledger)
+        session = session_native(ordinary, "Actual observation of the laboratory", 51400)
+        service = DissectionService(game)
+        original = state(game)
+        account = "PRIVATE_SYNTHETIC_OBSERVATION"
+        assert ordinary.menu(ADMIN)["specimens"] == (("source-gorgon", "source-gorgon"),)
+        assert not ordinary.menu(OTHER)["specimens"]
+        with pytest.raises(WorkflowError, match="original Scientist"):
+            service.perform(
+                OTHER, "wrong-scientist", session, original.revision, "source-gorgon", account
+            )
+        with pytest.raises(WorkflowError, match="eligible laboratory"):
+            service.perform(ADMIN, "living-body", session, original.revision, "secret", account)
+        with pytest.raises(WorkflowError, match="current Session"):
+            service.perform(
+                ADMIN, "stale-specimen", session, original.revision - 1, "source-gorgon", account
+            )
+        ledger.safety(PLAYER, "hold-specimen", ledger.status(PLAYER)["revision"], pause=True)
+        with pytest.raises(WorkflowError, match="SAFETY_PAUSED"):
+            service.perform(
+                ADMIN, "paused-specimen", session, original.revision, "source-gorgon", account
+            )
+        ledger.safety(PLAYER, "resume-specimen", ledger.status(PLAYER)["revision"], pause=False)
+        ledger.engine.dispose()
+
+        async def dissect():
+            click = current(1, 51402)
+            await click.response.defer(ephemeral=True)
+            await open_ordinary(click, ordinary)
+            form = click.edit_original_response.call_args.kwargs["view"]
+            form.values.update(
+                operation=("dissection",), specimen=("source-gorgon",), account=account
+            )
+            await form.confirm.callback(current(1, 51403))
+            assert form.completed
+
+        import asyncio
+
+        asyncio.run(dissect())
+        receipt = service.perform(
+            ADMIN, "51403", session, original.revision, "source-gorgon", account
+        )
+        final = state(game)
+        (dissection,) = records(final)
+        assert dissection.lab == "base0" and dissection.death != dissection.event
+        assert HandlerAdvancementService(ledger).view(ADMIN, receipt["id"])["phase"] == "held"
+        assert final.sheets == original.sheets and not ordinary.menu(ADMIN)["specimens"]
+        with pytest.raises(WorkflowError, match="eligible laboratory"):
+            service.perform(
+                ADMIN, "repeat-dissection", session, final.revision, "source-gorgon", account
+            )
 
 
 def test_actual_handler_attack_uses_owned_replacement_not_npc_death_or_fake_asset(ledger):

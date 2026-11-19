@@ -1848,3 +1848,29 @@ branches, real roll denial without dice, source ownership and
 mandatory adjudication. Frame-specific ownership and additional
 memory representations remain separate.
 [Lobotomy p. 194](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=196)
+
+### Scientist laboratory dissection
+
+Base `d04a17a21c5425322cfa9ae0e3e21b6fb91ec50e`. The original
+Scientist can dissect the exposed remains of a Gorgon actually
+defeated in the world and present in an operational Foundation lab.
+The Session control verifies the death against the saved living
+and dead revisions and grants the held advancement once. Later
+use of the award recovers the exact specimen, Scientist, lab,
+Session and event. The original Gorgon record stays available.
+
+**52 selected tests passed in 156.79 seconds** across Gorgon combat,
+the Scientist lab and original Handler advancement paths. The new
+native scenario exercised actual combat death, wrong owner, a living
+subject, stale state, safety pause, reopened choice, replay and award
+recovery. Other corpse transport and Scientist Project paths remain open.
+[Scientist p. 129](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=131)
+
+### Full synthetic regression for the Handler advancement candidate
+
+All **3,766 tests passed** on exact revision
+`6e0ded6c928ed00993305d49197e49282c3e27c0` in four detached processes.
+The longest partition ran **2,284.83 seconds**. Partition totals were
+942, 942, 941 and 941. Manifests and logs are under
+`var/rulebook-full-6e0ded6/`. This revision precedes the later
+Ancillary, Expanded Status, siege, Lobotomy and dissection work.

@@ -252,6 +252,11 @@ def prove_award(
 
         prove_pr(game, c, state, award)
         return
+    if source.trigger == "scientist_dissection":
+        from girlframe.services.m3_scientist_dissection import prove_award as prove_dissection
+
+        prove_dissection(game, c, award)
+        return
     if source.trigger == "dogrunner_all_dogs":
         birth = _history(c, game, award.award_event)
         born = next((x for x in advancement.awards(birth) if x.id == award.id), None)
@@ -748,11 +753,20 @@ class HandlerOrdinaryService:
                 and handler.entity == str(viewer.user_id)
                 and self._all_dogs_available(c, state, active, handler)
             )
+            specimens: tuple[tuple[str, str], ...] = ()
+            if active is not None and handler is not None and handler.entity == str(viewer.user_id):
+                from girlframe.services.m3_scientist_dissection import eligible
+
+                specimens = tuple(
+                    (specimen.id, specimen.name)
+                    for specimen, _, _ in eligible(self.game, c, state, active, handler)
+                )
             return dict(
                 selected=selected.model_dump(mode="json") if selected else None,
                 active=active.model_dump(mode="json") if active else None,
                 kind="session",
                 dogrunner_award=dogrunner_award,
+                specimens=specimens,
                 revision=state.revision,
                 facilitator=human == viewer.user_id,
                 appointment=appointment,

@@ -68,6 +68,7 @@ AwardTrigger = Literal[
     "capture_convert",
     "dogrunner_all_dogs",
     "advocate_pride_parade",
+    "scientist_dissection",
 ]
 
 

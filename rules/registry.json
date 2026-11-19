@@ -16096,7 +16096,8 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_handler_creation.py::test_all_seven_actual_starting_variants_save_reopen_agree_and_activate",
-        "tests/rules/test_scientist_lab.py"
+        "tests/rules/test_scientist_lab.py",
+        "tests/rules/test_gorgon_runtime.py::test_actual_core_response_kills_original_gorgon_and_stops_its_old_attack"
       ],
       "m2_play_id": null,
       "module": "core"
