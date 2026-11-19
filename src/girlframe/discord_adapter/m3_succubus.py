@@ -79,6 +79,7 @@ async def open_npc_order(
     service: SuccubusService,
     *,
     princess_period: str | None = None,
+    trainer: bool = False,
 ) -> None:
     channel = int(interaction.channel_id or 0)
     data = await asyncio.to_thread(
@@ -86,6 +87,7 @@ async def open_npc_order(
         viewer_from_interaction(interaction),
         channel,
         princess_period=princess_period,
+        trainer=trainer,
     )
     if not data["targets"]:
         raise WorkflowError("No actual NPC in this scene is an eligible Order recipient")
@@ -102,6 +104,7 @@ async def open_npc_order(
             data["cast"],
             values["instruction"],
             princess_period=princess_period,
+            trainer=trainer,
         )
         return (
             "Direct Order saved for the actual NPC. "
@@ -157,10 +160,25 @@ async def open_order(
         return
     fields: list[Field] = []
     instructions = "Direct Order: " + data["instruction"]
-    if phase == "response":
+    if phase == "trainer_perception":
+        binary = (("yes", "Yes"), ("no", "No"))
+        fields.extend(
+            [
+                Field(
+                    "option", "Confirm the NPC's perception", (("perception", "Record perception"),)
+                ),
+                Field("saw_eyes", "Did the NPC see the Trainer's eyes?", binary),
+                Field("heard_voice", "Did the NPC hear the Trainer's voice?", binary),
+            ]
+        )
+    elif phase == "response":
         options = rules.RESPONSES
         if data.get("can_offer_reason"):
             options += (("reason", "Give the GM the NPC's reason to refuse"),)
+        elif data.get("trainer_compelled"):
+            instructions += (
+                " The NPC saw the Trainer's eyes and heard their voice. Choose how it obeys."
+            )
         elif not data.get("princess"):
             options += (("disobey", "Make the real Disobey Orders Play"),)
         elif data.get("reason_reviewed"):
@@ -302,6 +320,8 @@ async def open_order(
             knows=values["knows"][0] == "yes" if "knows" in values else None,
             punish=values["punish"][0] == "yes" if "punish" in values else None,
             heat_gain=int(values["heat_gain"][0]) if "heat_gain" in values else None,
+            saw_eyes=values["saw_eyes"][0] == "yes" if "saw_eyes" in values else None,
+            heard_voice=values["heard_voice"][0] == "yes" if "heard_voice" in values else None,
         )
         return "Actual NPC response saved. Next: " + str(result["phase"]).replace("_", " ") + "."
 

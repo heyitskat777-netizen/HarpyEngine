@@ -1240,10 +1240,12 @@ class HandlerPlayService:
             state = load_state(c, self.store.campaign_id)
             from girlframe.engine.m3_advocate_alone import RULE as alone_rule
             from girlframe.engine.m3_handler_private_scene import RULES as private_rules
+            from girlframe.engine.m3_succubus import TRAINER_ORDER_RULE
             from girlframe.services.m3_contaminant_zone import warp_options
             from girlframe.services.m3_handler_book_orders import book_rule_available
             from girlframe.services.m3_successor import owned as owned_successor
 
+            registry = Access(self.store).registry
             return dict(
                 game_revision=state.revision,
                 plays=BASIC,
@@ -1285,6 +1287,16 @@ class HandlerPlayService:
                 )
                 is not None,
                 dress_them_down=_can_dress(c, self.game, state, active_handler(state)),
+                trainer_npc_order=registry is not None
+                and registry.entry(TRAINER_ORDER_RULE).verified
+                and active_book(
+                    self.game,
+                    c,
+                    state,
+                    book="Trainer",
+                    rule=TRAINER_ORDER_RULE,
+                )
+                is not None,
                 targets=[
                     dict(
                         ref=ActorRef(

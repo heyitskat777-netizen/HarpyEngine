@@ -37,6 +37,8 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
     ]
     if data.get("dress_them_down") and interaction.channel_id is not None:
         options.append(("dress", "Dress Them Down in this scene"))
+    if data.get("trainer_npc_order") and interaction.channel_id is not None:
+        options.append(("trainer_npc_order", "Trainer: order an NPC in this scene"))
     if data.get("successor") and interaction.channel_id is not None:
         options.append(("advice", "Give advice on how to lead in this scene"))
     if data.get("frantic_breakdown") and interaction.channel_id is not None:
@@ -75,6 +77,11 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
                 identity[5:],
             )
             await open_play(current, service, result["id"])
+        elif identity == "trainer_npc_order":
+            from girlframe.discord_adapter.m3_succubus import open_npc_order
+            from girlframe.services.m3_succubus import SuccubusService
+
+            await open_npc_order(current, SuccubusService(service.game), trainer=True)
         elif identity == "frantic_breakdown":
             from girlframe.discord_adapter.m3_frantic_breakdown import open_start
             from girlframe.services.m3_frantic_breakdown import FranticBreakdownService

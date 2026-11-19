@@ -894,3 +894,135 @@ def test_trainer_installs_one_uninstalled_phrase_during_actual_punishment(ledger
     answer(game, OTHER, SPEAK, text="This is the original Girl's answer.")
     answer(game, ADMIN, HEAR, flag=True)
     assert game.inspect(OTHER, made["action_id"])["state"] == "complete"
+
+
+@pytest.mark.parametrize("heard", (True, False))
+def test_trainer_npc_order_requires_both_sight_and_hearing_for_compulsion(
+    ledger, heard, tmp_path, monkeypatch
+):
+    from test_cast_service import change
+    from test_enforcer_requisitions import approved
+    from test_harpy_flirt import submit_form
+
+    from girlframe.engine.m3_actor_state import ActorRef
+    from girlframe.engine.m3_handler_consequences import active_handler
+    from girlframe.engine.m3_succubus import TRAINER_ORDER_RULE
+    from girlframe.engine.m3_world_state import Npc
+    from girlframe.services.m3_actors import ActorService
+    from girlframe.services.m3_cast import CastService
+    from girlframe.services.m3_missions import MissionService
+    from girlframe.services.m3_npc_roles import NpcRoleService
+    from girlframe.services.m3_succubus import SuccubusService
+    from girlframe.services.m3_world import WorldService
+
+    _, game = ready(ledger)
+    create_trainer(ledger, start_with_speak=False)
+    assert not HandlerPlayService(ledger).options(ADMIN)["trainer_npc_order"]
+    approved(ledger, game, tmp_path, monkeypatch, extra=(TRAINER_ORDER_RULE,))
+    approval = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update=dict(
+            m3_approval=approval.model_copy(update=dict(subsystems=approval.subsystems | {"world"}))
+        )
+    )
+    missions = MissionService(ledger)
+    roles = NpcRoleService(WorldService(missions))
+    guard = Npc(
+        id="trainer-guard",
+        name="Original guard",
+        jobs=("guard",),
+        controller=3,
+        detail="The ordinary guard.",
+        cell=(0, 0),
+        revealed=True,
+    )
+    offered = roles.offer(ADMIN, "trainer-guard-offered", state(game).revision, guard)
+    roles.respond(OTHER, "trainer-guard-accepted", offered["id"], state(game).revision, "accept")
+    npc = ActorRef(kind="npc", entity=guard.id)
+    cast = CastService(ActorService(missions))
+    change(cast, OTHER, "join", npc)
+    change(cast, ADMIN, "join", active_handler(state(game)))
+    orders = SuccubusService(game)
+    worker, gateway = GameWorker(game), Gateway()
+    inbox = InboxService(ledger)
+
+    async def issue(click):
+        await open_handler_plays(click, HandlerPlayService(ledger))
+        menu = click.edit_original_response.call_args.kwargs["view"]
+        await menu.open_item(click, "trainer_npc_order")
+
+    asyncio.run(
+        submit_form(ADMIN, issue, dict(target=(npc.token,), instruction="Open the door."), 47440)
+    )
+    with ledger.engine.connect() as c:
+        (pending,) = orders._tasks(c, OTHER)
+    identity = pending["id"]
+    with pytest.raises(WorkflowError):
+        orders.inspect(PLAYER, identity)
+    tick(worker, gateway, 3)
+
+    async def route(click):
+        item = next(x for x in inbox.items(OTHER) if x.identity == identity)
+        await InboxView(inbox, 3).route(click, item)
+
+    asyncio.run(
+        submit_form(
+            OTHER,
+            route,
+            dict(
+                option=("perception",),
+                saw_eyes=("yes",),
+                heard_voice=("yes" if heard else "no",),
+                account="PRIVATE_NPC_PERCEPTION",
+            ),
+            47450,
+        )
+    )
+    ledger.engine.dispose()
+    data = orders.inspect(OTHER, identity)
+    assert data["trainer_compelled"] is heard and "PRIVATE_NPC_PERCEPTION" not in str(data)
+    if heard:
+        with pytest.raises(WorkflowError):
+            orders.choose(
+                OTHER, "compelled-no-refusal", identity, data["revision"], "disobey", "I refuse."
+            )
+        asyncio.run(
+            submit_form(
+                OTHER, route, dict(option=("hesitant",), account="The NPC obeys hesitantly."), 47460
+            )
+        )
+        assert orders.inspect(ADMIN, identity)["result"]["response"] == "hesitant"
+        assert game.dice.calls == 0
+    else:
+        game.dice.faces = (1, 1)
+        orders.choose(
+            OTHER, "ordinary-npc-refuses", identity, data["revision"], "disobey", "The NPC refuses."
+        )
+        result = orders.choose(
+            OTHER,
+            "ordinary-npc-roll",
+            identity,
+            orders.inspect(OTHER, identity)["revision"],
+            "roll",
+            "Roll the original NPC's refusal.",
+        )
+        assert result["receipt"]["faces"] == [1, 1] and game.dice.calls == 1
+        orders.choose(
+            OTHER,
+            "low-npc-follows",
+            identity,
+            orders.inspect(OTHER, identity)["revision"],
+            "obedient",
+            "The NPC follows after all.",
+        )
+        orders.choose(
+            ADMIN,
+            "no-npc-notice",
+            identity,
+            orders.inspect(ADMIN, identity)["revision"],
+            "review",
+            "Nobody notices the aborted refusal.",
+            knows=False,
+            punish=False,
+        )
+        assert orders.inspect(ADMIN, identity)["phase"] == "complete"

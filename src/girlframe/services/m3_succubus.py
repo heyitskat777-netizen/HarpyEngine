@@ -176,7 +176,41 @@ def _source(
         birth = _history(game, c, loss.event)
         if loss not in rules.rank_losses(birth, value.target):
             raise WorkflowError("Recover the actual original NPC Status-loss source")
-    if value.princess_upkeep is not None:
+    if value.trainer_authority is not None:
+        expected = value.issuer, value.trainer_authority
+        if (
+            value.issuer != value.handler
+            or value.authority is not None
+            or value.princess_upkeep is not None
+            or value.stim_effect is not None
+            or _trainer_source(game, c, original) != expected
+            or (active and _trainer_source(game, c, state) != expected)
+        ):
+            raise WorkflowError("Recover the original Trainer's Control Freak authority")
+        data = action["data"]
+        perception = data.get("trainer_perception")
+        if data["phase"] != "trainer_perception":
+            if perception is None or not c.scalar(
+                sa.select(t.events.c.id).where(
+                    t.events.c.campaign_id == game.store.campaign_id,
+                    t.events.c.id == perception["event"],
+                    t.events.c.kind == "m3.trainer_npc_perception",
+                    t.events.c.actor_id == str(value.controller),
+                    sa.func.json_extract(t.events.c.payload_json, "$.action_id") == action["id"],
+                    sa.func.json_extract(t.events.c.payload_json, "$.order_id") == value.id,
+                )
+            ):
+                raise WorkflowError("Recover the controller's actual recorded perception")
+            saved = _history(game, c, perception["event"])
+            if dict(
+                kind="trainer_npc_perception",
+                order=value.id,
+                body=json.dumps(perception, sort_keys=True),
+            ) not in saved.facts or data.get("trainer_compelled") != (
+                perception["eyes"] and perception["voice"]
+            ):
+                raise WorkflowError("Recover the exact perception before answering the Trainer")
+    elif value.princess_upkeep is not None:
         from girlframe.services.m3_princess_npc_orders import authority as princess_authority
 
         if (
@@ -225,6 +259,14 @@ def _source(
                 "This actual Order no longer has ordinary expanded Status authority"
             )
     return value
+
+
+def _trainer_source(
+    game: "GameService", c: Connection, state: GameState
+) -> tuple[ActorRef, int] | None:
+    from girlframe.services.m3_handler_book_orders import active_book
+
+    return active_book(game, c, state, book="Trainer", rule=rules.TRAINER_ORDER_RULE)
 
 
 def validate_role_case(
@@ -436,16 +478,35 @@ class SuccubusService:
         )
 
     def targets(
-        self, viewer: GuildViewer, channel: int, *, princess_period: str | None = None
+        self,
+        viewer: GuildViewer,
+        channel: int,
+        *,
+        princess_period: str | None = None,
+        trainer: bool = False,
     ) -> dict[str, Any]:
         with self.store.engine.connect() as c:
-            self._access(c, viewer, rule=PRINCESS_ORDER_RULE if princess_period else rules.RULE)
+            self._access(
+                c,
+                viewer,
+                rule=rules.TRAINER_ORDER_RULE
+                if trainer
+                else PRINCESS_ORDER_RULE
+                if princess_period
+                else rules.RULE,
+            )
             state = load_state(c, self.store.campaign_id)
             actor = current_ref(state, viewer.user_id)
+            if trainer:
+                owned = _trainer_source(self.game, c, state)
+                if owned is None or owned[0] != actor or princess_period:
+                    raise WorkflowError("Use the actual original Trainer in this scene")
             if princess_period:
                 self._princess_upkeep(c, state, actor, princess_period)
             cast = _cast(self.game, c, state, channel)
             if not any(x.actor == actor and x.controller == viewer.user_id for x in cast.roles):
+                if trainer:
+                    raise WorkflowError("Join the actual Trainer's speaking role in this scene")
                 raise WorkflowError("Your actual original Pilot must be present in this scene")
             candidates = []
             for role in cast.roles:
@@ -459,9 +520,13 @@ class SuccubusService:
                         or depth(state, actor, role.actor) > 0
                     ):
                         continue
-                    if princess_period and npc.controller == viewer.user_id:
+                    if (princess_period or trainer) and npc.controller == viewer.user_id:
                         continue
-                    if not princess_period and not rules.ordinary_higher(state, actor, role.actor):
+                    if trainer and not rules.ordinary_higher(state, actor, role.actor):
+                        continue
+                    if not (princess_period or trainer) and not rules.ordinary_higher(
+                        state, actor, role.actor
+                    ):
                         _proof(self.game, c, state, rules.authority(state, actor, role.actor))
                     actual = resolve(state, role.actor, profiles(c, self.store.campaign_id))
                 except ValueError:
@@ -501,10 +566,13 @@ class SuccubusService:
         *,
         stim_effect: str | None = None,
         princess_period: str | None = None,
+        trainer: bool = False,
     ) -> dict[str, Any]:
-        if princess_period is not None and stim_effect is not None:
+        if sum((princess_period is not None, stim_effect is not None, trainer)) > 1:
             raise WorkflowError("Choose the actual authority for this original Order")
-        if princess_period is not None:
+        if trainer:
+            source_rule, event_prefix = rules.TRAINER_ORDER_RULE, "m3.trainer_npc_"
+        elif princess_period is not None:
             source_rule, event_prefix = PRINCESS_ORDER_RULE, "m3.princess_npc_"
         elif stim_effect is not None:
             source_rule, event_prefix = STIM_ORDER_RULE, "m3.stim_pilot_npc_"
@@ -534,7 +602,22 @@ class SuccubusService:
                 raise WorkflowError("This recipient needs its own actual rules consumer")
             authority = None
             upkeep = None
-            if princess_period is not None:
+            trainer_authority = None
+            if trainer:
+                owned = _trainer_source(self.game, c, state)
+                if (
+                    owned is None
+                    or owned[0] != actor
+                    or actor.kind != "handler"
+                    or actual.controller == viewer.user_id
+                    or not (npc.revealed or depth(state, actor, target) > 0)
+                    or not rules.ordinary_higher(state, actor, target)
+                ):
+                    raise WorkflowError(
+                        "Order a known ordinary NPC with a separate controller as Trainer"
+                    )
+                trainer_authority = owned[1]
+            elif princess_period is not None:
                 if actual.controller == viewer.user_id or not (
                     npc.revealed or depth(state, actor, target) > 0
                 ):
@@ -572,6 +655,7 @@ class SuccubusService:
                 registry=_registry(self.game, source_rule),
                 stim_effect=stim_effect,
                 princess_upkeep=upkeep,
+                trainer_authority=trainer_authority,
             )
             body = dict(text=text, succubus_npc_order=value.model_dump(mode="json"))
             c.execute(
@@ -592,7 +676,7 @@ class SuccubusService:
                 succubus_npc_order=value.model_dump(mode="json"),
                 order_id=order_id,
                 participants=sorted({x.controller for x in cast.roles} | {int(handler.entity)}),
-                phase="response",
+                phase="trainer_perception" if trainer else "response",
                 receipt=None,
                 result={},
                 modifiers=[],
@@ -663,7 +747,8 @@ class SuccubusService:
                 text=text,
             )
             | ({"stim_effect": stim_effect} if stim_effect is not None else {})
-            | ({"princess_period": princess_period} if princess_period is not None else {}),
+            | ({"princess_period": princess_period} if princess_period is not None else {})
+            | ({"trainer": True} if trainer else {}),
             change,
             auto_audit=False,
             authorize=lambda c: self._access(c, viewer, rule=source_rule),
@@ -733,6 +818,10 @@ class SuccubusService:
                 receipt=action["data"]["receipt"],
                 result=action["data"]["result"],
             )
+            if value.trainer_authority is not None:
+                view["trainer_compelled"] = bool(action["data"].get("trainer_compelled"))
+                if view["trainer_compelled"] or view["phase"] == "trainer_perception":
+                    return view | dict(tags=[], followers=[], witnesses=[])
             if value.princess_upkeep is not None:
                 reason = action["data"].get("princess_reason", {})
                 return view | dict(
@@ -807,6 +896,8 @@ class SuccubusService:
         knows: bool | None = None,
         punish: bool | None = None,
         heat_gain: int | None = None,
+        saw_eyes: bool | None = None,
+        heard_voice: bool | None = None,
     ) -> dict[str, Any]:
         def change(c: Connection) -> dict[str, Any]:
             self.game.unpaused(c)
@@ -814,7 +905,17 @@ class SuccubusService:
             action = self.game.action(c, identity)
             phase = action["data"]["phase"]
             value = _source(
-                self.game, c, state, action, active=phase in ("response", "roll", "princess_review")
+                self.game,
+                c,
+                state,
+                action,
+                active=phase
+                in (
+                    "response",
+                    "roll",
+                    "princess_review",
+                    "trainer_perception",
+                ),
             )
             lock = self.game.lock(c, action["channel_id"])
             if (
@@ -831,7 +932,31 @@ class SuccubusService:
             data = action["data"]
             result = data["result"]
             event = str(uuid4())
-            if phase == "response":
+            if phase != "trainer_perception" and (saw_eyes is not None or heard_voice is not None):
+                raise WorkflowError("Record perception only in the original Trainer Order phase")
+            if phase == "trainer_perception":
+                if (
+                    value.trainer_authority is None
+                    or option != "perception"
+                    or saw_eyes is None
+                    or heard_voice is None
+                ):
+                    raise WorkflowError(
+                        "The NPC's controller records whether it saw eyes and heard voice"
+                    )
+                data["trainer_perception"] = dict(
+                    event=event, eyes=saw_eyes, voice=heard_voice, account=account.strip()
+                )
+                state.facts.append(
+                    dict(
+                        kind="trainer_npc_perception",
+                        order=value.id,
+                        body=json.dumps(data["trainer_perception"], sort_keys=True),
+                    )
+                )
+                data["trainer_compelled"] = saw_eyes and heard_voice
+                data["phase"] = "response"
+            elif phase == "response":
                 if (
                     value.princess_upkeep is not None
                     and option == "reason"
@@ -842,7 +967,11 @@ class SuccubusService:
                 elif option in dict(rules.RESPONSES):
                     result.update(response=option, response_account=account)
                     _finish(self.game, c, action)
-                elif value.princess_upkeep is None and option == "disobey":
+                elif (
+                    value.princess_upkeep is None
+                    and not data.get("trainer_compelled")
+                    and option == "disobey"
+                ):
                     result.update(response=option, response_account=account)
                     data["phase"] = "roll"
                 else:
@@ -1049,7 +1178,7 @@ class SuccubusService:
                 c,
                 viewer.user_id,
                 key,
-                value.event_prefix + phase,
+                value.event_prefix + phase.removeprefix("trainer_"),
                 state,
                 event_id=event,
                 action_id=identity,
@@ -1077,6 +1206,11 @@ class SuccubusService:
                 knows=knows,
                 punish=punish,
                 heat_gain=heat_gain,
+            )
+            | (
+                {"saw_eyes": saw_eyes, "heard_voice": heard_voice}
+                if saw_eyes is not None or heard_voice is not None
+                else {}
             ),
             change,
             authorize=lambda c: self._order_access(c, viewer, self.game.action(c, identity)),

@@ -17518,7 +17518,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_trainer_control.py::test_trainer_refusal_leaves_the_tag_choice_with_original_girl"
+        "tests/rules/test_trainer_control.py::test_trainer_refusal_leaves_the_tag_choice_with_original_girl",
+        "tests/rules/test_trainer_phrases.py::test_trainer_npc_order_requires_both_sight_and_hearing_for_compulsion"
       ],
       "m2_play_id": null,
       "module": "core"
