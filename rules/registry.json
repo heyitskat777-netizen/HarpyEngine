@@ -20059,14 +20059,16 @@
         "heading": "Successor"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_successor.py::test_owned_advice_and_actual_lessons_complete_three_star_successor_milestone"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

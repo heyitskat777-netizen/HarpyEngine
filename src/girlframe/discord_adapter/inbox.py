@@ -1880,6 +1880,11 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_handler_plays import HandlerPlayService
 
             await open_notice(interaction, HandlerPlayService(self.service.store), item.identity)
+        elif item.task == "m3_successor":
+            from girlframe.discord_adapter.m3_successor import open_successor
+            from girlframe.services.m3_successor import SuccessorService
+
+            await open_successor(interaction, SuccessorService(self.service.store), item.identity)
         elif item.task == "m3_frantic_crisis":
             from girlframe.discord_adapter.m3_frantic_crisis import open_crisis
             from girlframe.services.m3_frantic_crisis import CrisisService

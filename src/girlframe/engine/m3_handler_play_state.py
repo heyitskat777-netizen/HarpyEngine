@@ -23,8 +23,10 @@ EXTRA = (
     ("tracker_voyeur", "Play voyeur to a private moment"),
     ("contaminant_warp", "Warp the quarantined area"),
     ("dress_them_down", "Dress Them Down"),
+    ("successor_advice", "Give advice on how to lead"),
 )
 DRESS_RULE = "handler-playbook.dogrunner.dress-them-down"
+SUCCESSOR_ADVICE = "handler-advancement.handler-advancement.successor"
 DRESS_STEPS = (
     ("competency", "Insult their competency"),
     ("appearance", "Insult their appearance"),
@@ -44,6 +46,7 @@ Play = Literal[
     "tracker_voyeur",
     "contaminant_warp",
     "dress_them_down",
+    "successor_advice",
 ]
 
 
@@ -62,6 +65,7 @@ class Effect(Model):
         "tracker_voyeur",
         "contaminant_warp",
         "dress_them_down",
+        "successor_advice",
     ]
     account: str = Field(min_length=1, max_length=1200)
     detail: str = Field(default="", max_length=1200)
@@ -101,6 +105,7 @@ class Effect(Model):
             "tracker_voyeur": {"target", "detail"},
             "contaminant_warp": {"zone", "cell", "detail"},
             "dress_them_down": {"target", "tag", "dress_steps"},
+            "successor_advice": set(),
         }[self.kind] | {"kind", "account", "source_label"}
         baseline = Effect.model_construct(kind=self.kind, account=self.account)
         if any(
@@ -185,7 +190,7 @@ class HandlerPlay(Model):
 
     @model_validator(mode="after")
     def actual_authority(self) -> "HandlerPlay":
-        if self.clause == DRESS_RULE and (
+        if self.clause in (DRESS_RULE, SUCCESSOR_ADVICE) and (
             self.source != "ordinary"
             or self.scope.scene_id is None
             or self.chooser_actor is None
@@ -193,7 +198,7 @@ class HandlerPlay(Model):
             or len(self.targets) != 1
             or self.targets[0].kind != "pilot"
         ):
-            raise ValueError("Dress Them Down belongs to the original Dogrunner and Girl in scene")
+            raise ValueError("This Play belongs to the original Handler and Girl in scene")
         if self.offered_play is not None and (
             self.source != "ordinary"
             or self.clause != "director_offer"

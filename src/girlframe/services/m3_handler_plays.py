@@ -19,6 +19,7 @@ from girlframe.engine.m3_handler_play_state import (
     BASIC,
     DRESS_RULE,
     EXTRA,
+    SUCCESSOR_ADVICE,
     Effect,
     HandlerPlay,
     Play,
@@ -92,21 +93,32 @@ def _ordinary_scene_idle(c: Connection, game: "GameService") -> None:
         )
 
 
-def _dress_in_scene(
+def _original_scene(
     c: Connection,
     game: "GameService",
     state: GameState,
     channel: int | str,
     handler: ActorRef | None,
     target: ActorRef,
+    rule: str,
 ) -> str:
-    owned = active_book(game, c, state, book="Dogrunner", rule=DRESS_RULE)
-    if owned is None or owned[0] != handler or target.kind != "pilot":
-        raise WorkflowError("Only the current Dogrunner may dress down an actual Girl")
+    if handler is None or target.kind != "pilot":
+        raise WorkflowError("Use the actual original Handler and Girl")
+    if rule == DRESS_RULE:
+        book = active_book(game, c, state, book="Dogrunner", rule=DRESS_RULE)
+        if book is None or book[0] != handler:
+            raise WorkflowError("Only the current Dogrunner may dress down an actual Girl")
+    elif rule == SUCCESSOR_ADVICE:
+        from girlframe.services.m3_successor import owned
+
+        if owned(game, c, state, handler) is None:
+            raise WorkflowError("Acquire the actual Successor advancement first")
+    else:
+        raise WorkflowError("Choose the original scene for this specific Handler Play")
     scene = game.scene(c, channel)
-    people = (int(owned[0].entity), int(target.entity))
+    people = (int(handler.entity), int(target.entity))
     if not set(people) <= set(scene["participants"]):
-        raise WorkflowError("Join the original Dogrunner and Girl to this actual scene first")
+        raise WorkflowError("Join the original Handler and Girl to this actual scene first")
     game.pilot_cast(c, state, scene, owners=people)
     return str(scene["id"])
 
@@ -654,7 +666,7 @@ def _authority(c: Connection, game: "GameService", state: GameState, grant: Hand
                 "The original Handler body context changed; withdraw this untouched move "
                 "and start a fresh one."
             )
-        if grant.clause == DRESS_RULE and grant.state == "pending":
+        if grant.clause in (DRESS_RULE, SUCCESSOR_ADVICE) and grant.state == "pending":
             scenes = t.m2["m2_scenes"]
             channel = c.scalar(
                 sa.select(scenes.c.channel_id).where(
@@ -665,10 +677,12 @@ def _authority(c: Connection, game: "GameService", state: GameState, grant: Hand
             )
             if (
                 channel is None
-                or _dress_in_scene(c, game, state, channel, grant.chooser_actor, grant.targets[0])
+                or _original_scene(
+                    c, game, state, channel, grant.chooser_actor, grant.targets[0], grant.clause
+                )
                 != grant.scope.scene_id
             ):
-                raise WorkflowError("Recover the original Dogrunner's scene and affected Girl")
+                raise WorkflowError("Recover the original Handler's scene and affected Girl")
         return
     assert grant.chooser_actor is not None
     try:
@@ -1138,10 +1152,12 @@ class HandlerPlayService:
             HandlerService(self.store).authorize(c, viewer)
             state = load_state(c, self.store.campaign_id)
             from girlframe.services.m3_contaminant_zone import warp_options
+            from girlframe.services.m3_successor import owned as owned_successor
 
             return dict(
                 game_revision=state.revision,
                 plays=BASIC,
+                successor=owned_successor(self.game, c, state, active_handler(state)) is not None,
                 frantic_breakdown=active_book(
                     self.game, c, state, book="Frantic", rule=breakdown_rule
                 )
@@ -1210,6 +1226,7 @@ class HandlerPlayService:
         director_brief: tuple[str, str] | None = None,
         director_offer: tuple[str, Play] | None = None,
         dress_scene: int | None = None,
+        advice_scene: int | None = None,
     ) -> dict[str, Any]:
         offer_scope = director_brief or director_offer
 
@@ -1219,7 +1236,13 @@ class HandlerPlayService:
             self.game.unpaused(c)
 
         def operation(c: Connection) -> dict[str, Any]:
-            if sum(x is not None for x in (director_offer, director_brief, dress_scene)) > 1:
+            if (
+                sum(
+                    x is not None
+                    for x in (director_offer, director_brief, dress_scene, advice_scene)
+                )
+                > 1
+            ):
                 raise WorkflowError("Use one reviewed Handler source.")
             _ordinary_scene_idle(c, self.game)
             state = load_state(c, self.store.campaign_id)
@@ -1236,26 +1259,29 @@ class HandlerPlayService:
                 if offer_scope
                 else WorkScope(campaign_context=True)
             )
-            if dress_scene is not None:
+            channel = dress_scene if dress_scene is not None else advice_scene
+            clause = (
+                "director_brief"
+                if director_brief
+                else "director_offer"
+                if director_offer
+                else "basic_handler_play"
+            )
+            if channel is not None:
                 if len(targets) != 1:
-                    raise WorkflowError("Choose the one original Girl who is being dressed down")
+                    raise WorkflowError("Choose the one original Girl in this scene")
+                clause = DRESS_RULE if dress_scene is not None else SUCCESSOR_ADVICE
                 scope = WorkScope(
-                    scene_id=_dress_in_scene(c, self.game, state, dress_scene, handler, targets[0])
+                    scene_id=_original_scene(
+                        c, self.game, state, channel, handler, targets[0], clause
+                    )
                 )
             state.handler_plays.append(
                 HandlerPlay(
                     id=identity,
                     source="ordinary",
                     source_event=event,
-                    clause=(
-                        DRESS_RULE
-                        if dress_scene is not None
-                        else "director_brief"
-                        if director_brief
-                        else "director_offer"
-                        if director_offer
-                        else "basic_handler_play"
-                    ),
+                    clause=clause,
                     chooser_actor=handler,
                     chooser_controller=owner,
                     appointment=appointment,
@@ -1292,6 +1318,7 @@ class HandlerPlayService:
                 **({"director_brief": director_brief} if director_brief else {}),
                 **({"director_offer": director_offer} if director_offer else {}),
                 **({"dress_scene": dress_scene} if dress_scene is not None else {}),
+                **({"advice_scene": advice_scene} if advice_scene is not None else {}),
             ),
             operation,
             auto_audit=False,
@@ -1418,6 +1445,8 @@ class HandlerPlayService:
                 special_plays = tuple(x for x in EXTRA if x[0] == "contaminant_warp")
             elif grant.clause == DRESS_RULE:
                 special_plays = tuple(x for x in EXTRA if x[0] == "dress_them_down")
+            elif grant.clause == SUCCESSOR_ADVICE:
+                special_plays = tuple(x for x in EXTRA if x[0] == "successor_advice")
             return dict(
                 id=identity,
                 game_revision=state.revision,

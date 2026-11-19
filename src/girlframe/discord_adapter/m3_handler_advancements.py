@@ -527,6 +527,12 @@ class AcquireMore(discord.ui.Button[NativeForm]):
             return
 
         async def choose(current: discord.Interaction, values: dict[str, Any]) -> None:
+            if values["advancement"][0] == "successor":
+                from girlframe.discord_adapter.m3_successor import open_purchase
+                from girlframe.services.m3_successor import SuccessorService
+
+                await open_purchase(current, SuccessorService(self.service.store), self.identity)
+                return
             if values["advancement"][0] == "opportunity":
                 from girlframe.discord_adapter.m3_promotional_opportunity import open_opportunity
                 from girlframe.services.m3_promotional_opportunity import (
@@ -562,6 +568,7 @@ class AcquireMore(discord.ui.Button[NativeForm]):
                         ("gender", "Gender Designation Request"),
                         ("marriage", "Intracadre Marriage"),
                         ("opportunity", "Promotional Opportunity"),
+                        ("successor", "Successor"),
                     ),
                 )
             ],

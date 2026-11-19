@@ -1433,3 +1433,23 @@ repeated Tag use while held and actual loss. The selected Strain,
 Handler Tag, Off-Duty, fictional Director and Inbox regression passed
 **97 tests in 131.33 seconds**.
 [Rulebook pp. 133–134](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=135) · [Tests](../../tests/rules/test_insurgent_cover.py)
+
+### Successor advice and the three-Star milestone
+
+Base `e36c9dca993239c2b9a0c2aa2335f8aca37c96cd`. Successor now consumes
+an actual held advancement and unlocks its own Handler advice Play in an
+actual joined scene. The original Handler can award a Gold Star for an
+original Girl's later completed Play in that scene. The judgment preserves
+the advice and actual action sources. Three Stars grant one Permission
+and promote her to Ace. Removing a Star preserves the already-performed
+benefits and any saved roll. We apply the three-Star benefit once for the
+original Girl. Enemy kills, stopped treason and the five-, eight- and ten-Star
+transitions still need direct support.
+
+The synthetic test exercised an actual award purchase, private advice,
+wrong owners, older actions, restart, retry, the actual Permission and
+Status changes, and removing a Star during an unrelated saved roll.
+The selected advancement, Handler, Inbox and engine regression passed
+**144 tests in 124.68 seconds** before the removal timing check. The revised
+focused case passed **1 test in 9.20 seconds**.
+[Rulebook p. 153](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=155) · [Tests](../../tests/rules/test_successor.py)

@@ -1,7 +1,14 @@
 """Finite Handler Play grants; a printed counter never changes campaign GM authority."""
 
 from girlframe.engine.m2 import GameState, TagState, shift_status
-from girlframe.engine.m3_handler_play_state import BASIC, DRESS_RULE, Effect, HandlerPlay, Play
+from girlframe.engine.m3_handler_play_state import (
+    BASIC,
+    DRESS_RULE,
+    SUCCESSOR_ADVICE,
+    Effect,
+    HandlerPlay,
+    Play,
+)
 from girlframe.engine.m3_void_state import HarpyTag
 from girlframe.engine.m3_world import introduce_npc
 from girlframe.engine.m3_world_state import WorldTag
@@ -21,6 +28,8 @@ def replace(state: GameState, value: HandlerPlay) -> None:
 def available_plays(state: GameState, grant: HandlerPlay) -> tuple[str, ...]:
     if grant.clause == DRESS_RULE:
         return ("dress_them_down",)
+    if grant.clause == SUCCESSOR_ADVICE:
+        return ("successor_advice",)
     if grant.brief_account is not None:
         return ("brief",)
     if grant.offered_play is not None:
@@ -67,6 +76,8 @@ def select(state: GameState, identity: str, play: Play, effect: Effect, event: s
         raise ValueError("A basic Handler grant has no quarantined-zone authority")
     if (grant.clause == DRESS_RULE) != (play == "dress_them_down"):
         raise ValueError("Use only the original Dogrunner's Dress Them Down grant")
+    if (grant.clause == SUCCESSOR_ADVICE) != (play == "successor_advice"):
+        raise ValueError("Use only the original earned Successor advice grant")
     if grant.nonbody_only and effect.kind not in ("brief", "escalate", "support", "expectation"):
         raise ValueError(
             "The actual original ended; only the source-owned nonbody procedure remains"
@@ -223,7 +234,7 @@ def direct(state: GameState, identity: str, event: str) -> GameState:
                 "invented resources/custody"
             )
         changed.world = introduce_npc(changed.world, npc)
-    elif effect.kind not in ("brief", "escalate", "expectation"):
+    elif effect.kind not in ("brief", "escalate", "expectation", "successor_advice"):
         raise ValueError("This effect requires its actual specialized runtime port")
     return changed
 

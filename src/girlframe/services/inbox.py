@@ -2901,6 +2901,10 @@ class InboxService:
                         task="m3_battle_context",
                     )
                 )
+            from girlframe.engine.m3_handler_consequences import (
+                active_handler as current_successor_handler,
+            )
+            from girlframe.engine.m3_successor import acquisitions as successor_acquisitions
             from girlframe.services.m3_frantic_breakdown import FranticBreakdownService
             from girlframe.services.m3_frantic_crisis import CrisisService
             from girlframe.services.m3_handler_plays import HandlerPlayService
@@ -2908,6 +2912,29 @@ class InboxService:
             from girlframe.services.m3_medical import MedicalService
             from girlframe.services.m3_privacy_trouble import PrivacyTroubleService
             from girlframe.services.m3_scene_requisitions import SceneRequisitionService
+
+            for value in successor_acquisitions(canon):
+                if value.handler == current_successor_handler(
+                    canon
+                ) and value.handler.entity == str(viewer.user_id):
+                    items.append(
+                        InboxItem(
+                            "successor:" + value.id,
+                            "successor",
+                            value.id,
+                            canon.revision,
+                            "playbook",
+                            "Successor Gold Stars",
+                            "Your original Handler",
+                            "available",
+                            True,
+                            False,
+                            "Review performed lessons and the original Gold Stars.",
+                            "Use the actual source Play to grant a new Star.",
+                            "Review Successor",
+                            task="m3_successor",
+                        )
+                    )
 
             if any(x.get("kind") == "insurgent_cover_strain" for x in canon.facts):
                 covers = CoverService(OffDutyService(MissionService(self.store)))

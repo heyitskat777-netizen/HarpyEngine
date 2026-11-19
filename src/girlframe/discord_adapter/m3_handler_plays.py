@@ -25,6 +25,8 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
     ]
     if data.get("dress_them_down") and interaction.channel_id is not None:
         options.append(("dress", "Dress Them Down in this scene"))
+    if data.get("successor") and interaction.channel_id is not None:
+        options.append(("advice", "Give advice on how to lead in this scene"))
     if data.get("frantic_breakdown") and interaction.channel_id is not None:
         options.append(("frantic_breakdown", "Break Down in this scene"))
     options.extend(
@@ -59,10 +61,11 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
             from girlframe.services.m3_off_duty import OffDutyService
 
             await open_period(current, OffDutyService(MissionService(service.store)))
-        elif identity not in ("new", "dress"):
+        elif identity not in ("new", "dress", "advice"):
             await open_play(current, service, identity)
         else:
             dress_scene = interaction.channel_id if identity == "dress" else None
+            advice_scene = interaction.channel_id if identity == "advice" else None
 
             async def submit(actual: discord.Interaction, values: dict[str, Any]) -> str:
                 result = await asyncio.to_thread(
@@ -72,6 +75,7 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
                     data["game_revision"],
                     tuple(ActorRef.model_validate(targets[x]["ref"]) for x in values["targets"]),
                     dress_scene=dress_scene,
+                    advice_scene=advice_scene,
                 )
                 return (
                     "Owned Handler Play saved. Reopen your Inbox or Handler Plays to "
@@ -84,14 +88,18 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
                 )
             form = NativeForm(
                 viewer_from_interaction(current).user_id,
-                "Dress Them Down" if dress_scene else "Handler Play — affected characters",
+                "Dress Them Down"
+                if dress_scene
+                else "Give advice on how to lead"
+                if advice_scene
+                else "Handler Play — affected characters",
                 "Choose the actual originals affected. No player reply or consent is generated.",
                 [
                     Field(
                         "targets",
                         "Who is affected?",
                         tuple((key, x["label"]) for key, x in targets.items()),
-                        maximum=1 if dress_scene else len(targets),
+                        maximum=1 if dress_scene or advice_scene else len(targets),
                     )
                 ],
                 submit,
