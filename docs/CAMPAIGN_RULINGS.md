@@ -4650,3 +4650,16 @@ ruling specifies who may inflict it and how the original Girl's solo
 response remains protected. The ordinary Punishment authority remains in
 force.
 [High Budget p. 149](../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=151) · [Severe Punishment p. 16](../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=18)
+
+## Jackdaw Hallucinations and physical communication
+
+[Rulebook p. 169](../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=171) says the
+high result ends Isolation and separately describes drowning out
+audible communication. The candidate ends the actual original
+Isolation source for the Girl and still checks the physical
+communication route. Confirm how an Autocrat's visual route is
+established and known, and what restores ordinary audibility
+while the Jackdaw continues jamming. A low result with fewer than
+three erasable Identities retains the roll for private review.
+Confirm how the printed erasure applies to missing or protected
+slots. These are open printed-clarity questions.

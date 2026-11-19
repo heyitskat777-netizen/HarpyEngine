@@ -164,6 +164,12 @@ def source(
 
             prove_temptation(game, c, first, body, actor)
             return current, body, actor
+        if body.get("reason") == "jackdaw_hallucinations":
+            from girlframe.services.m3_hallucinations import prove_threshold as prove_hallucinations
+
+            assert proof is not None
+            prove_hallucinations(game, c, proof, first, body, actor)
+            return current, body, actor
         if body.get("reason") == "scientist_private_void":
             from girlframe.services.m3_scientist_private_scene import (
                 prove_threshold as prove_scientist_threshold,
@@ -562,6 +568,12 @@ def complete(
             from girlframe.services.m3_consume import resume_pending
 
             resume_pending(game, c, event)
+        elif body.get("reason") == "jackdaw_hallucinations":
+            from girlframe.services.m3_hallucinations import (
+                complete_void as complete_hallucinations,
+            )
+
+            complete_hallucinations(game, c, identity, body["source_action"], event, viewer, key)
         elif body.get("reason") == "harpy_bond_void":
             from girlframe.services.m3_harpy_bond_void import complete_void as complete_temptation
 

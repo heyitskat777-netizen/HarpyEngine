@@ -24,6 +24,7 @@ class Declaration(Model):
             "mother_sprite",
             "jackdaw_jam",
             "jackdaw_catatonia",
+            "jackdaw_hallucinations",
             "parasite_hitch",
             "parasite_detach",
         ]
@@ -55,6 +56,7 @@ class Declaration(Model):
             "incubus_inflict",
             "mother_mutation",
             "doppleganger_bond",
+            "jackdaw_hallucinations",
             "parasite_hitch",
         ):
             if self.target is None or self.target_sha256 is None or self.target == self.actor:

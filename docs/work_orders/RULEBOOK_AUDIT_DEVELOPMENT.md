@@ -1954,6 +1954,38 @@ Girl sheet. Infiltrating technology and Infect still need their own
 workflows.
 [Parasite p. 174](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=176) · [Native ride case](../../tests/rules/test_gorgon_runtime.py)
 
+### Jackdaw Hallucinations
+
+Base `1790f60f5026668547395d70dc7ac5a7ce674516`. The native
+Gorgon declaration binds the current original Girl to the exact
+Jackdaw's active Isolation and original scene. Only the Girl can
+choose the Heat and the resulting Tag or Identity. The saved
+faces survive replay and restart. The mid result grants her
+authored Tag. The high result protects it against rejection and
+ends this original source of Isolation. The low result erases
+her three selected ordinary Identities, adds her authored
+Identity and an Isolated Tag, and applies catatonia in range and
+one ordinary Void gain. Status, other characters' sheets and
+private audience restrictions are preserved.
+
+**Four focused tests passed in 13.33 seconds**, including the
+native Heat control, the three immediate tiers, repeat, wrong
+owner, safety pause and private consequences. The fourth case
+reaches Mockingbird's actual Frame threshold and holds the
+original Gorgon Play until the Girl completes the source-owned
+Keep Your Head with a human ruling. The ordinary audio jam
+still requires an independently verified communication route.
+Daily repeat gains, visual alternatives and the low-tier case
+with fewer than three erasable Identities remain open.
+
+The detached run on `953a275e7c941b288225902b621d8ff1c457cd7c`
+found that the Director's separate native inventory omitted
+Jackdaw jamming. The Director catalog now uses the native Gorgon
+service's rule map. A recognized declaration still enters private
+review without spending resources or resolving game effects. The
+Director review suite passed **11 tests in 16.29 seconds**.
+[Hallucinations p. 169](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=171) · [Native cases](../../tests/rules/test_gorgon_runtime.py) · [Director catalog check](../../tests/test_director_play_review.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

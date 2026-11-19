@@ -138,6 +138,11 @@ def start(game: Any, c: Connection, state: GameState, action: dict[str, Any]) ->
         )
         action["data"]["result"]["catatonia" if people else "audible_communication_blocked"] = True
         return
+    if meta["kind"] == "jackdaw_hallucinations":
+        from girlframe.services.m3_hallucinations import start as inflict
+
+        inflict(game, c, state, action)
+        return
     if meta["kind"] in parasite.PLAYS:
         declaration = Declaration.model_validate_json(json.dumps(meta["declaration"]))
         if declaration.target is None:
@@ -421,7 +426,11 @@ def apply(
     meta, event = _meta(action), _event(action)
     body = json.loads(row["body_json"])
     kind = row["kind"].removeprefix("gorgon_")
-    if kind == "defend":
+    if kind.startswith("hallucinations_"):
+        from girlframe.services.m3_hallucinations import apply as resolve_hallucinations
+
+        resolve_hallucinations(game, c, state, action, row, answer)
+    elif kind == "defend":
         target = _ref(body["actor"])
         defensive_assets = battle.intact_assets(state, target, profiles(c, game.store.campaign_id))
         selected = _one(answer, ("play", "damage") if defensive_assets else ("play",))
@@ -756,6 +765,10 @@ def projection(
     body = json.loads(row["body_json"])
     kind = row["kind"].removeprefix("gorgon_")
     result: dict[str, Any] = dict(kind=kind, account=action["data"].get("context", ""))
+    if kind.startswith("hallucinations_"):
+        from girlframe.services.m3_hallucinations import project
+
+        return project(game, c, state, action, row)
     if kind == "dormant_void":
         result.update(work_id=body["work_id"], actor=body["actor"], source="actual_gorgon_dormant")
     elif kind == "defend":
@@ -959,6 +972,10 @@ def synchronize(
     materialize_dormant(game, c, action, event)
     synchronize_damage(game, c, event)
     state = load_state(c, game.store.campaign_id)
+    if meta["kind"] == "jackdaw_hallucinations":
+        from girlframe.services.m3_hallucinations import materialize
+
+        materialize(game, c, state, action, event)
     if not _actor(state, action).alive:
         actions = t.m2["m2_actions"]
         active_child = c.scalar(

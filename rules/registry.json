@@ -21979,14 +21979,50 @@
         "heading": "Hallucinations"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original Jackdaw inflicts Hallucinations on a Girl Isolated by its actual range in their open source scene.",
+        "actor_type": "Original Jackdaw and actual original Girl",
+        "pre_roll_sources": [
+          "The original Jackdaw range, current original cast and Girl sheet",
+          "The affected Girl's owned Heat choice"
+        ],
+        "roll_kind": "2d6",
+        "allowed_modifiers": [
+          "Owned Heat"
+        ],
+        "tier_options": {
+          "mid": [
+            "The Girl authors a Tag describing the actual Hallucination"
+          ],
+          "high": [
+            "The Girl authors an irrejectable Tag and leaves that source of Isolation"
+          ],
+          "low": [
+            "The Girl chooses three erasable Identities and authors their replacement, takes an Isolated Tag, becomes catatonic in range and gains ordinary Void"
+          ]
+        },
+        "choice_ownership": "The Gorgon controller declares the exposure. The Girl chooses her Heat, resulting Tag or Identity and original Asset.",
+        "target_policy": "Original Pilot in the exact source scene and in its active range. Other Pilot personas and exterior chat do not inherit access.",
+        "post_roll_effects": [
+          "Save the roll before any response",
+          "Apply the original Girl's consequences exactly once"
+        ],
+        "mandatory_followups": [
+          "Resolve any threshold reached by the initial ordinary Void gain",
+          "Additional Void for further fictional days in range still needs its calendar source"
+        ],
+        "handler_or_gm_intervention": "The human GM handles the original source adjudication and unsupported Identity/physical cases.",
+        "test_fixture_ids": [
+          "tests/rules/test_gorgon_runtime.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_gorgon_runtime.py::test_jackdaw_hallucinations_has_owned_heat_roll_and_printed_consequence"],
       "m2_play_id": null,
       "module": "core"
     },

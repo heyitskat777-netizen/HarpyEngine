@@ -154,6 +154,7 @@ def prepare_keep(
                 "mockingbird_void_threshold",
                 "mockingbird_sex_void_threshold",
                 "janus_void_threshold",
+                "gorgon_hallucinations_void",
             )
             and x["actor_id"] == actor.entity
             and json.loads(x["body_json"]).get("work_id") == row["id"]

@@ -20,6 +20,7 @@ from girlframe.engine.m3_red_queen import PLAYS as RED_QUEEN
 from girlframe.engine.m3_wyvern import PLAYS as WYVERN
 from girlframe.engine.rules_registry import Registry
 from girlframe.services.m3_access import digest, load_registry
+from girlframe.services.m3_gorgon_play import RULES as GORGON_RULES
 
 HANDLER_SCENES = {
     "handler_advocate_alone": (advocate_alone, "Get Them Alone"),
@@ -75,16 +76,7 @@ NATIVE_RULES = {
     "handler_dress_them_down": DRESS_RULE,
     "handler_successor_advice": SUCCESSOR_ADVICE,
     **{key: rule for key, (rule, _) in HANDLER_SCENES.items()},
-    "gorgon_attack": "gorgon.gorgon.attack",
-    "gorgon_collateral": "gorgon.gorgon.collateral-damage",
-    "gorgon_warp": "gorgon.gorgon.warp",
-    "gorgon_corrupt": "gorgon-type.sentinel.sentinel-type",
-    "gorgon_incubus_inflict": "gorgon-type.incubus.incubus-type",
-    "gorgon_mother_mutation": "gorgon-type.mother.mother-type",
-    "gorgon_mother_sprite": "gorgon-type.mother.mother-type",
-    "gorgon_growth_adapt": "gorgon-type.growth.growth-type",
-    "gorgon_growth_regrow": "gorgon-type.growth.growth-type",
-    "gorgon_doppleganger_bond": "gorgon-type.doppleganger.doppleganger-type",
+    **{"gorgon_" + key: rule for key, rule in GORGON_RULES.items()},
 }
 
 

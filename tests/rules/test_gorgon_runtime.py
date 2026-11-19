@@ -33,6 +33,7 @@ def candidate_source_gate(monkeypatch):
             "gorgon.gorgon.warp",
             "gorgon-type.sentinel.sentinel-type",
             "gorgon-type.jackdaw.jackdaw-type",
+            "gorgon-type.jackdaw.hallucinations",
             "gorgon-type.incubus.incubus-type",
             "gorgon-type.mother.mother-type",
             "gorgon-type.growth.growth-type",
@@ -2076,3 +2077,212 @@ def test_parasite_rides_actual_npc_until_owned_detachment(ledger):
     assert state(game).world.npcs[0].cell == (0, 0)
     assert next(x for x in state(game).world.gorgons if x.id == actor.entity).cell == (1, 0)
     assert state(game).sheets == original.sheets and game.dice.calls == 0
+
+
+@pytest.mark.parametrize(
+    "die_faces,result,threshold",
+    [
+        ((3, 4), "mid", False),
+        ((5, 5), "high", False),
+        ((1, 2), "low", False),
+        ((1, 2), "low", True),
+    ],
+)
+def test_jackdaw_hallucinations_has_owned_heat_roll_and_printed_consequence(
+    ledger, die_faces, result, threshold
+):
+    import asyncio
+
+    from test_ledger import OTHER
+    from test_m2_game import Dice, pass_tags
+    from test_mission_ui import current
+
+    from girlframe.discord_adapter.m3_gorgon_runtime import open_choice
+    from girlframe.engine.m2 import ChoiceAnswer, PlayInput
+    from girlframe.engine.m3_actor_bonds import current_ref
+    from girlframe.engine.m3_actors import resolve
+    from girlframe.engine.m3_beneath import rejection_blocked
+    from girlframe.engine.m3_hallucinations import records
+    from girlframe.engine.m3_jackdaw import Range
+    from girlframe.services.m3_actors import profiles
+    from girlframe.services.m3_hallucinations import HEAT, OUTCOME
+    from girlframe.services.m3_jackdaw import catatonic, isolation
+    from girlframe.services.m3_sentinel import require_communication
+    from girlframe.services.m3_void import VoidService
+    from girlframe.services.onboarding import WorkflowError
+
+    game, worker, gateway, jam, declaration = gorgon_source(
+        ledger,
+        kind="jackdaw_jam",
+        types=("jackdaw",),
+        other_cell=(2, 0),
+        interference=Range(cells=((0, 0),)),
+    )
+    tick(worker, gateway, 5)
+    assert game.inspect(ADMIN, jam)["state"] == "complete"
+    game.dice = Dice(die_faces)
+    remaining = None
+    with ledger.transaction() as c:
+        canon = state(game)
+        sheet = canon.sheets[str(PLAYER.user_id)]
+        sheet.heat = 2
+        if threshold:
+            frame = [x for x in sheet.assets if x.family == "frame"]
+            remaining = frame[-1].id
+            for asset in frame[:-1]:
+                asset.void = True
+                asset.description = "Earlier fictional damage"
+
+        game.event(c, PLAYER.user_id, "synthetic-hallucination-heat", "synthetic.heat", canon)
+    service = GorgonPlayService(game)
+    preview = service.preview(ADMIN, 900)
+    before = state(game)
+    girl = current_ref(before, PLAYER.user_id)
+    stray = current_ref(before, OTHER.user_id)
+    assert preview["typed_targets"][declaration.actor.token]["jackdaw_hallucinations"] == [
+        girl.token
+    ]
+    forms = {x["token"]: x for x in preview["actors"]}
+    hallucinations = Declaration(
+        kind="jackdaw_hallucinations",
+        actor=declaration.actor,
+        actor_sha256=forms[declaration.actor.token]["source_sha256"],
+        target=girl,
+        target_sha256=forms[girl.token]["source_sha256"],
+        account="The original Jackdaw directs its established song at the Isolated Girl.",
+        reach_confirmed=True,
+    )
+    with pytest.raises(WorkflowError, match="actual Girl must be Isolated"):
+        service.begin(
+            ADMIN,
+            "outside-isolation",
+            900,
+            before.revision,
+            hallucinations.model_copy(
+                update=dict(target=stray, target_sha256=forms[stray.token]["source_sha256"])
+            ),
+        )
+    action = service.begin(ADMIN, "hallucinations", 900, before.revision, hallucinations)[
+        "action_id"
+    ]
+    tick(worker, gateway, 5)
+    if not any(x["kind"] == HEAT for x in game.choices(PLAYER)):
+        game.roll(ADMIN, "advance-hallucinations", action)
+    spend = next(x for x in game.choices(PLAYER) if x["kind"] == HEAT)
+    assert all(x["kind"] not in (HEAT, OUTCOME) for x in game.choices(OTHER))
+    with pytest.raises(WorkflowError, match="another player"):
+        game.respond(
+            OTHER, "wrong-hallucinations", spend["id"], spend["revision"], ChoiceAnswer(number=1)
+        )
+    with pytest.raises(WorkflowError, match="Choose Heat"):
+        game.respond(
+            PLAYER,
+            "excess-hallucination-heat",
+            spend["id"],
+            spend["revision"],
+            ChoiceAnswer(number=100),
+        )
+    if result == "high":
+        ledger.safety(OTHER, "pause-hallucinations", ledger.status(OTHER)["revision"], pause=True)
+        with pytest.raises(WorkflowError, match="SAFETY_PAUSED"):
+            game.respond(
+                PLAYER,
+                "paused-hallucinations",
+                spend["id"],
+                spend["revision"],
+                ChoiceAnswer(number=1),
+            )
+        ledger.safety(OTHER, "resume-hallucinations", ledger.status(OTHER)["revision"], pause=False)
+
+        async def native_heat():
+            handoff = current(PLAYER.user_id, 87300)
+            await handoff.response.defer(ephemeral=True)
+            await open_choice(handoff, game, spend["id"])
+            form = handoff.edit_original_response.call_args.kwargs["view"]
+            form.values["heat"] = "1"
+            await form.confirm.callback(current(PLAYER.user_id, 87301))
+            assert form.completed
+
+        asyncio.run(native_heat())
+        key = "87301"
+    else:
+        key = "hallucination-heat"
+        game.respond(PLAYER, key, spend["id"], spend["revision"], ChoiceAnswer(number=1))
+    game.respond(PLAYER, key, spend["id"], spend["revision"], ChoiceAnswer(number=1))
+    assert game.dice.calls == 1
+    assert state(game).sheets[girl.entity].heat == before.sheets[girl.entity].heat - 1
+    decision = next(x for x in game.choices(PLAYER) if x["kind"] == OUTCOME)
+    ledger.engine.dispose()
+    detail = game.decision(PLAYER, decision["id"])["detail"]
+    assert detail["roll"]["faces"] == list(die_faces) and detail["tier"] == result
+    talent = "Clockwork birds on the roof"
+    fields, erased = {}, ()
+    if result == "low":
+        erased = tuple(list(detail["identities"])[:3])
+        assert len(erased) == 3
+        fields = dict(
+            asset=remaining or next(iter(detail["assets"])), void_description="Turns to glass."
+        )
+    game.respond(
+        PLAYER,
+        "hallucination-outcome",
+        decision["id"],
+        decision["revision"],
+        ChoiceAnswer(text=talent, options=erased, fields=fields),
+    )
+    after = state(game)
+    (effect,) = records(after)
+    assert (
+        effect.girl == girl and effect.source == declaration.actor and effect.roll.result == result
+    )
+    assert game.inspect(ADMIN, action)["state"] == ("awaiting_choices" if threshold else "complete")
+    assert after.sheets[stray.entity] == before.sheets[stray.entity]
+    tag = next(x for x in after.sheets[girl.entity].tags if x.id == effect.tag)
+    assert tag.label == ("Isolated" if result == "low" else talent)
+    assert OTHER.user_id not in tag.observers
+    assert rejection_blocked(after, PLAYER.user_id, tag.id) == (result == "high")
+    with ledger.engine.connect() as c:
+        view = resolve(after, girl, profiles(c, ledger.campaign_id), require_current_profile=False)
+        assert bool(isolation(c, ledger.campaign_id, after, view)) == (result != "high")
+        assert catatonic(c, ledger.campaign_id, after, view) == (result == "low")
+        with pytest.raises(WorkflowError, match="No verified communication route"):
+            require_communication(c, ledger.campaign_id, after, girl, (stray,))
+    if result == "low":
+        sheet = after.sheets[girl.entity]
+        assert not set(erased) & {x.id for x in sheet.identities}
+        assert next(x.name for x in sheet.identities if x.id == effect.identity) == talent
+        assert effect.void_asset == fields["asset"]
+        assert next(x for x in sheet.assets if x.id == effect.void_asset).void
+
+    if threshold:
+        (work,) = effect.void_work
+        service = VoidService(ledger)
+        assert service.get(PLAYER, work)["stage"] == "resist_pending"
+        with pytest.raises(WorkflowError, match="private Void"):
+            service.get(OTHER, work)
+        held = next(x for x in game.choices(PLAYER) if x["kind"] == "gorgon_hallucinations_void")
+        assert game.decision(PLAYER, held["id"])["detail"]["work"] == work
+        original = state(game).sheets[girl.entity]
+        game.dice.faces = (1, 1)
+        child = game.begin(
+            PLAYER,
+            "resist-hallucinations",
+            900,
+            original.revision,
+            PlayInput(
+                play="keep_your_head",
+                source_work=work,
+                heat=original.heat,
+                parent=action,
+                context="The original Girl resists the actual corrupted Frame.",
+                trigger_confirmed=True,
+            ),
+        )["action_id"]
+        tick(worker, gateway, 4)
+        pass_tags(game)
+        answer(game, PLAYER, "actor_keep", options=("in_control",))
+        answer(game, ADMIN, "handler_keep", flag=True, text="The actual resistance succeeded.")
+        tick(worker, gateway, 5)
+        assert game.inspect(PLAYER, child)["state"] == "complete"
+        assert game.inspect(ADMIN, action)["state"] == "complete"
+        assert service.get(PLAYER, work)["stage"] == "prevented"

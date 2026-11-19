@@ -10,6 +10,7 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_growth as growth
+from girlframe.engine import m3_hallucinations as hallucinations
 from girlframe.engine import m3_jackdaw as jackdaw
 from girlframe.engine import m3_mother_sprite as mother_sprite
 from girlframe.engine import m3_parasite as parasite
@@ -41,6 +42,7 @@ RULES: dict[str, str] = {
     "mother_sprite": mother_sprite.RULE,
     "jackdaw_jam": jackdaw.RULE,
     "jackdaw_catatonia": jackdaw.RULE,
+    "jackdaw_hallucinations": hallucinations.RULE,
     **dict.fromkeys(parasite.PLAYS, parasite.RULE),
     **{str(kind): rule for kind, rule in TYPE_TAG_RULES.items()},
 }
@@ -71,6 +73,7 @@ class GorgonPlayService:
 
     def preview(self, viewer: GuildViewer, channel: int) -> dict[str, Any]:
         from girlframe.services.m3_battle import _cast, _visible
+        from girlframe.services.m3_hallucinations import eligible as isolated
 
         with self.store.engine.connect() as c:
             self.authorize(c, viewer)
@@ -156,7 +159,7 @@ class GorgonPlayService:
                             ]
                             if hosts:
                                 parasite_choices[token] = {"parasite_hitch": hosts}
-                    options = {
+                    options: dict[str, list[str]] = {
                         kind: [
                             target.ref.token
                             for target in visible.values()
@@ -166,6 +169,12 @@ class GorgonPlayService:
                         if gorgon_type in actor.types
                         and (kind != "doppleganger_bond" or actor.revealed)
                     }
+                    if "jackdaw" in actor.types:
+                        options["jackdaw_hallucinations"] = [
+                            girl.ref.token
+                            for girl in visible.values()
+                            if isolated(c, self.store.campaign_id, state, caster.ref, girl, cast.id)
+                        ]
                     typed_targets[token] = {
                         kind: targets for kind, targets in options.items() if targets
                     }
@@ -175,7 +184,9 @@ class GorgonPlayService:
             for kind, identity in RULES.items():
                 if kind == "corrupt" and not can_corrupt:
                     continue
-                if kind in TAG_TYPES and not any(kind in x for x in typed_targets.values()):
+                if (kind in TAG_TYPES or kind == "jackdaw_hallucinations") and not any(
+                    kind in x for x in typed_targets.values()
+                ):
                     continue
                 if kind in parasite.PLAYS and not any(kind in x for x in parasite_choices.values()):
                     continue
@@ -210,6 +221,7 @@ class GorgonPlayService:
 
         def operation(c: Connection) -> dict[str, Any]:
             from girlframe.services.m3_battle import _cast, _scene_judge, _visible
+            from girlframe.services.m3_hallucinations import eligible as isolated
             from girlframe.services.m3_scene_requisitions import guard
 
             self.game.unpaused(c)
@@ -303,6 +315,10 @@ class GorgonPlayService:
                     raise WorkflowError(
                         "Use the actual present original target and source resources"
                     )
+                if declaration.kind == "jackdaw_hallucinations" and not isolated(
+                    c, self.store.campaign_id, state, actual.ref, target, cast.id
+                ):
+                    raise WorkflowError("The actual Girl must be Isolated by this original Jackdaw")
                 if declaration.kind == "parasite_hitch" and (
                     not _visible(state, target.ref, viewer.user_id)
                     or not parasite.present(state, actual, target)
@@ -383,6 +399,7 @@ class GorgonPlayService:
                 actual.cell is None
                 or target_view is not None
                 and target_view.cell != actual.cell
+                and declaration.kind != "jackdaw_hallucinations"
                 or declaration.interference is not None
                 and len(declaration.interference.cells) > 1
             )
@@ -833,7 +850,12 @@ def prepare_response(
     if prepared.play == "defeat" and prepared.source_work is not None:
         return None
     parent = game.action(c, prepared.parent)
-    if not parent["data"].get("gorgon_play"):
+    source = parent["data"].get("gorgon_play")
+    if not source or (
+        source["kind"] == "jackdaw_hallucinations"
+        and prepared.play == "keep_your_head"
+        and prepared.source_work is not None
+    ):
         return None
     from girlframe.services.m3_battle import _cast
 

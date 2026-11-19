@@ -5,6 +5,7 @@ from sqlalchemy import Connection
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, ProfileBinding, SceneCast
 from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_hallucinations import immunity, records
 from girlframe.engine.m3_jackdaw import KIND, Interference, Range, ranges
 from girlframe.services.m3_actors import profiles
 from girlframe.services.onboarding import WorkflowError
@@ -47,26 +48,57 @@ def _active(c: Connection, campaign: str, state: GameState) -> tuple[Interferenc
     return tuple(effects)
 
 
+def isolation(
+    c: Connection, campaign: str, state: GameState, girl: ActorView, scene: str | None = None
+) -> tuple[Interference, ...]:
+    if girl.rules not in ("girl_frame", "handler_girl") or girl.offstage_source is not None:
+        return ()
+    return tuple(
+        original
+        for original in _active(c, campaign, state)
+        if original.effect == "audible"
+        and (scene is None or original.scene == scene)
+        and girl.cell in original.range.cells
+        and not immunity(state, girl.ref, original.event)
+    )
+
+
+def catatonic(c: Connection, campaign: str, state: GameState, actor: ActorView) -> bool:
+    if actor.ref.kind != "pilot" or actor.offstage_source is not None or actor.cell is None:
+        return False
+    sources = {
+        effect.source
+        for effect in records(state)
+        if effect.girl == actor.ref and effect.roll.result == "low"
+    }
+    return bool(sources) and any(
+        x.actor in sources and x.effect == "audible" and actor.cell in x.range.cells
+        for x in _active(c, campaign, state)
+    )
+
+
 def require_audible(
     c: Connection, campaign: str, state: GameState, conversation: tuple[ActorView, ...]
 ) -> None:
-    for original in _active(c, campaign, state):
-        if any(
-            x.offstage_source is None
-            and x.cell in original.range.cells
-            and (
-                x.rules in ("girl_frame", "handler_girl")
-                if original.effect == "audible"
-                else x.ref in original.victims
-            )
-            for x in conversation
-        ):
-            raise WorkflowError(
-                "No verified communication route reaches the original recipient from this position."
-            )
+    if any(
+        actor.offstage_source is None
+        and actor.cell in actual.range.cells
+        and (
+            actor.rules in ("girl_frame", "handler_girl")
+            if actual.effect == "audible"
+            else actor.ref in actual.victims
+        )
+        for actual in _active(c, campaign, state)
+        for actor in conversation
+    ):
+        raise WorkflowError(
+            "No verified communication route reaches the original recipient from this position."
+        )
 
 
 def require_action(c: Connection, campaign: str, state: GameState, actor: ActorView) -> None:
+    if catatonic(c, campaign, state, actor):
+        raise WorkflowError("The original Girl is catatonic while in the actual Jackdaw's range")
     if actor.ref.kind not in ("npc", "handler") or actor.offstage_source is not None:
         return
     if any(

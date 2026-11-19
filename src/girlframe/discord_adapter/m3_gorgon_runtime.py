@@ -25,6 +25,15 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
             interaction, GorgonDormantService(game.store, game), detail["work_id"]
         )
         return
+    if kind == "hallucinations_void":
+        from girlframe.discord_adapter.m3_void import open_void
+        from girlframe.services.m3_void import VoidService
+
+        await open_void(interaction, VoidService(game.store), detail["work"])
+        return
+    if kind.startswith("hallucinations_"):
+        await open_hallucinations(interaction, game, data)
+        return
     if kind == "response_play":
         from girlframe.discord_adapter.m2_ui import open_play
 
@@ -149,4 +158,69 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         fields,
         submit,
     )
+    await reply(interaction, form.text(), form)
+
+
+async def open_hallucinations(
+    interaction: discord.Interaction, game: GameService, data: dict[str, Any]
+) -> None:
+    detail = data["detail"]
+    spend = detail["kind"] == "hallucinations_heat"
+    fields: list[Field]
+    if spend:
+        description = f"You have {detail['heat']} Heat. Each Heat you spend adds one to the roll."
+        fields = [Field("heat", "Heat to spend")]
+    else:
+        roll = detail["roll"]
+        faces = " + ".join(str(x) for x in roll["faces"])
+        description = f"Saved roll {faces} + {roll['heat']} Heat. Describe what you experienced."
+        low = detail["tier"] == "low"
+        fields = [Field("label", "Hallucination Identity" if low else "Hallucination Tag")]
+        if low:
+            if len(detail["identities"]) < 3 or not detail["assets"]:
+                await reply(
+                    interaction,
+                    "Your saved result needs private review of the Identity or Void choices.",
+                )
+                return
+            fields.extend(
+                (
+                    Field(
+                        "identities",
+                        "Your three Identities to erase",
+                        tuple(detail["identities"].items()),
+                        3,
+                        3,
+                    ),
+                    Field("asset", "Your Asset affected by Void", tuple(detail["assets"].items())),
+                    Field("void_description", "What changes about the Asset?", paragraph=True),
+                )
+            )
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        number = None
+        if spend:
+            raw = values["heat"].strip()
+            if not raw.isascii() or not raw.isdecimal() or len(raw) > 9:
+                return "Enter a whole amount of your current Heat."
+            number = int(raw)
+        answer = ChoiceAnswer(
+            number=number,
+            text=values.get("label", ""),
+            options=tuple(values.get("identities", ())),
+            fields={"asset": values["asset"][0], "void_description": values["void_description"]}
+            if values.get("asset")
+            else {},
+        )
+        await asyncio.to_thread(
+            game.respond,
+            viewer_from_interaction(current),
+            str(current.id),
+            data["id"],
+            data["revision"],
+            answer,
+        )
+        return "Your choice is saved. Open the private Inbox to recover any next step."
+
+    form = NativeForm(interaction.user.id, "Hallucinations", description, fields, submit)
     await reply(interaction, form.text(), form)

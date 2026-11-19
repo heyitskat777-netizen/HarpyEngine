@@ -56,10 +56,10 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
             if kind not in riding_choices:
                 return "Use the actual Parasite whose host state permits this Play."
             targets = [x for x in targets if x["token"] in riding_choices[kind]]
-        if type_tag:
+        if type_tag or kind == "jackdaw_hallucinations":
             eligible = data["typed_targets"].get(actor["token"], {}).get(kind, ())
             targets = [x for x in targets if x["token"] in eligible]
-        targeted = kind in ("attack", "parasite_hitch") or type_tag
+        targeted = kind in ("attack", "parasite_hitch", "jackdaw_hallucinations") or type_tag
         if targeted and not targets:
             return "Join the actual eligible target to the scene before declaring this Play."
         if kind in ("attack", "collateral") and not actor["assets"]:

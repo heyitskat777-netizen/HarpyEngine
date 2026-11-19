@@ -2265,6 +2265,22 @@ class GameService:
                     c, state, mechanical_owner, require_current_profile=False
                 ),
             )
+            if (
+                defeat is None
+                and void_keep is None
+                and any(x.get("kind") == "jackdaw_hallucinations" for x in state.facts)
+            ):
+                from girlframe.engine.m3_actors import resolve as resolve_pilot
+                from girlframe.services.m3_actors import profiles
+                from girlframe.services.m3_jackdaw import require_action
+
+                original_body = resolve_pilot(
+                    state,
+                    acting_ref,
+                    profiles(c, self.store.campaign_id),
+                    require_current_profile=False,
+                )
+                require_action(c, self.store.campaign_id, state, original_body)
             if prepared.play == "check_sensors":
                 from girlframe.services.m3_sentinel import require_sensors
 
@@ -2380,6 +2396,7 @@ class GameService:
                                 "mockingbird_void_threshold",
                                 "mockingbird_sex_void_threshold",
                                 "janus_void_threshold",
+                                "gorgon_hallucinations_void",
                                 "snoop_item_void_threshold",
                                 "gorgon_response_play",
                             )
@@ -2453,6 +2470,7 @@ class GameService:
                     "mockingbird_void_threshold",
                     "mockingbird_sex_void_threshold",
                     "janus_void_threshold",
+                    "gorgon_hallucinations_void",
                     "snoop_item_void_threshold",
                 ) and (void_keep is None or prepared.play != "keep_your_head"):
                     raise WorkflowError("Use the actual source-owned Void resistance controls.")
