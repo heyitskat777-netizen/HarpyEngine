@@ -12,7 +12,7 @@ from girlframe.discord_adapter.m3_punishments import Picker
 from girlframe.discord_adapter.m3_world import TYPES, coordinates
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.playbooks import GIRL_TYPES
-from girlframe.services.m3_timeskip import DURATIONS, Arrival, TimeskipService
+from girlframe.services.m3_timeskip import BASE_JOBS, DURATIONS, Arrival, TimeskipService
 
 
 async def open_timeskip_start(interaction: discord.Interaction, service: TimeskipService) -> None:
@@ -59,8 +59,16 @@ async def open_timeskip(
     if step in ("death", "death_ballot"):
         await _open_death(interaction, service, case, title, data)
         return
-    if step == "base_foundation":
-        await reply(interaction, "The Timeskip awaits the establishment of a new base.")
+    if step == "base_contacts":
+        await reply(interaction, "The Timeskip awaits the original players’ NPC contributions.")
+        return
+    if step == "rebel_succession":
+        await reply(
+            interaction, "The Timeskip awaits the fall and rise of the actual Rebel groups."
+        )
+        return
+    if step == "create_contact":
+        await _open_contact(interaction, service, case, title, data)
         return
     if step in ("newgirl", "replacement") and not data["can_continue"]:
         message = (
@@ -123,16 +131,17 @@ async def open_timeskip(
         form = NativeForm(interaction.user.id, title, "Confirm your own decision.", fields, vote)
         await reply(interaction, form.text(), form)
         return
-    if step == "city_foundation":
+    if step in ("city_foundation", "base_foundation"):
+        site = "city" if step == "city_foundation" else "base"
         fields = [
-            Field("name", "Name of the actual new city"),
+            Field("name", "Name of the actual new " + site),
             Field("cell", "Actual map square in x,y form"),
-            Field("account", "Describe the new city", paragraph=True),
+            Field("account", "Describe the new " + site, paragraph=True),
         ]
 
         async def establish(click: discord.Interaction, values: dict[str, Any]) -> str:
             await asyncio.to_thread(
-                service.establish_city,
+                service.establish_site,
                 viewer_from_interaction(click),
                 str(click.id),
                 case,
@@ -260,6 +269,43 @@ async def _open_death(
         title,
         instruction,
         [Field("choice", "Your decision", options)],
+        confirm,
+    )
+    await reply(interaction, form.text(), form)
+
+
+async def _open_contact(
+    interaction: discord.Interaction,
+    service: TimeskipService,
+    identity: str,
+    title: str,
+    data: dict[str, Any],
+) -> None:
+    async def confirm(click: discord.Interaction, values: dict[str, Any]) -> str:
+        await asyncio.to_thread(
+            service.introduce_contact,
+            viewer_from_interaction(click),
+            str(click.id),
+            identity,
+            data["revision"],
+            values["name"],
+            values["job"][0],
+            values["detail"],
+            values["acquaintance"],
+        )
+        return "Your NPC is now at the new base."
+
+    fields = [
+        Field("name", "New NPC’s name"),
+        Field("job", "Printed NPC job", tuple((x, x.replace("_", " ").title()) for x in BASE_JOBS)),
+        Field("detail", "Describe the new NPC", paragraph=True),
+        Field("acquaintance", "How your character knows them", paragraph=True),
+    ]
+    form = NativeForm(
+        interaction.user.id,
+        title,
+        "Introduce your NPC at " + clean(data["site"]) + ".",
+        fields,
         confirm,
     )
     await reply(interaction, form.text(), form)

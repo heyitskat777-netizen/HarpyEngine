@@ -21,7 +21,16 @@ from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_location_build import require_site
 from girlframe.engine.m3_physical import interrupt_journeys
 from girlframe.engine.m3_vatgrown_death import RULE as VATGROWN_DEATH_RULE
-from girlframe.engine.m3_world_state import Asset, Cell, CorePlan, Gorgon, GorgonType, Location
+from girlframe.engine.m3_world_state import (
+    NPC_JOBS,
+    Asset,
+    Cell,
+    CorePlan,
+    Gorgon,
+    GorgonType,
+    Location,
+    Npc,
+)
 from girlframe.engine.playbooks import GIRL_TYPES
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_game import GameService
@@ -38,6 +47,7 @@ from girlframe.services.read_only_bot import GuildViewer
 
 RULE = "situational.situational.timeskip"
 KIND = "timeskip"
+BASE_JOBS = tuple(job for job in NPC_JOBS if job not in ("director", "prisoner"))
 DURATIONS = {
     6: "Six months",
     12: "One year",
@@ -73,6 +83,8 @@ class Timeskip(Model):
         "death",
         "replacement",
         "base_foundation",
+        "base_contacts",
+        "rebel_succession",
         "declined",
     ]
     city_ruin: str | None = None
@@ -85,6 +97,8 @@ class Timeskip(Model):
     death_ballots: tuple[int, ...] = ()
     death_event: str | None = None
     death_archive: str | None = None
+    new_base: str | None = None
+    base_contacts: dict[str, str] = {}
 
 
 def records(state: GameState) -> tuple[Timeskip, ...]:
@@ -300,6 +314,8 @@ class TimeskipService:
             return "choose_book"
         if case.step == "death" and case.death is not None and user not in case.death_ballots:
             return "death_ballot"
+        if case.step == "base_contacts" and str(user) not in case.base_contacts:
+            return "create_contact"
         if user == case.gm or case.step == "agreement" and user not in case.accepted:
             return case.step
         return None
@@ -347,6 +363,11 @@ class TimeskipService:
                 data["nominee"] = self._nominees(c, state, case).get(case.death)
             if step == "replacement":
                 data["can_continue"] = self._replacement_ready(state, case)
+            if step == "create_contact":
+                site = next((x for x in state.world.locations if x.id == case.new_base), None)
+                if site is None or not site.foundation_operational:
+                    raise WorkflowError("Recover the actual operational Timeskip base")
+                data["site"] = site.name
             kind = {"city_ruin": "city", "base_ruin": "base"}.get(case.step)
             if kind is not None:
                 data["locations"] = {
@@ -495,7 +516,7 @@ class TimeskipService:
             operation,
         )
 
-    def establish_city(
+    def establish_site(
         self,
         viewer: GuildViewer,
         key: str,
@@ -510,29 +531,34 @@ class TimeskipService:
             _ordinary_scene_idle(c, self.game)
             state = load_state(c, self.store.campaign_id)
             case = self._case(c, state, viewer, identity)
+            field = {"city_foundation": "city", "base_foundation": "base"}.get(case.step)
             if (
                 viewer.user_id != case.gm
                 or state.world is None
-                or case.step != "city_foundation"
+                or field is None
                 or state.revision != revision
                 or not 0 < len(account.strip()) <= 1200
             ):
-                raise WorkflowError("STALE_TIMESKIP: reopen the original city establishment")
+                raise WorkflowError("STALE_TIMESKIP: reopen the original site establishment")
             require_site(state, cell)
             event = str(uuid4())
-            city = Location(id=event, kind="city", name=name.strip(), cell=cell)
-            state.world = world_rules.update(state.world, locations=state.world.locations + (city,))
+            kind: Literal["city", "base"] = "base" if field == "base" else "city"
+            site = Location(id=event, kind=kind, name=name.strip(), cell=cell)
+            state.world = world_rules.update(state.world, locations=state.world.locations + (site,))
             state.facts.append(
                 dict(
-                    kind="timeskip_city",
+                    kind="timeskip_" + kind,
                     id=case.id,
-                    entity=city.id,
+                    entity=site.id,
                     event=event,
                     account=account.strip(),
                 )
             )
-            case = case.model_copy(update=dict(step="base_ruin", city=city.id))
-            return self._save(c, state, viewer, key, case, "city_established", event)
+            if kind == "base":
+                case = case.model_copy(update=dict(step="base_contacts", new_base=site.id))
+            else:
+                case = case.model_copy(update=dict(step="base_ruin", city=site.id))
+            return self._save(c, state, viewer, key, case, kind + "_established", event)
 
         return self._write(
             viewer,
@@ -766,4 +792,78 @@ class TimeskipService:
 
         return self._write(
             viewer, key, dict(id=identity, revision=revision, activated=True), operation
+        )
+
+    def introduce_contact(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        identity: str,
+        revision: int,
+        name: str,
+        job: str,
+        detail: str,
+        acquaintance: str,
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            _ordinary_scene_idle(c, self.game)
+            state = load_state(c, self.store.campaign_id)
+            case = self._case(c, state, viewer, identity)
+            world = state.world
+            site = (
+                next((x for x in world.locations if x.id == case.new_base), None) if world else None
+            )
+            owner = str(viewer.user_id)
+            if (
+                case.step != "base_contacts"
+                or state.revision != revision
+                or owner in case.base_contacts
+                or job not in BASE_JOBS
+                or world is None
+                or site is None
+                or not site.foundation_operational
+                or not detail.strip()
+                or not 0 < len(acquaintance.strip()) <= 1200
+            ):
+                raise WorkflowError("Reopen your own original NPC contribution at the new base")
+            event = str(uuid4())
+            npc = Npc(
+                id=event,
+                name=name.strip(),
+                jobs=(job,),
+                detail=detail.strip(),
+                controller=case.gm,
+                cell=site.cell,
+                revealed=True,
+            )
+            state.world = world_rules.introduce_npc(world, npc)
+            state.facts.append(
+                dict(
+                    kind="timeskip_base_contact",
+                    id=npc.id,
+                    event=event,
+                    source=case.id,
+                    owner=owner,
+                    base=site.id,
+                    acquaintance=acquaintance.strip(),
+                )
+            )
+            contacts = case.base_contacts | {owner: npc.id}
+            next_step = "rebel_succession" if len(contacts) == len(case.voters) else "base_contacts"
+            case = case.model_copy(update=dict(base_contacts=contacts, step=next_step))
+            return self._save(c, state, viewer, key, case, "base_contact_introduced", event)
+
+        return self._write(
+            viewer,
+            key,
+            dict(
+                id=identity,
+                revision=revision,
+                name=name,
+                job=job,
+                detail=detail,
+                acquaintance=acquaintance,
+            ),
+            operation,
         )

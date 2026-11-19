@@ -351,3 +351,29 @@ def test_native_timeskip_agreement_and_ordered_world_changes(ledger):
     assert records(replaced)[0].step == "base_foundation"
     assert replaced.sheets["2"].character_id != ref.incarnation
     assert replaced.sheets["2"].girl == "NEWGIRL" and replaced.sheets["2"].mentor == OTHER.user_id
+
+    native(ADMIN, dict(name="New Base", cell="3,3", account="A new Foundation base."), 93360)
+    (base_case,) = records(state(game))
+    assert base_case.step == "base_contacts"
+    for viewer, sequence in ((PLAYER, 93364), (OTHER, 93368), (ADMIN, 93372)):
+        native(
+            viewer,
+            dict(
+                name="Contact " + str(viewer.user_id),
+                job=("mechanic",),
+                detail="Repairs and maintains equipment in the base.",
+                acquaintance="The original player records how they know this contact.",
+            ),
+            sequence,
+        )
+    final = state(game)
+    (populated,) = records(final)
+    assert populated.step == "rebel_succession"
+    assert set(populated.base_contacts) == {"1", "2", "3"}
+    assert final.world is not None
+    base = next(x for x in final.world.locations if x.id == populated.new_base)
+    assert base.name == "New Base" and base.kind == "base" and base.foundation_operational
+    contacts = tuple(x for x in final.world.npcs if x.id in populated.base_contacts.values())
+    assert len(contacts) == 3
+    assert all(x.cell == base.cell and x.controller == ADMIN.user_id and x.alive for x in contacts)
+    assert not any(x.task == "m3_timeskip" for x in InboxService(ledger).items(PLAYER))

@@ -3216,3 +3216,18 @@ operation. Vatgrown with its printed replacement requirement
 still needs a human ruling on which replacement rule takes
 precedence. Special and non-GM NPC nominations remain open.
 [Timeskip p. 197](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=199) · [Native case](../../tests/rules/test_timeskip.py)
+
+### Timeskip’s new base and original players’ NPCs
+
+Base `bd6d24a`. The human GM establishes the actual Foundation base
+on an eligible map square. Every original player authors one living
+NPC with a printed job and records how their character knows them.
+The GM controls the NPCs by default. The base remains pending
+until all original contributions are in world state. An authored
+acquaintance creates no automatic Bond.
+
+**One focused case passed in 8.91 seconds** through the combined
+Timeskip to the actual base and all three NPC contributions.
+Director and captive/prisoner introductions keep their own gates.
+Rebel succession is the next open step.
+[Timeskip p. 197](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=199) · [Native case](../../tests/rules/test_timeskip.py)
