@@ -245,6 +245,12 @@ def source(
             assert proof is not None
             prove_harpy_passage(game, c, proof, first, body, actor)
             return current, body, actor
+        if body.get("reason") == "voidspace_invasion_gain":
+            from girlframe.services.m3_voidspace_invasion import prove_void as prove_invasion
+
+            assert proof is not None
+            prove_invasion(game, c, proof, first, body, actor)
+            return current, body, actor
         if body.get("reason") == "scientist_private_void":
             from girlframe.services.m3_scientist_private_scene import (
                 prove_threshold as prove_scientist_threshold,
@@ -633,6 +639,7 @@ def complete(
             "npc_scientist_void",
             "harpy_gaze",
             "harpy_voidspace_carry",
+            "voidspace_invasion_gain",
         ):
             # These sources have no parent Play to resume after the owned outcome.
             continue
@@ -810,6 +817,10 @@ class VoidService:
             from girlframe.services.m3_harpy_voidspace import audience as passage_audience
 
             handler = viewer.user_id in passage_audience(self.game, c, state, body)
+        if handler and body.get("reason") == "voidspace_invasion_gain":
+            from girlframe.services.m3_voidspace_invasion import audience as invasion_audience
+
+            handler = viewer.user_id in invasion_audience(self.game, c, state, body)
         if handler and body.get("reason") == "scientist_private_void":
             from girlframe.engine.m3_handler_consequences import active_handler
             from girlframe.engine.m3_handler_private_scene import records as private_scenes

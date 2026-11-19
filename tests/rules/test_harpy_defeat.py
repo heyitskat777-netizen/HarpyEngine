@@ -1150,7 +1150,7 @@ def test_genuine_harpy_carry_can_apply_repeatable_owned_void_in_private(ledger):
     assert actual.controller == OTHER.user_id
 
 
-def test_invasion_uses_actual_ace_void_and_yields_an_owned_onward_leg(ledger):
+def start_invasion(ledger, faces, *, ordinary_ace=False):
     import asyncio
 
     from test_cast_service import change as change_cast
@@ -1166,10 +1166,13 @@ def test_invasion_uses_actual_ace_void_and_yields_an_owned_onward_leg(ledger):
     from girlframe.services.m3_missions import MissionService
     from girlframe.services.m3_voidspace_invasion import InvasionService
 
-    routes, game, worker, gateway, _, _, _, _ = rolled(ledger, (3, 4))
+    routes, game, worker, gateway, harpy, _, _, _ = rolled(ledger, (3, 4))
     with ledger.transaction() as c:
         canon = place(place(state(game), 2, mode="outside_frame"), 3, mode="outside_frame")
         ace = current_ref(canon, canon.order[0])
+        if ordinary_ace:
+            canon.sheets[ace.entity].girl = "PRINCESS"
+            canon.sheets[ace.entity].girl_runtime = None
         for i, asset in enumerate(canon.sheets[ace.entity].assets):
             asset.void = i == 0
         game.event(c, ADMIN.user_id, "synthetic-ace-void", "synthetic.position", canon)
@@ -1221,8 +1224,7 @@ def test_invasion_uses_actual_ace_void_and_yields_an_owned_onward_leg(ledger):
         )
         legs[viewer.user_id] = leg
         ready = any(
-            x.identity == rift.id and x.task == "m3_voidspace_invasion"
-            for x in inbox.items(ADMIN)
+            x.identity == rift.id and x.task == "m3_voidspace_invasion" for x in inbox.items(ADMIN)
         )
         assert ready is (viewer.user_id == OTHER.user_id)
 
@@ -1233,7 +1235,7 @@ def test_invasion_uses_actual_ace_void_and_yields_an_owned_onward_leg(ledger):
             )
         )
 
-    game.dice.faces = (3, 4)
+    game.dice.faces = faces
     native(
         ADMIN,
         rift.id,
@@ -1241,6 +1243,11 @@ def test_invasion_uses_actual_ace_void_and_yields_an_owned_onward_leg(ledger):
         91800,
     )
     (invasion,) = records(state(game))
+    return routes, game, service, inbox, native, invasion, legs, harpy
+
+
+def test_invasion_uses_actual_ace_void_and_yields_an_owned_onward_leg(ledger):
+    routes, game, service, inbox, native, invasion, legs, _ = start_invasion(ledger, (3, 4))
     assert invasion.faces == (3, 4) and invasion.result == "mid" and len(invasion.void_assets) == 1
     assert game.dice.calls == 2
     with pytest.raises(WorkflowError, match="unavailable"):
@@ -1271,3 +1278,69 @@ def test_invasion_uses_actual_ace_void_and_yields_an_owned_onward_leg(ledger):
         next(x for x in confirmed.harpy_travels if x.id == legs[PLAYER.user_id]).state == "offstage"
     )
     assert service.get(OTHER, invasion.id)["traveler"] is None and game.dice.calls == 2
+
+
+def test_invasion_high_retains_both_actual_route_and_encounter(ledger):
+    from girlframe.engine.m3_voidspace_invasion import records
+
+    _, game, service, _, native, invasion, _, harpy = start_invasion(ledger, (5, 6))
+    assert invasion.result == "high"
+    native(ADMIN, invasion.id, dict(account="The observed green route continues inward."), 91810)
+    with pytest.raises(WorkflowError, match="unavailable"):
+        service.get(OTHER, invasion.id)
+    view = service.get(ADMIN, invasion.id)
+    assert set(view["encounters"]) == {harpy.token}
+    native(
+        ADMIN,
+        invasion.id,
+        dict(target=(harpy.token,), account="They meet the actual escaped Harpy again."),
+        91814,
+    )
+    accepted = records(state(game))[0]
+    assert accepted.encounter.actor == harpy and accepted.discovery and not accepted.gains
+    member = service.get(OTHER, invasion.id)
+    assert member["route"] and member["encounter"] == accepted.encounter.label
+
+
+def test_invasion_low_requires_each_original_owned_void_gain_and_keeps_threshold_private(ledger):
+    from girlframe.engine.m3_voidspace_invasion import records
+    from girlframe.services.m3_void import VoidService
+
+    _, game, service, _, native, invasion, _, harpy = start_invasion(
+        ledger, (1, 2), ordinary_ace=True
+    )
+    assert invasion.result == "low"
+    native(
+        ADMIN,
+        invasion.id,
+        dict(target=(harpy.token,), account="The Cadre encounter the same original Harpy."),
+        91830,
+    )
+    assert not records(state(game))[0].gains
+    viewers = {PLAYER.user_id: PLAYER, OTHER.user_id: OTHER}
+    chosen = {}
+    for member in invasion.cadre:
+        viewer = viewers[member.controller]
+        view = service.get(viewer, invasion.id)
+        assert view["step"] == "gain"
+        asset = next(iter(view["assets"]))
+        chosen[member.actor.entity] = asset
+        native(
+            viewer,
+            invasion.id,
+            dict(asset=(asset,), account="My original Girl's chosen Asset changes."),
+            91834 + member.controller * 4,
+        )
+    end = state(game)
+    (case,) = records(end)
+    assert len(case.gains) == 2 and game.dice.calls == 2
+    for uid, asset in chosen.items():
+        assert next(x for x in end.sheets[uid].assets if x.id == asset).void
+    threshold = next(x for x in case.gains if x.work)
+    assert threshold.actor == case.ace
+    first = viewers[int(threshold.actor.entity)]
+    other = OTHER if first == PLAYER else PLAYER
+    assert VoidService(ledger).get(first, threshold.work)["stage"] == "allured"
+    assert service.get(other, invasion.id)["step"] == "report"
+    with pytest.raises(WorkflowError):
+        VoidService(ledger).get(other, threshold.work)

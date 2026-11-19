@@ -3141,3 +3141,20 @@ leg with the previous leg ended. Other mid choices, high
 encounters and low gains for the whole original Cadre still
 need their genuine effects.
 [Voidspace Invasion p. 195](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=197) · [Native case](../../tests/rules/test_harpy_defeat.py)
+
+### Voidspace Invasion’s high encounter and low Cadre gains
+
+Base `1b77e1e`. The supported high result needs both
+the real route and an actual encounter before the travelers
+get the route. The supported low result records the
+actual encounter and opens a separate ordinary Void choice
+for each original member. A derived threshold stays private
+to its owner and the original human facilitator. The group’s
+outcome stays pending through all gains and required thresholds.
+
+**Three focused Invasion cases passed in 18.36 seconds**.
+The low case passed again in **7.55 seconds** with the group
+pending check. Direct encounter evidence uses the actual
+Harpy who opened the Rift. Other utility discoveries and
+other encounter producers remain open.
+[Voidspace Invasion p. 195](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=197) · [Native cases](../../tests/rules/test_harpy_defeat.py)

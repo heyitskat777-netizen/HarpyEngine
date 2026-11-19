@@ -13,6 +13,21 @@ class Traversal(Model):
     travel: str
 
 
+class Encounter(Model):
+    source: str
+    actor: ActorRef
+    label: str
+    event: str
+    account: str
+
+
+class Gain(Model):
+    actor: ActorRef
+    event: str
+    asset: str | None = None
+    work: str | None = None
+
+
 class Invasion(Model):
     id: str
     rift: str
@@ -26,6 +41,8 @@ class Invasion(Model):
     account: str
     route: str | None = None
     discovery: str | None = None
+    encounter: Encounter | None = None
+    gains: tuple[Gain, ...] = ()
 
     @property
     def result(self) -> str:
