@@ -97,6 +97,10 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
                 order = "npc-handler-order:" + token
                 options.append((order, "Send a Girl as " + role["label"][:60]))
                 actions[order] = ("npc_handler_order", ActorRef.model_validate(role["ref"]))
+            if "intelligence_agent" in role["job_prompts"]:
+                inquiry = "npc-intelligence:" + token
+                options.append((inquiry, "Investigate as " + role["label"][:60]))
+                actions[inquiry] = ("npc_intelligence", ActorRef.model_validate(role["ref"]))
     if data["may_facilitate"] and not data["own_facilitator"]:
         options.append(("facilitate", "Join as facilitator (no fictional character)"))
         actions["facilitate"] = ("facilitate", None)
@@ -239,6 +243,13 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
 
             assert ref is not None
             await open_handler_order(current, NpcOrderService(service.game), channel, ref)
+            return
+        if action == "npc_intelligence":
+            from girlframe.discord_adapter.m3_npc_intelligence import open_inquiry
+            from girlframe.services.m3_npc_intelligence import IntelligenceService
+
+            assert ref is not None
+            await open_inquiry(current, IntelligenceService(service.game), channel, ref)
             return
         if action == "phone":
             from girlframe.discord_adapter.m3_director_strain import open_phone

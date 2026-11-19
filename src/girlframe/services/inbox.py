@@ -4120,17 +4120,41 @@ class InboxService:
             from girlframe.services.m3_harpy_visions import VisionsService
             from girlframe.services.m3_npc_handover import LABELS as HANDOVER_LABELS
             from girlframe.services.m3_npc_handover import NpcHandoverService
+            from girlframe.services.m3_npc_intelligence import IntelligenceService
 
-            handover = NpcHandoverService(GameService(self.store))
-            for offer in handover.tasks(connection, canon, viewer):
+            intelligence = IntelligenceService(GameService(self.store))
+            for inquiry, step in intelligence.tasks(connection, canon, viewer):
                 items.append(
                     InboxItem(
-                        "npc-handover:" + offer.id,
-                        "npc_handover",
-                        offer.id,
+                        "npc-intelligence:" + inquiry.id,
+                        "npc_intelligence",
+                        inquiry.id,
                         canon.revision,
                         "plays",
-                        HANDOVER_LABELS[offer.job],
+                        "Intelligence Agent inquiry",
+                        "Original NPC scene",
+                        "pending" if step == "review" else "complete",
+                        True,
+                        False,
+                        "Review the original inquiry"
+                        if step == "review"
+                        else "Open the Agent’s verified discovery",
+                        "The result belongs to the original Intelligence Agent.",
+                        "Open the inquiry",
+                        task="m3_npc_intelligence",
+                    )
+                )
+
+            handover = NpcHandoverService(GameService(self.store))
+            for item_handover in handover.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "npc-handover:" + item_handover.id,
+                        "npc_handover",
+                        item_handover.id,
+                        canon.revision,
+                        "plays",
+                        HANDOVER_LABELS[item_handover.job],
                         "Original NPC scene",
                         "pending",
                         True,

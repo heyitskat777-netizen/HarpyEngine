@@ -195,5 +195,6 @@ tests/rules/test_journalist.py
 tests/rules/test_psychologist.py
 tests/rules/test_npc_care.py
 tests/rules/test_npc_handler_order.py
+tests/rules/test_npc_intelligence.py
 tests/rules/test_npc_job_handover.py
 tests/rules/test_sniff_out.py

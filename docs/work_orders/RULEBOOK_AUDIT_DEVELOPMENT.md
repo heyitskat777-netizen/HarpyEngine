@@ -2946,3 +2946,20 @@ unchanged custody before approval, exact transfer history,
 and replay of the same confirmed choice. Mechanical Assets
 and hiding people or objects require separate effects.
 [Fan p. 188](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=190) · [Patron and Smuggler p. 189](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=191) · [Native cases](../../tests/rules/test_npc_job_handover.py)
+
+### Intelligence Agent’s concealed affiliation
+
+Base `be38c42`. The Intelligence Agent can open an inquiry
+on another actual local NPC. The original human facilitator
+selects an existing concealed affiliation after reviewing
+the Agent’s evidence. A verified result is recorded only
+for the original Agent and its exact current controller.
+The target’s public world record is unchanged.
+
+**One focused native case passed in 5.34 seconds**. It
+covered the original private review, a distinct NPC
+controller, a restart before reading the confirmed report,
+and denial to an unrelated player. Other hidden information
+and temporary covers beyond the existing conversation
+prompts remain open.
+[Intelligence Agent p. 188](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=190) · [Native case](../../tests/rules/test_npc_intelligence.py)

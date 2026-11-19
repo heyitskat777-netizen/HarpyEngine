@@ -2094,6 +2094,14 @@ class InboxView(discord.ui.View):
             await open_handover_choice(
                 interaction, NpcHandoverService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_npc_intelligence":
+            from girlframe.discord_adapter.m3_npc_intelligence import open_inquiry_result
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_npc_intelligence import IntelligenceService
+
+            await open_inquiry_result(
+                interaction, IntelligenceService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_harpy_visions_recovery":
             from girlframe.discord_adapter.m3_harpy_visions import open_visions_recovery
             from girlframe.services.m2_game import GameService
