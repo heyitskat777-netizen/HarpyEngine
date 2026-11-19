@@ -1193,6 +1193,23 @@ async def open_play(
                 viewer_from_interaction(interaction)
             )
         )
+        extra_roles = [x for x in roles["actors"] if x["rules"] == "ancillary"]
+        if extra_roles:
+            from girlframe.engine.m3_ancillary import RULE, STARTERS
+            from girlframe.services.m3_access import load_registry
+
+            try:
+                registry = await threaded(load_registry)
+            except WorkflowError:
+                registry = None
+            extra_roles = [
+                x
+                for x in extra_roles
+                if registry is not None and "ancillary" in registry.enabled_modules
+                and registry.entry(RULE).verified
+                and x["girl"] in STARTERS
+                and registry.entry(STARTERS[x["girl"]].rule).verified
+            ]
         actual = [
             x
             for x in roles["actors"]
@@ -1200,6 +1217,7 @@ async def open_play(
             or x.get("girl") == "harpy"
             and x.get("heat") is not None
         ]
+        actual.extend(extra_roles)
         if parent is not None:
             if parent["kind"] not in (
                 "battle_counter_play",

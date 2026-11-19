@@ -66,6 +66,10 @@ class ActorPlayService:
         from girlframe.engine.m3_janus import can_act
 
         can_act(state, actor)
+        if self._ancillary_ready(state, actor):
+            if play not in ("keep_your_head", "actor_reject_tag"):
+                raise WorkflowError("This Ancillary Play needs its own approved rule port")
+            return
         if actor.kind != "external_pilot":
             return
         if play == "all_out_assault" and rebel_inventory(state, actor) is not None:
@@ -82,6 +86,22 @@ class ActorPlayService:
             and is_helpless(state, actor)
         ):
             raise WorkflowError("This actual Harpy cannot make the defensive Keep Your Head Play.")
+
+    def _ancillary_ready(self, state: GameState, ref: ActorRef) -> bool:
+        from girlframe.engine.m3_ancillary import RULE, STARTERS, find
+        from girlframe.services.m3_access import Access
+
+        role = find(state, ref)
+        if role is None:
+            return False
+        registry = Access(self.store).registry
+        assert registry is not None
+        for rule in (RULE, STARTERS[role.draft.book].rule):
+            try:
+                registry.require_available(rule)
+            except ValueError as error:
+                raise WorkflowError(str(error)) from None
+        return True
 
     def saved(self, viewer: GuildViewer) -> list[dict[str, Any]]:
         with self.store.engine.connect() as c:
@@ -232,12 +252,14 @@ class ActorPlayService:
             )
             ambush = scoped_ambush(state, ref, channel)
             if actor is None or not (
-                actor.rules in ("handler_girl", "clone_am")
+                actor.rules in ("handler_girl", "clone_am", "ancillary")
                 or actor.ref.kind == "external_pilot"
                 and actor.girl == "harpy"
                 or ambush
             ):
                 raise WorkflowError("Select your actual supported role or original ambush actor.")
+            if actor.rules == "ancillary":
+                self._ancillary_ready(state, ref)
             judge = self._judge(c, state, cast, ref)
             from girlframe.engine.m3_enforcer_requisitions import PAVLOV, SNOOP
             from girlframe.engine.m3_harpy_defeat import harpy
@@ -385,7 +407,7 @@ class ActorPlayService:
                 actor is None
                 or actor.controller != viewer.user_id
                 or not (
-                    actor.rules in ("handler_girl", "clone_am")
+                    actor.rules in ("handler_girl", "clone_am", "ancillary")
                     or actor.ref.kind == "external_pilot"
                     and actor.girl == "harpy"
                     or prepared.play == "all_out_assault"
@@ -396,6 +418,8 @@ class ActorPlayService:
                 or cast.revision != cast_revision
             ):
                 raise ValueError("STALE_ACTOR: confirm your actual resources and Director first")
+            if actor.rules == "ancillary":
+                self._eligible_play(state, ref, rejection=rejection is not None, play=prepared.play)
             from girlframe.services.m3_wyvern_combat import require_free
             from girlframe.services.m3_wyvern_support import require_play_target
 
@@ -554,7 +578,10 @@ class ActorPlayService:
                 pair_share=prepared.pair_share,
             )
             if required_adjudication is None:
-                self._eligible_play(state, ref, rejection=rejection is not None, play=prepared.play)
+                if actor.rules != "ancillary":
+                    self._eligible_play(
+                        state, ref, rejection=rejection is not None, play=prepared.play
+                    )
             elif actor.ref.kind == "external_pilot":
                 from girlframe.engine.m3_harpy_defeat import harpy
 
@@ -583,7 +610,7 @@ class ActorPlayService:
                     raise ValueError(
                         "Choose your actual owed Tag rejection without spending resources"
                     )
-                if ref.kind == "external_pilot":
+                if actor.ref.kind == "external_pilot" and actor.rules != "ancillary":
                     from girlframe.services.m3_tag_permissions import PermissionService
 
                     PermissionService(self.store).authorize_rejection(
@@ -817,7 +844,7 @@ class ActorPlayService:
             or actor is None
             or actor.controller != int(action["actor_id"])
             or not (
-                actor.rules in ("handler_girl", "clone_am")
+                actor.rules in ("handler_girl", "clone_am", "ancillary")
                 or actor.ref.kind == "external_pilot"
                 and actor.girl == "harpy"
                 or bool(action["data"].get("battle", {}).get("rebel_ambush"))
@@ -829,6 +856,8 @@ class ActorPlayService:
             or judge.appointment != meta.get("adjudicator_appointment")
         ):
             raise ValueError("STALE_CAST: explicitly recover the saved actual roles and responses")
+        if actor.rules == "ancillary":
+            self._ancillary_ready(state, ref)
         return actor
 
     def roll(
@@ -899,7 +928,7 @@ class ActorPlayService:
             item = next(x for x in state.obligations if x.id == meta["rejection"])
             if item.state != "pending":
                 raise ValueError("This rejection has already resolved")
-            if actor.ref.kind == "external_pilot":
+            if actor.ref.kind == "external_pilot" and actor.rules != "ancillary":
                 from girlframe.services.m3_tag_permissions import PermissionService
 
                 PermissionService(self.store).authorize_rejection(
@@ -1372,7 +1401,7 @@ class ActorPlayService:
 
                 clear_tag_debt(state, actor.ref, tag.id)
             elif answer.options == ("reject",) and not answer.denied:
-                if actor.ref.kind == "external_pilot":
+                if actor.ref.kind == "external_pilot" and actor.rules != "ancillary":
                     from girlframe.services.m3_tag_permissions import PermissionService
 
                     if viewer is None or viewer.user_id != owner:
@@ -1563,7 +1592,11 @@ class ActorPlayService:
             from girlframe.services.m3_battle import damage_projection
 
             result["battle"] = damage_projection(self.game, c, state, action, row)
-        if row["kind"] == "tag_resolution" and actor.ref.kind == "external_pilot":
+        if (
+            row["kind"] == "tag_resolution"
+            and actor.ref.kind == "external_pilot"
+            and actor.rules != "ancillary"
+        ):
             from girlframe.engine.m3_tag_permissions import can_reject
 
             result["rejection_blocked"] = not can_reject(state, actor.ref, result["body"]["tag"])

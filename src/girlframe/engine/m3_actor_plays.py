@@ -13,12 +13,16 @@ from girlframe.engine.m2 import (
 )
 from girlframe.engine.m3_actor_state import ActorRef, ProfileBinding
 from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_ancillary import find as ancillary_actor
+from girlframe.engine.m3_ancillary import put as put_ancillary
 from girlframe.engine.m3_harpy_defeat import harpy
 from girlframe.engine.m3_harpy_defeat import update as update_harpy
 from girlframe.engine.m3_void_state import HarpyIdentity, HarpyTag
 
 
 def tags(state: GameState, actor: ActorRef) -> Sequence[TagState | HarpyTag]:
+    if ancillary := ancillary_actor(state, actor):
+        return ancillary.tags
     if actor.kind == "clone_am":
         from girlframe.engine.m3_clone_am import tags as clone_tags
 
@@ -83,6 +87,16 @@ def keep(level: str, answer: ChoiceAnswer, *, harpy_mode: bool = False) -> dict[
 
 
 def add_tag(state: GameState, actor: ActorRef, label: str, participants: tuple[int, ...]) -> None:
+    if ancillary := ancillary_actor(state, actor):
+        tag = TagState(
+            id=str(uuid4()),
+            label=label.strip(),
+            giver=ancillary.controller,
+            giver_actor=actor,
+            observers=participants,
+        )
+        put_ancillary(state, ancillary.model_copy(update=dict(tags=(*ancillary.tags, tag))))
+        return
     if actor.kind == "clone_am":
         from girlframe.engine.m3_clone_am import add_tag as clone_tag
 
@@ -176,6 +190,13 @@ def proposal(
 
 
 def defer_rejection(state: GameState, actor: ActorRef, tag_id: str) -> None:
+    if ancillary := ancillary_actor(state, actor):
+        ancillary_tag = next((x for x in ancillary.tags if x.id == tag_id and x.marked), None)
+        if ancillary_tag is None:
+            raise ValueError("Choose your actual marked Ancillary Tag")
+        ancillary_tag.rejection_pending = True
+        put_ancillary(state, ancillary)
+        return
     if actor.kind == "clone_am":
         from girlframe.engine.m3_clone_am import tag as clone_tag
 
@@ -210,6 +231,11 @@ def mark(state: GameState, target: ActorRef, tag_id: str, scene: str) -> bool:
     if tag is None or tag.scene_used == scene:
         raise ValueError("The proposed Tag changed or was already used in this scene")
     was_marked = tag.marked
+    if ancillary := ancillary_actor(state, target):
+        selected = next(x for x in ancillary.tags if x.id == tag_id)
+        selected.marked, selected.scene_used = True, scene
+        put_ancillary(state, ancillary)
+        return was_marked
     if target.kind == "clone_am":
         from girlframe.engine.m3_clone_am import tag as clone_tag
 
@@ -240,6 +266,30 @@ def embrace(state: GameState, actor: ActorRef, tag_id: str, replaced: tuple[str,
     from girlframe.engine.m3_leviathan_obsession import require_identity_change
 
     require_identity_change(state, actor, replaced)
+    if ancillary := ancillary_actor(state, actor):
+        original = next((x for x in ancillary.tags if x.id == tag_id and x.marked), None)
+        limit = 2 if ancillary.draft.book == "SOLDIER" else 4
+        count = 1 if len(ancillary.identities) >= limit else 0
+        removable = {
+            x.id
+            for x in ancillary.identities
+            if not x.protected and not (ancillary.draft.book == "ANGEL-WIFE" and x.name == "Wife")
+        }
+        if original is None or len(replaced) != count or not set(replaced) <= removable:
+            raise ValueError("Choose the actual marked Tag and any required ordinary replacement")
+        put_ancillary(
+            state,
+            ancillary.model_copy(
+                update=dict(
+                    tags=tuple(x for x in ancillary.tags if x.id != tag_id),
+                    identities=(
+                        *tuple(x for x in ancillary.identities if x.id not in replaced),
+                        IdentityState(id=str(uuid4()), name=original.label),
+                    ),
+                )
+            ),
+        )
+        return
     if actor.kind == "external_pilot":
         body = harpy(state, actor)
         harpy_tag = next((x for x in body.tags if x.id == tag_id and x.marked), None)
@@ -275,6 +325,16 @@ def embrace(state: GameState, actor: ActorRef, tag_id: str, replaced: tuple[str,
 
 
 def reject(state: GameState, actor: ActorRef, tag_id: str) -> None:
+    if ancillary := ancillary_actor(state, actor):
+        if not any(x.id == tag_id and x.rejection_pending for x in ancillary.tags):
+            raise ValueError("Take the actual owed action to reject this Ancillary Tag")
+        put_ancillary(
+            state,
+            ancillary.model_copy(
+                update=dict(tags=tuple(x for x in ancillary.tags if x.id != tag_id))
+            ),
+        )
+        return
     if actor.kind == "clone_am":
         from girlframe.engine.m3_clone_am import reject as clone_reject
 

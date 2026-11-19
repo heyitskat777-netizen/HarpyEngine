@@ -1777,3 +1777,21 @@ independent approval both reject creation. Shared gameplay, the
 individual book effects, and Captured!, Timeskip and Rebellion
 Endgame integrations remain separate work.
 [Ancillary playbooks pp. 93–109](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=95)
+
+### Ancillary Keep Your Head
+
+Base `e6f47cf04515c554999f47472a3b38dd77f05cba`. The native Play
+menu can select a separately owned approved Ancillary already cast
+in the scene. Keep Your Head reserves the ordinary scene lock,
+spends that actor's own Heat and Identity, and saves the ordinary
+roll. Its Tag belongs to that actor and the original table owns the
+ruling. The test records that the high roll and Tag stood even though
+the human GM found the action insufficient for the narrated goal.
+The controller's primary Girl sheet stays separate.
+
+**148 selected tests passed in 160.05 seconds**, including the native
+choice, separate resources, decision owner, replay, restart, retained
+Harpy and Actor Play paths, and the optional module's denial of Dive
+Deep. The other shared Plays, Defeat and Off-Duty actions require
+their own source ports.
+[Keep Your Head p. 19](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=21) · [Ancillary p. 93](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=95)

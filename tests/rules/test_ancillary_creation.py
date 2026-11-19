@@ -271,3 +271,128 @@ def test_approved_ancillary_books_create_independent_actual_roles(
     cast = CastService(actor_service)
     change(cast, PLAYER, "join", ref)
     assert any(x["ref"] == receipt["actor"] for x in cast.view(PLAYER, 900)["roles"])
+
+
+def test_ancillary_native_keep_pays_its_own_heat_and_reaches_the_original_gm(
+    ledger, tmp_path, monkeypatch
+):
+    from test_m2_game import Dice, Gateway, answer, pass_tags, tick
+
+    from girlframe.delivery.m2_worker import GameWorker
+    from girlframe.discord_adapter.m2_ui import open_play
+    from girlframe.engine.m2 import PlayInput
+    from girlframe.services.m3_actor_plays import ActorPlayService
+
+    game = scenario(ledger)
+    enable(ledger, game, tmp_path, monkeypatch)
+    missions = MissionService(ledger)
+    ancillary = AncillaryService(missions)
+    original = state(game)
+    invitation = ancillary.invite(ADMIN, "basic-role", original.revision, 2, "base0")["id"]
+    asset = rules.NamedAsset
+    starter = rules.Draft(
+        name="Second role",
+        book="SOLDIER",
+        frame_catalogue="SOLDIER_3",
+        bond=current_ref(original, 3),
+        girl_assets=(
+            asset(name="Nice Jacket", description="Private jacket markings"),
+            asset(name="Taser", description="Synthetic equipment"),
+        ),
+        frame_assets=(
+            asset(name="Laser Sword", description="Synthetic Frame equipment"),
+            asset(name="Armour Plating", description="Synthetic Frame armor"),
+        ),
+    )
+    result = ancillary.respond(
+        PLAYER, "create-basic-role", invitation, state(game).revision, starter
+    )
+    actor = ActorRef.model_validate(result["actor"])
+    change(CastService(ActorService(missions)), PLAYER, "join", actor)
+    plays = ActorPlayService(game)
+    with pytest.raises(WorkflowError):
+        plays.preview(OTHER, 900, actor)
+    preview = plays.preview(PLAYER, 900, actor)
+    assert preview["adjudicator"]["ref"] is None
+    identity = preview["actor"]["identities"][0]["id"]
+    with pytest.raises(WorkflowError, match="approved rule port"):
+        plays.begin(
+            PLAYER,
+            "unsupported-play",
+            900,
+            actor,
+            preview["actor"]["source_sha256"],
+            None,
+            preview["cast_revision"],
+            PlayInput(
+                play="dive_deep", context="Unapproved role attempt", trigger_confirmed=True, heat=0
+            ),
+        )
+    game.dice = Dice((5, 5))
+
+    async def native_play():
+        click = current(2, 51200)
+        click.channel_id = 900
+        await click.response.defer(ephemeral=True)
+        await open_play(click, game)
+        roles = click.edit_original_response.call_args.kwargs["view"]
+        await roles.open_item(click, actor.token)
+        playbook = click.edit_original_response.call_args.kwargs["view"]
+        assert {key for key, _ in playbook.options} == {"keep_your_head"}
+        await playbook.open_item(click, "keep_your_head")
+        form = click.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            context="The reserve pilot tries to hold her position in the drill.",
+            identity=(identity,),
+            gain=("3",),
+            heat=("2",),
+            confirm=("yes",),
+        )
+        sent = current(2, 51201)
+        await form.confirm.callback(sent)
+        assert form.completed, (sent.followup.send.call_args, sent.edit_original_response.call_args)
+
+    asyncio.run(native_play())
+    saved = plays.begin(
+        PLAYER,
+        "51201",
+        900,
+        actor,
+        preview["actor"]["source_sha256"],
+        None,
+        preview["cast_revision"],
+        PlayInput(
+            play="keep_your_head",
+            context="The reserve pilot tries to hold her position in the drill.",
+            trigger_confirmed=True,
+            identity=identity,
+            gain=3,
+            heat=2,
+        ),
+    )["action_id"]
+    assert game.dice.calls == 0
+    ledger.engine.dispose()
+    worker, gateway = GameWorker(game), Gateway()
+    tick(worker, gateway, 3)
+    assert game.dice.calls == 1
+    pass_tags(game)
+    (pending,) = [x for x in game.choices(PLAYER) if x["kind"] == "actor_keep"]
+    with pytest.raises(WorkflowError):
+        game.decision(OTHER, pending["id"])
+    answer(game, PLAYER, "actor_keep", text="Reserve pilot held her ground")
+    answer(
+        game,
+        ADMIN,
+        "handler_keep",
+        flag=False,
+        text="Holding this position did not clear the exit.",
+    )
+    tick(worker, gateway, 5)
+    details = game.inspect(PLAYER, saved)
+    assert details["state"] == "complete" and details["result"]["total"] == 12
+    assert details["result"]["enough"] is False
+    after = state(game)
+    (role,) = rules.records(after)
+    assert role.heat == 1 and role.identities[0].marked
+    assert [x.giver_actor for x in role.tags] == [actor]
+    assert original.sheets == after.sheets

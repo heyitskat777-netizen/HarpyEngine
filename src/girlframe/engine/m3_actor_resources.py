@@ -244,6 +244,31 @@ def commit(
             and all(x.marked for x in actual_identities)
         ):
             followups.append(Followup(kind="ankou_feedback", actor=actor, source_pdf=84))
+    elif view.rules == "ancillary":
+        from girlframe.engine.m3_ancillary import find, put
+
+        ancillary = find(state, actor)
+        assert ancillary is not None
+        identities = list(ancillary.identities)
+        heat = ancillary.heat
+        if prepared.pair_share:
+            raise ValueError("An Ancillary cannot share Heat through a Paired Identity")
+        if prepared.identity is not None:
+            picked = next((x for x in identities if x.id == prepared.identity), None)
+            if picked is None or picked.marked or not 1 <= prepared.gain <= 3:
+                raise ValueError("Mark an actual unmarked Ancillary Identity for one to three Heat")
+            picked.marked = True
+            heat += prepared.gain
+        elif prepared.gain:
+            raise ValueError("Heat gain requires an actual eligible Identity")
+        if prepared.heat > heat or heat >= 5 and prepared.heat != heat:
+            raise ValueError("Spend actual available Heat; five or more requires all")
+        put(
+            state,
+            ancillary.model_copy(
+                update=dict(heat=heat - prepared.heat, identities=tuple(identities))
+            ),
+        )
     elif actor.kind == "external_pilot" and rebel_inventory(state, actor) is not None:
         inventory = rebel_inventory(state, actor)
         assert inventory is not None

@@ -23603,10 +23603,11 @@
         "choice_ownership": "The sponsor chooses the location and authorized contacts. Only the invited human creates and controls the character.",
         "target_policy": "One new source-proved side character, separate from the controller's existing original character.",
         "post_roll_effects": [
-          "Create the selected book's actual identities, two Girl and two Frame Assets, and applicable starting contact/Bond without a Frame playbook or Permission balance."
+          "Create the actual Identities, two Girl and two Frame Assets, and any starting contact/Bond without a Frame playbook or Permission balance.",
+          "Use the existing cast, Heat, Identity and Tag pipeline for Keep Your Head. The original table adjudicator determines whether the owned result was enough."
         ],
         "mandatory_followups": [
-          "Shared Play, Off-Duty, Defeat and promotion differences, and the eight book-specific Play and passive consumers need separate verified coverage."
+          "Remaining shared Plays, Off-Duty, Defeat and promotion differences, and the eight book-specific Play and passive consumers need separate verified coverage."
         ],
         "handler_or_gm_intervention": "Native world invitation and private Inbox acceptance use the actual original human authorities.",
         "test_fixture_ids": ["tests/rules/test_ancillary_creation.py"]
