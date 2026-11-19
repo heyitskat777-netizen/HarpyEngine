@@ -229,6 +229,17 @@ class CastService:
                         else {}
                     )
                     harpy_actions: dict[str, bool] = {}
+                    can_escape = False
+                    if actor.rules == "girl_frame" and viewer.user_id == actor.controller:
+                        from girlframe.services.m3_escape import EscapeService
+
+                        escape_service = EscapeService(self.game)
+                        try:
+                            escape_service._gate(c, viewer)
+                            escape_service._where(c, state, channel, actor.ref)
+                            can_escape = True
+                        except (ValueError, WorkflowError):
+                            pass
                     can_capture = False
                     if capture_service and actor.ref.kind in ("npc", "external_pilot"):
                         try:
@@ -282,6 +293,7 @@ class CastService:
                             "own": role.controller == viewer.user_id,
                             **({"job_prompts": prompts} if prompts else {}),
                             **harpy_actions,
+                            **({"escape_source": True} if can_escape else {}),
                             **({"capture_source": True} if can_capture else {}),
                             **(
                                 {"director_phone": True}

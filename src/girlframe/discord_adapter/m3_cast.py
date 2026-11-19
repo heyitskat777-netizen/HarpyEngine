@@ -80,6 +80,10 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
             key = "mask:" + token
             options.append((key, "Use A Human Mask as " + role["label"][:65]))
             actions[key] = ("harpy_mask", ActorRef.model_validate(role["ref"]))
+        if role.get("escape_source"):
+            key = "escape:" + token
+            options.append((key, "Start Escape as " + role["label"][:65]))
+            actions[key] = ("escape", ActorRef.model_validate(role["ref"]))
         if role.get("director_phone"):
             phone = "phone:" + token
             options.append((phone, "Call the Handler as " + role["label"][:55]))
@@ -270,6 +274,13 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
 
             assert ref is not None
             await open_capture(current, CapturedService(service.game), channel, ref)
+            return
+        if action == "escape":
+            from girlframe.discord_adapter.m3_escape import open_escape
+            from girlframe.services.m3_escape import EscapeService
+
+            assert ref is not None
+            await open_escape(current, EscapeService(service.game), channel, ref)
             return
         if action == "npc_handler_order":
             from girlframe.discord_adapter.m3_npc_orders import open_handler_order

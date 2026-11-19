@@ -1424,6 +1424,17 @@ class GameService:
             from girlframe.engine.m3_plays import GIRL_ROLL_RULES
 
             original_sheet = state.sheets.get(str(mechanical_owner))
+            if original_sheet and original_sheet.character_id:
+                from girlframe.engine.m3_actor_state import ActorRef as EscapeActor
+                from girlframe.services.m3_escape import held as escape_held
+
+                original_actor = EscapeActor(
+                    kind="pilot",
+                    entity=str(mechanical_owner),
+                    incarnation=original_sheet.character_id,
+                )
+                if escape_held(state, original_actor):
+                    raise WorkflowError("The original Girl has an unfinished owned consequence.")
             if prepared.play == "go_off_duty" and original_sheet and original_sheet.character_id:
                 from girlframe.engine.m3_actor_bonds import current_ref as captured_actor
                 from girlframe.engine.m3_captured import active as captured_active

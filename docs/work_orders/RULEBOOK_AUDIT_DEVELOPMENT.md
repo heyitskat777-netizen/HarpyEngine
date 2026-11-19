@@ -3100,3 +3100,25 @@ during the preceding focused file run. Rebel Pilot captors,
 protected resources, book-specific later consequences,
 and restoration to the Foundation remain separate.
 [Captured! p. 196](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=198) · [Native cases](../../tests/rules/test_captured.py)
+
+### Escape at an original Foundation base
+
+Base `c7daf4f7ca5cdc1749b5023a88498b9eb92ce556`. The
+original Girl owns initiation, Heat and the exact saved
+roll. Low erases her chosen eligible Identity. On mid the
+human facilitator records the actual finder. The original
+Girl becomes physically incapacitated with an Intense
+Bond to the finder, and that participant chooses her
+actual rescue. The finder may give a private Tag and make
+her the Dog. On high actual local staff take her to the
+base’s sickbay, her Girl Assets take damage, and she
+becomes the Dog. The facilitator can verify that the
+original restraint ended without repairing her Assets.
+
+**Three focused native cases passed in 5.85 seconds**.
+They cover the original roll in each tier, source-specific
+custody and rescue, private access, safe reopening and
+the actual sheet effects. The finder’s Disobey-to-refuse
+branch, other settings and exceptional body types still
+require the appropriate source adapters.
+[Escape p. 195](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=197) · [Native cases](../../tests/rules/test_escape.py)

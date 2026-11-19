@@ -2118,6 +2118,14 @@ class InboxView(discord.ui.View):
             await open_capture_choice(
                 interaction, CapturedService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_escape":
+            from girlframe.discord_adapter.m3_escape import open_escape_choice
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_escape import EscapeService
+
+            await open_escape_choice(
+                interaction, EscapeService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_npc_handover":
             from girlframe.discord_adapter.m3_npc_handover import open_handover_choice
             from girlframe.services.m2_game import GameService

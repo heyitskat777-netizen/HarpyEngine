@@ -24569,14 +24569,31 @@
         "heading": "Escape"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original Girl explicitly starts Escape in an eligible original Foundation base scene.",
+        "actor_type": "Original Girl, actual finder or base personnel, and human facilitator",
+        "pre_roll_sources": ["Original physical and authorized Cast, actual player-owned trigger, and exact available Heat"],
+        "roll_kind": "2d6",
+        "allowed_modifiers": ["Actual owned Heat"],
+        "tier_options": {
+          "low": ["Original Girl erases one eligible actual Identity."],
+          "mid": ["The table names the actual finder, records an Intense Bond, and the finder owns the actual rescue. Their optional Tag also makes her the Dog."],
+          "high": ["Actual local personnel restrain the Girl. Damage all original Girl Assets, move to the represented sickbay at the original Base, and make her the Dog."]
+        },
+        "choice_ownership": "The original Girl owns initiation and the low erasure. The actual human GM records presence and the original finder owns rescue.",
+        "target_policy": "Original Girl outside her Frame at an operating Foundation base. Rosters, Frame and unrelated Actors remain distinct.",
+        "post_roll_effects": ["Track actual original Heat, dice, physical restriction, accepted owned rescue or ward placement, and eligible sheet changes."],
+        "mandatory_followups": ["The actual ward restraint needs a later verified release. The finder’s Disobey-to-refuse path and settings beyond the supported base remain open."],
+        "handler_or_gm_intervention": "The human facilitator owns the table finding and actual ward placement. No software narration or unsupported death resolution.",
+        "test_fixture_ids": ["tests/rules/test_escape.py"]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_escape.py"],
       "m2_play_id": null,
       "module": "core"
     },

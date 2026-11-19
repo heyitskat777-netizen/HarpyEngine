@@ -4115,6 +4115,7 @@ class InboxService:
                 )
             from girlframe.services.m2_game import GameService
             from girlframe.services.m3_captured import CapturedService
+            from girlframe.services.m3_escape import EscapeService
             from girlframe.services.m3_harpy_eagle import EagleService
             from girlframe.services.m3_harpy_gaze import GazeService
             from girlframe.services.m3_harpy_mask import MaskService
@@ -4125,6 +4126,33 @@ class InboxService:
             from girlframe.services.m3_npc_handover import LABELS as HANDOVER_LABELS
             from girlframe.services.m3_npc_handover import NpcHandoverService
             from girlframe.services.m3_npc_intelligence import IntelligenceService
+
+            rescues = EscapeService(GameService(self.store))
+            for escape_case, escape_step in rescues.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "escape:" + escape_case.id,
+                        "escape",
+                        escape_case.id,
+                        canon.revision,
+                        "plays",
+                        "Escape",
+                        "Original Foundation scene",
+                        "pending",
+                        True,
+                        False,
+                        {
+                            "erase": "Choose the original Identity that is erased.",
+                            "find": "Record who actually finds the original Girl.",
+                            "rescue": "Choose whether to carry out the original rescue.",
+                            "ward": "Record the actual base personnel and sickbay outcome.",
+                            "release": "Verify the actual sickbay restraint has ended.",
+                        }[escape_step],
+                        "This choice belongs to the original participant.",
+                        "Open your choice",
+                        task="m3_escape",
+                    )
+                )
 
             captive = CapturedService(GameService(self.store))
             for capture_case, capture_step in captive.tasks(connection, canon, viewer):
