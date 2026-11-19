@@ -25,7 +25,21 @@ def test_entire_inventory_and_every_native_identifier_have_explicit_review_route
     rolled = set((*PLAY_IDS, *ROLL_IDS, *FIXED_IDS, *HEAT_IDS, *ASSET_IDS, *JANUS_ROLL_IDS))
     handlers = {"handler_" + key for key, _ in (*BASIC, *EXTRA)}
     assert (
-        rolled | handlers | {"receive_orders", "gorgon_attack", "gorgon_collateral", "gorgon_warp"}
+        rolled
+        | handlers
+        | {
+            "receive_orders",
+            "gorgon_attack",
+            "gorgon_collateral",
+            "gorgon_warp",
+            "handler_advocate_alone",
+            "handler_frantic_breakdown",
+            "handler_casualty_parts",
+            "handler_mistress_favor",
+            "handler_trainer_private",
+            "handler_dogrunner_private",
+            "handler_insurgent_private",
+        }
         == NATIVE_RULES.keys()
     )
     for identity in NATIVE_RULES:

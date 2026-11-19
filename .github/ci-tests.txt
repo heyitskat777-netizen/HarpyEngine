@@ -155,6 +155,8 @@ tests/rules/test_handler_borrowed.py
 tests/rules/test_handler_book_swap.py
 tests/rules/test_advocate_alone.py
 tests/rules/test_mistress_favor.py
+tests/rules/test_dogrunner_private_scene.py
+tests/rules/test_insurgent_private_scene.py
 tests/rules/test_trainer_control.py
 tests/rules/test_mistress_rewards.py
 tests/rules/test_trainer_phrases.py

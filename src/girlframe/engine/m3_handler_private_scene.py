@@ -8,10 +8,12 @@ from girlframe.engine.m2 import GameState, shift_status
 from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_intracadre_marriage import status_groups
 
-Book = Literal["Mistress", "Trainer"]
+Book = Literal["Mistress", "Trainer", "Dogrunner", "Insurgent"]
 RULES: dict[Book, str] = {
     "Mistress": "handler-playbook.mistress.sex-play",
     "Trainer": "handler-playbook.trainer.sex-play",
+    "Dogrunner": "handler-playbook.dogrunner.sex-play",
+    "Insurgent": "handler-playbook.insurgent.sex-play",
 }
 Phase = Literal[
     "invite",
@@ -23,6 +25,14 @@ Phase = Literal[
     "trainer_question",
     "trainer_answer",
     "trainer_install",
+    "dogrunner_question",
+    "dogrunner_answer",
+    "dogrunner_response",
+    "dogrunner_discipline",
+    "insurgent_question",
+    "insurgent_answer",
+    "insurgent_no_suspicion",
+    "insurgent_suspicion",
     "complete",
     "withdrawn",
 ]
@@ -41,26 +51,52 @@ class PrivateScene(Model):
     favor: str = Field(default="", max_length=1200)
     accepted_event: str | None = None
     outcome: (
-        Literal["fulfilled", "failed", "declined", "identity_erased", "speak_installed"] | None
+        Literal[
+            "fulfilled",
+            "failed",
+            "declined",
+            "identity_erased",
+            "speak_installed",
+            "dogrunner_rewarded",
+            "dogrunner_punishment",
+            "insurgent_resolved",
+            "insurgent_left_suspicions",
+        ]
+        | None
     ) = None
     identity: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    tag: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    discipline: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    effects: tuple[str, ...] = Field(default=(), exclude_if=lambda value: not value)
     action: str | None = None
     account: str = Field(default="", max_length=1200)
+
+
+KINDS: dict[Book, str] = {
+    "Mistress": "mistress_favor",
+    "Trainer": "trainer_private_scene",
+    "Dogrunner": "dogrunner_private_scene",
+    "Insurgent": "insurgent_private_scene",
+}
 
 
 def records(state: GameState) -> tuple[PrivateScene, ...]:
     return tuple(
         PrivateScene.model_validate_json(x["body"])
         for x in state.facts
-        if x.get("kind") in ("mistress_favor", "trainer_private_scene")
+        if x.get("kind") in KINDS.values()
     )
 
 
 def put(state: GameState, value: PrivateScene) -> None:
-    kind = "mistress_favor" if value.playbook == "Mistress" else "trainer_private_scene"
+    kind = KINDS[value.playbook]
     state.facts = [x for x in state.facts if (x.get("kind"), x.get("id")) != (kind, value.id)] + [
         dict(kind=kind, id=value.id, body=value.model_dump_json())
     ]
+
+
+def pending_discipline(state: GameState, value: PrivateScene) -> bool:
+    return not any(x.id == value.discipline and x.state == "fulfilled" for x in state.obligations)
 
 
 def change_rank(state: GameState, owner: int, *, ace: bool) -> None:

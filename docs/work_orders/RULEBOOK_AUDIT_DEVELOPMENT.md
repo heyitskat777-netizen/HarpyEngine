@@ -1601,3 +1601,27 @@ actual original Identity erasure, stale and wrong owner rejection, a
 restart, duplicate submission and a complete Speak order. Scoped type
 checks passed.
 [Rulebook pp. 136–137](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=138) · [Tests](../../tests/rules/test_trainer_phrases.py)
+
+### Dogrunner and Insurgent private scene effects
+
+Base `9d8ac3dbd2e4952c70358137b411626186529b1f`. Dogrunner agreement
+grants the original Girl a private Tag and adds the printed +2 to her
+next ordinary dice-based Go Off-Duty receipt. The bonus is consumed
+with the saved roll. Disagreement creates real discipline work and
+remains pending until the actual Punishment is performed. A written
+manual Off-Duty ruling still follows its existing whole-total semantics.
+
+After an original Girl reports no suspicions, the Insurgent can confess,
+lower her Status and erase a known Tag on either original participant.
+Unshared Tags stay private. If the Girl reports suspicions, the current
+native choice can leave them alone. The printed crush and Handler
+loyalty-label changes remain open.
+
+The selected Dogrunner, Off-Duty, Harpy and Director regression passed
+**65 tests in 134.90 seconds** before the Insurgent addition. The combined
+private-scene and Director review cases passed **23 tests in 68.32
+seconds**. They cover original owners, restart, duplicate requests,
+ordinary Punishment and a saved pre-roll bonus, and rejection of a
+Tag outside the Insurgent's knowledge. The Director refers the new
+Plays to their own native player/Handler controls.
+[Dogrunner p. 125](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=127) · [Insurgent p. 135](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=137) · [Dogrunner tests](../../tests/rules/test_dogrunner_private_scene.py) · [Insurgent tests](../../tests/rules/test_insurgent_private_scene.py)

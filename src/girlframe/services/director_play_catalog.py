@@ -4,12 +4,31 @@ import re
 
 from girlframe.ai.play_review import PlayReferral
 from girlframe.engine.m2 import PLAY_IDS
+from girlframe.engine.m3_advocate_alone import RULE as advocate_alone
 from girlframe.engine.m3_consume import PLAYS as CONSUME
-from girlframe.engine.m3_handler_play_state import BASIC, DRESS_RULE, EXTRA, SUCCESSOR_ADVICE
+from girlframe.engine.m3_frantic_breakdown import RULE as frantic_breakdown
+from girlframe.engine.m3_handler_play_state import (
+    BASIC,
+    DRESS_RULE,
+    EXTRA,
+    SOURCE_RULE,
+    SUCCESSOR_ADVICE,
+)
+from girlframe.engine.m3_handler_private_scene import RULES as private_scenes
 from girlframe.engine.m3_red_queen import PLAYS as RED_QUEEN
 from girlframe.engine.m3_wyvern import PLAYS as WYVERN
 from girlframe.engine.rules_registry import Registry
 from girlframe.services.m3_access import digest, load_registry
+
+HANDLER_SCENES = {
+    "handler_advocate_alone": (advocate_alone, "Get Them Alone"),
+    "handler_frantic_breakdown": (frantic_breakdown, "Break Down"),
+    "handler_casualty_parts": (SOURCE_RULE, "Damage an original Casualty part"),
+    "handler_mistress_favor": (private_scenes["Mistress"], "Mistress Sex Play"),
+    "handler_trainer_private": (private_scenes["Trainer"], "Trainer Sex Play"),
+    "handler_dogrunner_private": (private_scenes["Dogrunner"], "Dogrunner Sex Play"),
+    "handler_insurgent_private": (private_scenes["Insurgent"], "Insurgent Sex Play"),
+}
 
 NATIVE_RULES = {
     **{x: "play.basic." + x for x in (*PLAY_IDS, "receive_orders")},
@@ -68,6 +87,7 @@ NATIVE_RULES = {
     "handler_contaminant_warp": "handler-advancement.handler-advancement.contaminant-zone",
     "handler_dress_them_down": DRESS_RULE,
     "handler_successor_advice": SUCCESSOR_ADVICE,
+    **{key: rule for key, (rule, _) in HANDLER_SCENES.items()},
     "gorgon_attack": "gorgon.gorgon.attack",
     "gorgon_collateral": "gorgon.gorgon.collateral-damage",
     "gorgon_warp": "gorgon.gorgon.warp",
@@ -86,7 +106,9 @@ class PlayCatalog:
         native = [key for key, value in NATIVE_RULES.items() if value == rule.id]
         play = identity if identity in NATIVE_RULES else native[0] if len(native) == 1 else rule.id
         title = rule.title
-        if play.startswith("handler_"):
+        if play in HANDLER_SCENES:
+            title = HANDLER_SCENES[play][1]
+        elif play.startswith("handler_"):
             title = dict((*BASIC, *EXTRA))[play.removeprefix("handler_")]
             if play == "handler_off_duty":
                 title = "Handler Go Off-Duty"

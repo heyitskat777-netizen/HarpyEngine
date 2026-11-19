@@ -1181,6 +1181,14 @@ class HandlerPlayService:
                     self.game, c, state, book="Trainer", rule=private_rules["Trainer"]
                 )
                 is not None,
+                dogrunner_private=active_book(
+                    self.game, c, state, book="Dogrunner", rule=private_rules["Dogrunner"]
+                )
+                is not None,
+                insurgent_private=active_book(
+                    self.game, c, state, book="Insurgent", rule=private_rules["Insurgent"]
+                )
+                is not None,
                 successor=owned_successor(self.game, c, state, active_handler(state)) is not None,
                 frantic_breakdown=active_book(
                     self.game, c, state, book="Frantic", rule=breakdown_rule

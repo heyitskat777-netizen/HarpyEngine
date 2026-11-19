@@ -9,11 +9,13 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_handler_private_scene as rules
-from girlframe.engine.m2 import GameState
+from girlframe.engine.m2 import GameState, Obligation
 from girlframe.engine.m3_actor_bonds import current_ref, is_helpless
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_handler_state import Conditioning
+from girlframe.services.m2_choices import ChoiceEngine
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
@@ -26,6 +28,8 @@ from girlframe.services.read_only_bot import GuildViewer
 
 EVENT = "m3.mistress_favor"
 TRAINER_EVENT = "m3.trainer_private_scene"
+DOGRUNNER_EVENT = "m3.dogrunner_private_scene"
+INSURGENT_EVENT = "m3.insurgent_private_scene"
 
 
 class HandlerPrivateSceneService:
@@ -94,6 +98,7 @@ class HandlerPrivateSceneService:
                 x.handler == owned[0]
                 and x.girl == girl
                 and x.phase not in ("complete", "withdrawn")
+                and (x.phase != "dogrunner_discipline" or rules.pending_discipline(canon, x))
                 for x in rules.records(canon)
             ):
                 raise WorkflowError(
@@ -152,6 +157,20 @@ class HandlerPrivateSceneService:
             return ("trainer_yes", "trainer_understands")
         if value.phase == "trainer_install" and actor == value.handler:
             return ("install_speak", "pass_phrase")
+        if value.phase == "dogrunner_question" and actor == value.handler:
+            return ("dogrunner_ask",)
+        if value.phase == "dogrunner_answer" and actor == value.girl:
+            return ("dogrunner_answer",)
+        if value.phase == "dogrunner_response" and actor == value.handler:
+            return ("dogrunner_agree", "dogrunner_disagree")
+        if value.phase == "insurgent_question" and actor == value.handler:
+            return ("insurgent_ask",)
+        if value.phase == "insurgent_answer" and actor == value.girl:
+            return ("insurgent_yes", "insurgent_no")
+        if value.phase == "insurgent_no_suspicion" and actor == value.handler:
+            return ("insurgent_apply",)
+        if value.phase == "insurgent_suspicion" and actor == value.handler:
+            return ("insurgent_leave_suspicions",)
         if value.phase == "favor" and actor == value.handler:
             return ("ask",)
         if value.phase == "decision" and actor == value.girl:
@@ -204,6 +223,8 @@ class HandlerPrivateSceneService:
         *,
         text: str = "",
         action: str = "",
+        effects: tuple[str, ...] = (),
+        tag: str = "",
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             canon = load_state(c, self.store.campaign_id)
@@ -221,7 +242,7 @@ class HandlerPrivateSceneService:
             ):
                 raise WorkflowError("Recover the original Handler and Girl")
             in_scene = step in ("consent", "attest", "ask", "accept", "decline") or (
-                value.playbook == "Trainer" and step != "withdraw"
+                value.playbook != "Mistress" and step != "withdraw"
             )
             if in_scene and self._available(c, canon, value.channel, value.handler) != (
                 value.scene,
@@ -241,12 +262,35 @@ class HandlerPrivateSceneService:
                 performed = (*value.attestations, actor)
                 update.update(
                     attestations=performed,
-                    phase=("favor" if value.playbook == "Mistress" else "trainer_question")
+                    phase={
+                        "Mistress": "favor",
+                        "Trainer": "trainer_question",
+                        "Dogrunner": "dogrunner_question",
+                        "Insurgent": "insurgent_question",
+                    }[value.playbook]
                     if len(performed) == 2
                     else "scene",
                 )
             elif value.playbook == "Trainer":
                 update.update(_training(canon, value, step, text, event))
+            elif value.playbook == "Dogrunner":
+                update.update(self._dogrunner(canon, value, step, text))
+            elif value.playbook == "Insurgent":
+                if step == "insurgent_apply":
+                    from girlframe.services.m3_insurgent_private_scene import apply
+
+                    update.update(apply(self.game, canon, value, effects, text, tag))
+                else:
+                    update.update(
+                        {
+                            "insurgent_ask": dict(phase="insurgent_answer"),
+                            "insurgent_yes": dict(phase="insurgent_suspicion"),
+                            "insurgent_no": dict(phase="insurgent_no_suspicion"),
+                            "insurgent_leave_suspicions": dict(
+                                phase="complete", outcome="insurgent_left_suspicions"
+                            ),
+                        }[step]
+                    )
             elif step == "ask":
                 update.update(phase="decision", favor=text.strip())
             elif step == "decline":
@@ -294,9 +338,43 @@ class HandlerPrivateSceneService:
         return self._write(
             viewer,
             key,
-            dict(id=identity, expected=expected, step=step, text=text, action=action),
+            dict(id=identity, expected=expected, step=step, text=text, action=action)
+            | (dict(effects=effects, tag=tag) if effects or tag else {}),
             operation,
         )
+
+    def _dogrunner(
+        self, canon: GameState, value: rules.PrivateScene, step: str, text: str
+    ) -> dict[str, Any]:
+        if step == "dogrunner_ask":
+            return dict(phase="dogrunner_answer")
+        if step == "dogrunner_answer":
+            if not 1 <= len(text.strip()) <= 1200:
+                raise WorkflowError("The original Girl supplies her own answer")
+            return dict(phase="dogrunner_response", account=text.strip())
+        target, handler = int(value.girl.entity), int(value.handler.entity)
+        if step == "dogrunner_agree":
+            if not 1 <= len(text.strip()) <= 120:
+                raise WorkflowError("Choose the actual original Girl's reward Tag")
+            tag = ChoiceEngine(self.game).add_tag(
+                canon, {"data": {"participants": (handler, target)}}, target, handler, text
+            )
+            tag.giver_actor = value.handler
+            return dict(phase="complete", outcome="dogrunner_rewarded", tag=tag.id)
+        character = value.girl.incarnation
+        if step != "dogrunner_disagree" or character is None:
+            raise WorkflowError("Recover the actual original Girl's private response")
+        debt = self.game.obligation(
+            canon,
+            {"id": value.id},
+            "punishment",
+            target,
+            handler,
+            cause=rules.RULES["Dogrunner"],
+            source_pdf="127",
+            character_id=character,
+        )
+        return dict(phase="dogrunner_discipline", outcome="dogrunner_punishment", discipline=debt)
 
     def menu(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
         with self.store.engine.connect() as c:
@@ -304,16 +382,35 @@ class HandlerPrivateSceneService:
             canon = load_state(c, self.store.campaign_id)
             value, actor = self._case(c, canon, viewer, identity)
             sheet = canon.sheets.get(value.girl.entity)
+            tag_options: tuple[tuple[str, str], ...] = ()
+            if (
+                value.phase == "insurgent_no_suspicion"
+                and actor == value.handler
+                and sheet is not None
+            ):
+                from girlframe.services.m3_insurgent_private_scene import tags
+
+                if sheet.character_id == value.girl.incarnation and value.handler == active_handler(
+                    canon
+                ):
+                    tag_options = tuple(
+                        (key, label.label) for key, (_, label) in tags(canon, value).items()
+                    )
             return dict(
                 id=value.id,
                 revision=canon.revision,
-                phase=value.phase,
+                phase="complete"
+                if value.phase == "dogrunner_discipline"
+                and not rules.pending_discipline(canon, value)
+                else value.phase,
                 playbook=value.playbook,
                 options=self._options(value, actor),
                 favor=value.favor,
                 outcome=value.outcome,
                 action=value.action,
                 account=value.account,
+                discipline=value.discipline,
+                tags=tag_options,
                 identities=tuple(
                     (x.id, x.name)
                     for x in sheet.identities
@@ -342,7 +439,32 @@ class HandlerPrivateSceneService:
 
 
 def _event(value: rules.PrivateScene) -> str:
-    return EVENT if value.playbook == "Mistress" else TRAINER_EVENT
+    return {
+        "Mistress": EVENT,
+        "Trainer": TRAINER_EVENT,
+        "Dogrunner": DOGRUNNER_EVENT,
+        "Insurgent": INSURGENT_EVENT,
+    }[value.playbook]
+
+
+def prove_discipline(
+    game: GameService, c: Connection, state: GameState, debt: Obligation, handler: int
+) -> None:
+    value = next((x for x in rules.records(state) if x.discipline == debt.id), None)
+    if (
+        value is None
+        or value.playbook != "Dogrunner"
+        or value.handler != active_handler(state)
+        or value.handler.entity != str(handler)
+        or debt.target != handler
+        or debt.owner != int(value.girl.entity)
+        or current_ref(state, debt.owner) != value.girl
+        or debt.action != value.id
+        or value.outcome != "dogrunner_punishment"
+        or value.phase != "dogrunner_discipline"
+        or value not in rules.records(_history(c, game, value.event))
+    ):
+        raise WorkflowError("Recover the original Dogrunner and this actual discipline decision")
 
 
 def _training(

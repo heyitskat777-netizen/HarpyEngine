@@ -11,6 +11,7 @@ from girlframe.discord_adapter.m3_punishments import Picker
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_handler_play_state import BASIC, DRESS_STEPS, EXTRA, Effect, Play
+from girlframe.engine.m3_handler_private_scene import Book
 from girlframe.engine.m3_world_state import Npc
 from girlframe.services.m3_handler_plays import HandlerPlayService
 from girlframe.services.onboarding import WorkflowError
@@ -33,10 +34,18 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
         options.append(("advocate_alone", "Get Them Alone in this scene"))
     if data.get("casualty_parts"):
         options.append(("casualty_parts", "Casualty: damage an original part"))
-    if data.get("mistress_favor") and interaction.channel_id is not None:
-        options.append(("mistress_favor", "Mistress: offer a private scene"))
-    if data.get("trainer_private") and interaction.channel_id is not None:
-        options.append(("trainer_private", "Trainer: offer a private scene"))
+    private_books: dict[str, Book] = {
+        "mistress_favor": "Mistress",
+        "trainer_private": "Trainer",
+        "dogrunner_private": "Dogrunner",
+        "insurgent_private": "Insurgent",
+    }
+    if interaction.channel_id is not None:
+        options.extend(
+            (key, f"{book}: offer a private scene")
+            for key, book in private_books.items()
+            if data.get(key)
+        )
     options.extend(
         ("warp:" + x["id"], "Warp area: " + x["label"]) for x in data.get("warp_zones", [])
     )
@@ -83,7 +92,7 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
                 casualty.menu, viewer_from_interaction(current), int(interaction.channel_id or 0)
             )
             await open_part_damage(current, casualty, menu, handler_play=True)
-        elif identity in ("mistress_favor", "trainer_private"):
+        elif identity in private_books:
             from girlframe.discord_adapter.m3_handler_private_scene import open_invite
             from girlframe.services.m3_handler_private_scene import HandlerPrivateSceneService
 
@@ -93,7 +102,7 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
                 HandlerPrivateSceneService(service.store, service.game),
                 data["game_revision"],
                 interaction.channel_id,
-                playbook="Trainer" if identity == "trainer_private" else "Mistress",
+                playbook=private_books[identity],
             )
         elif identity == "off_duty":
             from girlframe.discord_adapter.m3_off_duty import open_period

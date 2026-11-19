@@ -211,10 +211,10 @@ class PunishmentService:
         if load_state(c, self.store.campaign_id).revision != game_revision:
             raise WorkflowError("STALE_STATE: sheets or Status changed; review the task again.")
         from girlframe.engine.m3_frantic_breakdown import RULE as breakdown_rule
+        from girlframe.engine.m3_handler_private_scene import RULES as private_rules
 
-        if body.get("cause") == breakdown_rule:
-            from girlframe.services.m3_frantic_breakdown import discipline_source
-
+        cause = body.get("cause")
+        if cause in (breakdown_rule, private_rules["Dogrunner"]):
             state = load_state(c, self.store.campaign_id)
             debt = next(
                 (
@@ -224,15 +224,21 @@ class PunishmentService:
                 ),
                 None,
             )
-            if (
-                debt is None
-                or debt.target is None
-                or discipline_source(self.game, c, state, debt, debt.target)
-                != body.get("required_severity")
-            ):
-                raise WorkflowError(
-                    "Recover the exact original Frantic responsibility and severity"
-                )
+            if debt is None or debt.target is None:
+                raise WorkflowError("Recover the private Play's original pending discipline")
+            if cause == breakdown_rule:
+                from girlframe.services.m3_frantic_breakdown import discipline_source
+
+                if discipline_source(self.game, c, state, debt, debt.target) != body.get(
+                    "required_severity"
+                ):
+                    raise WorkflowError(
+                        "Recover the exact original Frantic responsibility and severity"
+                    )
+            else:
+                from girlframe.services.m3_handler_private_scene import prove_discipline
+
+                prove_discipline(self.game, c, state, debt, int(row["owner_id"]))
         actions = t.m2["m2_actions"]
         from girlframe.services.m3_beneath import discipline_action, lineage
 

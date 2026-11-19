@@ -15995,14 +15995,16 @@
         "heading": "Sex Play"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_dogrunner_private_scene.py::test_dogrunner_answer_creates_real_recovery_bonus_or_punishment"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -16399,14 +16401,16 @@
         "heading": "Sex Play"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_insurgent_private_scene.py::test_insurgent_private_scene_keeps_suspicion_and_tags_with_original_owners"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

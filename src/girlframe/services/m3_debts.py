@@ -214,6 +214,7 @@ def synchronize(c: Connection, store: OnboardingStore, state: GameState, event: 
 
     frame_rewards(c, store, state, period, event)
     from girlframe.engine.m3_frantic_breakdown import RULE as breakdown_rule
+    from girlframe.engine.m3_handler_private_scene import RULES as private_rules
     from girlframe.services.m2_game import GameService
     from girlframe.services.m3_frantic_breakdown import discipline_source
     from girlframe.services.m3_show_dog import synchronize as show_dog
@@ -245,6 +246,12 @@ def synchronize(c: Connection, store: OnboardingStore, state: GameState, event: 
             if debt.target != period.handler or state.handler != period.handler:
                 continue
             severity = discipline_source(game, c, state, debt, period.handler)
+        if debt.details.get("cause") == private_rules["Dogrunner"]:
+            if debt.target != period.handler or state.handler != period.handler:
+                continue
+            from girlframe.services.m3_handler_private_scene import prove_discipline
+
+            prove_discipline(game, c, state, debt, period.handler)
         allocation = next((x for x in records(state, Allocation) if x.source_id == debt.id), None)
         subject = int(allocation.subject.entity) if allocation else debt.owner
         actual_character = (

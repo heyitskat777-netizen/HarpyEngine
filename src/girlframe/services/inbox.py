@@ -3057,7 +3057,7 @@ class InboxService:
                         True,
                         False,
                         "Open your own saved choice.",
-                        "Fictional consent, performance and the favor have separate steps.",
+                        "Consent, performance and the playbook decision have separate steps.",
                         "Open private choice",
                         task="m3_mistress_favor",
                     )
