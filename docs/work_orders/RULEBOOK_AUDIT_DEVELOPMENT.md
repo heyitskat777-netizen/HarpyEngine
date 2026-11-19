@@ -1710,6 +1710,36 @@ attack, Battle and Handler consequence cases. Ruff and scoped mypy
 passed.
 [High Rebellion p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) · [Handler p. 13](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=15)
 
+### Full regression after registry and recovery fixes
+
+Exact revision `3263a9df6a5697a09679143fa747b6dbeba1ffb1` passed
+**3,788 tests** in four detached partitions. All four exited zero.
+The longest partition ran **3,025.54 seconds**. This includes the
+rules, optional gate, recovery, knowledge and private Inbox tests
+present at that commit. Later changes have their own evidence below.
+Logs are under `var/rulebook-full-3263a9d/`.
+
+### High Budget Foundation attack on a person
+
+Base `ca06d2e7e03fdfc6a085535ed0cfe46dd3607873`. High Budget 5.2
+retains the original base path and now supports the original Handler
+or a Girl from the preparing period. The original Foundation Pilot
+records the attempt from their actual piloted Frame and the original
+target must join the scene. A human referee chooses the outcome.
+An actual interception or the target's own verified physical
+withdrawal can avert it. A landed strike uses ordinary physical
+damage, including the Handler's owned response or a Girl's required
+Defeat. Off-Duty stays blocked through these responses and the
+referee's verification of their committed outcome.
+
+**16 focused tests passed in 28.35 seconds**, covering the six native
+attack cases and registry checks. The Girl strike exposed a mixed-cast
+recovery gap for source-owned Defeat without a parent Play. The
+receipts now bind the actual scene and the exact participating body.
+If the target's body ends independently before the source strike,
+closing the original effect still needs dedicated source handling.
+[High Budget p. 149](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=151) · [Native cases](../../tests/rules/test_foundation_attack.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

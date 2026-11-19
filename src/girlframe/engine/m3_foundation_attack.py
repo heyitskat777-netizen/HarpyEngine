@@ -1,4 +1,4 @@
-"""The higher-ups' attack against an original Foundation base."""
+"""The higher-ups' attack against an original person or Foundation base."""
 
 from typing import Literal
 
@@ -19,14 +19,17 @@ class Attack(Model):
     handler: ActorRef
     pilot: ActorRef
     controller: int
-    base: str
+    base: str | None = None
     cell: Cell
+    target: ActorRef | None = Field(default=None, exclude_if=lambda value: value is None)
     attempt: str | None = None
     account: str = Field(default="", max_length=1200)
     cast: SceneCast | None = None
     defenders: tuple[ActorRef, ...] = ()
     resolution: str | None = None
-    result: Literal["destroyed", "averted"] | None = None
+    strike: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    followups: tuple[str, ...] = Field(default=(), exclude_if=lambda value: not value)
+    result: Literal["destroyed", "averted", "struck"] | None = None
 
 
 def attacks(state: GameState) -> tuple[Attack, ...]:

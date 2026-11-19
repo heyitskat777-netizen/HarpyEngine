@@ -426,9 +426,18 @@ def effect_form(
         )
 
     foundation_pilots = []
+    foundation_people: dict[str, tuple[str, str]] = {}
+    foundation_labels: list[tuple[str, str]] = []
     if rule == FOUNDATION_ATTACK:
         from girlframe.engine.m3_foundation_attack import pilot as foundation_actor
 
+        if handler is not None:
+            foundation_people["handler"] = ("handler", str(handler))
+            foundation_labels.append(("handler", "The original Handler"))
+        for uid in state.order:
+            token = "girl:" + str(uid)
+            foundation_people[token] = ("pilot", str(uid))
+            foundation_labels.append((token, state.sheets[str(uid)].callsign))
         for candidate in world["pilots"]:
             try:
                 attacker = foundation_actor(state, candidate["id"])
@@ -868,8 +877,10 @@ def effect_form(
                 (
                     Field(
                         "attacked_base",
-                        "Which operational base is targeted?",
-                        tuple((site.id, site.name) for site in theft_bases.values()) or WAIT,
+                        "Which original person or base is targeted?",
+                        tuple((site.id, site.name) for site in theft_bases.values())
+                        + tuple(foundation_labels)
+                        or WAIT,
                     ),
                     Field(
                         "foundation_pilot",
@@ -1677,7 +1688,11 @@ def effect_form(
                     for i in range(1, 4)
                 )
         if rule == FOUNDATION_ATTACK:
-            payload.update(target=values["attacked_base"][0], victim=values["foundation_pilot"][0])
+            target = values["attacked_base"][0]
+            if target in foundation_people:
+                mode, target = foundation_people[target]
+                payload["foundation_person"] = mode
+            payload.update(target=target, victim=values["foundation_pilot"][0])
         if rule == REBEL_FRAME_THEFT:
             payload.update(target=values["theft_base"][0], victim=values["frame_thief"][0])
         if rule == REBEL_BOND_ATTACK:

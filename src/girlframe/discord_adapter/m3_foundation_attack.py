@@ -19,11 +19,22 @@ async def open_attack(
     status = {
         "destroyed": "The base was destroyed.",
         "averted": "The original Cadre stopped the attack.",
+        "struck": "The actual strike and its consequences are recorded.",
         None: "The original attack awaits resolution."
         if data["attempted"]
-        else "The original Pilot can act in the base scene.",
+        else "The original Pilot can act in the target's scene.",
     }[data["result"]]
-    text = "\n\n".join(x for x in (status, discord.utils.escape_mentions(data["account"])) if x)
+    if data["awaiting_consequences"]:
+        status = "The actual strike landed. Finish any required response in the private Inbox."
+    text = "\n\n".join(
+        x
+        for x in (
+            discord.utils.escape_mentions(data["target"]),
+            status,
+            discord.utils.escape_mentions(data["account"]),
+        )
+        if x
+    )
     if not data["choices"]:
         await reply(interaction, text)
         return
@@ -38,20 +49,21 @@ async def open_attack(
             channel,
             values["choice"][0],
             values["account"],
+            (values.get("asset") or (None,))[0],
         )
-        return (
-            "The original attempt is recorded."
-            if result["decision"] == "attempt"
-            else "The base attack is resolved."
-        )
+        return {
+            "attempt": "The original attempt is recorded.",
+            "strike": "The strike is recorded. Check the private Inbox for required responses.",
+        }.get(result["decision"], "The original attack is resolved.")
 
+    fields = [Field("choice", "Your action", data["choices"])]
+    if data["assets"]:
+        fields.append(Field("asset", "Actual struck Asset", data["assets"]))
+    fields.append(Field("account", "What happened?", paragraph=True))
     await NativeForm(
         interaction.user.id,
-        "Foundation attack on the base",
+        "Original Foundation attack",
         text,
-        [
-            Field("choice", "Your action", data["choices"]),
-            Field("account", "What happened?", paragraph=True),
-        ],
+        fields,
         submit,
     ).present(interaction)

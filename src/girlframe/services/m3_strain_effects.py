@@ -719,7 +719,14 @@ class EffectService:
 
                 assert choice.target and choice.victim
                 stage_foundation_attack(
-                    c, self.strain, updated, row, event_id, choice.target, choice.victim
+                    c,
+                    self.strain,
+                    updated,
+                    row,
+                    event_id,
+                    choice.target,
+                    choice.victim,
+                    person=choice.foundation_person,
                 )
             needs_theft = choice.rule_id == REBEL_FRAME_THEFT
             if needs_theft:

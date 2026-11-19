@@ -147,6 +147,9 @@ class Choice(Model):
     faction_id: str | None = Field(default=None, exclude_if=lambda x: x is None)
     location: Location | None = None
     victim: str | None = None
+    foundation_person: Literal["pilot", "handler"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     new_assets: tuple[Asset, ...] = ()
     new_type: GorgonType | None = None
     core_plan: CorePlan | None = None
@@ -276,9 +279,9 @@ def apply(
             choice.account.strip(),
         )
     elif rule == FOUNDATION_ATTACK:
-        fields(choice, {"target", "victim"})
+        fields(choice, {"target", "victim", "foundation_person"})
         if not choice.target or not choice.victim:
-            raise ValueError("Choose the original base and actual Foundation Pilot")
+            raise ValueError("Choose the original target and actual Foundation Pilot")
     elif rule == REBEL_SIEGE:
         fields(choice, {"target", "victim", "siege_recruits", "faction"})
         if not choice.target or choice.victim not in (None, "ace", "handler"):

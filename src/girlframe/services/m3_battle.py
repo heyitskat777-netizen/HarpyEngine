@@ -2465,6 +2465,7 @@ def synchronize_damage(game: "GameService", c: Connection, event: str) -> None:
         if action:
             parent = dict(campaign_id=game.store.campaign_id, scene_id=action["scene_id"])
         if action is None and fact.get("source_work"):
+            from girlframe.engine.m3_foundation_attack import attacks as foundation_attacks
             from girlframe.engine.m3_wyvern import RousedUse
             from girlframe.engine.m3_wyvern import records as wyvern_records
             from girlframe.services.m3_wyvern import prove_use
@@ -2472,7 +2473,19 @@ def synchronize_damage(game: "GameService", c: Connection, event: str) -> None:
             source_use = next(
                 (x for x in wyvern_records(state, RousedUse) if x.id == fact["source_work"]), None
             )
-            if source_use is not None:
+            foundation = next(
+                (
+                    x
+                    for x in foundation_attacks(state)
+                    if x.id == fact["source_work"]
+                    and x.strike == event
+                    and fact["id"] in x.followups
+                ),
+                None,
+            )
+            if foundation is not None and foundation.cast is not None:
+                parent = dict(campaign_id=game.store.campaign_id, scene_id=foundation.cast.id)
+            elif source_use is not None:
                 prove_use(game, c, state, source_use.id)
                 parent = dict(campaign_id=game.store.campaign_id, scene_id=source_use.cast.id)
             else:

@@ -3321,7 +3321,9 @@ class InboxService:
                         base_attack.id,
                         canon.revision,
                         "off_duty",
-                        "Foundation attack on the base",
+                        "Foundation attack on the base"
+                        if base_attack.base
+                        else "Foundation attack on a person",
                         "Original participants and referee",
                         "pending" if attack_pending else "resolved",
                         attack_pending

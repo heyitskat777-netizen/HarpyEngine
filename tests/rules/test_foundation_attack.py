@@ -1,6 +1,7 @@
-"""The original higher-up attack changes the actual base only after resolution."""
+"""The higher-ups' actual attack and its owned consequences survive reopening."""
 
 import asyncio
+import json
 
 import pytest
 from test_cast_service import change
@@ -17,6 +18,7 @@ from girlframe.delivery.m2_worker import GameWorker
 from girlframe.discord_adapter.inbox import InboxView
 from girlframe.discord_adapter.m3_strain_effects import open_effect
 from girlframe.engine.m2 import PlayInput
+from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_foundation_attack import RULE, attacks
 from girlframe.engine.m3_leviathan_arrival import install_external_pose
@@ -26,14 +28,26 @@ from girlframe.services.inbox import InboxService
 from girlframe.services.m3_actors import ActorService
 from girlframe.services.m3_cast import CastService
 from girlframe.services.m3_foundation_attack import FoundationAttackService
+from girlframe.services.m3_handler_consequences import HandlerConsequenceService
+from girlframe.services.m3_movement import MovementService
 from girlframe.services.m3_off_duty_cycle import CycleService
 from girlframe.services.m3_strain_effects import EffectService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
 
-@pytest.mark.parametrize("verdict", ("destroyed", "averted"))
-def test_high_budget_uses_original_pilot_scene_and_actual_base_outcome(ledger, verdict):
+@pytest.mark.parametrize(
+    "target,verdict",
+    (
+        ("base0", "destroyed"),
+        ("base0", "averted"),
+        ("handler", "strike"),
+        ("handler", "withdraw"),
+        ("girl:2", "strike"),
+        ("girl:2", "averted"),
+    ),
+)
+def test_high_budget_uses_original_pilot_scene_and_actual_outcome(ledger, target, verdict):
     strain, game = ready(ledger)
     approval = ledger.policy.m3_approval
     ledger.policy = ledger.policy.model_copy(
@@ -72,6 +86,15 @@ def test_high_budget_uses_original_pilot_scene_and_actual_base_outcome(ledger, v
             )
         )
         canon = place(place(canon, 2), 3, cell=(2, 1))
+        if target == "handler":
+            canon.facts.append(
+                dict(
+                    kind="ordinary_handler_movement",
+                    actor=current_ref(canon, 1).model_dump_json(),
+                    cell=json.dumps((0, 0)),
+                    event="fixture-present-handler",
+                )
+            )
         canon = install_external_pose(
             canon,
             actor,
@@ -86,6 +109,10 @@ def test_high_budget_uses_original_pilot_scene_and_actual_base_outcome(ledger, v
         for sheet in canon.sheets.values():
             for asset in sheet.assets:
                 asset.void = False
+        if (target, verdict) == ("girl:2", "strike"):
+            frames = [x for x in canon.sheets["2"].assets if x.family == "frame"]
+            for spare in frames[1:]:
+                spare.damaged = True
         game.event(c, 1, "setup-higher-ups-attack", "synthetic.setup", canon)
     cast = CastService(ActorService(strain.missions))
     change(cast, controller, "join", actor)
@@ -117,14 +144,14 @@ def test_high_budget_uses_original_pilot_scene_and_actual_base_outcome(ledger, v
     assert selected["rule_id"] == RULE
     inbox = InboxService(ledger)
 
-    async def native(viewer, number, *, select=False, **values):
+    async def native(viewer, number, *, select=False, task="m3_foundation_attack", **values):
         click = current(viewer.user_id, number)
         click.channel_id = 900
         await click.response.defer(ephemeral=True)
         if select:
             await open_effect(click, effects, work)
         else:
-            entry = next(x for x in inbox.items(viewer) if x.task == "m3_foundation_attack")
+            entry = next(x for x in inbox.items(viewer) if x.task == task)
             await InboxView(inbox, viewer.user_id).route(click, entry)
         form = click.edit_original_response.call_args.kwargs["view"]
         form.values.update(values)
@@ -137,9 +164,9 @@ def test_high_budget_uses_original_pilot_scene_and_actual_base_outcome(ledger, v
             ADMIN,
             41700,
             select=True,
-            attacked_base=("base0",),
+            attacked_base=(target,),
             foundation_pilot=(actor.entity,),
-            account="The higher-ups send the original Pilot for the base.",
+            account="The higher-ups send the original Pilot against this target.",
         )
     )
     service = FoundationAttackService(strain)
@@ -154,6 +181,12 @@ def test_high_budget_uses_original_pilot_scene_and_actual_base_outcome(ledger, v
         service.act(ADMIN, "original-owner-only", work, revision, 900, "attempt", "Wrong owner")
     with pytest.raises(WorkflowError, match="actual base scene"):
         service.act(controller, "wrong-scene", work, revision, 901, "attempt", "Wrong scene")
+    if target == "handler":
+        original = current_ref(state(game), 1)
+        with pytest.raises(WorkflowError, match="original person must join"):
+            service.act(controller, "handler-absent", work, revision, 900, "attempt", "Not there")
+        change(cast, ADMIN, "join", original)
+        revision = state(game).revision
     ledger.safety(PLAYER, "pause-foundation", ledger.status(PLAYER)["revision"], pause=True)
     with pytest.raises(WorkflowError, match="SAFETY_PAUSED"):
         service.act(
@@ -179,7 +212,18 @@ def test_high_budget_uses_original_pilot_scene_and_actual_base_outcome(ledger, v
         )
     before = state(game)
     assert next(x for x in before.world.locations if x.id == "base0").condition == "intact"
-    if verdict == "averted":
+    if verdict == "withdraw":
+        MovementService(game).move(
+            ADMIN,
+            "actual-handler-withdrawal",
+            before.revision,
+            900,
+            current_ref(before, 1),
+            (1, 0),
+            account="The original Handler leaves the attack square.",
+        )
+        verdict = "averted"
+    elif verdict == "averted":
         asset = next(x.id for x in before.sheets["2"].assets if x.family == "frame")
         game.dice.faces = (4, 5)
         action = game.begin(
@@ -223,13 +267,83 @@ def test_high_budget_uses_original_pilot_scene_and_actual_base_outcome(ledger, v
     revision = state(game).revision
     with pytest.raises(WorkflowError, match="STALE_STATE"):
         service.act(ADMIN, "stale-foundation", work, revision - 1, 900, verdict, "Final result.")
-    asyncio.run(native(ADMIN, 41720, choice=(verdict,), account="Final result."))
+    final_values = {}
+    if target == "girl:2" and verdict == "strike":
+        asset = next(x.id for x in before.sheets["2"].assets if x.family == "frame")
+        with pytest.raises(WorkflowError, match="actual target Asset"):
+            service.act(ADMIN, "forged-asset", work, revision, 900, "strike", "No", "fake")
+        final_values["asset"] = (asset,)
+    asyncio.run(native(ADMIN, 41720, choice=(verdict,), account="Final result.", **final_values))
     assert (
-        service.act(ADMIN, "41721", work, revision, 900, verdict, "Final result.")["decision"]
+        service.act(
+            ADMIN,
+            "41721",
+            work,
+            revision,
+            900,
+            verdict,
+            "Final result.",
+            (final_values.get("asset") or (None,))[0],
+        )["decision"]
         == verdict
     )
+    if verdict == "strike":
+        saved = attacks(state(game))[0]
+        assert saved.strike and saved.resolution is None and len(saved.followups) == 1
+        assert effects.get(ADMIN, work)["state"] == "pending"
+        with pytest.raises(WorkflowError, match="Strain|immediate sheet work"):
+            activate(cycle, game, period)
+        with pytest.raises(WorkflowError, match="original strike consequences"):
+            service.act(ADMIN, "premature-finish", work, state(game).revision, 900, "finish", "No")
+        ledger.engine.dispose()
+        if target == "handler":
+            body = HandlerConsequenceService(ledger)
+            consequence = next(x for x in body.tasks(ADMIN) if x["trigger"] == "asset_damage")
+            with pytest.raises(WorkflowError, match="Handler's human"):
+                body.get(controller, consequence["id"])
+            asyncio.run(
+                native(
+                    ADMIN,
+                    41730,
+                    task="m3_handler_consequence",
+                    choice=("injury",),
+                    account="The original body bears the actual injury.",
+                )
+            )
+            assert state(game).handler_injuries[-1].actor == saved.target
+        else:
+            assert next(x for x in state(game).sheets["2"].assets if x.id == asset).damaged
+            game.dice.faces = (4, 4)
+            action = game.begin(
+                PLAYER,
+                "actual-foundation-defeat",
+                900,
+                state(game).sheets["2"].revision,
+                PlayInput(
+                    play="defeat",
+                    heat=0,
+                    source_work=saved.followups[0],
+                    context="Forced out of the cockpit",
+                    trigger_confirmed=True,
+                ),
+            )["action_id"]
+            worker, gateway = GameWorker(game), Gateway()
+            tick(worker, gateway, 3)
+            pass_tags(game)
+            answer(game, controller, "tag_window", options=("pass",))
+            answer(
+                game,
+                PLAYER,
+                "defeat_select",
+                options=("escape_cockpit_choose_location",),
+                text="The original Girl actually escapes her cockpit.",
+            )
+            assert game.inspect(PLAYER, action)["state"] == "complete"
+            tick(worker, gateway, 5)
+        asyncio.run(native(ADMIN, 41740, choice=("finish",), account="Verify the actual result."))
     canon = state(game)
-    assert attacks(canon)[0].result == verdict and effects.get(ADMIN, work)["state"] == "resolved"
+    result = "struck" if verdict == "strike" else verdict
+    assert attacks(canon)[0].result == result and effects.get(ADMIN, work)["state"] == "resolved"
     location = next(x for x in canon.world.locations if x.id == "base0")
     assert location.condition == ("destroyed" if verdict == "destroyed" else "intact")
     assert any(

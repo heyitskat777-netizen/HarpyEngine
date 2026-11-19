@@ -19638,7 +19638,26 @@
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Saved High Budget die 5 column 2",
+        "actor_type": "Original independently controlled Foundation Pilot, original target and human referee",
+        "pre_roll_sources": [
+          "Saved Strain choice and preparing Off-Duty period",
+          "Original targeted base, Handler or Girl, with actual target location",
+          "Original Foundation Pilot present in their working Frame"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "attack": ["Actual base destruction", "Actual strike on the original person", "Verified original interception or withdrawal"]
+        },
+        "choice_ownership": "The original Foundation Pilot authors the attempt. The human referee rules the outcome. Target owners control their own required responses.",
+        "target_policy": "The frozen original target and attacker must be present for a strike. Use actual unhidden undamaged Assets or the ordinary Handler body.",
+        "post_roll_effects": ["Resolve actual site loss or ordinary physical damage", "Retain the original attempt and private audience"],
+        "mandatory_followups": ["Finish any owned physical consequence before clearing the Strain effect"],
+        "handler_or_gm_intervention": "The human referee controls the table verdict. Split owned body consequences from their ruling.",
+        "test_fixture_ids": ["tests/rules/test_foundation_attack.py"]
+      },
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_foundation_attack.py"

@@ -2005,7 +2005,6 @@ class GameService:
                 scoped_defeat = (
                     isinstance(json.loads(source_defeat_work["body_json"]).get("requirement"), dict)
                     and source_defeat_work["scene_id"] == scene["id"]
-                    and prepared.parent is not None
                 )
             if (
                 all(
@@ -2242,6 +2241,16 @@ class GameService:
                     raise WorkflowError(
                         "STALE_CAST: recover the actual Dive participants and facilitator."
                     )
+                if (
+                    scoped_defeat
+                    and defeat is not None
+                    and not any(
+                        role.actor.model_dump(mode="json") == defeat["actor"]
+                        and role.controller == mechanical_owner
+                        for role in source_cast.roles
+                    )
+                ):
+                    raise WorkflowError("Recover the original Defeat actor in its source scene.")
             from girlframe.engine.m3_actor_state import ActorRef
             from girlframe.services.m3_scene_requisitions import guard as guard_private_scene
 
