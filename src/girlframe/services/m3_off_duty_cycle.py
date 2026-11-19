@@ -339,8 +339,10 @@ class CycleService:
                 )
             work = self.periods._pending(c, identity)
             start = [x for x in work if x["kind"] == "off_duty_strain_start"]
+            from girlframe.services.m3_budget_demotion import due as due_demotion
             from girlframe.services.m3_budget_trial import due as due_trial
 
+            demotion = due_demotion(c, StrainService(self.periods), state, identity)
             execution = due_trial(c, StrainService(self.periods), state, identity)
             blockers = frozenset(
                 x["id"]
@@ -348,6 +350,7 @@ class CycleService:
                 if x["kind"]
                 not in ("off_duty_strain_start", "off_duty_handler_scene", "off_duty_status_review")
                 and (execution is None or x["id"] != execution[1].id)
+                and (demotion is None or x["id"] != demotion.id)
                 and not (
                     x["kind"] == "punishment"
                     and json.loads(x["body_json"]).get("due_stage") == "active"
@@ -953,14 +956,18 @@ class CycleService:
         def change(c: Connection, period: rules.Period, state: GameState, event_id: str) -> Outcome:
             self.missions._handler(c, viewer)
             rules.current(period, expected)
+            from girlframe.services.m3_budget_demotion import due as due_demotion
             from girlframe.services.m3_budget_trial import due as due_trial
             from girlframe.services.m3_strain import StrainService
 
-            execution = due_trial(c, StrainService(self.periods), state, identity)
+            strain_service = StrainService(self.periods)
+            demotion = due_demotion(c, strain_service, state, identity)
+            execution = due_trial(c, strain_service, state, identity)
             pending = [
                 x
                 for x in self.periods._pending(c, identity)
                 if execution is None or x["id"] != execution[1].id
+                if demotion is None or x["id"] != demotion.id
             ]
             review = [x for x in pending if x["kind"] == "off_duty_status_review"]
             if (
@@ -1175,15 +1182,18 @@ class CycleService:
                     require_prince_off_duty(
                         self.game, c, state, identity, prince_ref(state, prince_owner)
                     )
+            from girlframe.services.m3_budget_demotion import due as due_demotion
             from girlframe.services.m3_budget_trial import due as due_trial
             from girlframe.services.m3_strain import StrainService
 
             strain_service = StrainService(self.periods)
+            demotion = due_demotion(c, strain_service, state, identity)
             execution = due_trial(c, strain_service, state, identity)
             pending = frozenset(
                 x["id"]
                 for x in self.periods._pending(c, identity)
                 if execution is None or x["id"] != execution[1].id
+                if demotion is None or x["id"] != demotion.id
             )
             # Prove actual completion before advancing any world entity.
             finished, updated = rules.finish(
@@ -1292,6 +1302,19 @@ class CycleService:
                     row, trial = execution
                     updated = execute(updated, trial, event, appointment)
                     settled_trial = row
+                if demotion is not None:
+                    from girlframe.engine.m3_budget_demotion import demote
+                    from girlframe.engine.m3_void_leave import leaves as pending_leaves
+
+                    if (
+                        loss_episode is not None
+                        or execution is not None
+                        or any(x.period == identity for x in pending_leaves(updated))
+                    ):
+                        raise WorkflowError(
+                            "Review overlapping Handler endings before the demotion"
+                        )
+                    updated = demote(updated, demotion, event, appointment)
             self.game.event(
                 c,
                 viewer.user_id,
@@ -1311,7 +1334,7 @@ class CycleService:
                 (
                     x
                     for x in updated.handler_archives
-                    if x.source_event == event and x.ending in ("retired", "death")
+                    if x.source_event == event and x.ending in ("retired", "death", "demoted")
                 ),
                 None,
             )

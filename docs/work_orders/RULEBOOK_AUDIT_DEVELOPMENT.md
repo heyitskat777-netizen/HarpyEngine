@@ -39,8 +39,8 @@ Off-Duty resumes only at its genuine completion boundary.
 
 The registry tracks each source's current scope and its acceptance tests.
 Every ordinary core Strain column has an effect path. Several have incomplete
-branches. Rebellion Endgames 3–8 and Budget Endgame 2 are still awaiting
-their complete effect routes. Current subset limitations include
+branches. Rebellion Endgames 3–8 are awaiting their first effect routes.
+Current subset limitations include
 the High Budget hearing's Severe finding and the High Void bunk's separate
 contact Play. The individual receipts below retain the rest of the source
 questions and missing variants. A cascade retains both child dice and
@@ -1081,3 +1081,24 @@ sets no execution time. This implementation carries it out at the close
 of the original Off-Duty period. Conflicting leave, retirement, or
 Quadrant loss and other permissible court arrangements remain open.
 [Budget Endgame p. 150](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=152) · [Trial test](../../tests/rules/test_budget_trial.py)
+
+## Budget Endgame demotion and succession
+
+The base is `80c78fc79bdedd25601b9e1a9a180b7aa65c95a3`. The original
+Handler nominates another joined player, who can accept or decline in
+private. The original body leaves the office alive when Off-Duty closes.
+The demoted player uses the ordinary Girl review and activation with
+their own character choices, actual starting agreement and assigned
+Status. The administrator's appointment preserves existing setup. The
+consenting successor builds and activates the actual Handler persona
+through the ordinary relationship agreements. The original Endgame
+remains pending until the successor verifies both actual activations.
+
+All 156 selected tests passed in 91.86 seconds. They include wrong owner,
+decline and new nomination, stale submission, pause, retry, database
+reopening, actual different-player succession and the next permitted
+Off-Duty. Ruff and mypy passed on the changed source. This scope assumes
+the original Handler's player has no separate active Girl. Handling an
+already occupied Girl slot or competing ending for the original body and
+any follow-up positioning relies on separate source review.
+[Budget Endgame p. 150](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=152) · [Demotion test](../../tests/rules/test_budget_demotion.py)

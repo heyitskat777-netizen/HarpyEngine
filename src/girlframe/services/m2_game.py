@@ -636,6 +636,9 @@ class GameService:
                 if int(x.actor.entity) not in state.order
             }
             expected_roster = {x.user_id for x in setup.status_order} - absent_careers
+            from girlframe.services.m3_budget_demotion import girl_slot
+
+            demotion = girl_slot(state, viewer.user_id, setup)
             if not state.order and not state.career_archives:
                 state.order = tuple(x.user_id for x in setup.status_order)
                 state.handler = setup.handler_id
@@ -774,6 +777,18 @@ class GameService:
             stage_activation(
                 self, c, state, activated_actor(state, viewer.user_id), activation_event
             )
+            if demotion is not None:
+                from girlframe.engine.m3_budget_demotion import save as save_demotion
+
+                save_demotion(
+                    state,
+                    demotion.model_copy(
+                        update=dict(
+                            girl=activated_actor(state, viewer.user_id),
+                            girl_activation=activation_event,
+                        )
+                    ),
+                )
             self.event(
                 c,
                 viewer.user_id,

@@ -26,7 +26,7 @@ class HandlerArchive(Model):
     account: str = Field(min_length=1, max_length=1200)
     appointment: str = Field(min_length=1)
     links_json: str
-    ending: Literal["death", "fired", "retired", "imprisoned"] = "death"
+    ending: Literal["death", "fired", "retired", "imprisoned", "demoted"] = "death"
     alive: bool = False
     custody: Literal["free", "foundation_prison"] = "free"
     position: Cell | None = None
@@ -45,7 +45,7 @@ class HandlerArchive(Model):
 class HandlerDeparture(Model):
     id: str = Field(min_length=1)
     actor: ActorRef
-    reason: Literal["fired", "retired", "imprisoned"]
+    reason: Literal["fired", "retired", "imprisoned", "demoted"]
     source_work: str = Field(min_length=1)
     source_event: str = Field(min_length=1)
     appointment: str = Field(min_length=1)

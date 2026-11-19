@@ -2965,6 +2965,7 @@ class InboxService:
             from girlframe.engine.m3_void_revelation import revelations
             from girlframe.engine.m3_void_signal import signals as void_signals
             from girlframe.services.m3_berserk_frame import visible as visible_berserk
+            from girlframe.services.m3_budget_demotion import visible as visible_demotions
             from girlframe.services.m3_budget_hearing import options as hearing_options
             from girlframe.services.m3_budget_hearing import visible as visible_hearings
             from girlframe.services.m3_budget_trial import options as trial_options
@@ -2985,6 +2986,27 @@ class InboxService:
             from girlframe.services.m3_rebel_frame_theft import visible as visible_thefts
 
             journalism = JournalistService(GameService(self.store))
+            for demotion in visible_demotions(
+                canon, viewer, administrator=self.store.policy.allow_guild_administrators
+            ):
+                items.append(
+                    InboxItem(
+                        "budget-demotion:" + demotion.id,
+                        "work",
+                        demotion.id,
+                        canon.revision,
+                        "campaign",
+                        "Budget Endgame succession",
+                        "Original authorized participants",
+                        "resolved" if demotion.completed else "pending",
+                        not bool(demotion.completed),
+                        False,
+                        "Review the original demotion and succession.",
+                        "",
+                        "Open succession",
+                        task="m3_budget_demotion",
+                    )
+                )
             for trial in visible_trials(canon, viewer):
                 trial_pending = trial.phase not in ("saved", "executed")
                 items.append(
@@ -4460,6 +4482,15 @@ class InboxService:
                     if any(x.identity == work["id"] and x.task == "m3_budget_trial" for x in items):
                         continue
                     primary, task_name = "Open the Budget trial", "m3_budget_trial"
+                elif (
+                    kind == "strain_endgame_effect"
+                    and json.loads(work["body_json"]).get("rule_id") == "strain.budget.endgame.2"
+                ):
+                    if any(
+                        x.identity == work["id"] and x.task == "m3_budget_demotion" for x in items
+                    ):
+                        continue
+                    primary, task_name = "Review the original demotion", "m3_budget_demotion"
                 elif (
                     kind == "strain_endgame_effect"
                     and json.loads(work["body_json"]).get("rule_id") == "strain.budget.endgame.6"

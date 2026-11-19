@@ -294,7 +294,7 @@ def depart(
     original: GameState,
     actor: ActorRef,
     *,
-    reason: Literal["fired", "retired", "imprisoned"],
+    reason: Literal["fired", "retired", "imprisoned", "demoted"],
     source_work: str,
     event: str,
     appointment: str,

@@ -1272,6 +1272,17 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_rebel_merge import MergerService
 
             await open_merger(interaction, MergerService(self.service.store), item.identity)
+        elif item.task == "m3_budget_demotion":
+            from girlframe.discord_adapter.m3_budget_demotion import open_demotion
+            from girlframe.services.m3_budget_demotion import DemotionService
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_off_duty import OffDutyService
+            from girlframe.services.m3_strain import StrainService
+
+            demotion_service = DemotionService(
+                StrainService(OffDutyService(MissionService(self.service.store)))
+            )
+            await open_demotion(interaction, demotion_service, item.identity)
         elif item.task == "m3_budget_trial":
             from girlframe.discord_adapter.m3_budget_trial import open_trial
             from girlframe.services.m3_budget_trial import TrialService
