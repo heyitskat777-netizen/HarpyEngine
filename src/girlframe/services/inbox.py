@@ -4556,7 +4556,11 @@ class InboxService:
                     primary, task_name = "Resolve actual group merger", "m3_rebel_merge"
                 elif kind == "strain_endgame_effect" and json.loads(work["body_json"]).get(
                     "rule_id"
-                ) in ("strain.rebellion.endgame.4", "strain.rebellion.endgame.5"):
+                ) in (
+                    "strain.rebellion.endgame.4",
+                    "strain.rebellion.endgame.5",
+                    "strain.rebellion.endgame.6",
+                ):
                     if any(
                         x.identity == work["id"] and x.task == "m3_rebel_assimilation"
                         for x in items

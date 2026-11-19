@@ -186,6 +186,8 @@ async def open_work(
             f"Book PDF {PAGES[(body['track'], body['severity'])]}. "
             "These short summaries select an event; its complete effects remain required work."
         )
+        if data.get("pressure_side") == "foundation":
+            instructions += " The Foundation is the opposing faction for this roll."
 
         async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
             result = await asyncio.to_thread(

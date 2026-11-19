@@ -18,6 +18,7 @@ async def open_participation(
     channel = int(interaction.channel_id or 0)
     candidates = data["candidates"]
     choices = data["choices"]
+    role = "Foundation" if data["side"] == "foundation" else "insurgent"
     if data["completed"]:
         await reply(interaction, "The original participation is recorded.")
         return
@@ -26,7 +27,7 @@ async def open_participation(
             interaction,
             "The original actor's reply is pending."
             if data["invited"]
-            else "Recover an eligible original insurgent actor and controller.",
+            else f"Recover an eligible original {role} actor and controller.",
         )
         return
 
@@ -45,7 +46,7 @@ async def open_participation(
         return "Your private decision is recorded."
 
     fields = (
-        [Field("nominee", "Original insurgent actor", candidates)]
+        [Field("nominee", f"Original {role} actor", candidates)]
         if candidates
         else [
             Field("choice", "Your decision", choices),
@@ -57,7 +58,7 @@ async def open_participation(
         "Rebellion event participation",
         "Arrange the original actor's part in this event."
         if data["sponsor"]
-        else "This invitation concerns your own insurgent character.",
+        else f"This invitation concerns your own {role} character.",
         fields,
         submit,
     ).present(interaction)

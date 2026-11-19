@@ -1,7 +1,7 @@
 """Private sponsorship and independently authored participation in the saved event."""
 
 import json
-from typing import Any
+from typing import Any, Literal
 from uuid import uuid4
 
 import sqlalchemy as sa
@@ -13,6 +13,8 @@ from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_handler_consequences import same_handler_body
+from girlframe.engine.m3_rebel_alignment import PORTED_EFFECTS
+from girlframe.engine.m3_rebel_alignment import current as current_alignment
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_rebel_ambush import _cast
@@ -29,7 +31,8 @@ def for_row(state: GameState, row: dict[str, Any]) -> rules.Influence | None:
 
 
 def available(state: GameState, value: rules.Influence) -> dict[str, tuple[ActorRef, int, str]]:
-    rules.group(state, value.group)
+    side: Literal["foundation", "rebel"] = "foundation" if value.side == "foundation" else "rebel"
+    rules.group(state, value.group, side)
     assert state.world is not None
     candidates = []
     for x in state.world.npcs:
@@ -38,7 +41,7 @@ def available(state: GameState, value: rules.Influence) -> dict[str, tuple[Actor
     for body in state.world.pilots:
         if (
             body.faction == value.group
-            and body.kind == "rebel"
+            and body.kind == side
             and body.revealed
             and body.alive
             and body.custody == "free"
@@ -67,9 +70,20 @@ def require_participation(
     value = for_row(state, row)
     if value is None:
         return
+    if value.side == "foundation":
+        alignment = current_alignment(state)
+        rule = json.loads(row["body_json"])["rule_id"]
+        if (
+            alignment is None
+            or alignment.id != value.alignment
+            or alignment.opponent != value.group
+        ):
+            raise WorkflowError("Recover the original Handler's changed alignment")
+        if rule not in PORTED_EFFECTS:
+            raise WorkflowError("This original event needs its specific Foundation interpretation")
     if value.participation is None or value.candidate is None or value.controller is None:
         raise WorkflowError(
-            "Confirm the original insurgent's actual participation before applying this effect"
+            "Confirm the original actor's actual participation before applying this effect"
         )
     events = t.events
     query = sa.select(events.c.kind, events.c.actor_id, events.c.payload_json, events.c.seq).where(
@@ -137,6 +151,7 @@ class FundingService:
                 completed=bool(value.participation),
                 invited=bool(value.nominated) and not value.declined,
                 account=value.account if not sponsor else "",
+                side=value.side,
             )
 
     def act(
@@ -171,6 +186,13 @@ class FundingService:
             state = self.strain._state(c, revision)
             value = self._case(state, viewer, identity)
             row = EffectService(self.strain)._row(c, value.id + ":effect")
+            if (
+                value.side == "foundation"
+                and json.loads(row["body_json"])["rule_id"] not in PORTED_EFFECTS
+            ):
+                raise WorkflowError(
+                    "This original event needs its specific Foundation interpretation"
+                )
             members = HandlerService(self.store)
             if (
                 row["state"] != "pending"
@@ -190,7 +212,7 @@ class FundingService:
                     or candidate is None
                     or not members._member(c, candidate[1])
                 ):
-                    raise WorkflowError("Choose the original eligible insurgent controller once")
+                    raise WorkflowError("Choose an eligible original controller once")
                 updated = value.model_copy(
                     update=dict(
                         candidate=candidate[0],
@@ -224,7 +246,7 @@ class FundingService:
                         )
                         or resolve(state, actor, ()).offstage_source is not None
                     ):
-                        raise WorkflowError("Join the original insurgent in the actual event scene")
+                        raise WorkflowError("Join the original actor in the actual event scene")
                     updated = value.model_copy(
                         update=dict(scene=cast.id, participation=event, account=account)
                     )

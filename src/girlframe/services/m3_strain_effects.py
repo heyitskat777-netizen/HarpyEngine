@@ -83,9 +83,15 @@ class EffectService:
             body = json.loads(row["body_json"])
             state = load_state(c, self.store.campaign_id)
             captured_base = None
+            from girlframe.engine.m3_rebel_alignment import PORTED_EFFECTS
             from girlframe.services.m3_rebel_funding import for_row as funding_for_row
 
             involvement = funding_for_row(state, row)
+            unported_foundation = (
+                involvement is not None
+                and involvement.side == "foundation"
+                and body["rule_id"] not in PORTED_EFFECTS
+            )
             if body["rule_id"] == REBEL_BASE_CAPTURE:
                 from girlframe.engine.m3_handler_consequences import same_handler_body
                 from girlframe.engine.m3_rebel_base_capture import captures
@@ -113,15 +119,18 @@ class EffectService:
             return {
                 **{k: row[k] for k in ("id", "revision", "state", "off_duty_id")},
                 "rule_id": body["rule_id"],
-                "supported": body["rule_id"] in rules.SUPPORTED or body["rule_id"] == VOID_SPREAD,
+                "supported": (body["rule_id"] in rules.SUPPORTED or body["rule_id"] == VOID_SPREAD)
+                and not unported_foundation,
                 "game_revision": state.revision,
                 **(
                     {"pending_insurgent": involvement.id}
                     if involvement is not None
                     and not involvement.participation
+                    and not unported_foundation
                     and row["state"] == "pending"
                     else {}
                 ),
+                **({"foundation_attention": True} if unported_foundation else {}),
                 **({"captured_base": captured_base} if captured_base is not None else {}),
                 **(
                     {

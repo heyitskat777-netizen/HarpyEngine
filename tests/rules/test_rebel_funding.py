@@ -15,6 +15,8 @@ from girlframe.discord_adapter.inbox import InboxView
 from girlframe.discord_adapter.m2_forms import NativeForm
 from girlframe.discord_adapter.m3_strain_effects import open_effect
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_rebel_alignment import RULE as ALIGNMENT_RULE
+from girlframe.engine.m3_rebel_alignment import current as current_alignment
 from girlframe.engine.m3_rebel_funding import RULE, fundings, influences
 from girlframe.engine.m3_strain_effects import Choice
 from girlframe.engine.m3_world_state import Faction, Npc
@@ -28,7 +30,8 @@ from girlframe.services.m3_world import WorldService
 from girlframe.services.onboarding import WorkflowError
 
 
-def test_future_saved_rebellion_uses_actual_insurgents_with_private_sponsorship(ledger):
+@pytest.mark.parametrize("rebel_handler", (False, True))
+def test_future_saved_rebellion_uses_the_actual_changed_side(ledger, rebel_handler):
     strain, game = ready(ledger, face=6)
     approval = ledger.policy.m3_approval
     ledger.policy = ledger.policy.model_copy(
@@ -63,7 +66,7 @@ def test_future_saved_rebellion_uses_actual_insurgents_with_private_sponsorship(
             controller=3,
             cell=(0, 0),
             detail="An original insurgent",
-            faction="actual-insurgents",
+            faction="assimilated" if rebel_handler else "actual-insurgents",
             revealed=True,
         ),
     )
@@ -87,11 +90,11 @@ def test_future_saved_rebellion_uses_actual_insurgents_with_private_sponsorship(
         request.id,
         1,
         state(game).revision,
-        5,
+        6 if rebel_handler else 5,
         endgame=True,
         faction="assimilated",
     )
-    assert selected["rule_id"] == RULE
+    assert selected["rule_id"] == (ALIGNMENT_RULE if rebel_handler else RULE)
     endgame = request.id + ":effect"
     inbox = InboxService(ledger)
     effects = EffectService(strain)
@@ -116,28 +119,37 @@ def test_future_saved_rebellion_uses_actual_insurgents_with_private_sponsorship(
         )
         return form.instructions
 
+    fields = {} if rebel_handler else dict(funded_group=("actual-insurgents",))
     asyncio.run(
         native(
             ADMIN,
             43100,
             endgame,
             "m3_rebel_assimilation",
-            funded_group=("actual-insurgents",),
             account="SECRET_FUNDING_ACCOUNT",
+            **fields,
         )
     )
     after = state(game)
-    assert fundings(after)[0].group == "actual-insurgents" and not influences(after)
+    assert not influences(after)
+    if rebel_handler:
+        assert current_alignment(after).opponent == "assimilated" and not fundings(after)
+    else:
+        assert fundings(after)[0].group == "actual-insurgents" and current_alignment(after) is None
     assert next(x for x in after.world.factions if x.id == "assimilated").kind == "foundation"
     pending = next(
         x for x in after.strain.requests if x.track == "rebellion" and x.severity == "low"
     )
     strain.dice.face = 1
     strain.roll(ADMIN, "first-funded-roll", pending.id, 1, state(game).revision)
+    assert strain.work(ADMIN, pending.id).get("pressure_side") == (
+        "foundation" if rebel_handler else None
+    )
     chosen = strain.choose(ADMIN, "first-funded-choice", pending.id, 2, state(game).revision, 2)
     assert chosen["rule_id"] == "strain.rebellion.low.1.2"
     effect = pending.id + ":effect"
     assert [x.id for x in influences(state(game))] == [pending.id]
+    assert influences(state(game))[0].side == ("foundation" if rebel_handler else "insurgents")
     choice = Choice(
         rule_id=chosen["rule_id"], account="The recorded event shows the actual control slip."
     )
@@ -184,3 +196,25 @@ def test_future_saved_rebellion_uses_actual_insurgents_with_private_sponsorship(
     )
     canon = state(game)
     assert influences(canon)[0].participation and len(canon.refusal_bonuses) == 1
+    if rebel_handler:
+        request = next(
+            x for x in canon.strain.requests if x.track == "rebellion" and x.severity == "low"
+        )
+        strain.dice.face = 2
+        strain.roll(ADMIN, "foundation-strafe-roll", request.id, 1, canon.revision)
+        selected = strain.choose(
+            ADMIN, "foundation-strafe-column", request.id, 2, state(game).revision, 1
+        )
+        unsupported = request.id + ":effect"
+        assert not effects.get(ADMIN, unsupported)["supported"]
+        assert selected["rule_id"] == "strain.rebellion.low.2.1"
+        with pytest.raises(WorkflowError, match="specific Foundation interpretation"):
+            effects.apply(
+                ADMIN,
+                "no-old-rebel-strafe",
+                unsupported,
+                1,
+                state(game).revision,
+                Choice(rule_id=selected["rule_id"], account="Original outcome remains pending."),
+            )
+        assert effects.get(ADMIN, unsupported)["state"] == "pending"

@@ -108,6 +108,11 @@ async def open_effect(
 ) -> None:
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(service.get, viewer, identity)
+    if data.get("foundation_attention"):
+        await reply(
+            interaction, "This saved result still needs its Foundation consequences reviewed."
+        )
+        return
     if insurgent := data.get("pending_insurgent"):
         from girlframe.discord_adapter.m3_rebel_funding import open_participation
         from girlframe.services.m3_rebel_funding import FundingService

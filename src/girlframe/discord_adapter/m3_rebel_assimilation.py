@@ -9,6 +9,7 @@ from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
+from girlframe.engine.m3_rebel_alignment import RULE as ALIGNMENT_RULE
 from girlframe.engine.m3_rebel_assimilation import EmploymentPlay
 from girlframe.engine.m3_rebel_funding import RULE as FUNDING_RULE
 from girlframe.services.m3_rebel_assimilation import AssimilationService
@@ -18,6 +19,33 @@ async def open_employment(
     interaction: discord.Interaction, service: AssimilationService, identity: str
 ) -> None:
     data = await asyncio.to_thread(service.view, viewer_from_interaction(interaction), identity)
+    if data["rule"] == ALIGNMENT_RULE:
+        if data["installed"]:
+            await reply(
+                interaction, "You are a Rebel Handler. New Rebellion rolls refer to the Foundation."
+            )
+            return
+
+        async def align(click: discord.Interaction, values: dict[str, Any]) -> str:
+            await asyncio.to_thread(
+                service.install,
+                viewer_from_interaction(click),
+                str(click.id),
+                identity,
+                data["revision"],
+                become_rebel=True,
+                account=values["account"],
+            )
+            return "Your allegiance is recorded. Future Rebellion rolls refer to the Foundation."
+
+        await NativeForm(
+            interaction.user.id,
+            "Become a Rebel Handler",
+            "Describe your original Handler's break with the Foundation.",
+            [Field("account", "Your change of allegiance", paragraph=True)],
+            align,
+        ).present(interaction)
+        return
     if data["rule"] == FUNDING_RULE:
         if data["installed"]:
             await reply(

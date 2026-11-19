@@ -39,7 +39,7 @@ Off-Duty resumes only at its genuine completion boundary.
 
 The registry tracks each source's current scope and its acceptance tests.
 Every ordinary core Strain column has an effect path. Several have incomplete
-branches. Rebellion Endgames 3 and 6–8 are awaiting their first effect routes.
+branches. Rebellion Endgames 3, 7 and 8 are awaiting their first effect routes.
 Current subset limitations include
 the High Budget hearing's Severe finding and the High Void bunk's separate
 contact Play. The individual receipts below retain the rest of the source
@@ -1139,3 +1139,20 @@ source modules. This scope follows ordinary printed dice-derived effects.
 Custom event substitution, replacement of an inactive insurgent group and
 carryover after the sponsor leaves still need explicit treatment.
 [Rebellion Endgame p. 147](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=149) · [Funding test](../../tests/rules/test_rebel_funding.py)
+
+## Rebellion Endgame Rebel Handler alignment
+
+The base is `48cc42b8fd6f9da4cc0d143f411fb969d290cd17`. The original group
+enters the Foundation and the Handler becomes a Rebel. Later dice save
+Foundation opposition against the original Handler's actual changed role.
+The receipt leaves the die, original period and original column intact.
+The control-slip effect uses a genuine Foundation participant and the
+normal +2 consequence. Unported Foundation versions remain pending.
+
+All 21 selected tests passed in 36.91 seconds. They cover both changes
+in opposition, the original participant's native controls, two future
+rolls and inability to apply the old Rebel strafe under the new alignment.
+Static typing passed on eleven source files. Foundation-specific versions
+of the remaining table entries and the overlap with an earlier covert
+sponsorship still require explicit treatment.
+[Rebellion Endgame p. 147](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=149) · [Opposition test](../../tests/rules/test_rebel_funding.py)

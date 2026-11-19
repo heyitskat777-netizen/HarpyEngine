@@ -1,10 +1,13 @@
 """A covert sponsor binds future printed Rebellion effects to actual insurgents."""
 
-from pydantic import Field
+from typing import Literal
+
+from pydantic import Field, model_validator
 
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_handler_consequences import same_handler_body
+from girlframe.engine.m3_rebel_alignment import current as alignment
 from girlframe.engine.m3_strain_state import Event
 from girlframe.engine.m3_world_state import Faction
 
@@ -24,7 +27,11 @@ class Funding(Model):
 class Influence(Model):
     id: str
     roll_event: str
-    funding: str
+    funding: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    alignment: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    side: Literal["insurgents", "foundation"] = Field(
+        default="insurgents", exclude_if=lambda x: x == "insurgents"
+    )
     period: str
     group: str
     sponsor: ActorRef
@@ -35,6 +42,14 @@ class Influence(Model):
     scene: str | None = None
     participation: str | None = None
     account: str = Field(default="", max_length=1200)
+
+    @model_validator(mode="after")
+    def actual_side(self) -> "Influence":
+        if (self.side == "foundation" and (not self.alignment or self.funding)) or (
+            self.side == "insurgents" and (not self.funding or self.alignment)
+        ):
+            raise ValueError("Use the actual original sponsorship or Rebel Handler alignment")
+        return self
 
 
 def fundings(state: GameState) -> tuple[Funding, ...]:
@@ -49,17 +64,23 @@ def influences(state: GameState) -> tuple[Influence, ...]:
     )
 
 
-def group(state: GameState, identity: str) -> Faction:
+def group(
+    state: GameState, identity: str, kind: Literal["rebel", "foundation"] = "rebel"
+) -> Faction:
     selected = (
         next((x for x in state.world.factions if x.id == identity), None) if state.world else None
     )
-    if selected is None or not selected.active or selected.kind != "rebel":
-        raise ValueError("Recover the original active Rebel insurgents")
+    if selected is None or not selected.active or selected.kind != kind:
+        raise ValueError("Recover the original active group on this event's actual side")
     return selected
 
 
 def fund(state: GameState, value: Funding) -> None:
     group(state, value.group)
+    if alignment(state) is not None:
+        raise ValueError(
+            "Review how the original Rebel Handler's Foundation pressure overlaps sponsorship"
+        )
     if not same_handler_body(state, value.sponsor) or fundings(state):
         raise ValueError("Record the original Handler's secret sponsorship once")
     state.facts.append(dict(kind=FUNDING, id=value.id, body=value.model_dump_json()))
@@ -73,6 +94,20 @@ def save(state: GameState, value: Influence) -> None:
 
 def bind_roll(state: GameState, roll: Event, event: str) -> None:
     if roll.track != "rebellion":
+        return
+    if moved := alignment(state):
+        save(
+            state,
+            Influence(
+                id=roll.id,
+                roll_event=event,
+                alignment=moved.id,
+                side="foundation",
+                period=roll.period_id,
+                group=moved.opponent,
+                sponsor=moved.handler,
+            ),
+        )
         return
     funding = next((x for x in fundings(state) if same_handler_body(state, x.sponsor)), None)
     if funding is not None:

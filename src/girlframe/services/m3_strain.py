@@ -726,11 +726,15 @@ class StrainService:
                         )
                     )
             custom_columns = {}
+            pressure_side = None
             if row["kind"] == "strain_roll" and state.strain is not None:
                 from girlframe.engine.m3_custom_strain import replacement
+                from girlframe.engine.m3_rebel_funding import influences
+
+                pressure_side = next((x.side for x in influences(state) if x.id == identity), None)
 
                 saved_roll = next((x for x in state.strain.events if x.id == identity), None)
-                if saved_roll is not None and saved_roll.column is None:
+                if saved_roll is not None and saved_roll.column is None and pressure_side is None:
                     for column in (1, 2):
                         if slot := replacement(state, saved_roll, column):
                             custom_columns[str(column)] = slot.design.title
@@ -739,6 +743,7 @@ class StrainService:
                 **{k: row[k] for k in ("id", "revision", "kind", "state", "off_duty_id")},
                 "body": json.loads(row["body_json"]),
                 **({"custom_columns": custom_columns} if custom_columns else {}),
+                **({"pressure_side": pressure_side} if pressure_side == "foundation" else {}),
                 "game_revision": state.revision,
                 "period_revision": period.revision,
                 "canonical_facts": {

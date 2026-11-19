@@ -8,6 +8,7 @@ import sqlalchemy as sa
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
+from girlframe.engine import m3_rebel_alignment as alignment
 from girlframe.engine import m3_rebel_assimilation as rules
 from girlframe.engine import m3_rebel_funding as funding
 from girlframe.engine.m2 import GameState
@@ -60,7 +61,7 @@ class AssimilationService:
             self.game.authorize(c, viewer, game=False)
             state = load_state(c, self.store.campaign_id)
             rule = json.loads(_work(c, self.store, identity)["body_json"]).get("rule_id")
-            if rule not in (rules.RULE, funding.RULE):
+            if rule not in (rules.RULE, funding.RULE, alignment.RULE):
                 raise WorkflowError("Open the actual original assimilation Endgame")
             row, faction = self._source(c, state, viewer, identity, rule)
             value = next((x for x in rules.assimilations(state) if x.id == identity), None)
@@ -94,6 +95,7 @@ class AssimilationService:
         play: rules.EmploymentPlay | None = None,
         *,
         funded_group: str | None = None,
+        become_rebel: bool = False,
         account: str = "",
     ) -> dict[str, Any]:
         if play is not None:
@@ -101,16 +103,25 @@ class AssimilationService:
                 {k: v.strip() for k, v in play.model_dump().items()}
             )
         account = account.strip()
-        if (play is None) != (funded_group is not None) or (
-            funded_group is not None and not 0 < len(account) <= 1200
+        if (
+            type(become_rebel) is not bool
+            or sum((play is not None, funded_group is not None, become_rebel is True)) != 1
+            or (play is None and not 0 < len(account) <= 1200)
+            or (play is not None and account)
         ):
             raise WorkflowError(
-                "Record the actual work Play or the separate secretly funded original group"
+                "Record the actual original work Play, covert sponsorship, or change of allegiance"
             )
-        rule = funding.RULE if funded_group is not None else rules.RULE
+        rule = (
+            alignment.RULE
+            if become_rebel
+            else funding.RULE
+            if funded_group is not None
+            else rules.RULE
+        )
 
         def authorize(c: Connection) -> None:
-            for scope in ("strain", "world", "plays"):
+            for scope in ("strain", "world", "plays") if play else ("strain", "world"):
                 self.strain.missions.access.authorize(c, viewer, scope)
             self.game.unpaused(c)
             self._source(c, load_state(c, self.store.campaign_id), viewer, identity, rule)
@@ -155,6 +166,21 @@ class AssimilationService:
                         account=account,
                     ),
                 )
+            if become_rebel:
+                if any(same_handler_body(state, x.sponsor) for x in funding.fundings(state)):
+                    raise WorkflowError(
+                        "Review how existing covert sponsorship overlaps Foundation pressure"
+                    )
+                alignment.align(
+                    changed,
+                    alignment.Alignment(
+                        id=identity,
+                        handler=handler,
+                        opponent=group.id,
+                        event=event,
+                        account=account,
+                    ),
+                )
             self.game.event(
                 c,
                 viewer.user_id,
@@ -174,6 +200,8 @@ class AssimilationService:
             INSTALL,
             dict(id=identity, revision=revision, play=play.model_dump(mode="json"))
             if play
+            else dict(id=identity, revision=revision, become_rebel=True, account=account)
+            if become_rebel
             else dict(id=identity, revision=revision, funded_group=funded_group, account=account),
             operation,
             authorize,
