@@ -1224,6 +1224,15 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_void_retirement import StipendService
 
             await open_offer(interaction, StipendService(self.service.store), item.identity)
+        elif item.task in ("m3_void_privacy_grant", "m3_void_privacy_notice"):
+            from girlframe.discord_adapter.m3_void_privacy import open_concealment, open_void_notice
+            from girlframe.services.m3_void_privacy import ConcealmentService
+
+            concealment_service = ConcealmentService(self.service.store)
+            if item.task == "m3_void_privacy_grant":
+                await open_concealment(interaction, concealment_service, item.identity)
+            else:
+                await open_void_notice(interaction, concealment_service, item.identity)
         elif item.task == "m3_rebel_leader":
             from girlframe.discord_adapter.m3_rebel_leader import open_leader
             from girlframe.services.m3_rebel_leader import LeaderService

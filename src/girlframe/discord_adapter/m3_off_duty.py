@@ -226,11 +226,26 @@ async def open_period(interaction: discord.Interaction, service: OffDutyService)
                 from girlframe.services.m3_handler_advancements import HandlerAdvancementService
 
                 await open_advancement(current, HandlerAdvancementService(service.store), identity)
+            elif saved["body"]["rule_id"] == "strain.void.endgame.2":
+                from girlframe.discord_adapter.m3_void_lab_portal import open_lab
+                from girlframe.services.m3_void_lab_portal import LabPortalService
+
+                await open_lab(current, LabPortalService(service.store), identity)
+            elif saved["body"]["rule_id"] == "strain.void.endgame.3":
+                from girlframe.discord_adapter.m3_handler_retirement import open_retirement
+                from girlframe.services.m3_handler_retirement import RetirementService
+
+                await open_retirement(current, RetirementService(service.store), identity)
             elif saved["body"]["rule_id"] == "strain.void.endgame.4":
                 from girlframe.discord_adapter.m3_void_retirement import open_offer
                 from girlframe.services.m3_void_retirement import StipendService
 
                 await open_offer(current, StipendService(service.store), identity)
+            elif saved["body"]["rule_id"] == "strain.void.endgame.5":
+                from girlframe.discord_adapter.m3_void_privacy import open_concealment
+                from girlframe.services.m3_void_privacy import ConcealmentService
+
+                await open_concealment(current, ConcealmentService(service.store), identity)
             elif saved["body"]["rule_id"] == "strain.rebellion.endgame.1":
                 from girlframe.discord_adapter.m3_rebel_leader import open_leader
                 from girlframe.services.m3_rebel_leader import LeaderService

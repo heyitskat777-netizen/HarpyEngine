@@ -25,7 +25,9 @@ async def open_application(
         await reply(interaction, "Each affected role has its own required work in the Inbox.")
         return
     service = SpreadService(effects.strain)
-    unknown = await asyncio.to_thread(service.area, viewer_from_interaction(interaction), identity)
+    viewer = viewer_from_interaction(interaction)
+    unknown = await asyncio.to_thread(service.area, viewer, identity)
+    witnesses = await asyncio.to_thread(service.publication_options, viewer, identity)
     fields = [Field("apply", "Apply the confirmed area?", (("yes", "Apply ordinary Void gain"),))]
     if unknown:
         fields += [
@@ -38,6 +40,17 @@ async def open_application(
             ),
             Field("account", "Evidence that these original people were outside", paragraph=True),
         ]
+    if witnesses:
+        fields.append(
+            Field(
+                "witnesses",
+                "Which Girls actually saw the Handler gain Void?",
+                witnesses,
+                maximum=len(witnesses),
+                minimum=0,
+                required=False,
+            )
+        )
 
     async def submit(click: discord.Interaction, values: dict[str, Any]) -> str:
         result = await asyncio.to_thread(
@@ -49,6 +62,7 @@ async def open_application(
             data["revision"],
             tuple(values.get("outside", ())),
             values.get("account", ""),
+            witnesses=tuple(values.get("witnesses", ())),
         )
         count = result["required"]
         if count:

@@ -698,3 +698,25 @@ behavior and live Discord remain separate. The implemented target scope is
 reborn original Pilots with a native conversion workflow. Other Harpies,
 Rebel Pilots and competing demands after a Handler succession remain open.
 [High Budget p. 149](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=151) · [Capture and conversion tests](../../tests/rules/test_handler_conversion.py)
+
+## Void Endgame concealment
+
+The base is `027b32b85e5be52fc8b3f00171fde492f7dd72c1`.
+The original Handler can save the one-use grant through the private Inbox
+or Off-Duty. The next actual Void gain on that body consumes the grant.
+Ordinary Handler treatment and Girl-rules Asset requirements remain due.
+A fictional Director's separate body cannot consume it.
+
+High Void spread offers a private notice only to original same-square Girls
+whose scene participation is still current and whose witness was confirmed
+by the original Handler. The grant suppresses the notice for that gain.
+It does not grant an exception to treatment or create shared scene knowledge.
+Other gain sources retain their existing audiences. More direct tests of
+Girl-rules gain timing and later voluntary disclosure remain open.
+
+All 45 selected tests passed, including original saved Endgame and next real
+area gain, new and withdrawn witness access, the native Off-Duty and Inbox
+controls, duplicate submissions, safety pause, recovery of saved state, and
+the original medical response. Read-only Off-Duty routing now also reopens
+the existing laboratory and retirement Endgames.
+[Void Endgame p. 144](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=146) · [Concealment tests](../../tests/rules/test_void_privacy.py)

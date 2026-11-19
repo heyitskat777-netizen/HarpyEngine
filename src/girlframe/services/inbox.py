@@ -2644,6 +2644,7 @@ class InboxService:
                         task="m3_dormant",
                     )
                 )
+            from girlframe.engine.m3_void_privacy import notices as handler_void_notices
             from girlframe.services.m3_handler_void import HandlerVoidService
             from girlframe.services.m3_mockingbird_plays import MockingbirdService
 
@@ -2670,6 +2671,26 @@ class InboxService:
                         task="handler_void",
                     )
                 )
+            for void_notice in handler_void_notices(canon):
+                if any(x.controller == viewer.user_id for x in void_notice.witnesses):
+                    items.append(
+                        InboxItem(
+                            "handler-void-notice:" + void_notice.id,
+                            "observation",
+                            void_notice.id,
+                            1,
+                            "plays",
+                            "Witnessed Handler Void",
+                            "Original scene",
+                            "resolved",
+                            False,
+                            False,
+                            "Your Girl saw the Handler gain Void.",
+                            "",
+                            "Read original observation",
+                            task="m3_void_privacy_notice",
+                        )
+                    )
             from girlframe.services.m3_handler_girl_void import HandlerGirlVoidService
             from girlframe.services.m3_sprite import SpriteService
 
@@ -4211,6 +4232,11 @@ class InboxService:
                     and json.loads(work["body_json"]).get("rule_id") == "strain.void.endgame.4"
                 ):
                     primary, task_name = "Offer retirement with stipend", "m3_void_retirement"
+                elif (
+                    kind == "strain_endgame_effect"
+                    and json.loads(work["body_json"]).get("rule_id") == "strain.void.endgame.5"
+                ):
+                    primary, task_name = "Conceal the next Void gain", "m3_void_privacy_grant"
                 elif kind == "strain_endgame_effect" and json.loads(work["body_json"]).get(
                     "rule_id"
                 ) in ("strain.void.endgame.6", "strain.void.endgame.7"):

@@ -18,6 +18,7 @@ from girlframe.engine.m3_handler_consequences import active_handler, same_handle
 from girlframe.engine.m3_handler_void import require as require_handler_void
 from girlframe.engine.m3_harpy_resources import assets as harpy_assets
 from girlframe.engine.m3_janus_storage import alter, effective_assets
+from girlframe.engine.m3_void_privacy import Witness
 from girlframe.engine.m3_world import update
 from girlframe.engine.m3_world_state import AdversaryPilot, WorldTag
 from girlframe.services.m2_state import load_state
@@ -275,6 +276,54 @@ class SpreadService:
                 if x.cell is None and x.offstage_source is None
             )
 
+    @staticmethod
+    def _witnesses(
+        state: GameState,
+        original: GameState,
+        spread: rules.Spread,
+        people: tuple[ActorView, ...],
+    ) -> tuple[ActorView, ...]:
+        handler = next((x for x in people if x.ref == active_handler(original)), None)
+        if handler is None or handler.cell not in spread.cells or handler.rules != "handler":
+            return ()
+        cast_members = {
+            cast.id: {(role.actor, role.controller) for role in cast.roles}
+            for cast in state.scene_casts
+            if cast.open
+        }
+        shared = [
+            {(x.actor, x.controller) for x in cast.roles} & cast_members.get(cast.id, set())
+            for cast in original.scene_casts
+            if cast.open
+        ]
+        return tuple(
+            person
+            for person in people
+            if person.ref.kind == "pilot"
+            and person.rules == "girl_frame"
+            and person.cell == handler.cell
+            and any(
+                {(handler.ref, handler.controller), (person.ref, person.controller)} <= members
+                for members in shared
+            )
+        )
+
+    def publication_options(
+        self, viewer: GuildViewer, identity: str
+    ) -> tuple[tuple[str, str], ...]:
+        with self.store.engine.connect() as c:
+            self.game.authorize(c, viewer, game=False)
+            self.strain.missions._handler(c, viewer)
+            row = EffectService(self.strain)._row(c, identity)
+            if row["owner_id"] != str(viewer.user_id):
+                raise WorkflowError("Only the original Handler can review this footprint")
+            spread, original = _scope(c, self.store.campaign_id, row)
+            state = load_state(c, self.store.campaign_id)
+            people = _people(c, self.store.campaign_id, original)
+            return tuple(
+                (x.ref.token, x.label) for x in self._witnesses(state, original, spread, people)
+            )
+
     def start(
         self,
         viewer: GuildViewer,
@@ -284,6 +333,8 @@ class SpreadService:
         work_revision: int,
         outside: tuple[str, ...],
         account: str,
+        *,
+        witnesses: tuple[str, ...] = (),
     ) -> dict[str, Any]:
         def authorize(c: Connection) -> None:
             self.strain._authorize(c, viewer)
@@ -306,6 +357,9 @@ class SpreadService:
             ):
                 raise WorkflowError("Reopen the original unapplied footprint")
             people = _people(c, self.store.campaign_id, original)
+            eligible = {x.ref.token: x for x in self._witnesses(state, original, spread, people)}
+            if len(set(witnesses)) != len(witnesses) or not set(witnesses) <= eligible.keys():
+                raise WorkflowError("Choose actual current witnesses from the original same scene")
             unknown = tuple(x.ref for x in people if x.cell is None and x.offstage_source is None)
             if (
                 len(outside) != len(set(outside))
@@ -365,6 +419,16 @@ class SpreadService:
                         work=record_person.work,
                         source_event=event,
                         appointment=MedicalService(self.store)._handler(c)[1],
+                        witnesses=(
+                            tuple(
+                                Witness(
+                                    actor=eligible[token].ref, controller=eligible[token].controller
+                                )
+                                for token in witnesses
+                            )
+                            if record_person.actor == handler
+                            else ()
+                        ),
                     )
             state.facts.append(dict(kind=rules.KIND, id=identity, body=record.model_dump_json()))
             self.game.event(
@@ -413,7 +477,8 @@ class SpreadService:
                 work_revision=work_revision,
                 outside=outside,
                 account=account,
-            ),
+            )
+            | ({"witnesses": witnesses} if witnesses else {}),
             operation,
             authorize,
         )

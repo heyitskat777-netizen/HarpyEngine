@@ -4614,3 +4614,15 @@ controls. `None` preserves frozen behavior for existing configurations. The
 synthetic candidate tests this explicit selection; no private policy, pinned
 runtime or live environment was changed. A later runtime rollout must explicitly
 select the ruling and renew any changed-registry approval.
+
+## Witnesses to a Handler Void gain
+
+During High Void 2.1, an original Girl may know that the Handler gained Void
+when both were at the affected square in the original scene and the Handler
+explicitly records her as a witness. Both roles must still be joined when the
+gain is applied. The notice contains the initial observation and no medical
+details. An unused Void Endgame 5 benefit suppresses that notice and is
+spent by the gain itself. Subsequent voluntary disclosure and medical choices
+use their existing authority. This interpretation is awaiting independent
+printed-rule review.
+[High Void and Endgames pp. 143–144](../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145)

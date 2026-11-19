@@ -93,6 +93,7 @@ class StrainService:
             "off_duty_strain_start",
             "strain_roll",
             "strain_endgame",
+            "strain_endgame_effect",
         ):
             raise WorkflowError("Unknown Strain work.")
         return dict(row)
