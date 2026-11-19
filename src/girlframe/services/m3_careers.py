@@ -173,7 +173,11 @@ def synchronize_end(
             continue
         actual = (
             sorted(
-                {x.controller for x in cast.roles if x.actor.kind == "pilot"}
+                {
+                    x.controller
+                    for x in cast.roles
+                    if x.actor.kind == "pilot" or x.controller in people
+                }
                 | ({cast.facilitator} if cast.facilitator else set())
             )
             if cast
