@@ -24,7 +24,23 @@ async def open_ask(
 ) -> None:
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(service.targets, viewer, channel, reporter, job=job)
-    family = job == "family"
+    title, prompt, effect = {
+        "journalist": (
+            "Ask a direct Journalist question",
+            "What do you ask?",
+            Field("tag", "Tag on refusal"),
+        ),
+        "family": (
+            "Point out an actual change",
+            "What change do you point out?",
+            Field("tag", "Tag if the change stays uncorrected"),
+        ),
+        "psychologist": (
+            "Give a directive and an Identity",
+            "What do you direct her to do?",
+            Field("identity", "New Identity"),
+        ),
+    }[job]
     if not data["targets"]:
         await reply(interaction, "Choose a scene with your original NPC and an addressed Girl.")
         return
@@ -39,28 +55,20 @@ async def open_ask(
             reporter,
             int(values["girl"][0]),
             values["question"],
-            values["tag"],
+            values.get("tag", ""),
             job=job,
+            identity_label=values.get("identity"),
         )
         return "The original Girl can respond from her private Inbox."
 
     form = NativeForm(
         viewer.user_id,
-        "Point out an actual change" if family else "Ask a direct Journalist question",
+        title,
         "The addressed Girl owns her response.",
         [
             Field("girl", "Which Girl do you address?", data["targets"]),
-            Field(
-                "question",
-                "What change do you point out?" if family else "What do you ask?",
-                paragraph=True,
-            ),
-            Field(
-                "tag",
-                "Tag if the change stays uncorrected"
-                if family
-                else "Tag if she declines in character",
-            ),
+            Field("question", prompt, paragraph=True),
+            effect,
         ],
         submit,
     )
@@ -74,16 +82,24 @@ async def open_response(
     data = await asyncio.to_thread(service.view, viewer, identity)
     question = clean(data["question"])
     family = data["job"] == "family"
-    if not data["can_answer"]:
-        status = (
-            ("\n" + clean(data["reply"]))
-            if data["reply"]
-            else (
-                ("\nThe change remains uncorrected." if family else "\nDeclined in character.")
-                if data["response"] == "decline"
-                else "\nAwaiting the original Girl's response."
+    psychology = data["job"] == "psychologist"
+    if psychology:
+        question += "\nNew Identity · " + clean(data["identity_label"])
+        if data["can_answer"] and data["needs_replacement"] and not data["replacements"]:
+            await reply(
+                interaction,
+                question + "\nThis request needs human review of the existing Identity slots.",
             )
-        )
+            return
+    if not data["can_answer"]:
+        if data["reply"]:
+            status = "\n" + clean(data["reply"])
+        elif psychology and data["response"] == "answer":
+            status = "\nThe original Girl received the Identity."
+        elif data["response"] == "decline":
+            status = "\nThe change remains uncorrected." if family else "\nDeclined in character."
+        else:
+            status = "\nAwaiting the original Girl's response."
         await reply(interaction, (question + status)[:1950])
         return
 
@@ -94,10 +110,30 @@ async def open_response(
             str(click.id),
             identity,
             data["revision"],
-            values["response"][0],
+            values.get("response", ("answer",))[0],
             values.get("reply", ""),
+            replace=values.get("replace", (None,))[0],
         )
         return "Your response was saved."
+
+    if psychology:
+        fields = (
+            [Field("replace", "Your own Identity to replace", data["replacements"])]
+            if data["needs_replacement"]
+            else []
+        )
+        form = NativeForm(
+            viewer.user_id,
+            "Receive the Psychologist's Identity",
+            question,
+            fields
+            + [
+                Field("response", "Confirm the Identity", (("answer", "Add this Identity"),)),
+            ],
+            submit,
+        )
+        await reply(interaction, form.text(), form)
+        return
 
     form = NativeForm(
         viewer.user_id,

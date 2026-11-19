@@ -592,6 +592,22 @@ The synthetic native test verifies job inventory, another cast
 member's scope, multi-job viewing and access after withdrawal.
 [NPC jobs pp. 187–189](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=189) · [Cast tests](../../tests/rules/test_cast_service.py)
 
+## Psychologist directive and Identity
+
+The base is `becc53165465d89d31b58672f0b2f4aa0aa43876`.
+A joined Psychologist can send a directive and name a real new Identity
+for an original Girl. Her private Inbox lets her receive it and select an
+eligible owned slot at capacity. The original controller cannot pick a slot.
+The engine preserves protected, paired, limiter, locked and source-bound
+Identities. The tests verify the native cast and Inbox forms, a free slot,
+owned replacement at capacity, a blocked protected slot, unauthorized
+access, command replay and database reopening. An unresolved grant remains
+pending. Obedience, probing questions and sharing private information follow
+their respective player-owned, narrative and disclosure workflows.
+The selected Psychologist, Journalist, NPC roles and resources, Cast and
+registry regression passed all 40 tests using temporary databases.
+[Psychologist p. 189](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=191) · [Identity grant tests](../../tests/rules/test_psychologist.py)
+
 ## Journalist question and refusal
 
 The base is `c4ff89edc8c3e7dc7e75157606a5582d7a6e8bcb`.

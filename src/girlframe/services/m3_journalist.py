@@ -8,7 +8,7 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_journalist as rules
-from girlframe.engine.m2 import GameState, TagState
+from girlframe.engine.m2 import GameState, IdentityState, PilotSheet, TagState
 from girlframe.engine.m3_actor_state import ActorRef, SceneCast
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
@@ -21,6 +21,34 @@ ASKED = "m3.journalist_asked"
 ANSWERED = "m3.journalist_answered"
 FAMILY_ASKED = "m3.family_discrepancy_raised"
 FAMILY_ANSWERED = "m3.family_discrepancy_answered"
+PSYCHOLOGIST_DIRECTIVE = "m3.psychologist_directive"
+PSYCHOLOGIST_IDENTITY = "m3.psychologist_identity_received"
+SOURCE_EVENTS: dict[rules.Job, str] = {
+    "journalist": ASKED,
+    "family": FAMILY_ASKED,
+    "psychologist": PSYCHOLOGIST_DIRECTIVE,
+}
+RESULT_EVENTS: dict[rules.Job, str] = {
+    "journalist": ANSWERED,
+    "family": FAMILY_ANSWERED,
+    "psychologist": PSYCHOLOGIST_IDENTITY,
+}
+
+
+def identity_slots(sheet: PilotSheet) -> tuple[bool, tuple[tuple[str, str], ...]]:
+    ordinary = sum(not x.protected or x.paired or bool(x.am_limiter) for x in sheet.identities)
+    allowed = tuple(
+        (x.id, x.name)
+        for x in sheet.identities
+        if not (
+            x.protected
+            or x.paired
+            or x.am_limiter
+            or x.obsession_sources
+            or x.id in sheet.sedation_locked
+        )
+    )
+    return ordinary >= 4, allowed if ordinary >= 4 else ()
 
 
 def eligible(
@@ -98,10 +126,20 @@ class JournalistService:
         tag: str,
         *,
         job: rules.Job = "journalist",
+        identity_label: str | None = None,
     ) -> dict[str, Any]:
-        if not 0 < len(question.strip()) <= 1200 or not 0 < len(tag.strip()) <= 120:
+        if job not in SOURCE_EVENTS:
+            raise WorkflowError("Choose the actual original NPC job")
+        if job == "psychologist":
+            if tag or identity_label is None or not 0 < len(identity_label.strip()) <= 120:
+                raise WorkflowError(
+                    "Record the actual new Identity for the Psychologist's directive"
+                )
+        elif identity_label is not None or not 0 < len(tag.strip()) <= 120:
             raise WorkflowError("Provide the actual prompt and its conditional Tag")
-        kind = FAMILY_ASKED if job == "family" else ASKED
+        if not 0 < len(question.strip()) <= 1200:
+            raise WorkflowError("Record the actual original NPC's instruction or prompt")
+        kind = SOURCE_EVENTS[job]
 
         def operation(c: Connection) -> dict[str, Any]:
             state = load_state(c, self.store.campaign_id)
@@ -138,8 +176,9 @@ class JournalistService:
                     controller=viewer.user_id,
                     girl=recipient,
                     question=question.strip(),
-                    tag=tag.strip(),
+                    tag=tag.strip() if tag else None,
                     job=job,
+                    identity_label=identity_label.strip() if identity_label is not None else None,
                 ),
             )
             self.game.event(c, viewer.user_id, key, kind, state, event_id=event, scene_id=cast.id)
@@ -157,7 +196,8 @@ class JournalistService:
                 question=question,
                 tag=tag,
             )
-            | (dict(job=job) if job != "journalist" else {}),
+            | (dict(job=job) if job != "journalist" else {})
+            | (dict(identity_label=identity_label) if identity_label is not None else {}),
             operation,
             auto_audit=False,
             authorize=lambda c: self._access(c, viewer, job),
@@ -182,13 +222,13 @@ class JournalistService:
             .where(
                 history.c.campaign_id == self.store.campaign_id,
                 history.c.event_id == identity,
-                t.events.c.kind == (FAMILY_ASKED if value.job == "family" else ASKED),
+                t.events.c.kind == SOURCE_EVENTS[value.job],
                 t.events.c.actor_id == str(value.controller),
             )
         )
         first = GameState.model_validate_json(raw) if raw else None
         if first is None or value.model_copy(
-            update=dict(response=None, reply=None, response_event=None)
+            update=dict(response=None, reply=None, response_event=None, replaced_identity=None)
         ) not in rules.questions(first):
             raise WorkflowError("Recover the actual original NPC request source")
         return state, value
@@ -205,15 +245,26 @@ class JournalistService:
     def view(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
         with self.store.engine.connect() as c:
             state, value = self._owned(c, viewer, identity)
+            can_answer = (
+                value.response is None
+                and value.girl.entity == str(viewer.user_id)
+                and self.live(c, state, value)
+            )
+            needs_replacement, replacements = (
+                identity_slots(state.sheets[value.girl.entity])
+                if (value.job == "psychologist" and can_answer)
+                else (False, ())
+            )
             return dict(
                 revision=state.revision,
                 question=value.question,
                 job=value.job,
                 response=value.response,
                 reply=value.reply,
-                can_answer=value.response is None
-                and value.girl.entity == str(viewer.user_id)
-                and self.live(c, state, value),
+                can_answer=can_answer,
+                identity_label=value.identity_label,
+                needs_replacement=needs_replacement,
+                replacements=replacements,
             )
 
     def respond(
@@ -224,12 +275,10 @@ class JournalistService:
         expected: int,
         response: rules.Response,
         reply: str,
+        *,
+        replace: str | None = None,
     ) -> dict[str, Any]:
-        if (
-            response not in ("answer", "decline")
-            or (response == "answer" and not reply.strip())
-            or len(reply) > 1200
-        ):
+        if response not in ("answer", "decline") or len(reply) > 1200:
             raise WorkflowError("Record the original Girl's actual answer or in-character refusal")
 
         def authorize(c: Connection) -> None:
@@ -248,14 +297,31 @@ class JournalistService:
             ):
                 raise WorkflowError("STALE_QUESTION: recover the unchanged original NPC and Girl")
             event = str(uuid4())
+            if value.job == "psychologist":
+                if response != "answer":
+                    raise WorkflowError(
+                        "The original Identity request remains pending for human review"
+                    )
+                assert value.identity_label is not None
+                self._receive_identity(state, value, replace)
+            elif replace is not None or (response == "answer" and not reply.strip()):
+                raise WorkflowError(
+                    "Record the original Girl's actual answer or in-character refusal"
+                )
             rules.save(
                 state,
                 value.model_copy(
-                    update=dict(response=response, reply=reply.strip(), response_event=event)
+                    update=dict(
+                        response=response,
+                        reply=reply.strip(),
+                        response_event=event,
+                        replaced_identity=replace,
+                    )
                 ),
             )
             if response == "decline":
                 sheet = state.sheets[value.girl.entity]
+                assert value.tag is not None
                 sheet.tags.append(
                     TagState(
                         id=identity + ":tag",
@@ -270,7 +336,7 @@ class JournalistService:
                 c,
                 viewer.user_id,
                 key,
-                FAMILY_ANSWERED if value.job == "family" else ANSWERED,
+                RESULT_EVENTS[value.job],
                 state,
                 event_id=event,
                 question_id=identity,
@@ -281,8 +347,34 @@ class JournalistService:
             viewer,
             key,
             ANSWERED,
-            dict(id=identity, expected=expected, response=response, reply=reply),
+            dict(id=identity, expected=expected, response=response, reply=reply)
+            | (dict(replace=replace) if replace is not None else {}),
             operation,
             auto_audit=False,
             authorize=authorize,
         )
+
+    def _receive_identity(
+        self, state: GameState, value: rules.Question, replace: str | None
+    ) -> None:
+        from girlframe.engine.m3_identity_slots import replacement_slot
+        from girlframe.services.m2_choices import ChoiceEngine
+        from girlframe.services.m3_ankou_support import erase_identity
+
+        sheet = state.sheets[value.girl.entity]
+        needs_replacement, candidates = identity_slots(sheet)
+        if (needs_replacement and replace not in dict(candidates)) or (
+            not needs_replacement and replace is not None
+        ):
+            raise WorkflowError("Use an eligible own Identity slot only when capacity requires it")
+        label = value.identity_label
+        assert label is not None
+        if not ChoiceEngine(self.game).duplicate_labels() and any(
+            x.id != replace and x.name.casefold() == label.casefold() for x in sheet.identities
+        ):
+            raise WorkflowError("Duplicate Identity labels require the approved campaign ruling")
+        slot = replacement_slot(sheet, replace)
+        if replace is not None:
+            erase_identity(state, value.girl, replace)
+        sheet.identities.append(IdentityState(id=value.id + ":identity", name=label, slot=slot))
+        sheet.revision += 1

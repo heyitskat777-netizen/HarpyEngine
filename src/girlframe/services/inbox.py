@@ -2955,6 +2955,17 @@ class InboxService:
                     and question.girl.entity == user
                     and journalism.live(connection, canon, question)
                 )
+                title, summary = {
+                    "journalist": (
+                        "Private Journalist question",
+                        "Review the original direct question.",
+                    ),
+                    "family": ("Private Family discrepancy", "Review the original discrepancy."),
+                    "psychologist": (
+                        "Private Psychologist directive",
+                        "Review the original directive and Identity.",
+                    ),
+                }[question.job]
                 items.append(
                     InboxItem(
                         "journalist:" + question.id,
@@ -2962,16 +2973,12 @@ class InboxService:
                         question.id,
                         1,
                         "playbook",
-                        "Private Family discrepancy"
-                        if question.job == "family"
-                        else "Private Journalist question",
+                        title,
                         "Original scene roles",
                         "pending" if question.response is None else "resolved",
                         actionable,
                         False,
-                        "Review the original discrepancy."
-                        if question.job == "family"
-                        else "Review the original direct question.",
+                        summary,
                         "",
                         "Open response",
                         task="m3_journalist",

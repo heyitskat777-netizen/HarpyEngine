@@ -53,6 +53,10 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
                 note = "family:" + token
                 options.append((note, "Point out a change as " + role["label"][:55]))
                 actions[note] = ("family", ActorRef.model_validate(role["ref"]))
+            if "psychologist" in role["job_prompts"]:
+                directive = "psychologist:" + token
+                options.append((directive, "Give a directive as " + role["label"][:55]))
+                actions[directive] = ("psychologist", ActorRef.model_validate(role["ref"]))
     if data["may_facilitate"] and not data["own_facilitator"]:
         options.append(("facilitate", "Join as facilitator (no fictional character)"))
         actions["facilitate"] = ("facilitate", None)
@@ -147,7 +151,7 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
             )
             await reply(current, form.text(), form)
             return
-        if action in ("journalist", "family"):
+        if action in ("journalist", "family", "psychologist"):
             from girlframe.discord_adapter.m3_journalist import open_ask
             from girlframe.services.m3_journalist import JournalistService
 
@@ -157,7 +161,7 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
                 JournalistService(service.game),
                 channel,
                 ref,
-                job="family" if action == "family" else "journalist",
+                job=action,
             )
             return
 
