@@ -139,6 +139,8 @@ class CastService:
         return (cast, False) if cast else (self._legacy(c, scene), True)
 
     def view(self, viewer: GuildViewer, channel: int) -> dict[str, Any]:
+        from girlframe.engine.m3_npc_job_prompts import PROMPTS
+
         with self.store.engine.connect() as c:
             self.game.authorize(c, viewer, game=False)
             state = load_state(c, self.store.campaign_id)
@@ -200,6 +202,18 @@ class CastService:
                 known = known and knowledge_allowed(state, actor.ref)
                 part = presentation(state, actor.ref, cast.id)
                 if known:
+                    owned_npc = (
+                        next((x for x in state.world.npcs if x.id == actor.ref.entity), None)
+                        if state.world
+                        and actor.ref.kind == "npc"
+                        and actor.controller == role.controller == viewer.user_id
+                        else None
+                    )
+                    prompts = (
+                        {job: PROMPTS[job] for job in owned_npc.jobs if job in PROMPTS}
+                        if owned_npc
+                        else {}
+                    )
                     known_refs.add(actor.ref)
                     visible.append(
                         {
@@ -210,6 +224,7 @@ class CastService:
                             "can_detect_act": part is None,
                             "stale": role.controller != actor.controller,
                             "own": role.controller == viewer.user_id,
+                            **({"job_prompts": prompts} if prompts else {}),
                         }
                     )
                 if (

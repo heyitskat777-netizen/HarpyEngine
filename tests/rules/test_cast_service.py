@@ -251,6 +251,54 @@ def test_native_scene_role_selector_is_owner_bound_and_confirmation_is_explicit(
     asyncio.run(run())
 
 
+def test_native_job_prompts_cover_printed_jobs_and_follow_current_original_cast(ledger):
+    from test_mission_ui import current
+
+    from girlframe.discord_adapter.m3_cast import open_cast
+    from girlframe.engine.m3_npc_job_prompts import PROMPTS
+    from girlframe.engine.m3_world import update
+    from girlframe.engine.m3_world_state import NPC_JOBS
+
+    assert set(PROMPTS) == set(NPC_JOBS) - {"director"}
+    assert all(len(set(prompts)) == 3 for prompts in PROMPTS.values())
+    actors, game = ready(ledger)
+    service, ref = CastService(actors), ActorRef(kind="npc", entity="secret-npc")
+    with ledger.transaction() as c:
+        canon = state(game)
+        npc = canon.world.npcs[0].model_copy(update=dict(revealed=True, jobs=("guard", "mechanic")))
+        canon.world = update(canon.world, npcs=(npc,))
+        game.event(c, 1, "two-npc-jobs", "synthetic.npc_roles", canon)
+    change(service, PLAYER, "join", ref)
+    own = next(x for x in service.view(PLAYER, 900)["roles"] if x["token"] == ref.token)
+    other = next(x for x in service.view(OTHER, 900)["roles"] if x["token"] == ref.token)
+    assert set(own["job_prompts"]) == {"guard", "mechanic"} and "job_prompts" not in other
+    before = state(game)
+
+    async def run():
+        viewer = current(2, 89900)
+        viewer.channel_id = 900
+        await viewer.response.defer(ephemeral=True)
+        await open_cast(viewer, service)
+        menu = viewer.edit_original_response.call_args.kwargs["view"]
+        key = next(key for key, label in menu.options if label.startswith("Review job prompts"))
+        open_jobs = current(2, 89901)
+        await open_jobs.response.defer(ephemeral=True)
+        await menu.open_item(open_jobs, key)
+        jobs = open_jobs.edit_original_response.call_args.kwargs["view"]
+        assert dict(jobs.options) == {"guard": "Guard", "mechanic": "Mechanic"}
+        card = current(2, 89902)
+        await card.response.defer(ephemeral=True)
+        await jobs.open_item(card, "mechanic")
+        text = card.edit_original_response.call_args.kwargs["content"]
+        assert "Offer to fix a concrete fault" in text and "PRIVATE_NPC_DETAIL" not in text
+        assert state(game) == before
+        change(service, PLAYER, "withdraw", ref)
+        with pytest.raises(WorkflowError, match="current original NPC role"):
+            await jobs.open_item(card, "mechanic")
+
+    asyncio.run(run())
+
+
 def test_cast_model_rejects_duplicate_actor_and_unproven_facilitator():
     from pydantic import ValidationError
 

@@ -579,3 +579,15 @@ NPC's durable state, source actor, retry, reopen and view scope. A
 temporary reviewed fixture allowed the effect. The default review
 gate passed. Fleeing and pursuit remain open under this class entry.
 [Erratic Gorgon p. 164](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=166) · [Erratic Gorgon Tag test](../../tests/rules/test_erratic_gorgon.py)
+
+## NPC job prompts in scene roles
+
+The base is `1f58cf9b0ca03113ea26049113e649e053cb7062`.
+Scene roles now expose the 20 printed NPC job prompt sets to the
+human who currently controls and plays the NPC in that scene.
+Multi-job NPCs have a per-job view and the view rechecks the cast
+before displaying a prompt. It applies no effect. Entries with
+mechanical job consequences keep their existing acceptance status.
+The synthetic native test verifies job inventory, another cast
+member's scope, multi-job viewing and access after withdrawal.
+[NPC jobs pp. 187–189](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=189) · [Cast tests](../../tests/rules/test_cast_service.py)
