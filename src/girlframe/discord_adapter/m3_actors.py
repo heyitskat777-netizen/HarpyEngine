@@ -67,6 +67,8 @@ async def open_actors(interaction: discord.Interaction, service: ActorService) -
         text += "Rules: " + own["rules"].replace("_", " ") + "\n"
         if language := result.get("pronouns"):
             text += "Pronouns: " + language + "\n"
+        if rank := result.get("ancillary_status"):
+            text += "Cadre Status: " + str(rank) + "\n"
         if status := result.get("expanded_status"):
             text += "Status: " + status["label"] + "\n"
         if own["heat"] is not None:

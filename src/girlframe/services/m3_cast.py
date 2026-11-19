@@ -440,6 +440,16 @@ class CastService:
                             "label": actor.label,
                         }
                     )
+            can_form_cadre = False
+            if cast.facilitator == viewer.user_id:
+                from girlframe.services.m3_ancillary_cadre import AncillaryCadreService
+
+                try:
+                    can_form_cadre = AncillaryCadreService(self.game).available(
+                        c, state, viewer, channel
+                    )
+                except (ValueError, WorkflowError):
+                    pass
             return {
                 "scene": cast.id,
                 "channel": channel,
@@ -449,6 +459,7 @@ class CastService:
                 "roles": visible,
                 "facilitator": cast.facilitator,
                 "own_facilitator": cast.facilitator == viewer.user_id,
+                "can_form_ancillary_cadre": can_form_cadre,
                 "may_facilitate": state.handler == viewer.user_id,
                 "adjudicator": cast.adjudicator.model_dump(mode="json")
                 if cast.adjudicator in known_refs

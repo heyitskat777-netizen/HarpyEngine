@@ -150,6 +150,7 @@ class ActorService:
             }
 
     def inspect(self, viewer: GuildViewer, ref: ActorRef) -> dict[str, Any]:
+        from girlframe.engine.m3_ancillary_cadre import actual_members, current
         from girlframe.services.m3_ancillary_traits import pronouns
         from girlframe.services.m3_expanded_status import ExpandedStatusService
 
@@ -159,9 +160,12 @@ class ActorService:
             actor = self._actor(c, viewer, state, ref)
             status = ExpandedStatusService(self.game)
             language = pronouns(self.game, state, ref)
+            cadre = current(state, ref) if actor.rules == "ancillary" else None
+            position = actual_members(state, cadre).index(ref) + 1 if cadre else None
             return {
                 "game_revision": state.revision,
                 "actor": actor.model_dump(mode="json"),
+                **({"ancillary_status": position} if position else {}),
                 **({"pronouns": language} if language else {}),
                 **({"expanded_status": status.view(c, state, actor)} if status.enabled() else {}),
             }

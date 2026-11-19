@@ -1,6 +1,6 @@
 """Printed Ancillary traits that can modify ordinary source-bound Tag windows."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Connection
@@ -11,6 +11,7 @@ from girlframe.engine.m3_actor_state import ActorRef, ActorView
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_ancillary import RULE as ANCILLARY
 from girlframe.engine.m3_ancillary import STARTERS, Book, find
+from girlframe.engine.m3_ancillary_cadre import actual_members, current
 from girlframe.engine.m3_chained_darling import RULE as DANGEROUS
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
@@ -69,11 +70,19 @@ def approved(game: "GameService", state: GameState, actor: ActorRef) -> Trait | 
         access.require_specialist_rule(trait.rule)
     except (ValueError, WorkflowError):
         return None
+    if trait == WARBOY and _language(state, actor) != PRONOUNS:
+        return replace(trait, label="Pronouns (she/her)")
     return trait
 
 
+def _language(state: GameState, actor: ActorRef) -> str:
+    cadre = current(state, actor)
+    return "she/her" if cadre and actual_members(state, cadre)[-1] == actor else PRONOUNS
+
+
 def pronouns(game: "GameService", state: GameState, ref: ActorRef) -> str | None:
-    return PRONOUNS if approved(game, state, ref) == WARBOY else None
+    trait = approved(game, state, ref)
+    return _language(state, ref) if trait and trait.rule == BOY else None
 
 
 def observed(game: "GameService", state: GameState, actor: ActorView) -> Trait | None:

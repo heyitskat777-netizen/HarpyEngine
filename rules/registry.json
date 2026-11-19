@@ -15021,10 +15021,10 @@
         ],
         "tier_options": {
           "low": [
-            "The other participant can decline the optional Status and Tag consequence"
+            "The other participant can decline or apply the paired Cadre Status drop and Tag"
           ],
           "mid": [
-            "The original ruling remains pending for Cadre authority"
+            "Raise the original Prodigy in an approved Ancillary Cadre for the ordinary standard-counterpart route"
           ],
           "high": [
             "Give the original participant a real scoped Tag, then record an actual reaction from the selected original NPC Bond"
@@ -15036,7 +15036,7 @@
           "Apply the real scoped Tag and record the actual authorised NPC reaction."
         ],
         "mandatory_followups": [
-          "Ace and other Status changes, the low Tag where the consequence is accepted, other counterpart kinds and ordinary modifiers remain open."
+          "Ace and Handler alternatives, mixed Cadre Status, direct low and middle verification, other counterpart kinds and ordinary modifiers remain open."
         ],
         "handler_or_gm_intervention": "The original facilitator confirms the source; unsupported Status changes remain pending.",
         "test_fixture_ids": [
@@ -15531,7 +15531,7 @@
       "reviewer": null,
       "review_reference": null,
       "contract": {
-        "trigger": "An actual ordinary Warboy has he/him pronouns, which another character can use as a Tag in his Play.",
+        "trigger": "An actual ordinary Warboy has he/him pronouns or she/her as the actual Dog of an approved Ancillary Cadre, which another character can use as a Tag in his Play.",
         "actor_type": "Original Warboy and actual co-present authenticated cast role",
         "pre_roll_sources": ["Approved original Warboy", "Known original Warboy body", "Valid native Tag window and unused pronouns in the scene"],
         "roll_kind": "diceless",
@@ -15540,12 +15540,12 @@
         "choice_ownership": "Another actual co-present character proposes relevance. The ordinary Play resolves its Tag choice.",
         "target_policy": "Original living disclosed Warboy and original native scene, with an owner-only sheet projection.",
         "post_roll_effects": ["Apply the actual numeric modifier and record that the pronouns were used in this scene."],
-        "mandatory_followups": ["An Ancillary Cadre Dog needs actual actor-level Status support. Repeated use across scenes stays a modifier; the compatibility of forced Tag resolution with printed fixed pronouns remains for human review."],
+        "mandatory_followups": ["Mixed standard and Ancillary Cadres remain open. Repeated use across scenes stays a modifier; forced Tag resolution with fixed pronouns remains for human review."],
         "handler_or_gm_intervention": "No independent new roll. The native Play still governs dice and later resolution.",
-        "test_fixture_ids": ["tests/rules/test_ancillary_traits.py"]
+        "test_fixture_ids": ["tests/rules/test_ancillary_traits.py", "tests/rules/test_ancillary_cadre.py"]
       },
       "dependencies": [],
-      "test_evidence": ["tests/rules/test_ancillary_traits.py"],
+      "test_evidence": ["tests/rules/test_ancillary_traits.py", "tests/rules/test_ancillary_cadre.py"],
       "m2_play_id": null,
       "module": "ancillary"
     },

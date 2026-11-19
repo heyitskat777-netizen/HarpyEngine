@@ -3613,3 +3613,24 @@ and existing last-Girl-Asset Helplessness. Original low Void and
 Asset transfer, selectively ignoring the other participant’s
 separate Play, and direct middle verification remain open.
 [Abyssal Acolyte p. 109](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=111) · [Native case](../../tests/rules/test_abyssal_private_play.py)
+
+### Actor-level Ancillary Cadre Status and the Warboy Dog
+
+Base `083b876`. The original facilitator privately proposes a
+separate ordered Cadre for two to four actual Ancillary actors.
+The current original Handler and each selected character owner
+approve. An unaccepted role’s private name stays hidden from
+the other proposed members. The actual current characters own
+the ranked positions. None inherits the Status of a standard
+Pilot controlled by the same person.
+
+**One focused case passed in 5.20 seconds.** It verified the
+native group proposal, original private approvals, denial of a
+different member's decision, preservation of the standard
+Cadre order, and the original Warboy changing from he/him to
+she/her when she became the actual Dog. The optional Status
+authority also serves the original standard-counterpart
+Prodigy raise and optional low reduction. Those two branches,
+mixed Cadres and the Prodigy’s Ace and Handler alternatives
+remain unverified or outside this slice.
+[Warboy p. 106](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=108) · [Prodigy p. 99](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=101) · [Native case](../../tests/rules/test_ancillary_cadre.py)

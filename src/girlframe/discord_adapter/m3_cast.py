@@ -157,6 +157,8 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
             key = "capture:" + role["token"]
             options.append((key, "Record a capture at the Rebel base"))
             actions[key] = ("captured", ActorRef.model_validate(role["ref"]))
+    if data.get("can_form_ancillary_cadre"):
+        options.append(("form-ancillary-cadre", "Form an Ancillary Cadre"))
     if data["own_facilitator"]:
         options.append(("withdraw_facilitator", "Stop facilitating this scene"))
         actions["withdraw_facilitator"] = ("withdraw_facilitator", None)
@@ -196,6 +198,12 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
         return role
 
     async def choose(current: discord.Interaction, token: str) -> None:
+        if token == "form-ancillary-cadre":
+            from girlframe.discord_adapter.m3_ancillary_cadre import open_ancillary_cadre
+            from girlframe.services.m3_ancillary_cadre import AncillaryCadreService
+
+            await open_ancillary_cadre(current, AncillaryCadreService(service.game), channel)
+            return
         if token == "invite-harpy":
             from girlframe.discord_adapter.m3_harpy_creation import open_invitation
 

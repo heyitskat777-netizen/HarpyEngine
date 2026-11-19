@@ -94,7 +94,7 @@ async def open_ancillary_intimacy_choice(
     if step in ("mercenary_low_hold", "mercenary_high_hold"):
         await reply(interaction, "The original paid Order or Status consequence remains pending.")
         return
-    if step == "prodigy_rank":
+    if step == "prodigy_rank" and not data["can_change_status"]:
         await reply(
             interaction,
             "The original Status outcome remains pending for the actual Cadre authority.",
@@ -212,9 +212,14 @@ async def open_ancillary_intimacy_choice(
             + ".",
             (("confirm", "Record the actual reaction"),),
         ),
+        "prodigy_rank": (
+            "Apply the actual original Prodigy’s Status advance in her Cadre.",
+            (("raise", "Apply the Status advance"),),
+        ),
         "prodigy_low": (
             "You may decline the optional Tag and Status consequence.",
-            (("pass", "Decline both"),),
+            (("pass", "Decline both"), ("apply", "Lower Status and apply a Tag"))
+            if data.get("can_change_status") else (("pass", "Decline both"),),
         ),
         "mercenary_request": (
             "Ask for a small favour within the scene, or pass.",
@@ -352,6 +357,8 @@ async def open_ancillary_intimacy_choice(
                 required=step not in ("mercenary_request", "mercenary_reply"),
             )
         )
+    if step == "prodigy_low" and data["can_change_status"]:
+        fields.append(Field("account", "New Tag if choosing the effect", required=False))
     if step in ("prodigy_choose", "prodigy_jealous"):
         field_label = "Actual new Tag" if step == "prodigy_choose" else "Actual NPC reaction"
         fields.append(Field("account", field_label, paragraph=step == "prodigy_jealous"))

@@ -4115,6 +4115,7 @@ class InboxService:
                 )
             from girlframe.services.m2_game import GameService
             from girlframe.services.m3_abysstech import AbysstechService
+            from girlframe.services.m3_ancillary_cadre import AncillaryCadreService
             from girlframe.services.m3_ancillary_intimacy import AncillaryIntimacyService
             from girlframe.services.m3_captured import CapturedService
             from girlframe.services.m3_chained_darling import ChainedPlacementService
@@ -4137,6 +4138,27 @@ class InboxService:
             from girlframe.services.m3_timeskip import TimeskipService
             from girlframe.services.m3_voidspace_invasion import InvasionService
             from girlframe.services.m3_warboy_hate import ConditionedHateService
+
+            ancillary_cadres = AncillaryCadreService(GameService(self.store))
+            for cadre_id in ancillary_cadres.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "ancillary-cadre:" + cadre_id,
+                        "ancillary_cadre",
+                        cadre_id,
+                        canon.revision,
+                        "playbooks",
+                        "Ancillary Cadre",
+                        "Original proposed role",
+                        "pending",
+                        True,
+                        False,
+                        "Choose whether your original character joins the proposed Cadre.",
+                        "The original roles approve their own membership.",
+                        "Review proposed Cadre",
+                        task="m3_ancillary_cadre",
+                    )
+                )
 
             ancillary_private = AncillaryIntimacyService(GameService(self.store))
             for private_id, private_step in ancillary_private.tasks(connection, canon, viewer):

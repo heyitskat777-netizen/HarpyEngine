@@ -7,6 +7,7 @@ from uuid import uuid4
 from sqlalchemy import Connection
 
 from girlframe.engine import m3_ancillary as ancillary
+from girlframe.engine import m3_ancillary_cadre as cadre_rank
 from girlframe.engine.m2 import GameState, IdentityState, tier
 from girlframe.engine.m3_actor_bonds import change, current_ref, depth, make_helpless
 from girlframe.engine.m3_actor_resources import Commitment, commit
@@ -594,6 +595,8 @@ class AncillaryIntimacyService:
                     or case.step in ("revolutionary_escape", "abyssal_leave")
                     and self._separated(counterpart, actual, case)
                 ),
+                can_change_status=case.step in ("prodigy_rank", "prodigy_low")
+                and cadre_rank.current(state, actual.ref) is not None,
                 npc_bonds={
                     key: label for key, (_, _, label) in _prodigy_people(state, actual.ref).items()
                 }
@@ -1128,8 +1131,20 @@ def _prodigy(
             )
         )
         return state, dict(step="closed", disposition="actual_npc_reaction")
-    if case.step == "prodigy_low" and choice == "pass" and not account:
-        return state, dict(step="closed", disposition="declined_status_and_tag")
+    if case.step == "prodigy_rank" and choice == "raise" and not account:
+        cadre_rank.shift(state, actor, -1, event)
+        return state, dict(step="closed", disposition="status_applied")
+    if case.step == "prodigy_low":
+        if choice == "pass" and not account:
+            return state, dict(step="closed", disposition="declined_status_and_tag")
+        if choice == "apply" and 0 < len(account) <= 120:
+            cadre_rank.shift(state, actor, 1, event)
+            tag = str(uuid4())
+            state = give_tag(
+                state, actor, partner, account, event, tag,
+                (case.actor.controller, case.partner.controller),
+            )
+            return state, dict(step="closed", disposition="status_applied", tag=tag)
     raise WorkflowError("The original Status or outstanding reaction requires human review.")
 
 
