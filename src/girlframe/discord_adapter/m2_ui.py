@@ -161,6 +161,19 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
                 "options", "Apply the −2 Insidious Conditioning modifier or pass", ("apply", "pass")
             )
         ]
+    elif kind == "mistress_honey_offer":
+        from girlframe.services.m3_mistress_rewards import REWARDS as HONEY_REWARDS
+
+        fields = [
+            menu("options", "Offer one or two rewards, or pass", (*HONEY_REWARDS, "pass"), 1, 2),
+            text("fields.praise", "Praise or sympathy", False),
+            text("fields.pet_name", "Pet name", False),
+            text("fields.tag", "Optional Tag that matches the pet name", False),
+        ]
+    elif kind == "mistress_honey_reply":
+        fields = [flags("Accept this reward?")]
+    elif kind == "mistress_honey_rejection":
+        fields = [menu("options", "Respond to the rejection", ("smile", "punish"))]
     elif kind == "tag_window":
         partner_tags = decision.get("gender_man_tags", ())
         options: tuple[str, ...] = (
@@ -1033,6 +1046,15 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         "Choose only your own response. Nothing is submitted until Confirm. "
         "Safety pause remains available."
     )
+    if decision["kind"] == "mistress_honey_reply":
+        from girlframe.services.m3_mistress_rewards import LABELS
+
+        reward = decision["body"]
+        instructions += "\n" + LABELS[reward["reward"]]
+        if reward.get("account"):
+            instructions += "\n" + clean(reward["account"])
+        if reward.get("tag"):
+            instructions += "\nMatching Tag " + clean(reward["tag"])
     if decision["kind"] == "tag_window" and decision.get("gender_man_tags"):
         instructions += (
             "\nThe partner-Tag option uses this roll's one Tag proposal "

@@ -15789,14 +15789,16 @@
         "heading": "Catch More Flies With Honey"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_mistress_rewards.py::test_honey_rewards_require_each_owner_and_a_real_accepted_effect"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

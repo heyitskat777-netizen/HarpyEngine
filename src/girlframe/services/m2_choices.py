@@ -1226,8 +1226,12 @@ class ChoiceEngine:
                 )
             else:
                 from girlframe.services.m3_advocate_empathy import offer_reward
+                from girlframe.services.m3_mistress_rewards import offer as offer_mistress_reward
 
-                if not offer_reward(self.game, c, state, action):
+                if not (
+                    offer_reward(self.game, c, state, action)
+                    or offer_mistress_reward(self.game, c, state, action)
+                ):
                     self.finish(c, state, action)
             return
         if kind == "advocate_empathy":
@@ -1235,6 +1239,13 @@ class ChoiceEngine:
 
             apply_reward(self, c, state, action, request, answer)
             self.finish(c, state, action)
+            return
+        if kind in ("mistress_honey_offer", "mistress_honey_reply", "mistress_honey_rejection"):
+            from girlframe.services.m3_mistress_rewards import choose as choose_mistress_reward
+
+            choose_mistress_reward(self, c, state, action, request, answer)
+            if not self.game.pending(c, action["id"]):
+                self.finish(c, state, action)
             return
         if kind in ("escape_play", "order_disobey", "beneath_response_play"):
             raise WorkflowError(

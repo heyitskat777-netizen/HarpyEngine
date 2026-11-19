@@ -1264,3 +1264,23 @@ actual Play, private Inbox, wrong owner, retry, stale decision, and restart.
 The selected Handler, native orders, NPC, ritual and Inbox regression passed
 **135 tests in 88.37 seconds**.
 [Rulebook p. 137](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=139) · [Tests](../../tests/rules/test_trainer_control.py)
+
+### Mistress rewards for unhesitating obedience
+
+Base `cd05dd5723bdfa0f2704d554cec5c1f4a0f14522`. Catch More Flies With Honey
+now lets the original Mistress offer one or two of praise, a pet name with
+an optional matching Tag, and a relative Status increase after unhesitating
+obedience to a direct order. Each offer goes privately to the original Girl.
+The actual Tag or Status change applies on that specific accepted offer.
+Rejecting an offer gives the Mistress an owned response. Choosing Punishment
+opens the ordinary discipline debt and preserves the actual scene and
+attendance gates. Affection, care, conditional rewards, original Handler
+succession during discipline and learned sources remain open.
+
+The two focused cases passed after actual acceptance or rejection through the
+private Inbox. They verified no early reward, separate recipients, restart,
+retry, stale inputs, a real new Tag, a real Status change and an actual
+discipline effect after both participants attested to its scene. The selected
+Handler, Strain, Off-Duty, discipline and Inbox regression passed
+**143 tests in 100.63 seconds**.
+[Rulebook p. 123](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=125) · [Tests](../../tests/rules/test_mistress_rewards.py)

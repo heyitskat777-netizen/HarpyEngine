@@ -15,7 +15,7 @@ from girlframe.services.onboarding import WorkflowError
 ledger = ledger_fixture
 
 
-def pending(store):
+def pending(store, *, before_period=None):
     strain, game = ready(store, face=1)
     approval = store.policy.m3_approval
     store.policy = store.policy.model_copy(
@@ -37,6 +37,8 @@ def pending(store):
         game.event(c, 1, "synthetic-past-surgery", "synthetic.baseline", current)
     from test_strain_service import prepared
 
+    if before_period is not None:
+        before_period(game)
     identity = prepared(strain, game)
     request = state(game).strain.requests[0]
     strain.roll(ADMIN, "die", request.id, 1, state(game).revision)

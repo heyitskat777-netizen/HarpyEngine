@@ -23,8 +23,8 @@ from girlframe.services.onboarding import WorkflowError
 ledger = ledger_fixture
 
 
-def prepared(store):
-    effects, game, identity, first = pending(store)
+def prepared(store, *, before_period=None):
+    effects, game, identity, first = pending(store, before_period=before_period)
     policy = store.policy
     store.policy = policy.model_copy(
         update={
