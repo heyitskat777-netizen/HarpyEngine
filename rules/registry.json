@@ -15839,14 +15839,17 @@
         "heading": "MISTRESS"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_handler_creation.py::test_all_seven_actual_starting_variants_save_reopen_agree_and_activate",
+        "tests/rules/test_mistress_rewards.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -15911,14 +15914,18 @@
         "heading": "DOGRUNNER"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_handler_creation.py::test_all_seven_actual_starting_variants_save_reopen_agree_and_activate",
+        "tests/rules/test_dogrunner_status.py::test_dogrunner_all_dogs_uses_actual_status_and_the_ordinary_award_slot",
+        "tests/rules/test_dogrunner_status.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -16058,14 +16065,17 @@
         "heading": "SCIENTIST"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_handler_creation.py::test_all_seven_actual_starting_variants_save_reopen_agree_and_activate",
+        "tests/rules/test_scientist_lab.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -16106,14 +16116,17 @@
         "heading": "Scientist Bonds"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_handler_creation.py::test_all_seven_actual_starting_variants_save_reopen_agree_and_activate",
+        "tests/rules/test_handler_creation.py::test_scientist_can_choose_dog_and_other_relative_ranks_are_preserved"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -16228,14 +16241,18 @@
         "heading": "FRANTIC"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_handler_creation.py::test_all_seven_actual_starting_variants_save_reopen_agree_and_activate",
+        "tests/rules/test_frantic_breakdown.py",
+        "tests/rules/test_frantic_crisis.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -16323,14 +16340,17 @@
         "heading": "INSURGENT"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_handler_creation.py::test_all_seven_actual_starting_variants_save_reopen_agree_and_activate",
+        "tests/rules/test_handler_creation_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -16444,14 +16464,18 @@
         "heading": "TRAINER"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_handler_creation.py::test_all_seven_actual_starting_variants_save_reopen_agree_and_activate",
+        "tests/rules/test_trainer_control.py",
+        "tests/rules/test_trainer_phrases.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -16541,14 +16565,17 @@
         "heading": "ADVOCATE"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_handler_creation.py::test_all_seven_actual_starting_variants_save_reopen_agree_and_activate",
+        "tests/rules/test_advocate_empathy.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -16612,14 +16639,16 @@
         "heading": "Advocate Bonds"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_handler_creation.py::test_all_seven_actual_starting_variants_save_reopen_agree_and_activate"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -19819,7 +19848,7 @@
       "reviewer": null,
       "review_reference": null,
       "contract": {
-        "trigger": "Within recorded ordinary Sessions, complete proved useful starting-Identity replacement, successful performed Cadre PR or actual Harpy repossession; consume the shared ordinary award slot when granting",
+        "trigger": "In an actual ordinary Session, prove useful starting-Identity replacement, successful Cadre PR, Harpy repossession, or the Dogrunner having every original Girl except the Ace designated as a Dog. Each grant uses the shared Session slot.",
         "actor_type": "Authorized human facilitator, original Girl and original Handler/body/appointment",
         "pre_roll_sources": [
           "Actual canonical session and original human facilitator boundary record",
@@ -19827,7 +19856,8 @@
           "Scoped Girl disclosure and exact current endpoint usefulness judgment",
           "One ordinary award per session and permanent original-Handler criterion mark-off",
           "For PR, actual original host and source-owned Girl activities plus performed public material/outcome and authorized human GM factual result",
-          "For capture_convert, completed exact Harpy repossession into a real current Mockingbird, proved against its source events and saved result"
+          "For capture_convert, completed exact Harpy repossession into a real current Mockingbird, proved against its source events and saved result",
+          "For the Dogrunner, actual original Dog designations, sole current Ace, original appointment and recorded Session"
         ],
         "roll_kind": "diceless",
         "allowed_modifiers": [],
@@ -19868,6 +19898,7 @@
       },
       "dependencies": [],
       "test_evidence": [
+        "tests/rules/test_dogrunner_status.py::test_dogrunner_all_dogs_uses_actual_status_and_the_ordinary_award_slot",
         "tests/rules/test_handler_ordinary.py",
         "tests/rules/test_handler_pr.py",
         "tests/rules/test_handler_conversion.py"

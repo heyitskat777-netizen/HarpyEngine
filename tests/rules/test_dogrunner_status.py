@@ -4,6 +4,7 @@ import asyncio
 
 import pytest
 from m3_policy_scenario import configure_m3_fixture
+from test_enforcer_requisitions import approved
 from test_handler_creation import complete, save
 from test_intracadre_marriage import FOUR, setup_three
 from test_ledger import ADMIN, OTHER, PLAYER
@@ -18,11 +19,15 @@ from girlframe.discord_adapter.m3_handler_plays import open_handler_plays
 from girlframe.engine.m2 import PlayInput, shift_status
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_dogrunner import owners
+from girlframe.engine.m3_handler_advancements import PermissionGrant, awards
+from girlframe.engine.m3_handler_ordinary import RULE as ordinary_rule
 from girlframe.engine.m3_handler_play_state import Effect
 from girlframe.engine.m3_intracadre_marriage import is_dog
 from girlframe.engine.m3_punishments import Details
 from girlframe.services.inbox import InboxService
+from girlframe.services.m3_handler_advancements import HandlerAdvancementService
 from girlframe.services.m3_handler_creation import HandlerCreationService
+from girlframe.services.m3_handler_ordinary import HandlerOrdinaryService
 from girlframe.services.m3_handler_plays import HandlerPlayService
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_punishments import PunishmentService
@@ -60,9 +65,7 @@ def dogrunner_ready(ledger):
     return game, worker, gateway, registry
 
 
-def test_dogrunner_keeps_raised_dogs_and_mission_punishes_each_original_once(ledger):
-    game, worker, gateway, registry = dogrunner_ready(ledger)
-
+def witnessed_refusal(game, worker, gateway):
     order = game.issue_order(ADMIN, "dogrunner-actual-order", 900, 3, "Stay by the entrance.")
     tick(worker, gateway, 3)
     answer(game, OTHER, "order_response", options=("disobey",))
@@ -88,6 +91,11 @@ def test_dogrunner_keeps_raised_dogs_and_mission_punishes_each_original_once(led
     answer(game, ADMIN, "handler_disobey", flag=False)
     assert game.inspect(OTHER, refusal)["result"]["can_disobey"]
     tick(worker, gateway, 4)
+
+
+def test_dogrunner_keeps_raised_dogs_and_mission_punishes_each_original_once(ledger):
+    game, worker, gateway, registry = dogrunner_ready(ledger)
+    witnessed_refusal(game, worker, gateway)
     assert state(game).order == (2, 4, 3)
     assert owners(state(game)) == (4, 3)
     assert is_dog(state(game), 4) and is_dog(state(game), 3)
@@ -226,3 +234,71 @@ def test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_do
     assert service.notice(PLAYER, identity)["account"] == effect.account
     with pytest.raises(WorkflowError):
         service.notice(OTHER, identity)
+
+
+def test_dogrunner_all_dogs_uses_actual_status_and_the_ordinary_award_slot(
+    ledger, tmp_path, monkeypatch
+):
+    game, worker, gateway, _ = dogrunner_ready(ledger)
+    approved(ledger, game, tmp_path, monkeypatch, extra=(ordinary_rule,))
+    ordinary = HandlerOrdinaryService(ledger)
+    session = ordinary.record_session(
+        ADMIN, "dogs-session", state(game).revision, "Actual synthetic session", "Session starts."
+    )["id"]
+    assert not ordinary.menu(ADMIN, session)["dogrunner_award"]
+    with pytest.raises(WorkflowError, match="actual Dogs"):
+        ordinary.claim_all_dogs(ADMIN, "before-dogs", session, state(game).revision, "Too early.")
+    witnessed_refusal(game, worker, gateway)
+    assert ordinary.menu(ADMIN, session)["dogrunner_award"]
+    expected = state(game).revision
+    with pytest.raises(WorkflowError):
+        ordinary.claim_all_dogs(OTHER, "wrong-dog-award", session, expected, "Wrong controller.")
+    ledger.engine.dispose()
+
+    async def claim():
+        inbox = InboxService(ledger)
+        item = next(x for x in inbox.items(ADMIN) if x.identity == session)
+        click = current(1, 47700)
+        await click.response.defer(ephemeral=True)
+        await InboxView(inbox, 1).route(click, item)
+        form = click.edit_original_response.call_args.kwargs["view"]
+        assert "dogrunner_award" in dict(form.fields[0].options)
+        form.values.update(operation=("dogrunner_award",), account="The Ace and two actual Dogs.")
+        sent = current(1, 47701)
+        await form.confirm.callback(sent)
+        assert form.completed, (sent.followup.send.call_args, sent.edit_original_response.call_args)
+
+    asyncio.run(claim())
+    (value,) = awards(state(game))
+    assert (
+        value.ordinary_source.session == session
+        and value.ordinary_source.trigger == "dogrunner_all_dogs"
+    )
+    assert ordinary.claim_all_dogs(
+        ADMIN, "47701", session, expected, "The Ace and two actual Dogs."
+    ) == dict(id=value.id, phase="held")
+    assert not ordinary.menu(ADMIN, session)["dogrunner_award"]
+    assert (
+        HandlerAdvancementService(ledger).spend_permissions(
+            ADMIN,
+            "spend-dog-award",
+            value.id,
+            state(game).revision,
+            (PermissionGrant(actor=current_ref(state(game), 3), amount=2),),
+            "Actual spend.",
+        )["phase"]
+        == "spent"
+    )
+    assert state(game).sheets["3"].permissions == 2
+    ordinary.end_session(ADMIN, "close-dogs", session, state(game).revision, "Session ends.")
+    next_session = ordinary.record_session(
+        ADMIN,
+        "another-dogs-session",
+        state(game).revision,
+        "Next session",
+        "Next actual session starts.",
+    )["id"]
+    with pytest.raises(WorkflowError, match="once"):
+        ordinary.claim_all_dogs(
+            ADMIN, "repeat-dog-award", next_session, state(game).revision, "Already marked."
+        )

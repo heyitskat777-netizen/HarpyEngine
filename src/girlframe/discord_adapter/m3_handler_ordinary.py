@@ -103,6 +103,16 @@ async def open_ordinary(
     if selected:
 
         async def operate(current: discord.Interaction, values: dict[str, Any]) -> str | None:
+            if values["operation"][0] == "dogrunner_award":
+                await asyncio.to_thread(
+                    service.claim_all_dogs,
+                    viewer_from_interaction(current),
+                    str(current.id),
+                    selected["id"],
+                    data["revision"],
+                    values["account"],
+                )
+                return "Your Dogrunner advancement is held. Open advancements to spend it."
             if values["operation"][0] == "conversion":
                 from girlframe.discord_adapter.m3_handler_conversion import open_conversion
                 from girlframe.services.m3_handler_conversion import HandlerConversionService
@@ -153,6 +163,11 @@ async def open_ordinary(
                         ("pr", "Plan actual Foundation fundraiser/photoshoot"),
                         ("conversion", "Repossess an actually captured Harpy"),
                         ("end", "Record actual Session end"),
+                    )
+                    + (
+                        (("dogrunner_award", "Claim the Dogrunner’s actual Dogs"),)
+                        if data.get("dogrunner_award")
+                        else ()
                     ),
                 ),
                 Field(

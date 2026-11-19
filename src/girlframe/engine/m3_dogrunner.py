@@ -4,6 +4,20 @@ from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef
 
 RULE = "handler-playbook.dogrunner.no-rest-for-hounds"
+BOOK = "handler-playbook.dogrunner.dogrunner"
+
+
+def all_except_ace(state: GameState) -> bool:
+    from girlframe.engine.m3_intracadre_marriage import status_groups
+
+    assigned = owners(state)
+    groups = status_groups(state)
+    return (
+        assigned is not None
+        and len(groups) >= 2
+        and len(groups[0]) == 1
+        and set(assigned) == set(state.order) - set(groups[0])
+    )
 
 
 def owners(state: GameState) -> tuple[int, ...] | None:

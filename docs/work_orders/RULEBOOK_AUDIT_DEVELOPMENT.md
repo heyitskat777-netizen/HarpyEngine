@@ -1375,3 +1375,23 @@ wrong readers, pause, restart, both distinct raises and a third pending
 Crisis. The selected Frantic, fictional Director, Strain, Off-Duty,
 Handler and Inbox regression passed **214 tests in 108.95 seconds**.
 [Rulebook pp. 130–132](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=132) · [Tests](../../tests/rules/test_frantic_crisis.py)
+
+### Dogrunner advancement and existing Handler starting Bonds
+
+Base `8acb61f321e5266ed51102fff1997b3bfa8bf18b`. A Dogrunner can claim
+the printed advancement when each actual original Girl except the sole
+Ace holds the Dog designation. It consumes the ordinary award slot of an
+actual Session and permanently marks this criterion for the original
+Handler. The existing award system verifies the saved source on spend.
+All seven starting setups already had native creation and owned acceptance.
+The tests now verify actual Bond depth and rank explicitly, including the
+separately listed Scientist and Advocate starting rules. The playbook
+headings describe partial coverage. Their remaining advancements and
+signature effects keep separate entries.
+
+The synthetic Dogrunner case used a real witnessed refusal to change
+Status. It checked no early grant, private Session controls, wrong owner,
+restart, retry, actual Permission payment and repeat denial in a later
+Session. The selected advancement, Handler creation, registry and Inbox
+regression passed **78 tests in 111.45 seconds** under fixture-only approval.
+[Dogrunner p. 126](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=128) · [Scientist p. 129](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=131) · [Advocate p. 139](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=141) · [Dogrunner tests](../../tests/rules/test_dogrunner_status.py) · [Starting setup tests](../../tests/rules/test_handler_creation.py)

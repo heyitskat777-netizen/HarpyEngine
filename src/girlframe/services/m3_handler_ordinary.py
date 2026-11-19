@@ -9,6 +9,7 @@ import sqlalchemy as sa
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
+from girlframe.engine import m3_dogrunner as dogrunner
 from girlframe.engine import m3_handler_advancements as advancement
 from girlframe.engine import m3_handler_ordinary as rules
 from girlframe.engine.m2 import ChoiceAnswer, GameState
@@ -23,6 +24,7 @@ from girlframe.services.m3_handler_advancements import (
     _appointment_at,
     _history,
 )
+from girlframe.services.m3_handler_book_orders import active_book
 from girlframe.services.m3_medical import MedicalService
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
@@ -249,6 +251,43 @@ def prove_award(
         from girlframe.services.m3_handler_pr import prove_award as prove_pr
 
         prove_pr(game, c, state, award)
+        return
+    if source.trigger == "dogrunner_all_dogs":
+        birth = _history(c, game, award.award_event)
+        born = next((x for x in advancement.awards(birth) if x.id == award.id), None)
+        session = _session(game, c, birth, source.session)
+        kind = c.scalar(
+            sa.select(t.events.c.kind).where(
+                t.events.c.campaign_id == game.store.campaign_id,
+                t.events.c.id == award.award_event,
+                t.events.c.actor_id == award.handler.entity,
+            )
+        )
+        marks = [x for x in rules.marks(birth) if x.handler == award.handler]
+        session_used = [x for x in marks if x.session == session.id]
+        criterion = [x for x in marks if x.trigger == source.trigger]
+        if (
+            born is None
+            or born.phase != "held"
+            or born.ordinary_source != source
+            or born.handler != award.handler
+            or born.appointment != award.appointment
+            or born.source_event != award.award_event
+            or award.source_event != award.award_event
+            or born.award_event != award.award_event
+            or born.account != award.account
+            or not dogrunner.all_except_ace(birth)
+            or active_handler(birth) != award.handler
+            or kind != "m3.dogrunner_all_dogs_awarded"
+            or session.end_event is not None
+            or _appointment_at(c, game, session.start_event, award.handler) != award.appointment
+            or len(session_used) != 1
+            or session_used != criterion
+            or criterion[0].award != award.id
+            or criterion[0].review != source.review
+            or criterion[0].event != award.award_event
+        ):
+            raise WorkflowError("Recover the actual Dogrunner, Dogs and ordinary Session award")
         return
     birth = _history(c, game, award.award_event)
     born = next((x for x in advancement.awards(birth) if x.id == award.id), None)
@@ -702,10 +741,18 @@ class HandlerOrdinaryService:
                 ),
                 None,
             )
+            handler = active_handler(state)
+            dogrunner_award = (
+                active is not None
+                and handler is not None
+                and handler.entity == str(viewer.user_id)
+                and self._all_dogs_available(c, state, active, handler)
+            )
             return dict(
                 selected=selected.model_dump(mode="json") if selected else None,
                 active=active.model_dump(mode="json") if active else None,
                 kind="session",
+                dogrunner_award=dogrunner_award,
                 revision=state.revision,
                 facilitator=human == viewer.user_id,
                 appointment=appointment,
@@ -725,6 +772,102 @@ class HandlerOrdinaryService:
                 if human == viewer.user_id
                 else [],
             )
+
+    def _all_dogs_available(
+        self, c: Connection, state: GameState, session: rules.Session, handler: ActorRef
+    ) -> bool:
+        owned = active_book(self.game, c, state, book="Dogrunner", rule=dogrunner.BOOK)
+        return (
+            owned is not None
+            and owned[0] == handler
+            and session.end_event is None
+            and session.facilitator == int(handler.entity)
+            and dogrunner.all_except_ace(state)
+            and not any(
+                x.handler == handler
+                and (x.session == session.id or x.trigger == "dogrunner_all_dogs")
+                for x in rules.marks(state)
+            )
+        )
+
+    def claim_all_dogs(
+        self, viewer: GuildViewer, key: str, identity: str, revision: int, account: str
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            state = load_state(c, self.store.campaign_id)
+            session = _session(self.game, c, state, identity)
+            handler = active_handler(state)
+            if (
+                state.revision != revision
+                or handler is None
+                or handler.entity != str(viewer.user_id)
+                or not self._all_dogs_available(c, state, session, handler)
+                or not 1 <= len(account.strip()) <= 1200
+            ):
+                raise WorkflowError("Claim the actual Dogs once in a free ordinary Session")
+            _, appointment = MedicalService(self.store)._handler(c)
+            HandlerAdvancementService(self.store)._current(c, state, handler, appointment)
+            if (
+                session.appointment != appointment
+                or _appointment_at(c, self.game, session.start_event, handler) != appointment
+            ):
+                raise WorkflowError("Recover the same original Handler's actual Session")
+            event = str(uuid4())
+            review = "dogrunner-all-dogs:" + event
+            identity_award = "ordinary:" + review
+            rules.put(
+                state,
+                rules.Mark(
+                    id="dogrunner-all-dogs:" + handler.token,
+                    handler=handler,
+                    session=session.id,
+                    review=review,
+                    award=identity_award,
+                    event=event,
+                    trigger="dogrunner_all_dogs",
+                ),
+            )
+            advancement.grant(
+                state,
+                advancement.Award(
+                    id=identity_award,
+                    rule=rules.RULE,
+                    handler=handler,
+                    appointment=appointment,
+                    ordinary_source=rules.AwardSource(
+                        session=session.id,
+                        review=review,
+                        trigger="dogrunner_all_dogs",
+                    ),
+                    source_event=event,
+                    award_event=event,
+                    account=account.strip(),
+                ),
+            )
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.dogrunner_all_dogs_awarded",
+                state,
+                event_id=event,
+                session_id=session.id,
+                award_id=identity_award,
+            )
+            return dict(id=identity_award, phase="held")
+
+        return self._write(
+            viewer,
+            key,
+            "m3.dogrunner_all_dogs_awarded",
+            dict(
+                id=identity,
+                revision=revision,
+                account=account,
+            ),
+            operation,
+        )
 
     def _tasks(self, c: Connection, viewer: GuildViewer) -> list[dict[str, Any]]:
         self.game.authorize(c, viewer, game=False)
