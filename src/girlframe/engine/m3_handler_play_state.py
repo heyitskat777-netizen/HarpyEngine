@@ -33,9 +33,11 @@ DRESS_STEPS = (
     ("appearance", "Insult their appearance"),
     ("identity", "Dismiss them for an inherent trait"),
     ("dog", "Call them a dog, mutt or stray"),
+    ("dismissal", "End with an order to get out of your sight"),
     ("punishment", "End by deciding they deserve a proper Punishment"),
 )
-DressStep = Literal["competency", "appearance", "identity", "dog", "punishment"]
+DRESS_ENDINGS = frozenset(("dismissal", "punishment"))
+DressStep = Literal["competency", "appearance", "identity", "dog", "dismissal", "punishment"]
 Play = Literal[
     "brief",
     "punish",
@@ -110,7 +112,7 @@ class Effect(Model):
             "tracker_intercept": {"target"},
             "tracker_voyeur": {"target", "detail"},
             "contaminant_warp": {"zone", "cell", "detail"},
-            "dress_them_down": {"target", "tag", "dress_steps"},
+            "dress_them_down": {"target", "tag", "dress_steps", "detail"},
             "successor_advice": set(),
         }[self.kind] | {"kind", "account", "source_label"}
         baseline = Effect.model_construct(kind=self.kind, account=self.account)
@@ -161,8 +163,13 @@ class Effect(Model):
             or len(set(self.dress_steps)) != len(self.dress_steps)
         ):
             raise ValueError("Choose one to three distinct options and an actual original Girl")
-        if "punishment" in self.dress_steps and self.dress_steps[-1] != "punishment":
-            raise ValueError("A proper Punishment must end the dressing down")
+        endings = DRESS_ENDINGS.intersection(self.dress_steps)
+        if len(endings) > 1 or (endings and self.dress_steps[-1] not in endings):
+            raise ValueError("Choose only one ending and put it last in the dressing down")
+        if self.kind == "dress_them_down" and (
+            ("dismissal" in endings) != bool(self.detail.strip())
+        ):
+            raise ValueError("Supply the actual dismissal order only for that ending")
         return self
 
 

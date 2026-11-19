@@ -1307,8 +1307,8 @@ this signature Play from the native Handler menu in an actual jointly attended
 scene. The exact original Girl and Handler stay bound to the private Inbox
 grant. The competency, appearance, inherent-trait and dog-language options
 each lower actual Status by one position and require the actual Tag if the
-Girl becomes a Dog. She keeps her own actions. The physical, third-party,
-demeaning-order and dismissal-order branches remain open.
+Girl becomes a Dog. She keeps her own actions. The physical, third-party
+and demeaning-order branches remain open.
 
 The focused cases covered the native menu and Inbox, the required Tag,
 wrong owner, unrelated readers, wrong scene, restart, safety pause, retries
@@ -1325,6 +1325,15 @@ single native Inbox case passed in 5.43 seconds. It covered the private
 notice and case, duplicate submission, stale and paused controls, reopening,
 the attendance requirement and the real Heat change. The synthetic command
 was `python -m pytest -q --tb=short tests/rules/test_dogrunner_status.py -k proper-punishment`
+with `PYTHONPATH="$PWD/src"`.
+
+The dismissal ending, based on `8c83089`, uses the ordinary direct Order
+flow in the original scene. The Order, Status and any new Dog Tag commit
+together. The original Girl alone can choose her response. The single
+native test passed in 5.03 seconds. It verified a private refusal choice,
+no premature response, wrong owner, wrong scene, retry, reopening, stale
+revision and safety pause. The command was
+`python -m pytest -q --tb=short tests/rules/test_dogrunner_status.py -k dismissal`
 with `PYTHONPATH="$PWD/src"`.
 
 ### Trainer Speak and Off-Duty installation

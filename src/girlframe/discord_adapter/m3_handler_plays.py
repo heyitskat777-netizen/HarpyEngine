@@ -10,7 +10,14 @@ from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.m3_punishments import Picker
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_actor_state import ActorRef
-from girlframe.engine.m3_handler_play_state import BASIC, DRESS_STEPS, EXTRA, Effect, Play
+from girlframe.engine.m3_handler_play_state import (
+    BASIC,
+    DRESS_ENDINGS,
+    DRESS_STEPS,
+    EXTRA,
+    Effect,
+    Play,
+)
 from girlframe.engine.m3_handler_private_scene import Book
 from girlframe.engine.m3_world_state import Npc
 from girlframe.services.m3_handler_plays import HandlerPlayService
@@ -383,6 +390,7 @@ async def effect_form(
             [
                 Field("dress_steps", "Choose one to three printed steps", DRESS_STEPS, maximum=3),
                 Field("tag", "Tag only if they become the Dog", required=False),
+                Field("detail", "Dismissal order, if chosen", paragraph=True, required=False),
             ]
         )
     elif kind == "tag":
@@ -482,9 +490,10 @@ async def effect_form(
             steps = values["dress_steps"]
             # Discord selects return option order, so put the printed ending last.
             effect_data.update(
-                dress_steps=tuple(x for x in steps if x != "punishment")
-                + (("punishment",) if "punishment" in steps else ()),
+                dress_steps=tuple(x for x in steps if x not in DRESS_ENDINGS)
+                + tuple(x for x in steps if x in DRESS_ENDINGS),
                 tag=values.get("tag", ""),
+                detail=values.get("detail", ""),
             )
         elif kind == "tag":
             effect_data["tag"] = values["tag"]

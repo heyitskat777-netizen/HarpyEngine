@@ -3,7 +3,7 @@
 import json
 from collections.abc import Callable
 from datetime import UTC, datetime
-from typing import Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 from uuid import UUID, uuid4
 
 import sqlalchemy as sa
@@ -40,6 +40,9 @@ from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_state import load_state, public_sheet
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
+
+if TYPE_CHECKING:
+    from girlframe.engine.m3_handler_play_state import Effect
 
 PUBLIC_FIELDS = {
     "frame_name",
@@ -6139,11 +6142,21 @@ class GameService:
         dose_up: bool = False,
         conditioning_phrase: str | None = None,
         advocate_conversation: tuple[str, int, str] | None = None,
+        dismissal: tuple[str, int, "Effect"] | None = None,
     ) -> dict[str, Any]:
         if not text.strip() or len(text) > 1200:
             raise WorkflowError("Provide a direct order in 1–1200 characters.")
         if advocate_conversation is not None and (dose_up or conditioning_phrase is not None):
             raise WorkflowError("Choose one source for this direct order")
+        if dismissal is not None and (dose_up or conditioning_phrase or advocate_conversation):
+            raise WorkflowError("Choose one source for this direct order")
+
+        def authorize(c: Connection) -> None:
+            self.authorize(c, viewer)
+            if dismissal is not None:
+                from girlframe.services.m3_handler_plays import authorize_dismissal
+
+                authorize_dismissal(self, c, viewer, dismissal[0])
 
         def operation(c: Connection) -> dict[str, Any]:
             self.unpaused(c)
@@ -6165,7 +6178,11 @@ class GameService:
             from girlframe.services.m3_bonded_support import issue_requested_order
             from girlframe.services.m3_sentinel import require_order_communication
 
-            if advocate_conversation is None:
+            if dismissal is not None:
+                from girlframe.services.m3_handler_plays import stage_dismissal
+
+                stage_dismissal(self, c, state, dismissal, scene, target, text)
+            elif advocate_conversation is None:
                 requested = issue_requested_order(
                     self, c, state, viewer, key, channel, target, text, dose_up=dose_up
                 )
@@ -6364,6 +6381,12 @@ class GameService:
             )
             if taunt_works:
                 materialize(self, c, viewer.user_id, applied_event, taunt_works)
+            if dismissal is not None:
+                from girlframe.services.m3_handler_plays import complete_dismissal
+
+                return complete_dismissal(
+                    self, c, state, viewer, key, dismissal, order_id, applied_event
+                )
             return {"action_id": identity, "order_id": order_id}
 
         try:
@@ -6378,10 +6401,21 @@ class GameService:
                     {"advocate_conversation": advocate_conversation}
                     if advocate_conversation
                     else {}
+                )
+                | (
+                    {
+                        "dismissal": [
+                            dismissal[0],
+                            dismissal[1],
+                            dismissal[2].model_dump(mode="json"),
+                        ]
+                    }
+                    if dismissal is not None
+                    else {}
                 ),
                 operation,
                 auto_audit=False,
-                authorize=lambda c: self.authorize(c, viewer),
+                authorize=authorize,
             )
         except ValidationError:
             raise WorkflowError(

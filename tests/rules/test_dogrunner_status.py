@@ -151,9 +151,11 @@ def test_dogrunner_keeps_raised_dogs_and_mission_punishes_each_original_once(led
     )
 
 
-@pytest.mark.parametrize("ending", ("dog", "punishment"), ids=("tag-only", "proper-punishment"))
+@pytest.mark.parametrize(
+    "ending", ("dog", "punishment", "dismissal"), ids=("tag-only", "proper-punishment", "dismissal")
+)
 def test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_dog(ledger, ending):
-    game, *_ = dogrunner_ready(ledger)
+    game, worker, gateway, _ = dogrunner_ready(ledger)
     service = HandlerPlayService(ledger)
     original = state(game)
     actor = current_ref(original, 2)
@@ -184,6 +186,7 @@ def test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_do
         account="PRIVATE_ACTUAL_DRESSING",
         dress_steps=("competency", ending),
         tag="PRIVATE_NEW_DOG_TAG",
+        detail="Get out of my sight." if ending == "dismissal" else "",
     )
     information = service.get(ADMIN, identity)
     revision = information["game_revision"]
@@ -217,10 +220,11 @@ def test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_do
         form.values.update(
             target=(actor.token,),
             dress_steps=tuple(reversed(effect.dress_steps))
-            if effect.opens_punishment
+            if ending != "dog"
             else effect.dress_steps,
             account=effect.account,
             tag=effect.tag,
+            detail=effect.detail,
         )
         sent = current(1, 47011)
         await form.confirm.callback(sent)
@@ -265,6 +269,16 @@ def test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_do
         assert grant.state == "complete"
         assert grant.completed_event == completed.role_punishments[-1].completion_event
         assert completed.sheets["2"].heat == 7 and owners(completed) == (4,)
+    if ending == "dismissal":
+        assert not canonical.role_punishments
+        assert not game.choices(PLAYER)
+        tick(worker, gateway, 3)
+        (choice,) = [x for x in game.choices(PLAYER) if x["kind"] == "order_response"]
+        assert game.decision(PLAYER, choice["id"])["order_text"] == effect.detail
+        with pytest.raises(WorkflowError):
+            game.decision(OTHER, choice["id"])
+        answer(game, PLAYER, "order_response", options=("disobey",))
+        assert handler_plays.record(state(game), identity).state == "complete"
 
 
 def test_dogrunner_all_dogs_uses_actual_status_and_the_ordinary_award_slot(
