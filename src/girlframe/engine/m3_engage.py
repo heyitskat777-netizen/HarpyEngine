@@ -39,6 +39,7 @@ def select(
     *,
     assault_extra: bool = False,
     casualty_extra: bool = False,
+    hunt_extra: bool = False,
     substitute_damage: bool = False,
     wyvern_extra: bool = False,
 ) -> tuple[dict[str, str], str | None]:
@@ -47,8 +48,8 @@ def select(
         raise ValueError("Choose maneuvers, their actual Assets and the resulting circumstances")
     harpy = actor.ref.kind == "external_pilot" and actor.girl == "harpy"
     if assault_extra:
-        if not harpy and not (casualty_extra and actor.ref.kind == "pilot"):
-            raise ValueError("Use the actual Harpy or source-owned Casualty extra maneuver")
+        if not harpy and not ((casualty_extra or hunt_extra) and actor.ref.kind == "pilot"):
+            raise ValueError("Use the actual Harpy or a source-owned extra maneuver")
         minimum, maximum = 0, 1
     else:
         minimum = {"low": 1, "mid": 2, "high": 3}[level]

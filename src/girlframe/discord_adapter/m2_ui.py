@@ -1117,6 +1117,12 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
     ):
         await open_play(interaction, game, parent=decision)
         return
+    if decision["kind"] == "trainer_hunt_play":
+        from girlframe.discord_adapter.m3_battle import open_declaration
+        from girlframe.services.m3_battle import BattleService
+
+        await open_declaration(interaction, BattleService(game.store), parent=decision)
+        return
     fields = choice_fields(decision)
     if not fields:
         from girlframe.discord_adapter.p1_facilitator import open_missing_source
@@ -2967,6 +2973,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
             app_commands.Choice(name="Conditioning Phrase (Speak)", value="trainer_speak"),
             app_commands.Choice(name="Conditioning Phrase (Sit)", value="trainer_sit"),
             app_commands.Choice(name="Conditioning Phrase (Heel)", value="trainer_heel"),
+            app_commands.Choice(name="Conditioning Phrase (Hunt)", value="trainer_hunt"),
             app_commands.Choice(name="Conditioning Phrase (Play Gentle)", value="trainer_gentle"),
             app_commands.Choice(name="Conditioning Phrase (Play Rough)", value="trainer_rough"),
             app_commands.Choice(name="Grant leave after Sit", value="trainer_leave"),
@@ -2987,6 +2994,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
             "trainer_speak": "speak",
             "trainer_sit": "sit",
             "trainer_heel": "heel",
+            "trainer_hunt": "hunt",
             "trainer_gentle": "play_gentle",
             "trainer_rough": "play_rough",
         }.get(use)
@@ -3027,6 +3035,54 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
                 )
             except WorkflowError as error:
                 await reply(interaction, str(error))
+            return
+        if phrase == "hunt":
+            from girlframe.services.m3_battle import BattleService
+
+            channel = interaction.channel_id or 0
+            await interaction.response.defer(ephemeral=True)
+            try:
+                preview = await threaded(
+                    lambda: BattleService(game.store).preview(
+                        viewer_from_interaction(interaction), channel
+                    )
+                )
+            except WorkflowError as error:
+                await reply(interaction, str(error))
+                return
+            targets = tuple(
+                (actor["token"], actor["name"])
+                for actor in preview["actors"]
+                if actor["ref"]["kind"] in ("pilot", "gorgon", "external_pilot")
+                and actor["ref"]["entity"] != str(member.id)
+                and actor["assets"]
+            )
+            if not targets:
+                await reply(interaction, "Join an actual visible Hunt target with an intact Asset.")
+                return
+
+            async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+                await threaded(
+                    lambda: game.issue_order(
+                        viewer_from_interaction(current),
+                        str(current.id),
+                        channel,
+                        member.id,
+                        instruction,
+                        conditioning_phrase="hunt",
+                        phrase_actor=values["target"][0],
+                    )
+                )
+                return "Hunt order recorded for the original Girl."
+
+            form = NativeForm(
+                interaction.user.id,
+                "Issue Hunt",
+                "Choose the original battlefield target.",
+                [Field("target", "Actual opposing actor", targets)],
+                submit,
+            )
+            await reply(interaction, form.text(), form)
             return
         await private_operation(
             interaction,

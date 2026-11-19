@@ -252,7 +252,24 @@ def apply(
             }
         }
     )
-    casualty_extra = extra and meta.get("extra_source") == "girl.casualty.no-one-better"
+    hunt_choice = json.loads(row["body_json"]).get("trainer_hunt") if extra else None
+    if hunt_choice:
+        from girlframe.services.m3_trainer_phrases import prove_hunt
+
+        parent = game.action(c, action["parent_id"])
+        source = next((x for x in game.pending(c, parent["id"]) if x["id"] == hunt_choice), None)
+        if (
+            not meta.get("trainer_hunt_extra_started")
+            or hunt_choice != meta.get("trainer_hunt_choice")
+            or action["data"]["result"]["tier"] not in ("mid", "high")
+            or source is None
+            or prove_hunt(game, c, state, parent, source)
+            != (ref, ActorRef.model_validate(meta["target"]))
+        ):
+            raise WorkflowError("Recover the original Hunt's earned Engage option")
+    casualty_extra = (
+        extra and not hunt_choice and meta.get("extra_source") == "girl.casualty.no-one-better"
+    )
     if casualty_extra:
         from girlframe.services.m3_learned_plays import (
             consumed_no_one_better,
@@ -285,10 +302,13 @@ def apply(
         maneuver_answer,
         assault_extra=extra,
         casualty_extra=casualty_extra,
+        hunt_extra=bool(hunt_choice),
         substitute_damage=selected_tag is not None,
         wyvern_extra=wyvern,
     )
-    if meta.get("extra_selected" if extra else "applied"):
+    if meta.get(
+        "trainer_hunt_extra_done" if hunt_choice else "extra_selected" if extra else "applied"
+    ):
         raise WorkflowError("This actual source maneuver choice has already resolved")
     from girlframe.services.m3_budget_sabotage import intercept as intercept_sabotage
 
@@ -339,8 +359,12 @@ def apply(
 
     release_counter_pin(game, c, state, action, executed, event)
     if extra:
-        meta["extra_selected"] = True
-        action["data"]["result"]["extra_maneuver"] = executed
+        if hunt_choice:
+            meta["trainer_hunt_extra_done"] = True
+            action["data"]["result"]["trainer_hunt_maneuver"] = executed
+        else:
+            meta["extra_selected"] = True
+            action["data"]["result"]["extra_maneuver"] = executed
         from girlframe.services.m3_battle import results as battle_results
 
         battle_results(game, c, action, state=state)
@@ -497,13 +521,17 @@ def complete_damage_work(
             synchronize(game, c, action, event, viewer, key)
 
 
-def start_assault_extra(game: "GameService", c: Connection, action: dict[str, Any]) -> None:
+def start_assault_extra(
+    game: "GameService", c: Connection, action: dict[str, Any], *, hunt: bool = False
+) -> None:
     """Ask before primary Assault effects; the same used Asset may subsequently be damaged."""
     meta = action["data"]["battle"]
-    if meta.get("extra_started"):
-        raise WorkflowError("Resume the existing actual Harpy extra-maneuver choice")
-    meta["extra_started"] = True
-    game.request(c, action, int(action["actor_id"]), "engage_assault_extra")
+    flag = "trainer_hunt_extra_started" if hunt else "extra_started"
+    if meta.get(flag):
+        raise WorkflowError("Resume the existing actual extra-maneuver choice")
+    meta[flag] = True
+    body = {"trainer_hunt": meta["trainer_hunt_choice"]} if hunt else {}
+    game.request(c, action, int(action["actor_id"]), "engage_assault_extra", body)
 
 
 def ensure_assault_extra(

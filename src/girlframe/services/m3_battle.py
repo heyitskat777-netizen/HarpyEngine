@@ -375,6 +375,25 @@ def prepare(
         raise WorkflowError("This source declaration has already started its one actual Play.")
     if prepared.play != declaration.play or prepared.target_actor != declaration.target:
         raise WorkflowError("Roll the actual declared Play against the original target.")
+    hunt_choice = None
+    if prepared.parent and context.source_choice:
+        source = game.action(c, prepared.parent)
+        hunt = next(
+            (
+                row
+                for row in game.pending(c, source["id"])
+                if row["id"] == context.source_choice and row["kind"] == "trainer_hunt_play"
+            ),
+            None,
+        )
+        if hunt is not None:
+            from girlframe.services.m3_trainer_phrases import prove_hunt
+
+            if declaration.play != "all_out_assault" or prove_hunt(
+                game, c, state, source, hunt
+            ) != (declaration.actor, declaration.target):
+                raise WorkflowError("Recover the original Hunt's declared All Out Assault")
+            hunt_choice = hunt["id"]
     if (
         prepared.attacking_asset != declaration.attacking_asset
         or prepared.target_asset != declaration.target_asset
@@ -552,6 +571,7 @@ def prepare(
         dormant_awakened=context.dormant_awakened,
         dormant_close=context.dormant_close,
         **({"rebel_ambush": ambush.id} if ambush is not None else {}),
+        **({"trainer_hunt_choice": hunt_choice} if hunt_choice else {}),
         occupancy={
             ref.token: False
             for ref, outside in (
@@ -785,6 +805,15 @@ def results(
             meta["extra_source"] = "girl.casualty.no-one-better"
             start_assault_extra(game, c, action)
             return
+    if (
+        meta.get("trainer_hunt_choice")
+        and level in ("mid", "high")
+        and not meta.get("trainer_hunt_extra_done")
+    ):
+        from girlframe.services.m3_engage import start_assault_extra
+
+        start_assault_extra(game, c, action, hunt=True)
+        return
     if action["data"]["play"] == "go_for_the_core" and level == "high":
         state = load_state(c, game.store.campaign_id)
         _, target = _refs(action)
@@ -3372,6 +3401,20 @@ class BattleService:
                         ),
                         None,
                     )
+                    if request is None and declaration.play == "all_out_assault":
+                        from girlframe.services.m3_trainer_phrases import HUNT, prove_hunt
+
+                        request = next(
+                            (
+                                x
+                                for x in self.game.pending(c, parent)
+                                if x["kind"] == HUNT
+                                and x["actor_id"] == str(viewer.user_id)
+                                and prove_hunt(self.game, c, state, source, x)
+                                == (declaration.actor, declaration.target)
+                            ),
+                            None,
+                        )
                 if source["channel_id"] != str(channel) or request is None:
                     raise WorkflowError(
                         "Declare the actual target's counter against the original attacker."

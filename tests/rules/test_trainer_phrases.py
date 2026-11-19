@@ -557,3 +557,117 @@ def test_heel_ends_the_prior_sit_and_waits_for_real_movement_to_the_issuer(ledge
     actual = next(x for x in after.placements if x.actor == girl)
     assert actual.girl_cell == (0, 0) and actual.frame_cell == original.frame_cell
     assert game.dice.calls == 0
+
+
+def test_hunt_requires_its_exact_assault_and_earns_one_engage_maneuver(ledger):
+    from test_physical_operations import place
+
+    from girlframe.engine.m3_actor_bonds import current_ref
+    from girlframe.engine.m3_battle_state import Declaration
+    from girlframe.services.m3_battle import BattleService
+    from girlframe.services.m3_trainer_phrases import HUNT
+
+    _, game = ready(ledger)
+    create_trainer(ledger, start_with_speak=False, dog_prompt=1)
+    game.dice.faces = (4, 5)
+    with ledger.transaction() as c:
+        game.event(
+            c, 1, "hunt-original-positions", "synthetic.placement", place(place(state(game), 2), 3)
+        )
+    target = current_ref(state(game), 2)
+    worker, gateway = GameWorker(game), Gateway()
+    parent = game.issue_order(
+        ADMIN,
+        "hunt-order",
+        900,
+        3,
+        "Assault this target.",
+        conditioning_phrase="hunt",
+        phrase_actor=target.token,
+    )["action_id"]
+    tick(worker, gateway, 3)
+    answer(game, OTHER, "order_response", options=("obedient",))
+    (choice,) = (x for x in game.choices(OTHER) if x["kind"] == HUNT)
+    with pytest.raises(WorkflowError):
+        game.decision(PLAYER, choice["id"])
+    inbox = InboxService(ledger)
+    ledger.engine.dispose()
+
+    async def open_hunt():
+        click = current(3, 47390)
+        click.channel_id = 900
+        await click.response.defer(ephemeral=True)
+        item = next(x for x in inbox.items(OTHER) if x.identity == choice["id"])
+        await InboxView(inbox, 3).route(click, item)
+        form = click.edit_original_response.call_args.kwargs["view"]
+        fields = {x.key: x for x in form.fields}
+        assert tuple(key for key, _ in fields["play"].options) == ("all_out_assault",)
+        assert tuple(key for key, _ in fields["target"].options) == (target.token,)
+
+    asyncio.run(open_hunt())
+    battle = BattleService(ledger)
+    data = battle.preview(OTHER, 900)
+    by_entity = {x["ref"]["entity"]: x for x in data["actors"]}
+    attacker, opponent = by_entity["3"], by_entity["2"]
+    declaration = Declaration(
+        play="all_out_assault",
+        actor=current_ref(state(game), 3),
+        target=target,
+        attacking_asset=attacker["assets"][0]["id"],
+        target_asset=opponent["assets"][0]["id"],
+        actor_sha256=attacker["sha256"],
+        target_sha256=opponent["sha256"],
+        account="I open with the declared Asset against the exact target.",
+    )
+    context = battle.propose(
+        OTHER, "hunt-declare", data["revision"], 900, declaration, parent=parent
+    )["id"]
+    battle.confirm(
+        ADMIN,
+        "hunt-reach",
+        state(game).revision,
+        context,
+        opening=True,
+        reach=True,
+        outside_permission=False,
+        indirect=False,
+        evidence="The opening and reach are established.",
+    )
+    child = game.begin(
+        OTHER,
+        "hunt-roll",
+        900,
+        state(game).sheets["3"].revision,
+        PlayInput(
+            play="all_out_assault",
+            heat=0,
+            target_actor=target,
+            parent=parent,
+            attacking_asset=declaration.attacking_asset,
+            target_asset=declaration.target_asset,
+            battle_context=context,
+            context=declaration.account,
+            trigger_confirmed=True,
+            piloting=True,
+        ),
+    )["action_id"]
+    tick(worker, gateway, 5)
+    pass_tags(game)
+    assert game.inspect(OTHER, parent)["state"] != "complete"
+    answer(
+        game,
+        OTHER,
+        "engage_assault_extra",
+        options=("protect",),
+        fields={"protect": declaration.attacking_asset},
+        text="I cover the withdrawal route.",
+    )
+    for member in (ADMIN, PLAYER, OTHER):
+        answer(
+            game, member, "battle_assault_table", flag=False, text="The defender stays in reach."
+        )
+    actual = state(game)
+    assert next(x for x in actual.sheets["2"].assets if x.id == declaration.target_asset).damaged
+    assert sum(x.get("kind") == "engage_maneuver" for x in actual.facts) == 1
+    assert game.inspect(OTHER, parent)["state"] == game.inspect(OTHER, child)["state"] == "complete"
+    assert game.dice.calls == 1

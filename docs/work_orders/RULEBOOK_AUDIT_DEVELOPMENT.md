@@ -1440,6 +1440,17 @@ One focused case passed in 4.27 seconds using
 with `PYTHONPATH="$PWD/src"`, including restart, private Inbox access and
 the movement itself. [Heel case](../../tests/rules/test_trainer_phrases.py)
 
+Hunt, based on `0bbeda5`, fixes the visible opposing body in the Order.
+The affected Girl's private Inbox opens the real battle declaration, with
+the original actor, opposing body and All Out Assault fixed. Battle still
+requires actual opening, reach and owned Assets. A saved 8+ grants one
+optional Engage maneuver before normal Assault consequences. One focused
+case passed in 5.99 seconds using
+`python -m pytest -q --tb=short tests/rules/test_trainer_phrases.py -k hunt_requires`
+with `PYTHONPATH="$PWD/src"`, covering a native Pilot target, restart,
+the card's fixed choices, one roll, one maneuver and actual Asset damage.
+[Hunt case](../../tests/rules/test_trainer_phrases.py)
+
 ### Scientist's initial laboratory Project step
 
 Base `06aa08cbeb9592c1d3d1a86dbd081f710098d371`. Head to the Lab can

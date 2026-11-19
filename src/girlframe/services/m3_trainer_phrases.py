@@ -42,6 +42,7 @@ HEAR = "trainer_speak_heard"
 SIT = "trainer_sit"
 HEEL = "trainer_heel_response"
 FLIRT = "trainer_flirt_play"
+HUNT = "trainer_hunt_play"
 ROUGH_OFFER = "trainer_rough_offer"
 ROUGH_REPLY = "trainer_rough_reply"
 ROUGH_HEARD = "trainer_rough_heard"
@@ -192,6 +193,7 @@ def stage(
     *,
     scene: dict[str, Any],
     counterpart: int | None = None,
+    actor_token: str | None = None,
 ) -> dict[str, Any]:
     girl = current_ref(state, target)
     installation = _installation(game, c, state, girl, phrase)
@@ -215,6 +217,12 @@ def stage(
             raise WorkflowError("Choose another original Girl currently in this actual scene")
         game.pilot_cast(c, state, scene, owners=(issuer, target, counterpart))
         nominated = current_ref(state, counterpart).model_dump(mode="json")
+    if (actor_token is not None) != (phrase == "hunt"):
+        raise WorkflowError("Hunt requires one actual target in this scene")
+    if actor_token is not None:
+        nominated = _hunt_target(game, c, state, scene, girl, issuer, actor_token).model_dump(
+            mode="json"
+        )
     return dict(
         phrase=phrase,
         order=order,
@@ -304,6 +312,15 @@ def offer_phrase(
     if original is None:
         return False
     _, saved = original
+    if saved["phrase"] == "hunt":
+        game.request(
+            c,
+            action,
+            int(saved["target"]["entity"]),
+            HUNT,
+            dict(source=saved, actor=saved["target"], target=saved["counterpart"]),
+        )
+        return True
     if saved["phrase"] in TARGETED:
         target = int(saved["counterpart"]["entity"])
         game.request(
@@ -322,6 +339,71 @@ def offer_phrase(
         dict(source=saved),
     )
     return True
+
+
+def _hunt_target(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    scene: dict[str, Any],
+    girl: ActorRef,
+    issuer: int,
+    token: str,
+) -> ActorRef:
+    from girlframe.engine.m3_battle import intact_assets
+    from girlframe.services.m3_battle import _cast, _visible
+
+    cast = _cast(game, c, state, int(scene["channel_id"]))
+    bound = profiles(c, game.store.campaign_id)
+    for role in cast.roles:
+        other = role.actor
+        if (
+            other.token == token
+            and other.kind in ("pilot", "gorgon", "external_pilot")
+            and role.controller != int(girl.entity)
+            and all(_visible(state, other, human) for human in (issuer, int(girl.entity)))
+        ):
+            view = resolve(state, other, bound, require_current_profile=False)
+            if (
+                view.controller == role.controller
+                and not view.offstage_source
+                and any(not x.concealed for x in intact_assets(state, other, bound))
+            ):
+                return other
+    raise WorkflowError("Choose an actual visible opposing body with an intact Asset for Hunt")
+
+
+def prove_hunt(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    parent: dict[str, Any],
+    request: dict[str, Any],
+) -> tuple[ActorRef, ActorRef]:
+    original = _original(game, c, state, parent)
+    body = json.loads(request["body_json"])
+    if (
+        original is None
+        or original[1]["phrase"] != "hunt"
+        or request["kind"] != HUNT
+        or original[1] != body.get("source")
+        or original[1]["target"] != body.get("actor")
+        or original[1]["counterpart"] != body.get("target")
+        or request["actor_id"] != original[1]["target"]["entity"]
+    ):
+        raise WorkflowError("Recover the original Hunt order and its exact actors")
+    saved = original[1]
+    girl, target = (
+        ActorRef.model_validate(saved["target"]),
+        ActorRef.model_validate(saved["counterpart"]),
+    )
+    scene = game.scene(c, parent["channel_id"])
+    if (
+        _hunt_target(game, c, state, scene, girl, int(saved["issuer"]["entity"]), target.token)
+        != target
+    ):
+        raise WorkflowError("Recover the original Hunt target in this actual scene")
+    return girl, target
 
 
 def prove_counterpart(

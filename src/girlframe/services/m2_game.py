@@ -2424,6 +2424,7 @@ class GameService:
                                 "secretary_response_play",
                                 "order_disobey",
                                 "trainer_flirt_play",
+                                "trainer_hunt_play",
                                 "am_prepare",
                                 "am_code_prepare",
                                 "beneath_response_play",
@@ -2616,6 +2617,10 @@ class GameService:
                     from girlframe.services.m3_trainer_phrases import validate_gentle
 
                     validate_gentle(self, c, state, parent, required, prepared)
+                if required["kind"] == "trainer_hunt_play" and (
+                    battle is None or battle.get("trainer_hunt_choice") != required["id"]
+                ):
+                    raise WorkflowError("Play the original Hunt's actual All Out Assault")
                 actions = t.m2["m2_actions"]
                 if c.execute(
                     sa.select(actions.c.id).where(
@@ -6147,6 +6152,7 @@ class GameService:
         dose_up: bool = False,
         conditioning_phrase: str | None = None,
         phrase_target: int | None = None,
+        phrase_actor: str | None = None,
         advocate_conversation: tuple[str, int, str] | None = None,
         dress_order: tuple[str, int, "Effect"] | None = None,
     ) -> dict[str, Any]:
@@ -6156,6 +6162,8 @@ class GameService:
 
         if phrase_target is not None and conditioning_phrase not in TARGETED:
             raise WorkflowError("Only a targeted Conditioning Phrase nominates another Girl")
+        if phrase_actor is not None and conditioning_phrase != "hunt":
+            raise WorkflowError("Only Hunt uses an opposing battlefield target")
         if advocate_conversation is not None and (dose_up or conditioning_phrase is not None):
             raise WorkflowError("Choose one source for this direct order")
         if dress_order is not None and (dose_up or conditioning_phrase or advocate_conversation):
@@ -6269,6 +6277,7 @@ class GameService:
                     order_event,
                     scene=scene,
                     counterpart=phrase_target,
+                    actor_token=phrase_actor,
                 )
                 text_for_target = PHRASE_LABELS[conditioning_phrase] + ". " + text
             else:
@@ -6417,6 +6426,7 @@ class GameService:
                 | ({"dose_up": True} if dose_up else {})
                 | ({"conditioning_phrase": conditioning_phrase} if conditioning_phrase else {})
                 | ({"phrase_target": phrase_target} if phrase_target is not None else {})
+                | ({"phrase_actor": phrase_actor} if phrase_actor is not None else {})
                 | (
                     {"advocate_conversation": advocate_conversation}
                     if advocate_conversation
@@ -7081,6 +7091,19 @@ class GameService:
                 from girlframe.services.m3_trainer_phrases import prove_counterpart
 
                 prove_counterpart(self, c, load_state(c, self.store.campaign_id), action, dict(row))
+            if row["kind"] == "trainer_hunt_play":
+                from girlframe.services.m3_trainer_phrases import prove_hunt
+
+                actor, target = prove_hunt(
+                    self, c, load_state(c, self.store.campaign_id), action, dict(row)
+                )
+                return dict(row) | dict(
+                    body=dict(
+                        actor=actor.model_dump(mode="json"), target=target.model_dump(mode="json")
+                    ),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                )
             from girlframe.services.m3_trainer_phrases import RESPONSE_CHOICES as TRAINER_CHOICES
 
             if row["kind"] in TRAINER_CHOICES:

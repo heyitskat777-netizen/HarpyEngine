@@ -1273,7 +1273,13 @@ class ChoiceEngine:
             if not self.game.pending(c, action["id"]):
                 self.finish(c, state, action)
             return
-        if kind in ("escape_play", "order_disobey", "beneath_response_play", "trainer_flirt_play"):
+        if kind in (
+            "escape_play",
+            "order_disobey",
+            "beneath_response_play",
+            "trainer_flirt_play",
+            "trainer_hunt_play",
+        ):
             raise WorkflowError(
                 "Start the required response Play from its wizard; a text answer cannot replace it."
             )
@@ -2164,10 +2170,13 @@ class ChoiceEngine:
                     "beneath_defeat",
                     "required_defeat",
                     "trainer_flirt_play",
+                    "trainer_hunt_play",
                 )
             ]
             require(len(requests) == 1, "The parent response linkage changed.")
-            if requests[0]["kind"] == "trainer_flirt_play" and not action["data"].get("receipt"):
+            if requests[0]["kind"] in ("trainer_flirt_play", "trainer_hunt_play") and not action[
+                "data"
+            ].get("receipt"):
                 return
             table = t.m2["m2_choices"]
             c.execute(

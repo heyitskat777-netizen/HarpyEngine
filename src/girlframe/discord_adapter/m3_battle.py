@@ -167,7 +167,8 @@ async def open_declaration(
                 "play",
                 "Choose your Play",
                 (("all_out_assault", "Required All Out Assault"),)
-                if parent and parent["kind"] in ("red_queen_child", "princess_sex_child")
+                if parent
+                and parent["kind"] in ("red_queen_child", "princess_sex_child", "trainer_hunt_play")
                 else (
                     ("all_out_assault", "All Out Assault"),
                     ("go_for_the_core", "Go For the Core"),

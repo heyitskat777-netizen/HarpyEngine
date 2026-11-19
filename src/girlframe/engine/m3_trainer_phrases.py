@@ -7,13 +7,14 @@ from girlframe.engine.m3_actor_state import ActorRef, Model
 if TYPE_CHECKING:
     from girlframe.engine.m2 import GameState
 
-Phrase = Literal["speak", "sit", "play_gentle", "play_rough", "heel"]
+Phrase = Literal["speak", "sit", "play_gentle", "play_rough", "heel", "hunt"]
 PHRASES: tuple[tuple[Phrase, str], ...] = (
     ("speak", "Speak"),
     ("sit", "Sit"),
     ("play_gentle", "Play Gentle"),
     ("play_rough", "Play Rough"),
     ("heel", "Heel"),
+    ("hunt", "Hunt"),
 )
 PHRASE_LABELS: dict[str, str] = dict(PHRASES)
 TARGETED = frozenset(("play_gentle", "play_rough"))
