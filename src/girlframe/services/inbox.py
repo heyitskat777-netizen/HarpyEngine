@@ -4115,6 +4115,27 @@ class InboxService:
                 )
             from girlframe.services.m3_npc_care import NpcCareService
             from girlframe.services.m3_parasite_excision import ExcisionService
+            from girlframe.services.m3_sniff_out import SniffOutService
+
+            for request in SniffOutService(self.store).tasks(connection, viewer, canon):
+                items.append(
+                    InboxItem(
+                        "sniff-out:" + request["id"],
+                        "sniff_out",
+                        request["id"],
+                        request["revision"],
+                        "plays",
+                        request["label"],
+                        "Original investigator and human GM",
+                        "pending" if request["pending"] else "established",
+                        request["pending"],
+                        False,
+                        "Resolve the original search and its selected conditions.",
+                        "The concealed identity stays private until an actual discovery.",
+                        "Open search",
+                        task="m3_sniff_out",
+                    )
+                )
 
             for request in NpcCareService(self.store).tasks(connection, viewer, canon):
                 items.append(

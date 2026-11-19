@@ -22052,14 +22052,31 @@
         "heading": "Sniff You Out"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The human GM seals the actual hidden Dopplegänger and its guise in a scene with an original Girl investigating that lead.",
+        "actor_type": "Actual original Girl, original human GM and original concealed Gorgon",
+        "pre_roll_sources": ["Original scene and sealed known body and guise", "Original Girl's own available Heat"],
+        "roll_kind": "2d6",
+        "allowed_modifiers": ["Owned Heat"],
+        "tier_options": {
+          "mid": ["The original Girl can volunteer herself as bait before private discovery."],
+          "high": ["Save the original roll for two printed conditions including at least one disruptive condition."],
+          "low": ["Save the original roll for three printed conditions."]
+        },
+        "choice_ownership": "The original Girl spends actual Heat and chooses her own use as bait. The actual human GM verifies the original encounter.",
+        "target_policy": "Original living same-square hidden Dopplegänger and its sealed guise. Only the original Girl and human GM may view the discovery.",
+        "post_roll_effects": ["Record the actual scoped discovery without a global map reveal."],
+        "mandatory_followups": ["Save the actual bait and require participated encounter evidence before disclosing the guise."],
+        "handler_or_gm_intervention": "The human GM supplies and verifies the sealed source. Other printed choices and wider reveal paths remain open.",
+        "test_fixture_ids": ["tests/rules/test_sniff_out.py"]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_sniff_out.py::test_sniff_out_reveals_only_the_original_guise_after_owned_bait"],
       "m2_play_id": null,
       "module": "core"
     },

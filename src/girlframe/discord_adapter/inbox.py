@@ -2076,6 +2076,11 @@ class InboxView(discord.ui.View):
             await open_enforcer_task(
                 interaction, EnforcerService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_sniff_out":
+            from girlframe.discord_adapter.m3_sniff_out import open_search
+            from girlframe.services.m3_sniff_out import SniffOutService
+
+            await open_search(interaction, SniffOutService(self.service.store), item.identity)
         elif item.task == "m3_npc_care":
             from girlframe.discord_adapter.m3_npc_care import open_care
             from girlframe.services.m3_npc_care import NpcCareService

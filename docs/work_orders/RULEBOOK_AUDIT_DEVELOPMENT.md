@@ -2309,6 +2309,23 @@ for either move. The current scoped ruling uses one actual Asset
 per performed offer.
 [Doctor p. 188 and Mechanic p. 189](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=190) · [Native cases](../../tests/rules/test_npc_care.py)
 
+### Sniff You Out and the original Girl serving as bait
+
+Base `43f4668f2ae4828ab3482f59de87c79fdd73ae8b`. The human GM
+seals an actual concealed Dopplegänger and a real guise under
+GM control in the original Girl’s scene. Her private Inbox
+shows only the lead and her owned Heat roll. On a middle
+roll she can make herself bait. The later GM confirmation
+shares the actual guise only with the original investigator.
+The underlying Gorgon remains hidden on the map.
+
+**One focused case passed in 5.07 seconds**, including actual
+Heat and dice, exact command replay, restart and source privacy
+before and after discovery. Other choices, the higher and
+lower tier combinations, and a global physical reveal remain
+open. Their original receipts stay pending.
+[Dopplegänger p. 168](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=170) · [Native case](../../tests/rules/test_sniff_out.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab
