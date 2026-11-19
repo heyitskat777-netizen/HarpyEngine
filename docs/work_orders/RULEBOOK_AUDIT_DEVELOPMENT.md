@@ -37,6 +37,21 @@ One focused case passed in 5.74 seconds using
 with `PYTHONPATH="$PWD/src"`.
 [PANDORA p. 67](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=69)
 
+### JANUS Universal Plug and a known original NPC
+
+Base `3de3631`. The battery picker and ordinary contact accept an actual
+known scene actor. The registered attached Core keeps its existing access.
+A concealed NPC in the same cast is outside both the picker and direct
+ordinary contact. A known ordinary NPC uses their actual established
+physical body, their controller's consent, and the original judge's contact
+review. The optional 8+ Tag applies to that NPC's own sheet.
+Three cases passed in 9.95 seconds using
+`python -m pytest -q --tb=short tests/rules/test_janus_requisitions.py tests/rules/test_frame_control.py -k 'universal_plug or unexposed_core'`.
+The optional other-body contact check passed in 2.92 seconds using
+`python -m pytest -q --tb=short tests/rules/test_frame_control.py -k optional_other_body`.
+Both commands used `PYTHONPATH="$PWD/src"`.
+[Universal Plug p. 68](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=70) · [Cases](../../tests/rules/test_janus_requisitions.py)
+
 ### Princess NPC Orders
 
 Base `4a827d5a992da65d0b71ac9f1b8badbc2745a3b8`. The owner's confirmed
