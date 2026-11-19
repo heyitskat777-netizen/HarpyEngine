@@ -117,7 +117,7 @@ class HandlerHistory(discord.ui.View):
         draft = Draft.model_validate_json(json.dumps(data["draft"]))
         profile = data["playbook_profile"]
         raw_pages = [
-            "Playbook: " + str(draft.playbook or "Unchosen") + "\nName: " + draft.name,
+            "Playbook: " + str(data["playbook"] or "Unchosen") + "\nName: " + draft.name,
             *(
                 ["Voice\n" + profile["voice"] + "\n\nWhen to step in\n" + profile["initiative"]]
                 if profile

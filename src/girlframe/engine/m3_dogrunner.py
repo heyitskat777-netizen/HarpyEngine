@@ -24,7 +24,7 @@ def owners(state: GameState) -> tuple[int, ...] | None:
     from girlframe.engine.m3_intracadre_marriage import status_groups
 
     persona = state.handler_persona
-    if persona is None or persona.owner != state.handler or persona.draft.playbook != "Dogrunner":
+    if persona is None or persona.owner != state.handler or persona.playbook != "Dogrunner":
         return None
     groups = status_groups(state)
     ace = groups[0] if groups else ()

@@ -27,7 +27,7 @@ def observe_births(
     game: GameService, c: Connection, before: GameState, state: GameState, event: str
 ) -> None:
     persona = state.handler_persona
-    if persona is None or persona.draft.playbook != "Frantic":
+    if persona is None or persona.playbook != "Frantic":
         return
     already = {x.id for x in before.handler_tags}
     tags = [x for x in state.handler_tags if x.id not in already]

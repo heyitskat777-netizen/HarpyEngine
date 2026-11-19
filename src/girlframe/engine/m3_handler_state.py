@@ -171,6 +171,14 @@ class Conditioning(Model):
     source_event: str
 
 
+class BookChange(Model):
+    id: str
+    award: str
+    event: str
+    playbook: Playbook
+    retained: str
+
+
 class HandlerPersona(Model):
     id: str = Field(min_length=1)
     owner: Snowflake
@@ -179,3 +187,8 @@ class HandlerPersona(Model):
     source_event: str = Field(min_length=1)
     conditioning: tuple[Conditioning, ...] = ()
     sticky_dogs: tuple[ActorRef, ...] = ()
+    book_change: BookChange | None = Field(default=None, exclude_if=lambda value: value is None)
+
+    @property
+    def playbook(self) -> Playbook | None:
+        return self.book_change.playbook if self.book_change else self.draft.playbook

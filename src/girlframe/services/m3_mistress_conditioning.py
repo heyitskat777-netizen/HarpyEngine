@@ -30,7 +30,7 @@ def _source(
     if (
         handler is None
         or persona is None
-        or persona.draft.playbook != "Mistress"
+        or persona.playbook != "Mistress"
         or action["data"].get("play") != "disobey_orders"
         or not order_id
         or int(handler.entity) not in action["data"]["participants"]

@@ -47,7 +47,7 @@ def active_book(
 ) -> tuple[ActorRef, int] | None:
     persona = state.handler_persona
     handler = active_handler(state)
-    if persona is None or persona.draft.playbook != book or handler is None:
+    if persona is None or persona.playbook != book or handler is None:
         return None
     setup = HandlerService(game.store)
     if (
@@ -57,6 +57,12 @@ def active_book(
     ):
         return None
     events = t.events
+    change = persona.book_change
+    if change is not None:
+        from girlframe.services.m3_handler_book_swap import change_sequence
+
+        sequence = change_sequence(game, c, handler, change)
+        return (handler, sequence) if sequence is not None else None
     activation = c.scalar(
         sa.select(events.c.seq).where(
             events.c.campaign_id == game.store.campaign_id,

@@ -128,6 +128,7 @@ async def open_advancement(
             "successor": "Successor",
             "last-resort": "Last / Resort",
             "take-a-play": "a borrowed Handler Play",
+            "swap-playbook": "a Handler playbook change",
         }.get(data["acquired_rule"].rsplit(".", 1)[-1], "Supply Drop")
         await reply(
             interaction,
@@ -548,6 +549,12 @@ class AcquireMore(discord.ui.Button[NativeForm]):
                     current, BorrowedHandlerService(self.service.store), self.identity
                 )
                 return
+            if values["advancement"][0] == "swap":
+                from girlframe.discord_adapter.m3_handler_book_swap import open_swap
+                from girlframe.services.m3_handler_book_swap import HandlerBookSwapService
+
+                await open_swap(current, HandlerBookSwapService(self.service.store), self.identity)
+                return
             if values["advancement"][0] == "opportunity":
                 from girlframe.discord_adapter.m3_promotional_opportunity import open_opportunity
                 from girlframe.services.m3_promotional_opportunity import (
@@ -586,6 +593,7 @@ class AcquireMore(discord.ui.Button[NativeForm]):
                         ("successor", "Successor"),
                         ("last_resort", "Last / Resort"),
                         ("borrow", "Take a Play from a different book"),
+                        ("swap", "Swap Handler playbook"),
                     ),
                 )
             ],

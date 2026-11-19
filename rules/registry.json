@@ -20076,6 +20076,34 @@
       "module": "core"
     },
     {
+      "id": "handler-advancement.handler-advancement.swap-playbook",
+      "title": "Swap your Handler Playbook, keeping one advancement or Play",
+      "scope": "handler-advancement",
+      "kind": "mechanic",
+      "source": {
+        "document": "rulebook",
+        "pdf_page": 153,
+        "printed_page": 151,
+        "heading": "Swap your Handler Playbook, keeping 1 advancement or play"
+      },
+      "required": true,
+      "implementation": "subset",
+      "source_audit": "inventoried",
+      "independent_review": "pending",
+      "reviewer": null,
+      "review_reference": null,
+      "contract": null,
+      "dependencies": [
+        "source.handler-advancement-triggers",
+        "handler-advancement.handler-advancement.take-a-play"
+      ],
+      "test_evidence": [
+        "tests/rules/test_handler_book_swap.py::test_native_book_swap_retains_original_play_and_unlocks_actual_new_play"
+      ],
+      "m2_play_id": null,
+      "module": "core"
+    },
+    {
       "id": "handler-advancement.handler-advancement.successor",
       "title": "Successor",
       "scope": "handler-advancement",

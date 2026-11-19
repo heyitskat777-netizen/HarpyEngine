@@ -252,6 +252,9 @@ class HandlerCreationService:
             raise WorkflowError("Only the current appointed Handler can begin creation.")
         state = load_state(c, self.store.campaign_id)
         draft = saved.draft if saved else Draft()
+        persona = state.handler_persona
+        active = persona if persona and saved and persona.id == saved.persona_id else None
+        playbook = active.playbook if active else draft.playbook
         pilots = []
         if appointment is not None:
             for uid in state.order:
@@ -313,9 +316,8 @@ class HandlerCreationService:
             and (saved is None or saved.appointment == appointment)
             and state.handler_persona is None,
             draft=draft.model_dump(mode="json"),
-            playbook_profile=PROFILES[draft.playbook].model_dump(mode="json")
-            if draft.playbook
-            else None,
+            playbook=playbook,
+            playbook_profile=PROFILES[playbook].model_dump(mode="json") if playbook else None,
             missing=list(draft.missing)
             + [
                 "NPC relationship history: " + x["name"]

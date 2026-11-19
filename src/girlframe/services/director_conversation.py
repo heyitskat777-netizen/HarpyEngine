@@ -119,7 +119,7 @@ class DirectorConversationService:
                 if self.handler_mode == "reviewed"
                 else None
             )
-            playbook = persona.draft.playbook if persona else None
+            playbook = persona.playbook if persona else None
             if source.fictional_channel == "private":
                 # Scene membership is OOC access, not in-fiction hearing. Never
                 # expose the private narration as the Handler's current question.

@@ -1479,8 +1479,24 @@ audience, Status effect and real Tag when the Girl becomes Dog. The
 purchase preserves the original Handler book and its passive entitlements.
 Other borrowed Plays remain open.
 
-The selected regression passed **73 tests in 92.32 seconds** during
-implementation. The focused route verifies a real ordinary award,
+The selected regression passed **73 tests in 102.36 seconds** at
+commit `5bf839f82bfab7daf023d56458c6f32dfa78d9d6`. The focused route verifies a real ordinary award,
 wrong audience, passive selection rejection, retry, restart and a
 stale effect application.
 [Rulebook p. 151](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=153) · [Tests](../../tests/rules/test_handler_borrowed.py)
+
+### Handler playbook change and retention
+
+Base `5bf839f82bfab7daf023d56458c6f32dfa78d9d6`. An original Scientist
+can independently earn and spend a second ordinary advancement to
+become Frantic while retaining an already acquired Dress Them Down.
+The persona identity, original draft, character sheets and ranks retain
+their sources. The native sheet and Director profile use the active
+playbook. A real Break Down roll verifies the new entitlement. Other
+source and destination books, retained advancements and previously
+installed Project steps still need reconciliation.
+
+The selected regression passed **73 tests in 105.18 seconds**, including
+wrong owner, safety pause, stale choice, retry and restart in the native
+Inbox path. Scoped type checks passed.
+[Rulebook p. 151](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=153) · [Tests](../../tests/rules/test_handler_book_swap.py)

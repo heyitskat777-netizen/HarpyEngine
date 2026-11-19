@@ -35,6 +35,9 @@ def owned(
     if len(matching) != 1:
         raise WorkflowError("Recover the original Handler's one acquired copy of this Play")
     value = matching[0]
+    if state.handler_persona and state.handler_persona.book_change:
+        if state.handler_persona.book_change.retained != value.id:
+            return False
     birth = _history(c, game, value.event)
     payment = next((row for row in advancements.awards(birth) if row.id == value.award), None)
     audit = c.execute(
@@ -47,7 +50,7 @@ def owned(
         value not in rules.acquisitions(birth)
         or active_handler(birth) != handler
         or birth.handler_persona is None
-        or birth.handler_persona.draft.playbook == value.book
+        or birth.handler_persona.playbook == value.book
         or payment is None
         or payment.phase != "spent"
         or payment.acquired_rule != rules.RULE
@@ -91,7 +94,7 @@ class BorrowedHandlerService:
                 or play != DRESS_RULE
                 or not book_rule_available(self.game, play)
                 or state.handler_persona is None
-                or state.handler_persona.draft.playbook == "Dogrunner"
+                or state.handler_persona.playbook == "Dogrunner"
                 or owned(self.game, c, state, handler, play)
                 or not 1 <= len(account.strip()) <= 1200
             ):

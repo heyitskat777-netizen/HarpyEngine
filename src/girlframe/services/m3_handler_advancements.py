@@ -246,6 +246,9 @@ class HandlerAdvancementService:
                     from girlframe.engine.m3_handler_borrowed import acquisitions as borrowed_plays
 
                     receipts = borrowed_plays(spent)
+                elif value.acquired_rule == "handler-advancement.handler-advancement.swap-playbook":
+                    persona = spent.handler_persona
+                    receipts = (persona.book_change,) if persona and persona.book_change else ()
                 else:
                     from girlframe.engine.m3_supply_drop import (
                         acquisitions as drop_acquisitions,
