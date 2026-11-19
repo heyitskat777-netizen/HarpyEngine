@@ -15,6 +15,7 @@ class Result(Model):
     no_heat: bool
     prompt: str | None = None
     scene_choice: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    room_account: str | None = Field(default=None, exclude_if=lambda value: value is None)
     chosen_event: str | None = None
     completed: str | None = None
     erased_identity: str | None = None

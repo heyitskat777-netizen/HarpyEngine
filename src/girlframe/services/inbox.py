@@ -4587,6 +4587,7 @@ class InboxService:
                             "consent": "Confirm the original narrated capture.",
                             "roll": "Roll Captured! with your actual permitted Heat.",
                             "mid": "Set your original fighting-chance scene.",
+                            "room_review": "Play your character in the proposed room scene.",
                             "high_scene": "Set an actual punishment scene at the Rebel base.",
                             "erase": "Choose your exact original Identity to erase.",
                             "low_review": "The original low awaits the Ancillary consequence.",

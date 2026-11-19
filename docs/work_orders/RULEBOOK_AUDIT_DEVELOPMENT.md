@@ -3130,11 +3130,22 @@ The item keeps that source for later custody checks. The scene clears the
 capture's own Helplessness while retaining other sources, current custody,
 and the original parked Frame. The shiv is a held object. The player
 describes the incoming meal and the Girl's response in the scene.
-The separate room and radio branches still need implementation.
 One focused test passed in 5.49 seconds after exercising the native Inbox,
 wrong owner, replay after reopen, saved dice and actual item provenance.
 The command was `python -m pytest -q --tb=short tests/rules/test_captured.py -k cell_scene`
 with `PYTHONPATH="$PWD/src"`.
+
+The room scene, based on `c294d6984630417799ee297d6636fe7d6792437f`,
+lets the original Girl frame the scene with the original Rebel. Only the
+Rebel's current original controller receives the proposal and authors the
+Rebel's part. Returning the proposal reopens the same saved Girl result.
+Confirming releases the capture's Helplessness and passes the response to
+the original Girl. Custody continues. The radio and Defeat-produced
+capture branches still need implementation.
+One focused synthetic case passed in 8.37 seconds using
+`python -m pytest -q --tb=short tests/rules/test_captured.py -k captured_room`
+with `PYTHONPATH="$PWD/src"`. It exercised the private Inbox, wrong owner,
+returning the choice, reopening and committing the final effect.
 
 ### Captured! low and the optional Ancillary conversion
 

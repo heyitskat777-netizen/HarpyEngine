@@ -32,6 +32,7 @@ from girlframe.services.read_only_bot import GuildViewer
 MID = {
     "escape": "Set a scene outside the captured room after getting free",
     "cell": "Set a cell scene with a shiv and incoming meal",
+    "room": "Set a scene in the original Rebel’s room",
     "chance": "Set another actual fighting chance",
 }
 HIGH = {
@@ -158,6 +159,20 @@ class CapturedService:
             targets[role.actor.token] = girl
         return cast, actor, base.id, faction.id, targets
 
+    def _require_current_cast(
+        self, c: Connection, state: GameState, value: rules.Capture
+    ) -> None:
+        cast, captor, base, faction, targets = self._source(
+            c, state, value.channel, value.captor, held=bool(value.confirmed)
+        )
+        if (
+            cast.id != value.scene
+            or captor.controller != value.controller
+            or (base, faction) != (value.base, value.faction)
+            or value.girl.token not in targets
+        ):
+            raise WorkflowError("Recover the actual Rebel base and original capture")
+
     def menu(self, viewer: GuildViewer, channel: int, captor: ActorRef) -> dict[str, Any]:
         with self.store.engine.connect() as c:
             self._gate(c, viewer)
@@ -279,6 +294,8 @@ class CapturedService:
         if result is None or result.completed:
             return "roll" if owner else None
         if result.roll.result == "mid":
+            if result.scene_choice == "room":
+                return "room_review" if value.controller == viewer.user_id else None
             return "mid" if owner else None
         if result.roll.result == "high":
             if result.chosen_event:
@@ -310,6 +327,8 @@ class CapturedService:
         value, step = item
         if MedicalService(self.store)._handler(c) != (value.gm, value.appointment):
             raise WorkflowError("Recover the actual original capture facilitator")
+        if step == "room_review":
+            self._require_current_cast(c, state, value)
         history = t.m2["m2_state_history"]
         for event, suffix, author, snapshot in self._roots(value):
             if event is None:
@@ -342,7 +361,11 @@ class CapturedService:
         if current:
             first = current.model_copy(
                 update=dict(
-                    prompt=None, scene_choice=None, chosen_event=None, conversion_identity=None
+                    prompt=None,
+                    scene_choice=None,
+                    room_account=None,
+                    chosen_event=None,
+                    conversion_identity=None,
                 )
             )
             first = first.model_copy(update=dict(completed=None, erased_identity=None))
@@ -362,7 +385,16 @@ class CapturedService:
                 )
             if current.roll.result == "low":
                 yield current.chosen_event, "low_review", value.gm, value
-            if current.completed:
+            if current.scene_choice == "room":
+                scene = current.model_copy(update=dict(room_account=None, completed=None))
+                yield (
+                    current.chosen_event,
+                    "mid",
+                    int(value.girl.entity),
+                    value.model_copy(update=dict(rolls=(*value.rolls[:-1], scene))),
+                )
+                yield current.completed, "room_review", value.controller, value
+            elif current.completed:
                 kind = "erase" if current.roll.result == "high" else "mid"
                 yield current.completed, kind, int(value.girl.entity), value
 
@@ -393,7 +425,8 @@ class CapturedService:
                 account=value.account if step == "consent" else "",
                 heat=state.sheets[value.girl.entity].heat if step == "roll" else None,
                 no_heat=bool(current and current.completed and current.roll.result == "high"),
-                prompt=current.prompt if current and step == "erase" else None,
+                prompt=current.prompt if current and step in ("erase", "room_review") else None,
+                room_account=current.room_account if current and step == "roll" else None,
                 roll=current.roll.model_dump(mode="json") if current else None,
                 tier=current.roll.result if current else None,
                 slots={i.id: i.name for i in self._slots(state, value)} if step == "erase" else {},
@@ -455,16 +488,8 @@ class CapturedService:
                     event,
                 )
             require_scene_clear(self.game, c, value.channel)
-            cast, captor, base, faction, targets = self._source(
-                c, state, value.channel, value.captor, held=bool(value.confirmed)
-            )
-            if (
-                cast.id != value.scene
-                or captor.controller != value.controller
-                or (base, faction) != (value.base, value.faction)
-                or value.girl.token not in targets
-            ):
-                raise WorkflowError("Recover the actual Rebel base and original capture")
+            if step != "room_review":
+                self._require_current_cast(c, state, value)
             if step in ("low_review", "convert"):
                 return self._convert_step(
                     c,
@@ -576,7 +601,18 @@ class CapturedService:
             return state, value.model_copy(update=dict(rolls=(*value.rolls, result)))
         if current is None or heat is not None:
             raise WorkflowError("Recover the actual original Captured! roll")
-        if step == "mid" and choice in MID and account:
+        if step == "mid" and choice == "room" and account:
+            result = current.model_copy(
+                update=dict(scene_choice=choice, prompt=account, chosen_event=event)
+            )
+        elif step == "room_review" and choice == "confirm" and account:
+            rules.recover_capture_helplessness(state, value, event)
+            result = current.model_copy(update=dict(room_account=account, completed=event))
+        elif step == "room_review" and choice == "return" and not account:
+            result = current.model_copy(
+                update=dict(scene_choice=None, prompt=None, chosen_event=None)
+            )
+        elif step == "mid" and choice in MID and account:
             rules.recover_capture_helplessness(state, value, event)
             if choice == "escape":
                 self._custody(state, value, event, None, account)

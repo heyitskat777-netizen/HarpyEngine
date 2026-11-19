@@ -70,11 +70,26 @@ async def open_capture_choice(
             if data["no_heat"]
             else f"You have {data['heat']} Heat."
         )
+        if data["room_account"]:
+            text = clean(data["room_account"]) + "\n\n" + text
         fields = (
             [Field("heat", "Actual Heat to spend")]
             if not data["no_heat"]
             else [Field("zero", "Roll without Heat", (("roll", "Roll with zero Heat"),))]
         )
+    elif step == "room_review":
+        text = clean(data["prompt"])
+        fields = [
+            Field(
+                "choice",
+                "Your part in the room scene",
+                (
+                    ("confirm", "Confirm your presence and play your character"),
+                    ("return", "Return this scene choice to the Girl"),
+                ),
+            ),
+            Field("account", "Describe your part if you confirm", paragraph=True, required=False),
+        ]
     elif step in ("mid", "high_scene", "low_review"):
         text = "Choose and describe the original Captured! scene."
         choices = MID if step == "mid" else HIGH

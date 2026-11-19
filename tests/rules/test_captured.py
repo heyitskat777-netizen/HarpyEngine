@@ -181,6 +181,42 @@ def test_captured_cell_scene_grants_a_real_shiv_and_clears_only_capture_helpless
     assert shiv.holder == girl and shiv.weapon and shiv.source_event == receipt["event"]
 
 
+def test_captured_room_waits_for_the_original_rebel_to_play_their_part(ledger):
+    game, service, native, _, girl, captor, identity = begin_capture(ledger, (4, 5))
+    native(PLAYER, dict(heat="0"), 91540)
+    roll = records(state(game))[0].current.roll
+    proposed = "PRIVATE_ROOM: I am in the Rebel Handler’s room."
+    native(PLAYER, dict(choice=("room",), account=proposed), 91544)
+    held = state(game)
+    assert is_helpless(held, girl, captor) and not records(held)[0].current.completed
+    assert service.get(ADMIN, identity)["prompt"] == proposed
+    with pytest.raises(WorkflowError, match="unavailable"):
+        service.get(OTHER, identity)
+    with pytest.raises(WorkflowError, match="unavailable"):
+        service.act(
+            PLAYER,
+            "respond-for-captor",
+            identity,
+            held.revision,
+            "room_review",
+            choice="confirm",
+            account="A forged response",
+        )
+    native(ADMIN, dict(choice=("return",)), 91548)
+    original = records(state(game))[0].current
+    assert original.roll == roll and not original.chosen_event
+    assert service.get(PLAYER, identity)["step"] == "mid"
+    native(PLAYER, dict(choice=("room",), account=proposed), 91552)
+    ledger.engine.dispose()
+    response = "PRIVATE_RESPONSE: I drift off in the chair."
+    native(ADMIN, dict(choice=("confirm",), account=response), 91556)
+    after = state(game)
+    assert not is_helpless(after, girl, captor) and game.dice.calls == 1
+    assert records(after)[0].current.completed and records(after)[0].current.roll == roll
+    assert service.get(PLAYER, identity)["room_account"] == response
+    assert next(x for x in after.placements if x.actor == girl).custody == captor
+
+
 def test_captured_low_requires_optional_approval_and_continues_the_same_person(
     ledger, tmp_path, monkeypatch
 ):

@@ -25282,21 +25282,22 @@
         "roll_kind": "2d6",
         "allowed_modifiers": ["Owned Heat, except on the next roll after a completed high"],
         "tier_options": {
-          "mid": ["Set the escaped scene in the original square, the cell scene with an actual held shiv, or another fighting-chance scene. Each clears capture-imposed Helplessness."],
+          "mid": ["Set the escaped scene in the original square, the cell scene with a held shiv, the original Rebel’s room with their actual participation, or another fighting-chance scene. Each clears capture-imposed Helplessness."],
           "high": ["The facilitator selects a genuine punishment scene. Erase one exact eligible original Identity and block Heat on the next roll."],
           "low": ["Save the exact outcome pending actual Ancillary conversion."]
         },
         "choice_ownership": "The original Girl confirms her capture, owns her roll and mid scene, and selects the actual erased Identity. The original facilitator sets high scenes.",
         "target_policy": "Original captive incarnation and verified custody. Normal Go Off-Duty is unavailable during that capture.",
         "post_roll_effects": ["Preserve the original roll, source-only Helplessness, ownership and actual custody. No outside Frame is moved."],
-        "mandatory_followups": ["Low uses the separately gated original Ancillary conversion. The printed room and radio scenes and additional Defeat sources remain open."],
+        "mandatory_followups": ["The actual Rebel controller authors their room response. Low uses the separately gated original Ancillary conversion. The radio scene and additional Defeat sources remain open."],
         "handler_or_gm_intervention": "Human facilitator supplies the actual event and high scene. The software Director does not choose a character's response.",
         "test_fixture_ids": ["tests/rules/test_captured.py"]
       },
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_captured.py",
-        "tests/rules/test_captured.py::test_captured_cell_scene_grants_a_real_shiv_and_clears_only_capture_helplessness"
+        "tests/rules/test_captured.py::test_captured_cell_scene_grants_a_real_shiv_and_clears_only_capture_helplessness",
+        "tests/rules/test_captured.py::test_captured_room_waits_for_the_original_rebel_to_play_their_part"
       ],
       "m2_play_id": null,
       "module": "core"
