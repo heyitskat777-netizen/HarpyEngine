@@ -21,6 +21,7 @@ from girlframe.engine.m3_jackdaw import EFFECTS as JACKDAW_EFFECTS
 from girlframe.engine.m3_jackdaw import Range as JackdawRange
 from girlframe.engine.m3_mother_sprite import BirthPlan
 from girlframe.engine.m3_parasite import PLAYS as PARASITE_PLAYS
+from girlframe.engine.m3_parasite_infection import PLAY as infection_play
 from girlframe.engine.m3_sentinel_shell import PLAY as shell_play
 from girlframe.engine.m3_sentinel_shell import RELEASE as shell_release
 from girlframe.engine.m3_world_state import Cell, CorePlan
@@ -68,6 +69,7 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
             shell_play,
             shell_release,
             unreal_play,
+            infection_play,
         ):
             eligible = data["typed_targets"].get(actor["token"], {}).get(kind, ())
             targets = [x for x in targets if x["token"] in eligible]
@@ -79,6 +81,7 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
                 shell_play,
                 shell_release,
                 unreal_play,
+                infection_play,
                 *contact_plays,
                 *HALLUCINATIONS_PLAYS,
             )

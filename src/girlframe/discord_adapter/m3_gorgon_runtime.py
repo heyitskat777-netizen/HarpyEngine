@@ -25,6 +25,9 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
             interaction, GorgonDormantService(game.store, game), detail["work_id"]
         )
         return
+    if kind.startswith("infection_"):
+        await open_infection(interaction, game, data)
+        return
     if kind.startswith("unreal_"):
         await open_unreal(interaction, game, data)
         return
@@ -569,4 +572,92 @@ async def open_unreal(
         return "Your choice is saved. Any remaining consequence is in the Inbox."
 
     form = NativeForm(interaction.user.id, "Grow Unreal", message, fields, submit)
+    await reply(interaction, form.text(), form)
+
+
+async def open_infection(
+    interaction: discord.Interaction, game: GameService, data: dict[str, Any]
+) -> None:
+    from girlframe.services.m3_parasite_infection import LOSSES
+
+    detail = data["detail"]
+    kind = detail["kind"]
+    if kind == "infection_threshold":
+        from girlframe.discord_adapter.m3_void import open_void
+        from girlframe.services.m3_void import VoidService
+
+        await open_void(interaction, VoidService(game.store), detail["work"])
+        return
+    if kind == "infection_low_review":
+        await reply(
+            interaction,
+            "The original low roll is saved. Review the original sheet control privately. "
+            "The infection remains pending while that consequence is unresolved.",
+        )
+        return
+    fields: list[Field] = []
+    if kind == "infection_heat":
+        message = f"You have {detail['heat']} available Heat. Choose how much to spend."
+        fields.append(Field("heat", "Your Heat spend"))
+    elif kind == "infection_loss":
+        message = "Fight off the infection and record the small loss you chose for your Girl."
+        fields.extend(
+            (
+                Field("options", "The kind of loss", tuple(LOSSES.items())),
+                Field("account", "Describe your Girl's actual loss", paragraph=True),
+            )
+        )
+    elif kind == "infection_damage":
+        message = "Choose the actual Voided Asset damaged as the Parasite makes contact."
+        if detail["assets"]:
+            fields.append(
+                Field("options", "Your actual Voided Asset", tuple(detail["assets"].items()))
+            )
+        else:
+            message = "There is no eligible Voided Asset. Confirm that the infection cannot start."
+            fields.append(
+                Field(
+                    "no_connection",
+                    "Your actual situation",
+                    (("confirm", "No eligible Voided Asset"),),
+                )
+            )
+    elif kind == "infection_void":
+        if not detail["assets"]:
+            await reply(
+                interaction,
+                "There is no eligible Asset. The ordinary Void consequence stays pending.",
+            )
+            return
+        message = "The Parasite partly inhabits your Girl. Choose her ordinary Void gain."
+        fields.extend(
+            (
+                Field("options", "Your actual uncorrupted Asset", tuple(detail["assets"].items())),
+                Field("account", "Describe the change", paragraph=True),
+            )
+        )
+    else:
+        return
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        heat = values.get("heat", "").strip()
+        if kind == "infection_heat" and (
+            not heat.isascii() or not heat.isdecimal() or len(heat) > 9
+        ):
+            return "Enter a whole amount of your actual Heat."
+        await asyncio.to_thread(
+            game.respond,
+            viewer_from_interaction(current),
+            str(current.id),
+            data["id"],
+            data["revision"],
+            ChoiceAnswer(
+                number=int(heat) if kind == "infection_heat" else None,
+                text=values.get("account", ""),
+                options=tuple(values.get("options", ())),
+            ),
+        )
+        return "Your infection response is saved. Any remaining choice stays in your Inbox."
+
+    form = NativeForm(interaction.user.id, "Parasite Infect", message, fields, submit)
     await reply(interaction, form.text(), form)

@@ -22,6 +22,7 @@ from girlframe.engine.m3_gorgon_play_state import Declaration
 from girlframe.engine.m3_grow_unreal import PLAY as unreal_play
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_incubus_conditioning import PLAY as incubus_play
+from girlframe.engine.m3_parasite_infection import PLAY as infection_play
 from girlframe.engine.m3_world_state import Asset
 from girlframe.services import m3_gorgon_contact as contact
 from girlframe.services import m3_gorgon_frame_contact as frame_contact
@@ -143,6 +144,11 @@ def start(game: Any, c: Connection, state: GameState, action: dict[str, Any]) ->
             victims=people,
         )
         action["data"]["result"]["catatonia" if people else "audible_communication_blocked"] = True
+        return
+    if meta["kind"] == infection_play:
+        from girlframe.services.m3_parasite_infection import start as infect
+
+        infect(game, c, state, action)
         return
     if meta["kind"] == unreal_play:
         from girlframe.services.m3_grow_unreal import start as grow_unreal
@@ -456,6 +462,11 @@ def apply(
     meta, event = _meta(action), _event(action)
     body = json.loads(row["body_json"])
     kind = row["kind"].removeprefix("gorgon_")
+    if kind.startswith("infection_"):
+        from girlframe.services.m3_parasite_infection import apply as apply_infection
+
+        apply_infection(game, c, state, action, row, answer)
+        return
     if kind.startswith("unreal_"):
         from girlframe.services.m3_grow_unreal import apply as apply_unreal
 
@@ -813,6 +824,10 @@ def projection(
     body = json.loads(row["body_json"])
     kind = row["kind"].removeprefix("gorgon_")
     result: dict[str, Any] = dict(kind=kind, account=action["data"].get("context", ""))
+    if kind.startswith("infection_"):
+        from girlframe.services.m3_parasite_infection import project as project_infection
+
+        return project_infection(game, c, state, action, row)
     if kind.startswith("unreal_"):
         from girlframe.services.m3_grow_unreal import project as project_unreal
 
@@ -1042,6 +1057,10 @@ def synchronize(
     materialize_dormant(game, c, action, event)
     synchronize_damage(game, c, event)
     state = load_state(c, game.store.campaign_id)
+    if meta["kind"] == infection_play:
+        from girlframe.services.m3_parasite_infection import materialize as materialize_infection
+
+        materialize_infection(game, c, state, action, event, viewer, key)
     if meta["kind"] == unreal_play:
         from girlframe.services.m3_grow_unreal import materialize as materialize_unreal
 
@@ -1078,6 +1097,7 @@ def synchronize(
                     "gorgon_shell_threshold",
                     "gorgon_conditioning_threshold",
                     "gorgon_unreal_threshold",
+                    "gorgon_infection_threshold",
                 ):
                     c.execute(
                         choices.update()

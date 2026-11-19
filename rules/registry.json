@@ -22493,14 +22493,50 @@
         "heading": "Infect"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "A local living Parasite damages an actual Voided Asset to infect the original Girl.",
+        "actor_type": "Original Parasite and original affected Girl",
+        "pre_roll_sources": [
+          "Actual same-square source and target",
+          "Exact damage and its mandatory work",
+          "Original Girl's Heat"
+        ],
+        "roll_kind": "2d6",
+        "allowed_modifiers": [
+          "Owned Heat"
+        ],
+        "tier_options": {
+          "mid": [
+            "Fight off the infection and record an actual small loss chosen by the Girl."
+          ],
+          "high": [
+            "Apply ordinary Void and record the partial infestation and pending surgery."
+          ],
+          "low": [
+            "Save the exact roll and keep the private sheet-control consequence pending."
+          ]
+        },
+        "choice_ownership": "The Parasite initiates. The original Girl identifies the exact Voided Asset privately, spends Heat, owns her mid-tier loss, and describes her high-tier Void.",
+        "target_policy": "Living same-square original Girl in the actual scene with known occupancy. Other bodies' corruption is excluded from the source actor's target preview.",
+        "post_roll_effects": [
+          "Original loss and repelled Parasite or actual ordinary Void and persistent partial infestation."
+        ],
+        "mandatory_followups": [
+          "Resolve actual damage work before rolling.",
+          "Complete any ordinary Void threshold; retain the outstanding experimental excision requirement."
+        ],
+        "handler_or_gm_intervention": "Private human GM escalation preserves the low-tier result. Excision and sheet control remain open.",
+        "test_fixture_ids": [
+          "tests/rules/test_gorgon_runtime.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_gorgon_runtime.py::test_parasite_infect_damages_an_actual_voided_asset_before_the_owned_roll"],
       "m2_play_id": null,
       "module": "core"
     },

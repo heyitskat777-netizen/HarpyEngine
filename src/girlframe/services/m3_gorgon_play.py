@@ -17,6 +17,7 @@ from girlframe.engine import m3_incubus_conditioning as incubus
 from girlframe.engine import m3_jackdaw as jackdaw
 from girlframe.engine import m3_mother_sprite as mother_sprite
 from girlframe.engine import m3_parasite as parasite
+from girlframe.engine import m3_parasite_infection as infection
 from girlframe.engine import m3_sentinel_shell as shell
 from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, SceneCast
@@ -51,6 +52,7 @@ RULES: dict[str, str] = {
     incubus.PLAY: incubus.RULE,
     shell.RELEASE: shell.RULE,
     unreal.PLAY: unreal.RULE,
+    infection.PLAY: infection.RULE,
     "growth_adapt": growth.RULE,
     "growth_regrow": growth.RULE,
     "mother_sprite": mother_sprite.RULE,
@@ -62,7 +64,7 @@ RULES: dict[str, str] = {
 }
 
 
-PRIVATE_PLAYS = (*contact_plays, incubus.PLAY)
+PRIVATE_PLAYS = (*contact_plays, incubus.PLAY, infection.PLAY)
 
 
 class GorgonPlayService:
@@ -157,7 +159,9 @@ class GorgonPlayService:
                         label=actual.label,
                         source_sha256=actual.source_sha256,
                         owned=owned,
-                        assets=[asset.model_dump(mode="json") for asset in actual.assets],
+                        assets=[asset.model_dump(mode="json") for asset in actual.assets]
+                        if owned and role.actor.kind == "gorgon"
+                        else [],
                     )
                 )
             typed_targets: dict[str, dict[str, list[str]]] = {}
@@ -250,6 +254,13 @@ class GorgonPlayService:
                             for girl in visible.values()
                             if unreal.original_target(caster, girl)
                         ]
+                    if actor.alive and "parasite" in actor.types:
+                        # Do not use other bodies' actual corruption to discover targets.
+                        options[infection.PLAY] = [
+                            girl.ref.token
+                            for girl in visible.values()
+                            if infection.reachable(state, caster, girl)
+                        ]
                     typed_targets[token] = {
                         kind: targets for kind, targets in options.items() if targets
                     }
@@ -263,7 +274,8 @@ class GorgonPlayService:
                     kind in TAG_TYPES
                     or kind in hallucinations.PLAYS
                     or kind in contact_plays
-                    or kind in (shell.PLAY, shell.RELEASE, incubus.PLAY, unreal.PLAY)
+                    or kind
+                    in (shell.PLAY, shell.RELEASE, incubus.PLAY, unreal.PLAY, infection.PLAY)
                 ) and not any(kind in x for x in typed_targets.values()):
                     continue
                 if kind in parasite.PLAYS and not any(kind in x for x in parasite_choices.values()):
@@ -413,6 +425,10 @@ class GorgonPlayService:
                     or not unreal.original_target(actual, target)
                 ):
                     raise WorkflowError("Use an actual Growth Asset and an actual reachable Girl")
+                if declaration.kind == infection.PLAY and (
+                    "parasite" not in gorgon.types or not infection.reachable(state, actual, target)
+                ):
+                    raise WorkflowError("Use the actual local Parasite and original Girl")
                 if declaration.kind == incubus.PLAY and not any(
                     x.id == declaration.tag for x in incubus.available(state, actual, target)
                 ):
@@ -982,7 +998,14 @@ def prepare_response(
     source = parent["data"].get("gorgon_play")
     if not source or (
         source["kind"]
-        in (*hallucinations.PLAYS, frame_contact.PLAY, shell.PLAY, incubus.PLAY, unreal.PLAY)
+        in (
+            *hallucinations.PLAYS,
+            frame_contact.PLAY,
+            shell.PLAY,
+            incubus.PLAY,
+            unreal.PLAY,
+            infection.PLAY,
+        )
         and prepared.play == "keep_your_head"
         and prepared.source_work is not None
     ):

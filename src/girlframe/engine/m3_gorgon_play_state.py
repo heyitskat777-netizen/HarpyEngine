@@ -33,6 +33,7 @@ class Declaration(Model):
             "sentinel_release",
             "incubus_conditioning",
             "grow_unreal",
+            "parasite_infect",
             "parasite_detach",
         ]
         | TypeTag
@@ -76,6 +77,7 @@ class Declaration(Model):
             "sentinel_release",
             "incubus_conditioning",
             "grow_unreal",
+            "parasite_infect",
         ):
             if self.target is None or self.target_sha256 is None or self.target == self.actor:
                 raise ValueError("This Play needs its actual distinct target body and source")

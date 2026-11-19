@@ -2155,6 +2155,28 @@ within Voidspace remain open. The prior Incubus and related
 selection passed **105 tests in 273.30 seconds**.
 [Growth p. 173](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=175) · [Native cases](../../tests/rules/test_gorgon_runtime.py)
 
+### Parasite damages a Voided Asset and infects the original Girl
+
+Base `5b8784d2b4e964a13051c49d7f654e0f645f32ad`. The current slice uses
+the live mapped Parasite and the actual original Girl in their
+shared square and scene. The Girl identifies the actual Voided
+Asset privately. Battle damage must occur and its required work
+must resolve before Heat or dice. The declaration picker keeps
+other bodies' Asset details out of the source role's projection.
+
+Five focused synthetic cases passed in 18.65 seconds. The native
+private decision exercised no eligible connection, actual damage,
+a mid-tier loss the Girl authored, a high-tier infestation with an
+ordinary Void gain, and the high-tier path through actual private
+Keep Your Head and a resolved threshold. The low case preserved
+the exact owned roll and remained pending after acknowledgement
+was rejected. The tests covered other-scene-role access, stale
+choices, retries and restart.
+
+Native low-tier sheet control, excision, reach outside the shared
+square and Infiltrate Technology remain open at this checkpoint.
+[Parasite p. 174](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=176) · [Native cases](../../tests/rules/test_gorgon_runtime.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

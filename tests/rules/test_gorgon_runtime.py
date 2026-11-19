@@ -44,6 +44,7 @@ def candidate_source_gate(monkeypatch):
             "gorgon-type.growth.grow-unreal",
             "gorgon-type.doppleganger.doppleganger-type",
             "gorgon-type.parasite.parasite-type",
+            "gorgon-type.parasite.infect",
         }:
             return next(x for x in registry.entries if x.id == identity)
         return actual(registry, identity)
@@ -3572,3 +3573,168 @@ def test_grow_unreal_pays_original_asset_and_applies_owned_tier_choices(
         assert next(x for x in canon.world.gorgons if x.id == parent.id).cell == (2, 0)
     if "cockpit" in choices:
         assert record.frame_instance == canon.placements[0].frame_instance
+
+
+@pytest.mark.parametrize("tier", ("no_connection", "mid", "high", "high_threshold", "low"))
+def test_parasite_infect_damages_an_actual_voided_asset_before_the_owned_roll(ledger, tier):
+    import asyncio
+
+    from test_ledger import OTHER
+    from test_m2_game import Dice
+    from test_mission_ui import current
+    from test_privacy_game_delivery import PrivateGateway
+
+    from girlframe.discord_adapter.m2_ui import open_choice
+    from girlframe.engine.m2 import ChoiceAnswer, PlayInput
+    from girlframe.engine.m3_parasite_infection import get
+    from girlframe.services.m3_parasite_infection import DAMAGE, HEAT, LOSS, LOW_REVIEW, VOID
+    from girlframe.services.m3_void import VoidService
+    from girlframe.services.onboarding import WorkflowError
+
+    game, worker, _, _, original = gorgon_source(
+        ledger,
+        types=("parasite",),
+        target="2",
+        begin=False,
+    )
+    gateway = PrivateGateway()
+    game.dice = Dice((1, 2) if tier == "low" else (5, 5) if tier.startswith("high") else (3, 4))
+    with ledger.transaction() as c:
+        canon = state(game)
+        sheet = canon.sheets["2"]
+        sheet.heat = 2
+        connection = next(x for x in sheet.assets if x.family == "girl")
+        connection.void = tier != "no_connection"
+        frame = [x for x in sheet.assets if x.family == "frame"]
+        if tier == "high_threshold":
+            for x in frame[:-1]:
+                x.void = True
+        game.event(c, PLAYER.user_id, "synthetic-infection-connection", "synthetic.void", canon)
+    initial = state(game)
+    service = GorgonPlayService(game)
+    view = service.preview(ADMIN, 900)
+    people = {x["token"]: x for x in view["actors"]}
+    assert people[original.target.token]["assets"] == []
+    assert original.target.token in view["typed_targets"][original.actor.token]["parasite_infect"]
+    declared = Declaration(
+        kind="parasite_infect",
+        actor=original.actor,
+        target=original.target,
+        actor_sha256=people[original.actor.token]["source_sha256"],
+        target_sha256=people[original.target.token]["source_sha256"],
+        account="The Parasite reaches toward the original Girl.",
+        reach_confirmed=True,
+    )
+    parent = service.begin(ADMIN, "infect-actual-girl", 900, initial.revision, declared)[
+        "action_id"
+    ]
+    tick(worker, gateway, 5)
+    if not any(x["kind"] == DAMAGE for x in game.choices(PLAYER)):
+        game.roll(ADMIN, "advance-infection", parent)
+    assert game.dice.calls == 0
+    damage = next(x for x in game.choices(PLAYER) if x["kind"] == DAMAGE)
+    with pytest.raises(WorkflowError):
+        game.decision(OTHER, damage["id"])
+    with pytest.raises(WorkflowError, match="Voided Asset"):
+        answer(game, PLAYER, DAMAGE, options=("fake-asset",))
+
+    async def native_damage():
+        interaction = current(PLAYER.user_id, 87903)
+        await interaction.response.defer(ephemeral=True)
+        await open_choice(interaction, game, damage["id"])
+        form = interaction.edit_original_response.call_args.kwargs["view"]
+        if tier != "no_connection":
+            form.values["options"] = (connection.id,)
+        else:
+            form.values["no_connection"] = ("confirm",)
+        await form.confirm.callback(current(PLAYER.user_id, 87904))
+        assert form.completed
+
+    asyncio.run(native_damage())
+    if tier == "no_connection":
+        case = get(state(game), parent)
+        assert case.interrupted is not None and game.dice.calls == 0
+        assert game.inspect(PLAYER, parent)["state"] == "complete"
+        return
+    after_damage = state(game)
+    assert next(x for x in after_damage.sheets["2"].assets if x.id == connection.id).damaged
+    assert after_damage.sheets["2"].heat == 2 and game.dice.calls == 0
+    heat = next(x for x in game.choices(PLAYER) if x["kind"] == HEAT)
+    if tier == "mid":
+        ledger.safety(PLAYER, "pause-infection", ledger.status(PLAYER)["revision"], pause=True)
+        with pytest.raises(WorkflowError, match="SAFETY_PAUSED"):
+            game.respond(
+                PLAYER, "held-infection", heat["id"], heat["revision"], ChoiceAnswer(number=1)
+            )
+        assert game.dice.calls == 0
+        ledger.safety(PLAYER, "resume-infection", ledger.status(PLAYER)["revision"], pause=False)
+    with pytest.raises(WorkflowError):
+        game.respond(
+            PLAYER, "stale-infection", heat["id"], heat["revision"] - 1, ChoiceAnswer(number=1)
+        )
+    response = game.respond(
+        PLAYER, "owned-infection-roll", heat["id"], heat["revision"], ChoiceAnswer(number=1)
+    )
+    assert (
+        game.respond(
+            PLAYER, "owned-infection-roll", heat["id"], heat["revision"], ChoiceAnswer(number=1)
+        )
+        == response
+    )
+    ledger.engine.dispose()
+    assert game.dice.calls == 1 and state(game).sheets["2"].heat == 1
+    if tier == "mid":
+        answer(game, PLAYER, LOSS, options=("body",), text="A small piece of her outer ear.")
+        assert get(state(game), parent).loss == "body"
+    elif tier.startswith("high"):
+        selected = frame[-1].id
+        answer(game, PLAYER, VOID, options=(selected,), text="The alloy hums out of phase.")
+        case = get(state(game), parent)
+        assert case.void_asset == selected and case.surgery_required
+        assert next(x for x in state(game).sheets["2"].assets if x.id == selected).void
+        if tier == "high_threshold":
+            assert (
+                case.resolved is None
+                and game.inspect(PLAYER, parent)["state"] == "awaiting_choices"
+            )
+            work = case.void_work
+            assert VoidService(ledger).get(PLAYER, work)["stage"] == "resist_pending"
+            with pytest.raises(WorkflowError):
+                VoidService(ledger).get(OTHER, work)
+            game.dice.faces = (1, 1)
+            child = game.begin(
+                PLAYER,
+                "infection-resistance",
+                900,
+                state(game).sheets["2"].revision,
+                PlayInput(
+                    play="keep_your_head",
+                    heat=0,
+                    parent=parent,
+                    source_work=work,
+                    context="I resist the altered cockpit.",
+                    trigger_confirmed=True,
+                ),
+            )["action_id"]
+            tick(worker, gateway, 5)
+            for participant in (PLAYER, ADMIN):
+                answer(game, participant, "tag_window", options=("pass",))
+            answer(game, PLAYER, "actor_keep", options=("in_control",))
+            answer(game, ADMIN, "handler_keep", flag=True, text="The threshold was resisted.")
+            tick(worker, gateway, 5)
+            assert game.inspect(PLAYER, child)["state"] == "complete"
+            assert VoidService(ledger).get(PLAYER, work)["stage"] == "prevented"
+    else:
+        reviewed = next(x for x in game.choices(ADMIN) if x["kind"] == LOW_REVIEW)
+        assert game.decision(ADMIN, reviewed["id"])["detail"]["roll"]["faces"] == [1, 2]
+        with pytest.raises(WorkflowError, match="awaits private human review"):
+            answer(game, ADMIN, LOW_REVIEW, text="Acknowledged.")
+        assert get(state(game), parent).resolved is None
+        assert game.inspect(PLAYER, parent)["state"] == "awaiting_choices"
+    if tier != "low":
+        assert get(state(game), parent).resolved is not None
+        assert game.inspect(PLAYER, parent)["state"] == "complete"
+    with pytest.raises(WorkflowError, match="original source-table"):
+        game.inspect(OTHER, parent)
+    tick(worker, gateway, 5)
+    assert {uid for uid, _ in gateway.private} <= {ADMIN.user_id, PLAYER.user_id}
