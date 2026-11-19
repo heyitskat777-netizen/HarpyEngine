@@ -15,6 +15,7 @@ from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_journalist import Job
 from girlframe.services.m3_cast import CastService
 from girlframe.services.m3_conditioning import ConditioningService
+from girlframe.services.m3_harpy_creation import HarpyCreationService
 from girlframe.services.onboarding import WorkflowError
 
 NPC_REQUEST_LABELS: dict[Job, str] = {
@@ -79,6 +80,15 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
         options.append((key, "Offer " + role["label"][:55] + " for Handler-rule responses"))
         actions[key] = ("adjudicate", ActorRef.model_validate(role["ref"]))
     conditioning = ConditioningService(service.game)
+    harpy_creation = HarpyCreationService(service.game)
+    if data["own_facilitator"]:
+        try:
+            invitation = await asyncio.to_thread(harpy_creation.menu, viewer)
+        except WorkflowError:
+            pass
+        else:
+            if invitation["members"]:
+                options.append(("invite-harpy", "Invite a new Harpy controller"))
     try:
         if conditioning.enabled():
             await asyncio.to_thread(conditioning.menu, viewer, channel)
@@ -101,6 +111,11 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
         return role
 
     async def choose(current: discord.Interaction, token: str) -> None:
+        if token == "invite-harpy":
+            from girlframe.discord_adapter.m3_harpy_creation import open_invitation
+
+            await open_invitation(current, harpy_creation)
+            return
         if token == "conditioning":
             from girlframe.discord_adapter.m3_conditioning import open_invite
 

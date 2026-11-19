@@ -2593,9 +2593,29 @@ class InboxService:
             from girlframe.services.m3_careers import CareerService
             from girlframe.services.m3_handler_creation import HandlerCreationService
             from girlframe.services.m3_harpy_advancements import HarpyAdvancementService
+            from girlframe.services.m3_harpy_creation import HarpyCreationService
             from girlframe.services.m3_harpy_defeat import HarpyDefeatService
             from girlframe.services.m3_harpy_physical import HarpyPhysicalService
 
+            for harpy_offer in HarpyCreationService(frame_game).tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "harpy-creation:" + harpy_offer.actor.entity,
+                        "harpy_creation",
+                        harpy_offer.actor.entity,
+                        canon.revision,
+                        "playbook",
+                        "New Harpy invitation",
+                        "Original invited controller",
+                        "pending",
+                        True,
+                        False,
+                        "Choose your original starting Assets or decline.",
+                        "",
+                        "Review invitation",
+                        task="m3_harpy_creation",
+                    )
+                )
             for advancing, available in HarpyAdvancementService(self.store).tasks(
                 connection, canon, viewer
             ):

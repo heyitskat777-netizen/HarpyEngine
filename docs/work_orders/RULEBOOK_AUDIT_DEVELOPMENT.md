@@ -1887,6 +1887,25 @@ starting Bond, Frame classification and registry selection passed
 existing requirements.
 [Rulebook pp. 29–76](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=31) · [Official sheets](../../../attachments/328941e7-a37f-49b6-979a-5067cfd6d48c/GIRL_FRAME_official_sheets.pdf#page=6) · [Creation evidence](../../tests/test_creation_review.py)
 
+### New native Harpy creation
+
+Base `3c1508be9cc71d25d5137b65273d2cc0f5916084`. The original
+human GM can invite a current campaign controller through the
+native Cast controls. Only that invitee can accept or decline
+in their private Inbox. Accepting creates a separate Harpy with
+three described Girl Assets and four described Frame Assets.
+All 23 catalogue labels match the printed source. The existing
+factual runtime review stays in the path to an independent Play.
+Existing imported and converted bodies retain their own Assets.
+
+**Both native cases passed in 11.25 seconds**, covering accept,
+decline, wrong controller, unapproved gate, invalid map square,
+stale choice, pause, retry, restart and private world visibility.
+The accepted original role completed an actual Keep Your Head
+after the runtime review, with the other's existing Girl sheets
+preserved. Ruff and scoped mypy passed.
+[Harpy p. 176](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=178) · [Native cases](../../tests/rules/test_harpy_creation.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

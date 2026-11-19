@@ -1498,6 +1498,16 @@ class InboxView(discord.ui.View):
                 item.task.split(":", 1)[1],
                 item.identity,
             )
+        elif item.task == "m3_harpy_creation":
+            from girlframe.discord_adapter.m3_harpy_creation import (
+                open_creation as open_harpy_creation,
+            )
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_harpy_creation import HarpyCreationService
+
+            await open_harpy_creation(
+                interaction, HarpyCreationService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_harpy_advancement":
             from girlframe.discord_adapter.m3_harpy_advancements import (
                 open_advancement as open_harpy_advancement,
