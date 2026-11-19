@@ -31,9 +31,15 @@ async def open_order(
     )
     if not data["issuers"]:
         await reply(
-            interaction, "No actual NPC you control has this original source of order authority."
+            interaction,
+            "None of your actual scene roles has this original source of order authority.",
         )
         return
+    voices = {
+        ref.token: (ref, item["label"])
+        for item in data.get("voices", ())
+        for ref in (ActorRef.model_validate(item["ref"]),)
+    }
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
         issuer = next(
@@ -51,24 +57,37 @@ async def open_order(
             data["revision"],
             instruction,
             origin_kind=origin_kind,
+            voice=voices[values["voice"][0]][0] if values.get("voice") else None,
         )
-        return "Actual NPC order saved; the original recipient owns its response. " + str(
+        return "The order is saved. The original recipient owns its response. " + str(
             result["action_id"]
         )
 
     form = NativeForm(
         interaction.user.id,
-        "NPC: direct order",
-        "Choose the actual NPC with the original saved order authority. Direct order: "
-        + instruction,
+        "Echoes of Old Command" if origin_kind == "harpy_echoes" else "NPC direct order",
+        "Choose the actual issuer with the original saved order authority.\n\n" + instruction,
         [
             Field(
                 "issuer",
-                "Actual original NPC issuer",
+                "Actual original issuer",
                 tuple(
                     (ActorRef.model_validate(x["ref"]).token, x["label"]) for x in data["issuers"]
                 ),
-            )
+            ),
+            *(
+                [
+                    Field(
+                        "voice",
+                        "Fictional voice to imitate",
+                        tuple((key, label) for key, (_ref, label) in voices.items()),
+                        0,
+                        required=False,
+                    )
+                ]
+                if voices
+                else []
+            ),
         ],
         submit,
     )

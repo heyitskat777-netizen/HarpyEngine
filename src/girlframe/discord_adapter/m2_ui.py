@@ -1199,6 +1199,8 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         )
     if decision.get("npc_order_issuer"):
         instructions += "\nActual NPC issuer: " + clean(decision["npc_order_issuer"])
+    if decision.get("heard_order_voice"):
+        instructions += "\nYou hear " + clean(decision["heard_order_voice"]) + " give the order."
     if decision.get("order_text"):
         instructions += "\nDirect order: " + clean(decision["order_text"])
     if decision.get("context") and decision["kind"] != "harpy_sensor_answers":
@@ -2889,6 +2891,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
             app_commands.Choice(name="Ordinary order", value="ordinary"),
             app_commands.Choice(name="Dose Up (typed cocktail order)", value="dose_up"),
             app_commands.Choice(name="Conditioning Phrase (Speak)", value="trainer_speak"),
+            app_commands.Choice(name="Echoes of Old Command", value="harpy_echoes"),
         ]
     )
     async def order(
@@ -2900,19 +2903,26 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
     ) -> None:
         typed_dose = purpose is not None and purpose.value == "dose_up"
         phrase = "speak" if purpose is not None and purpose.value == "trainer_speak" else None
+        echoes = purpose is not None and purpose.value == "harpy_echoes"
         if as_npc and (typed_dose or phrase):
             await reply(
                 interaction,
                 "This typed order requires an original native issuer.",
             )
             return
-        if as_npc:
+        if as_npc or echoes:
             from girlframe.discord_adapter.m3_npc_orders import open_order
             from girlframe.services.m3_npc_orders import NpcOrderService
 
             await interaction.response.defer(ephemeral=True)
             try:
-                await open_order(interaction, NpcOrderService(game), member.id, instruction)
+                await open_order(
+                    interaction,
+                    NpcOrderService(game),
+                    member.id,
+                    instruction,
+                    origin_kind="harpy_echoes" if echoes else "broken",
+                )
             except WorkflowError as error:
                 await reply(interaction, str(error))
             return

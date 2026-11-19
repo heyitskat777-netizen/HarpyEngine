@@ -660,9 +660,10 @@ class ActorPlayService:
                 "choices": {},
             }
             if actor.girl == "harpy" and prepared.play in ("keep_your_head", "engage"):
-                from girlframe.services.m3_harpy_advancements import sparrows_source
+                from girlframe.engine.m3_harpy_advancements import SPARROWS
+                from girlframe.services.m3_harpy_advancements import advancement_source
 
-                source = sparrows_source(self.game, c, state, ref, viewer.user_id)
+                source = advancement_source(self.game, c, state, ref, viewer.user_id, SPARROWS)
                 if source is not None:
                     data["harpy_sparrows"] = source
             from girlframe.engine.m3_handler_consequences import active_handler

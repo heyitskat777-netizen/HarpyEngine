@@ -7797,7 +7797,9 @@ class GameService:
                 from girlframe.services.m3_npc_orders import order as original_npc_order
 
                 npc_order = original_npc_order(self, c, action)
-                if npc_order.origin_kind != "rebel_voice":
+                if npc_order.voice_label is not None:
+                    result["heard_order_voice"] = npc_order.voice_label
+                elif npc_order.origin_kind != "rebel_voice":
                     result["npc_order_issuer"] = resolve_npc_issuer(
                         state, npc_order.issuer, ()
                     ).label

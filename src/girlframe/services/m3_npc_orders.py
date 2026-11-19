@@ -15,6 +15,7 @@ from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_alpha import RULE
 from girlframe.engine.m3_alpha_state import Broken
 from girlframe.engine.m3_handler_consequences import active_handler
+from girlframe.engine.m3_harpy_advancements import ECHOES
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
@@ -64,10 +65,17 @@ def _access(
         "npc_flirt": "play.basic.flirt",
         "stim_sex": "girl.stim-blissed.sex-play",
         "rebel_voice": "strain.rebellion.high.5.1",
+        "harpy_echoes": ECHOES,
     }[origin_kind]
     if origin_kind == "rebel_voice":
         access.authorize(c, viewer, "strain", director_response=True)
-    access.registry.require_available(rule)
+    if origin_kind == "harpy_echoes":
+        try:
+            access.require_specialist_rule(rule)
+        except ValueError as error:
+            raise WorkflowError(str(error)) from None
+    else:
+        access.registry.require_available(rule)
 
 
 def source(
@@ -90,16 +98,7 @@ def source(
         (
             x
             for x in original.facts
-            if x.get("kind")
-            == {
-                "broken": "npc_broken_order",
-                "am_secret": "npc_am_secret_order",
-                "secretary": "npc_secretary_order",
-                "npc_flirt": "npc_flirt_order",
-                "stim_sex": "npc_stim_order",
-                "rebel_voice": "npc_rebel_voice_order",
-            }[value.origin_kind]
-            and x.get("id") == value.id
+            if x.get("kind") == rules.FACT_KINDS[value.origin_kind] and x.get("id") == value.id
         ),
         None,
     )
@@ -142,6 +141,24 @@ def source(
 
         prove_order_grant(game, c, state, value)
         condition_invalid = False
+    elif value.origin_kind == "harpy_echoes":
+        from girlframe.services.m3_harpy_echoes import authority as echoes_authority
+        from girlframe.services.m3_harpy_echoes import voices as known_voices
+
+        echoes_authority(
+            game,
+            c,
+            original,
+            value.issuer,
+            value.target,
+            value.controller,
+            condition=value.condition,
+        )
+        condition_invalid = (
+            value.voice is not None
+            and known_voices(game, c, original, value.cast, value.controller).get(value.voice)
+            != value.voice_label
+        )
     else:
         condition = next((x for x in state.alpha_broken if x.id == value.condition), None)
         birth = _condition(game, c, original, value.issuer, value.target)
@@ -313,10 +330,22 @@ class NpcOrderService:
             )
             issuers = []
             for role in cast.roles:
-                if role.actor.kind != "npc" or role.controller != viewer.user_id:
+                issuer_kind = "external_pilot" if origin_kind == "harpy_echoes" else "npc"
+                if role.actor.kind != issuer_kind or role.controller != viewer.user_id:
                     continue
                 try:
-                    if origin_kind == "stim_sex":
+                    if origin_kind == "harpy_echoes":
+                        from girlframe.services.m3_harpy_echoes import authority as echoes_authority
+
+                        condition_id = echoes_authority(
+                            self.game,
+                            c,
+                            state,
+                            role.actor,
+                            recipient,
+                            viewer.user_id,
+                        )
+                    elif origin_kind == "stim_sex":
                         from girlframe.services.m3_stim_npc import order_authority as stim_authority
 
                         effect = stim_authority(self.game, c, state, role.actor, recipient)
@@ -343,7 +372,17 @@ class NpcOrderService:
                         condition=condition_id,
                     )
                 )
-            return dict(revision=state.revision, issuers=issuers)
+            result = dict(revision=state.revision, issuers=issuers)
+            if origin_kind == "harpy_echoes" and issuers:
+                from girlframe.services.m3_harpy_echoes import voices as known_voices
+
+                result["voices"] = [
+                    dict(ref=ref.model_dump(mode="json"), label=label)
+                    for ref, label in known_voices(
+                        self.game, c, state, cast, viewer.user_id
+                    ).items()
+                ]
+            return result
 
     def issue(
         self,
@@ -357,9 +396,12 @@ class NpcOrderService:
         *,
         origin_kind: rules.Origin = "broken",
         source_effect: str | None = None,
+        voice: ActorRef | None = None,
     ) -> dict[str, Any]:
         if source_effect is not None and origin_kind not in ("stim_sex", "rebel_voice"):
             raise WorkflowError("This Order does not accept an exact source effect")
+        if voice is not None and origin_kind != "harpy_echoes":
+            raise WorkflowError("Only Echoes can choose an imitated voice with this Order")
         if origin_kind not in (
             "broken",
             "am_secret",
@@ -367,6 +409,7 @@ class NpcOrderService:
             "npc_flirt",
             "stim_sex",
             "rebel_voice",
+            "harpy_echoes",
         ):
             raise WorkflowError("Use only an implemented actual NPC order source")
         if not text.strip() or len(text) > 1200:
@@ -383,7 +426,26 @@ class NpcOrderService:
                 kind="pilot", entity=str(target), incarnation=state.sheets[str(target)].character_id
             )
             principal = None
-            if origin_kind == "rebel_voice":
+            voice_label = None
+            if origin_kind == "harpy_echoes":
+                from girlframe.services.m3_harpy_echoes import authority as echoes_authority
+                from girlframe.services.m3_harpy_echoes import voices as known_voices
+                from girlframe.services.m3_sentinel import require_communication
+
+                condition_id = echoes_authority(
+                    self.game,
+                    c,
+                    state,
+                    issuer,
+                    recipient,
+                    viewer.user_id,
+                )
+                require_communication(c, self.store.campaign_id, state, issuer, (recipient,))
+                if voice is not None:
+                    voice_label = known_voices(self.game, c, state, cast, viewer.user_id).get(voice)
+                    if voice_label is None:
+                        raise WorkflowError("Choose an actual known voice from the original cast")
+            elif origin_kind == "rebel_voice":
                 from girlframe.services.m3_rebel_voice import authority as voice_authority
 
                 if viewer.user_id not in scene["participants"]:
@@ -450,6 +512,8 @@ class NpcOrderService:
                 registry=self.store.policy.m3_approval.registry_sha256,
                 instruction=text,
                 principal=principal,
+                voice=voice,
+                voice_label=voice_label,
             )
             c.execute(
                 t.m2["m2_orders"]
@@ -534,14 +598,7 @@ class NpcOrderService:
                 )
             state.facts.append(
                 dict(
-                    kind={
-                        "broken": "npc_broken_order",
-                        "am_secret": "npc_am_secret_order",
-                        "secretary": "npc_secretary_order",
-                        "npc_flirt": "npc_flirt_order",
-                        "stim_sex": "npc_stim_order",
-                        "rebel_voice": "npc_rebel_voice_order",
-                    }[origin_kind],
+                    kind=rules.FACT_KINDS[origin_kind],
                     id=identity,
                     body=value.model_dump_json(),
                 )
@@ -574,7 +631,8 @@ class NpcOrderService:
                 text=text,
             )
             | (dict(origin_kind=origin_kind) if origin_kind != "broken" else {})
-            | (dict(source_effect=source_effect) if source_effect is not None else {}),
+            | (dict(source_effect=source_effect) if source_effect is not None else {})
+            | (dict(voice=voice.model_dump(mode="json")) if voice is not None else {}),
             operation,
             auto_audit=False,
             authorize=lambda c: _access(self.game, c, viewer, origin_kind),

@@ -15,7 +15,9 @@ from test_retained_tag_permissions import reborn_with_lock
 from girlframe.delivery.m2_worker import GameWorker
 from girlframe.discord_adapter.inbox import InboxView
 from girlframe.discord_adapter.m2_ui import open_choice
-from girlframe.engine.m2 import ChoiceAnswer
+from girlframe.engine.m2 import ChoiceAnswer, PlayInput
+from girlframe.engine.m3_actor_bonds import current_ref
+from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_director_strain import Command
 from girlframe.engine.m3_harpy_advancements import (
     SPARROWS,
@@ -28,6 +30,7 @@ from girlframe.engine.m3_strain_state import Event
 from girlframe.services.inbox import InboxService
 from girlframe.services.m3_director_strain import DirectorStrainService
 from girlframe.services.m3_harpy_advancements import HarpyAdvancementService, capacity
+from girlframe.services.m3_npc_orders import NpcOrderService
 from girlframe.services.onboarding import WorkflowError
 
 
@@ -44,11 +47,192 @@ def approve_sparrows(ledger):
     )
 
 
+def test_echoes_order_uses_only_actual_harpy_tag_and_recipient_keeps_response(ledger):
+    from test_harpy_beneath import prepared, start_native
+    from test_harpy_flirt import native_answer, submit_form
+
+    from girlframe.discord_adapter.m3_npc_orders import open_order
+    from girlframe.engine.m3_harpy_advancements import ECHOES
+
+    _, game, _, actor, worker, gateway = prepared(ledger, faces=(4, 5))
+    app = ledger.policy.m3_approval
+    service = NpcOrderService(game)
+    mode = "harpy_echoes"
+    with pytest.raises(WorkflowError, match="implementation and review"):
+        service.preview(PLAYER, 900, OTHER.user_id, origin_kind=mode)
+    ledger.policy = ledger.policy.model_copy(
+        update={
+            "m3_approval": app.model_copy(
+                update={"activity_specialist_rules": app.activity_specialist_rules | {ECHOES}}
+            )
+        }
+    )
+    career = HarpyAdvancementService(ledger)
+    data = career.get(PLAYER, actor.entity)
+    assert data["choices"] == ((ECHOES, "Echoes of Old Command"),)
+    career.select(PLAYER, "learn-echoes", actor.entity, data["revision"], ECHOES)
+    assert not service.preview(PLAYER, 900, OTHER.user_id, origin_kind=mode)["issuers"]
+    source = start_native(game, actor, worker, gateway)
+    native_answer(
+        game,
+        PLAYER,
+        "harpy_beneath_select",
+        {
+            "options": ("tag", "status"),
+            "text": "My insult sticks.",
+            "fields.tag": "Original Harpy Tag",
+        },
+        89810,
+    )
+    assert game.inspect(PLAYER, source)["state"] == "complete"
+    tick(worker, gateway, 5)
+    original = state(game)
+    target = current_ref(original, OTHER.user_id)
+    tag = original.sheets[target.entity].tags[-1]
+    assert tag.giver_actor == actor
+    assert not service.preview(ADMIN, 900, OTHER.user_id, origin_kind=mode)["issuers"]
+    assert (
+        service.preview(PLAYER, 900, OTHER.user_id, origin_kind=mode)["issuers"][0]["condition"]
+        == tag.id
+    )
+    with pytest.raises(WorkflowError, match="living original Harpy"):
+        service.issue(
+            PLAYER,
+            "other-persona-cannot-issue",
+            900,
+            current_ref(original, PLAYER.user_id),
+            OTHER.user_id,
+            original.revision,
+            "Hold your position.",
+            origin_kind=mode,
+        )
+    key = asyncio.run(
+        submit_form(
+            PLAYER,
+            lambda click: open_order(
+                click, service, OTHER.user_id, "Hold your position.", origin_kind=mode
+            ),
+            dict(issuer=(actor.token,)),
+            89820,
+            wrong_owner=True,
+        )
+    )
+    order = service.issue(
+        PLAYER,
+        key,
+        900,
+        actor,
+        OTHER.user_id,
+        original.revision,
+        "Hold your position.",
+        origin_kind=mode,
+    )
+    ledger.engine.dispose()
+    tick(worker, gateway, 4)
+    row = next(x for x in game.choices(OTHER) if x["kind"] == "order_response")
+    with pytest.raises(WorkflowError):
+        game.respond(
+            PLAYER,
+            "harpy-cannot-follow-for-girl",
+            row["id"],
+            row["revision"],
+            ChoiceAnswer(options=("immediate",)),
+        )
+    assert game.decision(OTHER, row["id"])["npc_order_issuer"] == "HARPY"
+    answer(game, OTHER, "order_response", options=("immediate",))
+    assert game.inspect(OTHER, order["action_id"])["state"] == "complete"
+    assert state(game).order == original.order and game.dice.calls == 1
+    tick(worker, gateway, 5)
+
+    voice = current_ref(state(game), PLAYER.user_id)
+    with pytest.raises(WorkflowError, match="actual known voice"):
+        service.issue(
+            PLAYER,
+            "invent-unknown-voice",
+            900,
+            actor,
+            OTHER.user_id,
+            state(game).revision,
+            "Stand down.",
+            origin_kind=mode,
+            voice=ActorRef(kind="npc", entity="absent"),
+        )
+    revision = state(game).revision
+    key = asyncio.run(
+        submit_form(
+            PLAYER,
+            lambda click: open_order(
+                click, service, OTHER.user_id, "Stand down.", origin_kind=mode
+            ),
+            dict(issuer=(actor.token,), voice=(voice.token,)),
+            89830,
+            wrong_owner=True,
+        )
+    )
+    order = service.issue(
+        PLAYER,
+        key,
+        900,
+        actor,
+        OTHER.user_id,
+        revision,
+        "Stand down.",
+        origin_kind=mode,
+        voice=voice,
+    )
+    tick(worker, gateway, 4)
+    row = next(x for x in game.choices(OTHER) if x["kind"] == "order_response")
+    heard = game.decision(OTHER, row["id"])
+    assert heard["heard_order_voice"] == state(game).sheets[voice.entity].callsign
+    assert "npc_order_issuer" not in heard
+    assert not [k for k, v in heard.items() if k not in ("own", "tags") and actor.entity in str(v)]
+    with ledger.engine.connect() as c:
+        original_source = game.action(c, order["action_id"])["data"]["npc_order"]
+        assert original_source["issuer"] == actor.model_dump(mode="json")
+        assert original_source["voice"] == voice.model_dump(mode="json")
+    answer(game, OTHER, "order_response", options=("disobey",))
+    game.dice.faces = (4, 5)
+    disobey = game.begin(
+        OTHER,
+        "actual-echoes-refusal",
+        900,
+        state(game).sheets[target.entity].revision,
+        PlayInput(
+            play="disobey_orders",
+            parent=order["action_id"],
+            order_id=order["order_id"],
+            heat=0,
+            context="I push back and reject the original Tag.",
+            trigger_confirmed=True,
+        ),
+    )["action_id"]
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    answer(game, OTHER, "actor_disobey", options=("reject_tag",), denied=(tag.id,))
+    answer(game, ADMIN, "handler_disobey", flag=False)
+    assert game.inspect(OTHER, disobey)["state"] == "complete" and game.dice.calls == 2
+    assert game.inspect(OTHER, order["action_id"])["state"] == "complete"
+    assert not any(x.id == tag.id for x in state(game).sheets[target.entity].tags)
+    tick(worker, gateway, 5)
+    assert not service.preview(PLAYER, 900, OTHER.user_id, origin_kind=mode)["issuers"]
+    with pytest.raises(WorkflowError, match="must still carry a Tag"):
+        service.issue(
+            PLAYER,
+            "expired-tag-cannot-issue",
+            900,
+            actor,
+            OTHER.user_id,
+            state(game).revision,
+            "Hold your position.",
+            origin_kind=mode,
+        )
+
+
 def test_harpy_advancement_is_owned_and_adds_sparrows_to_both_native_plays(ledger):
     svc, game, _, actor = ready(ledger, faces=(4, 4))
     inbox = InboxService(ledger)
     career = HarpyAdvancementService(ledger)
-    with pytest.raises(ValueError, match="implementation and review"):
+    with pytest.raises(WorkflowError, match="implementation and review"):
         career.get(PLAYER, actor.entity)
     assert not any(x.task == "m3_harpy_advancement" for x in inbox.items(PLAYER))
     approve_sparrows(ledger)

@@ -1809,6 +1809,29 @@ remain separate. External out-of-character chat is outside these
 engine controls.
 [Jackdaw p. 169](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=171) · [Native case](../../tests/rules/test_gorgon_runtime.py) · [Shadow case](../../tests/test_activity_shadow_readiness.py)
 
+### Echoes of Old Command
+
+Base `fb8fc14a0d00b6ab5cc30e2a837ca46cd7d21cc1`. The original
+Harpy can select Echoes in an earned slot. A Tag that the actual
+Harpy gave the original Girl grants priority for a particular
+Order while she still carries it. The same controller's other
+characters gain no authority. The recipient keeps the ordinary
+Receive Orders and Disobey choices. In this Order control the
+Harpy can use a known voice from the actual original cast. The
+recipient's Order shows the voice she heard and the canonical
+record preserves the actual issuer separately. The same physical
+communication restrictions apply. Identity-derived authority and
+imitation outside this Order control still need source paths.
+
+The focused native case passed in **10.26 seconds**. It uses a
+Tag from an actual Harpy Beneath Play, follows one Order, then
+refuses a mimicked Order using the ordinary Disobey roll and
+rejects the original Tag. The Harpy loses authority for a new
+Order. The case also checks replay, restart, the default gate,
+wrong original persona, false voice, and the recipient's scoped
+view. Ruff and scoped mypy passed.
+[Echoes p. 182](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=184) · [Native cases](../../tests/rules/test_harpy_advancements.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

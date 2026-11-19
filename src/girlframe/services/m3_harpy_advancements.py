@@ -48,14 +48,14 @@ def capacity(c: Connection, campaign: str, state: GameState, birth: str) -> tupl
     return best
 
 
-def sparrows_source(
-    game: GameService, c: Connection, state: GameState, actor: ActorRef, owner: int
+def advancement_source(
+    game: GameService, c: Connection, state: GameState, actor: ActorRef, owner: int, rule: str
 ) -> str | None:
-    record = next((x for x in rules.advances(state, actor) if x.rule == rules.SPARROWS), None)
+    record = next((x for x in rules.advances(state, actor) if x.rule == rule), None)
     if record is None or record.controller != owner:
         return None
     try:
-        Access(game.store).require_specialist_rule(rules.SPARROWS)
+        Access(game.store).require_specialist_rule(rule)
     except (ValueError, WorkflowError):
         return None
     history = t.m2["m2_state_history"]
@@ -116,31 +116,59 @@ class HarpyAdvancementService:
             raise WorkflowError("Use the actual living original Harpy")
         return original.source_event
 
-    def tasks(self, c: Connection, state: GameState, viewer: GuildViewer) -> tuple[ActorRef, ...]:
+    def tasks(
+        self, c: Connection, state: GameState, viewer: GuildViewer
+    ) -> tuple[tuple[ActorRef, bool], ...]:
         actors = self._actors(state, viewer)
         if not actors:
             return ()
         try:
             self.access.authorize(c, viewer, "plays")
-            self.access.require_specialist_rule(rules.SPARROWS)
         except (WorkflowError, ValueError):
             return ()
-        return actors
+        choices = {rule for rule, _label in self.options()}
+        if not choices:
+            return ()
+        result = []
+        for actor in actors:
+            learned = {x.rule for x in rules.advances(state, actor)}
+            available = False
+            if choices - learned:
+                slots, _source = capacity(
+                    c, self.store.campaign_id, state, self._owned(state, viewer, actor)
+                )
+                available = len(learned) < slots
+            result.append((actor, available))
+        return tuple(result)
+
+    def options(self) -> tuple[tuple[str, str], ...]:
+        available = []
+        for rule, label in rules.ADVANCEMENTS:
+            try:
+                self.access.require_specialist_rule(rule)
+            except (ValueError, WorkflowError):
+                continue
+            available.append((rule, label))
+        return tuple(available)
 
     def get(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
         actor = ActorRef(kind="external_pilot", entity=identity)
         with self.store.engine.connect() as c:
             self.access.authorize(c, viewer, "plays")
-            self.access.require_specialist_rule(rules.SPARROWS)
+            available = self.options()
+            if not available:
+                raise WorkflowError("Harpy advancement implementation and review are incomplete")
             state = load_state(c, self.store.campaign_id)
             birth = self._owned(state, viewer, actor)
             slots, _source = capacity(c, self.store.campaign_id, state, birth)
             learned = tuple(x.rule for x in rules.advances(state, actor))
+            choices = tuple(x for x in available if x[0] not in learned and len(learned) < slots)
             return dict(
                 revision=state.revision,
                 slots=slots,
                 learned=learned,
-                available=rules.SPARROWS not in learned and len(learned) < slots,
+                available=bool(choices),
+                choices=choices,
             )
 
     def select(
@@ -150,13 +178,15 @@ class HarpyAdvancementService:
 
         def authorize(c: Connection) -> None:
             self.access.authorize(c, viewer, "plays")
-            self.access.require_specialist_rule(rules.SPARROWS)
+            if rule not in dict(rules.ADVANCEMENTS):
+                raise WorkflowError("Choose a supported original Harpy advancement")
+            self.access.require_specialist_rule(rule)
             self.game.unpaused(c)
             self._owned(load_state(c, self.store.campaign_id), viewer, actor)
 
         def operation(c: Connection) -> dict[str, Any]:
             state = load_state(c, self.store.campaign_id)
-            if revision != state.revision or rule != rules.SPARROWS:
+            if revision != state.revision:
                 raise WorkflowError(
                     "Reopen the actual advancement and choose a supported original rule"
                 )

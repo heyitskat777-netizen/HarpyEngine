@@ -2,14 +2,26 @@
 
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model, SceneCast
 from girlframe.engine.m3_alpha import conditions, current
 from girlframe.engine.m3_alpha_state import Broken
 
-Origin = Literal["broken", "am_secret", "secretary", "npc_flirt", "stim_sex", "rebel_voice"]
+Origin = Literal[
+    "broken", "am_secret", "secretary", "npc_flirt", "stim_sex", "rebel_voice", "harpy_echoes"
+]
+
+FACT_KINDS: dict[Origin, str] = {
+    "broken": "npc_broken_order",
+    "am_secret": "npc_am_secret_order",
+    "secretary": "npc_secretary_order",
+    "npc_flirt": "npc_flirt_order",
+    "stim_sex": "npc_stim_order",
+    "rebel_voice": "npc_rebel_voice_order",
+    "harpy_echoes": "harpy_echoes_order",
+}
 
 
 class Order(Model):
@@ -25,6 +37,16 @@ class Order(Model):
     instruction: str = Field(min_length=1, max_length=1200)
     principal: ActorRef | None = Field(default=None, exclude_if=lambda value: value is None)
     origin_kind: Origin = Field(default="broken", exclude_if=lambda value: value == "broken")
+    voice: ActorRef | None = Field(default=None, exclude_if=lambda value: value is None)
+    voice_label: str | None = Field(default=None, exclude_if=lambda value: value is None)
+
+    @model_validator(mode="after")
+    def voice_source(self) -> "Order":
+        if (self.voice is None) != (self.voice_label is None) or (
+            self.voice is not None and self.origin_kind != "harpy_echoes"
+        ):
+            raise ValueError("Use an exact supported fictional voice source")
+        return self
 
 
 def authority(state: GameState, issuer: ActorRef, target: ActorRef) -> Broken:

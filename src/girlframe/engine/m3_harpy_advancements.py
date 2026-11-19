@@ -5,6 +5,11 @@ from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_strain_state import State as StrainState
 
 SPARROWS = "harpy.harpy.sparrows-led-you-over-the-black-earth"
+ECHOES = "harpy.harpy.echoes-of-old-command"
+ADVANCEMENTS = (
+    (SPARROWS, "Sparrows Led You Over the Black Earth"),
+    (ECHOES, "Echoes of Old Command"),
+)
 SPARROWS_CHOICES = (
     ("shadow", "I’m a shadow in the corner of their eye"),
     ("hands", "They feel my hands around their neck and my teeth on their ear"),
@@ -50,7 +55,3 @@ def add(state: GameState, record: Advancement, capacity: int) -> None:
     if len(existing) >= capacity or any(x.rule == record.rule for x in existing):
         raise ValueError("Use an open advancement slot and a distinct actual Harpy advancement")
     state.facts.append(dict(kind=KIND, id=record.event, body=record.model_dump_json()))
-
-
-def sparrows(state: GameState, actor: ActorRef) -> str | None:
-    return next((x.event for x in advances(state, actor) if x.rule == SPARROWS), None)

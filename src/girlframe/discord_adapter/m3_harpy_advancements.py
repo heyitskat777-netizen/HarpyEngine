@@ -8,7 +8,7 @@ import discord
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
-from girlframe.engine.m3_harpy_advancements import SPARROWS
+from girlframe.engine.m3_harpy_advancements import ECHOES, SPARROWS
 from girlframe.services.m3_harpy_advancements import HarpyAdvancementService
 
 
@@ -19,6 +19,10 @@ async def open_advancement(
     summary = f"Your Harpy has used {len(data['learned'])} of {data['slots']} advancement slots."
     if SPARROWS in data["learned"]:
         summary += " Sparrows is available in your Keep Your Head and Engage the Enemy Plays."
+    if ECHOES in data["learned"]:
+        summary += (
+            " Echoes lets your Harpy issue Orders to Girls who still have a Tag it gave them."
+        )
     if not data["available"]:
         await reply(interaction, summary)
         return
@@ -32,7 +36,7 @@ async def open_advancement(
             data["revision"],
             values["advancement"][0],
         )
-        return "Sparrows Led You Over the Black Earth is recorded for your Harpy."
+        return "The advancement is recorded for your Harpy."
 
     await NativeForm(
         interaction.user.id,
@@ -42,7 +46,7 @@ async def open_advancement(
             Field(
                 "advancement",
                 "Choose your advancement",
-                ((SPARROWS, "Sparrows Led You Over the Black Earth"),),
+                data["choices"],
             )
         ],
         submit,
