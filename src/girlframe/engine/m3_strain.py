@@ -60,6 +60,18 @@ def copy(state: State, **updates: object) -> State:
     return State.model_validate_json(state.model_copy(update=updates).model_dump_json())
 
 
+def set_level(current: State, track: Track, level: Severity) -> tuple[State, tuple[Request, ...]]:
+    requested = copy(current, levels={**current.levels, track: level})
+    effective = effective_levels(requested)[track]
+    changed = tuple(
+        x.model_copy(update={"severity": effective})
+        for x in current.requests
+        if x.kind == "roll" and x.track == track and x.parent is None and x.severity != effective
+    )
+    by_id = {x.id: x for x in changed}
+    return copy(requested, requests=tuple(by_id.get(x.id, x) for x in current.requests)), changed
+
+
 def effective_levels(state: State) -> dict[Track, Severity]:
     """Temporary quarantine relief never overwrites the natural Strain progression."""
     return state.levels | ({"void": "low"} if state.void_relief_sources else {})

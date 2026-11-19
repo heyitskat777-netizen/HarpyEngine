@@ -262,6 +262,10 @@ class GameService:
                 setattr(state, field, getattr(bound, field))
             from girlframe.engine.m3_red_queen import JUDGEMENT as COURT_JUDGEMENT
 
+            if state.handler_persona and state.handler_persona.draft.playbook == "Frantic":
+                from girlframe.services.m3_frantic_crisis import observe_births as crisis_births
+
+                crisis_births(self, c, previous_state, state, event)
             if any(getattr(x, "rule_id", None) == COURT_JUDGEMENT for x in state.requisitions):
                 from girlframe.services.m3_red_queen_support import stage_tag_births
 

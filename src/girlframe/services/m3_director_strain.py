@@ -16,7 +16,7 @@ from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, SceneCast
 from girlframe.engine.m3_civic_directive import director
 from girlframe.engine.m3_handler_consequences import active_handler, same_handler_body
-from girlframe.engine.m3_strain import PAGES, effective_levels
+from girlframe.engine.m3_strain import PAGES, effective_levels, set_level
 from girlframe.engine.m3_strain_state import Request
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_battle import _cast, _visible
@@ -179,7 +179,7 @@ class DirectorStrainService:
             arrivals: tuple[tuple[str, rift_rules.Arrival], ...] = ()
             if command.mode == "severity":
                 assert command.track is not None and command.severity is not None
-                changed = rules.set_level(state, command.track, command.severity)
+                state.strain, changed = set_level(state.strain, command.track, command.severity)
             elif command.mode in ("replace", "create_track"):
                 registry = self.strain.missions.access.registry
                 assert registry is not None
@@ -276,12 +276,7 @@ class DirectorStrainService:
                 mode=command.mode,
                 effect=effect,
             )
-            for request in changed:
-                row = self.strain._row(c, request.id)
-                saved = json.loads(row["body_json"])
-                if row["state"] != "pending" or saved.get("stage") != "die":
-                    raise WorkflowError("Reopen the actual unrolled Strain request")
-                self.strain._save(c, row, event, saved | {"severity": request.severity})
+            self.strain.save_unrolled_levels(c, changed, event)
             if rolled is not None and root is not None:
                 owner = int(handler.entity)
                 related(

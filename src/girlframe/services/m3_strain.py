@@ -158,6 +158,16 @@ class StrainService:
             event,
         )
 
+    def save_unrolled_levels(
+        self, c: Connection, requests: tuple[Request, ...], event: str
+    ) -> None:
+        for request in requests:
+            row = self._row(c, request.id)
+            saved = json.loads(row["body_json"])
+            if row["state"] != "pending" or saved.get("stage") != "die" or request.kind != "roll":
+                raise WorkflowError("Reopen the actual unrolled Strain request")
+            self._save(c, row, event, saved | {"severity": request.severity})
+
     def _rift_work(
         self,
         c: Connection,

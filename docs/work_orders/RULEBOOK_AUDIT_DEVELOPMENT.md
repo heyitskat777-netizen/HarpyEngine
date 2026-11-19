@@ -1358,3 +1358,20 @@ real Minor and Moderate effects, and preservation of the original dice.
 The selected Handler, discipline, Strain, Off-Duty and Inbox regression
 passed **225 tests in 110.80 seconds**.
 [Rulebook p. 130](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=132) · [Tests](../../tests/rules/test_frantic_breakdown.py)
+
+### Frantic Crisis Management Strain raises
+
+Base `b8d09b6a4c33717c175a2a9f535a85c79bcc1e63`. Each actual new Tag on
+the original Frantic creates one private Crisis choice. Either of the two
+printed raises consumes its own one-use option and changes an actual Low
+track to High. The existing severity transition updates the matching
+unrolled request and preserves any saved die and original severity used
+for its column. The fictional Director's independent call now shares
+that transition. Once both printed raises are spent, further Tag gains
+keep their Crisis choice pending. The other Crisis effects are open.
+
+The focused native Inbox test exercised actual Tag grants, retries,
+wrong readers, pause, restart, both distinct raises and a third pending
+Crisis. The selected Frantic, fictional Director, Strain, Off-Duty,
+Handler and Inbox regression passed **214 tests in 108.95 seconds**.
+[Rulebook pp. 130–132](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=132) · [Tests](../../tests/rules/test_frantic_crisis.py)

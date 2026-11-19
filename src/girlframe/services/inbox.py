@@ -2902,11 +2902,31 @@ class InboxService:
                     )
                 )
             from girlframe.services.m3_frantic_breakdown import FranticBreakdownService
+            from girlframe.services.m3_frantic_crisis import CrisisService
             from girlframe.services.m3_handler_plays import HandlerPlayService
             from girlframe.services.m3_medical import MedicalService
             from girlframe.services.m3_privacy_trouble import PrivacyTroubleService
             from girlframe.services.m3_scene_requisitions import SceneRequisitionService
 
+            for crisis in CrisisService(self.store)._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "frantic-crisis:" + crisis,
+                        "frantic_crisis",
+                        crisis,
+                        canon.revision,
+                        "plays",
+                        "Crisis Management",
+                        "Your original Frantic",
+                        "pending",
+                        True,
+                        False,
+                        "Choose the actual consequence of gaining your Tag.",
+                        "Previously chosen printed options remain spent.",
+                        "Review Crisis Management",
+                        task="m3_frantic_crisis",
+                    )
+                )
             for request in FranticBreakdownService(self.store)._tasks(connection, viewer):
                 items.append(
                     InboxItem(
