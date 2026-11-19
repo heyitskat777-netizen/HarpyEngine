@@ -265,6 +265,7 @@ def test_connected_defeat_replacement_ruling_and_next_scene_readback(ledger):
         off_duty.current(PLAYER)["phase"] == "preparing"
     )  # Remaining Strain/period work is explicit.
     output = Path("var/p2-connected-campaign.json")
+    output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(
         json.dumps(
             {

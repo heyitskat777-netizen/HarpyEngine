@@ -14,9 +14,9 @@ from girlframe.services.read_only_bot import GuildViewer
 
 
 def digest(registry: Registry) -> str:
-    checksum = hashlib.sha256(
-        json.dumps(registry.model_dump(mode="json"), sort_keys=True).encode()
-    ).hexdigest()
+    contents = registry.model_dump(mode="json")
+    contents["enabled_modules"] = sorted(registry.enabled_modules)
+    checksum = hashlib.sha256(json.dumps(contents, sort_keys=True).encode()).hexdigest()
     # Exactly two descriptions changed to use the printed name. Preserve the
     # existing approval and recorded source proofs for that exact registry.
     if checksum == "a8d61d0c8a3169e4bf047ccd4681171bc7997262b04ff0b90df9bbb646922350":

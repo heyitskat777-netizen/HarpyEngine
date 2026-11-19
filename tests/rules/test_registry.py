@@ -1,4 +1,7 @@
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -88,6 +91,27 @@ def test_owner_reprogramming_ruling_has_explicit_provenance():
         x for x in registry.campaign_rulings if x.id == "void-observation-reprogramming-fallback"
     )
     assert ruling.provenance == "owner_approved_campaign_ruling"
+
+
+def test_optional_release_digest_is_stable_across_process_restarts():
+    value = data()
+    value["enabled_modules"] = ["core", "ancillary"]
+    code = (
+        "import sys;"
+        "from girlframe.engine.rules_registry import Registry;"
+        "from girlframe.services.m3_access import digest;"
+        "print(digest(Registry.model_validate_json(sys.stdin.read())))"
+    )
+    hashes = [
+        subprocess.check_output(
+            [sys.executable, "-c", code],
+            input=json.dumps(value),
+            text=True,
+            env=os.environ | {"PYTHONHASHSEED": seed},
+        ).strip()
+        for seed in ("0", "3")
+    ]
+    assert hashes[0] == hashes[1]
 
 
 def test_delegated_rulings_are_adjustable_records_not_implicit_verification():
