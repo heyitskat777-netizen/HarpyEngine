@@ -44,6 +44,8 @@ ANGEL = "ancillary.angel-wife.sex-play"
 CHASTE = "ancillary.angel-wife.chaste"
 REVOLUTIONARY = "ancillary.revolutionary-idealist.sex-play"
 PRODIGY = "ancillary.prodigy.sex-play"
+MERCENARY = "ancillary.mercenary.sex-play"
+ABYSSAL = "ancillary.abyssal-acolyte.sex-play"
 REVOLUTIONARY_OPTIONS = ("erase", "tag", "remain")
 RULES: dict[ancillary.Book, str] = {
     "CHAINED DARLING": CHAINED,
@@ -51,6 +53,8 @@ RULES: dict[ancillary.Book, str] = {
     "ANGEL-WIFE": ANGEL,
     "REVOLUTIONARY IDEALIST": REVOLUTIONARY,
     "PRODIGY": PRODIGY,
+    "MERCENARY": MERCENARY,
+    "ABYSSAL ACOLYTE": ABYSSAL,
 }
 WARBOY_REFUSAL = "warboy_private_refusal"
 RESULTS = {
@@ -63,6 +67,16 @@ RESULTS = {
         "high": "revolutionary_offer",
     },
     "PRODIGY": {"low": "prodigy_low", "mid": "prodigy_rank", "high": "prodigy_choose"},
+    "MERCENARY": {
+        "low": "mercenary_low_hold",
+        "mid": "mercenary_request",
+        "high": "mercenary_high_hold",
+    },
+    "ABYSSAL ACOLYTE": {
+        "low": "abyssal_void_hold",
+        "mid": "abyssal_erase_tag",
+        "high": "abyssal_ask",
+    },
 }
 KIND = "ancillary_private_play"
 
@@ -121,6 +135,19 @@ class Encounter(Model):
         "prodigy_rank",
         "prodigy_choose",
         "prodigy_jealous",
+        "mercenary_low_hold",
+        "mercenary_high_hold",
+        "mercenary_request",
+        "mercenary_reply",
+        "mercenary_verify",
+        "mercenary_give_tag",
+        "abyssal_void_hold",
+        "abyssal_erase_tag",
+        "abyssal_leave",
+        "abyssal_ask",
+        "abyssal_reply",
+        "abyssal_verify",
+        "abyssal_damage",
     ]
     consent: str | None = None
     confirmed: str | None = None
@@ -383,6 +410,8 @@ class AncillaryIntimacyService:
             "revolutionary_tag",
             "revolutionary_release",
             "prodigy_low",
+            "mercenary_reply",
+            "abyssal_reply",
         ):
             return case.partner.controller
         if case.step in (
@@ -401,11 +430,30 @@ class AncillaryIntimacyService:
             "revolutionary_offer",
             "revolutionary_escape",
             "prodigy_choose",
+            "mercenary_request",
+            "mercenary_give_tag",
+            "abyssal_erase_tag",
+            "abyssal_leave",
+            "abyssal_ask",
+            "abyssal_damage",
         ):
             return case.actor.controller
         if case.step == "prodigy_jealous":
             return case.reaction_owner
-        return case.gm if case.step in ("verify", "prodigy_rank") else None
+        return (
+            case.gm
+            if case.step
+            in (
+                "verify",
+                "prodigy_rank",
+                "mercenary_verify",
+                "mercenary_low_hold",
+                "mercenary_high_hold",
+                "abyssal_void_hold",
+                "abyssal_verify",
+            )
+            else None
+        )
 
     def _source(self, c: Connection, state: GameState, case: Encounter) -> ActorView:
         cast, actor, actual, book, gm, appointment = self._scene(
@@ -422,7 +470,7 @@ class AncillaryIntimacyService:
                 case.gm,
                 case.appointment,
             )
-            or case.step not in ("angel_space", "revolutionary_escape")
+            or case.step not in ("angel_space", "revolutionary_escape", "abyssal_leave")
             and not self._together(actual, partner)
             or partner.rules != "girl_frame"
         ):
@@ -523,6 +571,9 @@ class AncillaryIntimacyService:
                 step=case.step,
                 heat=actual.heat if case.step == "roll" else None,
                 account=case.account,
+                actual_favor=case.answer
+                if case.step in ("mercenary_verify", "abyssal_verify")
+                else None,
                 participants=(actual.label, counterpart.label),
                 tier=case.roll.result if case.roll else None,
                 tag=label,
@@ -532,11 +583,15 @@ class AncillaryIntimacyService:
                 else _angel_identities(state, actual.ref)
                 if case.step == "angel_replace"
                 else {},
-                assets=_angel_assets(counterpart) if case.step == "angel_damage" else {},
+                assets=_angel_assets(counterpart)
+                if case.step == "angel_damage"
+                else _abyssal_assets(counterpart)
+                if case.step == "abyssal_damage"
+                else {},
                 stepped_away=(
                     case.step == "angel_space"
                     and self._separated(actual, counterpart, case)
-                    or case.step == "revolutionary_escape"
+                    or case.step in ("revolutionary_escape", "abyssal_leave")
                     and self._separated(counterpart, actual, case)
                 ),
                 npc_bonds={
@@ -547,6 +602,8 @@ class AncillaryIntimacyService:
                 offered=case.picks if case.step == "revolutionary_choice" else (),
                 identities=_revolutionary_identities(state, actual.ref)
                 if case.step in ("revolutionary_erase", "revolutionary_erase_two")
+                else _abyssal_identities(state, counterpart.ref)
+                if case.step == "abyssal_erase_tag"
                 else {},
             )
 
@@ -596,7 +653,7 @@ class AncillaryIntimacyService:
                 or len(account) > 1200
                 or case.step != "roll"
                 and heat
-                or len(picks) > 2
+                or len(picks) > (4 if case.step == "abyssal_damage" else 2)
                 or len(set(picks)) != len(picks)
                 or picks
                 and case.step
@@ -604,6 +661,7 @@ class AncillaryIntimacyService:
                     "revolutionary_offer",
                     "revolutionary_erase",
                     "revolutionary_erase_two",
+                    "abyssal_damage",
                 )
             ):
                 raise WorkflowError(
@@ -714,6 +772,27 @@ class AncillaryIntimacyService:
                     )
             elif case.book == "PRODIGY" and case.step.startswith("prodigy_"):
                 state, update = _prodigy(state, case, choice, account.strip(), event)
+            elif case.book == "MERCENARY" and case.step.startswith("mercenary_"):
+                state, update = _mercenary(state, case, choice, account.strip(), event)
+            elif case.book == "ABYSSAL ACOLYTE" and case.step.startswith("abyssal_"):
+                bindings = profiles(c, self.store.campaign_id)
+                partner = resolve(state, case.partner.actor, bindings)
+                if case.step == "abyssal_leave" and choice == "confirm" and not account:
+                    if not self._separated(partner, actual, case):
+                        raise WorkflowError("Verify your actual departure through movement first.")
+                    update = dict(step="closed", disposition="abyssal_departed")
+                else:
+                    state, update = _abyssal(
+                        state,
+                        case,
+                        actual,
+                        partner,
+                        bindings,
+                        choice,
+                        account.strip(),
+                        picks,
+                        event,
+                    )
             else:
                 raise WorkflowError("Choose the original owner's supported private response.")
             return self._save(c, state, viewer, key, case.model_copy(update=update), event)
@@ -1052,3 +1131,149 @@ def _prodigy(
     if case.step == "prodigy_low" and choice == "pass" and not account:
         return state, dict(step="closed", disposition="declined_status_and_tag")
     raise WorkflowError("The original Status or outstanding reaction requires human review.")
+
+
+def _mercenary(
+    state: GameState,
+    case: Encounter,
+    choice: str,
+    account: str,
+    event: str,
+) -> tuple[GameState, dict[str, Any]]:
+    if case.step == "mercenary_request":
+        if choice == "pass" and not account:
+            return state, dict(step="closed", disposition="no_favour")
+        if choice == "ask" and account:
+            return state, dict(step="mercenary_reply", account=account)
+    if case.step == "mercenary_reply":
+        if choice == "decline" and not account:
+            return state, dict(step="mercenary_give_tag")
+        if choice == "did_it" and account:
+            return state, dict(step="mercenary_verify", answer=account)
+    if case.step == "mercenary_verify":
+        if choice == "confirmed" and account:
+            state.facts.append(
+                dict(
+                    kind="mercenary_favour_verified",
+                    encounter=case.id,
+                    event=event,
+                    account=account,
+                )
+            )
+            return state, dict(step="closed", disposition="favour_verified")
+        if choice == "not_fulfilled" and account:
+            state.facts.append(
+                dict(
+                    kind="mercenary_favour_unfulfilled",
+                    encounter=case.id,
+                    event=event,
+                    account=account,
+                )
+            )
+            return state, dict(step="mercenary_give_tag")
+    if case.step == "mercenary_give_tag" and choice == "tag" and 0 < len(account) <= 120:
+        tag = str(uuid4())
+        state = give_tag(
+            state,
+            case.partner.actor,
+            case.actor.actor,
+            account,
+            event,
+            tag,
+            (case.actor.controller, case.partner.controller),
+        )
+        return state, dict(step="closed", tag=tag, disposition="favour_refused")
+    raise WorkflowError("The original private outcome requires its actual supported consequence.")
+
+
+def _abyssal_identities(state: GameState, actor: ActorRef) -> dict[str, str]:
+    return {
+        item.id: item.name
+        for item in state.sheets[actor.entity].identities
+        if not item.protected
+        and not item.paired
+        and not item.obsession_sources
+        and not item.am_limiter
+    }
+
+
+def _abyssal_assets(partner: ActorView) -> dict[str, str]:
+    return (
+        {
+            x.id: x.name
+            for x in partner.assets
+            if x.family == "girl" and not x.damaged and not x.concealed
+        }
+        if partner.inside_frame is False
+        else {}
+    )
+
+
+def _abyssal(
+    state: GameState,
+    case: Encounter,
+    actual: ActorView,
+    partner: ActorView,
+    bindings: tuple[ProfileBinding, ...],
+    choice: str,
+    account: str,
+    picks: tuple[str, ...],
+    event: str,
+) -> tuple[GameState, dict[str, Any]]:
+    actor, other = case.actor.actor, case.partner.actor
+    if case.step == "abyssal_ask" and choice == "ask" and account:
+        return state, dict(step="abyssal_reply", account=account)
+    if case.step == "abyssal_reply":
+        if choice == "refuse" and not account:
+            return state, dict(step="abyssal_damage")
+        if choice == "did_it" and account:
+            return state, dict(step="abyssal_verify", answer=account)
+    if case.step == "abyssal_verify" and choice in ("yes", "no") and account:
+        state.facts.append(
+            dict(
+                kind="abyssal_private_request_review",
+                event=event,
+                encounter=case.id,
+                account=account,
+                choice=choice,
+            )
+        )
+        return state, (
+            dict(step="closed", disposition="abyssal_request_fulfilled")
+            if choice == "yes"
+            else dict(step="abyssal_damage")
+        )
+    if case.step == "abyssal_damage" and choice == "damage" and not account:
+        if not set(picks) <= _abyssal_assets(partner).keys():
+            raise WorkflowError("Choose real reachable undamaged Girl Assets.")
+        for item in picks:
+            state, followups = damage(state, other, item, bindings, event, opponent=actor)
+            if followups:
+                raise WorkflowError("Resolve the unsupported actual damage with the original GM.")
+        return state, dict(step="closed", disposition="abyssal_damage_applied")
+    if case.step == "abyssal_erase_tag" and 0 < len(account) <= 120:
+        if choice not in _abyssal_identities(state, other):
+            raise WorkflowError("Choose one real eligible original Identity.")
+        from girlframe.engine.m3_leviathan_obsession import require_identity_change
+
+        require_identity_change(state, other, (choice,))
+        tag = str(uuid4())
+        state = give_tag(
+            state,
+            other,
+            actor,
+            account,
+            event,
+            tag,
+            (case.actor.controller, case.partner.controller),
+        )
+        sheet = state.sheets[other.entity]
+        sheet.identities = [x for x in sheet.identities if x.id != choice]
+        sheet.revision += 1
+        return state, dict(
+            step="abyssal_leave",
+            tag=tag,
+            partner_pose=actual.position_sha256,
+            partner_cell=actual.cell,
+        )
+    raise WorkflowError("The original Abyssal result awaits its actual supported consequence.")

@@ -88,6 +88,12 @@ async def open_ancillary_intimacy_choice(
 
     data = await asyncio.to_thread(service.get, viewer, identity)
     step = data["step"]
+    if step == "abyssal_void_hold":
+        await reply(interaction, "The actual Void gain or Void Asset exchange remains pending.")
+        return
+    if step in ("mercenary_low_hold", "mercenary_high_hold"):
+        await reply(interaction, "The original paid Order or Status consequence remains pending.")
+        return
     if step == "prodigy_rank":
         await reply(
             interaction,
@@ -210,9 +216,57 @@ async def open_ancillary_intimacy_choice(
             "You may decline the optional Tag and Status consequence.",
             (("pass", "Decline both"),),
         ),
+        "mercenary_request": (
+            "Ask for a small favour within the scene, or pass.",
+            (("ask", "Ask a favour"), ("pass", "Pass")),
+        ),
+        "mercenary_reply": (
+            "Choose whether to decline or describe your own actual fulfilment.",
+            (("decline", "Decline"), ("did_it", "Record what I did")),
+        ),
+        "mercenary_verify": (
+            "Verify the actual completed favour, or confirm it remains unfulfilled.",
+            (("confirmed", "Verify fulfilment"), ("not_fulfilled", "Verify non-fulfilment")),
+        ),
+        "mercenary_give_tag": (
+            "Give the other participant a Tag because the original favour was refused.",
+            (("tag", "Give a Tag"),),
+        ),
+        "abyssal_erase_tag": (
+            "Erase an eligible Identity and give the original participant a Tag as you leave.",
+            tuple(data.get("identities", {}).items()),
+        ),
+        "abyssal_leave": (
+            "Use your movement controls to leave, then confirm your departure here.",
+            (("confirm", "Confirm departure"),),
+        ),
+        "abyssal_ask": (
+            "Tell the original participant what you want.",
+            (("ask", "Ask"),),
+        ),
+        "abyssal_reply": (
+            "You can refuse or describe your own actual follow-through.",
+            (("refuse", "Refuse"), ("did_it", "Record what I did")),
+        ),
+        "abyssal_verify": (
+            "Verify the actual follow-through or record that it was unfulfilled.",
+            (("yes", "Verify"), ("no", "Unfulfilled")),
+        ),
+        "abyssal_damage": (
+            "Choose how many of the reachable Girl Assets to damage, from zero to all.",
+            (("damage", "Apply damage to the selection"),),
+        ),
     }[step]
-    if step in ("angel_space", "revolutionary_escape") and not data["stepped_away"]:
+    if (
+        step in ("angel_space", "revolutionary_escape", "abyssal_leave")
+        and not data["stepped_away"]
+    ):
         await reply(interaction, instructions)
+        return
+    if step == "abyssal_erase_tag" and not options:
+        await reply(
+            interaction, "There is no eligible Identity. This original result remains open."
+        )
         return
     if step == "angel_damage" and not options:
         await reply(interaction, "No supported Asset is reachable. The original effect is pending.")
@@ -259,6 +313,43 @@ async def open_ancillary_intimacy_choice(
                 tuple(data["identities"].items()),
                 count,
                 count,
+            )
+        )
+    if step in ("abyssal_reply", "abyssal_verify"):
+        instructions += "\nOriginal request — " + clean(data["account"])
+    if step == "abyssal_verify":
+        instructions += "\nOriginal participant’s follow-through — " + clean(data["actual_favor"])
+    if step in ("abyssal_ask", "abyssal_reply", "abyssal_verify", "abyssal_erase_tag"):
+        fields.append(
+            Field(
+                "account",
+                "Actual new Tag" if step == "abyssal_erase_tag" else "Your original account",
+                paragraph=step != "abyssal_erase_tag",
+                required=step != "abyssal_reply",
+            )
+        )
+    if step == "abyssal_damage" and data["assets"]:
+        fields.append(
+            Field(
+                "picks",
+                "Actual eligible Girl Assets",
+                tuple(data["assets"].items()),
+                0,
+                min(4, len(data["assets"])),
+                required=False,
+            )
+        )
+    if step in ("mercenary_reply", "mercenary_verify"):
+        instructions += "\nOriginal favour — " + clean(data["account"])
+    if step == "mercenary_verify":
+        instructions += "\nOriginal participant’s follow-through — " + clean(data["actual_favor"])
+    if step in ("mercenary_request", "mercenary_reply", "mercenary_verify", "mercenary_give_tag"):
+        fields.append(
+            Field(
+                "account",
+                "Your original account",
+                paragraph=step != "mercenary_give_tag",
+                required=step not in ("mercenary_request", "mercenary_reply"),
             )
         )
     if step in ("prodigy_choose", "prodigy_jealous"):

@@ -3581,3 +3581,35 @@ Status consequences remain pending, as does the accepted low
 consequence. The original counterpart can already decline both
 low effects.
 [Prodigy p. 99](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=101) · [Native case](../../tests/rules/test_prodigy_private_play.py)
+
+### Mercenary’s private Play
+
+Base `f071b9b`. The middle result can open a small favour
+owned by the original counterpart. A claimed fulfilment requires
+the original facilitator to verify its actual follow-through.
+Refusal or verified non-fulfilment opens the original Mercenary’s
+scoped Tag. Passing leaves the actual resources untouched.
+
+**One focused case passed in 4.62 seconds.** It verified the
+saved middle result, the original counterpart’s refusal, denial
+of a substitution by the Mercenary and the actual Tag. Paid
+requests, a 2-cost Requisition, the paid Order and Status
+branches, and direct fulfilment evidence remain open.
+[Mercenary p. 97](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=99) · [Native case](../../tests/rules/test_mercenary_private_play.py)
+
+### Abyssal Acolyte’s private Play
+
+Base `f071b9b`. The supported high result lets the original
+Acolyte ask, the counterpart independently respond, and the
+facilitator verify any reported fulfilment. On refusal the
+Acolyte can select zero or more actual reachable Girl Assets.
+The ordinary damage authority produces the real last-Asset
+consequence. The middle result can apply the original Identity
+erasure and Tag and verify the Acolyte’s physical departure.
+
+**One focused case passed in 5.56 seconds.** It verified the
+original request, actual refusal, privately selected damage
+and existing last-Girl-Asset Helplessness. Original low Void and
+Asset transfer, selectively ignoring the other participant’s
+separate Play, and direct middle verification remain open.
+[Abyssal Acolyte p. 109](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=111) · [Native case](../../tests/rules/test_abyssal_private_play.py)

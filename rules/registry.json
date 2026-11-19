@@ -14895,14 +14895,49 @@
         "heading": "Sex Play"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original Mercenary and original Pilot independently consent to a verified local private encounter.",
+        "actor_type": "Original Mercenary, original Pilot and original human facilitator",
+        "pre_roll_sources": [
+          "Actual optional release",
+          "Exact original counterpart and scope",
+          "Owned Heat"
+        ],
+        "roll_kind": "2d6",
+        "allowed_modifiers": [
+          "Owned Heat"
+        ],
+        "tier_options": {
+          "low": [
+            "Keep the paid Status effect pending"
+          ],
+          "mid": [
+            "Ask an original small favour or pass; verify actual fulfilment or issue a scoped Tag after refusal"
+          ],
+          "high": [
+            "Keep the paid Order and refusal consequence pending"
+          ]
+        },
+        "choice_ownership": "Original Mercenary requests and owns the Tag. Original counterpart owns their response and account. Original facilitator verifies fulfilment.",
+        "target_policy": "The original same-scene co-present characters and scoped decisions.",
+        "post_roll_effects": [
+          "Record a fulfilled small favour or create the actual privately scoped Tag."
+        ],
+        "mandatory_followups": [
+          "Paid Orders, low Status, 2-cost Requisitions, ordinary modifiers and direct evidence for the fulfilled route remain open."
+        ],
+        "handler_or_gm_intervention": "The actual facilitator verifies the encounter and any claimed actual fulfilment.",
+        "test_fixture_ids": [
+          "tests/rules/test_mercenary_private_play.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_mercenary_private_play.py"],
       "m2_play_id": null,
       "module": "ancillary"
     },
@@ -15684,14 +15719,49 @@
         "heading": "Sex Play"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original Acolyte shares a verified private encounter with an independently consenting standard Pilot.",
+        "actor_type": "Original Acolyte, standard Pilot and actual facilitator",
+        "pre_roll_sources": [
+          "Actual approved optional Play",
+          "Original consent and physical co-presence",
+          "Owned Heat"
+        ],
+        "roll_kind": "2d6",
+        "allowed_modifiers": [
+          "Owned Heat"
+        ],
+        "tier_options": {
+          "low": [
+            "The original Void or Void-Asset consequence remains pending"
+          ],
+          "mid": [
+            "Erase an eligible actual Identity, give a real Tag and verify actual departure"
+          ],
+          "high": [
+            "Ask the counterpart what you want; if refused, choose zero or more actual reachable Girl Assets to damage"
+          ]
+        },
+        "choice_ownership": "Each original participant owns their response. The Acolyte owns her requested and allowed printed effects.",
+        "target_policy": "Private original scene, exact scoped roles and reachable actual standard resources.",
+        "post_roll_effects": [
+          "Apply real Identity, Tag, damage and last-Girl-Asset Helplessness where supported."
+        ],
+        "mandatory_followups": [
+          "Low gain and custody, suppressing a counterpart’s separate printed effect, direct middle verification and ordinary modifiers remain open."
+        ],
+        "handler_or_gm_intervention": "Original facilitator verifies the source and any actual follow-through.",
+        "test_fixture_ids": [
+          "tests/rules/test_abyssal_private_play.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_abyssal_private_play.py"],
       "m2_play_id": null,
       "module": "ancillary"
     },
