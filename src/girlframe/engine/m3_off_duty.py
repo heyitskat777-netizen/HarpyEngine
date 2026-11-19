@@ -17,6 +17,7 @@ from girlframe.engine.m3_core import Recovery, RepairSelection, recover_off_duty
 from girlframe.engine.m3_modular import Replacement
 from girlframe.engine.m3_observation_state import Observation
 from girlframe.engine.m3_scientist_lab import LabAnswer, LabProposal
+from girlframe.engine.m3_trainer_phrases import Phrase
 from girlframe.engine.rolls import Face
 
 
@@ -65,7 +66,7 @@ class Scene(Model):
     summary: str = Field(min_length=1, max_length=1200)
     character_ids: dict[str, str] = Field(default_factory=dict)
     roles: tuple["ActorRef", ...] = Field(default=(), exclude_if=lambda value: not value)
-    conditioning_phrase: Literal["speak"] | None = Field(
+    conditioning_phrase: Phrase | None = Field(
         default=None, exclude_if=lambda value: value is None
     )
     lab: LabProposal | None = Field(default=None, exclude_if=lambda value: value is None)
@@ -171,7 +172,7 @@ def handler_scene(
     summary: str,
     *,
     extra_participants: frozenset[int] = frozenset(),
-    conditioning_phrase: Literal["speak"] | None = None,
+    conditioning_phrase: Phrase | None = None,
     lab: LabProposal | None = None,
 ) -> Period:
     current(period, expected)

@@ -1360,8 +1360,7 @@ replacement preserves the original dice, applies the printed Heat and
 Status changes through their existing rules, and holds for her own answer.
 A successful ordinary refusal remains possible on 8–10. The Trainer can
 install Speak through the native Off-Duty scene after both people attest to
-their own participation. Punishment-time installation and the other six
-phrases still need runtime paths.
+their own participation.
 
 The four focused cases exercised starting and Off-Duty installations,
 actual higher-Status and Handler orders, the 8–10 and 11+ outcomes, private
@@ -1369,6 +1368,19 @@ hearing, restart, stale and duplicate choices and a wrong original owner.
 The selected native control, Off-Duty, authority and Inbox regression
 passed **230 tests in 145.17 seconds**.
 [Rulebook p. 136](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=138) · [Tests](../../tests/rules/test_trainer_phrases.py)
+
+Sit, based on `28ea1d239a87521cd6a4443ca6ecb209a0475907`, uses the same
+original installation and native Order proof. On obedience or an
+unsuccessful refusal, the original Girl describes actually sitting.
+Voluntary movement and ordinary cockpit entry stay blocked until the
+original issuer grants leave in a shared scene. Other asserted release
+authority needs human review. Both original participants can install Sit
+through Off-Duty. One focused case passed in 6.08 seconds with
+`python -m pytest -q --tb=short tests/rules/test_trainer_phrases.py -k 'installation and sit'`
+and `PYTHONPATH="$PWD/src"`. It covered native controls, reopening,
+wrong issuer and actual movement after release. Punishment-time
+installation and the other five phrases stay open.
+[Sit case](../../tests/rules/test_trainer_phrases.py)
 
 ### Scientist's initial laboratory Project step
 

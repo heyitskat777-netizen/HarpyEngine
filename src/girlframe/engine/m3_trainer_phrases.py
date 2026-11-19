@@ -1,0 +1,41 @@
+"""Durable restrictions from the original, resolved Trainer order."""
+
+from typing import TYPE_CHECKING, Literal
+
+from girlframe.engine.m3_actor_state import ActorRef, Model
+
+if TYPE_CHECKING:
+    from girlframe.engine.m2 import GameState
+
+Phrase = Literal["speak", "sit"]
+PHRASES: tuple[tuple[Phrase, str], ...] = (("speak", "Speak"), ("sit", "Sit"))
+PHRASE_LABELS: dict[str, str] = dict(PHRASES)
+
+
+class Seated(Model):
+    target: ActorRef
+    issuer: ActorRef
+    order: str
+    choice: str
+    event: str
+    released: str | None = None
+
+
+def sitting(state: "GameState", target: ActorRef) -> Seated | None:
+    for fact in reversed(state.facts):
+        if fact.get("kind") == "trainer_sitting" and fact.get("target") == target.token:
+            record = Seated.model_validate_json(fact["body"])
+            if record.target == target:
+                return record if record.released is None else None
+    return None
+
+
+def save_sitting(state: "GameState", record: Seated) -> None:
+    state.facts.append(
+        dict(kind="trainer_sitting", target=record.target.token, body=record.model_dump_json())
+    )
+
+
+def require_can_leave_seat(state: "GameState", target: ActorRef) -> None:
+    if sitting(state, target) is not None:
+        raise ValueError("The original Sit order still requires leave from its issuer")

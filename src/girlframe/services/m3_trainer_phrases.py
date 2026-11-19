@@ -2,6 +2,7 @@
 
 import json
 from typing import TYPE_CHECKING, Any
+from uuid import uuid4
 
 import sqlalchemy as sa
 from sqlalchemy import Connection
@@ -13,9 +14,13 @@ from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_handler_state import Conditioning
 from girlframe.engine.m3_leviathan_obsession import allowed_gain
 from girlframe.engine.m3_off_duty import Period
+from girlframe.engine.m3_trainer_phrases import PHRASE_LABELS, Seated, save_sitting, sitting
 from girlframe.services.handler_setup import HandlerService
+from girlframe.services.m2_state import load_state
+from girlframe.services.m3_access import Access
 from girlframe.services.m3_handler_book_orders import active_book
 from girlframe.services.onboarding import WorkflowError
+from girlframe.services.read_only_bot import GuildViewer
 
 if TYPE_CHECKING:
     from girlframe.services.m2_game import GameService
@@ -23,6 +28,7 @@ if TYPE_CHECKING:
 RULE = "handler-playbook.trainer.conditioning-phrases"
 SPEAK = "trainer_speak_answer"
 HEAR = "trainer_speak_heard"
+SIT = "trainer_sit"
 
 
 def _installation(
@@ -126,18 +132,18 @@ def training_target(
     if (
         owned is None
         or owned[0].entity != str(period.handler)
-        or phrase != "speak"
+        or phrase not in PHRASE_LABELS
         or len(participants) != 2
         or period.handler not in participants
     ):
-        raise WorkflowError("The original Trainer and one original Girl own this Speak scene")
+        raise WorkflowError("The original Trainer and one original Girl own this phrase scene")
     target = current_ref(state, next(x for x in participants if x != period.handler))
     persona = state.handler_persona
     assert persona is not None
     if target.kind != "pilot" or target.incarnation != period.character_ids.get(target.entity):
         raise WorkflowError("Use the actual original Girl from this Off-Duty period")
     if any(x.pilot == target and phrase in x.phrases for x in persona.conditioning):
-        raise WorkflowError("This actual Girl already has Speak installed")
+        raise WorkflowError("This actual Girl already has the chosen phrase installed")
     return target
 
 
@@ -168,8 +174,11 @@ def stage(
 ) -> dict[str, Any]:
     girl = current_ref(state, target)
     installation = _installation(game, c, state, girl, phrase)
-    if phrase != "speak" or installation is None or not higher(state, issuer, target):
-        raise WorkflowError("Use an installed Speak phrase and its actual higher-Status issuer")
+    if phrase not in PHRASE_LABELS or installation is None or not higher(state, issuer, target):
+        label = PHRASE_LABELS.get(phrase, "Conditioning")
+        raise WorkflowError(f"Use an installed {label} phrase and its actual higher-Status issuer")
+    if phrase == "sit":
+        _seat_body(state, girl)
     return dict(
         phrase=phrase,
         order=order,
@@ -252,7 +261,7 @@ def high_refusal(
     return True
 
 
-def offer_speak(
+def offer_phrase(
     game: "GameService", c: Connection, state: GameState, action: dict[str, Any]
 ) -> bool:
     original = _original(game, c, state, action)
@@ -263,7 +272,7 @@ def offer_speak(
         c,
         action,
         int(saved["target"]["entity"]),
-        SPEAK,
+        SIT if saved["phrase"] == "sit" else SPEAK,
         dict(source=saved),
     )
     return True
@@ -280,7 +289,7 @@ def choose(
     original = _original(game, c, state, action)
     body = json.loads(request["body_json"])
     if original is None or original[1] != body["source"]:
-        raise WorkflowError("Recover the actual source of this private Speak response")
+        raise WorkflowError("Recover the actual source of this private phrase response")
     _, saved = original
     if (
         answer.options
@@ -289,7 +298,23 @@ def choose(
         or answer.number is not None
         or answer.member is not None
     ):
-        raise WorkflowError("Use only the original Speak response fields")
+        raise WorkflowError("Use only the original phrase response fields")
+    if request["kind"] == SIT:
+        if saved["phrase"] != "sit" or not answer.text.strip() or answer.flag is not None:
+            raise WorkflowError("Describe how the original Girl actually sits")
+        girl = ActorRef.model_validate(saved["target"])
+        _seat_body(state, girl)
+        save_sitting(
+            state,
+            Seated(
+                target=girl,
+                issuer=ActorRef.model_validate(saved["issuer"]),
+                order=saved["order"],
+                choice=request["id"],
+                event=action["data"]["response_event"],
+            ),
+        )
+        return
     if request["kind"] == SPEAK:
         if not answer.text.strip() or answer.flag is not None:
             raise WorkflowError("Only the Girl chooses what answer she actually gives")
@@ -319,9 +344,79 @@ def display(
     if original is None or original[1] != json.loads(request["body_json"])["source"]:
         raise WorkflowError("Recover this original private Conditioning Phrase")
     root, saved = original
-    if request["kind"] == SPEAK:
+    if request["kind"] in (SPEAK, SIT):
         return str(root["data"]["order_text"])
     spoken = action["data"].get("trainer_spoken", {})
     if spoken.get("source") != saved:
         raise WorkflowError("Only the original recipient can recover this actual answer")
     return str(spoken["answer"])
+
+
+def _seat_body(state: GameState, girl: ActorRef) -> None:
+    pose = next((x for x in state.placements if x.actor == girl), None)
+    if (
+        pose is None
+        or pose.mode != "outside_frame"
+        or pose.girl_cell is None
+        or pose.subsumed
+        or pose.incapacitated
+        or not pose.vitals_active
+        or sitting(state, girl) is not None
+    ):
+        raise WorkflowError("Use the original Girl who can sit outside her actual Frame")
+
+
+def grant_leave(
+    game: "GameService", viewer: GuildViewer, key: str, channel: int, target: int
+) -> dict[str, Any]:
+    def authorize(c: Connection) -> None:
+        Access(game.store).authorize(c, viewer, "plays")
+        game.unpaused(c)
+
+    def operation(c: Connection) -> dict[str, Any]:
+        from girlframe.services.m3_handler_plays import _ordinary_scene_idle
+        from girlframe.services.m3_sentinel import require_order_communication
+
+        _ordinary_scene_idle(c, game)
+        state = load_state(c, game.store.campaign_id)
+        scene = game.scene(c, channel)
+        if str(target) not in state.sheets:
+            raise WorkflowError("Choose the original seated Girl")
+        girl = current_ref(state, target)
+        record = sitting(state, girl)
+        if (
+            record is None
+            or record.issuer.entity != str(viewer.user_id)
+            or not {viewer.user_id, target} <= set(scene["participants"])
+            or record.issuer != current_ref(state, viewer.user_id)
+        ):
+            raise WorkflowError("Only the original Sit issuer can grant leave in a shared scene")
+        game.pilot_cast(c, state, scene, owners=(viewer.user_id, target))
+        require_order_communication(c, game.store.campaign_id, state, viewer.user_id, target)
+        responses = t.m2["m2_responses"]
+        if (
+            c.scalar(
+                sa.select(responses.c.event_id).where(
+                    responses.c.campaign_id == game.store.campaign_id,
+                    responses.c.choice_id == record.choice,
+                    responses.c.event_id == record.event,
+                    responses.c.actor_id == girl.entity,
+                )
+            )
+            is None
+        ):
+            raise WorkflowError("Recover the original Girl's performed Sit response")
+        event = str(uuid4())
+        save_sitting(state, record.model_copy(update=dict(released=event)))
+        game.event(c, viewer.user_id, key, "m3.trainer_sit_released", state, event_id=event)
+        return dict(event=event)
+
+    return game.store._write(
+        viewer,
+        key,
+        "m3.trainer_sit_released",
+        dict(channel=channel, target=target),
+        operation,
+        auto_audit=False,
+        authorize=authorize,
+    )

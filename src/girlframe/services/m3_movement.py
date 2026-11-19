@@ -105,7 +105,13 @@ def _physical_context(
     external_pose = next((x for x in state.external_poses if x.actor == actor), None)
     if actor.kind == "pilot":
         from girlframe.engine.m3_sentinel_shell import holds
+        from girlframe.engine.m3_trainer_phrases import require_can_leave_seat
 
+        if destination != actual.cell:
+            try:
+                require_can_leave_seat(state, actor)
+            except ValueError as error:
+                raise WorkflowError(str(error)) from None
         if holds(state, actor, "trapped"):
             raise WorkflowError("The actual trapped Girl needs assistance before leaving")
         if (

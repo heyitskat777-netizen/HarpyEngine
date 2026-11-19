@@ -244,10 +244,25 @@ def test_original_speak_order_uses_its_own_phrasing_and_saved_refusal(ledger, re
         )
 
 
-def test_actual_off_duty_speak_installation_needs_both_originals_and_can_trigger(ledger):
+@pytest.mark.parametrize("phrase", ("speak", "sit"))
+def test_actual_off_duty_speak_installation_needs_both_originals_and_can_trigger(ledger, phrase):
+    from test_physical_operations import place
+
+    from girlframe.engine.m3_actor_bonds import current_ref
+    from girlframe.engine.m3_trainer_phrases import sitting
+    from girlframe.services.m3_movement import MovementService
+    from girlframe.services.m3_trainer_phrases import SIT, grant_leave
+
+    def before_period(game):
+        create_trainer(ledger, start_with_speak=False)
+        if phrase == "sit":
+            with ledger.transaction() as c:
+                actual = place(state(game), 3, mode="outside_frame")
+                game.event(c, 1, "original-sit-placement", "synthetic.placement", actual)
+
     cycle, game, period = prepared(
         ledger,
-        before_period=lambda _: create_trainer(ledger, start_with_speak=False),
+        before_period=before_period,
     )
     activate(cycle, game, period)
 
@@ -262,6 +277,8 @@ def test_actual_off_duty_speak_installation_needs_both_originals_and_can_trigger
             participants=("3",),
             summary="PRIVATE_TRAINING_SCENE",
         )
+        if phrase == "sit":
+            form.values["phrase"] = (phrase,)
         form.controls()
         sent = current(1, 47301)
         await form.confirm.callback(sent)
@@ -269,14 +286,17 @@ def test_actual_off_duty_speak_installation_needs_both_originals_and_can_trigger
 
     asyncio.run(arrange())
     assert cycle.review(PLAYER, period)["handler_scene"] is None
-    assert cycle.review(OTHER, period)["handler_scene"]["conditioning_phrase"] == "speak"
+    assert cycle.review(OTHER, period)["handler_scene"]["conditioning_phrase"] == phrase
     with pytest.raises(WorkflowError):
         call(cycle, game, PLAYER, period, "acknowledge", None)
     call(cycle, game, ADMIN, period, "acknowledge", None)
-    assert not any("speak" in x.phrases for x in state(game).handler_persona.conditioning)
-    with pytest.raises(WorkflowError, match="installed Speak"):
+    assert not any(
+        x.pilot.entity == "3" and phrase in x.phrases
+        for x in state(game).handler_persona.conditioning
+    )
+    with pytest.raises(WorkflowError, match=f"installed {phrase.title()}"):
         game.issue_order(
-            ADMIN, "premature-speak-command", 900, 3, "Test", conditioning_phrase="speak"
+            ADMIN, "premature-speak-command", 900, 3, "Test", conditioning_phrase=phrase
         )
     ledger.engine.dispose()
     pending = cycle.review(OTHER, period)
@@ -293,15 +313,53 @@ def test_actual_off_duty_speak_installation_needs_both_originals_and_can_trigger
 
     asyncio.run(attest())
     cycle.acknowledge(OTHER, "47311", period, pending["revision"], pending["game_revision"], None)
-    spell = [x for x in state(game).handler_persona.conditioning if "speak" in x.phrases]
+    spell = [
+        x
+        for x in state(game).handler_persona.conditioning
+        if x.pilot.entity == "3" and phrase in x.phrases
+    ]
     assert len(spell) == 1 and spell[0].pilot.entity == "3"
     assert spell[0].source_event != state(game).handler_persona.source_event
     worker, gateway = GameWorker(game), Gateway()
     issued = game.issue_order(
-        ADMIN, "later-valid-speak", 900, 3, "PRIVATE_FOLLOWUP", conditioning_phrase="speak"
+        ADMIN, "later-valid-speak", 900, 3, "PRIVATE_FOLLOWUP", conditioning_phrase=phrase
     )
     tick(worker, gateway, 3)
     answer(game, OTHER, "order_response", options=("immediate",))
-    answer(game, OTHER, SPEAK, text="Yes.")
-    answer(game, ADMIN, HEAR, flag=True)
+    if phrase == "speak":
+        answer(game, OTHER, SPEAK, text="Yes.")
+        answer(game, ADMIN, HEAR, flag=True)
+    else:
+        girl = current_ref(state(game), 3)
+        assert sitting(state(game), girl) is None
+        choice = next(x["id"] for x in game.choices(OTHER) if x["kind"] == SIT)
+        item = next(x for x in InboxService(ledger).items(OTHER) if x.identity == choice)
+
+        async def sit_from_inbox():
+            click = current(3, 47320)
+            await click.response.defer(ephemeral=True)
+            await InboxView(InboxService(ledger), 3).route(click, item)
+            form = click.edit_original_response.call_args.kwargs["view"]
+            form.values["text"] = "I sit where I stand."
+            sent = current(3, 47321)
+            await form.confirm.callback(sent)
+            assert form.completed, sent.followup.send.call_args
+
+        asyncio.run(sit_from_inbox())
+        tick(worker, gateway, 4)
+        ledger.engine.dispose()
+        active = state(game)
+        assert sitting(active, girl).order == issued["order_id"]
+        movement = MovementService(game)
+        with pytest.raises(WorkflowError, match="requires leave"):
+            movement.move(
+                OTHER, "while-seated", active.revision, 900, girl, (1, 0), account="I move."
+            )
+        with pytest.raises(WorkflowError, match="original Sit issuer"):
+            grant_leave(game, PLAYER, "wrong-leave", 900, 3)
+        grant_leave(game, ADMIN, "actual-leave", 900, 3)
+        assert sitting(state(game), girl) is None
+        assert movement.move(
+            OTHER, "after-leave", state(game).revision, 900, girl, (1, 0), account="I move."
+        )["destination"] == [1, 0]
     assert game.inspect(OTHER, issued["action_id"])["state"] == "complete"

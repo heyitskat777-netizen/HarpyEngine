@@ -6,7 +6,7 @@ waive unsupported work, impersonate another participant or fabricate a receipt.
 
 import json
 from collections.abc import Callable
-from typing import Any, Literal
+from typing import Any
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
 import sqlalchemy as sa
@@ -22,6 +22,7 @@ from girlframe.engine.m3_core import Recovery
 from girlframe.engine.m3_intracadre_marriage import status_groups
 from girlframe.engine.m3_scientist_lab import LabAnswer, LabProposal
 from girlframe.engine.m3_strain_state import TRACKS, Trigger
+from girlframe.engine.m3_trainer_phrases import Phrase
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_choices import ChoiceEngine
 from girlframe.services.m2_state import load_state
@@ -903,7 +904,7 @@ class CycleService:
         summary: str,
         recipient: int | None = None,
         context: rules.HandlerContext | None = None,
-        conditioning_phrase: Literal["speak"] | None = None,
+        conditioning_phrase: Phrase | None = None,
         lab: LabProposal | None = None,
     ) -> dict[str, Any]:
         if context is not None:

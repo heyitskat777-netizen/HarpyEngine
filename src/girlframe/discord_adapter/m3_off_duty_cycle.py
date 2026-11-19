@@ -509,7 +509,7 @@ async def open_action(
             kind = one(values, "kind")
             scene_kinds = tuple((x, x.replace("_", " ").title()) for x in HANDLER_SCENES)
             if data.get("trainer_can_install_speak"):
-                scene_kinds += (("trainer_conditioning", "Install Speak"),)
+                scene_kinds += (("trainer_conditioning", "Install a Conditioning Phrase"),)
             if data.get("scientist_lab_available"):
                 scene_kinds += (("scientist_lab", "Head to the Lab"),)
             fields = [
@@ -589,6 +589,18 @@ async def open_action(
                     and x["custodian"] in members
                 )
                 fields.append(Field("entity", "Actual current prisoner", targets or WAIT))
+            elif kind == "trainer_conditioning":
+                from girlframe.engine.m3_trainer_phrases import PHRASES
+
+                fields.append(
+                    Field(
+                        "phrase",
+                        "Conditioning Phrase (defaults to Speak)",
+                        PHRASES,
+                        minimum=0,
+                        required=False,
+                    )
+                )
             elif kind == "scientist_lab":
                 fields += [
                     Field("asset_name", "New Void Asset name"),
@@ -631,7 +643,7 @@ async def open_action(
                 values["summary"],
                 int(selected) if selected else None,
                 context,
-                "speak" if kind == "trainer_conditioning" else None,
+                (one(values, "phrase") or "speak") if kind == "trainer_conditioning" else None,
                 LabProposal(name=values["asset_name"], description=values["asset_description"])
                 if kind == "scientist_lab"
                 else None,

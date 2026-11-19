@@ -6299,7 +6299,9 @@ class GameService:
                     if str(uid) in state.sheets
                 },
                 "order_id": order_id,
-                "order_text": "Speak. " + text if conditioning else text,
+                "order_text": (
+                    conditioning["phrase"].capitalize() + ". " + text if conditioning else text
+                ),
                 "participants": scene["participants"],
                 "handler": state.handler,
                 "depth": 0,
@@ -7057,7 +7059,7 @@ class GameService:
 
                 return SpriteService(self.store).decision(viewer, choice_id)
             action = self.action(c, row["action_id"])
-            if row["kind"] in ("trainer_speak_answer", "trainer_speak_heard"):
+            if row["kind"] in ("trainer_speak_answer", "trainer_speak_heard", "trainer_sit"):
                 from girlframe.services.m3_trainer_phrases import display as display_phrase
 
                 return dict(row) | dict(

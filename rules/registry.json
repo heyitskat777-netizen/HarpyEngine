@@ -17446,7 +17446,8 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_trainer_phrases.py::test_original_speak_order_uses_its_own_phrasing_and_saved_refusal",
-        "tests/rules/test_trainer_phrases.py::test_actual_off_duty_speak_installation_needs_both_originals_and_can_trigger"
+        "tests/rules/test_trainer_phrases.py::test_actual_off_duty_speak_installation_needs_both_originals_and_can_trigger",
+        "tests/rules/test_trainer_phrases.py::test_actual_off_duty_speak_installation_needs_both_originals_and_can_trigger[sit]"
       ],
       "m2_play_id": null,
       "module": "core"

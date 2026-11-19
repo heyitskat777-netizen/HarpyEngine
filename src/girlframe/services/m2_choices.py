@@ -653,7 +653,7 @@ class ChoiceEngine:
             if not self.game.pending(c, action["id"]):
                 self.finish(c, state, action)
             return
-        if kind in ("trainer_speak_answer", "trainer_speak_heard"):
+        if kind in ("trainer_speak_answer", "trainer_speak_heard", "trainer_sit"):
             from girlframe.services.m3_trainer_phrases import choose as choose_phrase
 
             choose_phrase(self.game, c, state, action, request, answer)
@@ -1050,9 +1050,9 @@ class ChoiceEngine:
 
                 offer_loyalty(self.game, c, state, action)
             if not result.get("can_disobey"):
-                from girlframe.services.m3_trainer_phrases import offer_speak
+                from girlframe.services.m3_trainer_phrases import offer_phrase
 
-                offer_speak(self.game, c, state, action)
+                offer_phrase(self.game, c, state, action)
             if not self.game.pending(c, action["id"]):
                 self.finish(c, state, action)
             return
@@ -1249,10 +1249,10 @@ class ChoiceEngine:
             else:
                 from girlframe.services.m3_advocate_empathy import offer_reward
                 from girlframe.services.m3_mistress_rewards import offer as offer_mistress_reward
-                from girlframe.services.m3_trainer_phrases import offer_speak
+                from girlframe.services.m3_trainer_phrases import offer_phrase
 
                 if not (
-                    offer_speak(self.game, c, state, action)
+                    offer_phrase(self.game, c, state, action)
                     or offer_reward(self.game, c, state, action)
                     or offer_mistress_reward(self.game, c, state, action)
                 ):

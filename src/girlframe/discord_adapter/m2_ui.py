@@ -240,6 +240,8 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
         ]
     elif kind == "trainer_speak_answer":
         fields = [text("text", "Your own answer to Speak")]
+    elif kind == "trainer_sit":
+        fields = [text("text", "Describe your character sitting")]
     elif kind == "trainer_speak_heard":
         fields = [Field("flag", "Confirm you heard this answer", (("yes", "I heard it"),))]
     elif kind == "insurgent_surveillance":
@@ -1137,7 +1139,7 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
             instructions += "\n" + clean(reward["account"])
         if reward.get("tag"):
             instructions += "\nMatching Tag " + clean(reward["tag"])
-    if decision["kind"] in ("trainer_speak_answer", "trainer_speak_heard"):
+    if decision["kind"] in ("trainer_speak_answer", "trainer_speak_heard", "trainer_sit"):
         instructions += "\n" + clean(decision["conditioning_text"])
     if decision["kind"] == "prodigy_confidence_roll":
         instructions += f"\nSaved total after Tags: {decision['body']['original_total']}."
@@ -2928,6 +2930,8 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
             app_commands.Choice(name="Ordinary order", value="ordinary"),
             app_commands.Choice(name="Dose Up (typed cocktail order)", value="dose_up"),
             app_commands.Choice(name="Conditioning Phrase (Speak)", value="trainer_speak"),
+            app_commands.Choice(name="Conditioning Phrase (Sit)", value="trainer_sit"),
+            app_commands.Choice(name="Grant leave after Sit", value="trainer_leave"),
             app_commands.Choice(name="Echoes of Old Command", value="harpy_echoes"),
         ]
     )
@@ -2939,13 +2943,29 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         purpose: app_commands.Choice[str] | None = None,
     ) -> None:
         typed_dose = purpose is not None and purpose.value == "dose_up"
-        phrase = "speak" if purpose is not None and purpose.value == "trainer_speak" else None
+        use = purpose.value if purpose is not None else "ordinary"
+        phrase = {"trainer_speak": "speak", "trainer_sit": "sit"}.get(use)
         echoes = purpose is not None and purpose.value == "harpy_echoes"
-        if as_npc and (typed_dose or phrase):
+        if as_npc and (typed_dose or phrase or use == "trainer_leave"):
             await reply(
                 interaction,
                 "This typed order requires an original native issuer.",
             )
+            return
+        if use == "trainer_leave":
+            from girlframe.services.m3_trainer_phrases import grant_leave
+
+            def release_sit() -> str:
+                grant_leave(
+                    game,
+                    viewer_from_interaction(interaction),
+                    str(interaction.id),
+                    interaction.channel_id or 0,
+                    member.id,
+                )
+                return "Leave granted on the original Sit order."
+
+            await private_operation(interaction, release_sit)
             return
         if as_npc or echoes:
             from girlframe.discord_adapter.m3_npc_orders import open_order

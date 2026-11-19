@@ -434,6 +434,9 @@ def cockpit_enter(
     pilot: bool,
     void_threshold: str | None = None,
 ) -> GameState:
+    from girlframe.engine.m3_trainer_phrases import require_can_leave_seat
+
+    require_can_leave_seat(original, actor)
     state = GameState.model_validate_json(original.model_dump_json())
     _source(state, source_event, account, actor)
     view = resolve(state, actor, bindings, require_current_profile=False)
