@@ -83,6 +83,9 @@ class EffectService:
             body = json.loads(row["body_json"])
             state = load_state(c, self.store.campaign_id)
             captured_base = None
+            from girlframe.services.m3_rebel_funding import for_row as funding_for_row
+
+            involvement = funding_for_row(state, row)
             if body["rule_id"] == REBEL_BASE_CAPTURE:
                 from girlframe.engine.m3_handler_consequences import same_handler_body
                 from girlframe.engine.m3_rebel_base_capture import captures
@@ -112,6 +115,13 @@ class EffectService:
                 "rule_id": body["rule_id"],
                 "supported": body["rule_id"] in rules.SUPPORTED or body["rule_id"] == VOID_SPREAD,
                 "game_revision": state.revision,
+                **(
+                    {"pending_insurgent": involvement.id}
+                    if involvement is not None
+                    and not involvement.participation
+                    and row["state"] == "pending"
+                    else {}
+                ),
                 **({"captured_base": captured_base} if captured_base is not None else {}),
                 **(
                     {
@@ -303,6 +313,9 @@ class EffectService:
                 raise WorkflowError(
                     "The selected effect does not match this actual saved Strain event."
                 )
+            from girlframe.services.m3_rebel_funding import require_participation
+
+            require_participation(c, self.strain, state, row)
             if choice.rule_id in (REBEL_AMBUSH, REBEL_HUNT) and choice.target:
                 from girlframe.engine.m3_rebel_ambush import attacker
                 from girlframe.services.handler_setup import HandlerService

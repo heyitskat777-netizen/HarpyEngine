@@ -9,10 +9,11 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_rebel_assimilation as rules
+from girlframe.engine import m3_rebel_funding as funding
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_handler_consequences import active_handler, same_handler_body
 from girlframe.services.m2_state import load_state
-from girlframe.services.m3_budget_tags import _selection
+from girlframe.services.m3_budget_tags import _selection, _work
 from girlframe.services.m3_strain import StrainService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
@@ -31,8 +32,9 @@ class AssimilationService:
         state: GameState,
         viewer: GuildViewer,
         identity: str,
+        rule: str = rules.RULE,
     ) -> tuple[dict[str, Any], str]:
-        row, original = _selection(c, self.game, identity, rule=rules.RULE)
+        row, original = _selection(c, self.game, identity, rule=rule)
         handler = active_handler(original)
         body = json.loads(row["body_json"])
         selection = (
@@ -57,7 +59,10 @@ class AssimilationService:
         with self.store.engine.connect() as c:
             self.game.authorize(c, viewer, game=False)
             state = load_state(c, self.store.campaign_id)
-            row, faction = self._source(c, state, viewer, identity)
+            rule = json.loads(_work(c, self.store, identity)["body_json"]).get("rule_id")
+            if rule not in (rules.RULE, funding.RULE):
+                raise WorkflowError("Open the actual original assimilation Endgame")
+            row, faction = self._source(c, state, viewer, identity, rule)
             value = next((x for x in rules.assimilations(state) if x.id == identity), None)
             group = (
                 next((x for x in state.world.factions if x.id == faction), None)
@@ -70,6 +75,14 @@ class AssimilationService:
                 phase=row["state"],
                 group=group.name if group else "Original group",
                 play=value.employment_play if value else None,
+                rule=rule,
+                funding_groups=tuple(
+                    (x.id, x.name)
+                    for x in state.world.factions
+                    if x.id != faction and x.kind == "rebel" and x.active
+                )
+                if state.world and rule == funding.RULE
+                else (),
             )
 
     def install(
@@ -78,21 +91,33 @@ class AssimilationService:
         key: str,
         identity: str,
         revision: int,
-        play: rules.EmploymentPlay,
+        play: rules.EmploymentPlay | None = None,
+        *,
+        funded_group: str | None = None,
+        account: str = "",
     ) -> dict[str, Any]:
-        play = rules.EmploymentPlay.model_validate(
-            {k: v.strip() for k, v in play.model_dump().items()}
-        )
+        if play is not None:
+            play = rules.EmploymentPlay.model_validate(
+                {k: v.strip() for k, v in play.model_dump().items()}
+            )
+        account = account.strip()
+        if (play is None) != (funded_group is not None) or (
+            funded_group is not None and not 0 < len(account) <= 1200
+        ):
+            raise WorkflowError(
+                "Record the actual work Play or the separate secretly funded original group"
+            )
+        rule = funding.RULE if funded_group is not None else rules.RULE
 
         def authorize(c: Connection) -> None:
             for scope in ("strain", "world", "plays"):
                 self.strain.missions.access.authorize(c, viewer, scope)
             self.game.unpaused(c)
-            self._source(c, load_state(c, self.store.campaign_id), viewer, identity)
+            self._source(c, load_state(c, self.store.campaign_id), viewer, identity, rule)
 
         def operation(c: Connection) -> dict[str, Any]:
             state = self.strain._state(c, revision)
-            row, group_id = self._source(c, state, viewer, identity)
+            row, group_id = self._source(c, state, viewer, identity, rule)
             group = (
                 next((x for x in state.world.factions if x.id == group_id), None)
                 if state.world
@@ -114,11 +139,22 @@ class AssimilationService:
                     original=group,
                     handler=handler,
                     source=row["event_id"],
-                    rule=rules.RULE,
+                    rule=rule,
                     event=event,
                     employment_play=play,
                 ),
             )
+            if funded_group is not None:
+                funding.fund(
+                    changed,
+                    funding.Funding(
+                        id=identity,
+                        group=funded_group,
+                        sponsor=handler,
+                        event=event,
+                        account=account,
+                    ),
+                )
             self.game.event(
                 c,
                 viewer.user_id,
@@ -136,7 +172,9 @@ class AssimilationService:
             viewer,
             key,
             INSTALL,
-            dict(id=identity, revision=revision, play=play.model_dump(mode="json")),
+            dict(id=identity, revision=revision, play=play.model_dump(mode="json"))
+            if play
+            else dict(id=identity, revision=revision, funded_group=funded_group, account=account),
             operation,
             authorize,
         )

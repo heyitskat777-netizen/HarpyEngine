@@ -108,6 +108,12 @@ async def open_effect(
 ) -> None:
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(service.get, viewer, identity)
+    if insurgent := data.get("pending_insurgent"):
+        from girlframe.discord_adapter.m3_rebel_funding import open_participation
+        from girlframe.services.m3_rebel_funding import FundingService
+
+        await open_participation(interaction, FundingService(service.strain), insurgent)
+        return
     if captured := data.get("captured_base"):
         await reply(
             interaction,

@@ -10,6 +10,7 @@ from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_rebel_assimilation import EmploymentPlay
+from girlframe.engine.m3_rebel_funding import RULE as FUNDING_RULE
 from girlframe.services.m3_rebel_assimilation import AssimilationService
 
 
@@ -17,6 +18,40 @@ async def open_employment(
     interaction: discord.Interaction, service: AssimilationService, identity: str
 ) -> None:
     data = await asyncio.to_thread(service.view, viewer_from_interaction(interaction), identity)
+    if data["rule"] == FUNDING_RULE:
+        if data["installed"]:
+            await reply(
+                interaction,
+                "The original group joined the Foundation and sponsorship was recorded privately.",
+            )
+            return
+        if not data["funding_groups"]:
+            await reply(interaction, "Recover a separate active group for the original insurgency.")
+            return
+
+        async def fund(click: discord.Interaction, values: dict[str, Any]) -> str:
+            await asyncio.to_thread(
+                service.install,
+                viewer_from_interaction(click),
+                str(click.id),
+                identity,
+                data["revision"],
+                funded_group=values["funded_group"][0],
+                account=values["account"],
+            )
+            return "You have recorded the private sponsorship for future Rebellion events."
+
+        await NativeForm(
+            interaction.user.id,
+            "Fund a separate insurgent group",
+            "This sponsorship is private to your role.",
+            [
+                Field("funded_group", "Actual insurgent group", data["funding_groups"]),
+                Field("account", "Your private sponsorship", paragraph=True),
+            ],
+            fund,
+        ).present(interaction)
+        return
     if not data["installed"]:
 
         async def write(click: discord.Interaction, values: dict[str, Any]) -> str:

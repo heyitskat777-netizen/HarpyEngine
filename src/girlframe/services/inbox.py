@@ -2988,8 +2988,28 @@ class InboxService:
             from girlframe.services.m3_rebel_escape_offer import visible as visible_escape_offers
             from girlframe.services.m3_rebel_frame_theft import choices as theft_choices
             from girlframe.services.m3_rebel_frame_theft import visible as visible_thefts
+            from girlframe.services.m3_rebel_funding import visible as visible_participation
 
             journalism = JournalistService(GameService(self.store))
+            for participation in visible_participation(canon, viewer):
+                items.append(
+                    InboxItem(
+                        "rebel-participation:" + participation.id,
+                        "work",
+                        participation.id,
+                        canon.revision,
+                        "off_duty",
+                        "Rebellion event participation",
+                        "Original actor",
+                        "pending" if not participation.participation else "resolved",
+                        not bool(participation.participation),
+                        False,
+                        "Review your own actor's part in the event.",
+                        "",
+                        "Open participation",
+                        task="m3_rebel_funding",
+                    )
+                )
             play_owner = employment_handler(canon)
             if play_owner is not None and play_owner.entity == user:
                 for employment in assimilated_work_plays(canon, play_owner):
@@ -4534,17 +4554,16 @@ class InboxService:
                     and json.loads(work["body_json"]).get("rule_id") == "strain.rebellion.endgame.2"
                 ):
                     primary, task_name = "Resolve actual group merger", "m3_rebel_merge"
-                elif (
-                    kind == "strain_endgame_effect"
-                    and json.loads(work["body_json"]).get("rule_id") == "strain.rebellion.endgame.4"
-                ):
+                elif kind == "strain_endgame_effect" and json.loads(work["body_json"]).get(
+                    "rule_id"
+                ) in ("strain.rebellion.endgame.4", "strain.rebellion.endgame.5"):
                     if any(
                         x.identity == work["id"] and x.task == "m3_rebel_assimilation"
                         for x in items
                     ):
                         continue
                     primary, task_name = (
-                        "Write the group's employment Play",
+                        "Review the group's assimilation",
                         "m3_rebel_assimilation",
                     )
                 elif (

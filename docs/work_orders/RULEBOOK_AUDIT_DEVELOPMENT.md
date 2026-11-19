@@ -39,7 +39,7 @@ Off-Duty resumes only at its genuine completion boundary.
 
 The registry tracks each source's current scope and its acceptance tests.
 Every ordinary core Strain column has an effect path. Several have incomplete
-branches. Rebellion Endgames 3 and 5–8 are awaiting their first effect routes.
+branches. Rebellion Endgames 3 and 6–8 are awaiting their first effect routes.
 Current subset limitations include
 the High Budget hearing's Severe finding and the High Void bunk's separate
 contact Play. The individual receipts below retain the rest of the source
@@ -1120,3 +1120,22 @@ Authored Plays currently record performed work. User-defined dice,
 mechanical effects, and the existing external Pilots' resulting career
 choices are separate ports.
 [Rebellion Endgame p. 147](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=149) · [Assimilation test](../../tests/rules/test_rebel_assimilation.py)
+
+## Rebellion Endgame covert sponsorship
+
+The base is `89c275d3faac1d000829ce38bbab0ed1cbfbb90e`. The selected
+original group joins the Foundation. The original Handler can privately
+fund a separate existing active Rebel group. A later ordinary Rebellion
+die carries the original funding source without changing the random
+result. The selected effect waits for an original insurgent in an actual
+scene. The insurgent controls their own contribution. The scope hides the
+sponsor's account from the insurgent and the actor's account from the
+sponsor. Earlier saved dice are preserved.
+
+All 19 selected tests passed, including the earlier assimilation, native
+Inbox, author and scene boundaries, provenance, retry, restart and the
+actual Low Rebellion control-slip effect. Static typing passed on ten
+source modules. This scope follows ordinary printed dice-derived effects.
+Custom event substitution, replacement of an inactive insurgent group and
+carryover after the sponsor leaves still need explicit treatment.
+[Rebellion Endgame p. 147](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=149) · [Funding test](../../tests/rules/test_rebel_funding.py)

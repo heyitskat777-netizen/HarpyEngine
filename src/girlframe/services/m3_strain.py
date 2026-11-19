@@ -422,6 +422,9 @@ class StrainService:
             state.strain = rules.roll(state.strain, identity, self.dice.roll_d6())
             saved = next(x for x in state.strain.events if x.id == identity)
             event_id = str(uuid4())
+            from girlframe.engine.m3_rebel_funding import bind_roll
+
+            bind_roll(state, saved, event_id)
             arrivals = rift_rules.upcoming(state, saved.id, saved.period_id, event_id)
             event = self.game.event(
                 c,
@@ -532,6 +535,12 @@ class StrainService:
                 )
                 cascade = selected.severity == "high" and selected.face == 6 and option == 2
                 if slot is not None:
+                    from girlframe.engine.m3_rebel_funding import influences
+
+                    if any(x.id == identity for x in influences(state)):
+                        raise WorkflowError(
+                            "The funded roll needs a printed event with its original participants"
+                        )
                     from girlframe.engine.m3_handler_consequences import active_handler
                     from girlframe.services.m3_custom_strain import prove_slot
 
