@@ -2989,8 +2989,28 @@ class InboxService:
             from girlframe.services.m3_rebel_frame_theft import choices as theft_choices
             from girlframe.services.m3_rebel_frame_theft import visible as visible_thefts
             from girlframe.services.m3_rebel_funding import visible as visible_participation
+            from girlframe.services.m3_rebel_succession import visible as visible_succession
 
             journalism = JournalistService(GameService(self.store))
+            for succession in visible_succession(canon, viewer):
+                items.append(
+                    InboxItem(
+                        "foundation-succession:" + succession.id,
+                        "work",
+                        succession.id,
+                        canon.revision,
+                        "campaign",
+                        "New Foundation court",
+                        "Original court participants",
+                        "resolved" if succession.completed else "pending",
+                        not bool(succession.completed),
+                        False,
+                        "Review your original court record.",
+                        "",
+                        "Open court",
+                        task="m3_rebel_succession",
+                    )
+                )
             for participation in visible_participation(canon, viewer):
                 items.append(
                     InboxItem(
@@ -4575,6 +4595,15 @@ class InboxService:
                     and json.loads(work["body_json"]).get("rule_id") == "strain.rebellion.endgame.1"
                 ):
                     primary, task_name = "Identify actual leader opportunity", "m3_rebel_leader"
+                elif (
+                    kind == "strain_endgame_effect"
+                    and json.loads(work["body_json"]).get("rule_id") == "strain.rebellion.endgame.7"
+                ):
+                    if any(
+                        x.identity == work["id"] and x.task == "m3_rebel_succession" for x in items
+                    ):
+                        continue
+                    primary, task_name = "Convene the new Foundation court", "m3_rebel_succession"
                 elif (
                     kind == "strain_endgame_effect"
                     and json.loads(work["body_json"]).get("rule_id") == "strain.void.endgame.2"

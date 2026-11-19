@@ -39,7 +39,7 @@ Off-Duty resumes only at its genuine completion boundary.
 
 The registry tracks each source's current scope and its acceptance tests.
 Every ordinary core Strain column has an effect path. Several have incomplete
-branches. Rebellion Endgames 3, 7 and 8 are awaiting their first effect routes.
+branches. Rebellion Endgames 3 and 8 are awaiting their first effect routes.
 Current subset limitations include
 the High Budget hearing's Severe finding and the High Void bunk's separate
 contact Play. The individual receipts below retain the rest of the source
@@ -1156,3 +1156,23 @@ Static typing passed on eleven source files. Foundation-specific versions
 of the remaining table entries and the overlap with an earlier covert
 sponsorship still require explicit treatment.
 [Rebellion Endgame p. 147](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=149) · [Opposition test](../../tests/rules/test_rebel_funding.py)
+
+## Rebellion Endgame execution and the new Foundation
+
+The base is `aee58e88f149af5b2ef9a635f9e9912e5d859493`. The original
+group joins the Foundation. Its actual independently controlled Director
+states the group's ideals and the original Handler's sentence. The
+sentence ends that actual body at the Off-Duty boundary. The original
+player can create a fresh Handler and submit that specific character's
+pledge. The original court can decline or accept. Edits to the draft
+invalidate the approval. The successor closes the original work only at
+ordinary activation, after the exact pledge and usual starting agreements.
+
+All 39 selected tests passed in 74.37 seconds. They include the original
+sentence, private court and dossier separation, denial of the wrong
+actor, genuine archive, reopening, refused and revised pledges, stale
+approval, and later Off-Duty. The nine source modules passed static
+typing. This scope uses the original player's appointment for a distinct
+new persona. A different appointment, changing court authority and
+overlapping Handler ending still require a separate path.
+[Rebellion Endgame p. 147](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=149) · [Succession test](../../tests/rules/test_rebel_succession.py)

@@ -24,11 +24,14 @@ EVENT = "m3.handler_retirement_awarded"
 def require_successor(state: GameState) -> None:
     from girlframe.engine.m3_budget_demotion import demotions
     from girlframe.engine.m3_budget_trial import trials
+    from girlframe.engine.m3_rebel_succession import successions
 
     if any(x.demoted and not x.completed for x in demotions(state)):
         raise WorkflowError(
             "Complete the original Girl and consenting successor before the next phase"
         )
+    if any(x.executed and not x.completed for x in successions(state)):
+        raise WorkflowError("Activate the exact approved successor before starting the next phase")
     if active_handler(state) is None and (
         any(x.retired for x in rules.awards(state)) or any(x.executed for x in trials(state))
     ):

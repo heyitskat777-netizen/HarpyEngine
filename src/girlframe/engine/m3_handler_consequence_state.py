@@ -117,13 +117,17 @@ class HandlerFatalSource(Model):
         "go_for_the_core.low",
         "consume_eat.kill",
         "strain.budget.endgame.1.execution",
+        "strain.rebellion.endgame.7.execution",
     ]
     appointment: str = Field(min_length=1)
     account: str = Field(min_length=1, max_length=1200)
 
     @model_validator(mode="after")
     def actual_source(self) -> "HandlerFatalSource":
-        execution = self.clause == "strain.budget.endgame.1.execution"
+        execution = self.clause in (
+            "strain.budget.endgame.1.execution",
+            "strain.rebellion.endgame.7.execution",
+        )
         if (execution and (not self.source_work or self.source_action or self.source_choice)) or (
             not execution and (not self.source_action or self.source_work)
         ):

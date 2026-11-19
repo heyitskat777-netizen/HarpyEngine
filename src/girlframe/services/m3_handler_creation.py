@@ -768,6 +768,9 @@ class HandlerCreationService:
                     )
             saved = self._draft(c, row)
             self._actual(c, saved)
+            from girlframe.services.m3_rebel_succession import prepare_successor
+
+            succession = prepare_successor(c, self, state, viewer, saved)
             accepted: list[Agreement] = []
             npc_accepted: list[NpcAgreement] = []
             for request in self._requests(c, saved.persona_id):
@@ -799,6 +802,19 @@ class HandlerCreationService:
                 from girlframe.services.m3_battle_director import bind_legacy_context_bodies
 
                 updated = bind_legacy_context_bodies(self.game, c, updated)
+            if succession is not None:
+                from girlframe.engine.m3_handler_consequences import active_handler
+                from girlframe.engine.m3_rebel_succession import save as save_succession
+
+                save_succession(
+                    updated,
+                    succession.model_copy(
+                        update=dict(
+                            replacement=active_handler(updated),
+                            completed=source,
+                        )
+                    ),
+                )
             self.game.event(
                 c,
                 viewer.user_id,
@@ -810,6 +826,13 @@ class HandlerCreationService:
                 body_sha256=fingerprint(saved),
             )
             self._save_work(c, row, source, saved.model_dump(mode="json"), state="resolved")
+            if succession is not None:
+                from girlframe.engine.m3_rebel_succession import RULE as SUCCESSION_RULE
+                from girlframe.services.m3_budget_tags import _selection
+                from girlframe.services.m3_collateral import append
+
+                work, _ = _selection(c, self.game, succession.id, rule=SUCCESSION_RULE)
+                append(c, work, source, json.loads(work["body_json"]), "resolved")
             for request in self._requests(c, saved.persona_id):
                 if request["state"] == "pending":
                     self._save_work(
