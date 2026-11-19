@@ -16,6 +16,7 @@ from girlframe.engine.m3_actor_state import ActorRef, ActorView, SceneCast
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_ancillary import Book
 from girlframe.engine.m3_hallucinations import Roll
+from girlframe.engine.m3_item_state import HeldItem
 from girlframe.engine.m3_parasite_infection import controls_identity
 from girlframe.engine.m3_world_state import AdversaryPilot, Npc
 from girlframe.services.m2_game import GameService
@@ -30,6 +31,7 @@ from girlframe.services.read_only_bot import GuildViewer
 
 MID = {
     "escape": "Set a scene outside the captured room after getting free",
+    "cell": "Set a cell scene with a shiv and incoming meal",
     "chance": "Set another actual fighting chance",
 }
 HIGH = {
@@ -38,6 +40,35 @@ HIGH = {
     "staff": "Rebel personnel are sent to punish her",
     "other": "The rebels leave her drained",
 }
+
+
+def prove_cell_shiv(game: GameService, c: Connection, original: GameState, item: HeldItem) -> None:
+    author = c.scalar(
+        sa.select(t.events.c.actor_id).where(
+            t.events.c.campaign_id == game.store.campaign_id,
+            t.events.c.id == item.source_event,
+            t.events.c.kind == "m3.captured_mid",
+        )
+    )
+    if (
+        item.id != "captured-shiv:" + item.source_event
+        or author != item.source_owner.entity
+        or item.confirmed_event != item.source_event
+        or item.confirmed_by != item.source_owner
+        or str(item.confirmed_controller) != author
+        or not item.weapon
+        or not any(
+            x.girl == item.source_owner
+            and x.confirmed is not None
+            and rules.active(original, x.girl)
+            and x.current is not None
+            and x.current.roll.result == "mid"
+            and x.current.scene_choice == "cell"
+            and x.current.chosen_event == x.current.completed == item.source_event
+            for x in rules.records(original)
+        )
+    ):
+        raise WorkflowError("Recover the original Girl’s chosen Captured! cell scene")
 
 
 class CapturedService:
@@ -310,7 +341,9 @@ class CapturedService:
         current = value.current
         if current:
             first = current.model_copy(
-                update=dict(prompt=None, chosen_event=None, conversion_identity=None)
+                update=dict(
+                    prompt=None, scene_choice=None, chosen_event=None, conversion_identity=None
+                )
             )
             first = first.model_copy(update=dict(completed=None, erased_identity=None))
             yield (
@@ -548,8 +581,25 @@ class CapturedService:
             if choice == "escape":
                 self._custody(state, value, event, None, account)
                 value = value.model_copy(update=dict(escaped=event))
+            elif choice == "cell":
+                state.held_items.append(
+                    HeldItem(
+                        id="captured-shiv:" + event,
+                        holder=value.girl,
+                        source_owner=value.girl,
+                        name="Shiv",
+                        description="The shiv from the Girl’s Captured! cell scene.",
+                        source_event=event,
+                        confirmed_by=value.girl,
+                        confirmed_controller=int(value.girl.entity),
+                        confirmed_event=event,
+                        weapon=True,
+                    )
+                )
             result = current.model_copy(
-                update=dict(prompt=account, chosen_event=event, completed=event)
+                update=dict(
+                    prompt=account, scene_choice=choice, chosen_event=event, completed=event
+                )
             )
         elif step == "high_scene" and choice in HIGH and account:
             if (choice == "pilot" and value.captor.kind != "external_pilot") or (

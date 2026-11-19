@@ -3120,9 +3120,21 @@ Helplessness, leaving the original Frame in place.
 the entire high result, denied Heat on the next attempt,
 reopened after restart, then resolved the mid escape.
 Low remains visible in the private Inbox with its saved
-roll pending Ancillary conversion. Other mid scenes and
-the Defeat-produced capture route remain open.
+roll pending Ancillary conversion. The Defeat-produced capture
+route remains open.
 [Captured! p. 196](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=198) · [Native case](../../tests/rules/test_captured.py)
+
+The cell scene, based on `ffd4fb26e74bd48076118e3352770dcf9ba44946`,
+gives the original Girl one held shiv from her actual saved middle result.
+The item keeps that source for later custody checks. The scene clears the
+capture's own Helplessness while retaining other sources, current custody,
+and the original parked Frame. The shiv is a held object. The player
+describes the incoming meal and the Girl's response in the scene.
+The separate room and radio branches still need implementation.
+One focused test passed in 5.49 seconds after exercising the native Inbox,
+wrong owner, replay after reopen, saved dice and actual item provenance.
+The command was `python -m pytest -q --tb=short tests/rules/test_captured.py -k cell_scene`
+with `PYTHONPATH="$PWD/src"`.
 
 ### Captured! low and the optional Ancillary conversion
 

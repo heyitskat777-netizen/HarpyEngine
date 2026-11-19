@@ -13,7 +13,7 @@ from test_world_service import ready
 
 from girlframe.discord_adapter.m3_captured import open_capture, open_capture_choice
 from girlframe.engine.m2 import PlayInput
-from girlframe.engine.m3_actor_bonds import current_ref, is_helpless
+from girlframe.engine.m3_actor_bonds import current_ref, is_helpless, make_helpless
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_captured import RULE, records
 from girlframe.engine.m3_world_state import Faction, Npc
@@ -21,6 +21,7 @@ from girlframe.services.inbox import InboxService
 from girlframe.services.m3_actors import ActorService
 from girlframe.services.m3_captured import CapturedService
 from girlframe.services.m3_cast import CastService
+from girlframe.services.m3_items import prove_item
 from girlframe.services.onboarding import WorkflowError
 
 
@@ -91,7 +92,7 @@ def begin_capture(ledger, faces):
         async def route(click):
             await open_capture_choice(click, service, item.identity)
 
-        asyncio.run(submit_form(viewer, route, values, number))
+        return asyncio.run(submit_form(viewer, route, values, number))
 
     native(PLAYER, dict(choice=("accept",)), 91504)
     assert is_helpless(state(game), girl, captor)
@@ -140,6 +141,44 @@ def test_captured_high_erases_original_identity_and_next_roll_cannot_spend_heat(
     assert not is_helpless(canon, girl, captor)
     body = next(x for x in canon.placements if x.actor == girl)
     assert body.custody is None and body.frame_cell == original_placement.frame_cell
+
+
+def test_captured_cell_scene_grants_a_real_shiv_and_clears_only_capture_helplessness(ledger):
+    game, service, native, original, girl, captor, identity = begin_capture(ledger, (4, 5))
+    with ledger.transaction() as c:
+        separate = "other-helpless-source"
+        changed = make_helpless(state(game), girl, captor, separate)
+        game.event(c, ADMIN.user_id, separate, "synthetic.helpless", changed, event_id=separate)
+    native(PLAYER, dict(heat="0"), 91530)
+    pending = state(game)
+    roll = records(pending)[0].current.roll
+    assert roll.result == "mid" and not pending.held_items
+    account = "I wait in the cell as they bring in a meal."
+    with pytest.raises(WorkflowError, match="unavailable"):
+        service.act(
+            OTHER, "another-girl", identity, pending.revision, "mid", choice="cell", account=account
+        )
+    key = native(PLAYER, dict(choice=("cell",), account=account), 91534)
+    ledger.engine.dispose()
+    actual = state(game)
+    receipt = service.act(
+        PLAYER, key, identity, pending.revision, "mid", choice="cell", account=account
+    )
+    assert receipt["event"] == records(actual)[0].current.completed
+    assert service.get(PLAYER, identity)["step"] == "roll"
+    assert state(game) == actual and game.dice.calls == 1
+    assert records(actual)[0].current.roll == roll
+    assert is_helpless(actual, girl, captor)
+    (condition,) = actual.helpless_conditions
+    assert condition.source_events == (separate,)
+    first_body = next(x for x in original.placements if x.actor == girl)
+    body = next(x for x in actual.placements if x.actor == girl)
+    assert body.custody == captor and body.frame_cell == first_body.frame_cell
+    assert actual.sheets[girl.entity].assets == original.sheets[girl.entity].assets
+    (shiv,) = actual.held_items
+    with ledger.engine.connect() as c:
+        assert prove_item(c, game, actual, shiv.id) == shiv
+    assert shiv.holder == girl and shiv.weapon and shiv.source_event == receipt["event"]
 
 
 def test_captured_low_requires_optional_approval_and_continues_the_same_person(

@@ -74,6 +74,11 @@ def prove_item(c: Connection, game: GameService, state: GameState, item_id: str)
         from girlframe.services.m3_tracker_implants import prove_recovered
 
         prove_recovered(game, c, state, item)
+    elif item.id.startswith("captured-shiv:"):
+        from girlframe.services.m3_captured import prove_cell_shiv
+
+        assert original is not None  # Required by the immutable possession proof above.
+        prove_cell_shiv(game, c, original, item)
     elif item.source_owner.kind == "handler" and item.confirmed_event and item.origin_asset_json:
         from girlframe.services.m3_handler_girl_void import prove_handler_item
 

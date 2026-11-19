@@ -1,5 +1,7 @@
 """Real rebel custody and the original Captured! roll."""
 
+from pydantic import Field
+
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_hallucinations import Roll
@@ -12,6 +14,7 @@ class Result(Model):
     roll: Roll
     no_heat: bool
     prompt: str | None = None
+    scene_choice: str | None = Field(default=None, exclude_if=lambda value: value is None)
     chosen_event: str | None = None
     completed: str | None = None
     erased_identity: str | None = None
