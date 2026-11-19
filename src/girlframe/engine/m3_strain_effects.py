@@ -15,6 +15,7 @@ from girlframe.engine.m3_budget_anarchy import REBELLION as REBEL_PROTEST
 from girlframe.engine.m3_budget_conversion import RULE as BUDGET_CONVERSION
 from girlframe.engine.m3_budget_hearing import RULE as BUDGET_HEARING
 from girlframe.engine.m3_budget_sabotage import Pin
+from girlframe.engine.m3_bunk_harpy import RULE as BUNK_HARPY
 from girlframe.engine.m3_cadre_leak import RULE as CADRE_LEAK
 from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_contraband_state import ContrabandFind
@@ -74,6 +75,7 @@ SUPPORTED = frozenset(
         PILOT_FEARS,
         DOPPELGANGER_REVEAL,
         HARPY_RAID,
+        BUNK_HARPY,
         CULT_OCCUPATION,
         CADRE_LEAK,
         "strain.rebellion.low.1.1",
@@ -228,6 +230,10 @@ def apply(
         fields(choice, {"target", "victim"})
         if not choice.target or choice.victim not in {str(x) for x in state.order}:
             raise ValueError("Choose the original Girl and the fictional Director for the hearing")
+    elif rule == BUNK_HARPY:
+        fields(choice, {"target"})
+        if not choice.target:
+            raise ValueError("Choose the actual independently controlled unlinked Harpy")
     elif rule == ORBITAL_THREAT:
         from girlframe.engine.m3_orbital_threat import introduce
 

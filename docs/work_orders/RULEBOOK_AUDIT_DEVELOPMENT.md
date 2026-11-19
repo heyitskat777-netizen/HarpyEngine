@@ -864,3 +864,27 @@ a different unapproved checksum. Runtime approval behavior is unchanged.
 The historical full-suite result does not cover any newer development
 revision.
 [Name and approval regression](../../tests/test_printed_frame_names.py)
+
+## High Void bunk encounter
+
+The base is `7a93b80`. High Void 2.2 draws one original Girl outside
+her Frame at the operational base where an independently controlled
+unlinked Harpy is present. The saved draw records the population, index
+and random source. A private, owned appearance places the existing
+bodies in the bunk encounter without moving either parked Frame. The
+Strain effect closes when the appearance occurs. The disclosure remains
+separate and durable as Off-Duty begins.
+
+The selected Girl can contact the Handler through the source-specific
+unrolled control. The Harpy's original controller can instead record
+leaving the bunk and provide the late notice. The Handler receives only
+the communicated notice and the original sender on direct contact.
+Other scene details remain private. Twelve selected tests and source
+static checks passed, including both notification paths, single draw,
+wrong audience, pause, stale requests, replay and restart.
+
+The encounter currently uses a known base with an eligible original
+roster and a separately controlled Harpy already outside her Frame.
+Other bunk locations, an initially unknown Harpy, and binding a separate
+printed Play used as the means of contact remain open.
+[High Void p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) · [Bunk encounter tests](../../tests/rules/test_bunk_harpy.py)

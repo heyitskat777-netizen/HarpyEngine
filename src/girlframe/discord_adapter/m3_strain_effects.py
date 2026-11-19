@@ -15,6 +15,7 @@ from girlframe.engine.m3_benevolent_contact import PLAYS as CONTACT_PLAYS
 from girlframe.engine.m3_benevolent_contact import RULE as BENEVOLENT_CONTACT
 from girlframe.engine.m3_budget_anarchy import REBELLION as REBEL_PROTEST
 from girlframe.engine.m3_budget_hearing import RULE as BUDGET_HEARING
+from girlframe.engine.m3_bunk_harpy import RULE as BUNK_HARPY
 from girlframe.engine.m3_cadre_leak import RULE as CADRE_LEAK
 from girlframe.engine.m3_civic_directive import PROTEST as CIVIC_PROTEST
 from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
@@ -106,6 +107,9 @@ async def open_effect(
         return
     if data.get("awaiting_budget_hearing"):
         await reply(interaction, "The original parties have the private hearing in their Inbox.")
+        return
+    if data.get("awaiting_bunk_harpy"):
+        await reply(interaction, "The encounter is awaiting a private appearance.")
         return
     if data["rule_id"] == VOID_SPREAD:
         await open_spread(interaction, service, data, identity)
@@ -276,6 +280,13 @@ def effect_form(
         raise WorkflowError("STALE_STATE: reopen this changed event.")
     handler = state.handler
     rule = data["rule_id"]
+    bunk_harpies: tuple[tuple[str, str], ...] = ()
+    if rule == BUNK_HARPY:
+        from girlframe.services.m3_bunk_harpy import candidates
+
+        bunk_harpies = candidates(state, viewer)
+        if not bunk_harpies:
+            raise WorkflowError("Recover a living unlinked Harpy under independent control.")
     from girlframe.engine.m3_promotional_opportunity import in_responsibility, responsibility_edge
 
     regional_locations = [
@@ -591,6 +602,10 @@ def effect_form(
                     tuple((str(uid), state.sheets[str(uid)].callsign) for uid in state.order)
                     or WAIT,
                 )
+            )
+        if rule == BUNK_HARPY:
+            fields.append(
+                Field("bunk_harpy", "Which unlinked Harpy comes to the base?", bunk_harpies)
             )
         if rule == CADRE_LEAK:
             fields.append(
@@ -1283,6 +1298,8 @@ def effect_form(
                 payload["protest_city"] = values["protest_city"][0]
         if rule == BUDGET_HEARING:
             payload["victim"] = values["hearing_girl"][0]
+        if rule == BUNK_HARPY:
+            payload["target"] = values["bunk_harpy"][0]
         if rule == CADRE_LEAK:
             if any(x not in parties_by_token for x in values["parties"]):
                 raise WorkflowError("Recover the actual original parties of this incident")
@@ -1537,6 +1554,8 @@ def effect_form(
             return "The original fictional Director can issue the demand in their private Inbox."
         if rule == BUDGET_HEARING:
             return "The Director can serve the accusation privately."
+        if rule == BUNK_HARPY:
+            return "The appearance is available to its original Harpy controller."
         if rule == PUBLIC_APPEARANCE:
             return "The original Cadre can record attendance from their private Inbox."
         if rule == HARPY_RAID:

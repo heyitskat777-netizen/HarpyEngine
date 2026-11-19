@@ -13,6 +13,7 @@ from girlframe.engine import m3_strain_effects as rules
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_benevolent_contact import RULE as BENEVOLENT_CONTACT
 from girlframe.engine.m3_budget_hearing import RULE as BUDGET_HEARING
+from girlframe.engine.m3_bunk_harpy import RULE as BUNK_HARPY
 from girlframe.engine.m3_cadre_leak import RULE as CADRE_LEAK
 from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_contraband_state import ContrabandFind
@@ -127,6 +128,8 @@ class EffectService:
                 "awaiting_rebel_voice": bool(body.get("voice_requested"))
                 and row["state"] == "pending",
                 "awaiting_budget_hearing": bool(body.get("hearing_requested"))
+                and row["state"] == "pending",
+                "awaiting_bunk_harpy": bool(body.get("bunk_requested"))
                 and row["state"] == "pending",
                 "supply_outcome": {
                     "recipient": label,
@@ -701,6 +704,21 @@ class EffectService:
                 stage_hearing(
                     c, self.strain, updated, row, event_id, choice.target, int(choice.victim)
                 )
+            needs_bunk = choice.rule_id == BUNK_HARPY
+            if needs_bunk:
+                from girlframe.services.m3_bunk_harpy import stage as stage_bunk
+
+                assert choice.target
+                stage_bunk(
+                    c,
+                    self.strain,
+                    updated,
+                    row,
+                    event_id,
+                    choice.target,
+                    self.selector,
+                    self.selection_source,
+                )
             pending = (
                 needs_offer
                 or needs_directive
@@ -713,6 +731,7 @@ class EffectService:
                 or needs_taunt
                 or needs_voice
                 or needs_hearing
+                or needs_bunk
             )
             scientific_period, scientific_events = None, []
             if choice.rule_id == "strain.budget.low.3.1":
@@ -934,7 +953,8 @@ class EffectService:
                 | ({"strafe_requested": event} if needs_strafe else {})
                 | ({"taunt_requested": event} if needs_taunt else {})
                 | ({"voice_requested": event} if needs_voice else {})
-                | ({"hearing_requested": event} if needs_hearing else {}),
+                | ({"hearing_requested": event} if needs_hearing else {})
+                | ({"bunk_requested": event} if needs_bunk else {}),
                 resolved=not pending,
             )
             return {

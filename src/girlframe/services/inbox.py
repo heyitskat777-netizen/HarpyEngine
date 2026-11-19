@@ -2966,6 +2966,8 @@ class InboxService:
             from girlframe.engine.m3_void_signal import signals as void_signals
             from girlframe.services.m3_budget_hearing import options as hearing_options
             from girlframe.services.m3_budget_hearing import visible as visible_hearings
+            from girlframe.services.m3_bunk_harpy import options as bunk_options
+            from girlframe.services.m3_bunk_harpy import visible as visible_bunks
             from girlframe.services.m3_handler_tags import HandlerTagService
             from girlframe.services.m3_journalist import JournalistService
             from girlframe.services.m3_pilot_fears import access as fear_access
@@ -2990,6 +2992,26 @@ class InboxService:
                         "Human rules review required." if hearing.phase == "review" else "",
                         "Open hearing",
                         task="m3_budget_hearing",
+                    )
+                )
+            for bunk in visible_bunks(canon, viewer):
+                actionable = bool(bunk_options(bunk, viewer))
+                items.append(
+                    InboxItem(
+                        "void-bunk:" + bunk.id,
+                        "work",
+                        bunk.id,
+                        canon.revision,
+                        "off_duty",
+                        "Private Harpy encounter",
+                        "Original audience",
+                        "pending" if actionable else "resolved",
+                        actionable,
+                        False,
+                        "Review the actual private encounter.",
+                        "",
+                        "Open encounter",
+                        task="m3_bunk_harpy",
                     )
                 )
             for leave in void_leaves(canon):
