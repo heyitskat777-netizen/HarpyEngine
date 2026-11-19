@@ -132,4 +132,5 @@ tests/rules/test_strain_public_appearance.py
 tests/rules/test_strain_npc_interest.py
 tests/rules/test_strain_rebel_strafe.py
 tests/rules/test_strain_rebel_taunt.py
+tests/rules/test_strain_rebel_voice.py
 tests/rules/test_strain_void_rift.py

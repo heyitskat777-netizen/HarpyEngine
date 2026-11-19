@@ -7631,8 +7631,11 @@ class GameService:
                 from girlframe.engine.m3_actors import resolve as resolve_npc_issuer
                 from girlframe.services.m3_npc_orders import order as original_npc_order
 
-                issuer = original_npc_order(self, c, action).issuer
-                result["npc_order_issuer"] = resolve_npc_issuer(state, issuer, ()).label
+                npc_order = original_npc_order(self, c, action)
+                if npc_order.origin_kind != "rebel_voice":
+                    result["npc_order_issuer"] = resolve_npc_issuer(
+                        state, npc_order.issuer, ()
+                    ).label
             if action["data"].get("beneath") and row["kind"].startswith("beneath_"):
                 from girlframe.services.m3_beneath import projection
 

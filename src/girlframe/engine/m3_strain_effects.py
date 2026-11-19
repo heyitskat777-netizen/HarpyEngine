@@ -28,6 +28,7 @@ from girlframe.engine.m3_rebel_defection import RULE as REBEL_DEFECTION
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_rebel_strafe import RULE as REBEL_STRAFE
 from girlframe.engine.m3_rebel_taunt import RULE as REBEL_TAUNT
+from girlframe.engine.m3_rebel_voice import RULE as REBEL_VOICE
 from girlframe.engine.m3_refusal_state import RefusalBonus
 from girlframe.engine.m3_scientific_observation import Demand, require_orders
 from girlframe.engine.m3_supply_state import SupplyLoss
@@ -78,6 +79,7 @@ SUPPORTED = frozenset(
         "strain.rebellion.low.2.2",
         REBEL_STRAFE,
         REBEL_TAUNT,
+        REBEL_VOICE,
         "strain.rebellion.low.5.2",
         REBEL_PROTEST,
         REBEL_ESCAPE_OFFER,
@@ -383,7 +385,7 @@ def apply(
             recipient=choice.defection_recipient,
             account=choice.account.strip(),
         )
-    elif rule in (REBEL_ESCAPE_OFFER, REBEL_TAUNT):
+    elif rule in (REBEL_ESCAPE_OFFER, REBEL_TAUNT, REBEL_VOICE):
         from girlframe.engine.m3_rebel_escape_offer import speaker
 
         fields(choice, {"target"})

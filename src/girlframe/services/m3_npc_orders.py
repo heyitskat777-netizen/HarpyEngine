@@ -63,7 +63,10 @@ def _access(
         "secretary": "handler-advancement.handler-advancement.secretary",
         "npc_flirt": "play.basic.flirt",
         "stim_sex": "girl.stim-blissed.sex-play",
+        "rebel_voice": "strain.rebellion.high.5.1",
     }[origin_kind]
+    if origin_kind == "rebel_voice":
+        access.authorize(c, viewer, "strain", director_response=True)
     access.registry.require_available(rule)
 
 
@@ -94,6 +97,7 @@ def source(
                 "secretary": "npc_secretary_order",
                 "npc_flirt": "npc_flirt_order",
                 "stim_sex": "npc_stim_order",
+                "rebel_voice": "npc_rebel_voice_order",
             }[value.origin_kind]
             and x.get("id") == value.id
         ),
@@ -101,7 +105,21 @@ def source(
     )
     actual = resolve(state, value.issuer, profiles(c, game.store.campaign_id))
     recipient = resolve(state, value.target, profiles(c, game.store.campaign_id))
-    if value.origin_kind == "stim_sex":
+    if value.origin_kind == "rebel_voice":
+        from girlframe.services.m3_rebel_voice import authority as voice_authority
+
+        rights = voice_authority(
+            game, c, state, value.condition, value.controller, value.issuer, value.target
+        )
+        born = voice_authority(
+            game, c, original, value.condition, value.controller, value.issuer, value.target
+        )
+        condition_invalid = (
+            rights != born
+            or value.principal != rights.handler
+            or value.controller not in game.scene(c, value.cast.channel)["participants"]
+        )
+    elif value.origin_kind == "stim_sex":
         from girlframe.services.m3_stim_npc import order_authority as stim_authority
 
         condition_invalid = (
@@ -214,6 +232,18 @@ def prepare(
 
 
 def _allow_refusal(game: GameService, c: Connection, state: GameState, value: rules.Order) -> None:
+    if value.origin_kind == "rebel_voice" and value.principal is not None:
+        from girlframe.engine.m3_harpy_flirt import assert_can_refuse
+
+        assert_can_refuse(state, value.target, value.principal)
+        if any(
+            x.kind == "cannot_refuse_until_tag_resolved"
+            and x.state == "pending"
+            and str(x.owner) == value.target.entity
+            and str(x.target) == value.principal.entity
+            for x in state.obligations
+        ):
+            raise WorkflowError("COMPULSION: resolve the owed Tag before refusing this Order.")
     if value.origin_kind == "npc_flirt":
         from girlframe.services.m3_npc_flirt import cannot_refuse
 
@@ -328,9 +358,16 @@ class NpcOrderService:
         origin_kind: rules.Origin = "broken",
         source_effect: str | None = None,
     ) -> dict[str, Any]:
-        if source_effect is not None and origin_kind != "stim_sex":
-            raise WorkflowError("An exact drug effect belongs only to its Stim source")
-        if origin_kind not in ("broken", "am_secret", "secretary", "npc_flirt", "stim_sex"):
+        if source_effect is not None and origin_kind not in ("stim_sex", "rebel_voice"):
+            raise WorkflowError("This Order does not accept an exact source effect")
+        if origin_kind not in (
+            "broken",
+            "am_secret",
+            "secretary",
+            "npc_flirt",
+            "stim_sex",
+            "rebel_voice",
+        ):
             raise WorkflowError("Use only an implemented actual NPC order source")
         if not text.strip() or len(text) > 1200:
             raise WorkflowError("State the actual direct order in 1–1200 characters")
@@ -346,7 +383,16 @@ class NpcOrderService:
                 kind="pilot", entity=str(target), incarnation=state.sheets[str(target)].character_id
             )
             principal = None
-            if origin_kind == "stim_sex":
+            if origin_kind == "rebel_voice":
+                from girlframe.services.m3_rebel_voice import authority as voice_authority
+
+                if viewer.user_id not in scene["participants"]:
+                    raise WorkflowError("Use the voice only in a scene you are authorized to view")
+                rights = voice_authority(
+                    self.game, c, state, source_effect or "", viewer.user_id, issuer, recipient
+                )
+                condition_id, principal = rights.id, rights.handler
+            elif origin_kind == "stim_sex":
                 from girlframe.services.m3_stim_npc import order_authority as stim_authority
 
                 effect = stim_authority(
@@ -377,7 +423,8 @@ class NpcOrderService:
             if (
                 state.revision != expected
                 or self.game.pending_actions(c)
-                or not any(
+                or origin_kind != "rebel_voice"
+                and not any(
                     x.actor == issuer
                     and (origin_kind == "secretary" or x.controller == viewer.user_id)
                     for x in cast.roles
@@ -493,6 +540,7 @@ class NpcOrderService:
                         "secretary": "npc_secretary_order",
                         "npc_flirt": "npc_flirt_order",
                         "stim_sex": "npc_stim_order",
+                        "rebel_voice": "npc_rebel_voice_order",
                     }[origin_kind],
                     id=identity,
                     body=value.model_dump_json(),

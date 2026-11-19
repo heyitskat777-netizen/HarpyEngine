@@ -2937,6 +2937,7 @@ class InboxService:
             from girlframe.engine.m3_rebel_defection import cases as rebel_defections
             from girlframe.engine.m3_rebel_strafe import passes as rebel_passes
             from girlframe.engine.m3_rebel_taunt import taunts as rebel_taunts
+            from girlframe.engine.m3_rebel_voice import voices as rebel_voices
             from girlframe.engine.m3_void_revelation import revelations
             from girlframe.engine.m3_void_signal import signals as void_signals
             from girlframe.services.m3_handler_tags import HandlerTagService
@@ -2999,6 +3000,41 @@ class InboxService:
                         "",
                         "Open radio taunt",
                         task="m3_rebel_taunt",
+                    )
+                )
+
+            for voice in rebel_voices(canon):
+                if viewer.user_id != voice.controller:
+                    continue
+                from girlframe.engine.m3_handler_consequences import same_handler_body
+                from girlframe.engine.m3_rebel_escape_offer import speaker
+
+                try:
+                    actual = speaker(canon, voice.issuer.entity)
+                except ValueError:
+                    continue
+                if actual.controller != viewer.user_id or not same_handler_body(
+                    canon, voice.handler
+                ):
+                    continue
+                items.append(
+                    InboxItem(
+                        "rebel-voice:" + voice.id,
+                        "work",
+                        voice.id,
+                        1,
+                        "off_duty",
+                        "Private Rebel voice",
+                        "Original Rebel controller",
+                        "pending",
+                        True,
+                        False,
+                        "Issue an Order in a scene with an original Girl."
+                        if voice.prepared
+                        else "Synthesize the original Handler's voice.",
+                        "",
+                        "Open voice",
+                        task="m3_rebel_voice",
                     )
                 )
 

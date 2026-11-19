@@ -490,3 +490,19 @@ The synthetic test exercised both native forms, the actual casualty,
 Off-Duty completion, a database reopen, the subsequent period's arrival,
 expiry, stale input, wrong audience, safety pause and command replay.
 [High Void p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) · [Aggressive introduction p. 163](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=165) · [Sky rift test](../../tests/rules/test_strain_void_rift.py)
+
+## High Rebellion imitated Handler voice
+
+The base is `eea454b47d1bd1f059c99b13d123b5d8e99bb2b1`.
+High Rebellion 5.1 preserves the actual separate Rebel Handler and
+controller, the imitated Handler's original body and the original
+Cadre. Actual synthesis opens reusable native Order authority. The
+operator can address an original Girl in a scene they are authorized
+to view. The resulting Receive Orders choice shows the Order and
+keeps the true caller private. The Girl owns her response and follows
+the normal Disobey roll and adjudication if she refuses. Revoked
+scene access prevents a fresh Order. The operating path requires
+independent review in the normal registry. A temporary reviewed
+registry allowed the synthetic tests to exercise that path and left
+the default denial in place. The workflow uses in-character text.
+[High Rebellion p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) · [Voice tests](../../tests/rules/test_strain_rebel_voice.py)

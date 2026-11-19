@@ -30,6 +30,7 @@ from girlframe.engine.m3_rebel_defection import RULE as REBEL_DEFECTION
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_rebel_strafe import RULE as REBEL_STRAFE
 from girlframe.engine.m3_rebel_taunt import RULE as REBEL_TAUNT
+from girlframe.engine.m3_rebel_voice import RULE as REBEL_VOICE
 from girlframe.engine.m3_scientific_observation import Demand
 from girlframe.engine.m3_strain_effects import SPRITE_ESCORT, Choice, TagChoice
 from girlframe.engine.m3_void_revelation import PLAYS as REVELATIONS
@@ -96,6 +97,12 @@ async def open_effect(
 ) -> None:
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(service.get, viewer, identity)
+    if data.get("awaiting_rebel_voice"):
+        await reply(
+            interaction,
+            "The original Rebel controller can finish the voice from their private Inbox.",
+        )
+        return
     if data["rule_id"] == VOID_SPREAD:
         await open_spread(interaction, service, data, identity)
         return
@@ -583,7 +590,7 @@ def effect_form(
                 Field("revelation", "Which printed revelation do you make?", REVELATIONS),
                 Field("revelation_scene", "Where was it actually spoken?", channels),
             ]
-        if rule in (REBEL_ESCAPE_OFFER, REBEL_TAUNT):
+        if rule in (REBEL_ESCAPE_OFFER, REBEL_TAUNT, REBEL_VOICE):
             rebels = {x["id"] for x in world["factions"] if x["kind"] == "rebel" and x["active"]}
             fields.append(
                 Field(
@@ -1267,7 +1274,7 @@ def effect_form(
                 revelation_play=values["revelation"][0],
                 revelation_channel=int(values["revelation_scene"][0]),
             )
-        if rule in (REBEL_ESCAPE_OFFER, REBEL_TAUNT):
+        if rule in (REBEL_ESCAPE_OFFER, REBEL_TAUNT, REBEL_VOICE):
             payload["target"] = values["rebel_handler"][0]
         if rule == REBEL_DEFECTION:
             payload.update(
@@ -1501,6 +1508,8 @@ def effect_form(
             return "The private offer is pending with the original rebel controller."
         if rule == REBEL_TAUNT:
             return "The original Rebel controller can transmit the taunt from the private Inbox."
+        if rule == REBEL_VOICE:
+            return "The original Rebel controller can finish the voice from their private Inbox."
         if rule in CIVIC_DIRECTIVES:
             return "The original Director's order is pending in their private Inbox."
         if rule == VOID_SIGNAL:
