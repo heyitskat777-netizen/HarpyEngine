@@ -225,15 +225,18 @@ class MapPages(discord.ui.View):
 
 
 async def open_world(interaction: discord.Interaction, service: WorldService) -> None:
+    from girlframe.services.m3_access import Access
     from girlframe.services.m3_ancillary import AncillaryService
     from girlframe.services.m3_expanded_status import ExpandedStatusService
     from girlframe.services.m3_mother_sprite import SpriteEscapeService
+    from girlframe.services.m3_timeskip import RULE as TIMESKIP_RULE
 
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(service.get, viewer, private=True)
     if data["world"] is None:
         await setup_world(interaction, service, data)
         return
+    timeskip_enabled = Access(service.store).activity_specialist_enabled(TIMESKIP_RULE)
     ancillary = AncillaryService(service.missions)
     ancillary_options = await asyncio.to_thread(ancillary.invite_options, viewer)
     standing = ExpandedStatusService(service.game)
@@ -267,6 +270,12 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
             from girlframe.discord_adapter.m3_mother_sprite import open_review
 
             await open_review(current, sprite_escape)
+            return
+        if action == "timeskip" and timeskip_enabled:
+            from girlframe.discord_adapter.m3_timeskip import open_timeskip_start
+            from girlframe.services.m3_timeskip import TimeskipService
+
+            await open_timeskip_start(current, TimeskipService(service.game))
             return
         if action == "location_build":
             from girlframe.discord_adapter.m3_location_build import open_build
@@ -543,6 +552,7 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
             ("girl_insurance", "Girl Insurance — acquired source and effect"),
             ("location_rebuild", "Rebuild an actual damaged or destroyed location"),
             ("location_build", "Build a new location"),
+            *((("timeskip", "Propose a Timeskip"),) if timeskip_enabled else ()),
             ("gorgon_position", "Record an actually unknown Gorgon position"),
             ("npc", "Introduce an NPC"),
             ("npc_invite", "Invite someone to play an NPC / Director"),

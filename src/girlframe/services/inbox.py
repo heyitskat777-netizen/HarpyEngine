@@ -4126,7 +4126,35 @@ class InboxService:
             from girlframe.services.m3_npc_handover import LABELS as HANDOVER_LABELS
             from girlframe.services.m3_npc_handover import NpcHandoverService
             from girlframe.services.m3_npc_intelligence import IntelligenceService
+            from girlframe.services.m3_timeskip import TimeskipService
             from girlframe.services.m3_voidspace_invasion import InvasionService
+
+            timeskips = TimeskipService(GameService(self.store))
+            for timeskip_id, timeskip_step in timeskips.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "timeskip:" + timeskip_id,
+                        "timeskip",
+                        timeskip_id,
+                        canon.revision,
+                        "plays",
+                        "Timeskip",
+                        "Original campaign table",
+                        "pending",
+                        True,
+                        False,
+                        {
+                            "agreement": "Review the proposed duration.",
+                            "city_ruin": "Record the ruined city and its Gorgon.",
+                            "city_foundation": "Establish the actual new city.",
+                            "base_ruin": "Record the ruined base, its losses, and its Gorgon.",
+                            "newgirl": "Open the original transition awaiting the Newgirl step.",
+                        }[timeskip_step],
+                        "Only the original owners can make each decision.",
+                        "Open Timeskip",
+                        task="m3_timeskip",
+                    )
+                )
 
             invasion = InvasionService(GameService(self.store))
             for invasion_id, invasion_step in invasion.tasks(connection, canon, viewer):

@@ -1,0 +1,484 @@
+"""Ordered, table-authorized Timeskip changes to the original campaign world."""
+
+from collections.abc import Callable
+from typing import Any, Literal
+from uuid import uuid4
+
+from sqlalchemy import Connection
+
+from girlframe.engine import m3_world as world_rules
+from girlframe.engine.m2 import GameState
+from girlframe.engine.m3_actor_state import ActorRef, Model
+from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_battle import category, end_actor_casts
+from girlframe.engine.m3_battle_director import die as end_director
+from girlframe.engine.m3_collateral import install_budget, stage_loss
+from girlframe.engine.m3_enforcer import end_grasps
+from girlframe.engine.m3_handler_consequences import active_handler
+from girlframe.engine.m3_location_build import require_site
+from girlframe.engine.m3_physical import interrupt_journeys
+from girlframe.engine.m3_world_state import Asset, Cell, CorePlan, Gorgon, GorgonType, Location
+from girlframe.services.handler_setup import HandlerService
+from girlframe.services.m2_game import GameService
+from girlframe.services.m2_state import load_state
+from girlframe.services.m3_access import Access
+from girlframe.services.m3_handler_plays import _ordinary_scene_idle
+from girlframe.services.m3_medical import MedicalService
+from girlframe.services.m3_quadrant_loss import materialize_loss, require_aftermath_clear
+from girlframe.services.onboarding import WorkflowError
+from girlframe.services.read_only_bot import GuildViewer
+
+RULE = "situational.situational.timeskip"
+KIND = "timeskip"
+DURATIONS = {
+    6: "Six months",
+    12: "One year",
+    24: "Two years",
+    36: "Three years",
+    60: "Five years",
+    96: "Eight years",
+    120: "A decade",
+}
+
+
+class Arrival(Model):
+    kind: Literal["benevolent", "dormant", "erratic"]
+    name: str
+    type: GorgonType
+    assets: tuple[str, ...]
+    weakness: str
+
+
+class Timeskip(Model):
+    id: str
+    gm: int
+    appointment: str
+    voters: tuple[int, ...]
+    accepted: tuple[int, ...]
+    months: int
+    step: Literal["agreement", "city_ruin", "city_foundation", "base_ruin", "newgirl", "declined"]
+    city_ruin: str | None = None
+    city: str | None = None
+    base_ruin: str | None = None
+    loss: str | None = None
+
+
+def records(state: GameState) -> tuple[Timeskip, ...]:
+    return tuple(
+        Timeskip.model_validate_json(row["body"]) for row in state.facts if row.get("kind") == KIND
+    )
+
+
+def _local_npcs(state: GameState, cell: Cell) -> dict[str, str]:
+    assert state.world is not None
+    return {
+        npc.id: npc.name
+        for npc in state.world.npcs
+        if npc.alive
+        and resolve(state, ActorRef(kind="npc", entity=npc.id), (), require_alive=False).cell
+        == cell
+    }
+
+
+def _end_npcs(
+    state: GameState, affected: tuple[str, ...], gm: int, event: str, account: str
+) -> GameState:
+    assert state.world is not None
+    for identity in affected:
+        npc = next(x for x in state.world.npcs if x.id == identity)
+        ref = ActorRef(kind="npc", entity=identity)
+        if (
+            npc.controller != gm
+            or npc.source_kind is not None
+            or category(state, ref) == "harpy"
+            or npc.captive_of
+        ):
+            raise WorkflowError("Resolve an affected non-GM, captive or special NPC with its owner")
+        if "director" in npc.jobs:
+            state = end_director(state, ref, event, account)
+        else:
+            state = end_actor_casts(
+                end_grasps(interrupt_journeys(state, ref, event, account), ref, event), ref, event
+            )
+        assert state.world is not None
+        state.world = world_rules.update(
+            state.world,
+            npcs=tuple(
+                x.model_copy(update=dict(alive=False)) if x.id == identity else x
+                for x in state.world.npcs
+            ),
+        )
+        state.facts.append(
+            dict(
+                kind="timeskip_npc_ended",
+                id=identity,
+                event=event,
+                body=npc.model_dump_json(),
+                account=account,
+            )
+        )
+    return state
+
+
+class TimeskipService:
+    def __init__(self, game: GameService):
+        self.game, self.store = game, game.store
+
+    def _gate(self, c: Connection, viewer: GuildViewer) -> None:
+        access = Access(self.store)
+        access.authorize(c, viewer, "world", director_response=True)
+        access.authorize(c, viewer, "plays", director_response=True)
+        access.require_specialist_rule(RULE)
+
+    def _current(self, c: Connection, case: Timeskip) -> None:
+        if MedicalService(self.store)._handler(c) != (case.gm, case.appointment):
+            raise WorkflowError("Recover the original Timeskip facilitator")
+        helper = HandlerService(self.store)
+        if any(not helper._member(c, uid) for uid in case.voters):
+            raise WorkflowError("Resolve the changed Timeskip table with the human GM")
+
+    def _write(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        payload: dict[str, Any],
+        operation: Callable[[Connection], dict[str, Any]],
+    ) -> dict[str, Any]:
+        def authorize(c: Connection) -> None:
+            self._gate(c, viewer)
+            if "id" in payload:
+                self._case(c, load_state(c, self.store.campaign_id), viewer, payload["id"])
+            elif MedicalService(self.store)._handler(c)[0] != viewer.user_id:
+                raise WorkflowError("Only the original human GM can propose a Timeskip")
+
+        try:
+            return self.store._write(
+                viewer,
+                key,
+                "m3.timeskip",
+                payload,
+                operation,
+                authorize=authorize,
+                auto_audit=False,
+            )
+        except ValueError as error:
+            raise WorkflowError(str(error)) from None
+
+    def _save(
+        self,
+        c: Connection,
+        state: GameState,
+        viewer: GuildViewer,
+        key: str,
+        case: Timeskip,
+        operation: str,
+        event: str,
+    ) -> dict[str, Any]:
+        state.facts = [x for x in state.facts if (x.get("kind"), x.get("id")) != (KIND, case.id)]
+        state.facts.append(dict(kind=KIND, id=case.id, body=case.model_dump_json()))
+        self.game.event(c, viewer.user_id, key, "m3.timeskip_" + operation, state, event_id=event)
+        return dict(id=case.id, step=case.step, event=event)
+
+    def start_menu(self, viewer: GuildViewer) -> int:
+        with self.store.engine.connect() as c:
+            self._gate(c, viewer)
+            state = load_state(c, self.store.campaign_id)
+            if MedicalService(self.store)._handler(c)[0] != viewer.user_id or state.world is None:
+                raise WorkflowError("The human GM proposes the Timeskip for the existing world")
+            if any(case.step != "declined" for case in records(state)):
+                raise WorkflowError("Continue the original Timeskip in your private Inbox")
+            return state.revision
+
+    def start(self, viewer: GuildViewer, key: str, revision: int, months: int) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            _ordinary_scene_idle(c, self.game)
+            state = load_state(c, self.store.campaign_id)
+            gm, appointment = MedicalService(self.store)._handler(c)
+            require_aftermath_clear(state)
+            if (
+                gm != viewer.user_id
+                or state.world is None
+                or state.revision != revision
+                or months not in DURATIONS
+                or any(case.step != "declined" for case in records(state))
+            ):
+                raise WorkflowError("Propose one printed duration for the current original world")
+            voters = tuple(dict.fromkeys((gm, *state.order)))
+            case = Timeskip(
+                id=str(uuid4()),
+                gm=gm,
+                appointment=appointment,
+                voters=voters,
+                accepted=(gm,),
+                months=months,
+                step="city_ruin" if voters == (gm,) else "agreement",
+            )
+            self._current(c, case)
+            return self._save(c, state, viewer, key, case, "proposed", case.id)
+
+        return self._write(viewer, key, dict(revision=revision, months=months), operation)
+
+    def _case(
+        self, c: Connection, state: GameState, viewer: GuildViewer, identity: str
+    ) -> Timeskip:
+        case = next((x for x in records(state) if x.id == identity), None)
+        if case is None or viewer.user_id not in case.voters:
+            raise WorkflowError("The original Timeskip is unavailable")
+        self._current(c, case)
+        return case
+
+    def vote(
+        self, viewer: GuildViewer, key: str, identity: str, revision: int, accept: bool
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            state = load_state(c, self.store.campaign_id)
+            case = self._case(c, state, viewer, identity)
+            if (
+                case.step != "agreement"
+                or viewer.user_id in case.accepted
+                or state.revision != revision
+                or type(accept) is not bool
+            ):
+                raise WorkflowError("STALE_TIMESKIP: reopen your original decision")
+            if accept:
+                accepted = case.accepted + (viewer.user_id,)
+                case = case.model_copy(
+                    update=dict(
+                        accepted=accepted,
+                        step="city_ruin" if set(accepted) == set(case.voters) else "agreement",
+                    )
+                )
+            else:
+                case = case.model_copy(update=dict(step="declined"))
+            return self._save(c, state, viewer, key, case, "vote", str(uuid4()))
+
+        return self._write(
+            viewer, key, dict(id=identity, revision=revision, accept=accept), operation
+        )
+
+    def tasks(
+        self, c: Connection, state: GameState, viewer: GuildViewer
+    ) -> tuple[tuple[str, str], ...]:
+        original = records(state)
+        if not original:
+            return ()
+        try:
+            self._gate(c, viewer)
+            current = MedicalService(self.store)._handler(c)
+        except (ValueError, WorkflowError):
+            return ()
+        return tuple(
+            (case.id, case.step)
+            for case in original
+            if (case.gm, case.appointment) == current
+            and viewer.user_id in case.voters
+            and case.step != "declined"
+            and (
+                viewer.user_id == case.gm
+                or case.step == "agreement"
+                and viewer.user_id not in case.accepted
+            )
+        )
+
+    def get(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
+        with self.store.engine.connect() as c:
+            self._gate(c, viewer)
+            state = load_state(c, self.store.campaign_id)
+            case = self._case(c, state, viewer, identity)
+            if state.world is None or (
+                viewer.user_id != case.gm
+                and (case.step != "agreement" or viewer.user_id in case.accepted)
+            ):
+                raise WorkflowError("The original Timeskip choice is unavailable")
+            data: dict[str, Any] = dict(
+                revision=state.revision,
+                step=case.step,
+                duration=DURATIONS[case.months],
+                accepted=viewer.user_id in case.accepted,
+            )
+            kind = {"city_ruin": "city", "base_ruin": "base"}.get(case.step)
+            if kind is not None:
+                data["locations"] = {
+                    location.id: dict(
+                        label=location.name,
+                        npcs=_local_npcs(state, location.cell) if kind == "base" else {},
+                    )
+                    for location in state.world.locations
+                    if location.kind == kind
+                    and location.condition != "destroyed"
+                    and not location.protection_sources
+                    and (location.ship is None or not location.ship.armoured)
+                }
+            return data
+
+    def ruin(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        identity: str,
+        revision: int,
+        site: str,
+        arrival: Arrival,
+        occupants: tuple[str, ...],
+        account: str,
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            _ordinary_scene_idle(c, self.game)
+            original = load_state(c, self.store.campaign_id)
+            case = self._case(c, original, viewer, identity)
+            kind = {"city_ruin": "city", "base_ruin": "base"}.get(case.step)
+            if (
+                viewer.user_id != case.gm
+                or original.world is None
+                or kind is None
+                or original.revision != revision
+                or not 0 < len(account.strip()) <= 1200
+            ):
+                raise WorkflowError("STALE_TIMESKIP: reopen the original ordered destruction")
+            target = next(
+                (x for x in original.world.locations if x.id == site and x.kind == kind), None
+            )
+            if target is None:
+                raise WorkflowError("Choose an actual location for this printed step")
+            event = str(uuid4())
+            assets = tuple(
+                Asset(
+                    id=event + ":" + str(i), name=x.strip(), description=x.strip(), family="gorgon"
+                )
+                for i, x in enumerate(arrival.assets)
+                if x.strip()
+            )
+            if (
+                len(assets) != world_rules.CLASS_ASSETS[arrival.kind]
+                or not arrival.weakness.strip()
+            ):
+                raise WorkflowError(
+                    "Use the exact Class Asset count and describe its Core weakness"
+                )
+            gorgon = Gorgon(
+                id=event,
+                name=arrival.name.strip(),
+                gorgon_class=arrival.kind,
+                types=(arrival.type,),
+                cell=target.cell,
+                position_event=event,
+                assets=assets,
+                core_plan=CorePlan(assets=(assets[0].id,), weakness=arrival.weakness.strip()),
+            )
+            changed = GameState.model_validate_json(original.model_dump_json())
+            destroyed = world_rules.destroy(original.world, target.id, gorgon_cause=False)
+            if not any(x.kind == "budget_structure_destroyed" for x in destroyed.followups):
+                raise WorkflowError("The current location must actually be destroyed")
+            changed.world = world_rules.introduce_gorgon(destroyed.world, gorgon, event=event).world
+            if len(occupants) != len(set(occupants)) or (
+                occupants
+                and (
+                    kind != "base"
+                    or not set(occupants) <= _local_npcs(original, target.cell).keys()
+                )
+            ):
+                raise WorkflowError("Confirm only actual NPCs inside the original base")
+            changed = _end_npcs(changed, occupants, case.gm, event, account.strip())
+            changed.facts.extend(
+                [
+                    dict(
+                        kind="structure_destroyed_source",
+                        id=case.id + ":" + kind,
+                        entity=target.id,
+                        event=event,
+                        source=case.id,
+                    ),
+                    dict(
+                        kind="timeskip_ruin",
+                        id=case.id,
+                        entity=target.id,
+                        gorgon=gorgon.id,
+                        event=event,
+                        account=account.strip(),
+                    ),
+                ]
+            )
+            install_budget(changed)
+            loss = stage_loss(
+                original,
+                changed,
+                source=case.id,
+                event=event,
+                judge=case.gm,
+                appointment=case.appointment,
+                handler=active_handler(original),
+            )
+            case = case.model_copy(
+                update=(
+                    dict(step="city_foundation", city_ruin=target.id)
+                    if kind == "city"
+                    else dict(step="newgirl", base_ruin=target.id, loss=loss.id if loss else None)
+                )
+            )
+            result = self._save(c, changed, viewer, key, case, kind + "_ruined", event)
+            if loss:
+                materialize_loss(self.game, c, loss, event)
+            return result
+
+        return self._write(
+            viewer,
+            key,
+            dict(
+                id=identity,
+                revision=revision,
+                site=site,
+                arrival=arrival.model_dump(mode="json"),
+                occupants=occupants,
+                account=account,
+            ),
+            operation,
+        )
+
+    def establish_city(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        identity: str,
+        revision: int,
+        name: str,
+        cell: Cell,
+        account: str,
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            _ordinary_scene_idle(c, self.game)
+            state = load_state(c, self.store.campaign_id)
+            case = self._case(c, state, viewer, identity)
+            if (
+                viewer.user_id != case.gm
+                or state.world is None
+                or case.step != "city_foundation"
+                or state.revision != revision
+                or not 0 < len(account.strip()) <= 1200
+            ):
+                raise WorkflowError("STALE_TIMESKIP: reopen the original city establishment")
+            require_site(state, cell)
+            event = str(uuid4())
+            city = Location(id=event, kind="city", name=name.strip(), cell=cell)
+            state.world = world_rules.update(state.world, locations=state.world.locations + (city,))
+            state.facts.append(
+                dict(
+                    kind="timeskip_city",
+                    id=case.id,
+                    entity=city.id,
+                    event=event,
+                    account=account.strip(),
+                )
+            )
+            case = case.model_copy(update=dict(step="base_ruin", city=city.id))
+            return self._save(c, state, viewer, key, case, "city_established", event)
+
+        return self._write(
+            viewer,
+            key,
+            dict(id=identity, revision=revision, name=name, cell=cell, account=account),
+            operation,
+        )

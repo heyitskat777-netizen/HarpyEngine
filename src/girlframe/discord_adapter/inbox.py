@@ -2126,6 +2126,14 @@ class InboxView(discord.ui.View):
             await open_escape_choice(
                 interaction, EscapeService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_timeskip":
+            from girlframe.discord_adapter.m3_timeskip import open_timeskip
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_timeskip import TimeskipService
+
+            await open_timeskip(
+                interaction, TimeskipService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_voidspace_invasion":
             from girlframe.discord_adapter.m3_voidspace_invasion import open_invasion
             from girlframe.services.m2_game import GameService

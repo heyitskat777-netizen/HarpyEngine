@@ -3158,3 +3158,23 @@ pending check. Direct encounter evidence uses the actual
 Harpy who opened the Rift. Other utility discoveries and
 other encounter producers remain open.
 [Voidspace Invasion p. 195](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=197) · [Native cases](../../tests/rules/test_harpy_defeat.py)
+
+### Timeskip’s original table and world transition
+
+Base `af916d4`. The original facilitator proposes one printed
+duration. The original active player owners must agree using private
+Inbox decisions. The next steps commit in order: ruin the actual city
+and place its Gorgon, establish the new city, then ruin the base and
+place its Gorgon. The original human GM confirms actual NPC occupants,
+whose ordinary endings update the world and cast. A same-square NPC
+outside the base is unaffected. Budget and last-Base loss use their
+existing source workflows. Unrevealed Gorgon details stay private.
+
+**One focused case passed in 5.74 seconds**. It used native World and
+Inbox controls and verified ownership, command replay, stale forms,
+database reopening, actual map and casualty changes and later Strain
+configuration. Further Timeskip steps remain pending. The arrival
+form covers Benevolent, Dormant and Erratic Gorgons. Special bodies,
+non-GM NPCs, protected sites and Armoured interception require further
+source-specific handling.
+[Timeskip p. 197](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=199) · [Native case](../../tests/rules/test_timeskip.py)
