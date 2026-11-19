@@ -472,21 +472,24 @@ async def open_action(
         world = snapshot["world"]
 
         def build(values: dict[str, Any]) -> list[Field]:
+            kind = one(values, "kind")
+            scene_kinds = tuple((x, x.replace("_", " ").title()) for x in HANDLER_SCENES)
+            if data.get("trainer_can_install_speak"):
+                scene_kinds += (("trainer_conditioning", "Install Speak"),)
             fields = [
                 Field(
                     "kind",
                     "Handler scene",
-                    tuple((x, x.replace("_", " ").title()) for x in HANDLER_SCENES),
+                    scene_kinds,
                 ),
                 Field(
                     "participants",
                     "Participating Girls",
                     data["participants"],
                     1,
-                    len(data["participants"]),
+                    1 if kind == "trainer_conditioning" else len(data["participants"]),
                 ),
             ]
-            kind = one(values, "kind")
             members = {data["handler"]} | {int(x) for x in values.get("participants", ())}
             if kind in ("permission", "punish", "exploit"):
                 fields.append(
@@ -585,6 +588,7 @@ async def open_action(
                 values["summary"],
                 int(selected) if selected else None,
                 context,
+                "speak" if kind == "trainer_conditioning" else None,
             )
 
         form = DependentForm(

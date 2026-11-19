@@ -1300,3 +1300,23 @@ wrong owner, unrelated readers, wrong scene, restart, safety pause, retries
 and stale choices. The selected Handler, mission, discipline, Off-Duty,
 Harpy, Void and Inbox regression passed **197 tests in 132.96 seconds**.
 [Rulebook p. 125](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=127) · [Tests](../../tests/rules/test_dogrunner_status.py)
+
+### Trainer Speak and Off-Duty installation
+
+Base `dcd93a48f6be7e2ae322d8eb940610dbac275d51`. An actual original
+higher-Status character can issue Speak to an original Girl with a verified
+installation. The Girl owns the wording. Only the original issuer may
+recover the answer and confirm hearing it in the actual scene. The 11+
+replacement preserves the original dice, applies the printed Heat and
+Status changes through their existing rules, and holds for her own answer.
+A successful ordinary refusal remains possible on 8–10. The Trainer can
+install Speak through the native Off-Duty scene after both people attest to
+their own participation. Punishment-time installation and the other six
+phrases still need runtime paths.
+
+The four focused cases exercised starting and Off-Duty installations,
+actual higher-Status and Handler orders, the 8–10 and 11+ outcomes, private
+hearing, restart, stale and duplicate choices and a wrong original owner.
+The selected native control, Off-Duty, authority and Inbox regression
+passed **230 tests in 145.17 seconds**.
+[Rulebook p. 136](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=138) · [Tests](../../tests/rules/test_trainer_phrases.py)

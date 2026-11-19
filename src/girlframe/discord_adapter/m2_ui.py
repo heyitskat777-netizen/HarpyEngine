@@ -238,6 +238,10 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
             menu("options", "Give the Trainer a Tag or pass", ("give_tag", "pass")),
             text("text", "Tag label (up to 120 characters)", False),
         ]
+    elif kind == "trainer_speak_answer":
+        fields = [text("text", "Your own answer to Speak")]
+    elif kind == "trainer_speak_heard":
+        fields = [Field("flag", "Confirm you heard this answer", (("yes", "I heard it"),))]
     elif kind == "tag_resolution" and decision.get("cute_uniform_tag"):
         fields = [
             menu("options", "Your uniform response", ("reject", "embrace", "embrace_asset")),
@@ -1055,6 +1059,8 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
             instructions += "\n" + clean(reward["account"])
         if reward.get("tag"):
             instructions += "\nMatching Tag " + clean(reward["tag"])
+    if decision["kind"] in ("trainer_speak_answer", "trainer_speak_heard"):
+        instructions += "\n" + clean(decision["conditioning_text"])
     if decision["kind"] == "tag_window" and decision.get("gender_man_tags"):
         instructions += (
             "\nThe partner-Tag option uses this roll's one Tag proposal "
@@ -2807,6 +2813,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         purpose=[
             app_commands.Choice(name="Ordinary order", value="ordinary"),
             app_commands.Choice(name="Dose Up (typed cocktail order)", value="dose_up"),
+            app_commands.Choice(name="Conditioning Phrase (Speak)", value="trainer_speak"),
         ]
     )
     async def order(
@@ -2817,10 +2824,11 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         purpose: app_commands.Choice[str] | None = None,
     ) -> None:
         typed_dose = purpose is not None and purpose.value == "dose_up"
-        if as_npc and typed_dose:
+        phrase = "speak" if purpose is not None and purpose.value == "trainer_speak" else None
+        if as_npc and (typed_dose or phrase):
             await reply(
                 interaction,
-                "UNSUPPORTED_RULE: typed Dose Up Orders currently use original native issuers.",
+                "This typed order requires an original native issuer.",
             )
             return
         if as_npc:
@@ -2844,6 +2852,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
                     member.id,
                     instruction,
                     dose_up=typed_dose,
+                    conditioning_phrase=phrase,
                 )["action_id"]
                 + "`."
             ),

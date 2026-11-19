@@ -6,7 +6,7 @@ waive unsupported work, impersonate another participant or fabricate a receipt.
 
 import json
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Literal
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
 import sqlalchemy as sa
@@ -601,6 +601,10 @@ class CycleService:
                 scene = updated.handler_scene
                 assert scene is not None
                 if set(scene.participants) == set(scene.acknowledgements):
+                    if scene.kind == "trainer_conditioning":
+                        from girlframe.services.m3_trainer_phrases import complete_training
+
+                        complete_training(self.game, c, state, updated, event_id)
                     if scene.kind in ("npc_employment", "prisoner"):
                         self.missions.access.authorize(c, viewer, "world")
                         self._handler_entity(
@@ -879,13 +883,14 @@ class CycleService:
         summary: str,
         recipient: int | None = None,
         context: rules.HandlerContext | None = None,
+        conditioning_phrase: Literal["speak"] | None = None,
     ) -> dict[str, Any]:
         if context is not None:
             context = rules.HandlerContext.model_validate_json(context.model_dump_json())
 
         def change(c: Connection, period: rules.Period, state: GameState, event_id: str) -> Outcome:
             self.missions._handler(c, viewer)
-            if kind not in rules.HANDLER_SCENES:
+            if kind not in (*rules.HANDLER_SCENES, "trainer_conditioning"):
                 raise WorkflowError("Choose a printed Handler scene.")
             extra: frozenset[int] = frozenset()
             if kind in ("npc_employment", "prisoner"):
@@ -905,6 +910,10 @@ class CycleService:
                 tuple(dict.fromkeys(participants + tuple(extra))),
                 independent=extra,
             )
+            if kind == "trainer_conditioning":
+                from girlframe.services.m3_trainer_phrases import training_target
+
+                training_target(self.game, c, state, period, people, conditioning_phrase)
             updated = rules.handler_scene(
                 period,
                 expected,
@@ -913,6 +922,7 @@ class CycleService:
                 people,
                 summary,
                 extra_participants=extra,
+                conditioning_phrase=conditioning_phrase,
             )
             if (
                 kind in ("permission", "punish", "exploit")
@@ -943,6 +953,11 @@ class CycleService:
                 "summary": summary,
                 "recipient": recipient,
                 "context": context.model_dump(mode="json") if context else None,
+                **(
+                    {"conditioning_phrase": conditioning_phrase}
+                    if conditioning_phrase is not None
+                    else {}
+                ),
             },
             change,
         )
@@ -1037,6 +1052,8 @@ class CycleService:
 
     def review(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
         from girlframe.services.m3_frame_rewards import needs_refresh
+        from girlframe.services.m3_handler_book_orders import active_book
+        from girlframe.services.m3_trainer_phrases import RULE as conditioning_rule
 
         with self.store.engine.connect() as c:
             period = self.periods._get(c, identity)
@@ -1112,6 +1129,9 @@ class CycleService:
                 "game_revision": state.revision,
                 "modular": modular,
                 "handler": period.handler,
+                "trainer_can_install_speak": viewer.user_id == period.handler
+                and active_book(self.game, c, state, book="Trainer", rule=conditioning_rule)
+                is not None,
                 "participants": tuple(
                     (str(uid), state.sheets[str(uid)].callsign) for uid in state.order
                 ),

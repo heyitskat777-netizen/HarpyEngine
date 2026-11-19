@@ -5947,6 +5947,7 @@ class GameService:
         text: str,
         *,
         dose_up: bool = False,
+        conditioning_phrase: str | None = None,
     ) -> dict[str, Any]:
         if not text.strip() or len(text) > 1200:
             raise WorkflowError("Provide a direct order in 1–1200 characters.")
@@ -6009,6 +6010,8 @@ class GameService:
             if lock and lock["state"] != "released":
                 raise WorkflowError("SCENE_BUSY: resolve the current action first.")
             identity, order_id = str(uuid4()), str(uuid4())
+            if dose_up and conditioning_phrase is not None:
+                raise WorkflowError("Choose one source for this direct order")
             dose_order = None
             order_event = None
             if dose_up:
@@ -6019,6 +6022,21 @@ class GameService:
                 order_event = str(uuid4())
                 dose_order = stage_order(
                     self, c, state, viewer.user_id, target, order_id, channel, order_event
+                )
+            conditioning = None
+            if conditioning_phrase is not None:
+                from girlframe.services.m3_trainer_phrases import stage as stage_phrase
+
+                order_event = str(uuid4())
+                conditioning = stage_phrase(
+                    self,
+                    c,
+                    state,
+                    viewer.user_id,
+                    target,
+                    conditioning_phrase,
+                    order_id,
+                    order_event,
                 )
             c.execute(
                 t.m2["m2_orders"]
@@ -6035,6 +6053,7 @@ class GameService:
                         | ({"succubus": authority} if authority else {})
                         | ({"gender_designation": gender_authority} if gender_authority else {})
                         | ({"dose_up": dose_order} if dose_order else {})
+                        | ({"conditioning_phrase": conditioning} if conditioning else {})
                         | ({"stim_sex": stim_authority} if stim_authority else {})
                     ),
                     state="awaiting_response",
@@ -6048,7 +6067,7 @@ class GameService:
                     if str(uid) in state.sheets
                 },
                 "order_id": order_id,
-                "order_text": text,
+                "order_text": "Speak. " + text if conditioning else text,
                 "participants": scene["participants"],
                 "handler": state.handler,
                 "depth": 0,
@@ -6059,6 +6078,8 @@ class GameService:
             }
             from girlframe.services.m3_recovery import enable as enable_recovery
 
+            if conditioning:
+                data["conditioning_phrase"] = conditioning
             enable_recovery(self, c, viewer, data)
             c.execute(
                 t.m2["m2_actions"]
@@ -6134,7 +6155,8 @@ class GameService:
                 key,
                 "m2.order_issued",
                 {"channel": channel, "target": target, "text": text}
-                | ({"dose_up": True} if dose_up else {}),
+                | ({"dose_up": True} if dose_up else {})
+                | ({"conditioning_phrase": conditioning_phrase} if conditioning_phrase else {}),
                 operation,
                 auto_audit=False,
                 authorize=lambda c: self.authorize(c, viewer),
@@ -6764,6 +6786,21 @@ class GameService:
 
                 return SpriteService(self.store).decision(viewer, choice_id)
             action = self.action(c, row["action_id"])
+            if row["kind"] in ("trainer_speak_answer", "trainer_speak_heard"):
+                from girlframe.services.m3_trainer_phrases import display as display_phrase
+
+                return dict(row) | dict(
+                    body={},
+                    play=action["data"]["play"],
+                    actor=int(action["actor_id"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    result={},
+                    own=None,
+                    conditioning_text=display_phrase(
+                        self, c, load_state(c, self.store.campaign_id), action, dict(row)
+                    ),
+                )
             if (
                 action["data"].get("harpy_flirt") or action["data"].get("harpy_followthrough")
             ) and row["kind"].startswith("harpy_flirt_"):

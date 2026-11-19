@@ -41,11 +41,13 @@ def active_book(
     if registry is None or digest(registry) != policy.registry_sha256:
         return None
     entry = registry.entry(rule)
+    setup = HandlerService(game.store)
     if (
         entry.implementation == "unimplemented"
         or entry.module not in registry.enabled_modules
         or (policy.scope == "core_complete" and not entry.verified)
-        or HandlerService(game.store).current(c)[1].handler_id != int(handler.entity)
+        or setup.current(c)[1].handler_id != int(handler.entity)
+        or not setup._member(c, int(handler.entity))
     ):
         return None
     events = t.events

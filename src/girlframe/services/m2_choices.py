@@ -653,6 +653,13 @@ class ChoiceEngine:
             if not self.game.pending(c, action["id"]):
                 self.finish(c, state, action)
             return
+        if kind in ("trainer_speak_answer", "trainer_speak_heard"):
+            from girlframe.services.m3_trainer_phrases import choose as choose_phrase
+
+            choose_phrase(self.game, c, state, action, request, answer)
+            if not self.game.pending(c, action["id"]):
+                self.finish(c, state, action)
+            return
         from girlframe.services.m3_mistress_conditioning import CHOICE as MISTRESS_CONDITIONING
 
         if kind in ("tag_window", MISTRESS_CONDITIONING):
@@ -1031,6 +1038,10 @@ class ChoiceEngine:
                     outcome=level,
                 )
             result["handler_knows"] = answer.flag
+            if not result.get("can_disobey"):
+                from girlframe.services.m3_trainer_phrases import offer_speak
+
+                offer_speak(self.game, c, state, action)
             if not self.game.pending(c, action["id"]):
                 self.finish(c, state, action)
             return
@@ -1227,9 +1238,11 @@ class ChoiceEngine:
             else:
                 from girlframe.services.m3_advocate_empathy import offer_reward
                 from girlframe.services.m3_mistress_rewards import offer as offer_mistress_reward
+                from girlframe.services.m3_trainer_phrases import offer_speak
 
                 if not (
-                    offer_reward(self.game, c, state, action)
+                    offer_speak(self.game, c, state, action)
+                    or offer_reward(self.game, c, state, action)
                     or offer_mistress_reward(self.game, c, state, action)
                 ):
                     self.finish(c, state, action)
@@ -1883,6 +1896,12 @@ class ChoiceEngine:
         if play == "disobey_orders":
             if action["data"]["prepared"]["witnessed"]:
                 shift_status(state, actor, -1)
+            if level == "high":
+                from girlframe.services.m3_trainer_phrases import high_refusal
+
+                if high_refusal(self.game, c, state, action):
+                    self.game.request(c, action, state.handler, "handler_disobey")
+                    return
             if level == "low":
                 action["data"]["result"]["can_disobey"] = False
                 self.game.request(c, action, state.handler, "handler_disobey")

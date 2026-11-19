@@ -64,6 +64,9 @@ class Scene(Model):
     summary: str = Field(min_length=1, max_length=1200)
     character_ids: dict[str, str] = Field(default_factory=dict)
     roles: tuple["ActorRef", ...] = Field(default=(), exclude_if=lambda value: not value)
+    conditioning_phrase: Literal["speak"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
     @model_validator(mode="after")
     def distinct(self) -> "Scene":
@@ -73,6 +76,7 @@ class Scene(Model):
             or not set(self.acknowledgements) <= set(self.participants)
             or not self.summary.strip()
             or not set(self.character_ids) <= {str(uid) for uid in self.participants}
+            or (self.kind == "trainer_conditioning") != (self.conditioning_phrase is not None)
         ):
             raise ValueError("A scene needs distinct participants and their own acknowledgements")
         return self
@@ -162,12 +166,13 @@ def handler_scene(
     summary: str,
     *,
     extra_participants: frozenset[int] = frozenset(),
+    conditioning_phrase: Literal["speak"] | None = None,
 ) -> Period:
     current(period, expected)
     if (
         actor != period.handler
         or period.handler_scene is not None
-        or kind not in HANDLER_SCENES
+        or kind not in (*HANDLER_SCENES, "trainer_conditioning")
         or actor not in participants
         or not set(participants) <= set(period.pilots) | {actor} | extra_participants
         or not (set(participants) & set(period.pilots))
@@ -176,7 +181,12 @@ def handler_scene(
             "The current Handler sets one printed scene with at least one current Girl"
         )
     result = clone(period)
-    result.handler_scene = Scene(kind=kind, participants=participants, summary=summary)
+    result.handler_scene = Scene(
+        kind=kind,
+        participants=participants,
+        summary=summary,
+        conditioning_phrase=conditioning_phrase,
+    )
     result.revision += 1
     return result
 
