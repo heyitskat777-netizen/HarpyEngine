@@ -3247,3 +3247,23 @@ actual active and inactive factions, distinct official roles, Assets
 and default private scope. Special Rebel books and more complicated
 custody sources remain outside this slice.
 [Timeskip p. 197](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=199) · [Native case](../../tests/rules/test_timeskip.py)
+
+### Timeskip’s two owned Identity replacements
+
+Base `d8081a4`. Each actual current Girl chooses two distinct ordinary
+Identity slots and supplies a different permitted Tag or a fitting
+alternative for each. A Tag turned into an Identity leaves the Tag list.
+The new Identities inherit those slot positions. Original protected,
+possessed and source-locked Identities retain their existing rules.
+Another owner’s selections and sheet resources stay private.
+
+The native exercise found that an ordinary replacement could become
+active while missing from the canonical Cadre order. Activation now
+uses the owned Status assignment when the replacement’s specialized
+workflow has not already placed her. The Vatgrown kit workflow keeps
+its own placement validation and order effect.
+
+**Two focused cases passed in 15.40 seconds**. They exercised
+the two private owner changes and the existing Vatgrown activation
+with its distinct Frame and original witness notice.
+[Timeskip p. 197](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=199) · [Native case](../../tests/rules/test_timeskip.py)

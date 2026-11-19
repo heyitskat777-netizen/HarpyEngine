@@ -20,6 +20,8 @@ from girlframe.engine.bonds import BondProposal
 from girlframe.engine.cadre_history import PriorMission
 from girlframe.engine.drafts import DraftInput
 from girlframe.engine.handler_setup import PilotRef
+from girlframe.engine.m3_actor_bonds import current_ref
+from girlframe.engine.m3_harpy_defeat import give_tag
 from girlframe.engine.m3_world_state import Faction, Npc
 from girlframe.engine.shared_setup import CallsignChoice
 from girlframe.services.bonds import BondService
@@ -356,6 +358,7 @@ def test_native_timeskip_agreement_and_ordered_world_changes(ledger):
     replaced = state(game)
     assert records(replaced)[0].step == "base_foundation"
     assert replaced.sheets["2"].character_id != ref.incarnation
+    assert replaced.order == (3, 2)
     assert replaced.sheets["2"].girl == "NEWGIRL" and replaced.sheets["2"].mentor == OTHER.user_id
 
     native(ADMIN, dict(name="New Base", cell="3,3", account="A new Foundation base."), 93360)
@@ -402,6 +405,7 @@ def test_native_timeskip_agreement_and_ordered_world_changes(ledger):
     after = state(game)
     (new_groups,) = records(after)
     assert new_groups.step == "identities"
+    assert {x.entity for x in new_groups.rewrite_targets} == {"2", "3"}
     assert after.world is not None
     groups = {x.id: x for x in after.world.factions}
     assert not groups["old-rebels"].active and groups[new_groups.new_group].active
@@ -412,3 +416,42 @@ def test_native_timeskip_agreement_and_ordered_world_changes(ledger):
     assert rebel.kind == "rebel" and rebel.frame == "JANUS"
     assert {x.family for x in rebel.assets} == {"girl", "frame"}
     assert "Their actual Handler" not in str(world.get(PLAYER))
+
+    with ledger.transaction() as c:
+        original = state(game)
+        player, other = (current_ref(original, actor.user_id) for actor in (PLAYER, OTHER))
+        tagged = give_tag(original, player, other, "Cautious", "actual-tag", "old-tag", (2, 3))
+        game.event(
+            c, OTHER.user_id, "timeskip-source-tag", "synthetic.tag", tagged, event_id="actual-tag"
+        )
+    assert {x.entity for x in records(state(game))[0].rewrite_targets} == {"2", "3"}
+    choices = service.get(PLAYER, case.id)
+    assert choices["tags"] == {"old-tag": "Cautious"}
+    assert "Cautious" not in str(service.get(OTHER, case.id))
+    earlier = state(game)
+    for viewer, seq in ((PLAYER, 93380), (OTHER, 93384)):
+        prior = earlier.sheets[str(viewer.user_id)]
+        first, second = prior.identities[:2]
+        own_tag = viewer == PLAYER
+        native(
+            viewer,
+            dict(
+                identity1=(first.id,),
+                source1=(("0" if own_tag else "alternative"),),
+                alternative1="" if own_tag else "Still serving",
+                identity2=(second.id,),
+                source2=("alternative",),
+                alternative2="Learned patience",
+            ),
+            seq,
+        )
+        after = state(game).sheets[str(viewer.user_id)]
+        assert after.identities[0].id != first.id and after.identities[1].id != second.id
+        assert after.identities[2:] == prior.identities[2:]
+        assert after.identities[0].slot == first.slot and after.identities[1].slot == second.slot
+        assert after.identities[0].name == ("Cautious" if own_tag else "Still serving")
+        assert after.identities[1].name == "Learned patience"
+        if own_tag:
+            assert not any(x.id == "old-tag" for x in after.tags)
+    (rewritten,) = records(state(game))
+    assert rewritten.step == "benefits" and len(rewritten.rewrites) == 2

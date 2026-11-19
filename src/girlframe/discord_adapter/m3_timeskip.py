@@ -16,6 +16,7 @@ from girlframe.services.m3_timeskip import (
     BASE_JOBS,
     DURATIONS,
     Arrival,
+    IdentityReplacement,
     RebelSuccessor,
     TimeskipService,
 )
@@ -73,6 +74,12 @@ async def open_timeskip(
         return
     if step == "identities":
         await reply(interaction, "The Timeskip awaits each original Girl’s two Identity changes.")
+        return
+    if step == "replace_identities":
+        await _open_identity_changes(interaction, service, case, title, data)
+        return
+    if step == "benefits":
+        await reply(interaction, "The Timeskip awaits the original Requisitions and advancement.")
         return
     if step == "create_contact":
         await _open_contact(interaction, service, case, title, data)
@@ -367,6 +374,64 @@ async def _open_rebels(
         interaction.user.id,
         title,
         "Establish the actual new group, Handler, and Girl.",
+        fields,
+        confirm,
+    )
+    await reply(interaction, form.text(), form)
+
+
+async def _open_identity_changes(
+    interaction: discord.Interaction,
+    service: TimeskipService,
+    identity: str,
+    title: str,
+    data: dict[str, Any],
+) -> None:
+    options = tuple(data["identities"].items())
+    if len(options) < 2:
+        await reply(interaction, "Ask the human GM to resolve the affected Identity slots.")
+        return
+    tag_sources = {str(i): x for i, x in enumerate(data["tags"])}
+    tags = (
+        ("alternative", "Write a fitting alternative"),
+        *((slot, data["tags"][tag]) for slot, tag in tag_sources.items()),
+    )
+    fields: list[Field] = []
+    for i in (1, 2):
+        fields.extend(
+            (
+                Field("identity" + str(i), "Original Identity " + str(i), options),
+                Field("source" + str(i), "Replacement source " + str(i), tags),
+                Field(
+                    "alternative" + str(i), "Name a fitting alternative " + str(i), required=False
+                ),
+            )
+        )
+
+    def change(values: dict[str, Any], i: int) -> IdentityReplacement:
+        suffix = str(i)
+        source = values["source" + suffix][0]
+        return IdentityReplacement(
+            identity=values["identity" + suffix][0],
+            tag=None if source == "alternative" else tag_sources[source],
+            alternative=values.get("alternative" + suffix, ""),
+        )
+
+    async def confirm(click: discord.Interaction, values: dict[str, Any]) -> str:
+        await asyncio.to_thread(
+            service.replace_identities,
+            viewer_from_interaction(click),
+            str(click.id),
+            identity,
+            data["revision"],
+            (change(values, 1), change(values, 2)),
+        )
+        return "Your two original Identity replacements are saved."
+
+    form = NativeForm(
+        interaction.user.id,
+        title,
+        "Choose two distinct Identities and supply one replacement source for each.",
         fields,
         confirm,
     )

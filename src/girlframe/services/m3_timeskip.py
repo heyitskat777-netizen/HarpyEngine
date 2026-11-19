@@ -1,5 +1,6 @@
 """Ordered, table-authorized Timeskip changes to the original campaign world."""
 
+import json
 from collections.abc import Callable
 from typing import Any, Literal
 from uuid import uuid4
@@ -7,7 +8,7 @@ from uuid import uuid4
 from sqlalchemy import Connection
 
 from girlframe.engine import m3_world as world_rules
-from girlframe.engine.m2 import GameState
+from girlframe.engine.m2 import GameState, IdentityState
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_actors import resolve
@@ -20,7 +21,9 @@ from girlframe.engine.m3_collateral import install_budget, stage_loss
 from girlframe.engine.m3_enforcer import end_grasps
 from girlframe.engine.m3_girl_runtime_state import change_playbook_runtime, has_rule
 from girlframe.engine.m3_handler_consequences import active_handler
+from girlframe.engine.m3_leviathan_obsession import require_identity_change
 from girlframe.engine.m3_location_build import require_site
+from girlframe.engine.m3_parasite_infection import controls_identity
 from girlframe.engine.m3_physical import interrupt_journeys
 from girlframe.engine.m3_vatgrown_death import RULE as VATGROWN_DEATH_RULE
 from girlframe.engine.m3_world_state import (
@@ -83,6 +86,12 @@ class RebelSuccessor(Model):
     account: str
 
 
+class IdentityReplacement(Model):
+    identity: str
+    tag: str | None = None
+    alternative: str = ""
+
+
 class Timeskip(Model):
     id: str
     gm: int
@@ -102,6 +111,7 @@ class Timeskip(Model):
         "base_contacts",
         "rebel_succession",
         "identities",
+        "benefits",
         "declined",
     ]
     city_ruin: str | None = None
@@ -120,6 +130,8 @@ class Timeskip(Model):
     new_group: str | None = None
     new_rebel_handler: str | None = None
     new_rebel_girl: str | None = None
+    rewrite_targets: tuple[ActorRef, ...] = ()
+    rewrites: dict[str, str] = {}
 
 
 def records(state: GameState) -> tuple[Timeskip, ...]:
@@ -337,6 +349,10 @@ class TimeskipService:
             return "death_ballot"
         if case.step == "base_contacts" and str(user) not in case.base_contacts:
             return "create_contact"
+        if case.step == "identities" and any(
+            x.entity == str(user) and x.token not in case.rewrites for x in case.rewrite_targets
+        ):
+            return "replace_identities"
         if user == case.gm or case.step == "agreement" and user not in case.accepted:
             return case.step
         return None
@@ -384,6 +400,11 @@ class TimeskipService:
                 data["nominee"] = self._nominees(c, state, case).get(case.death)
             if step == "replacement":
                 data["can_continue"] = self._replacement_ready(state, case)
+            if step == "replace_identities":
+                girl, identities, tags = self._rewrite_choices(c, state, case, viewer.user_id)
+                data["identities"] = {x.id: x.name for x in identities.values()}
+                data["tags"] = tags
+                data["sheet"] = state.sheets[girl.entity].revision
             if step == "rebel_succession":
                 data["groups"] = {
                     x.id: x.name for x in state.world.factions if x.kind == "rebel" and x.active
@@ -993,13 +1014,16 @@ class TimeskipService:
                 pilots=world.pilots + (pilot,),
                 npc_recruitment=tuple(x for x in world.npc_recruitment if x.faction != old.id),
             )
+            if not set(state.order) <= set(case.voters):
+                raise WorkflowError("Resolve the changed original Timeskip table before proceeding")
             case = case.model_copy(
                 update=dict(
-                    step="identities",
+                    step="identities" if state.order else "benefits",
                     fallen_group=old.id,
                     new_group=faction.id,
                     new_rebel_handler=handler.id,
                     new_rebel_girl=pilot.id,
+                    rewrite_targets=tuple(current_ref(state, user) for user in state.order),
                 )
             )
             return self._save(c, state, viewer, key, case, "rebel_succession", event)
@@ -1008,5 +1032,104 @@ class TimeskipService:
             viewer,
             key,
             dict(id=identity, revision=revision, draft=draft.model_dump(mode="json")),
+            operation,
+        )
+
+    def _rewrite_choices(
+        self, c: Connection, state: GameState, case: Timeskip, owner: int
+    ) -> tuple[ActorRef, dict[str, IdentityState], dict[str, str]]:
+        actor = next((x for x in case.rewrite_targets if x.entity == str(owner)), None)
+        if actor is None or actor.token in case.rewrites or case.step != "identities":
+            raise WorkflowError("Only the original Girl owns these Identity changes")
+        actual = resolve(
+            state, actor, profiles(c, self.store.campaign_id), require_current_profile=False
+        )
+        if actual.rules != "girl_frame" or actual.controller != owner or actual.offstage_source:
+            raise WorkflowError("Recover the actual available original Girl and her Identities")
+        sheet = state.sheets[actor.entity]
+        identities = {
+            x.id: x
+            for x in sheet.identities
+            if not (x.protected or x.paired or x.am_limiter or x.obsession_sources)
+            and not controls_identity(state, actor, x.id)
+        }
+        tags = {x.id: x.label for x in sheet.tags if not x.rejection_pending}
+        return actor, identities, tags
+
+    def replace_identities(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        identity: str,
+        revision: int,
+        changes: tuple[IdentityReplacement, IdentityReplacement],
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            _ordinary_scene_idle(c, self.game)
+            state = load_state(c, self.store.campaign_id)
+            case = self._case(c, state, viewer, identity)
+            if state.revision != revision:
+                raise WorkflowError("STALE_TIMESKIP: reopen your own current Identity choices")
+            girl, originals, tags = self._rewrite_choices(c, state, case, viewer.user_id)
+            sources = tuple(x.identity for x in changes)
+            embraced = tuple(x.tag for x in changes if x.tag is not None)
+            if (
+                len(changes) != 2
+                or len(set(sources)) != 2
+                or not set(sources) <= originals.keys()
+                or len(set(embraced)) != len(embraced)
+                or not set(embraced) <= tags.keys()
+                or any((x.tag is None) != bool(x.alternative.strip()) for x in changes)
+            ):
+                raise WorkflowError(
+                    "Replace two distinct ordinary Identities, with one source each"
+                )
+            require_identity_change(state, girl, sources)
+            names = tuple(
+                tags[x.tag] if x.tag is not None else x.alternative.strip() for x in changes
+            )
+            if any(not 0 < len(name) <= 120 for name in names):
+                raise WorkflowError("Give each actual replacement a short name")
+            event = str(uuid4())
+            sheet = state.sheets[girl.entity]
+            replacements = {
+                previous: IdentityState(
+                    id=event + ":" + str(i), name=name, slot=originals[previous].slot
+                )
+                for i, (previous, name) in enumerate(zip(sources, names, strict=True))
+            }
+            sheet.identities = [replacements.get(x.id, x) for x in sheet.identities]
+            sheet.tags = [x for x in sheet.tags if x.id not in embraced]
+            sheet.revision += 1
+            state.facts.append(
+                dict(
+                    kind="timeskip_identity_changes",
+                    id=case.id,
+                    actor=girl.model_dump_json(),
+                    event=event,
+                    body=json.dumps(
+                        [
+                            dict(
+                                original=originals[x.identity].model_dump(mode="json"),
+                                replacement=replacements[x.identity].model_dump(mode="json"),
+                                tag=x.tag,
+                            )
+                            for x in changes
+                        ]
+                    ),
+                )
+            )
+            applied = case.rewrites | {girl.token: event}
+            step = "benefits" if len(applied) == len(case.rewrite_targets) else "identities"
+            case = case.model_copy(update=dict(rewrites=applied, step=step))
+            return self._save(c, state, viewer, key, case, "identities_replaced", event)
+
+        return self._write(
+            viewer,
+            key,
+            dict(
+                id=identity, revision=revision, changes=[x.model_dump(mode="json") for x in changes]
+            ),
             operation,
         )

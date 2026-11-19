@@ -796,6 +796,15 @@ class GameService:
             stage_activation(
                 self, c, state, activated_actor(state, viewer.user_id), activation_event
             )
+            if (
+                current_career is not None
+                and current_career.previous_archive is not None
+                and viewer.user_id not in state.order
+            ):
+                position = current_career.status_position
+                if position is None or not 0 <= position <= len(state.order):
+                    raise WorkflowError("Recover the replacement's actual assigned Cadre Status.")
+                state.order = (*state.order[:position], viewer.user_id, *state.order[position:])
             if demotion is not None:
                 from girlframe.engine.m3_budget_demotion import save as save_demotion
 
