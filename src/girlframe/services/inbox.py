@@ -4116,6 +4116,7 @@ class InboxService:
             from girlframe.services.m2_game import GameService
             from girlframe.services.m3_harpy_eagle import EagleService
             from girlframe.services.m3_harpy_gaze import GazeService
+            from girlframe.services.m3_harpy_mask import MaskService
             from girlframe.services.m3_harpy_rewrite import RewriteService
             from girlframe.services.m3_harpy_song import HarpySongService
             from girlframe.services.m3_harpy_visions import VisionsService
@@ -4123,6 +4124,29 @@ class InboxService:
             from girlframe.services.m3_npc_handover import LABELS as HANDOVER_LABELS
             from girlframe.services.m3_npc_handover import NpcHandoverService
             from girlframe.services.m3_npc_intelligence import IntelligenceService
+
+            masks = MaskService(GameService(self.store))
+            for mask_case, mask_step in masks.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "harpy-mask:" + mask_case.event,
+                        "harpy_mask",
+                        mask_case.event,
+                        canon.revision,
+                        "plays",
+                        "A Human Mask",
+                        "Original Harpy scene",
+                        "pending",
+                        True,
+                        False,
+                        "Review the Harpy’s account."
+                        if mask_step == "review"
+                        else "End the original human appearance.",
+                        "This choice belongs to the original participant.",
+                        "Open your choice",
+                        task="m3_harpy_mask",
+                    )
+                )
 
             rewrite = RewriteService(GameService(self.store))
             for edit, edit_step in rewrite.tasks(connection, canon, viewer):

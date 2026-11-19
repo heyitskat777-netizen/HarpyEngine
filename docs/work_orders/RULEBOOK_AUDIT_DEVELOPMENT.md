@@ -3040,3 +3040,21 @@ Marks, ids and the other original Identities were preserved.
 Unrestricted or conflicting mechanical adjustments still
 require human review under their own rules and ownership.
 [Harpy p. 182](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=184) · [Native case](../../tests/rules/test_harpy_advancements.py)
+
+### A Human Mask and ordinary Keep Your Head
+
+Base `a19ffc9add3ea67e359a1adadcde95855abad032`. The
+original Harpy can establish a verified human appearance
+in her actual scene. This affects the in-world presentation.
+The players continue to see their authorized original
+role metadata. Her actual Keep Your Head uses the ordinary
+Girl traits and can add the printed human appearance choice.
+The human facilitator supplies the actual ruling.
+
+**One focused native case passed in 5.67 seconds**. It
+covered private review, scene presentation, restart, and
+the genuine saved roll with ordinary Traits and the extra
+choice. Giggling Orders, the remaining normal Girl Plays,
+and appearance at the original rebirth need separate
+adapters.
+[Harpy p. 181](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=183) · [Native case](../../tests/rules/test_harpy_advancements.py)

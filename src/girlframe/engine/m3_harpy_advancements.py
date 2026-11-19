@@ -12,6 +12,7 @@ EAGLE = "harpy.harpy.eagle-cracks-the-shell"
 MANIC_PIXIE = "harpy.harpy.manic-pixie-dream-monster"
 VISIONS = "harpy.harpy.visions-of-infinity"
 NOTHING = "harpy.harpy.nothing-can-ever-be-as-important-as-us"
+MASK = "harpy.harpy.a-human-mask"
 ADVANCEMENTS = (
     (SPARROWS, "Sparrows Led You Over the Black Earth"),
     (ECHOES, "Echoes of Old Command"),
@@ -21,6 +22,7 @@ ADVANCEMENTS = (
     (MANIC_PIXIE, "Manic Pixie Dream Monster"),
     (VISIONS, "Visions of Infinity"),
     (NOTHING, "Nothing Can Ever Be As Important As Us"),
+    (MASK, "A Human Mask"),
 )
 SPARROWS_CHOICES = (
     ("shadow", "I’m a shadow in the corner of their eye"),

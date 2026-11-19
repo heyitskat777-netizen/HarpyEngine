@@ -301,7 +301,7 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
     elif kind == "paired_tag":
         fields = [menu("options", "Make this the Paired Identity?", ("yes", "no"))]
     elif kind == "actor_keep":
-        harpy_mode = bool(own and own.get("harpy"))
+        harpy_mode = bool(own and own.get("harpy") and not decision.get("harpy_mask"))
         traits = tuple("beautiful" if x == "sexy" else x for x in TRAITS) if harpy_mode else TRAITS
         automatic = set(keep_automatic(own, learned_rule=decision.get("learned_keep_rule")))
         retained = set(own.get("retained_plays", ())) if own else set()
@@ -329,6 +329,16 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
                     "fields.harpy_sparrows",
                     "Choose an extra Sparrows effect",
                     decision["harpy_sparrows"],
+                    0,
+                    required=False,
+                )
+            )
+        if decision.get("harpy_mask"):
+            fields.append(
+                Field(
+                    "fields.seems_human",
+                    "A Human Mask",
+                    (("yes", "I seem perfectly human"),),
                     0,
                     required=False,
                 )

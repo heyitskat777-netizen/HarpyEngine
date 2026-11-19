@@ -196,11 +196,16 @@ class CastService:
                             for x in state.director_contexts
                         )
                     )
+                from girlframe.engine.m3_harpy_mask import active as human_mask
                 from girlframe.engine.m3_prince import presentation
                 from girlframe.services.m3_consume_support import knowledge_allowed
 
-                known = known and knowledge_allowed(state, actor.ref)
                 part = presentation(state, actor.ref, cast.id)
+                disguise = human_mask(state, actor.ref, cast.id) if actor.girl == "harpy" else None
+                if disguise and actor.alive and not actor.offstage_source:
+                    part = disguise.appearance
+                    known = known or any(x.controller == viewer.user_id for x in cast.roles)
+                known = known and knowledge_allowed(state, actor.ref)
                 if known:
                     owned_npc = (
                         next((x for x in state.world.npcs if x.id == actor.ref.entity), None)
@@ -223,6 +228,7 @@ class CastService:
                         from girlframe.engine.m3_harpy_advancements import (
                             EAGLE,
                             MANIC_PIXIE,
+                            MASK,
                             NOTHING,
                             ONLY_SHE_MATTERS,
                             SONG_OF_LOVE_LOST,
@@ -237,6 +243,7 @@ class CastService:
                             ("harpy_gaze", MANIC_PIXIE),
                             ("harpy_visions", VISIONS),
                             ("harpy_rewrite", NOTHING),
+                            ("harpy_mask", MASK),
                         ):
                             try:
                                 scene_harpy(

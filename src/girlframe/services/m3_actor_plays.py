@@ -671,6 +671,12 @@ class ActorPlayService:
                 source = advancement_source(self.game, c, state, ref, viewer.user_id, SPARROWS)
                 if source is not None:
                     data["harpy_sparrows"] = source
+            if actor.girl == "harpy" and prepared.play == "keep_your_head":
+                from girlframe.services.m3_harpy_mask import active as active_human_mask
+
+                mask = active_human_mask(self.game, c, state, ref, channel, cast.id)
+                if mask:
+                    data["harpy_mask"] = mask.event
             from girlframe.engine.m3_handler_consequences import active_handler
 
             handler = active_handler(state)
@@ -1470,6 +1476,22 @@ class ActorPlayService:
             from girlframe.services.m3_harpy_advancements import choose_sparrows
 
             extra = keep_extras(self.game, c, state, action, answer)
+            mask_event = action["data"].get("harpy_mask")
+            seems_human = answer.fields.get("seems_human")
+            if mask_event or seems_human is not None:
+                from girlframe.services.m3_harpy_mask import active as active_human_mask
+
+                mask = active_human_mask(
+                    self.game, c, state, actor.ref, int(action["channel_id"]), action["scene_id"]
+                )
+                if (
+                    mask is None
+                    or mask.event != mask_event
+                    or seems_human not in (None, "yes")
+                ):
+                    raise WorkflowError("Use the actual original Human Mask for this choice")
+                if seems_human == "yes":
+                    extra.add("seems_human")
             choose_sparrows(action, answer.fields.get("harpy_sparrows"))
             discipline = answer.fields.get("soldier_do_not_think")
             embrace_selection = answer.fields.get("soldier_embrace")
@@ -1494,13 +1516,14 @@ class ActorPlayService:
                             "soldier_do_not_think",
                             "soldier_embrace",
                             "harpy_sparrows",
+                            "seems_human",
                         )
                     }
                 }
             )
             result = (
                 rules.harpy_keep(state, actor.ref, action["data"]["result"]["tier"], ordinary)
-                if actor.girl == "harpy"
+                if actor.girl == "harpy" and not mask_event
                 else rules.keep(action["data"]["result"]["tier"], ordinary)
             )
             result["positive"] = sorted(set(result["positive"]) | extra)
@@ -1621,6 +1644,8 @@ class ActorPlayService:
             from girlframe.engine.m3_harpy_advancements import SPARROWS_CHOICES
 
             result["harpy_sparrows"] = SPARROWS_CHOICES
+        if row["kind"] == "actor_keep" and own and action["data"].get("harpy_mask"):
+            result["harpy_mask"] = True
         if action["data"].get("dive") and row["kind"].startswith("dive_"):
             from girlframe.services.m3_dive import projection
 

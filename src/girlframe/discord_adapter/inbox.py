@@ -2102,6 +2102,14 @@ class InboxView(discord.ui.View):
             await open_rewrite_response(
                 interaction, RewriteService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_harpy_mask":
+            from girlframe.discord_adapter.m3_harpy_mask import open_mask_response
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_harpy_mask import MaskService
+
+            await open_mask_response(
+                interaction, MaskService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_npc_handover":
             from girlframe.discord_adapter.m3_npc_handover import open_handover_choice
             from girlframe.services.m2_game import GameService

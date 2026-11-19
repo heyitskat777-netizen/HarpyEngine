@@ -1426,3 +1426,70 @@ def test_nothing_opens_only_owned_slots_for_one_minute_before_actual_approval(le
     )
     assert next(x for x in sheet.identities if x.id == hidden.id) == hidden
     assert next(x for x in records(final) if x.id == case).applied
+
+
+def test_human_mask_uses_ordinary_keep_traits_and_its_original_extra(ledger):
+    from test_harpy_flirt import native_answer, submit_form
+
+    from girlframe.discord_adapter.m3_harpy_mask import open_mask, open_mask_response
+    from girlframe.engine.m3_harpy_advancements import MASK
+    from girlframe.services.m3_harpy_mask import MaskService
+
+    actual_plays, game, cast, harpy = ready(ledger, faces=(4, 5))
+    policy = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update=dict(
+            m3_approval=policy.model_copy(
+                update=dict(activity_specialist_rules=policy.activity_specialist_rules | {MASK})
+            )
+        )
+    )
+    HarpyAdvancementService(ledger).select(
+        PLAYER, "learn-human-mask", harpy.entity, state(game).revision, MASK
+    )
+    masks = MaskService(game)
+    label = "The trainee liaison"
+    asyncio.run(
+        submit_form(
+            PLAYER,
+            lambda click: open_mask(click, masks, 900, harpy),
+            dict(appearance=label, account="The original Harpy approaches as a visitor."),
+            90980,
+        )
+    )
+    assert label not in str(cast.view(OTHER, 900))
+    notice = next(x for x in InboxService(ledger).items(ADMIN) if x.task == "m3_harpy_mask")
+    with pytest.raises(WorkflowError, match="unavailable"):
+        masks.get(OTHER, identity=notice.identity)
+    asyncio.run(
+        submit_form(
+            ADMIN,
+            lambda click: open_mask_response(click, masks, notice.identity),
+            dict(allow=("yes",), account="I verify the original appearance in this scene."),
+            90984,
+        )
+    )
+    assert (
+        next(x for x in cast.view(OTHER, 900)["roles"] if x["token"] == harpy.token)[
+            "perceived_part"
+        ]
+        == label
+    )
+    ledger.engine.dispose()
+    action = begin(actual_plays, harpy, context="I try to look ordinary under questioning.")
+    worker, gateway = GameWorker(game), Gateway()
+    tick(worker, gateway, 4)
+    pass_tags(game)
+    native_answer(
+        game,
+        PLAYER,
+        "actor_keep",
+        dict(
+            options=("sexy", "vicious"), denied=("in_control",), **{"fields.seems_human": ("yes",)}
+        ),
+        90988,
+    )
+    answer(game, ADMIN, "handler_keep", flag=True, text="The original evidence satisfies the GM.")
+    result = game.inspect(PLAYER, action)["result"]
+    assert "seems_human" in result["positive"] and "sexy" in result["positive"]
+    assert "beautiful" not in result["positive"] and game.dice.calls == 1
