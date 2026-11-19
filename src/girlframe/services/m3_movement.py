@@ -100,6 +100,10 @@ def _physical_context(
     pose = next((x for x in state.placements if x.actor == actor), None)
     external_pose = next((x for x in state.external_poses if x.actor == actor), None)
     if actor.kind == "pilot":
+        from girlframe.engine.m3_sentinel_shell import holds
+
+        if holds(state, actor, "trapped"):
+            raise WorkflowError("The actual trapped Girl needs assistance before leaving")
         if (
             pose is None
             or pose.custody

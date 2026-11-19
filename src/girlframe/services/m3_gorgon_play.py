@@ -15,6 +15,7 @@ from girlframe.engine import m3_hallucinations as hallucinations
 from girlframe.engine import m3_jackdaw as jackdaw
 from girlframe.engine import m3_mother_sprite as mother_sprite
 from girlframe.engine import m3_parasite as parasite
+from girlframe.engine import m3_sentinel_shell as shell
 from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, SceneCast
 from girlframe.engine.m3_actors import fingerprint, resolve
@@ -44,6 +45,8 @@ RULES: dict[str, str] = {
     "collateral": "gorgon.gorgon.collateral-damage",
     "warp": "gorgon.gorgon.warp",
     "corrupt": corrupt_rule,
+    shell.PLAY: shell.RULE,
+    shell.RELEASE: shell.RULE,
     "growth_adapt": growth.RULE,
     "growth_regrow": growth.RULE,
     "mother_sprite": mother_sprite.RULE,
@@ -208,6 +211,21 @@ class GorgonPlayService:
                         for girl in visible.values()
                         if contact_eligible(state, caster, girl, in_frame=True)
                     ]
+                    if (
+                        actor.alive
+                        and "sentinel" in actor.types
+                        and not shell.shell_intact(actor)
+                        and not any(x.source == caster.ref for x in shell.active(state))
+                    ):
+                        options[shell.PLAY] = [
+                            target.token
+                            for target in shell.nearest(caster, tuple(visible.values()))
+                        ]
+                    options[shell.RELEASE] = [
+                        x.girl.token
+                        for x in shell.active(state)
+                        if x.source == caster.ref and x.scene == cast.id and x.girl.token in visible
+                    ]
                     typed_targets[token] = {
                         kind: targets for kind, targets in options.items() if targets
                     }
@@ -218,7 +236,10 @@ class GorgonPlayService:
                 if kind == "corrupt" and not can_corrupt:
                     continue
                 if (
-                    kind in TAG_TYPES or kind in hallucinations.PLAYS or kind in contact_plays
+                    kind in TAG_TYPES
+                    or kind in hallucinations.PLAYS
+                    or kind in contact_plays
+                    or kind in (shell.PLAY, shell.RELEASE)
                 ) and not any(kind in x for x in typed_targets.values()):
                     continue
                 if kind in parasite.PLAYS and not any(kind in x for x in parasite_choices.values()):
@@ -360,6 +381,28 @@ class GorgonPlayService:
                         raise WorkflowError(
                             "Use the next fictional day with the original Girl still in range"
                         )
+                if declaration.kind == shell.PLAY:
+                    present = tuple(
+                        resolve(state, role.actor, bound, require_current_profile=False)
+                        for role in cast.roles
+                        if role.actor.kind == "pilot"
+                    )
+                    if (
+                        "sentinel" not in gorgon.types
+                        or any(x.source == actual.ref for x in shell.active(state))
+                        or shell.shell_intact(gorgon)
+                        or target.ref not in shell.nearest(actual, present)
+                    ):
+                        raise WorkflowError(
+                            "Choose the closest original Girl to this actual Sentinel"
+                        )
+                if declaration.kind == shell.RELEASE and not any(
+                    x.source == actual.ref and x.girl == target.ref and x.scene == cast.id
+                    for x in shell.active(state)
+                ):
+                    raise WorkflowError(
+                        "Choose the actual Sentinel's original captive in this scene"
+                    )
                 if declaration.kind in contact_plays and not contact_eligible(
                     state, actual, target, in_frame=declaration.kind == frame_contact.PLAY
                 ):
@@ -902,7 +945,7 @@ def prepare_response(
     parent = game.action(c, prepared.parent)
     source = parent["data"].get("gorgon_play")
     if not source or (
-        source["kind"] in (*hallucinations.PLAYS, frame_contact.PLAY)
+        source["kind"] in (*hallucinations.PLAYS, frame_contact.PLAY, shell.PLAY)
         and prepared.play == "keep_your_head"
         and prepared.source_work is not None
     ):

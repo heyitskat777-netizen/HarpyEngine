@@ -13,6 +13,7 @@ from girlframe.engine.m3_actor_bonds import is_helpless
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, SceneCast
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_leviathan import layers_clear
+from girlframe.engine.m3_sentinel_shell import shell_intact
 from girlframe.engine.m3_world import update
 from girlframe.services.m2_choices import ChoiceEngine
 from girlframe.services.m3_actors import profiles
@@ -44,6 +45,7 @@ def eligible(
         and body.alive
         and body.gorgon_class not in ("benevolent", "dormant")
         and layers_clear(body)
+        and not shell_intact(body)
         and girl.alive
         and girl.vitals_active is not False
         and placement is not None

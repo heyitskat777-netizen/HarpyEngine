@@ -164,6 +164,7 @@ def prepare_keep(
                 "janus_void_threshold",
                 "gorgon_hallucinations_void",
                 "gorgon_contact_frame_void",
+                "gorgon_shell_threshold",
             )
             and x["actor_id"] == actor.entity
             and json.loads(x["body_json"]).get("work_id") == row["id"]

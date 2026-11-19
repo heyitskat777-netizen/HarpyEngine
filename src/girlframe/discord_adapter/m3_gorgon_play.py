@@ -19,6 +19,8 @@ from girlframe.engine.m3_jackdaw import EFFECTS as JACKDAW_EFFECTS
 from girlframe.engine.m3_jackdaw import Range as JackdawRange
 from girlframe.engine.m3_mother_sprite import BirthPlan
 from girlframe.engine.m3_parasite import PLAYS as PARASITE_PLAYS
+from girlframe.engine.m3_sentinel_shell import PLAY as shell_play
+from girlframe.engine.m3_sentinel_shell import RELEASE as shell_release
 from girlframe.engine.m3_world_state import Cell, CorePlan
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_gorgon_contact import PLAYS as contact_plays
@@ -58,11 +60,20 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
             if kind not in riding_choices:
                 return "Use the actual Parasite whose host state permits this Play."
             targets = [x for x in targets if x["token"] in riding_choices[kind]]
-        if type_tag or kind in HALLUCINATIONS_PLAYS or kind in contact_plays:
+        if type_tag or kind in (*HALLUCINATIONS_PLAYS, *contact_plays, shell_play, shell_release):
             eligible = data["typed_targets"].get(actor["token"], {}).get(kind, ())
             targets = [x for x in targets if x["token"] in eligible]
         targeted = (
-            kind in ("attack", "parasite_hitch", *contact_plays, *HALLUCINATIONS_PLAYS) or type_tag
+            kind
+            in (
+                "attack",
+                "parasite_hitch",
+                shell_play,
+                shell_release,
+                *contact_plays,
+                *HALLUCINATIONS_PLAYS,
+            )
+            or type_tag
         )
         if targeted and not targets:
             return "Join the actual eligible target to the scene before declaring this Play."

@@ -22256,14 +22256,48 @@
         "heading": "Withdraw Into Your Shell"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The actual Sentinel withdraws around the nearest supported original Girl in its actual mapped scene.",
+        "actor_type": "Original Sentinel, original affected Girl and actual human GM for ties",
+        "pre_roll_sources": [
+          "Original scene, mapped distance, reach, and the original Girl's Heat"
+        ],
+        "roll_kind": "2d6",
+        "allowed_modifiers": [
+          "Owned Heat"
+        ],
+        "tier_options": {
+          "mid": [
+            "The Girl picks one ensnarement without closing the shell"
+          ],
+          "high": [
+            "Close the actual shell and have the Sentinel pick one ensnarement"
+          ],
+          "low": [
+            "Close the actual shell and have the Sentinel pick two distinct ensnarements"
+          ]
+        },
+        "choice_ownership": "The closest Girl owns Heat. The Girl chooses on mid and the Sentinel chooses on high or low. The original Girl authors ordinary Void changes.",
+        "target_policy": "Actual original physically mapped Pilot in their current cast. The human GM verifies an equally close target before spending.",
+        "post_roll_effects": [
+          "Block trapped movement and Heat, preserve the original Frame during cockpit invasion, and create a genuine damageable Core barrier when the Shell closes."
+        ],
+        "mandatory_followups": [
+          "Resolve actual Void thresholds",
+          "An actual Shell crack, original Sentinel death or owned release can end active containment"
+        ],
+        "handler_or_gm_intervention": "The human GM handles factual reach and ties. Distant carriage and alternate assistance remain limited.",
+        "test_fixture_ids": [
+          "tests/rules/test_gorgon_runtime.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_gorgon_runtime.py::test_sentinel_shell_real_owned_roll_and_physical_consequences"],
       "m2_play_id": null,
       "module": "core"
     },

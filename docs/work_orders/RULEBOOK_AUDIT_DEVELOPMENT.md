@@ -2073,6 +2073,37 @@ Alternate Handler discovery and third-party interruption routes
 remain open.
 [Rulebook p. 161](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=163) · [Native tests](../../tests/rules/test_gorgon_runtime.py)
 
+### Sentinel withdraws into its shell
+
+Base `8fdc619df4815b9d47639a32fdd394e89cb8cb05`. The Sentinel
+selects an actual closest original Girl in its open scene. The
+candidate measures distance by orthogonal map steps and asks the
+human GM to resolve equal-distance targets. Only the affected
+Girl spends her Heat. The saved result determines the selector
+and count. Trapping blocks ordinary departure and Heat spending.
+Cockpit invasion stops actual piloting until the source is cleared.
+Ordinary Void uses the original Girl's owned Asset and holds the
+Play open if the gain reaches a threshold.
+
+On high and low, the original Sentinel grows an actual protective
+Shell Asset. Its Core stays covered while that shell is intact.
+An original Sentinel can release its own actual captive. A
+different Girl cracked the shell through All Out Assault and a
+human GM table ruling. The affected pilot could then resume
+piloting. The four focused cases passed **in 12.31 seconds**,
+covering all tiers, the exact Heat owner, replay, restart, trapped
+movement, owned release and a fully resolved Void threshold.
+Distant containment movement and other forms of third-party rescue
+remain separate.
+
+The exact previous Hallucinations candidate
+`73a1bf1aa373403576c891456c9f9838c8ba4a88` passed **3,822 tests**
+in four detached shards. The longest ran **2,859.42 seconds**.
+The later Gorgon contact selection passed **99 tests in 268.77
+seconds**. These are offline runs. The pinned trial and live
+data were untouched.
+[Sentinel p. 171](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=173) · [Native tests](../../tests/rules/test_gorgon_runtime.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

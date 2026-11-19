@@ -13,6 +13,7 @@ from girlframe.engine import m3_growth as growth
 from girlframe.engine import m3_hallucinations as hallucinations
 from girlframe.engine import m3_mother_sprite as mother_sprite
 from girlframe.engine import m3_parasite as parasite
+from girlframe.engine import m3_sentinel_shell as shell
 from girlframe.engine.m2 import ChoiceAnswer, GameState
 from girlframe.engine.m3_actor_state import ActorRef, SceneCast
 from girlframe.engine.m3_actors import resolve
@@ -140,6 +141,17 @@ def start(game: Any, c: Connection, state: GameState, action: dict[str, Any]) ->
             victims=people,
         )
         action["data"]["result"]["catatonia" if people else "audible_communication_blocked"] = True
+        return
+    if meta["kind"] == shell.RELEASE:
+        shell.release(
+            state, _ref(meta["actor"]), _ref(meta["target"]), action["scene_id"], _event(action)
+        )
+        action["data"]["result"]["sentinel_release"] = True
+        return
+    if meta["kind"] == shell.PLAY:
+        from girlframe.services.m3_sentinel_shell import start as withdraw
+
+        withdraw(game, c, state, action)
         return
     if meta["kind"] in contact.PLAYS:
         contact.start(game, c, state, action)
@@ -432,6 +444,11 @@ def apply(
     meta, event = _meta(action), _event(action)
     body = json.loads(row["body_json"])
     kind = row["kind"].removeprefix("gorgon_")
+    if kind.startswith("shell_"):
+        from girlframe.services.m3_sentinel_shell import apply as apply_shell
+
+        apply_shell(game, c, state, action, row, answer)
+        return
     if kind.startswith("contact_"):
         contact.apply(game, c, state, action, row, answer)
         return
@@ -774,6 +791,10 @@ def projection(
     body = json.loads(row["body_json"])
     kind = row["kind"].removeprefix("gorgon_")
     result: dict[str, Any] = dict(kind=kind, account=action["data"].get("context", ""))
+    if kind.startswith("shell_"):
+        from girlframe.services.m3_sentinel_shell import project as project_shell
+
+        return project_shell(game, c, state, action, row)
     if kind.startswith("contact_"):
         return contact.project(game, c, state, action, row)
     if kind.startswith("hallucinations_"):
@@ -986,6 +1007,10 @@ def synchronize(
     materialize_dormant(game, c, action, event)
     synchronize_damage(game, c, event)
     state = load_state(c, game.store.campaign_id)
+    if meta["kind"] == shell.PLAY:
+        from girlframe.services.m3_sentinel_shell import materialize as materialize_shell
+
+        materialize_shell(game, c, state, action, event)
     if meta["kind"] in contact.PLAYS:
         contact.synchronize(game, c, state, action, event)
     if meta["kind"] in hallucinations.PLAYS:
@@ -1007,6 +1032,7 @@ def synchronize(
                 if pending["kind"].startswith("gorgon_") and pending["kind"] not in (
                     "gorgon_hallucinations_void",
                     frame_contact.FRAME_VOID,
+                    "gorgon_shell_threshold",
                 ):
                     c.execute(
                         choices.update()

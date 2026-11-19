@@ -2000,6 +2000,12 @@ class GameService:
             if HandlerService(self.store).current(c)[1].handler_id != state.handler:
                 raise WorkflowError("STALE_HANDLER: canonical Handler replacement needs review.")
             scene = self.scene(c, channel)
+            if prepared.heat and any(x.get("kind") == "sentinel_shell" for x in state.facts):
+                from girlframe.engine.m3_actor_bonds import current_ref
+                from girlframe.engine.m3_sentinel_shell import holds
+
+                if holds(state, current_ref(state, mechanical_owner), "trapped"):
+                    raise WorkflowError("This original Girl cannot spend Heat until she is freed")
             scoped_defeat = False
             if defeat is not None and defeat.get("source_work"):
                 from girlframe.services.m3_defeat import work as defeat_work
@@ -2398,6 +2404,7 @@ class GameService:
                                 "janus_void_threshold",
                                 "gorgon_hallucinations_void",
                                 "gorgon_contact_frame_void",
+                                "gorgon_shell_threshold",
                                 "snoop_item_void_threshold",
                                 "gorgon_response_play",
                             )
@@ -2473,6 +2480,7 @@ class GameService:
                     "janus_void_threshold",
                     "gorgon_hallucinations_void",
                     "gorgon_contact_frame_void",
+                    "gorgon_shell_threshold",
                     "snoop_item_void_threshold",
                 ) and (void_keep is None or prepared.play != "keep_your_head"):
                     raise WorkflowError("Use the actual source-owned Void resistance controls.")

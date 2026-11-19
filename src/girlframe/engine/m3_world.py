@@ -417,6 +417,10 @@ def expose_gorgon(world: World, identity: str, account: str) -> World:
     target = next((x for x in world.gorgons if x.id == identity and x.alive), None)
     if target is None or target.exposed or not account.strip():
         raise ValueError("Review an actual living Gorgon's Core weakness")
+    if target.shell_asset is not None and any(
+        x.id == target.shell_asset and not x.damaged for x in target.assets
+    ):
+        raise ValueError("Crack the original Sentinel shell before exposing its Core")
     dealt_with = {x.id for x in target.assets if x.damaged} | {
         x.id for x in target.destroyed_assets
     }

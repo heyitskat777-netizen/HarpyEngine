@@ -433,6 +433,11 @@ class ActorPlayService:
                 or cast.revision != cast_revision
             ):
                 raise ValueError("STALE_ACTOR: confirm your actual resources and Director first")
+            if prepared.heat:
+                from girlframe.engine.m3_sentinel_shell import holds
+
+                if holds(state, ref, "trapped"):
+                    raise WorkflowError("This original Girl cannot spend Heat until she is freed")
             if actor.rules == "ancillary":
                 self._eligible_play(state, ref, rejection=rejection is not None, play=prepared.play)
             from girlframe.services.m3_wyvern_combat import require_free

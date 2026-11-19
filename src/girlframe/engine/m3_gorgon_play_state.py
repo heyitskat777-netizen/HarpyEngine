@@ -29,6 +29,8 @@ class Declaration(Model):
             "parasite_hitch",
             "intimate_contact",
             "intimate_frame_contact",
+            "sentinel_withdraw",
+            "sentinel_release",
             "parasite_detach",
         ]
         | TypeTag
@@ -66,6 +68,8 @@ class Declaration(Model):
             "parasite_hitch",
             "intimate_contact",
             "intimate_frame_contact",
+            "sentinel_withdraw",
+            "sentinel_release",
         ):
             if self.target is None or self.target_sha256 is None or self.target == self.actor:
                 raise ValueError("This Play needs its actual distinct target body and source")

@@ -34,6 +34,7 @@ def candidate_source_gate(monkeypatch):
             "gorgon.gorgon.gorgons-fucking-girls",
             "gorgon.gorgon.gorgons-fucking-frames",
             "gorgon-type.sentinel.sentinel-type",
+            "gorgon-type.sentinel.withdraw-into-your-shell",
             "gorgon-type.jackdaw.jackdaw-type",
             "gorgon-type.jackdaw.hallucinations",
             "gorgon-type.incubus.incubus-type",
@@ -249,6 +250,7 @@ def gorgon_source(
         "parasite_hitch",
         "intimate_contact",
         "intimate_frame_contact",
+        "sentinel_withdraw",
     )
     declaration = Declaration(
         kind=kind,
@@ -2854,3 +2856,311 @@ def test_in_frame_gorgon_roll_uses_actual_void_frame_assets(
         (known,) = [x for x in state(game).facts if x.get("kind") == KIND]
         assert known["recipient"] == handler_role.model_dump_json()
         assert not any(x.task == offered.task for x in inbox.items(PLAYER))
+
+
+@pytest.mark.parametrize(
+    "faces,tier,choices",
+    [
+        ((3, 4), "mid", ("trapped",)),
+        ((5, 5), "high", ("cockpit",)),
+        ((1, 2), "low", ("trapped", "void")),
+        ((3, 4), "mid", ("void",)),
+    ],
+)
+def test_sentinel_shell_real_owned_roll_and_physical_consequences(ledger, faces, tier, choices):
+    import asyncio
+
+    from test_ledger import OTHER
+    from test_m2_game import Dice, pass_tags
+    from test_mission_ui import current
+
+    from girlframe.discord_adapter.m3_gorgon_runtime import open_choice
+    from girlframe.engine.m2 import ChoiceAnswer, PlayInput
+    from girlframe.engine.m3_actor_bonds import current_ref
+    from girlframe.engine.m3_actors import resolve
+    from girlframe.engine.m3_battle_state import Declaration as BattleDeclaration
+    from girlframe.engine.m3_physical_state import CockpitAction
+    from girlframe.engine.m3_sentinel_shell import holds, records, shell_intact
+    from girlframe.engine.m3_world import damage_gorgon, expose_gorgon
+    from girlframe.services.m3_actors import profiles
+    from girlframe.services.m3_battle import BattleService
+    from girlframe.services.m3_movement import MovementService
+    from girlframe.services.m3_physical import PhysicalService
+    from girlframe.services.m3_sentinel_shell import CHOOSE, HEAT, TIE, VOID
+    from girlframe.services.m3_void import VoidService
+    from girlframe.services.onboarding import WorkflowError
+
+    threshold = choices == ("void",)
+    game, worker, gateway, _, original = gorgon_source(
+        ledger,
+        kind="sentinel_withdraw",
+        types=("sentinel",),
+        other_cell=(1, 0) if tier != "mid" else (0, 0),
+        exposed=True,
+        begin=False,
+    )
+    game.dice = Dice(faces)
+    reserved = None
+    with ledger.transaction() as c:
+        canon = state(game)
+        canon.sheets["2"].heat = 2
+        if threshold:
+            frame_assets = [x for x in canon.sheets["2"].assets if x.family == "frame"]
+            reserved = frame_assets[-1].id
+            for asset in frame_assets[:-1]:
+                asset.void = True
+                asset.description = "Earlier fictional corruption"
+        game.event(c, PLAYER.user_id, "synthetic-shell-heat", "synthetic.heat", canon)
+    before = state(game)
+    svc = GorgonPlayService(game)
+    caller, girl = original.actor, original.target
+    outsider = current_ref(before, OTHER.user_id)
+    data = svc.preview(ADMIN, 900)
+    resources = {x["token"]: x for x in data["actors"]}
+    targets = data["typed_targets"][caller.token]["sentinel_withdraw"]
+    assert girl.token in targets
+    declared = original.model_copy(
+        update=dict(target_sha256=resources[girl.token]["source_sha256"])
+    )
+    if tier != "mid":
+        assert targets == [girl.token]
+        with pytest.raises(WorkflowError, match="closest original Girl"):
+            svc.begin(
+                ADMIN,
+                "wrong-nearest",
+                900,
+                before.revision,
+                declared.model_copy(
+                    update=dict(
+                        target=outsider,
+                        target_sha256=resources[outsider.token]["source_sha256"],
+                    )
+                ),
+            )
+    action = svc.begin(ADMIN, "sentinel-withdraw", 900, before.revision, declared)["action_id"]
+    tick(worker, gateway, 5)
+    if not any(
+        x["kind"] in (HEAT, TIE) for viewer in (PLAYER, ADMIN) for x in game.choices(viewer)
+    ):
+        game.roll(ADMIN, "advance-sentinel", action)
+    if tier == "mid":
+        assert not game.choices(PLAYER) and len(targets) == 2
+        answer(game, ADMIN, TIE, flag=True, text="The actual reach resolves the tied target.")
+    row = next(x for x in game.choices(PLAYER) if x["kind"] == HEAT)
+    with pytest.raises(WorkflowError, match="another player"):
+        game.respond(
+            OTHER, "forged-sentinel-heat", row["id"], row["revision"], ChoiceAnswer(number=1)
+        )
+
+    async def native_heat():
+        handoff = current(PLAYER.user_id, 87600)
+        await handoff.response.defer(ephemeral=True)
+        await open_choice(handoff, game, row["id"])
+        form = handoff.edit_original_response.call_args.kwargs["view"]
+        form.values.update(heat="1")
+        await form.confirm.callback(current(PLAYER.user_id, 87601))
+        assert form.completed
+
+    asyncio.run(native_heat())
+    game.respond(PLAYER, "87601", row["id"], row["revision"], ChoiceAnswer(number=1))
+    assert game.dice.calls == 1 and state(game).sheets["2"].heat == 1
+    chooser = PLAYER if tier == "mid" else ADMIN
+    pending = next(x for x in game.choices(chooser) if x["kind"] == CHOOSE)
+    ledger.engine.dispose()
+    detail = game.decision(chooser, pending["id"])["detail"]
+    assert detail["tier"] == tier and detail["roll"]["faces"] == list(faces)
+    assert detail["count"] == len(choices)
+    answer(game, chooser, CHOOSE, options=choices, text="The original Sentinel ensnares the Girl.")
+    if "void" in choices:
+        owned = next(x for x in game.choices(PLAYER) if x["kind"] == VOID)
+        fields = game.decision(PLAYER, owned["id"])["detail"]
+        asset = reserved or next(iter(fields["assets"]))
+        answer(game, PLAYER, VOID, options=(asset,), text="It takes on a dark iridescence.")
+        assert next(x for x in state(game).sheets["2"].assets if x.id == asset).void
+    if threshold:
+        current_state = state(game)
+        (source,) = records(current_state)
+        work = source.void_work
+        assert work and game.inspect(ADMIN, action)["state"] == "awaiting_choices"
+        service = VoidService(ledger)
+        assert service.get(PLAYER, work)["stage"] == "resist_pending"
+        game.dice.faces = (1, 1)
+        child = game.begin(
+            PLAYER,
+            "resist-shell-void",
+            900,
+            current_state.sheets["2"].revision,
+            PlayInput(
+                play="keep_your_head",
+                source_work=work,
+                heat=0,
+                parent=action,
+                context="The original Girl resists the actual Void threshold.",
+                trigger_confirmed=True,
+            ),
+        )["action_id"]
+        tick(worker, gateway, 5)
+        pass_tags(game)
+        answer(game, PLAYER, "actor_keep", options=("in_control",))
+        answer(game, ADMIN, "handler_keep", flag=True, text="The actual resistance held.")
+        assert game.inspect(PLAYER, child)["state"] == "complete"
+        assert service.get(PLAYER, work)["stage"] == "prevented"
+    tick(worker, gateway, 5)
+    after = state(game)
+    assert game.inspect(ADMIN, action)["state"] == "complete"
+    assert game.dice.calls == (2 if threshold else 1)
+    (record,) = records(after)
+    assert record.girl == girl and record.source == caller and record.effects == choices
+    body = next(x for x in after.world.gorgons if x.id == caller.entity)
+    assert shell_intact(body) == (tier != "mid")
+    assert body.exposed == (tier == "mid")
+    assert after.sheets["3"] == before.sheets["3"]
+    for effect in ("cockpit", "trapped"):
+        assert holds(after, girl, effect) == (effect in choices)
+        assert not holds(after, outsider, effect)
+
+    if "trapped" in choices:
+        with pytest.raises(WorkflowError, match="cannot spend Heat"):
+            game.begin(
+                PLAYER,
+                "cannot-spend",
+                900,
+                after.sheets["2"].revision,
+                PlayInput(
+                    play="keep_your_head",
+                    heat=1,
+                    context="I try to break free.",
+                    trigger_confirmed=True,
+                ),
+            )
+        with pytest.raises(WorkflowError, match="needs assistance"):
+            MovementService(game).move(
+                PLAYER,
+                "cannot-leave",
+                after.revision,
+                900,
+                girl,
+                (1, 0),
+                account="The original Girl tries to leave.",
+            )
+    if "cockpit" in choices:
+        with ledger.engine.connect() as c:
+            actual = resolve(after, girl, profiles(c, ledger.campaign_id))
+        assert actual.piloting is False and actual.inside_frame is True
+        command = CockpitAction(
+            actor=girl,
+            operation="pilot",
+            expected_position=actual.position_sha256,
+            account="I try to resume piloting.",
+            confirmed=True,
+        )
+        with pytest.raises(WorkflowError, match="containment"):
+            PhysicalService(ledger).operate(
+                PLAYER, "cannot-pilot", after.revision, command, channel=900
+            )
+    if record.shell_asset:
+        with pytest.raises(ValueError, match="Crack the original Sentinel shell"):
+            expose_gorgon(after.world, caller.entity, "Ordinary vulnerability")
+        if tier == "high":
+            ledger.policy = ledger.policy.model_copy(
+                update={"owner_table_outcomes": "gm_discretion"}
+            )
+            battle = BattleService(ledger)
+            scene = battle.preview(OTHER, 900)
+            pilot = next(x for x in scene["actors"] if x["owned"] and x["ref"]["kind"] == "pilot")
+            gorgon = next(x for x in scene["actors"] if x["ref"]["entity"] == caller.entity)
+            planned = BattleDeclaration(
+                play="all_out_assault",
+                actor=outsider,
+                target=caller,
+                attacking_asset=pilot["assets"][0]["id"],
+                target_asset=record.shell_asset,
+                actor_sha256=pilot["sha256"],
+                target_sha256=gorgon["sha256"],
+                account="I crack the actual barrier over the Shell.",
+            )
+            context = battle.propose(OTHER, "strike-shell", scene["revision"], 900, planned)["id"]
+            battle.confirm(
+                ADMIN,
+                "review-shell-strike",
+                state(game).revision,
+                context,
+                opening=True,
+                reach=True,
+                outside_permission=False,
+                indirect=False,
+                evidence="The original barrier is physically reachable.",
+            )
+            game.dice.faces = (4, 5)
+            strike = game.begin(
+                OTHER,
+                "crack-shell",
+                900,
+                after.sheets["3"].revision,
+                PlayInput(
+                    play="all_out_assault",
+                    heat=0,
+                    piloting=True,
+                    target_actor=caller,
+                    attacking_asset=planned.attacking_asset,
+                    target_asset=planned.target_asset,
+                    battle_context=context,
+                    context=planned.account,
+                    trigger_confirmed=True,
+                ),
+            )["action_id"]
+            tick(worker, gateway, 4)
+            pass_tags(game)
+            answer(
+                game, ADMIN, "battle_gm_table", flag=False, text="The actual Shell can be cracked."
+            )
+            tick(worker, gateway, 5)
+            assert game.inspect(OTHER, strike)["state"] == "complete"
+        else:
+            with ledger.transaction() as c:
+                canon = state(game)
+                canon.world = damage_gorgon(
+                    canon.world, caller.entity, record.shell_asset, indirect=False
+                )
+                game.event(
+                    c, OTHER.user_id, "synthetic-crack-shell", "synthetic.shell_cracked", canon
+                )
+        held = state(game)
+        assert not holds(held, girl, "trapped") and not holds(held, girl, "cockpit")
+        if "cockpit" in choices:
+            PhysicalService(ledger).operate(
+                PLAYER, "pilot-after-crack", held.revision, command, channel=900
+            )
+
+    if tier == "mid" and "trapped" in choices:
+        preview = svc.preview(ADMIN, 900)
+        rows = {x["token"]: x for x in preview["actors"]}
+        assert preview["typed_targets"][caller.token]["sentinel_release"] == [girl.token]
+        let_go = Declaration(
+            kind="sentinel_release",
+            actor=caller,
+            target=girl,
+            actor_sha256=rows[caller.token]["source_sha256"],
+            target_sha256=rows[girl.token]["source_sha256"],
+            account="The original Sentinel releases its actual captive.",
+            reach_confirmed=True,
+        )
+        response = svc.begin(ADMIN, "release-shell-captive", 900, preview["revision"], let_go)
+        tick(worker, gateway, 5)
+        if holds(state(game), girl, "trapped"):
+            game.roll(ADMIN, "advance-captive-release", response["action_id"])
+            tick(worker, gateway, 5)
+        (released,) = records(state(game))
+        assert released.released and released.event == record.event
+        assert not holds(state(game), girl, "trapped")
+        moved = MovementService(game).move(
+            PLAYER,
+            "move-after-captive-release",
+            state(game).revision,
+            900,
+            girl,
+            (1, 0),
+            frame=True,
+            account="The original Girl moves her Frame after the release.",
+        )
+        assert moved["destination"] == [1, 0] and game.dice.calls == 1

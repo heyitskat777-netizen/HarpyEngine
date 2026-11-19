@@ -25,6 +25,9 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
             interaction, GorgonDormantService(game.store, game), detail["work_id"]
         )
         return
+    if kind.startswith("shell_"):
+        await open_shell(interaction, game, data)
+        return
     if kind.startswith("contact_"):
         await open_contact(interaction, game, data)
         return
@@ -340,4 +343,80 @@ async def open_contact(
         return "Your private choice is saved. Recover any remaining step in your Inbox."
 
     form = NativeForm(interaction.user.id, "Private Gorgon contact", prompts[kind], fields, submit)
+    await reply(interaction, form.text(), form)
+
+
+async def open_shell(
+    interaction: discord.Interaction, game: GameService, data: dict[str, Any]
+) -> None:
+    detail = data["detail"]
+    kind = detail["kind"]
+    if kind == "shell_threshold":
+        from girlframe.discord_adapter.m3_void import open_void
+        from girlframe.services.m3_void import VoidService
+
+        await open_void(interaction, VoidService(game.store), detail["work"])
+        return
+    if kind == "shell_heat":
+        message = f"You have {detail['heat']} Heat. Choose what you spend on the Sentinel roll."
+        fields = [Field("heat", "Heat to spend")]
+    elif kind == "shell_tie":
+        message = "Confirm that the proposed Girl is the actual closest in this tied situation."
+        fields = [
+            Field("choice", "Confirm this target?", (("yes", "Confirm"), ("no", "Decline"))),
+            Field("account", "State how you verified actual reach", paragraph=True),
+        ]
+    elif kind == "shell_void":
+        message = "Choose and describe this required ordinary Void gain."
+        fields = [
+            Field("options", "Your actual uncorrupted Asset", tuple(detail["assets"].items())),
+            Field("account", "What changes about this Asset?", paragraph=True),
+        ]
+    else:
+        roll = detail["roll"]
+        faces = " + ".join(str(x) for x in roll["faces"])
+        count = detail["count"]
+        message = f"Saved roll {faces} + {roll['heat']} Heat. Choose {count} actual effects."
+        labels = {
+            "trapped": "Trap the Girl",
+            "cockpit": "Invade the original cockpit",
+            "void": "Make the original Girl gain Void",
+        }
+        if count > len(detail["options"]):
+            await reply(interaction, "The saved outcome needs private review of actual effects.")
+            return
+        fields = [
+            Field(
+                "options",
+                "Printed consequences",
+                tuple((x, labels[x]) for x in detail["options"]),
+                count,
+                count,
+            ),
+            Field("account", "Describe the actual effects", paragraph=True),
+        ]
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        number = None
+        if kind == "shell_heat":
+            heat = values["heat"].strip()
+            if not heat.isascii() or not heat.isdecimal() or len(heat) > 9:
+                return "Enter a whole amount of your actual Heat."
+            number = int(heat)
+        await asyncio.to_thread(
+            game.respond,
+            viewer_from_interaction(current),
+            str(current.id),
+            data["id"],
+            data["revision"],
+            ChoiceAnswer(
+                number=number,
+                text=values.get("account", ""),
+                options=tuple(values.get("options", ())),
+                flag=values["choice"][0] == "yes" if values.get("choice") else None,
+            ),
+        )
+        return "Your choice is saved. Any remaining consequence stays in the Inbox."
+
+    form = NativeForm(interaction.user.id, "Withdraw Into Your Shell", message, fields, submit)
     await reply(interaction, form.text(), form)

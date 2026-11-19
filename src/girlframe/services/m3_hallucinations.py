@@ -291,6 +291,10 @@ def apply(
             or "roll" in value
         ):
             raise WorkflowError("Choose Heat from this actual Girl before rolling")
+        from girlframe.engine.m3_sentinel_shell import holds
+
+        if answer.number and holds(state, girl.ref, "trapped"):
+            raise WorkflowError("The actual trapped Girl cannot spend Heat until freed")
         roll = rules.Roll(faces=game.dice.roll(), heat=answer.number, event=event)
         sheet.heat -= roll.heat
         if roll.heat:

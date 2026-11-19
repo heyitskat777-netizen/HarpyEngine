@@ -171,6 +171,12 @@ def source(
 
             prove_temptation(game, c, first, body, actor)
             return current, body, actor
+        if body.get("reason") == "sentinel_shell":
+            from girlframe.services.m3_sentinel_shell import prove_void as prove_shell_void
+
+            assert proof is not None
+            prove_shell_void(game, c, proof, first, body, actor)
+            return current, body, actor
         if body.get("reason") == "gorgon_frame_contact_consequence":
             from girlframe.services.m3_gorgon_frame_contact import prove_frame_void
 
@@ -583,6 +589,10 @@ def complete(
             from girlframe.services.m3_consume import resume_pending
 
             resume_pending(game, c, event)
+        elif body.get("reason") == "sentinel_shell":
+            from girlframe.services.m3_sentinel_shell import complete_void as complete_shell_void
+
+            complete_shell_void(game, c, identity, body["source_action"], event, viewer, key)
         elif body.get("reason") in (
             "gorgon_frame_contact_consequence",
             "gorgon_frame_contact_rebirth",

@@ -204,6 +204,12 @@ class PhysicalService:
             state = load_state(c, self.store.campaign_id)
             if type(revision) is not int or state.revision != revision:
                 raise WorkflowError("STALE_COCKPIT: refresh the actual physical state.")
+            from girlframe.engine.m3_sentinel_shell import holds
+
+            if holds(state, command.actor, "trapped") or (
+                command.operation == "pilot" and holds(state, command.actor, "cockpit")
+            ):
+                raise WorkflowError("Resolve the actual Sentinel's containment before this action")
             if self.game.immediate_work(c, viewer.user_id):
                 raise WorkflowError(
                     "Resolve the actual immediate consequence before ordinary cockpit operations."

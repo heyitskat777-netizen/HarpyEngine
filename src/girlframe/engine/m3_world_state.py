@@ -276,6 +276,7 @@ class Gorgon(Entity):
     flesh_layers_event: str | None = Field(
         default=None, min_length=1, exclude_if=lambda value: value is None
     )
+    shell_asset: str | None = Field(default=None, exclude_if=lambda value: value is None)
     exposed: bool = False
     alive: bool = True
     revealed: bool = False
@@ -308,6 +309,15 @@ class Gorgon(Entity):
             or not self.flesh_layers_event.strip()
         ):
             raise ValueError("Use two distinct actual original Leviathan flesh-layer Assets")
+        if self.shell_asset is not None and (
+            "sentinel" not in self.types
+            or self.shell_asset not in ids
+            or self.exposed
+            and any(x.id == self.shell_asset and not x.damaged for x in self.assets)
+        ):
+            raise ValueError(
+                "The Core cannot be exposed through the original intact Sentinel shell"
+            )
         if self.gorgon_class == "directed" and (
             self.goal is None or self.protected_asset not in ids
         ):
