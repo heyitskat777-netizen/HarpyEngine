@@ -15429,7 +15429,7 @@
       "reviewer": null,
       "review_reference": null,
       "contract": {
-        "trigger": "An actual Angel-Wife retains Wife and receives a direct Order from her actual original spouse.",
+        "trigger": "An actual Angel-Wife retains her original Wife Identity and receives an Order or address directive from her actual spouse.",
         "actor_type": "Original Angel-Wife and named original NPC spouse",
         "pre_roll_sources": [
           "Approved printed rule",
@@ -15441,16 +15441,17 @@
         "tier_options": {
           "order": [
             "Follow through the original owner’s declared action",
-            "Block the original spouse-specific Disobey path while Wife remains"
+            "Block the original spouse-specific Disobey path while Wife remains",
+            "Record a heard he or she address directive about an actual known character on the original Wife's private sheet"
           ]
         },
         "choice_ownership": "Spouse supplies the original Order. The human Angel-Wife controls the actual action and no response is inferred.",
         "target_policy": "Exact original known spouse. Preserve existing Wife Identity protections.",
         "post_roll_effects": [
-          "A blocked refusal rolls no dice and spends no Heat."
+          "A blocked refusal rolls no dice and spends no Heat. Keep the directive private and discontinue it if the original Wife Identity ends."
         ],
         "mandatory_followups": [
-          "Spouse pronoun directives, other authority sources and appearance remain outside this native subset."
+          "Appearance judgments and other authority sources remain outside this native subset."
         ],
         "handler_or_gm_intervention": "Retain human ownership of the other narrative requirements.",
         "test_fixture_ids": [

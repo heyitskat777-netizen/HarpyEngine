@@ -3782,6 +3782,21 @@ the original case completed. The Order landed in a later change.
 Other Bond sources and direct Asset-damage evidence remain open.
 [Isolation Protocol p. 104](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=106) · [Native case](../../tests/rules/test_chained_isolation.py)
 
+### Made For Service address directives
+
+Base `4125f08224e12867010b672cde5a83d951447725`. The original
+spouse can give a private he or she directive about a known,
+co-present character. After the Wife's player confirms hearing
+it, the directive appears on that player's private sheet. It
+applies to the Wife's address and leaves the subject's sheet and
+the player's speech under their respective owners' control.
+
+One focused native case passed in 6.92 seconds. It verified
+audience and actual delivery, and showed the directive ceases
+when the original Wife Identity is removed even if a different
+Identity uses the same label. Appearance remains a table judgment.
+[Made For Service p. 102](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=104) · [Native case](../../tests/rules/test_ancillary_npc_orders.py)
+
 ### Void-Drunk shadow emergence
 
 Base `c0b2cdc08affdedcad9e009b63495b8b4b00da9a`. A nearby

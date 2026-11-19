@@ -1,15 +1,20 @@
 """Exact optional NPC authorities preserve owner choice and printed refusal permissions."""
 
+import asyncio
+
 import pytest
 from test_ancillary_creation import REBEL, enable, scenario
 from test_cast_service import change
+from test_harpy_flirt import submit_form
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger
 from test_m2_game import Dice, state
 
+from girlframe.discord_adapter.m3_ancillary_orders import open_ancillary_order, open_order_response
 from girlframe.engine import m3_ancillary as ancillary
 from girlframe.engine.m2 import TagState
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.services.inbox import InboxService
 from girlframe.services.m3_actors import ActorService
 from girlframe.services.m3_ancillary import AncillaryService
 from girlframe.services.m3_ancillary_orders import ILLEGAL, SERVICE, AncillaryOrderService, records
@@ -130,3 +135,38 @@ def test_original_revolutionary_can_mark_owned_tag_and_wife_cannot_disobey_spous
         account="I decide to join him there.",
     )
     assert next(x for x in records(state(game)) if x.id == second).consequence == "chosen_follow"
+
+    asyncio.run(
+        submit_form(
+            ADMIN,
+            lambda click: open_ancillary_order(click, service, 900, REBEL),
+            dict(person=(wife.token,), reference=(REBEL.token,), pronouns=("he",)),
+            94830,
+        )
+    )
+    (item,) = [x for x in InboxService(ledger).items(OTHER) if x.task == "m3_ancillary_order"]
+    assert "address_directives" not in actors.inspect(OTHER, wife)
+    with pytest.raises(WorkflowError, match="unavailable"):
+        service.get(PLAYER, item.identity)
+    asyncio.run(
+        submit_form(
+            OTHER,
+            lambda click: open_order_response(click, service, item.identity),
+            dict(choice=("follow",), account="I heard that he uses he."),
+            94832,
+        )
+    )
+    (saved,) = actors.inspect(OTHER, wife)["address_directives"]
+    assert saved["subject"] == REBEL.token and saved["pronouns"] == "he"
+    with pytest.raises(WorkflowError, match="controlled by another"):
+        actors.inspect(PLAYER, wife)
+    with ledger.transaction() as c:
+        canon = state(game)
+        original_wife = ancillary.find(canon, wife)
+        after = tuple(
+            x.model_copy(update=dict(id="another-identity")) if x.name == "Wife" else x
+            for x in original_wife.identities
+        )
+        ancillary.put(canon, original_wife.model_copy(update=dict(identities=after)))
+        game.event(c, ADMIN.user_id, "old-wife-ended", "synthetic.identity_lost", canon)
+    assert "address_directives" not in actors.inspect(OTHER, wife)

@@ -22,7 +22,7 @@ from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_ancillary import AncillaryService
-from girlframe.services.m3_battle import _cast
+from girlframe.services.m3_battle import _cast, _visible
 from girlframe.services.m3_consume_support import knowledge_allowed
 from girlframe.services.m3_medical import MedicalService
 from girlframe.services.m3_missions import MissionService
@@ -35,6 +35,13 @@ from girlframe.services.read_only_bot import GuildViewer
 ILLEGAL = "ancillary.revolutionary-idealist.illegal-girl"
 SERVICE = "ancillary.angel-wife.made-for-service"
 KIND = "ancillary_npc_order"
+ADDRESS = "wife_address_directive"
+
+
+class Address(Model):
+    subject: ActorRef
+    label: str
+    pronouns: Literal["he", "she"]
 
 
 class Order(Model):
@@ -48,6 +55,7 @@ class Order(Model):
     source: str
     instruction: str
     isolation: str | None = None
+    address: Address | None = None
     stage: Literal["respond", "tag", "outcome", "review", "held", "closed"] = "respond"
     faces: tuple[int, int] | None = None
     rng_source: str | None = None
@@ -146,6 +154,32 @@ def pronoun_setting(
     )
 
 
+def _wife_spouse(state: GameState, game: GameService, actor: ActorRef) -> ActorRef | None:
+    role = find(state, actor)
+    if role is None or role.draft.book != "ANGEL-WIFE" or not _available(game, SERVICE):
+        return None
+    identity = (
+        role.event + ":identity"
+        if isinstance(role.draft, CapturedDraft)
+        else actor.entity + ":identity:0"
+    )
+    if not any(x.id == identity and x.name == "Wife" for x in role.identities):
+        return None
+    return role.draft.handler if isinstance(role.draft, CapturedDraft) else role.draft.bond
+
+
+def address_directives(
+    game: GameService, state: GameState, actor: ActorRef
+) -> tuple[dict[str, str], ...]:
+    if _wife_spouse(state, game, actor) is None:
+        return ()
+    return tuple(
+        dict(subject=x["subject"], label=x["label"], pronouns=x["pronouns"])
+        for x in state.facts
+        if x.get("kind") == ADDRESS and x.get("wife") == actor.token
+    )
+
+
 def _rules(
     game: GameService,
     c: Connection,
@@ -177,10 +211,8 @@ def _rules(
                 return False, False
     if not npc or not _independent(state, target):
         return None
-    if role.draft.book == "ANGEL-WIFE" and _available(game, SERVICE):
-        spouse = role.draft.handler if isinstance(role.draft, CapturedDraft) else role.draft.bond
-        if spouse == issuer and any(x.name == "Wife" for x in role.identities):
-            return True, False
+    if _wife_spouse(state, game, target) == issuer:
+        return True, False
     if illegal(c, game, state, target):
         original = role.draft.handler if isinstance(role.draft, CapturedDraft) else role.draft.bond
         cadre = rank.current(state, target)
@@ -257,9 +289,43 @@ class AncillaryOrderService:
     def menu(self, viewer: GuildViewer, channel: int, issuer: ActorRef) -> dict[str, Any]:
         with self.store.engine.connect() as c:
             state = load_state(c, self.store.campaign_id)
-            return dict(
-                revision=state.revision, people=self.options(c, state, viewer, channel, issuer)
-            )
+            people = self.options(c, state, viewer, channel, issuer)
+            cast, _, _ = self._scene(c, state, channel)
+            owner, issuer_body = self._person(c, state, cast, issuer)
+            references = {}
+            for role in cast.roles:
+                if (
+                    role.actor.token in people
+                    and _wife_spouse(state, self.game, role.actor) == issuer
+                ):
+                    references.update(
+                        self._address_references(c, state, cast, owner, role, issuer_body)
+                    )
+            return dict(revision=state.revision, people=people, references=references)
+
+    def _address_references(
+        self,
+        c: Connection,
+        state: GameState,
+        cast: SceneCast,
+        owner: CastRole,
+        target: CastRole,
+        issuer: ActorView,
+    ) -> dict[str, str]:
+        options = {}
+        for role in cast.roles:
+            if role.actor not in (owner.actor, target.actor) and not (
+                _visible(state, role.actor, owner.controller)
+                and _visible(state, role.actor, target.controller)
+            ):
+                continue
+            try:
+                _, actual = self._person(c, state, cast, role.actor)
+            except (ValueError, WorkflowError):
+                continue
+            if actual.cell == issuer.cell:
+                options[role.actor.token] = actual.label
+        return options
 
     def _write(
         self,
@@ -361,6 +427,9 @@ class AncillaryOrderService:
         revision: int,
         target: str,
         instruction: str,
+        *,
+        reference: str | None = None,
+        pronouns: Literal["he", "she"] | None = None,
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             self._guard(c, channel)
@@ -368,12 +437,26 @@ class AncillaryOrderService:
             if (
                 state.revision != revision
                 or target not in self.options(c, state, viewer, channel, issuer)
-                or not 0 < len(instruction.strip()) <= 1200
+                or len(instruction.strip()) > 1200
             ):
                 raise WorkflowError("Use your actual authority to give the original scoped order.")
             cast, gm, appointment = self._scene(c, state, channel)
             owner = next(x for x in cast.roles if x.actor == issuer)
             recipient = next(x for x in cast.roles if x.actor.token == target)
+            message = instruction.strip()
+            address = None
+            if reference is not None and pronouns in ("he", "she") and not message:
+                if _wife_spouse(state, self.game, recipient.actor) != owner.actor:
+                    raise WorkflowError("Only this original spouse can give an address directive.")
+                _, body = self._person(c, state, cast, issuer)
+                allowed = self._address_references(c, state, cast, owner, recipient, body)
+                if reference not in allowed:
+                    raise WorkflowError("Refer only to a known and co-present original character.")
+                subject = next(x.actor for x in cast.roles if x.actor.token == reference)
+                address = Address(subject=subject, label=allowed[reference], pronouns=pronouns)
+                message = f"Refer to {address.label} as {address.pronouns}."
+            elif not message or reference is not None or pronouns is not None:
+                raise WorkflowError("Give a direct Order or one complete address directive.")
             event = str(uuid4())
             order = Order(
                 id=event,
@@ -384,7 +467,8 @@ class AncillaryOrderService:
                 gm=gm,
                 appointment=appointment,
                 source=event,
-                instruction=instruction.strip(),
+                instruction=message,
+                address=address,
             )
             return self._save(c, state, viewer, key, order, event)
 
@@ -397,7 +481,8 @@ class AncillaryOrderService:
                 revision=revision,
                 target=target,
                 instruction=instruction,
-            ),
+            )
+            | (dict(reference=reference, pronouns=pronouns) if reference or pronouns else {}),
             operation,
         )
 
@@ -441,6 +526,12 @@ class AncillaryOrderService:
             or (order.isolation is None and actor.cell != target.cell)
         ):
             raise WorkflowError("Recover the original current scene and Order authority.")
+        if order.address is not None and (
+            not port[0]
+            or order.address.subject.token
+            not in self._address_references(c, state, cast, owner, recipient, actor)
+        ):
+            raise WorkflowError("Recover the original known character and spouse directive.")
         return actor, target, port
 
     def _order(self, state: GameState, identity: str) -> Order:
@@ -490,6 +581,7 @@ class AncillaryOrderService:
                 issuer=issuer.label,
                 instruction=value.instruction,
                 isolation=value.isolation is not None,
+                address=value.address is not None,
                 forbidden=forbidden,
                 heat=target.heat,
                 tags=self._tags(state, value) if self_tag and value.stage == "tag" else {},
@@ -609,6 +701,28 @@ class AncillaryOrderService:
                         )
                     ):
                         raise WorkflowError("Use physical movement to come to the Handler's side.")
+                    if order.address is not None:
+                        address = order.address
+                        state.facts = [
+                            x
+                            for x in state.facts
+                            if not (
+                                x.get("kind") == ADDRESS
+                                and x.get("wife") == actor.ref.token
+                                and x.get("subject") == address.subject.token
+                            )
+                        ]
+                        state.facts.append(
+                            dict(
+                                kind=ADDRESS,
+                                wife=actor.ref.token,
+                                subject=address.subject.token,
+                                label=address.label,
+                                pronouns=address.pronouns,
+                                event=event,
+                                order=order.id,
+                            )
+                        )
                     update = dict(
                         stage="closed", consequence="chosen_follow", account=account.strip()
                     )

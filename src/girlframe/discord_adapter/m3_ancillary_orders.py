@@ -28,6 +28,8 @@ async def open_ancillary_order(
         return
 
     async def submit(click: discord.Interaction, values: dict[str, Any]) -> str:
+        reference = values.get("reference", ())
+        pronouns = values.get("pronouns", ())
         await asyncio.to_thread(
             service.issue,
             viewer_from_interaction(click),
@@ -36,18 +38,40 @@ async def open_ancillary_order(
             actor,
             data["revision"],
             values["person"][0],
-            values["instruction"],
+            values.get("instruction", ""),
+            reference=reference[0] if reference else None,
+            pronouns=pronouns[0] if pronouns else None,
         )
         return "The original recipient has a private Order."
 
+    fields = [
+        Field("person", "Original recipient", tuple(data["people"].items())),
+        Field(
+            "instruction", "Your original Order", paragraph=True, required=not data["references"]
+        ),
+    ]
+    if data["references"]:
+        fields.extend(
+            (
+                Field(
+                    "reference",
+                    "Known person for spouse’s address directive",
+                    tuple(data["references"].items()),
+                    required=False,
+                ),
+                Field(
+                    "pronouns",
+                    "Which address to use",
+                    (("he", "He"), ("she", "She")),
+                    required=False,
+                ),
+            )
+        )
     form = NativeForm(
         interaction.user.id,
         "Ancillary Order",
-        "Give an actual direct Order as your original character.",
-        [
-            Field("person", "Original recipient", tuple(data["people"].items())),
-            Field("instruction", "Your original Order", paragraph=True),
-        ],
+        "Write an Order or select both fields for a spouse’s address directive.",
+        fields,
         submit,
     )
     await reply(interaction, form.text(), form)
@@ -72,7 +96,12 @@ async def open_order_response(
         if data["isolation"]:
             instructions += "\nUse actual movement to reach the Handler if you choose to follow."
         choices = (
-            (("follow", "Follow"),)
+            (
+                (
+                    "follow",
+                    "Record that I heard the address directive" if data["address"] else "Follow",
+                ),
+            )
             if data["forbidden"]
             else (
                 ("follow", "Follow"),
@@ -83,7 +112,12 @@ async def open_order_response(
             instructions += f"\nYou have {data['heat']} Heat."
             fields.append(Field("heat", "Heat only if rolling", required=False))
         fields.append(
-            Field("account", "What you do only if following", paragraph=True, required=False)
+            Field(
+                "account",
+                "Confirm you heard it" if data["address"] else "What you do only if following",
+                paragraph=True,
+                required=False,
+            )
         )
     elif stage == "tag":
         choices = (("pass", "Pass"),)

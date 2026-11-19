@@ -67,6 +67,15 @@ async def open_actors(interaction: discord.Interaction, service: ActorService) -
         text += "Rules: " + own["rules"].replace("_", " ") + "\n"
         if language := result.get("pronouns"):
             text += "Pronouns: " + language + "\n"
+        if directives := result.get("address_directives"):
+            text += (
+                "Spouse’s address directives\n"
+                + "\n".join(
+                    discord.utils.escape_markdown(item["label"]) + " — " + item["pronouns"]
+                    for item in directives
+                )
+                + "\n"
+            )
         if rank := result.get("ancillary_status"):
             text += "Cadre Status: " + str(rank) + "\n"
         if status := result.get("expanded_status"):
