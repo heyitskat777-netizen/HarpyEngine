@@ -79,6 +79,9 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
         if conditioning.enabled():
             await asyncio.to_thread(conditioning.menu, viewer, channel)
             options.append(("conditioning", "Request private Conditioning"))
+            speech = await asyncio.to_thread(conditioning.speech, viewer, channel)
+            if speech["sources"]:
+                options.append(("conditioning-word", "Speak a private Conditioning word"))
     except WorkflowError:
         pass
 
@@ -98,6 +101,11 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
             from girlframe.discord_adapter.m3_conditioning import open_invite
 
             await open_invite(current, conditioning, channel)
+            return
+        if token == "conditioning-word":
+            from girlframe.discord_adapter.m3_conditioning import open_speech
+
+            await open_speech(current, conditioning, channel)
             return
         if token in prompt_roles:
             role = await prompt_role(current, token)

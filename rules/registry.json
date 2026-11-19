@@ -23591,9 +23591,9 @@
         },
         "choice_ownership": "Trainee owns consent, the saved roll, and the final response. Trainer owns each effect. Either participant can withdraw before effects apply.",
         "target_policy": "Only the original living separate participants in a current private scene. The trainer sees eligible resources after consent. Other Bonds require explicit sharing.",
-        "post_roll_effects": ["Replace, teach, embrace or erase Identities", "Establish and weaken Bonds", "Excise and optionally replace an ordinary Girl Asset", "Give a scoped Tag"],
+        "post_roll_effects": ["Replace, teach, embrace or erase Identities", "Establish and weaken Bonds", "Excise and optionally replace an ordinary Girl Asset", "Give a scoped Tag", "Arm and speak a private word that makes this original trainee Helpless until a successful direct refusal"],
         "mandatory_followups": ["Trainer supplies the selected effects and account; trainee confirms their own response before effects commit."],
-        "handler_or_gm_intervention": "The actual Handler may be a trainer. The conditioning word and source-locked assets remain outside the current native scope.",
+        "handler_or_gm_intervention": "The actual Handler may be a trainer. The word does not grant order authority. Source-locked assets and independently unsupported cross-role Order variants are outside the current native scope.",
         "test_fixture_ids": ["tests/rules/test_conditioning.py"]
       },
       "dependencies": [],

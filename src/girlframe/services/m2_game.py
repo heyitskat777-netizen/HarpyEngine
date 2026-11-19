@@ -585,7 +585,7 @@ class GameService:
                     )
             return data
 
-    def helpless_status(self, viewer: GuildViewer) -> bool:
+    def helpless_status(self, viewer: GuildViewer, *, ordinary_recovery: bool = False) -> bool:
         """Read the current person's condition, including actor-bound NPC opponents."""
         from girlframe.engine.m3_actor_bonds import current_ref, is_helpless
 
@@ -594,7 +594,9 @@ class GameService:
             state = load_state(c, self.store.campaign_id)
             if str(viewer.user_id) not in state.sheets:
                 raise WorkflowError("This Pilot has no activated sheet.")
-            return is_helpless(state, current_ref(state, viewer.user_id))
+            return is_helpless(
+                state, current_ref(state, viewer.user_id), ignore_conditioning=ordinary_recovery
+            )
 
     def activate(
         self, viewer: GuildViewer, key: str, fingerprint: str, public_fields: tuple[str, ...] = ()
@@ -1974,9 +1976,15 @@ class GameService:
                     "Link Surgery Reversal prevents this original Girl's Frame Plays."
                 )
             from girlframe.engine.m3_actor_bonds import is_helpless
+            from girlframe.services.m3_conditioning_refusal import trainer_for_refusal
 
+            conditioning_trainer = trainer_for_refusal(
+                self, c, state, current_ref, channel, prepared
+            )
             if (
-                is_helpless(state, current_ref)
+                is_helpless(
+                    state, current_ref, ignore_conditioning=conditioning_trainer is not None
+                )
                 and defeat is None
                 and void_keep is None
                 and janus is None
@@ -3149,6 +3157,11 @@ class GameService:
                     table=npc_source_table,
                     cast=source_cast.model_dump(mode="json"),
                     cast_sha256=fingerprint(source_cast),
+                )
+            if conditioning_trainer is not None:
+                data["conditioning_refusal"] = dict(
+                    subject=current_ref.model_dump(mode="json"),
+                    trainer=conditioning_trainer.model_dump(mode="json"),
                 )
             if am_code is not None:
                 from girlframe.engine.m3_handler_consequences import active_handler
@@ -7957,7 +7970,9 @@ class GameService:
             if (
                 sheet is None
                 or sheet.revision != revision
-                or not is_helpless(state, current_ref(state, viewer.user_id))
+                or not is_helpless(
+                    state, current_ref(state, viewer.user_id), ignore_conditioning=True
+                )
             ):
                 raise WorkflowError("STALE_SHEET: no matching Helpless recovery is available.")
             scenes = t.m2["m2_scenes"]

@@ -70,8 +70,13 @@ class Tag(Effect):
     label: Label
 
 
+class Word(Effect):
+    kind: Literal["word"] = "word"
+    phrase: Label
+
+
 Choice = Annotated[
-    Replace | Teach | Embrace | Erase | Bond | Excise | Tag, Field(discriminator="kind")
+    Replace | Teach | Embrace | Erase | Bond | Excise | Tag | Word, Field(discriminator="kind")
 ]
 
 
@@ -87,6 +92,13 @@ class Roll(Model):
     @property
     def count(self) -> int:
         return 1 if self.total <= 7 else 2 if self.total <= 10 else 3
+
+
+class Utterance(Model):
+    choice: int
+    scene: str
+    event: str
+    released: str | None = None
 
 
 class Conditioning(Model):
@@ -106,6 +118,7 @@ class Conditioning(Model):
     choices: tuple[Choice, ...] = ()
     account: str | None = None
     low_identity: IdentityChoice | None = None
+    utterances: tuple[Utterance, ...] = ()
 
 
 def records(state: GameState) -> tuple[Conditioning, ...]:
@@ -121,6 +134,43 @@ def find(state: GameState, identity: str) -> Conditioning | None:
 def put(state: GameState, value: Conditioning) -> None:
     state.facts = [x for x in state.facts if (x.get("kind"), x.get("id")) != (KIND, value.id)]
     state.facts.append(dict(kind=KIND, id=value.id, body=value.model_dump_json()))
+
+
+def active_words(
+    state: GameState, subject: ActorRef, trainer: ActorRef | None = None
+) -> tuple[Conditioning, ...]:
+    if subject.kind != "pilot":
+        return ()
+    return tuple(
+        x
+        for x in records(state)
+        if x.trainee == subject
+        and x.phase == "complete"
+        and (trainer is None or x.trainer == trainer)
+        and any(word.released is None for word in x.utterances)
+    )
+
+
+def unsaid(value: Conditioning) -> tuple[tuple[int, Word], ...]:
+    if value.phase != "complete":
+        return ()
+    said = {x.choice for x in value.utterances}
+    return tuple(
+        (index, choice)
+        for index, choice in enumerate(value.choices)
+        if isinstance(choice, Word) and index not in said
+    )
+
+
+def release(state: GameState, subject: ActorRef, trainer: ActorRef, event: str) -> None:
+    for source in active_words(state, subject, trainer):
+        utterances = tuple(
+            utterance.model_copy(update={"released": event})
+            if utterance.released is None
+            else utterance
+            for utterance in source.utterances
+        )
+        put(state, source.model_copy(update={"utterances": utterances}))
 
 
 def ordinary_count(sheet: PilotSheet) -> int:
@@ -270,6 +320,8 @@ def preview(
                     observers=(value.trainee_controller, value.trainer_controller),
                 )
             )
+        elif isinstance(choice, Word):
+            text(choice.phrase, 120)
     if low_identity is not None:
         if value.roll is None or value.roll.count != 1:
             raise ValueError("Only the actual low result lets the trainee write a new Identity.")

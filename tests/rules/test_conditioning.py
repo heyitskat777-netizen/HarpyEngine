@@ -7,16 +7,17 @@ from test_cast_service import change
 from test_enforcer_requisitions import approved
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger
-from test_m2_game import Dice, state
+from test_m2_game import Dice, Gateway, answer, state, tick
 from test_mission_ui import current
 from test_scientist_lab import create_scientist
 from test_world_service import ready
 
+from girlframe.delivery.m2_worker import GameWorker
 from girlframe.discord_adapter.inbox import InboxView
 from girlframe.discord_adapter.m2_forms import NativeForm
 from girlframe.discord_adapter.m3_cast import open_cast
 from girlframe.engine import m3_conditioning as rules
-from girlframe.engine.m2 import AssetState, IdentityState, TagState
+from girlframe.engine.m2 import AssetState, IdentityState, PlayInput, TagState
 from girlframe.engine.m3_actor_bonds import current_ref, depth, set_depth
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_world_state import Npc
@@ -328,3 +329,105 @@ def test_private_consent_withdrawal_and_shared_bond_effect(ledger, tmp_path, mon
     assert depth(final, actual, ref) == 2
     assert depth(final, actual, current_ref(final, 3)) == 1
     assert {"First Tag", "Second Tag"} <= {tag.label for tag in final.sheets["2"].tags}
+
+
+def test_spoken_word_only_lifts_after_actual_success_against_its_trainer(
+    ledger, tmp_path, monkeypatch
+):
+    service, cast, trainer, ref = setup(ledger, tmp_path, monkeypatch, "handler", (1, 2), 4)
+    game = service.game
+    menu = service.menu(trainer, 900)
+    offer = service.invite(
+        trainer, "word-training", menu["revision"], 900, menu["scene"], menu["cast"]
+    )
+    identity = offer["id"]
+    step(service, PLAYER, identity, "consent")
+    step(service, PLAYER, identity, "roll")
+    asyncio.run(
+        native_request(
+            ledger, trainer, identity, 91400, "word", label="Quiet", account="Trainer rehearses."
+        )
+    )
+    assert not game.helpless_status(PLAYER)
+    assert service.speech(trainer, 900)["sources"] == []
+    asyncio.run(
+        native_request(ledger, PLAYER, identity, 91410, "confirm", account="I heard the word.")
+    )
+    speech = service.speech(trainer, 900)
+    assert speech["sources"] == [(identity, 0, "Quiet")]
+    assert not service.speech(PLAYER, 900)["sources"]
+    with pytest.raises(WorkflowError, match="original two participants"):
+        service.speak(OTHER, "steal-word", 900, speech["scene"], speech["revision"], identity, 0)
+
+    async def speak():
+        click = current(trainer.user_id, 91420)
+        click.channel_id = 900
+        await click.response.defer(ephemeral=True)
+        await open_cast(click, cast)
+        menu = click.edit_original_response.call_args.kwargs["view"]
+        assert "conditioning-word" in dict(menu.options)
+        opening = current(trainer.user_id, 91421)
+        await opening.response.defer(ephemeral=True)
+        await menu.open_item(opening, "conditioning-word")
+        form = opening.edit_original_response.call_args.kwargs["view"]
+        form.values["source"] = (identity + ":0",)
+        sent = current(trainer.user_id, 91422)
+        await form.confirm.callback(sent)
+        assert form.completed, sent.followup.send.call_args
+
+    asyncio.run(speak())
+    receipt = service.speak(trainer, "91422", 900, speech["scene"], speech["revision"], identity, 0)
+    assert receipt["phase"] == "word_spoken"
+    assert game.helpless_status(PLAYER)
+    assert not game.helpless_status(PLAYER, ordinary_recovery=True)
+    with pytest.raises(WorkflowError, match="no matching Helpless recovery"):
+        game.recover_helpless(
+            PLAYER, "bypass-word", state(game).sheets["2"].revision, "Alone.", None
+        )
+    change(cast, trainer, "withdraw", ref)
+    with pytest.raises(WorkflowError, match="recover from Helplessness"):
+        game.begin(
+            PLAYER,
+            "bypass-order",
+            900,
+            state(game).sheets["2"].revision,
+            PlayInput(
+                play="keep_your_head", context="I keep my head.", trigger_confirmed=True, heat=0
+            ),
+        )
+    worker, gateway = GameWorker(game), Gateway()
+    for number, faces in enumerate(((1, 2), (6, 6))):
+        game.dice.faces = faces
+        root = game.issue_order(trainer, f"direct-{number}", 900, 2, "Stay where you are.")
+        tick(worker, gateway)
+        answer(game, PLAYER, "order_response", options=("disobey",))
+        child = game.begin(
+            PLAYER,
+            f"refuse-{number}",
+            900,
+            state(game).sheets["2"].revision,
+            PlayInput(
+                play="disobey_orders",
+                context="I step forward.",
+                trigger_confirmed=True,
+                heat=0,
+                order_id=root["order_id"],
+                parent=root["action_id"],
+                witnessed=False,
+            ),
+        )["action_id"]
+        tick(worker, gateway)
+        for participant in (PLAYER, trainer):
+            if any(x["kind"] == "tag_window" for x in game.choices(participant)):
+                answer(game, participant, "tag_window", options=("pass",))
+        if number:
+            answer(game, PLAYER, "actor_disobey", flag=True)
+        assert game.helpless_status(PLAYER)
+        answer(game, trainer, "handler_disobey", flag=False)
+        assert game.inspect(PLAYER, child)["result"]["can_disobey"] is bool(number)
+        assert game.helpless_status(PLAYER) is (not number)
+        tick(worker, gateway, 4)
+    (utterance,) = rules.find(state(game), identity).utterances
+    assert utterance.event == receipt["event"]
+    assert utterance.released and utterance.released != utterance.event
+    assert game.dice.calls == 3

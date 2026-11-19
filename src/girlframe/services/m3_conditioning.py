@@ -147,9 +147,12 @@ class ConditioningService:
             }
         ):
             raise WorkflowError("Reopen the original private scene before continuing.")
-        require_scene_clear(self.game, c, value.channel)
-        require_clear(self.game, c, value.channel)
-        lock = self.game.lock(c, value.channel)
+        self._scene_clear(c, value.channel)
+
+    def _scene_clear(self, c: Connection, channel: int) -> None:
+        require_scene_clear(self.game, c, channel)
+        require_clear(self.game, c, channel)
+        lock = self.game.lock(c, channel)
         if lock and lock["state"] != "released":
             raise WorkflowError("Finish the pending Play in this original scene.")
 
@@ -255,6 +258,98 @@ class ConditioningService:
         )
         return dict(id=value.id, phase=value.phase, event=value.event)
 
+    def _speech_sources(
+        self, c: Connection, state: GameState, viewer: GuildViewer, channel: int
+    ) -> tuple[SceneCast, list[tuple[rules.Conditioning, int, rules.Word]]]:
+        cast, actors = self._scope(c, state, channel)
+        trainer = next((x for x in actors if x.controller == viewer.user_id), None)
+        trainee = next((x for x in actors if x.controller != viewer.user_id), None)
+        if trainer is None or trainee is None:
+            raise WorkflowError("Join the current scene as the original Conditioning trainer.")
+        return cast, [
+            (value, index, word)
+            for value in rules.records(state)
+            if value.trainer == trainer.ref
+            and value.trainee == trainee.ref
+            and value.trainer_controller == trainer.controller
+            and value.trainee_controller == trainee.controller
+            for index, word in rules.unsaid(self._get(c, state, viewer, value.id))
+        ]
+
+    def speech(self, viewer: GuildViewer, channel: int) -> dict[str, Any]:
+        with self.store.engine.connect() as c:
+            self._authorize(c, viewer)
+            state = load_state(c, self.store.campaign_id)
+            cast, sources = self._speech_sources(c, state, viewer, channel)
+            return dict(
+                revision=state.revision,
+                scene=cast.id,
+                sources=[(value.id, index, word.phrase) for value, index, word in sources],
+            )
+
+    def speak(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        channel: int,
+        scene: str,
+        expected: int,
+        identity: str,
+        index: int,
+    ) -> dict[str, Any]:
+        def authorize(c: Connection) -> None:
+            self._authorize(c, viewer)
+            self._get(c, load_state(c, self.store.campaign_id), viewer, identity)
+
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            state = load_state(c, self.store.campaign_id)
+            cast, sources = self._speech_sources(c, state, viewer, channel)
+            value = next((x for x, i, _ in sources if x.id == identity and i == index), None)
+            if value is None or state.revision != expected or cast.id != scene:
+                raise WorkflowError(
+                    "Reopen the original trainer's current unused Conditioning word."
+                )
+            original = rules.find(_history(c, self.game, value.event), identity)
+            if (
+                original is None
+                or original.phase != "complete"
+                or original.choices != value.choices
+                or original.trainer != value.trainer
+                or original.trainee != value.trainee
+                or original.account != value.account
+            ):
+                raise WorkflowError("Recover the trainee's original confirmed Conditioning choice.")
+            self._scene_clear(c, channel)
+            event = str(uuid4())
+            rules.put(
+                state,
+                value.model_copy(
+                    update=dict(
+                        utterances=(
+                            *value.utterances,
+                            rules.Utterance(choice=index, scene=scene, event=event),
+                        )
+                    )
+                ),
+            )
+            self.game.event(
+                c, viewer.user_id, key, "m3.conditioning_word_spoken", state, event_id=event
+            )
+            return dict(id=identity, phase="word_spoken", event=event)
+
+        return self.store._write(
+            viewer,
+            key,
+            "m3.conditioning_word_spoken",
+            dict(
+                channel=channel, scene=scene, revision=expected, conditioning=identity, index=index
+            ),
+            operation,
+            authorize=authorize,
+            auto_audit=False,
+        )
+
     def tasks(
         self, c: Connection, viewer: GuildViewer, state: GameState
     ) -> list[rules.Conditioning]:
@@ -305,6 +400,9 @@ class ConditioningService:
                 )
                 if value.phase == "confirm":
                     basic["choices"] = tuple((x.kind, x.account) for x in value.choices)
+                    basic["words"] = tuple(
+                        x.phrase for x in value.choices if isinstance(x, rules.Word)
+                    )
                     before = state.sheets[value.trainee.entity]
                     changes: list[tuple[str, str, str]] = []
                     for label, prior, after in (

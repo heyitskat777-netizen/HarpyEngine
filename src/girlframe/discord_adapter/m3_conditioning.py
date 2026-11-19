@@ -21,6 +21,7 @@ LABELS = {
     "bond": "Establish an Intense Bond and weaken shared Bonds",
     "excise": "Excise a Girl Asset",
     "tag": "Give a Tag",
+    "word": "Teach a word that can make the trainee Helpless",
 }
 
 
@@ -48,6 +49,54 @@ async def open_invite(
         "Invite " + clean(data["trainee"]) + " privately.",
         [Field("decision", "Send request", (("request", "Ask to begin Conditioning"),))],
         send,
+    )
+    await reply(interaction, form.text(), form)
+
+
+async def open_speech(
+    interaction: discord.Interaction, service: ConditioningService, channel: int
+) -> None:
+    viewer = viewer_from_interaction(interaction)
+    data = await asyncio.to_thread(service.speech, viewer, channel)
+    sources = {
+        f"{identity}:{index}": (identity, index, phrase)
+        for identity, index, phrase in data["sources"]
+    }
+    if not sources:
+        await reply(
+            interaction, "No unused Conditioning word is available for this original scene."
+        )
+        return
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        identity, index, _ = sources[values["source"][0]]
+        await asyncio.to_thread(
+            service.speak,
+            viewer_from_interaction(current),
+            str(current.id),
+            channel,
+            data["scene"],
+            data["revision"],
+            identity,
+            index,
+        )
+        return (
+            "The word was heard in this private scene. "
+            "This Helplessness lasts until a successful refusal."
+        )
+
+    form = NativeForm(
+        viewer.user_id,
+        "Speak a Conditioning word",
+        "Confirm the word your original trainer actually speaks to its trainee.",
+        [
+            Field(
+                "source",
+                "Choose the word your trainer spoke",
+                tuple((key, row[2]) for key, row in sources.items()),
+            )
+        ],
+        submit,
     )
     await reply(interaction, form.text(), form)
 
@@ -100,6 +149,8 @@ def _choice_form(kind: str, resource: dict[str, Any]) -> list[Field]:
             Field("asset", "Actual Girl Asset to remove", resource["assets"]),
             Field("extra", "Optional new Girl Asset", required=False),
         ]
+    if kind == "word":
+        return [Field("label", "The word the trainer arms")]
     return [Field("label", "New Tag")]
 
 
@@ -128,6 +179,8 @@ def _effect(kind: str, values: dict[str, Any], resource: dict[str, Any]) -> rule
         return rules.Excise(
             account=account, asset=values["asset"][0], replacement=values.get("extra") or None
         )
+    if kind == "word":
+        return rules.Word(account=account, phrase=values["label"])
     return rules.Tag(account=account, label=values["label"])
 
 
@@ -167,10 +220,13 @@ async def open_request(
                 "bond": True,
                 "excise": bool(resource["assets"]),
                 "tag": True,
+                "word": True,
             }
             options = [(kind, label) for kind, label in LABELS.items() if available[kind]] + options
         elif phase == "confirm":
             options.insert(0, ("confirm", "Describe my response and apply the effects"))
+            for word in data["words"]:
+                summary += "\nConditioning word · " + clean(word)
             for label, action, name in data["changes"]:
                 summary += "\n" + action + " " + label + " · " + clean(name)
             for kind, account in data["choices"]:

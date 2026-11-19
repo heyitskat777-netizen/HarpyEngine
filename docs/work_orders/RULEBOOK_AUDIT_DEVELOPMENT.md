@@ -1894,3 +1894,22 @@ wrong-owner denial, restart, replay and the default release gate.
 The remaining word-based Helplessness and source-locked or
 concealed Asset variants require their own effects and checks.
 [Conditioning p. 198](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=200)
+
+### Spoken Conditioning word
+
+Base `121d2898d8e7e8ef65e590ccaf098edef481cf17`. The original trainer
+can arm a word as one of the saved options. The trainee sees the actual
+word before confirming her response. The trainer can record speaking
+that word in a current private cast of the same two participants. The
+word creates the actual Helpless condition and a durable source receipt.
+An ordinary recovery leaves the condition in place. A completed native
+Disobey against the original trainer releases it only if the refusal
+succeeds. The word itself grants no Order authority.
+
+**125 selected tests passed in 107.23 seconds** across the native controls,
+actor conditions, prior Trainer phrases, shared Rolls, registry and
+Inbox. The scenario verifies a genuinely failed refusal followed by a
+genuinely successful refusal against the original Handler, no replayed
+speech and no unrelated recovery. Cross-role Order sources and
+source-locked Asset variants still need their separate ports.
+[Conditioning p. 198](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=200)

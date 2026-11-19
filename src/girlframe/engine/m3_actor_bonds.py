@@ -337,7 +337,18 @@ def _same_body(state: GameState, first: ActorRef, second: ActorRef) -> bool:
     return same_handler_body(state, first) and same_handler_body(state, second)
 
 
-def is_helpless(state: GameState, subject: ActorRef, foe: ActorRef | None = None) -> bool:
+def is_helpless(
+    state: GameState,
+    subject: ActorRef,
+    foe: ActorRef | None = None,
+    *,
+    ignore_conditioning: bool = False,
+) -> bool:
+    if not ignore_conditioning:
+        from girlframe.engine.m3_conditioning import active_words
+
+        if active_words(state, subject, foe):
+            return True
     from girlframe.engine.m3_ankou import helpless as ankou_helpless
 
     if ankou_helpless(state, subject, foe):

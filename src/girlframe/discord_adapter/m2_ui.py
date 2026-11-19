@@ -1205,7 +1205,8 @@ async def open_play(
             extra_roles = [
                 x
                 for x in extra_roles
-                if registry is not None and "ancillary" in registry.enabled_modules
+                if registry is not None
+                and "ancillary" in registry.enabled_modules
                 and registry.entry(RULE).verified
                 and x["girl"] in STARTERS
                 and registry.entry(STARTERS[x["girl"]].rule).verified
@@ -2259,7 +2260,14 @@ class StatePages(discord.ui.View):
             "Official allegation: " + x["allegation"] for x in sheet.get("official_allegations", ())
         ]
         if await threaded(lambda: self.game.helpless_status(viewer_from_interaction(interaction))):
-            lines.append("Helpless: recover through /character recover after a moment alone.")
+            if await threaded(
+                lambda: self.game.helpless_status(
+                    viewer_from_interaction(interaction), ordinary_recovery=True
+                )
+            ):
+                lines.append("Helpless: recover through /character recover after a moment alone.")
+            else:
+                lines.append("Helpless from Conditioning until the original trainer is disobeyed.")
         obligations = await threaded(
             lambda: self.game.own_obligations(viewer_from_interaction(interaction))
         )
@@ -3006,7 +3014,9 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         try:
             game.gate()
             if not await threaded(
-                lambda: game.helpless_status(viewer_from_interaction(interaction))
+                lambda: game.helpless_status(
+                    viewer_from_interaction(interaction), ordinary_recovery=True
+                )
             ):
                 raise WorkflowError("No current Helpless condition needs recovery.")
             sheet = await threaded(lambda: game.sheet(viewer_from_interaction(interaction)))

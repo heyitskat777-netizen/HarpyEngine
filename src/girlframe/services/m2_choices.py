@@ -2004,6 +2004,10 @@ class ChoiceEngine:
 
         if intercept_finish(self.game, c, state, action):
             return
+        if action["data"].get("conditioning_refusal"):
+            from girlframe.services.m3_conditioning_refusal import release as release_conditioning
+
+            release_conditioning(state, action)
         action["state"] = "complete"
         self.game.queue(
             c,
