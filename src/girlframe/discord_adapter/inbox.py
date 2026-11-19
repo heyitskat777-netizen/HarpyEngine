@@ -2126,6 +2126,14 @@ class InboxView(discord.ui.View):
             await open_escape_choice(
                 interaction, EscapeService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_warboy_hate":
+            from girlframe.discord_adapter.m3_warboy_hate import open_conditioned_hate
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_warboy_hate import ConditionedHateService
+
+            await open_conditioned_hate(
+                interaction, ConditionedHateService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_timeskip":
             from girlframe.discord_adapter.m3_timeskip import open_timeskip
             from girlframe.services.m2_game import GameService

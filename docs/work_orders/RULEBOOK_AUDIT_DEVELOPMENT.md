@@ -3307,3 +3307,20 @@ implemented path can reach completion. Rebel-based optional
 introductions, other printed elective benefits and independent
 release review remain open.
 [Timeskip p. 197](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=199) · [Native case](../../tests/rules/test_timeskip.py)
+
+### Warboy’s Conditioned Hate
+
+Base `e6cccb7`. The genuine new Helpless condition opens a private
+response for the original approved Warboy. The owner chooses
+a current unmarked Tag and describes their immediate action.
+Only the original current facilitator can verify it. Acceptance
+marks that exact Tag for the original scene and ends the original
+condition’s source while preserving other Helplessness.
+
+**One focused case passed in 6.71 seconds**. It used actual
+Ancillary creation and native Inbox forms with a synthetic
+scene-attributed Helpless source. It verified no change on proposal,
+reopening, privacy and actual effect isolation. Sources without
+native scene provenance and other Tag cases remain outside this
+verified slice.
+[Warboy p. 106](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=108) · [Native case](../../tests/rules/test_warboy_hate.py)

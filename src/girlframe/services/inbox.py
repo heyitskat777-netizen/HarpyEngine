@@ -4128,6 +4128,30 @@ class InboxService:
             from girlframe.services.m3_npc_intelligence import IntelligenceService
             from girlframe.services.m3_timeskip import TimeskipService
             from girlframe.services.m3_voidspace_invasion import InvasionService
+            from girlframe.services.m3_warboy_hate import ConditionedHateService
+
+            hatred = ConditionedHateService(GameService(self.store))
+            for hate_id, hate_step in hatred.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "conditioned-hate:" + hate_id,
+                        "conditioned_hate",
+                        hate_id,
+                        canon.revision,
+                        "plays",
+                        "Conditioned Hate",
+                        "Original Warboy response",
+                        "pending",
+                        True,
+                        False,
+                        "Verify the actual immediate action."
+                        if hate_step == "review"
+                        else "Choose your own Tag and act to reaffirm it.",
+                        "The original Warboy and facilitator each own their decision.",
+                        "Review original choice",
+                        task="m3_warboy_hate",
+                    )
+                )
 
             timeskips = TimeskipService(GameService(self.store))
             for timeskip_id, timeskip_step in timeskips.tasks(connection, canon, viewer):
