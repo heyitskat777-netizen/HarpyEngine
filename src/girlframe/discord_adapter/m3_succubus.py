@@ -6,6 +6,7 @@ from typing import Any
 import discord
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.m3_punishments import Picker
 from girlframe.discord_adapter.onboarding import reply
@@ -73,9 +74,19 @@ async def open_succubus(interaction: discord.Interaction, service: SuccubusServi
     ).present(interaction)
 
 
-async def open_npc_order(interaction: discord.Interaction, service: SuccubusService) -> None:
+async def open_npc_order(
+    interaction: discord.Interaction,
+    service: SuccubusService,
+    *,
+    princess_period: str | None = None,
+) -> None:
     channel = int(interaction.channel_id or 0)
-    data = await asyncio.to_thread(service.targets, viewer_from_interaction(interaction), channel)
+    data = await asyncio.to_thread(
+        service.targets,
+        viewer_from_interaction(interaction),
+        channel,
+        princess_period=princess_period,
+    )
     if not data["targets"]:
         raise WorkflowError("No actual NPC in this scene is an eligible Order recipient")
 
@@ -90,6 +101,7 @@ async def open_npc_order(interaction: discord.Interaction, service: SuccubusServ
             ActorRef.model_validate(selected["actor"]),
             data["cast"],
             values["instruction"],
+            princess_period=princess_period,
         )
         return (
             "Direct Order saved for the actual NPC. "
@@ -146,11 +158,32 @@ async def open_order(
     fields: list[Field] = []
     instructions = "Direct Order: " + data["instruction"]
     if phase == "response":
+        options = rules.RESPONSES
+        if data.get("can_offer_reason"):
+            options += (("reason", "Give the GM the NPC's reason to refuse"),)
+        elif not data.get("princess"):
+            options += (("disobey", "Make the real Disobey Orders Play"),)
+        elif data.get("reason_reviewed"):
+            instructions += " The GM returned this Order for your own response."
         fields.append(
             Field(
                 "option",
                 "Actual NPC Receive Orders response",
-                rules.RESPONSES + (("disobey", "Make the real Disobey Orders Play"),),
+                options,
+            )
+        )
+    elif phase == "princess_review":
+        instructions += "\nPrivate reason from the NPC's controller: " + clean(
+            data["refusal_reason"]
+        )
+        fields.append(
+            Field(
+                "option",
+                "GM ruling",
+                (
+                    ("allow_refusal", "The NPC has a reason to decline"),
+                    ("return_to_npc", "Return the Order for an owned response"),
+                ),
             )
         )
     elif phase == "roll":

@@ -59,6 +59,71 @@ async def open_action(
     instructions = (
         "Review your choices, then confirm. Saved dice and other players' decisions stay intact."
     )
+    if action == "princess_order":
+        from girlframe.discord_adapter.m3_succubus import open_npc_order
+        from girlframe.services.m3_succubus import SuccubusService
+
+        await open_npc_order(interaction, SuccubusService(service.game), princess_period=identity)
+        return
+    if action == "princess_upkeep":
+        from girlframe.services.m3_princess_npc_orders import review
+
+        candidates = data["princess_upkeep_candidates"]
+        if not candidates:
+            raise WorkflowError("Only the human GM can review the actual current standards")
+
+        def upkeep_fields(values: dict[str, Any]) -> list[Field]:
+            chosen = candidates.get(one(values, "girl"))
+            fields = [
+                Field(
+                    "girl",
+                    "Original Girl",
+                    tuple((uid, x["name"]) for uid, x in candidates.items()),
+                )
+            ]
+            if chosen:
+                fields.append(
+                    Field(
+                        "upheld",
+                        "Standards upheld this Off-Duty",
+                        tuple((x["role"], x["label"]) for x in chosen["standards"]),
+                        minimum=0,
+                        maximum=3,
+                        required=False,
+                    )
+                )
+            return fields + [
+                Field("account", "Private GM findings on the actual upkeep", paragraph=True)
+            ]
+
+        async def submit_upkeep(current: discord.Interaction, values: dict[str, Any]) -> str:
+            result = await asyncio.to_thread(
+                review,
+                service.periods,
+                viewer_from_interaction(current),
+                str(current.id),
+                identity,
+                data["revision"],
+                data["game_revision"],
+                int(values["girl"][0]),
+                values.get("upheld", ()),
+                values["account"],
+            )
+            return (
+                "Current Off-Duty NPC Orders authorized."
+                if result["approved"]
+                else "Standards review saved."
+            )
+
+        form = DependentForm(
+            viewer.user_id,
+            "Princess standards",
+            "Select each standard the Girl upheld in this period.",
+            upkeep_fields,
+            submit_upkeep,
+        )
+        await reply(interaction, form.text(), form)
+        return
     if action == "refresh_rewards":
         fields = [Field("confirm", "Confirm", (("yes", "Register current Frame reward tasks"),))]
 

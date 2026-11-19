@@ -9,6 +9,7 @@ from girlframe.engine.m2 import GameState, higher
 from girlframe.engine.m3_actor_bonds import depth
 from girlframe.engine.m3_actor_state import ActorRef, Model, SceneCast
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
+from girlframe.engine.m3_standards import RULE as PRINCESS_ORDER_RULE
 from girlframe.engine.m3_stim_sex import RULE as STIM_ORDER_RULE
 from girlframe.engine.m3_world_state import Npc, WorldTag
 
@@ -43,13 +44,18 @@ class Order(Model):
     event: str
     registry: str
     stim_effect: str | None = Field(default=None, min_length=1, exclude_if=lambda x: x is None)
+    princess_upkeep: str | None = Field(default=None, min_length=1, exclude_if=lambda x: x is None)
 
     @property
     def source_rule(self) -> str:
+        if self.princess_upkeep is not None:
+            return PRINCESS_ORDER_RULE
         return STIM_ORDER_RULE if self.stim_effect is not None else RULE
 
     @property
     def event_prefix(self) -> str:
+        if self.princess_upkeep is not None:
+            return "m3.princess_npc_"
         return "m3.stim_pilot_npc_" if self.stim_effect is not None else "m3.succubus_npc_"
 
 

@@ -119,6 +119,16 @@
       "rationale": "Owner explicitly resolved the source ambiguity; see docs/CAMPAIGN_RULINGS.md for context and change impact."
     },
     {
+      "id": "princess-current-off-duty-npc-orders",
+      "summary": "The human GM verifies all three standards for the exact active Off-Duty period. An NPC controller gives their refusal reason privately to that GM. The GM rules on the reason and authority expires when the period ends.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Book PDF 32 / printed p.30; owner confirmation, 2026-11-19",
+      "authority": "explicit_owner",
+      "clarity_review": true,
+      "revision": 1,
+      "rationale": "The printed rule sets the conditional privilege, while upkeep evidence, expiry and refusal arbitration need a campaign ruling."
+    },
+    {
       "id": "compulsory-frame-baseline",
       "summary": "The current Handler specifies each compulsory Frame replacement package case by case; no automatic starting Asset/ability package is assumed.",
       "provenance": "owner_approved_campaign_ruling",
@@ -9214,6 +9224,7 @@
         "tests/rules/test_reaction_service.py",
         "tests/rules/test_reaction_ui.py",
         "tests/rules/test_standards.py",
+        "tests/rules/test_standards.py::test_princess_npc_order_uses_current_off_duty_upkeep_and_private_gm_refusal",
         "tests/rules/test_girl_transition.py"
       ],
       "m2_play_id": null,

@@ -37,6 +37,27 @@ One focused case passed in 5.74 seconds using
 with `PYTHONPATH="$PWD/src"`.
 [PANDORA p. 67](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=69)
 
+### Princess NPC Orders
+
+Base `4a827d5a992da65d0b71ac9f1b8badbc2745a3b8`. The owner's confirmed
+ruling gives the human GM a private Off-Duty review of the three original
+standards. A positive review binds to the original Girl, standards,
+appointment and period. The Girl can issue an actual Order to an eligible
+known ordinary NPC in the shared scene. The NPC controller can choose their
+own compliance or send the GM their private reason. The GM can allow the
+refusal or return the Order for a response. The issuer sees the outcome.
+Period completion expires the authority. Other distinct Order sources use
+their existing rules. The initial scope uses independently controlled
+ordinary NPCs and the configured human GM.
+
+One focused case passed in 10.31 seconds using
+`python -m pytest -q --tb=short tests/rules/test_standards.py -k princess_npc_order`
+with `PYTHONPATH="$PWD/src"`. It exercised failed self-approval, incomplete
+upkeep, native issuance, the private response and GM ruling, restart,
+zero refusal dice and an actual Off-Duty close. Changed source type and
+lint checks passed.
+[To a Higher Standard p. 30](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=32)
+
 ## 1. Strain and Off-Duty
 
 The table below keeps both printed choices for each of the nine initially
@@ -91,7 +112,7 @@ roll it once immediately. [Custom Events p. 141](../../../attachments/d8b9bce2-0
 | --- | --- |
 | Handler books and lifecycle | For each of Mistress, Dogrunner, Scientist, Frantic, Insurgent, Trainer and Advocate, cover signature triggers, passives, owned choices, advancement awards, applicable intimate Plays and actual consequences. Exercise one original-owner Last / Resort, learned Handler Play and playbook swap with permitted retention. Connect the extra Girl/Frame prompts only where they produce a printed effect. [Books and advancements pp. 122–158](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=124) |
 | Gorgons, Harpies, Rebels, NPC jobs | Verify each Gorgon class and the seven non-Leviathan type effects plus both intimate Plays, with existing combat and Leviathan regressions. Verify each missing Harpy Play and advancement and actual Rebel Handler/Pilot consequences through mission, custody, conversion or succession. Test job effects individually where the printed result is mechanical. [Rules pp. 159–189](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=161) |
-| Shared, Girl and Frame gaps | Reconcile each missing or unverified matrix outcome with original actor, ownership, cost, receipt and downstream effect. Verify ordinary concealment/discovery and Expanded Status. Princess orders stay in private human adjudication while current Off-Duty upkeep, expiration or refusal ownership lacks a ruling. Test original body, copy, retained and learned-source cases with unchanged ownership. [Girl and Frame audit](../../reports/GIRL_FRAME_PLAY_COVERAGE.md) · [Princess decision](../../reports/GIRL_FRAME_INTEGRATION_HANDOFF.md#princess-conditional-npc-orders) |
+| Shared, Girl and Frame gaps | Reconcile each missing or unverified matrix outcome with original actor, ownership, cost, receipt and downstream effect. Verify ordinary concealment/discovery and Expanded Status. Princess NPC Orders use a current Off-Duty upkeep review and private GM arbitration. Test original body, copy, retained and learned-source cases with unchanged ownership. [Girl and Frame audit](../../reports/GIRL_FRAME_PLAY_COVERAGE.md) · [Princess decision](../../reports/GIRL_FRAME_INTEGRATION_HANDOFF.md#princess-conditional-npc-orders) |
 | Situational and Ancillary | Complete the actual consequences of each Lobotomy branch, Escape, Voidspace Invasion, Captured!, Timeskip and Conditioning. Cover all eight optional playbooks with scoped synthetic approval and exercise default denials. Verify the Captured! and Timeskip outcomes that depend on those books. [Rules pp. 93–109 and 193–198](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=95) |
 
 Keep a separate source, owner, consent and durable effect assertion for each

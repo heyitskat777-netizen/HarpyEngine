@@ -1161,12 +1161,25 @@ class CycleService:
                         ]
                     except (ValueError, WorkflowError):
                         pass
+            from girlframe.engine.m3_actor_bonds import current_ref
+            from girlframe.services.m3_princess_npc_orders import authority as princess_authority
+            from girlframe.services.m3_princess_npc_orders import review_candidates
+
+            princess = (
+                princess_authority(self.game, c, state, current_ref(state, viewer.user_id))
+                if period.phase == "active" and viewer.user_id in state.order
+                else None
+            )
             return {
                 **self.periods.get(viewer, identity),
                 "prime_investors": prime_investors,
                 "game_revision": state.revision,
                 "modular": modular,
                 "handler": period.handler,
+                "princess_upkeep_candidates": review_candidates(
+                    self.game, c, state, period, viewer
+                ),
+                "princess_can_order": princess is not None and princess.period == period.id,
                 "trainer_can_install_speak": viewer.user_id == period.handler
                 and active_book(self.game, c, state, book="Trainer", rule=conditioning_rule)
                 is not None,

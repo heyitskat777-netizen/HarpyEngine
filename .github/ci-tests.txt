@@ -7,6 +7,7 @@ tests/rules/test_harpy_beneath.py
 tests/rules/test_harpy_bond_void.py
 tests/rules/test_harpy_bond_void_ui.py
 tests/rules/test_janus_defeat_body.py
+tests/rules/test_janus_pandora_low.py::test_actual_pandora_low_birth_creates_dormant_child_at_original_birthplace
 tests/rules/test_harpy_defeat.py::test_mid_message_deepens_actual_original_bond_and_finishes_real_damage_source
 # Live setup correction: shared UI names and separate roles on one account.
 tests/test_member_names.py
@@ -169,6 +170,7 @@ tests/rules/test_insurgent_private_scene.py
 tests/rules/test_trainer_control.py
 tests/rules/test_mistress_rewards.py
 tests/rules/test_trainer_phrases.py
+tests/rules/test_standards.py::test_princess_npc_order_uses_current_off_duty_upkeep_and_private_gm_refusal
 tests/rules/test_scientist_lab.py
 tests/rules/test_ancillary_creation.py
 tests/rules/test_soldier_expendable.py

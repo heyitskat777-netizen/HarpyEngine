@@ -96,6 +96,10 @@ async def open_period(interaction: discord.Interaction, service: OffDutyService)
         actions.append(("custom_strain", "Author a custom Strain event"))
     elif data["phase"] == "active":
         own = progress["own"]
+        if progress["princess_upkeep_candidates"]:
+            actions.append(("princess_upkeep", "Review current Princess standards"))
+        if progress["princess_can_order"]:
+            actions.append(("princess_order", "Give a Princess Order to an NPC"))
         if progress["sheet"] is not None and not (own and own["recovered"]):
             if own is None or own["roll"] is None:
                 actions.append(
