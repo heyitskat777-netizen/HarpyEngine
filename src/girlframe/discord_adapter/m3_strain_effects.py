@@ -23,6 +23,7 @@ from girlframe.engine.m3_gorgon_catalog import ASSETS
 from girlframe.engine.m3_harpy_raid import RULE as HARPY_RAID
 from girlframe.engine.m3_orbital_threat import RULE as ORBITAL_THREAT
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
+from girlframe.engine.m3_rebel_defection import RULE as REBEL_DEFECTION
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_scientific_observation import Demand
 from girlframe.engine.m3_strain_effects import SPRITE_ESCORT, Choice, TagChoice
@@ -488,6 +489,37 @@ def effect_form(
                     ),
                 )
             )
+        if rule == REBEL_DEFECTION:
+            assert state.world is not None
+            group = values.get("defection_faction", ("",))[0]
+            fields += [
+                Field(
+                    "defection_npc",
+                    "Which actual NPC Bond is contacted?",
+                    tuple(
+                        (x.id, x.name)
+                        for x in state.world.npcs
+                        if x.alive and x.captive_of is None and original_bonds(state, x)
+                    )
+                    or WAIT,
+                ),
+                Field(
+                    "defection_faction",
+                    "Which active Rebel Group contacts the NPC?",
+                    options([x for x in world["factions"] if x["kind"] == "rebel" and x["active"]]),
+                ),
+                Field(
+                    "defection_contact",
+                    "Which current member receives a report if the NPC defects?",
+                    options(
+                        [
+                            x
+                            for x in world["npcs"]
+                            if x["alive"] and x["captive_of"] is None and x["faction"] == group
+                        ]
+                    ),
+                ),
+            ]
         if rule == "strain.rebellion.high.5.2":
             fields.append(Field("backstory_tag", "Your backstory-based Handler Tag"))
             fields.append(
@@ -1079,6 +1111,12 @@ def effect_form(
             )
         if rule == REBEL_ESCAPE_OFFER:
             payload["target"] = values["rebel_handler"][0]
+        if rule == REBEL_DEFECTION:
+            payload.update(
+                target=values["defection_npc"][0],
+                faction_id=values["defection_faction"][0],
+                defection_recipient=values["defection_contact"][0],
+            )
         if rule == "strain.rebellion.high.5.2":
             payload["tags"] = (dict(owner=handler, label=values["backstory_tag"]),)
             payload["backstory_observers"] = tuple(

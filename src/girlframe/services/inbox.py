@@ -2932,11 +2932,39 @@ class InboxService:
             from girlframe.engine.m3_doppelganger_reveal import reveals as disguise_reveals
             from girlframe.engine.m3_harpy_raid import raids as harpy_raids
             from girlframe.engine.m3_pilot_fears import cases as public_fears
+            from girlframe.engine.m3_rebel_defection import audience as defection_audience
+            from girlframe.engine.m3_rebel_defection import cases as rebel_defections
             from girlframe.engine.m3_void_revelation import revelations
             from girlframe.engine.m3_void_signal import signals as void_signals
             from girlframe.services.m3_handler_tags import HandlerTagService
             from girlframe.services.m3_pilot_fears import access as fear_access
             from girlframe.services.m3_rebel_escape_offer import visible as visible_escape_offers
+
+            for defection in rebel_defections(canon):
+                contacted, heard_report = defection_audience(canon, defection, viewer.user_id)
+                if not (contacted or heard_report):
+                    continue
+                can_stay = contacted and defection.outcome is None
+                items.append(
+                    InboxItem(
+                        "rebel-defection:" + defection.id,
+                        "rebel_defection",
+                        defection.id,
+                        canon.revision,
+                        "off_duty",
+                        "Private defection report" if heard_report else "Private Rebel contact",
+                        "Original Rebel Group",
+                        "pending" if can_stay else "resolved",
+                        can_stay,
+                        False,
+                        "Review the contact before Off-Duty ends."
+                        if can_stay
+                        else "Read the original case.",
+                        "",
+                        "Review contact",
+                        task="m3_rebel_defection",
+                    )
+                )
 
             contact_notices = [
                 x

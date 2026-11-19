@@ -376,3 +376,23 @@ new-controller grant handoff in this scope.
 Both choices passed native first use, original command replay, a second
 addressed use and original-participant visibility checks.
 [Low Void p. 142](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=144) · [Contact tests](../../tests/rules/test_strain_benevolent_contact.py)
+
+## Low Rebellion defection
+
+The base is `0f7e1041b196f85aa7f98f40460d1795aca8ddf5`.
+Low Rebellion 6.2 commits the active group's contact with a real NPC
+Bond and saves the actual Off-Duty deadline. The contacted NPC's
+controller can decide to stay after an actual joined scene with one
+of their original Bonds. This leaves the affiliation and Strain
+unchanged. At period completion, an unresolved contact changes the
+original NPC's faction, raises Rebellion Strain and delivers a report
+with that NPC's known name, role and contact location to the original
+Rebel recipient. The report does not pull arbitrary private campaign
+facts. The native Inbox keeps the original contact and report scoped
+to their recipients. The source stays held if the chosen live recipient
+or controller can no longer fulfill the original assignment. There is
+no automatic replacement recipient.
+
+Both the stay and defection paths passed through actual Off-Duty
+completion, with saved dice, idempotent retry and private readback.
+[Low Rebellion p. 145](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=147) · [Defection tests](../../tests/rules/test_strain_rebel_defection.py)

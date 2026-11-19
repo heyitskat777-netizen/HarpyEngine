@@ -21,6 +21,7 @@ from girlframe.engine.m3_doppelganger_reveal import RULE as DOPPELGANGER_REVEAL
 from girlframe.engine.m3_harpy_raid import RULE as HARPY_RAID
 from girlframe.engine.m3_orbital_threat import RULE as ORBITAL_THREAT
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
+from girlframe.engine.m3_rebel_defection import RULE as REBEL_DEFECTION
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_refusal_state import RefusalBonus
 from girlframe.engine.m3_scientific_observation import Demand, require_orders
@@ -73,6 +74,7 @@ SUPPORTED = frozenset(
         "strain.rebellion.high.4.2",
         "strain.rebellion.high.5.2",
         "strain.rebellion.low.6.1",
+        REBEL_DEFECTION,
         "strain.budget.low.5.2",
         "strain.budget.low.5.1",
         "strain.budget.low.6.1",
@@ -139,6 +141,7 @@ class Choice(Model):
     sprite_escort: SpriteEscortDesign | None = Field(default=None, exclude_if=lambda x: x is None)
     contact_play: ContactPlay | None = Field(default=None, exclude_if=lambda x: x is None)
     contact_channel: int | None = Field(default=None, ge=1, exclude_if=lambda x: x is None)
+    defection_recipient: str | None = Field(default=None, exclude_if=lambda x: x is None)
     leak_parties: tuple[ActorRef, ...] = Field(default=(), exclude_if=lambda x: not x)
     leak_report: str | None = Field(default=None, max_length=1200, exclude_if=lambda x: x is None)
 
@@ -307,6 +310,22 @@ def apply(
             period=period_id,
             speaker=choice.target,
             city=choice.protest_city,
+        )
+    elif rule == REBEL_DEFECTION:
+        from girlframe.engine.m3_rebel_defection import contact as stage_defection
+
+        fields(choice, {"target", "faction_id", "defection_recipient"})
+        if source_event is None or period_id is None:
+            raise ValueError("Recover the original preparing defection source")
+        stage_defection(
+            state,
+            identity=source_work,
+            event=source_event,
+            period=period_id,
+            target=choice.target,
+            group=choice.faction_id,
+            recipient=choice.defection_recipient,
+            account=choice.account.strip(),
         )
     elif rule == REBEL_ESCAPE_OFFER:
         from girlframe.engine.m3_rebel_escape_offer import speaker

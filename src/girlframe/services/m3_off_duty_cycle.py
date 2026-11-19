@@ -1206,8 +1206,10 @@ class CycleService:
                     update={"triggers": updated.strain.triggers + additions}
                 )
             if not severe:
+                from girlframe.engine.m3_rebel_defection import settle as settle_defections
                 from girlframe.engine.m3_repairs import close_period
 
+                settle_defections(updated, identity, event)
                 updated = close_period(updated, identity)
                 from girlframe.engine.m3_actor_bonds import current_ref as ended_period_actor
                 from girlframe.services.m3_ankou import off_duty_complete as finish_ankou_period
