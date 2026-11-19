@@ -8,9 +8,9 @@ from sqlalchemy import Connection
 
 from girlframe.engine import m3_ancillary as rules
 from girlframe.engine.m2 import GameState, IdentityState
-from girlframe.engine.m3_actor_bonds import current_ref, set_depth
+from girlframe.engine.m3_actor_bonds import current_ref, depth, set_depth
 from girlframe.engine.m3_actor_state import ActorRef
-from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_world import update
 from girlframe.engine.m3_world_state import AdversaryPilot, Asset, Location
@@ -87,7 +87,22 @@ class AncillaryService:
                 for x in world.pilots
                 if x.alive and x.kind == "harpy" and x.custody == "captured"
             )
-            return dict(revision=state.revision, sites=tuple(sites), contacts=contacts)
+            from girlframe.services.m3_candidate_promotion import RULE, eligible
+
+            candidates = ()
+            try:
+                self.missions.access.require_specialist_rule(RULE)
+            except (ValueError, WorkflowError):
+                pass
+            else:
+                candidates = tuple(
+                    (ActorRef(kind="npc", entity=npc.id), npc.name)
+                    for npc in world.npcs if eligible(state, npc)
+                )
+            return dict(
+                revision=state.revision, sites=tuple(sites), contacts=contacts,
+                candidates=candidates,
+            )
 
     def _site(self, state: GameState, site: str, faction: str | None) -> Location:
         world = state.world
@@ -158,6 +173,7 @@ class AncillaryService:
         contacts: tuple[ActorRef, ...] = (),
         *,
         timeskip: str | None = None,
+        candidate: ActorRef | None = None,
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             state = self._state(c, expected)
@@ -165,7 +181,15 @@ class AncillaryService:
             sponsor = active_handler(state)
             if sponsor is None or not HandlerService(self.store)._member(c, controller):
                 raise WorkflowError("Invite an actual campaign member from the original Handler")
-            self._site(state, site, faction)
+            location = self._site(state, site, faction)
+            candidate_row = None
+            if candidate is not None:
+                from girlframe.services.m3_candidate_promotion import RULE, source
+
+                self.missions.access.require_specialist_rule(RULE)
+                if timeskip or candidate in contacts:
+                    raise WorkflowError("Use the separate original Candidate promotion invitation.")
+                candidate_row = source(state, candidate, location, faction, controller)
             books = self._books(state, "foundation" if faction is None else "rebel")
             if not books:
                 raise WorkflowError("No approved Ancillary book is available for this faction")
@@ -190,6 +214,9 @@ class AncillaryService:
                 books=books,
                 contacts=contacts,
                 timeskip=timeskip,
+                candidate=candidate,
+                candidate_name=candidate_row.name if candidate_row is not None else None,
+                candidate_sha256=fingerprint(candidate_row) if candidate_row is not None else None,
             )
             if timeskip:
                 from girlframe.services.m3_timeskip_electives import bind_invite
@@ -218,7 +245,8 @@ class AncillaryService:
                 faction=faction,
                 contacts=tuple(x.model_dump(mode="json") for x in contacts),
             )
-            | (dict(timeskip=timeskip) if timeskip is not None else {}),
+            | (dict(timeskip=timeskip) if timeskip is not None else {})
+            | (dict(candidate=candidate.model_dump(mode="json")) if candidate is not None else {}),
             operation,
         )
 
@@ -278,6 +306,19 @@ class AncillaryService:
                         "Use the original invitation's approved book and appointment"
                     )
                 location = self._site(state, value.site, value.faction)
+                promoted = None
+                if value.candidate is not None:
+                    from girlframe.services.m3_candidate_promotion import RULE, source
+
+                    self.missions.access.require_specialist_rule(RULE)
+                    promoted = source(
+                        state, value.candidate, location, value.faction, viewer.user_id,
+                    )
+                    if (
+                        fingerprint(promoted) != value.candidate_sha256
+                        or promoted.name != draft.name.strip()
+                    ):
+                        raise WorkflowError("Preserve the exact original Pilot Candidate and name.")
                 self._bond_targets(c, state, value, draft)
                 assert state.world is not None
                 actor = ActorRef(kind="external_pilot", entity="ancillary:" + identity)
@@ -309,6 +350,7 @@ class AncillaryService:
                             assets=inventory,
                             faction=value.faction,
                             controller=viewer.user_id,
+                            revealed=promoted.revealed if promoted is not None else False,
                         ),
                     ),
                 )
@@ -323,8 +365,14 @@ class AncillaryService:
                     ),
                 )
                 rules.put(state, char)
+                if promoted is not None:
+                    from girlframe.services.m3_candidate_promotion import activate
+
+                    state = activate(
+                        state, value, promoted, actor, event, int(value.sponsor.entity)
+                    )
                 for target in (draft.bond, draft.patron):
-                    if target is not None:
+                    if target is not None and depth(state, actor, target) == 0:
                         state = set_depth(state, actor, target, 1, event)
             phase = "accepted" if draft is not None else "declined"
             rules.put_offer(state, value.model_copy(update=dict(phase=phase, decision_event=event)))

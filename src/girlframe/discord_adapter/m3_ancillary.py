@@ -36,6 +36,17 @@ async def open_offer(
             tuple((str(index), label) for index, (_, _, label) in enumerate(sites)),
         ),
     ]
+    candidates = {ref.token: ref for ref, _ in options.get("candidates", ())}
+    if candidates:
+        fields.append(
+            Field(
+                "candidate",
+                "Existing Pilot Candidate, if any",
+                tuple((ref.token, label) for ref, label in options["candidates"]),
+                minimum=0,
+                required=False,
+            )
+        )
     if contacts:
         fields.append(
             Field(
@@ -59,6 +70,7 @@ async def open_offer(
             site,
             faction,
             tuple(contacts[x] for x in values.get("contacts", ())),
+            candidate=candidates[values["candidate"][0]] if values.get("candidate") else None,
         )
         return "The original participant has a private Ancillary invitation."
 
@@ -115,7 +127,7 @@ async def open_invitation(
             frame = picked["catalogue"][0]
             girls = picked["girl_assets"]
             fields = [
-                Field("name", "Character name"),
+                Field("name", "Character name") if value.candidate_name is None else None,
                 Field(
                     "frame_assets",
                     "Choose two Frame Assets",
@@ -128,6 +140,7 @@ async def open_invitation(
                 Field("frame_1", "Describe the first selected Frame Asset", paragraph=True),
                 Field("frame_2", "Describe the second selected Frame Asset", paragraph=True),
             ]
+            fields = [item for item in fields if item is not None]
             choices = {}
             for kind, label in (
                 ("bond", "Starting Bond"),
@@ -155,7 +168,7 @@ async def open_invitation(
                     if details.get(kind)
                 }
                 draft = rules.Draft(
-                    name=details["name"],
+                    name=value.candidate_name or details["name"],
                     book=book,
                     frame_catalogue=frame,
                     girl_assets=(
@@ -193,7 +206,9 @@ async def open_invitation(
     await NativeForm(
         viewer.user_id,
         "Ancillary invitation",
-        "Choose your book or decline this invitation.",
+        "Choose your book or decline this invitation."
+        if value.candidate_name is None
+        else "Continue as your original Pilot Candidate, " + value.candidate_name + ".",
         [
             Field(
                 "book",

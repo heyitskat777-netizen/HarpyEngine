@@ -3668,3 +3668,22 @@ replaced the exact original slot and recorded original loss.
 Later Handler succession, other Tag producers and direct
 rejection verification remain open.
 [Easily Broken p. 100](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=102) · [Native case](../../tests/rules/test_easily_broken.py)
+
+### Pilot Candidate activation
+
+Base `1e8172b`. In the approved optional route, an eligible
+living original Candidate can receive the existing Ancillary
+invitation and choose actual starting equipment and Frame.
+Only her original controller may confirm. Activation moves
+the original actor’s Bonds and active cast to the Pilot,
+preserves the original NPC receipt, and records her actually
+piloting the new starting Frame at the same site. Assessment
+alone leaves the original NPC in place.
+
+**One focused case passed in 2.88 seconds.** It used the
+native invitation, denied a different owner, reopened before
+acceptance, retained an actual Intense Bond and replaced the
+live cast role without duplicating the NPC. Linked historical
+jobs, certain legacy resources, full Girl creation and other
+Candidate variants remain open.
+[Pilot Candidate p. 189](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=191) · [Ancillary p. 93](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=95) · [Native case](../../tests/rules/test_pilot_candidate_promotion.py)

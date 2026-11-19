@@ -24553,14 +24553,42 @@
         "heading": "Pilot Candidate"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The living ordinary Pilot Candidate enters an actual approved starting Frame and becomes an owned Ancillary Pilot.",
+        "actor_type": "Original NPC controller and current Foundation or authorized Rebel invitation sponsor",
+        "pre_roll_sources": [
+          "Exact living original Pilot Candidate",
+          "Approved optional Ancillary creation and NPC rule",
+          "Genuine operational site and matching original affiliation",
+          "Original owner’s choices for actual resources"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "activation": [
+            "Accept and complete eligible optional creation, or decline and retain the original NPC"
+          ]
+        },
+        "choice_ownership": "The original current human controller owns acceptance, the actual book and resources.",
+        "target_policy": "Retain exact original NPC identity, legitimate scope and source. Hold other jobs or unresolved authority that needs its own adapter.",
+        "post_roll_effects": [
+          "Create the genuine controlled Pilot and actual starting Frame in the original location; migrate career references and real actor Bonds."
+        ],
+        "mandatory_followups": [
+          "Standard full Girl creation, cataloguing original NPC Tags and some legacy or linked processes remain outside this scoped optional activation."
+        ],
+        "handler_or_gm_intervention": "Original facilitator authorizes the invitation. Assessment alone never activates the Candidate.",
+        "test_fixture_ids": [
+          "tests/rules/test_pilot_candidate_promotion.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_pilot_candidate_promotion.py"],
       "m2_play_id": null,
       "module": "core"
     },
