@@ -776,6 +776,10 @@ def prepare_response(
 ) -> dict[str, Any] | None:
     if prepared.parent is None:
         return None
+    # Damage Defeat is a separate source-owned child, validated against the
+    # original held Battle work by the Defeat adapter.
+    if prepared.play == "defeat" and prepared.source_work is not None:
+        return None
     parent = game.action(c, prepared.parent)
     if not parent["data"].get("gorgon_play"):
         return None

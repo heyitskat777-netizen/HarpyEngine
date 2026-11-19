@@ -162,6 +162,7 @@ tests/rules/test_mistress_rewards.py
 tests/rules/test_trainer_phrases.py
 tests/rules/test_scientist_lab.py
 tests/rules/test_ancillary_creation.py
+tests/rules/test_soldier_expendable.py
 tests/rules/test_expanded_status.py
 tests/rules/test_conditioning.py
 tests/rules/test_frantic_breakdown.py

@@ -179,6 +179,16 @@ def projection(
 ) -> dict[str, Any]:
     sheet = state.sheets[action["actor_id"]]
     data: dict[str, Any] = dict(offer=action["data"].get("defeat_offer"))
+    from girlframe.services import m3_soldier_expendable as expendable
+
+    if request["kind"] == "defeat_select":
+        data["soldiers"] = tuple(
+            (actor.ref.token, actor.label)
+            for actor, _ in expendable.candidates(game, c, state, action)
+        )
+    if request["kind"] == expendable.REQUEST:
+        source = action["data"].get("soldier_expendable") or {}
+        data["soldier_request"] = dict(label=source.get("label"), context=source.get("context"))
     if request["kind"] == "defeat_alternative":
         data.update(
             assets=[
@@ -347,10 +357,17 @@ def apply(
     request: dict[str, Any],
     answer: ChoiceAnswer,
 ) -> None:
+    from girlframe.services import m3_soldier_expendable as expendable
     from girlframe.services.m2_choices import ChoiceEngine
 
     actor = ActorRef.model_validate_json(json.dumps(action["data"]["defeat"]["actor"]))
     kind = request["kind"]
+    if kind == expendable.REQUEST:
+        expendable.answer_request(game, c, state, action, request, answer)
+        return
+    if kind == "defeat_select" and expendable.OPTION in answer.options:
+        expendable.ask(game, c, state, action, answer)
+        return
     if kind == "defeat_tag_gift":
         if (
             answer.options not in (("give",), ("decline",))

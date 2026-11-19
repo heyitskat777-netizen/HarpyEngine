@@ -2031,3 +2031,23 @@ tests reached their final assertions before failing to write to
 a missing ignored evidence directory. The registry serialization
 and evidence fixes are documented above. The exact historical logs
 are under `var/rulebook-full-e758bc9/`.
+
+### Soldier Expendable
+
+Base `be234c491886107e9ba0e604b13112d8ea91fae2`. The original
+Pilot's saved low Defeat can present a separately approved Soldier
+at the actual battlefield position. Asking records a pending choice.
+The original Soldier controller chooses whether to take the fatal
+hit. Declining keeps the Soldier alive and returns the original
+Pilot to her remaining choices. Accepting kills only the original
+Soldier's actual body, preserves the recorded damage and roll and
+resolves the held source. The underlying Girl sheets are preserved.
+
+Testing found that the Gorgon response adapter treated a genuine
+source damage Defeat as its earlier optional response Play. Owned
+Battle Defeat children now reach the native Defeat resolver with
+their original work and action proof. **89 selected tests passed
+in 178.12 seconds**, covering the true damage-to-Defeat route, both
+private response outcomes, wrong owner, stale request, safety pause,
+restart, replay, private Inbox and the wider Gorgon/Director checks.
+[Soldier p. 94](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=96)
