@@ -748,8 +748,9 @@ def synchronize(
             continue
         if case.source_kind == "ancillary_cadre":
             from girlframe.services.m3_chained_isolation import pending as isolation_pending
+            from girlframe.services.m3_soldier_surgery import pending as soldier_pending
 
-            if isolation_pending(state, case.id):
+            if isolation_pending(state, case.id) or soldier_pending(state, case.id):
                 continue
 
         pending = False
@@ -1176,6 +1177,7 @@ class RolePunishmentService:
                 from girlframe.services.m3_chained_isolation import stage
 
                 suppressed = stage(self.game, state, case, event)
+                tag = str(uuid4())
                 state = rules.social(
                     state,
                     case.subject,
@@ -1183,14 +1185,16 @@ class RolePunishmentService:
                     case.instruction,
                     profiles(c, self.store.campaign_id),
                     event,
-                    str(uuid4()),
+                    tag,
                     source_kind=case.source_kind,
                     suppress_bond=suppressed,
                 )
                 if case.source_kind == "ancillary_cadre":
                     from girlframe.services.m3_ancillary_discipline import applied_consequences
+                    from girlframe.services.m3_soldier_surgery import stage as stage_soldier
 
                     state = applied_consequences(self.game, state, case, event)
+                    stage_soldier(self.game, state, case, event, tag)
                 case = case.model_copy(update=dict(effect_event=event, execution_account=account))
                 kind = "executed"
             _replace(state, case)

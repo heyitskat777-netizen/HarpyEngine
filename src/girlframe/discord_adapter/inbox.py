@@ -2153,6 +2153,14 @@ class InboxView(discord.ui.View):
                 interaction, AncillaryIntimacyService(GameService(self.service.store)),
                 item.identity, item.source.removeprefix("ancillary_private_"),
             )
+        elif item.task == "m3_soldier_surgery":
+            from girlframe.discord_adapter.m3_soldier_surgery import open_soldier_surgery
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_soldier_surgery import SoldierSurgeryService
+
+            await open_soldier_surgery(
+                interaction, SoldierSurgeryService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_prodigy_swoon":
             from girlframe.discord_adapter.m3_ancillary_discipline import open_swoon
             from girlframe.services.m2_game import GameService

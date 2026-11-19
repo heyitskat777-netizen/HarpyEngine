@@ -3764,6 +3764,22 @@ decision. Four existing variants were deselected. Repeated Tag
 resolution and additional private participants remain open.
 [Tags p. 9](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=11) · [Bonds p. 11](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=13) · [Native case](../../tests/rules/test_mercenary_private_play.py)
 
+### Simplification Surgery for a Tag given in discipline
+
+Base `16b77c9e55f09087f1c4ef3a019d225da947537c`. On a native
+Ancillary Cadre Punishment, the original Tag giver can require
+an immediate embrace. At the two-Identity cap, the Soldier
+chooses the exact slot on her own sheet. The Punishment stays
+pending until the original Tag becomes an Identity or the
+giver passes.
+
+One focused native case passed in 5.57 seconds. It verified
+both private owner steps, withheld the Soldier’s Identities
+from the Tag giver’s choice, and completed the original
+Punishment only after the actual replacement. The prior Prodigy
+case was deselected. Other Tag sources remain open.
+[Simplification Surgery p. 94](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=96) · [Native case](../../tests/rules/test_prodigy_discipline.py)
+
 ### Actor-level Ancillary Cadre Status and the Warboy Dog
 
 Base `083b876`. The original facilitator privately proposes a

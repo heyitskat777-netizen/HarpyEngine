@@ -4138,6 +4138,7 @@ class InboxService:
             from girlframe.services.m3_npc_handover import NpcHandoverService
             from girlframe.services.m3_npc_intelligence import IntelligenceService
             from girlframe.services.m3_prodigy_swoon import SwoonService
+            from girlframe.services.m3_soldier_surgery import SoldierSurgeryService
             from girlframe.services.m3_timeskip import TimeskipService
             from girlframe.services.m3_voidspace_invasion import InvasionService
             from girlframe.services.m3_warboy_hate import ConditionedHateService
@@ -4227,6 +4228,28 @@ class InboxService:
                         "The original notch remains reserved until a response.",
                         "Open private choice",
                         task="m3_prodigy_swoon",
+                    )
+                )
+
+            for identity in SoldierSurgeryService(GameService(self.store)).tasks(
+                connection, canon, viewer
+            ):
+                items.append(
+                    InboxItem(
+                        "soldier-surgery:" + identity,
+                        "soldier_external_tag",
+                        identity,
+                        canon.revision,
+                        "discipline",
+                        "Simplification Surgery",
+                        "Original Tag",
+                        "pending",
+                        True,
+                        False,
+                        "Resolve your part of the original Tag embrace.",
+                        "The original source stays pending until the choice resolves.",
+                        "Open private choice",
+                        task="m3_soldier_surgery",
                     )
                 )
 

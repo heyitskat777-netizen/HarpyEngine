@@ -13,6 +13,7 @@ from test_m2_game import Dice, Gateway, answer, pass_tags, state, tick
 from girlframe.delivery.m2_worker import GameWorker
 from girlframe.discord_adapter.inbox import InboxView
 from girlframe.discord_adapter.m3_ancillary_discipline import open_confidence
+from girlframe.discord_adapter.m3_soldier_surgery import open_soldier_surgery
 from girlframe.engine import m3_ancillary as ancillary
 from girlframe.engine import m3_ancillary_cadre as cadre
 from girlframe.engine.m2 import PlayInput
@@ -38,16 +39,25 @@ from girlframe.services.m3_chained_darling import ChainedPlacementService
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_prodigy_swoon import SwoonService, records
 from girlframe.services.m3_role_punishments import RolePunishmentService
+from girlframe.services.m3_soldier_surgery import SoldierSurgeryService
 from girlframe.services.onboarding import WorkflowError
 
 
+@pytest.mark.parametrize("surgery", (False, True), ids=("original-prodigy", "soldier-external-tag"))
 def test_prodigy_confidence_and_favourite_follow_real_punishments(
     ledger,
     tmp_path,
     monkeypatch,
+    surgery,
 ):
     game = scenario(ledger)
-    enable(ledger, game, tmp_path, monkeypatch, extra=(EARNED, FAVOURITE))
+    enable(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(EARNED, FAVOURITE) + ((ancillary.SOLDIER_SIMPLIFICATION,) if surgery else ()),
+    )
     missions = MissionService(ledger)
     creation = AncillaryService(missions)
     cast_service = CastService(ActorService(missions))
@@ -131,6 +141,49 @@ def test_prodigy_confidence_and_favourite_follow_real_punishments(
         )
 
     enact(soldier, PLAYER, "Actual first Punishment")
+    if surgery:
+        before = state(game)
+        (case,) = before.role_punishments
+        assert case.effect_event and case.completion_event is None
+        original = ancillary.find(before, soldier)
+        (tag,) = original.tags
+        assert tag.label == "Actual first Punishment"
+        replacement = original.identities[0].id
+        service = SoldierSurgeryService(game)
+        assert not service.get(ADMIN, case.id)["replacements"]
+        with pytest.raises(WorkflowError, match="unavailable"):
+            service.get(PLAYER, case.id)
+        asyncio.run(
+            submit_form(
+                ADMIN,
+                lambda click: open_soldier_surgery(click, service, case.id),
+                dict(choice=("embrace",)),
+                94890,
+            )
+        )
+        assert state(game).role_punishments[0].completion_event is None
+        still_open = ancillary.find(state(game), soldier)
+        assert still_open.tags == original.tags and still_open.identities == original.identities
+        with pytest.raises(WorkflowError, match="unavailable"):
+            service.get(ADMIN, case.id)
+        assert any(
+            x.identity == case.id and x.task == "m3_soldier_surgery"
+            for x in InboxService(ledger).items(PLAYER)
+        )
+        asyncio.run(
+            submit_form(
+                PLAYER,
+                lambda click: open_soldier_surgery(click, service, case.id),
+                dict(choice=(replacement,)),
+                94892,
+            )
+        )
+        final = state(game)
+        resolved = ancillary.find(final, soldier)
+        assert not resolved.tags and any(x.name == tag.label for x in resolved.identities)
+        assert replacement not in {x.id for x in resolved.identities}
+        assert final.role_punishments[0].completion_event
+        return
     assert not is_helpless(state(game), prodigy)
     (notch,) = discipline.confidence_menu(OTHER, prodigy)["owned"]
     enact(prodigy, OTHER, "Actual second Punishment")

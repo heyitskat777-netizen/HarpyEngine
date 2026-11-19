@@ -14725,16 +14725,16 @@
         "pre_roll_sources": ["Approved Soldier ownership", "Original cast and saved roll", "Two-Identity cap"],
         "roll_kind": "special",
         "allowed_modifiers": [],
-        "tier_options": {"keep": ["I do not think about it", "Use the actual setter's immediate embrace when the Soldier authorizes a new self-given Tag"]},
-        "choice_ownership": "The Soldier chooses its additional trait. The actual Tag setter owns immediate embrace.",
+        "tier_options": {"keep": ["I do not think about it", "Use the actual setter's immediate embrace for the Soldier’s self-given Keep Tag or a given Tag in an actual Ancillary Cadre Punishment"]},
+        "choice_ownership": "The Soldier chooses the additional trait. The Tag setter decides whether to require an embrace. The original Soldier controls which eligible Identity it replaces.",
         "target_policy": "Only the approved original Soldier role and its own new source Tag.",
         "post_roll_effects": ["Save the exact extra positive trait", "Replace a current ordinary Identity at the original cap when an eligible Tag is embraced"],
         "mandatory_followups": ["The human GM still judges the Keep outcome."],
-        "handler_or_gm_intervention": "Externally given Tags need source-specific admission and the original external setter's choice.",
-        "test_fixture_ids": ["tests/rules/test_ancillary_creation.py::test_ancillary_native_keep_pays_its_own_heat_and_reaches_the_original_gm"]
+        "handler_or_gm_intervention": "The original Cadre Handler owns the choice for their given Tag. Other external Tag producers still need source connections.",
+        "test_fixture_ids": ["tests/rules/test_ancillary_creation.py::test_ancillary_native_keep_pays_its_own_heat_and_reaches_the_original_gm", "tests/rules/test_prodigy_discipline.py"]
       },
       "dependencies": [],
-      "test_evidence": ["tests/rules/test_ancillary_creation.py::test_ancillary_native_keep_pays_its_own_heat_and_reaches_the_original_gm"],
+      "test_evidence": ["tests/rules/test_ancillary_creation.py::test_ancillary_native_keep_pays_its_own_heat_and_reaches_the_original_gm", "tests/rules/test_prodigy_discipline.py"],
       "m2_play_id": null,
       "module": "ancillary"
     },
