@@ -4,6 +4,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Literal
 from uuid import uuid4
 
+from pydantic import Field
 from sqlalchemy import Connection
 
 from girlframe.engine import m3_actor_plays as actor_plays
@@ -107,10 +108,14 @@ class Dice(Model):
     heat: int
     source: str
     rng: str
+    modifier: int = Field(default=0, ge=-2, le=2, exclude_if=lambda value: value == 0)
+    marked_tag: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    tag_event: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    tag_account: str | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @property
     def result(self) -> str:
-        return tier(sum(self.faces) + self.heat)
+        return tier(sum(self.faces) + self.heat + self.modifier)
 
 
 class Encounter(Model):
@@ -126,6 +131,7 @@ class Encounter(Model):
         "consent",
         "verify",
         "roll",
+        "participant_tag",
         "middle",
         "tag",
         "reaffirm",
@@ -220,6 +226,33 @@ def records(state: GameState) -> tuple[Encounter, ...]:
 def _put(state: GameState, case: Encounter) -> None:
     state.facts = [x for x in state.facts if (x.get("kind"), x.get("id")) != (KIND, case.id)]
     state.facts.append(dict(kind=KIND, id=case.id, body=case.model_dump_json()))
+
+
+def _participant_tags(state: GameState, case: Encounter) -> dict[str, str]:
+    return {
+        x.id: x.label
+        for x in actor_plays.tags(state, case.actor.actor)
+        if not x.marked and x.scene_used != case.scene and case.partner.controller in x.observers
+    }
+
+
+def _route_result(state: GameState, case: Encounter, dice: Dice) -> dict[str, Any]:
+    update: dict[str, Any] = dict(roll=dice, step=RESULTS[case.book][dice.result])
+    if case.book not in ("MERCENARY", "SOLDIER", "PRODIGY"):
+        return update
+    group = cadre_rank.current(state, case.actor.actor)
+    if case.book == "MERCENARY" and dice.result == "low" and group is None:
+        update["step"] = "mercenary_low_hold"
+    if group is None:
+        return update
+    members = cadre_rank.actual_members(state, group)
+    if case.book == "SOLDIER" and dice.result == "low" and case.partner.actor in members:
+        update["step"] = "soldier_place"
+    if case.book == "PRODIGY" and case.roll is None:
+        update.update(
+            prodigy_cadre=group.id, prodigy_ace=case.partner.actor in (group.handler, members[0])
+        )
+    return update
 
 
 def prove_high_order(
@@ -582,6 +615,7 @@ class AncillaryIntimacyService:
     def _recipient(self, case: Encounter) -> int | None:
         if case.step in (
             "consent",
+            "participant_tag",
             "tag",
             "answer",
             "warboy_partner_tag",
@@ -807,6 +841,9 @@ class AncillaryIntimacyService:
                 else {},
                 participants=(actual.label, counterpart.label),
                 tier=case.roll.result if case.roll else None,
+                observed_tags=_participant_tags(state, case)
+                if case.step == "participant_tag"
+                else {},
                 tag=label,
                 identity=case.identity if case.step == "warboy_replace" else None,
                 replace=_replaceable(state, actual.ref)
@@ -940,6 +977,7 @@ class AncillaryIntimacyService:
                     "abyssal_damage",
                     "soldier_repair",
                     "mercenary_low_terms",
+                    "participant_tag",
                 )
             ):
                 raise WorkflowError(
@@ -980,27 +1018,40 @@ class AncillaryIntimacyService:
                 if len(faces) != 2 or any(type(x) is not int or not 1 <= x <= 6 for x in faces):
                     raise ValueError("Dice source returned invalid faces.")
                 dice = Dice(faces=faces, heat=heat, source=event, rng=self.game.rng_source)
-                update = dict(roll=dice, step=RESULTS[case.book][dice.result])
-                if (
-                    case.book == "MERCENARY"
-                    and dice.result == "low"
-                    and not cadre_rank.current(state, case.actor.actor)
-                ):
-                    update["step"] = "mercenary_low_hold"
-                if case.book == "SOLDIER" and dice.result == "low":
-                    group = cadre_rank.current(state, case.actor.actor)
-                    if group is not None and case.partner.actor in cadre_rank.actual_members(
-                        state, group
+                update = _route_result(state, case, dice)
+                if _participant_tags(state, case):
+                    update["step"] = "participant_tag"
+            elif case.step == "participant_tag" and case.roll is not None:
+                dice = case.roll
+                if choice != "pass" or picks or account:
+                    if not (
+                        choice in _participant_tags(state, case)
+                        and len(picks) == 1
+                        and picks[0] in ("-1", "1")
+                        and account.strip()
                     ):
-                        update["step"] = "soldier_place"
-                if case.book == "PRODIGY" and dice.result == "mid":
-                    group = cadre_rank.current(state, case.actor.actor)
-                    if group is not None:
-                        update.update(
-                            prodigy_cadre=group.id,
-                            prodigy_ace=case.partner.actor
-                            in (group.handler, cadre_rank.actual_members(state, group)[0]),
+                        raise WorkflowError("Pass or mark an eligible observed Tag with relevance.")
+                    modifier = actor_plays.proposal(
+                        state,
+                        case.actor.actor,
+                        case.partner.actor,
+                        case.partner.controller,
+                        profiles(c, self.store.campaign_id),
+                        choice,
+                        case.scene,
+                        int(picks[0]),
+                        account,
+                    )
+                    actor_plays.mark(state, case.actor.actor, choice, case.scene)
+                    dice = dice.model_copy(
+                        update=dict(
+                            modifier=modifier,
+                            marked_tag=choice,
+                            tag_event=event,
+                            tag_account=account.strip(),
                         )
+                    )
+                update = _route_result(state, case, dice)
             elif case.step == "middle" and choice == "apply" and not account:
                 state = make_helpless(state, case.partner.actor, case.actor.actor, event)
                 state.facts.append(

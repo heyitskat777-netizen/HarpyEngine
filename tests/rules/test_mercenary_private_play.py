@@ -9,6 +9,7 @@ from test_m2_game import Dice, state
 
 from girlframe.engine import m3_ancillary as ancillary
 from girlframe.engine import m3_ancillary_cadre as rank
+from girlframe.engine.m2 import TagState
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_handler_consequences import active_handler
@@ -28,8 +29,8 @@ from girlframe.services.onboarding import WorkflowError
 
 @pytest.mark.parametrize(
     "tier",
-    ("mid", "low", "high", "fee"),
-    ids=("original-mid", "pocket-money", "high-refusal", "high-fee"),
+    ("mid", "low", "high", "fee", "tag"),
+    ids=("original-mid", "pocket-money", "high-refusal", "high-fee", "observed-tag"),
 )
 def test_mercenary_original_private_outcome(ledger, tmp_path, monkeypatch, tier):
     game = scenario(ledger)
@@ -263,7 +264,28 @@ def test_mercenary_original_private_outcome(ledger, tmp_path, monkeypatch, tier)
         assert transfer.source_kind == "mercenary_pocket_money" and transfer.action == work
         assert records(final)[0].disposition == "pocket_money_paid" and game.dice.calls == 1
         return
-    game.dice = Dice((4, 5))
+    if tier == "tag":
+        with ledger.transaction() as c:
+            canon = state(game)
+            original = ancillary.find(canon, actor)
+            tags = (
+                TagState(
+                    id="heard-tag",
+                    label="Looks for trades",
+                    giver=OTHER.user_id,
+                    giver_actor=partner,
+                    observers=(OTHER.user_id,),
+                ),
+                TagState(
+                    id="private-tag",
+                    label="Private",
+                    giver=ADMIN.user_id,
+                    observers=(ADMIN.user_id,),
+                ),
+            )
+            ancillary.put(canon, original.model_copy(update=dict(tags=tags)))
+            game.event(c, ADMIN.user_id, "original-tag-history", "synthetic.prior_tags", canon)
+    game.dice = Dice((4, 3) if tier == "tag" else (4, 5))
     identity = service.offer(
         PLAYER,
         "actual-mid",
@@ -274,6 +296,24 @@ def test_mercenary_original_private_outcome(ledger, tmp_path, monkeypatch, tier)
     )["id"]
     for viewer, choice in ((OTHER, "yes"), (ADMIN, "yes"), (PLAYER, "roll")):
         service.act(viewer, choice + str(viewer.user_id), identity, state(game).revision, choice)
+    if tier == "tag":
+        available = service.get(OTHER, identity)
+        assert available["observed_tags"] == {"heard-tag": "Looks for trades"}
+        with pytest.raises(WorkflowError, match="unavailable"):
+            service.get(PLAYER, identity)
+        service.act(
+            OTHER,
+            "relevant-tag",
+            identity,
+            state(game).revision,
+            "heard-tag",
+            picks=("1",),
+            account="This exchange is another such trade.",
+        )
+        result = records(state(game))[0]
+        assert result.roll.faces == (4, 3) and result.roll.modifier == 2
+        assert result.roll.result == "mid" and game.dice.calls == 1
+        assert {x.id for x in ancillary.find(state(game), actor).tags if x.marked} == {"heard-tag"}
     service.act(
         PLAYER,
         "actual-small-favour",

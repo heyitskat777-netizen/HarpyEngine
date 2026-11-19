@@ -121,6 +121,10 @@ async def open_ancillary_intimacy_choice(
             (("yes", "Verify"), ("no", "Decline")),
         ),
         "roll": ("Spend your actual Heat for the original saved Play.", (("roll", "Roll"),)),
+        "participant_tag": (
+            "Pass or mark an eligible Tag you actually observed on the original participant.",
+            (("pass", "Pass"), *tuple(data.get("observed_tags", {}).items())),
+        ),
         "middle": (
             "Choose the printed Helplessness effect and lift your own restriction this scene.",
             (("apply", "Apply the effect"),),
@@ -374,6 +378,16 @@ async def open_ancillary_intimacy_choice(
     if step == "roll":
         instructions += f" You have {data['heat']} Heat."
         fields.append(Field("heat", "Actual Heat to spend"))
+    if step == "participant_tag" and data["observed_tags"]:
+        fields.append(
+            Field(
+                "tag_direction",
+                "Tag direction",
+                (("-1", "Lower"), ("1", "Raise")),
+                required=False,
+            )
+        )
+        fields.append(Field("account", "Why the Tag applies", paragraph=True, required=False))
     if step in (
         "tag",
         "reaffirm",
@@ -519,7 +533,7 @@ async def open_ancillary_intimacy_choice(
             account=values.get("account", ""),
             picks=(values["paid_tag"],)
             if values.get("paid_tag")
-            else tuple(values.get("picks", ())),
+            else tuple(values.get("tag_direction" if step == "participant_tag" else "picks", ())),
         )
         return "Your original choice is saved."
 

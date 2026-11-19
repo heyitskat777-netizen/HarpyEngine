@@ -14791,7 +14791,7 @@
         ],
         "roll_kind": "2d6",
         "allowed_modifiers": [
-          "Owned Heat"
+          "Owned Heat", "One observed, unmarked Tag from the original counterpart, with the actual Bond modifier"
         ],
         "tier_options": {
           "low": [
@@ -14946,7 +14946,7 @@
         ],
         "roll_kind": "2d6",
         "allowed_modifiers": [
-          "Owned Heat"
+          "Owned Heat", "One observed, unmarked Tag from the original counterpart, with the actual Bond modifier"
         ],
         "tier_options": {
           "low": [
@@ -15082,7 +15082,7 @@
         ],
         "roll_kind": "2d6",
         "allowed_modifiers": [
-          "Owned Heat"
+          "Owned Heat", "One observed, unmarked Tag from the original counterpart, with the actual Bond modifier"
         ],
         "tier_options": {
           "low": [
@@ -15356,7 +15356,7 @@
         ],
         "roll_kind": "2d6",
         "allowed_modifiers": [
-          "Owned Heat"
+          "Owned Heat", "One observed, unmarked Tag from the original counterpart, with the actual Bond modifier"
         ],
         "tier_options": {
           "low": [
@@ -15542,7 +15542,7 @@
         ],
         "roll_kind": "2d6",
         "allowed_modifiers": [
-          "Owned Heat"
+          "Owned Heat", "One observed, unmarked Tag from the original counterpart, with the actual Bond modifier"
         ],
         "tier_options": {
           "low": [
@@ -15707,7 +15707,7 @@
         "actor_type": "Original owned Chained Darling, local standard Pilot, and original human facilitator",
         "pre_roll_sources": ["Optional independent approval", "Two actual co-present roles", "Original participants' consent and actual encounter verification", "Owned Heat"],
         "roll_kind": "2d6",
-        "allowed_modifiers": ["Owned Heat"],
+        "allowed_modifiers": ["Owned Heat", "One observed, unmarked Tag from the original counterpart, with the actual Bond modifier"],
         "tier_options": {"low": ["Ask the other participant about their experience"], "mid": ["Make the other participant Helpless and lift the original Chained Darling's restriction for this scene"], "high": ["The other participant gives a Tag and the Chained Darling reaffirms it through her own action"]},
         "choice_ownership": "Each original person controls their consent, optional withdrawal and subsequent printed choices.",
         "target_policy": "Private native choice for each original owner, and original facilitator review after consent. Scope the exception to the current original cast role.",
@@ -15840,7 +15840,7 @@
         "actor_type": "Original Warboy, original counterpart and human facilitator",
         "pre_roll_sources": ["Approved original optional book", "Original placement and encounter", "Actual participants' consent and owned Heat"],
         "roll_kind": "2d6",
-        "allowed_modifiers": ["Owned Heat"],
+        "allowed_modifiers": ["Owned Heat", "One observed, unmarked Tag from the original counterpart, with the actual Bond modifier"],
         "tier_options": {"low": ["Deepen the original Bond", "Counterpart may offer an Identity", "Apply an automatic 7− to a supported refusal against that exact superior while the Bond exists"], "mid": ["Weaken the original Bond", "Partner may give a Tag"], "high": ["Weaken every actual Bond of the other participant and give that participant a Tag"]},
         "choice_ownership": "Original participants own consent, withdrawal, actual Tag, Identity and slot decisions.",
         "target_policy": "Keep the same exact original characters and private scope while the source scene stays open.",
@@ -15942,7 +15942,7 @@
         ],
         "roll_kind": "2d6",
         "allowed_modifiers": [
-          "Owned Heat"
+          "Owned Heat", "One observed, unmarked Tag from the original counterpart, with the actual Bond modifier"
         ],
         "tier_options": {
           "low": [

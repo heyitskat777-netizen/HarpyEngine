@@ -3748,6 +3748,22 @@ shared custody operation. Two other cases were deselected.
 Noncash fees and stale pledges that need new terms remain open.
 [Mercenary p. 97](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=99) · [Native case](../../tests/rules/test_mercenary_private_play.py)
 
+### Observed Tags in private Ancillary Plays
+
+Base `96848baa3931fff736248772183551a23242ec9c`. The original
+counterpart can mark one observed unmarked Tag after the saved
+roll. The engine applies the ordinary Bond modifier before
+routing the final result. The original dice and Heat remain in
+the receipt. The private form includes only eligible observed Tags.
+
+One focused case passed in 5.46 seconds. A Personal Bond raised
+the Mercenary’s 7 to 9 with an actual mark, and the ordinary
+middle consequence resolved. The test withheld a private Tag
+and denied the acting Mercenary access to the counterpart’s
+decision. Four existing variants were deselected. Repeated Tag
+resolution and additional private participants remain open.
+[Tags p. 9](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=11) · [Bonds p. 11](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=13) · [Native case](../../tests/rules/test_mercenary_private_play.py)
+
 ### Actor-level Ancillary Cadre Status and the Warboy Dog
 
 Base `083b876`. The original facilitator privately proposes a
