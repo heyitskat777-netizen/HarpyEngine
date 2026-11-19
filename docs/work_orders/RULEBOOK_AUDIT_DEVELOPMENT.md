@@ -2177,6 +2177,25 @@ Native low-tier sheet control, excision, reach outside the shared
 square and Infiltrate Technology remain open at this checkpoint.
 [Parasite p. 174](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=176) · [Native cases](../../tests/rules/test_gorgon_runtime.py)
 
+### Experimental excision of the original Parasite
+
+Base `74898d60481e11b01ce293cf4b35ec7f72a371b7`. The original
+patient can consent to an actual known local NPC doctor in an
+open scene or withdraw before performance. An Inbox task for
+the original human GM appears only after consent. The GM verifies
+that exact procedure and actual outcome. Excision clears only
+that source infestation and preserves the recorded Void, damage
+and original history. NPC doctors controlled by the original
+human GM are the verified scope. Further operators and low-tier
+sheet control remain open.
+
+**One focused native case passed in 7.23 seconds**, covering private
+Inbox visibility, withdrawal, restart, confirmed excision and
+retained Void. The user deferred full regression. The running
+older Sentinel regression and the broad Parasite/Growth selection
+were interrupted without recording a complete passing run.
+[Parasite p. 174](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=176) · [Native case](../../tests/rules/test_gorgon_runtime.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

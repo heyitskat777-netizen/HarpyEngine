@@ -22528,9 +22528,9 @@
         ],
         "mandatory_followups": [
           "Resolve actual damage work before rolling.",
-          "Complete any ordinary Void threshold; retain the outstanding experimental excision requirement."
+          "Complete any ordinary Void threshold. The patient may consent to experimental excision by an actual local doctor. Verify the actual surgery before removing the infestation."
         ],
-        "handler_or_gm_intervention": "Private human GM escalation preserves the low-tier result. Excision and sheet control remain open.",
+        "handler_or_gm_intervention": "The procedural human GM verifies performed excision after the original patient consents in the actual scene. Private low-tier sheet control remains open.",
         "test_fixture_ids": [
           "tests/rules/test_gorgon_runtime.py"
         ]

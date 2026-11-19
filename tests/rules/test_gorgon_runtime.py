@@ -3585,8 +3585,12 @@ def test_parasite_infect_damages_an_actual_voided_asset_before_the_owned_roll(le
     from test_privacy_game_delivery import PrivateGateway
 
     from girlframe.discord_adapter.m2_ui import open_choice
+    from girlframe.discord_adapter.m3_gorgon_runtime import open_excision
     from girlframe.engine.m2 import ChoiceAnswer, PlayInput
     from girlframe.engine.m3_parasite_infection import get
+    from girlframe.engine.m3_world_state import Npc
+    from girlframe.services.inbox import InboxService
+    from girlframe.services.m3_parasite_excision import ExcisionService
     from girlframe.services.m3_parasite_infection import DAMAGE, HEAT, LOSS, LOW_REVIEW, VOID
     from girlframe.services.m3_void import VoidService
     from girlframe.services.onboarding import WorkflowError
@@ -3609,7 +3613,25 @@ def test_parasite_infect_damages_an_actual_voided_asset_before_the_owned_roll(le
         if tier == "high_threshold":
             for x in frame[:-1]:
                 x.void = True
+        if tier == "high":
+            canon.world = update(
+                canon.world,
+                npcs=(
+                    Npc(
+                        id="actual-ward-doctor",
+                        name="Ward Doctor",
+                        jobs=("doctor",),
+                        detail="The original available doctor",
+                        controller=ADMIN.user_id,
+                        cell=(0, 0),
+                        revealed=True,
+                    ),
+                ),
+            )
         game.event(c, PLAYER.user_id, "synthetic-infection-connection", "synthetic.void", canon)
+    if tier == "high":
+        cast = CastService(ActorService(MissionService(ledger)))
+        change(cast, ADMIN, "join", ActorRef(kind="npc", entity="actual-ward-doctor"))
     initial = state(game)
     service = GorgonPlayService(game)
     view = service.preview(ADMIN, 900)
@@ -3738,3 +3760,60 @@ def test_parasite_infect_damages_an_actual_voided_asset_before_the_owned_roll(le
         game.inspect(OTHER, parent)
     tick(worker, gateway, 5)
     assert {uid for uid, _ in gateway.private} <= {ADMIN.user_id, PLAYER.user_id}
+    if tier == "high":
+        surgery = ExcisionService(ledger)
+        inbox = InboxService(ledger)
+
+        def surgery_items(viewer):
+            return [x for x in inbox.items(viewer) if x.task == "m3_parasite_excision"]
+
+        assert len(surgery_items(PLAYER)) == 1
+        assert surgery_items(ADMIN) == surgery_items(OTHER) == []
+        with pytest.raises(WorkflowError, match="unavailable"):
+            surgery.get(OTHER, parent)
+        initial_surgery = surgery.get(PLAYER, parent)
+        doctor = next(iter(initial_surgery["options"]))
+        surgery.respond(
+            PLAYER,
+            "first-doctor-consent",
+            parent,
+            initial_surgery["revision"],
+            "consent",
+            doctor=doctor,
+        )
+        assert len(surgery_items(ADMIN)) == 1 and surgery_items(OTHER) == []
+        surgery.respond(
+            PLAYER,
+            "withdraw-doctor-consent",
+            parent,
+            surgery.get(PLAYER, parent)["revision"],
+            "withdraw",
+        )
+        with pytest.raises(WorkflowError, match="unavailable"):
+            surgery.respond(
+                ADMIN,
+                "withdrawn-excision",
+                parent,
+                state(game).revision,
+                "performed",
+                account="Cannot proceed after withdrawal.",
+            )
+
+        async def choose_surgery(viewer, interaction_id, values):
+            interaction = current(viewer.user_id, interaction_id)
+            await interaction.response.defer(ephemeral=True)
+            await open_excision(interaction, surgery, parent)
+            form = interaction.edit_original_response.call_args.kwargs["view"]
+            form.values.update(values)
+            await form.confirm.callback(current(viewer.user_id, interaction_id + 1))
+            assert form.completed
+
+        asyncio.run(choose_surgery(PLAYER, 87908, {"doctor": (doctor,)}))
+        ledger.engine.dispose()
+        asyncio.run(choose_surgery(ADMIN, 87910, {"account": "The doctor excised the Parasite."}))
+        final = state(game)
+        assert not get(final, parent).surgery_required
+        saved = get(final, parent).excision
+        assert saved.doctor.entity == "actual-ward-doctor" and saved.performed_event
+        assert surgery_items(PLAYER) == surgery_items(ADMIN) == []
+        assert next(x for x in final.sheets["2"].assets if x.id == selected).void

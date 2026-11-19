@@ -15,6 +15,14 @@ KIND = "parasite_infection"
 Loss = Literal["body", "memory", "emotion"]
 
 
+class Excision(Model):
+    scene: str
+    doctor: ActorRef
+    consent_event: str
+    performed_event: str | None = None
+    account: str | None = None
+
+
 class Infection(Model):
     action: str
     scene: str
@@ -31,8 +39,15 @@ class Infection(Model):
     void_event: str | None = None
     void_work: str | None = None
     surgery_required: bool = False
+    excision: Excision | None = None
     resolved: str | None = None
     interrupted: str | None = None
+
+
+def records(state: GameState) -> tuple[Infection, ...]:
+    return tuple(
+        Infection.model_validate_json(x["body"]) for x in state.facts if x.get("kind") == KIND
+    )
 
 
 def get(state: GameState, action: str) -> Infection | None:

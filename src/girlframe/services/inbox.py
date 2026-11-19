@@ -4113,6 +4113,27 @@ class InboxService:
                         task="m3_privacy_trouble",
                     )
                 )
+            from girlframe.services.m3_parasite_excision import ExcisionService
+
+            for request in ExcisionService(self.store).tasks(connection, viewer, canon):
+                items.append(
+                    InboxItem(
+                        "parasite-excision:" + request["id"],
+                        "parasite_excision",
+                        request["id"],
+                        request["revision"],
+                        "plays",
+                        request["label"],
+                        "Original patient and human GM",
+                        "pending",
+                        True,
+                        False,
+                        "Resolve the original infestation through actual experimental surgery.",
+                        "The patient chooses the doctor and can withdraw consent before review.",
+                        "Review excision",
+                        task="m3_parasite_excision",
+                    )
+                )
             for request in MedicalService(self.store)._tasks(connection, viewer, history=True):
                 items.append(
                     InboxItem(

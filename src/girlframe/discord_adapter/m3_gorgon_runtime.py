@@ -11,6 +11,7 @@ from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m2 import ChoiceAnswer
 from girlframe.services.m2_game import GameService
+from girlframe.services.m3_parasite_excision import ExcisionService
 
 
 async def open_choice(interaction: discord.Interaction, game: GameService, identity: str) -> None:
@@ -660,4 +661,47 @@ async def open_infection(
         return "Your infection response is saved. Any remaining choice stays in your Inbox."
 
     form = NativeForm(interaction.user.id, "Parasite Infect", message, fields, submit)
+    await reply(interaction, form.text(), form)
+
+
+async def open_excision(
+    interaction: discord.Interaction, service: ExcisionService, identity: str
+) -> None:
+    data = await asyncio.to_thread(service.get, viewer_from_interaction(interaction), identity)
+    if data["patient"] and data["consent"]:
+        operation = "withdraw"
+        text = "You can withdraw consent before the surgery takes place."
+        fields = [Field("confirm", "Your choice", (("withdraw", "Withdraw consent"),))]
+    elif data["patient"] and data["options"]:
+        operation = "consent"
+        text = "Choose the actual doctor and scene you consent to for this surgery."
+        fields = [Field("doctor", "Your doctor and scene", tuple(data["options"].items()))]
+    elif data["patient"]:
+        await reply(
+            interaction, "Join an active scene with an available local doctor to consider surgery."
+        )
+        return
+    else:
+        operation = "performed"
+        text = "Verify the actual consented surgery was performed and the Parasite was excised."
+        fields = [Field("account", "Describe the performed operation and outcome", paragraph=True)]
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        updated = await asyncio.to_thread(
+            service.respond,
+            viewer_from_interaction(current),
+            str(current.id),
+            identity,
+            data["revision"],
+            operation,
+            doctor=values["doctor"][0] if values.get("doctor") else None,
+            account=values.get("account", ""),
+        )
+        return (
+            "The original infestation was excised."
+            if updated["excised"]
+            else "Your choice is saved."
+        )
+
+    form = NativeForm(interaction.user.id, "Experimental Parasite Excision", text, fields, submit)
     await reply(interaction, form.text(), form)
