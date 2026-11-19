@@ -76,10 +76,13 @@ def require_world_advancement(state: GameState) -> None:
 
 
 def _world_projection(state: GameState) -> dict[str, Any]:
+    from girlframe.engine.m3_void_lab_portal import projection as lab_portals
     from girlframe.services.m3_red_queen_accusation import official_allegations
 
     assert state.world is not None
     projected = state.world.model_dump(mode="json")
+    if portals := lab_portals(state):
+        projected["stable_portals"] = portals
     for row in projected["locations"]:
         row["official_allegations"] = official_allegations(state, row["kind"], row["id"])
     for row in projected["npcs"]:

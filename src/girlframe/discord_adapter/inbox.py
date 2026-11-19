@@ -1209,6 +1209,11 @@ class InboxView(discord.ui.View):
             await open_order(
                 interaction, SuccubusService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_void_lab_portal":
+            from girlframe.discord_adapter.m3_void_lab_portal import open_lab
+            from girlframe.services.m3_void_lab_portal import LabPortalService
+
+            await open_lab(interaction, LabPortalService(self.service.store), item.identity)
         elif item.task == "m3_void_retirement":
             from girlframe.discord_adapter.m3_void_retirement import open_offer
             from girlframe.services.m3_void_retirement import StipendService

@@ -275,6 +275,21 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
         if action == "map":
             await MapPages(service, viewer.user_id).show(current)
             return
+        if action == "stable_portal":
+            portal = next(iter(world.get("stable_portals", ())), None)
+            if portal is None:
+                raise WorkflowError("The private map has no established laboratory portal.")
+            status = "Accessible laboratory" if portal["accessible"] else "Site unavailable"
+            await reply(
+                current,
+                "**Stable Voidspace portal**\n"
+                + clean(portal["laboratory"])
+                + " · "
+                + map_cell(portal["cell"])
+                + " · "
+                + status,
+            )
+            return
         if action == "gorgon_position":
             offstage = {
                 x["entity"] for x in fresh.get("offstage_world", ()) if x["kind"] == "gorgon"
@@ -424,6 +439,11 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
         "**World management**\nChoose an explicit action.",
         (
             ("map", "View the player map"),
+            *(
+                (("stable_portal", "View the stable laboratory portal"),)
+                if data["world"].get("stable_portals")
+                else ()
+            ),
             ("matrix_context", "Set Matrix scene location"),
             ("supply_drop", "Supply Drop — repair or temporary Frame equipment"),
             ("cute_uniforms", "Cute Uniforms — actual dressing"),

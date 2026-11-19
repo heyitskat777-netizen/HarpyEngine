@@ -506,3 +506,16 @@ independent review in the normal registry. A temporary reviewed
 registry allowed the synthetic tests to exercise that path and left
 the default denial in place. The workflow uses in-character text.
 [High Rebellion p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) · [Voice tests](../../tests/rules/test_strain_rebel_voice.py)
+
+## Void Endgame laboratory portal
+
+The base is `17cb897c62008e1072f47e3d93f29e7d515a9134`.
+Void Endgame 2 opens a real stable portal in the original Handler's
+named lab at a fixed operational Foundation site. It retains the
+original source, owner and map square. The Handler's private map
+shows the site and its current accessibility. The private opening
+account stays in the source record. A real cascade, all its remaining
+effects, the native Inbox opening, idempotent replay, database reopen
+and actual Off-Duty activation passed. Moving-ship labs and travel
+through the portal are separate open workflows.
+[Void Endgames p. 144](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=146) · [Laboratory portal test](../../tests/rules/test_void_lab_portal.py)

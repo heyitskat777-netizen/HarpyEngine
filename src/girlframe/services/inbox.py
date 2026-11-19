@@ -4153,6 +4153,11 @@ class InboxService:
                     primary, task_name = "Identify actual leader opportunity", "m3_rebel_leader"
                 elif (
                     kind == "strain_endgame_effect"
+                    and json.loads(work["body_json"]).get("rule_id") == "strain.void.endgame.2"
+                ):
+                    primary, task_name = "Open the stable laboratory portal", "m3_void_lab_portal"
+                elif (
+                    kind == "strain_endgame_effect"
                     and json.loads(work["body_json"]).get("rule_id") == "strain.void.endgame.4"
                 ):
                     primary, task_name = "Offer retirement with stipend", "m3_void_retirement"
