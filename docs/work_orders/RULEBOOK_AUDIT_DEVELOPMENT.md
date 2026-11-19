@@ -3780,6 +3780,22 @@ Punishment only after the actual replacement. The prior Prodigy
 case was deselected. Other Tag sources remain open.
 [Simplification Surgery p. 94](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=96) · [Native case](../../tests/rules/test_prodigy_discipline.py)
 
+### Void-Drunk’s nearby NPC choice
+
+Base `87d13a276f194a0e3b926094294f6cd6b67228cd`. The follower
+can use her primary Dive choice on known ordinary NPCs in the
+original cast and square. The original Handler selects the
+manifestations. The engine applies them through the ordinary
+NPC Void effect while preserving both sources if the diver made
+the same primary choice.
+
+One focused case passed in 5.86 seconds. It denied the Acolyte
+the Handler’s manifestation choice, left the effect pending
+during the original Dive, and verified two distinct effects on
+the real NPC from one roll. Three existing cases were deselected.
+Hidden NPCs, Directors and other primary choices remain open.
+[Void-Drunk p. 109](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=111) · [Dive Deep p. 22](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=24) · [Native case](../../tests/rules/test_void_drunk.py)
+
 ### Actor-level Ancillary Cadre Status and the Warboy Dog
 
 Base `083b876`. The original facilitator privately proposes a

@@ -7,16 +7,19 @@ from sqlalchemy import Connection
 
 from girlframe.engine import m3_ancillary as ancillary
 from girlframe.engine import m3_ancillary_void as ancillary_void
+from girlframe.engine import m3_dive as dive_rules
 from girlframe.engine.m2 import ChoiceAnswer, GameState
 from girlframe.engine.m3_actor_bonds import make_helpless
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, CastRole, SceneCast
 from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_dive_state import NpcVoid
 from girlframe.engine.m3_leviathan_arrival import external_pose
 from girlframe.engine.m3_leviathan_arrival_state import ExternalPose
 from girlframe.engine.m3_passengers import passenger_view
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
-from girlframe.services.m3_battle import _cast
+from girlframe.services.m3_battle import _cast, _visible
+from girlframe.services.m3_consume_support import knowledge_allowed
 from girlframe.services.onboarding import WorkflowError
 
 if TYPE_CHECKING:
@@ -106,6 +109,38 @@ def _shadow_pose(state: GameState, actor: CastRole, target: ActorView) -> Extern
     return pose
 
 
+def _npc_pool(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    actor: CastRole,
+    target: ActorView,
+) -> dict[str, str]:
+    if state.world is None:
+        return {}
+    original = SceneCast.model_validate_json(json.dumps(action["data"]["dive"]["cast"]))
+    current = _cast(game, c, state, int(action["channel_id"]))
+    exact = {
+        r.actor.entity: r.controller
+        for r in current.roles
+        if r.actor.kind == "npc" and r in original.roles
+    }
+    known = {}
+    for npc in state.world.npcs:
+        if (
+            exact.get(npc.id) != npc.controller
+            or not npc.alive
+            or npc.cell != target.cell
+            or "director" in npc.jobs
+        ):
+            continue
+        ref = ActorRef(kind="npc", entity=npc.id)
+        if _visible(state, ref, actor.controller) and knowledge_allowed(state, ref):
+            known[npc.id] = npc.name
+    return known if len(known) <= 12 else {}
+
+
 def open_choices(
     game: "GameService",
     c: Connection,
@@ -161,6 +196,7 @@ def project(
         tags=_tags(state, target.ref, actor.controller, action["scene_id"]),
         shadow=_shadow_pose(state, actor, target) is not None,
         primary=1 if primary else 0,
+        primary_npcs=primary and bool(_npc_pool(game, c, state, action, actor, target)),
         primary_assets={x.id: x.name for x in ancillary_void.gains(state, actor.actor)}
         if primary
         else {},
@@ -179,8 +215,12 @@ def select(
     latching = answer.options in (("latch",), ("shadow",))
     primary = latching and action["data"]["result"]["tier"] != "low"
     asset = answer.fields.get("primary_asset")
+    npc_primary = answer.fields == {"primary_kind": "npcs"}
     if primary:
-        if (
+        if npc_primary:
+            if answer.text or not _npc_pool(game, c, state, action, actor, target):
+                raise WorkflowError("Recover the original nearby NPCs eligible for Void.")
+        elif (
             set(answer.fields) != {"primary_asset"}
             or not answer.text.strip()
             or asset not in {x.id for x in ancillary_void.gains(state, actor.actor)}
@@ -219,8 +259,103 @@ def select(
             shadow=answer.options == ("shadow",),
             primary_asset=asset,
             primary_rewrite=answer.text.strip() if asset else None,
+            primary_npcs=npc_primary,
         )
     )
+    if npc_primary:
+        from girlframe.services.m3_dive import _handler_controller
+
+        game.request(
+            c,
+            action,
+            _handler_controller(action["data"]["dive"]),
+            "dive_void_drunk_npcs",
+            dict(acolyte=actor.actor.token, choice=request["id"]),
+        )
+
+
+def _npc_choice(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    request: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, str]]:
+    from girlframe.services.m3_dive import _handler_controller
+
+    meta = action["data"]["dive"]
+    body = json.loads(request["body_json"])
+    target, people = _people(game, c, state, action)
+    actor = people.get(body["acolyte"])
+    selection = next((x for x in meta.get("void_drunk", ()) if x["choice"] == body["choice"]), None)
+    if (
+        not _enabled(game)
+        or int(request["actor_id"]) != _handler_controller(meta)
+        or actor is None
+        or selection is None
+        or selection["actor"] != actor.actor.token
+        or not selection.get("primary_npcs")
+    ):
+        raise WorkflowError("Recover the actual Handler and original Acolyte Void choice.")
+    return selection, _npc_pool(game, c, state, action, actor, target)
+
+
+def npc_project(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    request: dict[str, Any],
+) -> dict[str, Any]:
+    _, options = _npc_choice(game, c, state, action, request)
+    return dict(npcs=options)
+
+
+def npc_response(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    request: dict[str, Any],
+    answer: ChoiceAnswer,
+) -> None:
+    selected, options = _npc_choice(game, c, state, action, request)
+    response = action["data"]["response_event"]
+    if (
+        answer.options == ("reopen",)
+        and not answer.fields
+        and not any(
+            (
+                answer.text,
+                answer.denied,
+                answer.number is not None,
+                answer.member is not None,
+                answer.flag is not None,
+            )
+        )
+    ):
+        meta = action["data"]["dive"]
+        meta["void_drunk"].remove(selected)
+        game.request(
+            c, action, selected["controller"], "dive_void_drunk", dict(acolyte=selected["actor"])
+        )
+        return
+    if (
+        not options
+        or set(answer.fields) != set(options)
+        or answer.options
+        or answer.denied
+        or answer.text
+        or answer.number is not None
+        or answer.member is not None
+        or answer.flag is not None
+    ):
+        raise WorkflowError("Choose one actual manifestation for every eligible original NPC.")
+    selected["manifestations"] = [
+        NpcVoid.model_validate(dict(npc=npc, manifestation=value)).model_dump(mode="json")
+        for npc, value in answer.fields.items()
+    ]
+    selected["npc_event"] = response
 
 
 def complete(
@@ -266,6 +401,30 @@ def complete(
             ancillary_void.gain(
                 state, actor.actor, primary_asset, result["primary_rewrite"], unmark=True
             )
+        if result.get("primary_npcs"):
+            manifestations = tuple(NpcVoid.model_validate(x) for x in result["manifestations"])
+            pool = _npc_pool(game, c, state, action, actor, target)
+            if not pool or set(pool) != {x.npc for x in manifestations}:
+                from girlframe.services.m3_dive import _handler_controller
+
+                game.request(
+                    c,
+                    action,
+                    _handler_controller(action["data"]["dive"]),
+                    "dive_void_drunk_npcs",
+                    dict(acolyte=result["actor"], choice=result["choice"]),
+                )
+                return False
+            from girlframe.services.m3_dive import _context, _handler_controller
+
+            _, handler, _ = _context(action)
+            dive_rules.mark_npc_void(
+                state,
+                manifestations,
+                result["npc_event"],
+                handler,
+                _handler_controller(action["data"]["dive"]),
+            )
         if tag_id:
             changed = make_helpless(state, target.ref, actor.actor, event)
             state.helpless_conditions = changed.helpless_conditions
@@ -295,6 +454,7 @@ def complete(
                 event=event,
                 tag=tag_id or "",
                 **(dict(primary_asset=primary_asset) if primary_asset else {}),
+                **(dict(primary_npcs=result["npc_event"]) if result.get("primary_npcs") else {}),
                 **(dict(emergence="shadow") if shadow is not None else {}),
             )
         )

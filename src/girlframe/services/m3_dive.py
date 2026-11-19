@@ -433,6 +433,10 @@ def projection(
         from girlframe.services import m3_void_drunk as void_drunk
 
         return void_drunk.project(game, c, state, action, request)
+    if request["kind"] == "dive_void_drunk_npcs":
+        from girlframe.services import m3_void_drunk as void_drunk
+
+        return void_drunk.npc_project(game, c, state, action, request)
     actor, handler, npcs = _context(action)
     body = json.loads(request["body_json"])
     step = body["step"]
@@ -692,10 +696,13 @@ def apply(
     request: dict[str, Any],
     answer: ChoiceAnswer,
 ) -> None:
-    if request["kind"] == "dive_void_drunk":
+    if request["kind"] in ("dive_void_drunk", "dive_void_drunk_npcs"):
         from girlframe.services import m3_void_drunk as void_drunk
 
-        void_drunk.select(game, c, state, action, request, answer)
+        if request["kind"] == "dive_void_drunk":
+            void_drunk.select(game, c, state, action, request, answer)
+        else:
+            void_drunk.npc_response(game, c, state, action, request, answer)
         _next(game, c, state, action)
         return
     meta = action["data"]["dive"]

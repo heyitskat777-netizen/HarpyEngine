@@ -14,6 +14,7 @@ from girlframe.engine.m2 import PlayInput, TagState
 from girlframe.engine.m3_actor_bonds import current_ref, is_helpless
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_leviathan_arrival import external_pose
+from girlframe.engine.m3_world import update
 from girlframe.services.m3_actors import ActorService
 from girlframe.services.m3_ancillary import AncillaryService
 from girlframe.services.m3_cast import CastService
@@ -21,10 +22,13 @@ from girlframe.services.m3_chained_darling import ChainedPlacementService
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_movement import MovementService
 from girlframe.services.m3_void_drunk import KIND, RULE
+from girlframe.services.onboarding import WorkflowError
 
 
 @pytest.mark.parametrize(
-    "effect", ("tag", "shadow", "gain"), ids=("original-tag", "shadow-emergence", "primary-gain")
+    "effect",
+    ("tag", "shadow", "gain", "npc"),
+    ids=("original-tag", "shadow-emergence", "primary-gain", "primary-npc"),
 )
 def test_original_low_dive_retains_handler_choice_and_scoped_acolyte_effect(
     ledger,
@@ -63,7 +67,10 @@ def test_original_low_dive_retains_handler_choice_and_scoped_acolyte_effect(
     )
     acolyte = ActorRef.model_validate(created["actor"])
     diver = current_ref(state(game), PLAYER.user_id)
-    change(CastService(ActorService(missions)), OTHER, "join", acolyte)
+    cast = CastService(ActorService(missions))
+    change(cast, OTHER, "join", acolyte)
+    if effect == "npc":
+        change(cast, ADMIN, "join", REBEL)
     if effect == "shadow":
         placement = ChainedPlacementService(game)
         proposed = placement.propose(
@@ -83,6 +90,14 @@ def test_original_low_dive_retains_handler_choice_and_scoped_acolyte_effect(
     original_tag, private = "public-to-acolyte", "private-from-acolyte"
     with ledger.transaction() as c:
         canon = state(game)
+        if effect == "npc":
+            canon.world = update(
+                canon.world,
+                npcs=tuple(
+                    x.model_copy(update=dict(revealed=True)) if x.id == REBEL.entity else x
+                    for x in canon.world.npcs
+                ),
+            )
         if effect == "gain":
             acolyte_body = ancillary.find(canon, acolyte)
             identities = tuple(
@@ -97,7 +112,7 @@ def test_original_low_dive_retains_handler_choice_and_scoped_acolyte_effect(
         )
         game.event(c, ADMIN.user_id, "original-tags", "synthetic.existing_tags", canon)
 
-    game.dice = Dice((4, 5) if effect == "gain" else (2, 3))
+    game.dice = Dice((4, 5) if effect in ("gain", "npc") else (2, 3))
     action = game.begin(
         PLAYER,
         "real-low-dive",
@@ -115,7 +130,15 @@ def test_original_low_dive_retains_handler_choice_and_scoped_acolyte_effect(
     pass_tags(game)
     (choice,) = [x for x in game.choices(OTHER) if x["kind"] == "dive_void_drunk"]
     assert game.decision(OTHER, choice["id"])["dive"]["tags"] == {original_tag: "Loud in the link"}
-    if effect == "gain":
+    if effect == "npc":
+        assert game.decision(OTHER, choice["id"])["dive"]["primary_npcs"]
+        answer(game, OTHER, "dive_void_drunk", options=("latch",), fields={"primary_kind": "npcs"})
+        (effect_choice,) = [x for x in game.choices(ADMIN) if x["kind"] == "dive_void_drunk_npcs"]
+        with pytest.raises(WorkflowError):
+            game.decision(OTHER, effect_choice["id"])
+        answer(game, ADMIN, "dive_void_drunk_npcs", fields={REBEL.entity: "bones"})
+        assert not next(x for x in state(game).world.npcs if x.id == REBEL.entity).tags
+    elif effect == "gain":
         detail = game.decision(OTHER, choice["id"])["dive"]
         assert detail["primary"] == 1
         asset = next(iter(detail["primary_assets"]))
@@ -135,7 +158,7 @@ def test_original_low_dive_retains_handler_choice_and_scoped_acolyte_effect(
     else:
         answer(game, OTHER, "dive_void_drunk", options=("latch",), denied=(original_tag,))
     assert not is_helpless(state(game), diver, acolyte)
-    choose(game, PLAYER if effect == "gain" else ADMIN, "nearby_npcs_gain_void")
+    choose(game, PLAYER if effect in ("gain", "npc") else ADMIN, "nearby_npcs_gain_void")
     answer(game, ADMIN, "dive_effect", fields={REBEL.entity: "brain"})
     final = state(game)
     assert game.inspect(PLAYER, action)["state"] == "complete"
@@ -153,3 +176,7 @@ def test_original_low_dive_retains_handler_choice_and_scoped_acolyte_effect(
         assert {x.id for x in body.assets if x.void} == {asset}
         assert not any(x.marked for x in ancillary.find(final, acolyte).identities)
         assert game.dice.calls == 1
+    if effect == "npc":
+        target = next(x for x in final.world.npcs if x.id == REBEL.entity)
+        assert {x.label for x in target.tags} == {"Void of the brain", "Void of the bones"}
+        assert len({x.id for x in target.tags}) == 2 and game.dice.calls == 1

@@ -16006,7 +16006,7 @@
             "The Acolyte can mark an observed Tag on resurfacing and make the original diver Helpless, or emerge from shadow beside her"
           ],
           "mid_and_high": [
-            "The Acolyte independently chooses one primary effect. The current port supports nonterminal Void gain and unmarking her Identities."
+            "The Acolyte independently chooses one primary effect. She may gain nonterminal Void and unmark her Identities, or call for Void in known, cast, co-present ordinary NPCs with the original Handler choosing the manifestations."
           ]
         },
         "choice_ownership": "The Acolyte owns the latch, her primary effect and optional Tag or shadow emergence. The diver and Handler keep their ordinary Dive choices.",
