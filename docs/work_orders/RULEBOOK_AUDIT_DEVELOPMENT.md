@@ -3526,3 +3526,21 @@ effect still needs a native Warboy Order resolver. Middle and
 low direct evidence, ordinary optional Tag modifiers and other
 counterpart kinds remain open.
 [Warboy p. 107](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=109) · [Native service case](../../tests/rules/test_warboy_private_play.py)
+
+### Angel-Wife’s Chaste and private Play
+
+Base `e28ea60`. Chaste uses the original Angel-Wife owner’s
+private belief. With no Intense Bond, the original encounter
+closes without a roll or Heat spend when she believes the
+counterpart is a person other than a man. An existing Intense Bond
+holds that branch until its printed exception can be verified.
+The supported private Play resolves owned Identity choices,
+Helplessness, optional Tags, a proved departure, and reachable
+original Asset damage. Wife remains protected in this scope.
+
+**One focused case passed in 5.77 seconds.** It verified Chaste
+before dice, then a separate agreed low result in the same fixture
+with an actual slot replacement and scoped Helplessness. The
+Intense Bond exception, husband NPC, other counterpart types,
+last-Asset work and direct mid and high evidence remain open.
+[Angel-Wife p. 103](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=105) · [Native case](../../tests/rules/test_angel_wife_private_play.py)

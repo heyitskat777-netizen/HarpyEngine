@@ -125,7 +125,38 @@ async def open_ancillary_intimacy_choice(
             "Confirm the original Identity and choose a slot if needed.",
             tuple(data["replace"].items()) or (("accept", "Accept the Identity"),),
         ),
+        "chaste": (
+            "Choose your own character’s private belief about the other participant.",
+            (("man", "I believe they are a man"), ("not_man", "I believe they are not a man")),
+        ),
+        "angel_tag": (
+            "You can give the other participant a Tag. They then give you space.",
+            (("tag", "Give a Tag"), ("pass", "Pass")),
+        ),
+        "angel_space": (
+            "Use your actual movement control to give them space. "
+            "Then confirm your departure here.",
+            (("confirm", "Confirm my recorded departure"),),
+        ),
+        "angel_replace": (
+            "You may replace one eligible original Identity with a new one.",
+            (("pass", "Pass"), *tuple(data["replace"].items())),
+        ),
+        "angel_helpless": (
+            "Choose whether the original character becomes Helpless against yours.",
+            (("yes", "Apply"), ("no", "Pass")),
+        ),
+        "angel_damage": (
+            "Damage one actual reachable Asset of the original other character.",
+            tuple(data["assets"].items()),
+        ),
     }[step]
+    if step == "angel_space" and not data["stepped_away"]:
+        await reply(interaction, instructions)
+        return
+    if step == "angel_damage" and not options:
+        await reply(interaction, "No supported Asset is reachable. The original effect is pending.")
+        return
     first, second = data["participants"]
     instructions += "\nOriginal participants — " + clean(first) + " and " + clean(second)
     fields = [Field("choice", "Your decision", options)]
@@ -149,6 +180,8 @@ async def open_ancillary_intimacy_choice(
                 required=step not in ("warboy_partner_tag", "warboy_identity"),
             )
         )
+    if step in ("angel_tag", "angel_replace"):
+        fields.append(Field("account", "New Tag or Identity if chosen", required=False))
     if step == "warboy_replace":
         instructions += "\n" + clean(data["identity"])
     if step == "answer":

@@ -30,7 +30,7 @@ from girlframe.services.read_only_bot import GuildViewer
 
 KIND = "chained_pose_review"
 Mode = Literal["piloting", "inside_frame", "outside_frame"]
-SUPPORTED = ("CHAINED DARLING", "WARBOY")
+SUPPORTED = ("CHAINED DARLING", "WARBOY", "ANGEL-WIFE")
 
 
 class Placement(Model):

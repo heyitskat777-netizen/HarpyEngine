@@ -10,8 +10,16 @@ from girlframe.engine import m3_ancillary as ancillary
 from girlframe.engine.m2 import GameState, IdentityState, tier
 from girlframe.engine.m3_actor_bonds import change, current_ref, depth, make_helpless
 from girlframe.engine.m3_actor_resources import Commitment, commit
-from girlframe.engine.m3_actor_state import ActorRef, ActorView, CastRole, Model, SceneCast
+from girlframe.engine.m3_actor_state import (
+    ActorRef,
+    ActorView,
+    CastRole,
+    Model,
+    ProfileBinding,
+    SceneCast,
+)
 from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_battle import damage
 from girlframe.engine.m3_cast import validate_role
 from girlframe.engine.m3_chained_darling import EXEMPTION
 from girlframe.engine.m3_handler_consequences import active_handler
@@ -32,11 +40,18 @@ from girlframe.services.read_only_bot import GuildViewer
 
 CHAINED = "ancillary.chained-darling.sex-play"
 WARBOY = "ancillary.warboy.sex-play"
-RULES: dict[ancillary.Book, str] = {"CHAINED DARLING": CHAINED, "WARBOY": WARBOY}
+ANGEL = "ancillary.angel-wife.sex-play"
+CHASTE = "ancillary.angel-wife.chaste"
+RULES: dict[ancillary.Book, str] = {
+    "CHAINED DARLING": CHAINED,
+    "WARBOY": WARBOY,
+    "ANGEL-WIFE": ANGEL,
+}
 WARBOY_REFUSAL = "warboy_private_refusal"
 RESULTS = {
     "CHAINED DARLING": {"low": "ask", "mid": "middle", "high": "tag"},
     "WARBOY": {"low": "warboy_bond", "mid": "warboy_weaken", "high": "warboy_strong"},
+    "ANGEL-WIFE": {"low": "angel_replace", "mid": "angel_tag", "high": "angel_replace"},
 }
 KIND = "ancillary_private_play"
 
@@ -77,6 +92,12 @@ class Encounter(Model):
         "warboy_partner_tag",
         "warboy_identity",
         "warboy_replace",
+        "chaste",
+        "angel_tag",
+        "angel_space",
+        "angel_replace",
+        "angel_damage",
+        "angel_helpless",
     ]
     consent: str | None = None
     confirmed: str | None = None
@@ -86,6 +107,8 @@ class Encounter(Model):
     answer: str | None = None
     disposition: str | None = None
     identity: str | None = None
+    partner_pose: str | None = None
+    partner_cell: tuple[int, int] | None = None
 
 
 def records(state: GameState) -> tuple[Encounter, ...]:
@@ -132,7 +155,17 @@ class AncillaryIntimacyService:
             if gate.registry is None or rule is None:
                 raise WorkflowError("The original Ancillary Play awaits its approved rule port.")
             gate.require_specialist_rule(rule)
+            if book == "ANGEL-WIFE":
+                gate.require_specialist_rule(CHASTE)
             gate.registry.require_available(ancillary.STARTERS[book].rule)
+
+    def _separated(self, first: ActorView, second: ActorView, case: Encounter) -> bool:
+        return bool(
+            case.partner_pose
+            and case.partner_pose != second.position_sha256
+            and first.cell != second.cell
+            and case.partner_cell != second.cell
+        )
 
     def _person(
         self,
@@ -309,7 +342,16 @@ class AncillaryIntimacyService:
         )
 
     def _recipient(self, case: Encounter) -> int | None:
-        if case.step in ("consent", "tag", "answer", "warboy_partner_tag", "warboy_identity"):
+        if case.step in (
+            "consent",
+            "tag",
+            "answer",
+            "warboy_partner_tag",
+            "warboy_identity",
+            "angel_space",
+            "angel_replace",
+            "angel_helpless",
+        ):
             return case.partner.controller
         if case.step in (
             "roll",
@@ -320,6 +362,9 @@ class AncillaryIntimacyService:
             "warboy_weaken",
             "warboy_strong",
             "warboy_replace",
+            "chaste",
+            "angel_tag",
+            "angel_damage",
         ):
             return case.actor.controller
         return case.gm if case.step == "verify" else None
@@ -339,7 +384,8 @@ class AncillaryIntimacyService:
                 case.gm,
                 case.appointment,
             )
-            or not self._together(actual, partner)
+            or case.step != "angel_space"
+            and not self._together(actual, partner)
             or partner.rules != "girl_frame"
         ):
             raise WorkflowError("Recover the original private encounter and both present actors.")
@@ -430,7 +476,14 @@ class AncillaryIntimacyService:
                 tier=case.roll.result if case.roll else None,
                 tag=label,
                 identity=case.identity if case.step == "warboy_replace" else None,
-                replace=_replaceable(state, actual.ref) if case.step == "warboy_replace" else {},
+                replace=_replaceable(state, actual.ref)
+                if case.step == "warboy_replace"
+                else _angel_identities(state, actual.ref)
+                if case.step == "angel_replace"
+                else {},
+                assets=_angel_assets(counterpart) if case.step == "angel_damage" else {},
+                stepped_away=case.step == "angel_space"
+                and self._separated(actual, counterpart, case),
             )
 
     def withdraw(
@@ -492,10 +545,19 @@ class AncillaryIntimacyService:
                 )
             elif case.step == "verify" and choice in ("yes", "no") and not account:
                 update = (
-                    dict(step="roll", confirmed=event)
+                    dict(step="chaste" if case.book == "ANGEL-WIFE" else "roll", confirmed=event)
                     if choice == "yes"
                     else dict(step="closed", disposition="unconfirmed")
                 )
+            elif case.step == "chaste" and choice in ("man", "not_man") and not account:
+                if choice == "man":
+                    update = dict(step="roll")
+                elif any(
+                    depth(state, actual.ref, person) == 2 for person in _related(state, actual.ref)
+                ):
+                    raise WorkflowError("The original Intense Bond needs human Chaste review.")
+                else:
+                    update = dict(step="closed", disposition="chaste")
             elif case.step == "roll" and choice == "roll" and not account:
                 state = commit(
                     state,
@@ -544,6 +606,20 @@ class AncillaryIntimacyService:
                 update = dict(step="closed", answer=account.strip(), disposition="answered")
             elif case.book == "WARBOY" and case.step.startswith("warboy_"):
                 state, update = _warboy(state, case, choice, account.strip(), event)
+            elif case.book == "ANGEL-WIFE" and case.step.startswith("angel_"):
+                bindings = profiles(c, self.store.campaign_id)
+                partner = resolve(state, case.partner.actor, bindings)
+                if case.step == "angel_space" and choice == "confirm" and not account:
+                    if not self._separated(actual, partner, case):
+                        raise WorkflowError(
+                            "Verify your actual departure through physical movement first."
+                        )
+                    update = dict(step="closed", disposition="space_given")
+                else:
+                    state, update = _angel(
+                        state, case, partner, bindings, choice, account.strip(), event
+                    )
+
             else:
                 raise WorkflowError("Choose the original owner's supported private response.")
             return self._save(c, state, viewer, key, case.model_copy(update=update), event)
@@ -627,3 +703,80 @@ def _warboy(
         ancillary.put(state, original.model_copy(update=dict(identities=(*identities, item))))
         return state, dict(step="closed", disposition="bonded")
     raise WorkflowError("Choose the original player's printed Warboy result.")
+
+
+def _angel_identities(state: GameState, actor: ActorRef) -> dict[str, str]:
+    role = ancillary.find(state, actor)
+    return (
+        {
+            x.id: x.name
+            for x in role.identities
+            if x.name != "Wife" and not x.protected and not x.paired
+        }
+        if role is not None
+        else {}
+    )
+
+
+def _angel_assets(partner: ActorView) -> dict[str, str]:
+    if partner.inside_frame is not False:
+        return {}
+    assets = {x.id: x.name for x in partner.assets if not x.damaged and x.family == "girl"}
+    return (
+        {x.id: x.name for x in partner.assets if x.id in assets and not x.concealed}
+        if len(assets) >= 2
+        else {}
+    )
+
+
+def _angel(
+    state: GameState,
+    case: Encounter,
+    partner: ActorView,
+    bindings: tuple[ProfileBinding, ...],
+    choice: str,
+    account: str,
+    event: str,
+) -> tuple[GameState, dict[str, Any]]:
+    actor, other = case.actor.actor, case.partner.actor
+    audience = (case.actor.controller, case.partner.controller)
+    if case.step == "angel_tag" and (
+        choice == "pass" and not account or choice == "tag" and 0 < len(account) <= 120
+    ):
+        tag = None
+        if choice == "tag":
+            tag = str(uuid4())
+            state = give_tag(state, other, actor, account, event, tag, audience)
+        return state, dict(
+            step="angel_space",
+            tag=tag,
+            partner_pose=partner.position_sha256,
+            partner_cell=partner.cell,
+        )
+    if case.step == "angel_replace" and case.roll is not None:
+        if choice != "pass" or account:
+            if choice not in _angel_identities(state, actor) or not 0 < len(account) <= 120:
+                raise WorkflowError("Choose an original allowed Identity and its replacement.")
+            from girlframe.engine.m3_leviathan_obsession import require_identity_change
+
+            require_identity_change(state, actor, (choice,))
+            role = ancillary.find(state, actor)
+            assert role is not None
+            identities = tuple(
+                IdentityState(id=str(uuid4()), name=account, slot=x.slot) if x.id == choice else x
+                for x in role.identities
+            )
+            ancillary.put(state, role.model_copy(update=dict(identities=identities)))
+        return state, dict(
+            step="angel_helpless" if case.roll.result == "low" else "angel_damage",
+        )
+    if case.step == "angel_helpless" and choice in ("yes", "no") and not account:
+        if choice == "yes":
+            state = make_helpless(state, actor, other, event)
+        return state, dict(step="closed", disposition="helpless" if choice == "yes" else "spared")
+    if case.step == "angel_damage" and choice in _angel_assets(partner) and not account:
+        state, followups = damage(state, other, choice, bindings, event, opponent=actor)
+        if followups:
+            raise WorkflowError("Resolve the unsupported Asset consequence with the human GM.")
+        return state, dict(step="closed", disposition="asset_damaged")
+    raise WorkflowError("Choose the original player's printed Angel-Wife result.")
