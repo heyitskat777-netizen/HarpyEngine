@@ -1,4 +1,4 @@
-"""Native private consent and favor choices for the Mistress."""
+"""Native private consent and playbook-specific choices."""
 
 import asyncio
 from typing import Any
@@ -9,7 +9,8 @@ from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
-from girlframe.services.m3_mistress_favor import FavorService
+from girlframe.engine.m3_handler_private_scene import Book
+from girlframe.services.m3_handler_private_scene import HandlerPrivateSceneService
 
 CHOICES = {
     "consent": "Agree to the private scene",
@@ -22,15 +23,30 @@ CHOICES = {
     "failed": "Report that the favor was not completed",
     "confirm": "Confirm that the completed Play fulfilled the favor",
     "find_failed": "Find that the favor was not completed",
+    "trainer_ask": "Ask how she understands the private scene",
+    "trainer_yes": "I understood the scene as intimacy",
+    "trainer_understands": "I understood it as conditioning",
+    "install_speak": "Install Speak",
+    "pass_phrase": "Leave without installing a phrase",
 }
 
 
 async def open_invite(
-    interaction: discord.Interaction, service: FavorService, revision: int, channel: int
+    interaction: discord.Interaction,
+    service: HandlerPrivateSceneService,
+    revision: int,
+    channel: int,
+    *,
+    playbook: Book = "Mistress",
 ) -> None:
     async def submit(current: discord.Interaction, _: dict[str, Any]) -> str:
         await asyncio.to_thread(
-            service.invite, viewer_from_interaction(current), str(current.id), revision, channel
+            service.invite,
+            viewer_from_interaction(current),
+            str(current.id),
+            revision,
+            channel,
+            playbook=playbook,
         )
         return "The original Girl can privately accept or decline."
 
@@ -44,7 +60,7 @@ async def open_invite(
 
 
 async def open_favor(
-    interaction: discord.Interaction, service: FavorService, identity: str
+    interaction: discord.Interaction, service: HandlerPrivateSceneService, identity: str
 ) -> None:
     data = await asyncio.to_thread(service.menu, viewer_from_interaction(interaction), identity)
     if not data["options"]:
@@ -52,6 +68,11 @@ async def open_favor(
         return
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        text = (
+            (values.get("identity") or ("",))[0]
+            if data["phase"] == "trainer_answer"
+            else (values.get("account", ""))
+        )
         await asyncio.to_thread(
             service.respond,
             viewer_from_interaction(current),
@@ -59,7 +80,7 @@ async def open_favor(
             identity,
             data["revision"],
             values["choice"][0],
-            text=values.get("account", ""),
+            text=text,
             action=values.get("action", ""),
         )
         return "Your private choice is recorded."
@@ -75,12 +96,22 @@ async def open_favor(
         )
     if data["phase"] == "owed":
         fields.append(Field("action", "Completed Play reference, if fulfilled", required=False))
+    if data["identities"]:
+        fields.append(
+            Field(
+                "identity",
+                "Your erased Identity, if you understood this as conditioning",
+                tuple((identity, clean(label)) for identity, label in data["identities"]),
+                minimum=0,
+                required=False,
+            )
+        )
     summary = "Your original private choice."
     if data["favor"]:
         summary += "\nFavor: " + clean(data["favor"])
     if data["phase"] == "review":
         summary += "\nSubmitted Play: " + clean(data["action"])
         summary += "\nAccount: " + clean(data["account"])
-    await NativeForm(interaction.user.id, "Mistress's favor", summary, fields, submit).present(
-        interaction
-    )
+    await NativeForm(
+        interaction.user.id, data["playbook"] + " private scene", summary, fields, submit
+    ).present(interaction)

@@ -13,10 +13,10 @@ from girlframe.delivery.m2_worker import GameWorker
 from girlframe.discord_adapter.inbox import InboxView
 from girlframe.discord_adapter.m3_handler_plays import open_handler_plays
 from girlframe.engine.m2 import PlayInput
-from girlframe.engine.m3_mistress_favor import records
+from girlframe.engine.m3_handler_private_scene import records
 from girlframe.services.inbox import InboxService
 from girlframe.services.m3_handler_plays import HandlerPlayService
-from girlframe.services.m3_mistress_favor import FavorService
+from girlframe.services.m3_handler_private_scene import HandlerPrivateSceneService
 from girlframe.services.onboarding import WorkflowError
 
 
@@ -34,7 +34,7 @@ def test_mistress_favor_preserves_consent_and_applies_actual_rank(ledger, worked
     preview = creation.view(ADMIN)
     creation.activate(ADMIN, "activate-favor", preview["revision"], state(game).revision, True)
     game.leave_scene(PLAYER, "private-scene-for-favor", 900)
-    service, inbox = FavorService(ledger, game), InboxService(ledger)
+    service, inbox = HandlerPrivateSceneService(ledger, game), InboxService(ledger)
     before = state(game)
     assert before.order == (2, 3)
     ended = service.invite(ADMIN, "first-private-invitation", before.revision, 900)["id"]

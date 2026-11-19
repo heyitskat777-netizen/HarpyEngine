@@ -2910,9 +2910,9 @@ class InboxService:
             from girlframe.services.m3_frantic_breakdown import FranticBreakdownService
             from girlframe.services.m3_frantic_crisis import CrisisService
             from girlframe.services.m3_handler_plays import HandlerPlayService
+            from girlframe.services.m3_handler_private_scene import HandlerPrivateSceneService
             from girlframe.services.m3_insurgent_cover import CoverService
             from girlframe.services.m3_medical import MedicalService
-            from girlframe.services.m3_mistress_favor import FavorService
             from girlframe.services.m3_privacy_trouble import PrivacyTroubleService
             from girlframe.services.m3_scene_requisitions import SceneRequisitionService
 
@@ -3043,7 +3043,7 @@ class InboxService:
                         task="m3_advocate_alone",
                     )
                 )
-            for favor in FavorService(self.store)._tasks(viewer, canon):
+            for favor, private_book in HandlerPrivateSceneService(self.store)._tasks(viewer, canon):
                 items.append(
                     InboxItem(
                         "mistress-favor:" + favor,
@@ -3051,7 +3051,7 @@ class InboxService:
                         favor,
                         canon.revision,
                         "plays",
-                        "Private Mistress choice",
+                        private_book + " private scene",
                         "Original participants",
                         "pending",
                         True,

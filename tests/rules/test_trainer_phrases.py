@@ -13,10 +13,13 @@ from test_off_duty_cycle import activate, call, prepared
 from girlframe.delivery.m2_worker import GameWorker
 from girlframe.discord_adapter.inbox import InboxView
 from girlframe.discord_adapter.m2_forms import NativeForm
+from girlframe.discord_adapter.m3_handler_plays import open_handler_plays
 from girlframe.discord_adapter.m3_off_duty_cycle import open_action
 from girlframe.engine.m2 import ChoiceAnswer, PlayInput
 from girlframe.services.inbox import InboxService
 from girlframe.services.m3_handler_creation import HandlerCreationService
+from girlframe.services.m3_handler_plays import HandlerPlayService
+from girlframe.services.m3_handler_private_scene import HandlerPrivateSceneService
 from girlframe.services.m3_trainer_control import CHOICE
 from girlframe.services.m3_trainer_phrases import HEAR, SPEAK
 from girlframe.services.onboarding import WorkflowError
@@ -43,6 +46,103 @@ def create_trainer(ledger, *, start_with_speak):
     agree(creation)
     preview = creation.view(ADMIN)
     creation.activate(ADMIN, "speak-trainer", preview["revision"], preview["game_revision"], True)
+
+
+@pytest.mark.parametrize("character_answer", ("trainer_yes", "trainer_understands"))
+def test_private_trainer_source_installs_speak_or_erases_only_the_owned_identity(
+    ledger, character_answer
+):
+    from girlframe.engine.m3_handler_private_scene import records
+
+    _, game = ready(ledger)
+    create_trainer(ledger, start_with_speak=False)
+    game.leave_scene(PLAYER, "private-trainer-scene", 900)
+    service = HandlerPrivateSceneService(ledger, game)
+    inbox = InboxService(ledger)
+
+    async def offer():
+        click = current(1, 49300)
+        click.channel_id = 900
+        await click.response.defer(ephemeral=True)
+        await open_handler_plays(click, HandlerPlayService(ledger))
+        hub = click.edit_original_response.call_args.kwargs["view"]
+        await hub.open_item(click, "trainer_private")
+        form = click.edit_original_response.call_args.kwargs["view"]
+        form.values.update(offer=("offer",))
+        sent = current(1, 49301)
+        await form.confirm.callback(sent)
+        assert form.completed, sent.followup.send.call_args
+
+    asyncio.run(offer())
+    (value,) = records(state(game))
+    assert value.playbook == "Trainer"
+    assert not any(x.identity == value.id for x in inbox.items(PLAYER))
+    with pytest.raises(WorkflowError):
+        service.menu(PLAYER, value.id)
+
+    async def native(viewer, number, step, **values):
+        click = current(viewer.user_id, number)
+        await click.response.defer(ephemeral=True)
+        item = next(x for x in inbox.items(viewer) if x.identity == value.id)
+        await InboxView(inbox, viewer.user_id).route(click, item)
+        form = click.edit_original_response.call_args.kwargs["view"]
+        form.values.update(choice=(step,), **values)
+        sent = current(viewer.user_id, number + 1)
+        await form.confirm.callback(sent)
+        assert form.completed, sent.followup.send.call_args
+
+    asyncio.run(native(OTHER, 49310, "consent"))
+    asyncio.run(native(ADMIN, 49312, "attest"))
+    asyncio.run(native(OTHER, 49314, "attest"))
+    asyncio.run(native(ADMIN, 49316, "trainer_ask"))
+    before = state(game)
+    identities = tuple(before.sheets["3"].identities)
+    assert not service.menu(ADMIN, value.id)["identities"] and identities
+    with pytest.raises(WorkflowError, match="your own"):
+        service.respond(
+            ADMIN, "cannot-answer-for-girl", value.id, before.revision, character_answer
+        )
+    with pytest.raises(WorkflowError, match="current private choice"):
+        service.respond(OTHER, "old-answer", value.id, before.revision - 1, character_answer)
+    selector = {}
+    if character_answer == "trainer_understands":
+        with pytest.raises(WorkflowError, match="SOURCE_IDENTITY_REQUIRED"):
+            service.respond(
+                OTHER, "fake-id", value.id, before.revision, character_answer, text="different-body"
+            )
+        selector["identity"] = (identities[0].id,)
+    asyncio.run(native(OTHER, 49320, character_answer, **selector))
+    if selector:
+        assert service.menu(OTHER, value.id)["outcome"] == "identity_erased"
+        assert state(game).sheets["3"].identities == list(identities[1:])
+        assert state(game).handler_persona.conditioning == before.handler_persona.conditioning
+        return
+
+    assert service.menu(ADMIN, value.id)["phase"] == "trainer_install"
+    assert state(game).sheets["3"].identities == list(identities)
+    ledger.engine.dispose()
+    revision = state(game).revision
+    asyncio.run(native(ADMIN, 49322, "install_speak"))
+    assert (
+        service.respond(ADMIN, "49323", value.id, revision, "install_speak")["phase"] == "complete"
+    )
+    (finished,) = records(state(game))
+    assert finished.outcome == "speak_installed"
+    worker, gateway = GameWorker(game), Gateway()
+    made = game.issue_order(
+        ADMIN,
+        "private-trained-speak",
+        900,
+        3,
+        "What happened in the briefing?",
+        conditioning_phrase="speak",
+    )
+    tick(worker, gateway, 3)
+    answer(game, OTHER, "order_response", options=("obedient",))
+    answer(game, OTHER, SPEAK, text="I wrote this account myself.")
+    answer(game, ADMIN, HEAR, flag=True)
+    tick(worker, gateway, 4)
+    assert game.inspect(OTHER, made["action_id"])["state"] == "complete"
 
 
 @pytest.mark.parametrize("reaction", ("obeyed", "high", "mid"))

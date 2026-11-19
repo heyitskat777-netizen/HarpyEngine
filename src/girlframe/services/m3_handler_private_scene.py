@@ -1,4 +1,4 @@
-"""Owned consent, attested contact and actual Mistress favor consequences."""
+"""Owned consent, attested contact and the original Handler book's effects."""
 
 from collections.abc import Callable
 from typing import Any
@@ -8,11 +8,12 @@ import sqlalchemy as sa
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
-from girlframe.engine import m3_mistress_favor as rules
+from girlframe.engine import m3_handler_private_scene as rules
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import current_ref, is_helpless
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_handler_state import Conditioning
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
@@ -24,9 +25,10 @@ from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
 EVENT = "m3.mistress_favor"
+TRAINER_EVENT = "m3.trainer_private_scene"
 
 
-class FavorService:
+class HandlerPrivateSceneService:
     def __init__(self, store: OnboardingStore, game: GameService | None = None):
         self.store, self.game = store, game or GameService(store)
 
@@ -69,16 +71,24 @@ class FavorService:
             raise WorkflowError("Finish the pending Play in the original scene")
         return scene["id"], girl
 
-    def invite(self, viewer: GuildViewer, key: str, expected: int, channel: int) -> dict[str, Any]:
+    def invite(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        expected: int,
+        channel: int,
+        *,
+        playbook: rules.Book = "Mistress",
+    ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             canon = load_state(c, self.store.campaign_id)
-            owned = active_book(self.game, c, canon, book="Mistress", rule=rules.RULE)
+            owned = active_book(self.game, c, canon, book=playbook, rule=rules.RULES[playbook])
             if (
                 owned is None
                 or owned[0].entity != str(viewer.user_id)
                 or canon.revision != expected
             ):
-                raise WorkflowError("Use the current original Mistress and reopen the actual scene")
+                raise WorkflowError("Use the original Handler in this book and reopen the scene")
             scene, girl = self._available(c, canon, channel, owned[0])
             if any(
                 x.handler == owned[0]
@@ -90,20 +100,39 @@ class FavorService:
                     "Continue the existing private choice between these participants"
                 )
             event, identity = str(uuid4()), str(uuid4())
-            value = rules.Favor(
-                id=identity, handler=owned[0], girl=girl, scene=scene, channel=channel, event=event
+            value = rules.PrivateScene(
+                id=identity,
+                handler=owned[0],
+                girl=girl,
+                scene=scene,
+                channel=channel,
+                event=event,
+                playbook=playbook,
             )
             rules.put(canon, value)
             self.game.event(
-                c, viewer.user_id, key, EVENT, canon, event_id=event, case=identity, step="invite"
+                c,
+                viewer.user_id,
+                key,
+                _event(value),
+                canon,
+                event_id=event,
+                case=identity,
+                step="invite",
             )
             return dict(id=identity, revision=canon.revision)
 
-        return self._write(viewer, key, dict(expected=expected, channel=channel), operation)
+        return self._write(
+            viewer,
+            key,
+            dict(expected=expected, channel=channel)
+            | ({"playbook": playbook} if playbook != "Mistress" else {}),
+            operation,
+        )
 
     def _case(
         self, c: Connection, canon: GameState, viewer: GuildViewer, identity: str
-    ) -> tuple[rules.Favor, ActorRef]:
+    ) -> tuple[rules.PrivateScene, ActorRef]:
         value = next((x for x in rules.records(canon) if x.id == identity), None)
         if value is None or str(viewer.user_id) not in (value.handler.entity, value.girl.entity):
             raise WorkflowError("This private choice belongs to its original participants")
@@ -112,11 +141,17 @@ class FavorService:
             raise WorkflowError("Recover the original committed private choice")
         return value, value.handler if value.handler.entity == str(viewer.user_id) else value.girl
 
-    def _options(self, value: rules.Favor, actor: ActorRef) -> tuple[str, ...]:
+    def _options(self, value: rules.PrivateScene, actor: ActorRef) -> tuple[str, ...]:
         if value.phase == "invite":
             return ("consent", "withdraw") if actor == value.girl else ("withdraw",)
         if value.phase == "scene":
             return ("attest", "withdraw") if actor not in value.attestations else ("withdraw",)
+        if value.phase == "trainer_question" and actor == value.handler:
+            return ("trainer_ask",)
+        if value.phase == "trainer_answer" and actor == value.girl:
+            return ("trainer_yes", "trainer_understands")
+        if value.phase == "trainer_install" and actor == value.handler:
+            return ("install_speak", "pass_phrase")
         if value.phase == "favor" and actor == value.handler:
             return ("ask",)
         if value.phase == "decision" and actor == value.girl:
@@ -127,7 +162,7 @@ class FavorService:
             return ("confirm", "find_failed")
         return ()
 
-    def _proof_of_favor(self, c: Connection, value: rules.Favor, action_id: str) -> None:
+    def _proof_of_favor(self, c: Connection, value: rules.PrivateScene, action_id: str) -> None:
         action = self.game.action(c, action_id)
         events = t.events
         accepted = c.scalar(
@@ -176,16 +211,22 @@ class FavorService:
             if canon.revision != expected or step not in self._options(value, actor):
                 raise WorkflowError("Reopen your own current private choice")
             event = str(uuid4())
-            owned = active_book(self.game, c, canon, book="Mistress", rule=rules.RULE)
+            owned = active_book(
+                self.game, c, canon, book=value.playbook, rule=rules.RULES[value.playbook]
+            )
             if step != "withdraw" and (
                 owned is None
                 or owned[0] != value.handler
                 or current_ref(canon, int(value.girl.entity)) != value.girl
             ):
-                raise WorkflowError("Recover the original Mistress and Girl")
-            if step in ("consent", "attest", "ask", "accept", "decline") and self._available(
-                c, canon, value.channel, value.handler
-            ) != (value.scene, value.girl):
+                raise WorkflowError("Recover the original Handler and Girl")
+            in_scene = step in ("consent", "attest", "ask", "accept", "decline") or (
+                value.playbook == "Trainer" and step != "withdraw"
+            )
+            if in_scene and self._available(c, canon, value.channel, value.handler) != (
+                value.scene,
+                value.girl,
+            ):
                 raise WorkflowError("Recover the original private scene and participants")
             if step in ("ask", "fulfilled", "failed", "confirm", "find_failed") and not (
                 1 <= len(text.strip()) <= 1200
@@ -199,8 +240,13 @@ class FavorService:
             elif step == "attest":
                 performed = (*value.attestations, actor)
                 update.update(
-                    attestations=performed, phase="favor" if len(performed) == 2 else "scene"
+                    attestations=performed,
+                    phase=("favor" if value.playbook == "Mistress" else "trainer_question")
+                    if len(performed) == 2
+                    else "scene",
                 )
+            elif value.playbook == "Trainer":
+                update.update(_training(canon, value, step, text, event))
             elif step == "ask":
                 update.update(phase="decision", favor=text.strip())
             elif step == "decline":
@@ -231,10 +277,17 @@ class FavorService:
                     outcome="fulfilled" if step == "confirm" else "failed",
                     account=text.strip(),
                 )
-            value = rules.Favor.model_validate(dict(value.model_dump(), **update))
+            value = rules.PrivateScene.model_validate(dict(value.model_dump(), **update))
             rules.put(canon, value)
             self.game.event(
-                c, viewer.user_id, key, EVENT, canon, event_id=event, case=identity, step=step
+                c,
+                viewer.user_id,
+                key,
+                _event(value),
+                canon,
+                event_id=event,
+                case=identity,
+                step=step,
             )
             return dict(id=identity, phase=value.phase, revision=canon.revision)
 
@@ -250,21 +303,75 @@ class FavorService:
             Access(self.store).authorize(c, viewer, "plays")
             canon = load_state(c, self.store.campaign_id)
             value, actor = self._case(c, canon, viewer, identity)
+            sheet = canon.sheets.get(value.girl.entity)
             return dict(
                 id=value.id,
                 revision=canon.revision,
                 phase=value.phase,
+                playbook=value.playbook,
                 options=self._options(value, actor),
                 favor=value.favor,
                 outcome=value.outcome,
                 action=value.action,
                 account=value.account,
+                identities=tuple(
+                    (x.id, x.name)
+                    for x in sheet.identities
+                    if not (
+                        x.protected
+                        or x.paired
+                        or x.am_limiter
+                        or x.id in sheet.sedation_locked
+                        or x.obsession_sources
+                    )
+                )
+                if value.phase == "trainer_answer"
+                and actor == value.girl
+                and sheet is not None
+                and sheet.character_id == value.girl.incarnation
+                else (),
             )
 
-    def _tasks(self, viewer: GuildViewer, state: GameState) -> list[str]:
+    def _tasks(self, viewer: GuildViewer, state: GameState) -> list[tuple[str, rules.Book]]:
         return [
-            x.id
+            (x.id, x.playbook)
             for x in rules.records(state)
             if str(viewer.user_id) in (x.handler.entity, x.girl.entity)
             and self._options(x, x.handler if x.handler.entity == str(viewer.user_id) else x.girl)
         ]
+
+
+def _event(value: rules.PrivateScene) -> str:
+    return EVENT if value.playbook == "Mistress" else TRAINER_EVENT
+
+
+def _training(
+    state: GameState, value: rules.PrivateScene, step: str, identity: str, event: str
+) -> dict[str, Any]:
+    if step == "trainer_ask":
+        return dict(phase="trainer_answer")
+    if step == "trainer_yes" or (
+        step == "trainer_understands" and not state.sheets[value.girl.entity].identities
+    ):
+        return dict(phase="trainer_install")
+    if step == "trainer_understands":
+        from girlframe.services.m3_ankou_support import erase_identity
+
+        erase_identity(state, value.girl, identity)
+        if not state.sheets[value.girl.entity].identities:
+            return dict(phase="trainer_install", identity=identity)
+        return dict(phase="complete", outcome="identity_erased", identity=identity)
+    if step == "pass_phrase":
+        return dict(phase="complete", outcome="identity_erased" if value.identity else "declined")
+    persona = state.handler_persona
+    if (
+        step != "install_speak"
+        or persona is None
+        or any(x.pilot == value.girl and "speak" in x.phrases for x in persona.conditioning)
+    ):
+        raise WorkflowError("Choose a supported conditioning phrase that is not already installed")
+    installation = Conditioning(pilot=value.girl, phrases=("speak",), source_event=event)
+    state.handler_persona = persona.model_copy(
+        update=dict(conditioning=(*persona.conditioning, installation))
+    )
+    return dict(phase="complete", outcome="speak_installed")

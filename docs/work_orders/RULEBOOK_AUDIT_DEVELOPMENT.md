@@ -1584,3 +1584,20 @@ focused cases use native private controls for consent, withdrawal,
 performance, the favor, a real later Play, rank changes and restart.
 They also cover wrong owner, stale submissions, pause and retries.
 [Rulebook p. 123](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=125) · [Tests](../../tests/rules/test_mistress_favor.py)
+
+### Trainer's private scene and Speak
+
+Base `dbd2d94224808d9678985e48b5a7ec045399ad1a`. The Trainer uses the
+same original consent and separately attested performance as the Mistress.
+The Girl owns her answer and any Identity erased. The other response can
+install Speak, with the original Trainer's selection. When an answer leaves
+no Identity, the Trainer can also choose to install it or leave it unset.
+The installed phrase is usable by the existing Receive Orders path and
+retains its private answer and hearing rules. Other phrases stay open.
+
+The selected Trainer and Mistress checks passed **8 tests in 50.16
+seconds**. The synthetic cases exercised native consent and both answers,
+actual original Identity erasure, stale and wrong owner rejection, a
+restart, duplicate submission and a complete Speak order. Scoped type
+checks passed.
+[Rulebook pp. 136–137](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=138) · [Tests](../../tests/rules/test_trainer_phrases.py)

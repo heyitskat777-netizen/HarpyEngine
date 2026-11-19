@@ -42,11 +42,49 @@ def _installation(
             history.c.event_id == saved.source_event,
         )
     )
-    original = GameState.model_validate_json(body).handler_persona if body else None
+    snapshot = GameState.model_validate_json(body) if body else None
+    original = snapshot.handler_persona if snapshot else None
     if original is None or original.id != persona.id or saved not in original.conditioning:
         return None
     if saved.source_event == persona.source_event:
         return saved.source_event
+    if snapshot is not None:
+        from girlframe.engine.m3_handler_private_scene import records as private_scenes
+        from girlframe.services.m3_handler_private_scene import TRAINER_EVENT
+
+        record = next(
+            (
+                x
+                for x in private_scenes(snapshot)
+                if x.event == saved.source_event
+                and x.playbook == "Trainer"
+                and x.phase == "complete"
+                and x.outcome == "speak_installed"
+            ),
+            None,
+        )
+        if record is not None:
+            return (
+                saved.source_event
+                if (
+                    phrase == "speak"
+                    and record.girl == target
+                    and record.handler.entity == str(original.owner)
+                    and record.handler.incarnation == original.id
+                    and set(record.attestations) == {record.handler, target}
+                    and c.scalar(
+                        sa.select(t.events.c.id).where(
+                            t.events.c.campaign_id == game.store.campaign_id,
+                            t.events.c.id == saved.source_event,
+                            t.events.c.kind == TRAINER_EVENT,
+                            t.events.c.actor_id == str(original.owner),
+                            sa.func.json_extract(t.events.c.payload_json, "$.step")
+                            == "install_speak",
+                        )
+                    )
+                )
+                else None
+            )
     periods = t.m3["m3_off_duty_history"]
     source = c.scalar(
         sa.select(periods.c.body_json)
