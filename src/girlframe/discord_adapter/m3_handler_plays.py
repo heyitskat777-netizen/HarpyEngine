@@ -479,7 +479,13 @@ async def effect_form(
         elif kind == "status":
             effect_data["status"] = int(values["status"][0])
         elif kind == "dress_them_down":
-            effect_data.update(dress_steps=values["dress_steps"], tag=values.get("tag", ""))
+            steps = values["dress_steps"]
+            # Discord selects return option order, so put the printed ending last.
+            effect_data.update(
+                dress_steps=tuple(x for x in steps if x != "punishment")
+                + (("punishment",) if "punishment" in steps else ()),
+                tag=values.get("tag", ""),
+            )
         elif kind == "tag":
             effect_data["tag"] = values["tag"]
         elif kind == "damage":

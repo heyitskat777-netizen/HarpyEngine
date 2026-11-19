@@ -13,9 +13,11 @@ from test_m2_game import answer, pass_tags, state, tick
 from test_mission_service import launched
 from test_mission_ui import current
 from test_punishment_service import submit
+from test_role_punishments import change
 
 from girlframe.discord_adapter.inbox import InboxView
 from girlframe.discord_adapter.m3_handler_plays import open_handler_plays
+from girlframe.engine import m3_handler_plays as handler_plays
 from girlframe.engine.m2 import PlayInput, shift_status
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_dogrunner import owners
@@ -24,6 +26,7 @@ from girlframe.engine.m3_handler_ordinary import RULE as ordinary_rule
 from girlframe.engine.m3_handler_play_state import Effect
 from girlframe.engine.m3_intracadre_marriage import is_dog
 from girlframe.engine.m3_punishments import Details
+from girlframe.engine.m3_role_punishment_state import Instruction
 from girlframe.services.inbox import InboxService
 from girlframe.services.m3_handler_advancements import HandlerAdvancementService
 from girlframe.services.m3_handler_creation import HandlerCreationService
@@ -31,6 +34,7 @@ from girlframe.services.m3_handler_ordinary import HandlerOrdinaryService
 from girlframe.services.m3_handler_plays import HandlerPlayService
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_punishments import PunishmentService
+from girlframe.services.m3_role_punishments import RolePunishmentService
 from girlframe.services.onboarding import WorkflowError
 
 
@@ -147,7 +151,8 @@ def test_dogrunner_keeps_raised_dogs_and_mission_punishes_each_original_once(led
     )
 
 
-def test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_dog(ledger):
+@pytest.mark.parametrize("ending", ("dog", "punishment"), ids=("tag-only", "proper-punishment"))
+def test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_dog(ledger, ending):
     game, *_ = dogrunner_ready(ledger)
     service = HandlerPlayService(ledger)
     original = state(game)
@@ -177,7 +182,7 @@ def test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_do
         kind="dress_them_down",
         target=actor,
         account="PRIVATE_ACTUAL_DRESSING",
-        dress_steps=("competency", "dog"),
+        dress_steps=("competency", ending),
         tag="PRIVATE_NEW_DOG_TAG",
     )
     information = service.get(ADMIN, identity)
@@ -211,7 +216,9 @@ def test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_do
         form = click.edit_original_response.call_args.kwargs["view"]
         form.values.update(
             target=(actor.token,),
-            dress_steps=effect.dress_steps,
+            dress_steps=tuple(reversed(effect.dress_steps))
+            if effect.opens_punishment
+            else effect.dress_steps,
             account=effect.account,
             tag=effect.tag,
         )
@@ -220,10 +227,9 @@ def test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_do
         assert form.completed, (sent.followup.send.call_args, sent.edit_original_response.call_args)
 
     asyncio.run(submit_via_inbox())
-    assert (
-        service.submit(ADMIN, "47011", identity, revision, "dress_them_down", effect)["state"]
-        == "complete"
-    )
+    assert service.submit(ADMIN, "47011", identity, revision, "dress_them_down", effect)[
+        "state"
+    ] == ("awaiting_effect" if effect.opens_punishment else "complete")
     with pytest.raises(WorkflowError):
         service.submit(ADMIN, "stale-dress", identity, revision, "dress_them_down", effect)
     canonical = state(game)
@@ -234,6 +240,31 @@ def test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_do
     assert service.notice(PLAYER, identity)["account"] == effect.account
     with pytest.raises(WorkflowError):
         service.notice(OTHER, identity)
+    if effect.opens_punishment:
+        (case_id,) = handler_plays.record(canonical, identity).followups
+        (case,) = canonical.role_punishments
+        assert case.id == case_id and case.executor == current_ref(canonical, 1)
+        assert case.subject == actor and canonical.sheets["2"].heat == original.sheets["2"].heat
+        role = RolePunishmentService(game)
+        with pytest.raises(WorkflowError):
+            role.get(OTHER, case_id)
+        details = Details(kind="stimulant_injection")
+        change(
+            role,
+            ADMIN,
+            case_id,
+            instruction=Instruction(kind=details.kind, details_json=details.model_dump_json()),
+        )
+        change(role, ADMIN, case_id, scene="The original Handler performs the Punishment.")
+        with pytest.raises(WorkflowError):
+            change(role, ADMIN, case_id, execute=True, account="Cannot invent attendance.")
+        change(role, PLAYER, case_id, attest=True)
+        change(role, ADMIN, case_id, execute=True, account="The chosen Punishment occurred.")
+        completed = state(game)
+        grant = handler_plays.record(completed, identity)
+        assert grant.state == "complete"
+        assert grant.completed_event == completed.role_punishments[-1].completion_event
+        assert completed.sheets["2"].heat == 7 and owners(completed) == (4,)
 
 
 def test_dogrunner_all_dogs_uses_actual_status_and_the_ordinary_award_slot(

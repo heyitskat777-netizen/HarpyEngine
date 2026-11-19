@@ -17,6 +17,12 @@ The historical v0.1.4 Discord trial pin is
 supports simulated sign-in. The authenticated live checkout and real players
 are separate acceptance gates. [Prior integration](../../reports/GIRL_FRAME_INTEGRATION_HANDOFF.md) · [Manual trial](../../reports/P2_ACTIVITY_TRIAL.md)
 
+The current work covers core and non-Ancillary situational rules. Existing
+optional Ancillary work stays in the development history. Further Ancillary
+playbook work and dependent branches, including Rebellion Endgame 3, are
+deferred at the owner's direction. Use one focused synthetic check per change
+and defer the combined regression to a later candidate.
+
 ## 1. Strain and Off-Duty
 
 The table below keeps both printed choices for each of the nine initially
@@ -1302,13 +1308,24 @@ scene. The exact original Girl and Handler stay bound to the private Inbox
 grant. The competency, appearance, inherent-trait and dog-language options
 each lower actual Status by one position and require the actual Tag if the
 Girl becomes a Dog. She keeps her own actions. The physical, third-party,
-demeaning-order, dismissal-order and regular Punishment branches remain open.
+demeaning-order and dismissal-order branches remain open.
 
 The focused cases covered the native menu and Inbox, the required Tag,
 wrong owner, unrelated readers, wrong scene, restart, safety pause, retries
 and stale choices. The selected Handler, mission, discipline, Off-Duty,
 Harpy, Void and Inbox regression passed **197 tests in 132.96 seconds**.
 [Rulebook p. 125](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=127) · [Tests](../../tests/rules/test_dogrunner_status.py)
+
+The proper Punishment ending, based on
+`c40b425fa74774c7f053ec13a7dc0d07f976588f`, applies the selected Status
+reductions and required Dog Tag. It opens one ordinary discipline case with
+the original Dogrunner as inflictor. The Play stays pending until that case
+applies its actual consequence with the original Girl's attendance. The
+single native Inbox case passed in 5.43 seconds. It covered the private
+notice and case, duplicate submission, stale and paused controls, reopening,
+the attendance requirement and the real Heat change. The synthetic command
+was `python -m pytest -q --tb=short tests/rules/test_dogrunner_status.py -k proper-punishment`
+with `PYTHONPATH="$PWD/src"`.
 
 ### Trainer Speak and Off-Duty installation
 

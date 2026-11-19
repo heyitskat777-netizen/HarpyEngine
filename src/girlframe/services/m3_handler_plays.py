@@ -780,9 +780,10 @@ def validate_role_case(
         )
         or case.id not in grant.followups
         or grant.effect is None
-        or grant.effect.kind != "punish"
+        or not grant.effect.opens_punishment
         or case.chooser != grant.chooser_actor
-        or case.executor != grant.effect.executor
+        or case.executor
+        != (grant.chooser_actor if grant.clause == DRESS_RULE else grant.effect.executor)
         or case.chooser_controller != grant.chooser_controller
         or offender != grant.effect.target
         or offender not in grant.targets
@@ -1722,23 +1723,27 @@ class HandlerPlayService:
             elif effect.kind == "off_duty":
                 assert effect.off_duty is not None
                 _off_duty(c, self.game, grant, effect.off_duty)
-            elif effect.kind == "punish":
+            elif effect.opens_punishment:
                 from girlframe.services.m3_role_punishments import open_case
 
-                if effect.target is None or effect.executor is None:
+                executor_ref = effect.executor
+                if effect.kind == "dress_them_down":
+                    state = rules.direct(state, identity, event)
+                    executor_ref = grant.chooser_actor
+                if effect.target is None or executor_ref is None:
                     raise WorkflowError(
                         "Choose the actual affected original and living physical inflictor."
                     )
                 executor = resolve(
                     state,
-                    effect.executor,
+                    executor_ref,
                     profiles(c, self.store.campaign_id),
                     require_current_profile=False,
                 )
                 state, case_id = open_case(
                     state,
                     profiles(c, self.store.campaign_id),
-                    actor=effect.executor,
+                    actor=executor_ref,
                     target=effect.target,
                     chooser=grant.chooser_actor,
                     source_kind="handler_play",
@@ -1800,7 +1805,7 @@ class HandlerPlayService:
                 play=play,
             )
             materialize(self.game, c, viewer.user_id, event, taunt_works)
-            if effect.kind == "punish":
+            if effect.opens_punishment:
                 from girlframe.services.m3_role_punishments import synchronize
 
                 synchronize(self.game, c, None, event)

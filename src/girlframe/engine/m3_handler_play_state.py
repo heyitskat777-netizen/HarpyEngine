@@ -33,8 +33,9 @@ DRESS_STEPS = (
     ("appearance", "Insult their appearance"),
     ("identity", "Dismiss them for an inherent trait"),
     ("dog", "Call them a dog, mutt or stray"),
+    ("punishment", "End by deciding they deserve a proper Punishment"),
 )
-DressStep = Literal["competency", "appearance", "identity", "dog"]
+DressStep = Literal["competency", "appearance", "identity", "dog", "punishment"]
 Play = Literal[
     "brief",
     "punish",
@@ -87,6 +88,10 @@ class Effect(Model):
     )
     cell: Cell | None = Field(default=None, exclude_if=lambda x: x is None)
     dress_steps: tuple[DressStep, ...] = Field(default=(), max_length=3, exclude_if=lambda x: not x)
+
+    @property
+    def opens_punishment(self) -> bool:
+        return self.kind == "punish" or self.dress_steps[-1:] == ("punishment",)
 
     @model_validator(mode="after")
     def actual_effect(self) -> "Effect":
@@ -156,6 +161,8 @@ class Effect(Model):
             or len(set(self.dress_steps)) != len(self.dress_steps)
         ):
             raise ValueError("Choose one to three distinct options and an actual original Girl")
+        if "punishment" in self.dress_steps and self.dress_steps[-1] != "punishment":
+            raise ValueError("A proper Punishment must end the dressing down")
         return self
 
 
