@@ -2272,6 +2272,24 @@ needs additional direct verification. Outside-Frame pursuit,
 alternate high/mid Plays and exposure by report remain open.
 [Mother p. 170](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=172) · [Native cases](../../tests/rules/test_gorgon_runtime.py)
 
+### Mother’s low outcome outside the original cockpit
+
+Base `c61fdfba167041a0a1dea76f45339dbe7ed76155`. The low result
+outside the Frame applies ordinary Void first. The original
+Girl then owns an actual attempt to get back into her parked
+Frame if it is in her current square. The occupied Frame
+record changes when she acts. If returning requires movement
+across the map, the private source remains open.
+
+**One focused case passed in 4.63 seconds**, verifying that the
+original Girl stays outside until her owned action, then enters
+the same parked Frame and retains the original career. Whether
+later entry under this consequence forces rebirth needs human
+ruling review. The current interpretation confines forced
+rebirth to the immediate low outcome when the Girl was already
+inside her Frame.
+[Mother p. 170](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=172) · [Native cases](../../tests/rules/test_gorgon_runtime.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

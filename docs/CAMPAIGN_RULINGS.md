@@ -4663,3 +4663,14 @@ while the Jackdaw continues jamming. A low result with fewer than
 three erasable Identities retains the roll for private review.
 Confirm how the printed erasure applies to missing or protected
 slots. These are open printed-clarity questions.
+
+
+#### Mother’s low result after starting outside the Frame
+
+PDF172, printed p. 170. Does later entry after a low Memetic
+Hazard roll outside the Vital Frame force automatic rebirth,
+or does the printed attempt to meld open a new fictional
+situation for adjudication? Pending printed-rules review,
+the ordinary Void and the original Girl’s accepted attempt
+are saved. The immediate forced rebirth remains applicable
+when she was already inside her actual Frame and stayed there.

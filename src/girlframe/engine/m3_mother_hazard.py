@@ -23,6 +23,7 @@ class Exposure(Model):
     ejected: str | None = None
     remain_event: str | None = None
     rebirth_event: str | None = None
+    pursuit_event: str | None = None
     void_asset: str | None = None
     void_event: str | None = None
     void_work: str | None = None

@@ -15,7 +15,7 @@ from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_gorgon_play_state import Declaration
 from girlframe.engine.m3_hallucinations import Roll
 from girlframe.engine.m3_janus_storage import alter, effective_assets
-from girlframe.engine.m3_physical import cockpit_exit
+from girlframe.engine.m3_physical import cockpit_enter, cockpit_exit
 from girlframe.engine.m3_sentinel_shell import holds
 from girlframe.engine.m3_void_state import VoidThreshold
 from girlframe.services.m2_choices import ChoiceEngine
@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 
 HEAT = "gorgon_hazard_heat"
 EJECT = "gorgon_hazard_eject"
+PURSUE = "gorgon_hazard_pursue"
 REVIEW = "gorgon_hazard_review"
 MID = "gorgon_hazard_mid"
 VOID = "gorgon_hazard_void"
@@ -161,6 +162,8 @@ def apply(
         _apply_void(game, c, state, action, case, girl, answer, event)
     elif kind == PICK_PLAY:
         _request_play(game, c, state, action, case, girl, answer)
+    elif kind == PURSUE:
+        _return_to_frame(game, c, state, action, case, girl, answer, event)
     elif kind == EJECT:
         if (
             case.roll is None
@@ -207,6 +210,7 @@ def _review_rebirth(
         row["actor_id"] != str(source["procedural_gm"])
         or case.roll is None
         or case.roll.result != "low"
+        or case.choice == "pursue"
         or case.ejected
         or case.rebirth_event
         or case.frame is None
@@ -288,7 +292,7 @@ def _roll(
         case.model_copy(
             update=dict(
                 roll=roll,
-                frame=girl.occupied_frame_instance,
+                frame=girl.occupied_frame_instance or girl.frame_instance,
                 choice=choice,
             )
         ),
@@ -359,6 +363,54 @@ def _apply_void(
         _after_void(game, c, state, action, updated, event)
 
 
+def _parked_here(state: GameState, case: rules.Exposure, girl: ActorView) -> bool:
+    return (
+        girl.inside_frame is False
+        and girl.offstage_source is None
+        and case.frame is not None
+        and girl.frame_instance == case.frame
+        and girl.frame_cell == girl.cell
+        and girl.cell is not None
+        and girl.custody in (None, "free")
+        and girl.vitals_active is not False
+        and not holds(state, girl.ref, "trapped")
+        and state.sheets[girl.ref.entity].medical_state == "fit"
+    )
+
+
+def _return_to_frame(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    case: rules.Exposure,
+    girl: ActorView,
+    answer: ChoiceAnswer,
+    event: str,
+) -> None:
+    if (
+        case.choice != "pursue"
+        or not case.void_event
+        or not _parked_here(state, case, girl)
+        or answer.number is not None
+        or answer.options
+        or not answer.text.strip()
+    ):
+        raise WorkflowError("Use the original Girl's actual attempt to return to her parked Frame")
+    changed = cockpit_enter(
+        state,
+        profiles(c, game.store.campaign_id),
+        girl.ref,
+        event,
+        answer.text.strip(),
+        pilot=False,
+    )
+    for field in GameState.model_fields:
+        setattr(state, field, getattr(changed, field))
+    rules.put(state, case.model_copy(update=dict(pursuit_event=event, completed=event)))
+    action["data"]["result"]["mother_hazard_returned"] = True
+
+
 def _after_void(
     game: "GameService",
     c: Connection,
@@ -375,6 +427,18 @@ def _after_void(
         and original.character_id == case.girl.incarnation
     ):
         game.request(c, action, source["controller"], PICK_PLAY)
+    elif (
+        case.choice == "pursue"
+        and original is not None
+        and original.character_id == case.girl.incarnation
+    ):
+        girl = resolve(
+            state, case.girl, profiles(c, game.store.campaign_id), require_current_profile=False
+        )
+        if _parked_here(state, case, girl):
+            game.request(c, action, girl.controller, PURSUE)
+        else:
+            game.request(c, action, source["procedural_gm"], REVIEW)
     elif case.choice != "void":
         game.request(c, action, source["procedural_gm"], REVIEW)
     else:
@@ -435,6 +499,7 @@ def project(
                 and case.roll.result == "low"
                 and case.frame is not None
                 and case.frame == girl.frame_instance == girl.occupied_frame_instance
+                and case.choice != "pursue"
                 and (case.remain_event or not _actual_cockpit(state, girl))
             ),
         )

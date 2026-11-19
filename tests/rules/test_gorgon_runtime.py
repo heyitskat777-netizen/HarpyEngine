@@ -3854,7 +3854,7 @@ def test_parasite_infect_damages_an_actual_voided_asset_before_the_owned_roll(le
         assert next(x for x in final.sheets["2"].assets if x.id == selected).void
 
 
-@pytest.mark.parametrize("tier", ("low", "high", "remain"))
+@pytest.mark.parametrize("tier", ("low", "high", "remain", "outside"))
 def test_mother_local_hazard_applies_owned_ejection_or_both_high_effects(ledger, tier):
     import asyncio
 
@@ -3870,7 +3870,7 @@ def test_mother_local_hazard_applies_owned_ejection_or_both_high_effects(ledger,
     from girlframe.engine.m3_mother_hazard import get, immune
     from girlframe.engine.m3_physical_state import CockpitAction
     from girlframe.services.m3_actors import profiles
-    from girlframe.services.m3_mother_hazard import EJECT, HEAT, PICK_PLAY, REVIEW, VOID
+    from girlframe.services.m3_mother_hazard import EJECT, HEAT, PICK_PLAY, PURSUE, REVIEW, VOID
     from girlframe.services.m3_physical import PhysicalService
     from girlframe.services.m3_void import VoidService
     from girlframe.services.onboarding import WorkflowError
@@ -3925,9 +3925,10 @@ def test_mother_local_hazard_applies_owned_ejection_or_both_high_effects(ledger,
         tick(worker, gateway, 5)
     tagged = next(x for x in state(game).sheets["2"].tags if x.giver_actor == mutation.actor)
     assert not tagged.marked
-    operate("pilot", "enter-before-hazard")
-    frame = actor().occupied_frame_instance
-    assert frame and actor().piloting
+    if tier != "outside":
+        operate("pilot", "enter-before-hazard")
+    frame = actor().frame_instance
+    assert frame and (actor().piloting is True) is (tier != "outside")
     game.dice = Dice((5, 6) if tier == "high" else (1, 2))
     view = service.preview(ADMIN, 900)
     people = {x["token"]: x for x in view["actors"]}
@@ -3953,6 +3954,21 @@ def test_mother_local_hazard_applies_owned_ejection_or_both_high_effects(ledger,
     assert next(x for x in state(game).sheets["2"].tags if x.id == tagged.id).marked
     assert game.dice.calls == 0
     answer(game, PLAYER, HEAT, number=0)
+    if tier == "outside":
+        owned = next(x for x in game.choices(PLAYER) if x["kind"] == VOID)
+        selected = next(iter(game.decision(PLAYER, owned["id"])["detail"]["assets"]))
+        answer(game, PLAYER, VOID, options=(selected,), text="She gains ordinary Void.")
+        assert actor().inside_frame is False
+        assert game.inspect(PLAYER, parent)["state"] == "awaiting_choices"
+        with pytest.raises(WorkflowError):
+            answer(game, PLAYER, PURSUE, text="")
+        answer(game, PLAYER, PURSUE, text="I scramble back into my original parked Frame.")
+        current = actor()
+        assert current.inside_frame and not current.piloting and current.frame_instance == frame
+        assert get(state(game), parent).pursuit_event and game.dice.calls == 1
+        assert game.inspect(PLAYER, parent)["state"] == "complete"
+        assert state(game).sheets["2"].character_id == mutation.target.incarnation
+        return
     if tier == "high":
         owned = next(x for x in game.choices(PLAYER) if x["kind"] == VOID)
         selected = next(iter(game.decision(PLAYER, owned["id"])["detail"]["assets"]))

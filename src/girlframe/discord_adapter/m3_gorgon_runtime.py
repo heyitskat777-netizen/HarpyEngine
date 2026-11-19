@@ -740,6 +740,9 @@ async def open_hazard(
             Field("confirm", "Original outcome", (("remained", "Verify that she remained"),)),
             Field("account", "Describe the actual original failure to eject", paragraph=True),
         ]
+    elif kind == "hazard_pursue":
+        text = "Describe your Girl's attempt to return to her original parked Frame."
+        fields = [Field("account", "Your actual attempt", paragraph=True)]
     elif kind == "hazard_mid":
         text = "Choose the actual consequence of your saved roll."
         fields = [
