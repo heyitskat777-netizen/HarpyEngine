@@ -16921,7 +16921,9 @@
         "tests/rules/test_dogrunner_status.py::test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_dog[proper-punishment]",
         "tests/rules/test_dogrunner_status.py::test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_dog[dismissal]",
         "tests/rules/test_dogrunner_status.py::test_dress_them_down_native_play_reduces_for_each_choice_and_tags_the_new_dog[demeaning]",
-        "tests/rules/test_dogrunner_status.py::test_dress_them_down_waits_for_the_delegate_and_contact_then_creates_its_order"
+        "tests/rules/test_dogrunner_status.py::test_dress_them_down_waits_for_the_delegate_and_contact_then_creates_its_order",
+        "tests/rules/test_dogrunner_status.py::test_demeaning_dress_order_finishes_before_its_selected_proper_punishment",
+        "tests/rules/test_dogrunner_status.py::test_dogrunner_issues_the_recorded_dismissal_after_the_demeaning_order"
       ],
       "m2_play_id": null,
       "module": "core"

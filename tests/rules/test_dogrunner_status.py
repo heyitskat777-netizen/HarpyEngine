@@ -404,6 +404,104 @@ def test_dress_them_down_waits_for_the_delegate_and_contact_then_creates_its_ord
     assert "Attend to the equipment." in game.decision(PLAYER, order["id"])["order_text"]
 
 
+def test_demeaning_dress_order_finishes_before_its_selected_proper_punishment(ledger):
+    game, worker, gateway, _ = dogrunner_ready(ledger)
+    service = HandlerPlayService(ledger)
+    role = RolePunishmentService(game)
+    original = state(game)
+    girl = current_ref(original, 2)
+    grant = service.start(
+        ADMIN, "prepare-ordered-discipline", original.revision, (girl,), dress_scene=900
+    )["id"]
+    effect = Effect(
+        kind="dress_them_down",
+        target=girl,
+        dress_steps=("demeaning", "punishment"),
+        tag="Newly the Dog",
+        detail="Put away the tools.",
+        account="I order her to put away the tools, then set discipline.",
+    )
+    issued = service.submit(
+        ADMIN, "ordered-discipline", grant, state(game).revision, "dress_them_down", effect
+    )
+    assert issued["state"] == "awaiting_effect"
+    (case,) = handler_plays.record(state(game), grant).followups
+    details = Details(kind="stimulant_injection")
+    instruction = Instruction(kind=details.kind, details_json=details.model_dump_json())
+    with pytest.raises(WorkflowError, match="demeaning Order"):
+        change(role, ADMIN, case, instruction=instruction)
+    assert state(game).sheets["2"].heat == original.sheets["2"].heat
+    tick(worker, gateway, 3)
+    answer(game, PLAYER, "order_response", options=("obedient",))
+    tick(worker, gateway, 4)
+    ledger.engine.dispose()
+    change(role, ADMIN, case, instruction=instruction)
+    change(role, ADMIN, case, scene="The actual discipline follows the answered Order.")
+    change(role, PLAYER, case, attest=True)
+    change(role, ADMIN, case, execute=True, account="The original Handler applies the discipline.")
+    assert handler_plays.record(state(game), grant).state == "complete"
+    assert state(game).sheets["2"].heat == 7 and game.dice.calls == 0
+
+
+def test_dogrunner_issues_the_recorded_dismissal_after_the_demeaning_order(ledger):
+    from test_harpy_flirt import submit_form
+
+    game, worker, gateway, _ = dogrunner_ready(ledger)
+    service = HandlerPlayService(ledger)
+    original = state(game)
+    girl = current_ref(original, 2)
+    grant = service.start(
+        ADMIN, "prepare-two-actual-orders", original.revision, (girl,), dress_scene=900
+    )["id"]
+    effect = Effect(
+        kind="dress_them_down",
+        target=girl,
+        dress_steps=("demeaning", "dismissal"),
+        tag="The original Girl becomes a Dog",
+        detail="Clean the oil pan.",
+        dress_dismissal="Leave now.",
+        account="Two separate orders are selected.",
+    )
+    first = service.submit(
+        ADMIN, "first-dress-order", grant, state(game).revision, "dress_them_down", effect
+    )
+    assert first["state"] == "awaiting_effect"
+    assert not service.get(ADMIN, grant)["dress_final_pending"]
+    with pytest.raises(WorkflowError):
+        service.finish_dress_order(ADMIN, "too-early-dismissal", grant, state(game).revision)
+    tick(worker, gateway, 3)
+    choice = next(x for x in game.choices(PLAYER) if x["kind"] == "order_response")
+    assert game.decision(PLAYER, choice["id"])["order_text"] == "Clean the oil pan."
+    answer(game, PLAYER, "order_response", options=("obedient",))
+    tick(worker, gateway, 4)
+    ledger.engine.dispose()
+    inbox = InboxService(ledger)
+
+    async def final(click):
+        item = next(
+            x for x in inbox.items(ADMIN) if x.identity == grant and x.task == "m3_handler_play"
+        )
+        await InboxView(inbox, 1).route(click, item)
+
+    before_final = state(game)
+    with pytest.raises(WorkflowError):
+        service.finish_dress_order(OTHER, "wrong-owner-dismissal", grant, before_final.revision)
+    key = asyncio.run(submit_form(ADMIN, final, dict(choice=("send",)), 47550))
+    assert (
+        service.finish_dress_order(ADMIN, key, grant, before_final.revision)["state"] == "complete"
+    )
+    actual = state(game)
+    assert (
+        actual.order == before_final.order
+        and actual.sheets["2"].tags == before_final.sheets["2"].tags
+    )
+    tick(worker, gateway, 3)
+    choice = next(x for x in game.choices(PLAYER) if x["kind"] == "order_response")
+    assert game.decision(PLAYER, choice["id"])["order_text"] == "Leave now."
+    answer(game, PLAYER, "order_response", options=("obedient",))
+    assert game.dice.calls == 0
+
+
 def test_dogrunner_all_dogs_uses_actual_status_and_the_ordinary_award_slot(
     ledger, tmp_path, monkeypatch
 ):

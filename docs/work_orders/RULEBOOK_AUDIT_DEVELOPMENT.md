@@ -1424,8 +1424,7 @@ with `PYTHONPATH="$PWD/src"`.
 The demeaning Order uses the existing direct Order and Disobey workflow.
 The original Girl owns her response and roll. Discovery by the original
 Handler creates the ordinary Punishment obligation with that refusal as
-its source. An immediate Punishment or second Order needs a separate
-sequence when selected alongside this step. One native case passed in
+its source. One native case passed in
 5.93 seconds using `python -m pytest -q --tb=short tests/rules/test_dogrunner_status.py -k demeaning`
 with `PYTHONPATH="$PWD/src"`.
 
@@ -1440,6 +1439,16 @@ and a real demeaning Order. Two cases passed in 10.36 seconds using
 with `PYTHONPATH="$PWD/src"`. Delegated Orders and Punishment need their
 own authority and sequence ruling before they can be offered in this menu.
 [Dogrunner cases](../../tests/rules/test_dogrunner_status.py)
+
+On base `a04c221`, a demeaning Order can precede the separately selected
+proper Punishment or final dismissal. The follow-up proves that the first
+Order actually resolved. The original Handler issues the previously saved
+dismissal through the private Inbox, or uses the ordinary Punishment
+case with its own attendance and execution. Status and the new Dog Tag
+apply once. Three cases passed in 9.38 seconds using
+`python -m pytest -q --tb=short tests/rules/test_dogrunner_status.py -k 'selected_proper or recorded_dismissal or proper-punishment'`
+with `PYTHONPATH="$PWD/src"`.
+[Dogrunner sequences](../../tests/rules/test_dogrunner_status.py)
 
 ### Trainer Speak and Off-Duty installation
 

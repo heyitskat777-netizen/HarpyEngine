@@ -789,6 +789,53 @@ def validate_role_case(
         or offender not in grant.targets
     ):
         raise WorkflowError("This exact Handler Play cannot authorize another Punishment or body.")
+    if (
+        grant.clause == DRESS_RULE
+        and grant.effect.dress_order == "demeaning"
+        and not _answered_dress_order(game, c, grant)
+    ):
+        raise WorkflowError("Resolve the original demeaning Order before its final Punishment")
+
+
+def _answered_dress_order(game: "GameService", c: Connection, grant: HandlerPlay) -> bool:
+    effect = grant.effect
+    if effect is None or effect.target is None:
+        return False
+    source = c.scalar(
+        sa.select(t.events.c.payload_json).where(
+            t.events.c.campaign_id == game.store.campaign_id,
+            t.events.c.id == grant.effect_event,
+            t.events.c.kind == "m3.handler_play_applied",
+        )
+    )
+    payload = json.loads(source) if source else {}
+    issued = c.scalar(
+        sa.select(t.events.c.payload_json).where(
+            t.events.c.campaign_id == game.store.campaign_id,
+            t.events.c.id == payload.get("order_event"),
+            t.events.c.kind == "m2.order_issued",
+            t.events.c.actor_id == str(grant.chooser_controller),
+        )
+    )
+    action_id = json.loads(issued).get("action_id") if issued else None
+    order = game.action(c, action_id) if action_id else None
+    return bool(
+        order is not None
+        and order["state"] == "complete"
+        and order["data"].get("order_id") == payload.get("order_id")
+        and order["actor_id"] == effect.target.entity
+        and order["scene_id"] == grant.scope.scene_id
+    )
+
+
+def _ready_dismissal(game: "GameService", c: Connection, grant: HandlerPlay) -> bool:
+    return bool(
+        grant.state == "awaiting_effect"
+        and grant.clause == DRESS_RULE
+        and grant.effect
+        and grant.effect.dress_dismissal
+        and _answered_dress_order(game, c, grant)
+    )
 
 
 def authorize_dress_order(
@@ -811,6 +858,8 @@ def stage_dress_order(
     scene: dict[str, Any],
     target: int,
     text: str,
+    *,
+    final: bool = False,
 ) -> None:
     from girlframe.services.m3_dogrunner_dress import require_performed
     from girlframe.services.m3_wyvern_combat import require_targetable
@@ -825,7 +874,8 @@ def stage_dress_order(
         or effect.target is None
         or effect.target.entity != str(target)
         or effect.dress_order is None
-        or effect.detail != text
+        or (effect.dress_dismissal if final else effect.detail) != text
+        or (final and (grant.effect != effect or not _ready_dismissal(game, c, grant)))
         or (
             effect.source_label is not None
             and effect.source_label not in dict(source_labels(state, grant))
@@ -848,17 +898,27 @@ def complete_dress_order(
     dress_order: tuple[str, int, Effect],
     order_id: str,
     order_event: str,
+    *,
+    final: bool = False,
 ) -> dict[str, Any]:
     identity, _, effect = dress_order
     event = str(uuid4())
-    state = rules.select(state, identity, "dress_them_down", effect, event)
-    state = rules.direct(state, identity, event)
-    state = _complete(game, c, state, identity, event)
+    if final:
+        state = _complete(game, c, state, identity, event)
+    else:
+        state = rules.select(state, identity, "dress_them_down", effect, event)
+        state = rules.direct(state, identity, event)
+        if effect.opens_punishment:
+            state = _open_role_punishment(
+                game, c, state, rules.record(state, identity), effect, event
+            )
+        elif not effect.dress_dismissal:
+            state = _complete(game, c, state, identity, event)
     game.event(
         c,
         viewer.user_id,
         key,
-        "m3.handler_play_applied",
+        "m3.handler_play_completed" if final else "m3.handler_play_applied",
         state,
         event_id=event,
         event_index=1,
@@ -867,7 +927,48 @@ def complete_dress_order(
         order_id=order_id,
         order_event=order_event,
     )
-    return dict(id=identity, state="complete", game_revision=state.revision)
+    if effect.opens_punishment:
+        from girlframe.services.m3_role_punishments import synchronize
+
+        synchronize(game, c, None, event)
+    return dict(
+        id=identity, state=rules.record(state, identity).state, game_revision=state.revision
+    )
+
+
+def _open_role_punishment(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    grant: HandlerPlay,
+    effect: Effect,
+    event: str,
+) -> GameState:
+    from girlframe.services.m3_role_punishments import open_case
+
+    executor_ref = grant.chooser_actor if effect.kind == "dress_them_down" else effect.executor
+    if effect.target is None or executor_ref is None:
+        raise WorkflowError("Choose the actual affected original and living physical inflictor.")
+    bindings = profiles(c, game.store.campaign_id)
+    executor = resolve(state, executor_ref, bindings, require_current_profile=False)
+    changed, case = open_case(
+        state,
+        bindings,
+        actor=executor_ref,
+        target=effect.target,
+        chooser=grant.chooser_actor,
+        source_kind="handler_play",
+        action=grant.source_action,
+        source_event=event,
+        identity="handler-punishment:" + grant.id,
+        source_work=grant.id,
+        chooser_controller=grant.chooser_controller,
+        executor_controller=executor.controller,
+    )
+    rules.replace(
+        changed, rules.record(changed, grant.id).model_copy(update=dict(followups=(case,)))
+    )
+    return changed
 
 
 def role_scope(c: Connection, game: "GameService", case: "RolePunishment") -> WorkScope:
@@ -1174,7 +1275,7 @@ class HandlerPlayService:
                 kind="handler_play",
                 label="Choose your source-owned Handler Play",
                 state=x.state,
-                can_act=x.state == "pending",
+                can_act=x.state == "pending" or _ready_dismissal(self.game, c, x),
             )
             for x in state.handler_plays
             if x.chooser_controller == viewer.user_id
@@ -1585,6 +1686,7 @@ class HandlerPlayService:
                 game_revision=state.revision,
                 grant=grant.model_dump(mode="json"),
                 stale=stale,
+                dress_final_pending=not stale and _ready_dismissal(self.game, c, grant),
                 targets=targets,
                 observed_moment=observed,
                 zone=zone,
@@ -1695,6 +1797,32 @@ class HandlerPlayService:
             operation,
             auto_audit=False,
             authorize=access,
+        )
+
+    def finish_dress_order(
+        self, viewer: GuildViewer, key: str, identity: str, expected: int
+    ) -> dict[str, Any]:
+        with self.store.engine.connect() as c:
+            _, grant = authorize_dress_order(self.game, c, viewer, identity)
+            effect = grant.effect
+            scenes = t.m2["m2_scenes"]
+            channel = c.scalar(
+                sa.select(scenes.c.channel_id).where(
+                    scenes.c.campaign_id == self.store.campaign_id,
+                    scenes.c.id == grant.scope.scene_id,
+                    scenes.c.open.is_(True),
+                )
+            )
+        if channel is None or effect is None or effect.target is None or not effect.dress_dismissal:
+            raise WorkflowError("Recover the original selected dismissal and its scene")
+        return self.game.issue_order(
+            viewer,
+            key,
+            int(channel),
+            int(effect.target.entity),
+            effect.dress_dismissal,
+            dress_order=(identity, expected, effect),
+            final_dress_order=True,
         )
 
     def submit(
@@ -1851,40 +1979,9 @@ class HandlerPlayService:
                 assert effect.off_duty is not None
                 _off_duty(c, self.game, grant, effect.off_duty)
             elif effect.opens_punishment:
-                from girlframe.services.m3_role_punishments import open_case
-
-                executor_ref = effect.executor
                 if effect.kind == "dress_them_down":
                     state = rules.direct(state, identity, event)
-                    executor_ref = grant.chooser_actor
-                if effect.target is None or executor_ref is None:
-                    raise WorkflowError(
-                        "Choose the actual affected original and living physical inflictor."
-                    )
-                executor = resolve(
-                    state,
-                    executor_ref,
-                    profiles(c, self.store.campaign_id),
-                    require_current_profile=False,
-                )
-                state, case_id = open_case(
-                    state,
-                    profiles(c, self.store.campaign_id),
-                    actor=executor_ref,
-                    target=effect.target,
-                    chooser=grant.chooser_actor,
-                    source_kind="handler_play",
-                    action=grant.source_action,
-                    source_event=event,
-                    identity="handler-punishment:" + grant.id,
-                    source_work=grant.id,
-                    chooser_controller=grant.chooser_controller,
-                    executor_controller=executor.controller,
-                )
-                rules.replace(
-                    state,
-                    rules.record(state, identity).model_copy(update=dict(followups=(case_id,))),
-                )
+                state = _open_role_punishment(self.game, c, state, grant, effect, event)
             elif effect.kind == "damage":
                 from girlframe.services.m3_battle import damage_actor
 

@@ -108,6 +108,7 @@ class Effect(Model):
     dress_steps: tuple[DressStep, ...] = Field(default=(), max_length=3, exclude_if=lambda x: not x)
     dress_contact: DressContact | None = Field(default=None, exclude_if=lambda x: x is None)
     dress_delegate: ActorRef | None = Field(default=None, exclude_if=lambda x: x is None)
+    dress_dismissal: str = Field(default="", max_length=1200, exclude_if=lambda x: not x)
 
     @property
     def opens_punishment(self) -> bool:
@@ -145,6 +146,7 @@ class Effect(Model):
                 "detail",
                 "dress_contact",
                 "dress_delegate",
+                "dress_dismissal",
             },
             "successor_advice": set(),
         }[self.kind] | {"kind", "account", "source_label"}
@@ -208,10 +210,11 @@ class Effect(Model):
                 )
             if bool(self.dress_order) != bool(self.detail.strip()):
                 raise ValueError("Supply the direct Order text for the chosen Order step")
-            if len(DRESS_ORDERS.intersection(self.dress_steps)) > 1 or (
-                self.dress_order is not None and self.opens_punishment
-            ):
-                raise ValueError("Choose one direct Order or immediate Punishment for this Play")
+            two_orders = DRESS_ORDERS.issubset(self.dress_steps)
+            if two_orders != bool(self.dress_dismissal.strip()):
+                raise ValueError(
+                    "Provide separate dismissal text only when both direct Orders are chosen"
+                )
         return self
 
 

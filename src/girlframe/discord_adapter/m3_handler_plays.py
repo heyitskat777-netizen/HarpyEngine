@@ -222,7 +222,32 @@ async def open_play(
         await reply(interaction, form.text(), form)
         return
     if grant["state"] != "pending":
-        if grant["state"] == "awaiting_effect":
+        if data.get("dress_final_pending"):
+            from girlframe.discord_adapter.ledger import clean
+
+            async def dismiss(current: discord.Interaction, values: dict[str, Any]) -> str:
+                await asyncio.to_thread(
+                    service.finish_dress_order,
+                    viewer_from_interaction(current),
+                    str(current.id),
+                    identity,
+                    data["game_revision"],
+                )
+                return "The original dismissal Order is recorded."
+
+            form = NativeForm(
+                viewer_from_interaction(interaction).user_id,
+                "Finish Dress Them Down",
+                clean(grant["effect"]["dress_dismissal"]),
+                [
+                    Field(
+                        "choice", "Confirm the saved dismissal", (("send", "Issue the dismissal"),)
+                    )
+                ],
+                dismiss,
+            )
+            await reply(interaction, form.text(), form)
+        elif grant["state"] == "awaiting_effect":
             await reply(
                 interaction,
                 "This Handler Play is waiting for its actual effect and owned "
@@ -409,6 +434,12 @@ async def effect_form(
                 ),
                 Field("tag", "Tag only if they become the Dog", required=False),
                 Field("detail", "Direct Order text, if chosen", paragraph=True, required=False),
+                Field(
+                    "dress_dismissal",
+                    "Final dismissal text if two Orders were chosen",
+                    paragraph=True,
+                    required=False,
+                ),
             ]
         )
         if data["executors"]:
@@ -523,6 +554,7 @@ async def effect_form(
                 tag=values.get("tag", ""),
                 detail=values.get("detail", ""),
                 dress_contact=(values.get("dress_contact") or (None,))[0],
+                dress_dismissal=values.get("dress_dismissal", ""),
             )
             if values.get("dress_delegate"):
                 delegate = next(

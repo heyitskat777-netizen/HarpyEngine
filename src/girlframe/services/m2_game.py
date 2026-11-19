@@ -6160,6 +6160,7 @@ class GameService:
         phrase_actor: str | None = None,
         advocate_conversation: tuple[str, int, str] | None = None,
         dress_order: tuple[str, int, "Effect"] | None = None,
+        final_dress_order: bool = False,
     ) -> dict[str, Any]:
         if not text.strip() or len(text) > 1200:
             raise WorkflowError("Provide a direct order in 1–1200 characters.")
@@ -6173,7 +6174,15 @@ class GameService:
             raise WorkflowError("Choose one source for this direct order")
         if dress_order is not None and (dose_up or conditioning_phrase or advocate_conversation):
             raise WorkflowError("Choose one source for this direct order")
-        dress_step = dress_order[2].dress_order if dress_order is not None else None
+        if final_dress_order and dress_order is None:
+            raise WorkflowError("Recover the actual recorded Dress Them Down before its dismissal")
+        dress_step = (
+            "dismissal"
+            if final_dress_order
+            else dress_order[2].dress_order
+            if dress_order is not None
+            else None
+        )
         if dress_order is not None and dress_step is None:
             raise WorkflowError("Choose the actual direct Order option for Dress Them Down")
 
@@ -6207,7 +6216,9 @@ class GameService:
             if dress_order is not None:
                 from girlframe.services.m3_handler_plays import stage_dress_order
 
-                stage_dress_order(self, c, state, dress_order, scene, target, text)
+                stage_dress_order(
+                    self, c, state, dress_order, scene, target, text, final=final_dress_order
+                )
             elif advocate_conversation is None:
                 requested = issue_requested_order(
                     self, c, state, viewer, key, channel, target, text, dose_up=dose_up
@@ -6418,7 +6429,15 @@ class GameService:
                 from girlframe.services.m3_handler_plays import complete_dress_order
 
                 return complete_dress_order(
-                    self, c, state, viewer, key, dress_order, order_id, applied_event
+                    self,
+                    c,
+                    state,
+                    viewer,
+                    key,
+                    dress_order,
+                    order_id,
+                    applied_event,
+                    final=final_dress_order,
                 )
             return {"action_id": identity, "order_id": order_id}
 
@@ -6432,6 +6451,7 @@ class GameService:
                 | ({"conditioning_phrase": conditioning_phrase} if conditioning_phrase else {})
                 | ({"phrase_target": phrase_target} if phrase_target is not None else {})
                 | ({"phrase_actor": phrase_actor} if phrase_actor is not None else {})
+                | ({"final_dress_order": True} if final_dress_order else {})
                 | (
                     {"advocate_conversation": advocate_conversation}
                     if advocate_conversation
@@ -7099,12 +7119,13 @@ class GameService:
             if row["kind"] == "trainer_hunt_play":
                 from girlframe.services.m3_trainer_phrases import prove_hunt
 
-                actor, target = prove_hunt(
+                hunt_actor, hunt_target = prove_hunt(
                     self, c, load_state(c, self.store.campaign_id), action, dict(row)
                 )
                 return dict(row) | dict(
                     body=dict(
-                        actor=actor.model_dump(mode="json"), target=target.model_dump(mode="json")
+                        actor=hunt_actor.model_dump(mode="json"),
+                        target=hunt_target.model_dump(mode="json"),
                     ),
                     parent=action["id"],
                     channel=int(action["channel_id"]),
