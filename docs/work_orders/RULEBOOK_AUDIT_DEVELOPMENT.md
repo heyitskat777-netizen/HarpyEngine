@@ -1855,6 +1855,38 @@ An NPC-only controller keeps their own NPC cast role and gains no
 Pilot participation. The unrelated scene keeps its prior data.
 [Only She Matters p. 183](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=185) · [Native cases](../../tests/rules/test_harpy_advancements.py)
 
+The wider Battle, Gorgon, Cast, recovery and shadow selection passed
+**117 tests in 190.06 seconds**. The latest detached code candidate
+`953a275e7c941b288225902b621d8ff1c457cd7c` collected **3,814**
+tests for full regression.
+
+### Full regression on the Foundation candidate
+
+Exact revision `3c73518bfd88a3f7ecfade03351cfe083a6406bb` passed
+**3,804 tests** in four detached partitions. Each partition passed
+951 tests. The longest ran **2,564.60 seconds**. Logs are under
+`var/rulebook-full-3c73518/`.
+
+### Existing Girl and Frame creation rules
+
+Base `953a275e7c941b288225902b621d8ff1c457cd7c`. Eleven playbook
+headings marked unimplemented already have a native creation and
+review path. The audited scope covers Princess, Mockingbird,
+Stim-Blissed, Newgirl, Casualty, Oldgen, Vatgrown, AM, The Prince,
+CONSUME and The Enforcer. Each registry entry now links to its exact
+parameterized creation and review cases. Named Plays, specific
+starting relationships and later advancement gaps retain their own
+acceptance requirements.
+
+The rulebook contains all 99 starting Asset and Identity labels
+used by those catalogues. The sheets agree on the choices. The
+Prince's sheet shortens “Onboard AM (Artificial Mind)” to “Onboard
+AM,” and the catalogue keeps the rulebook spelling. The creation,
+starting Bond, Frame classification and registry selection passed
+**110 tests in 20.85 seconds**. Independent review gates retain their
+existing requirements.
+[Rulebook pp. 29–76](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=31) · [Official sheets](../../../attachments/328941e7-a37f-49b6-979a-5067cfd6d48c/GIRL_FRAME_official_sheets.pdf#page=6) · [Creation evidence](../../tests/test_creation_review.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

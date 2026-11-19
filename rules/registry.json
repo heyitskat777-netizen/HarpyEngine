@@ -9121,14 +9121,46 @@
         "heading": "PRINCESS"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original girl selects this original playbook at character creation.",
+        "actor_type": "Original Girl and the human overseeing the existing creation review.",
+        "pre_roll_sources": [
+          "Printed catalogue compared against the official sheet",
+          "Actual original private creation draft and reviewed eligibility"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "creation": [
+            "Two original described Girl Assets from the printed catalogue",
+            "Four printed starting Identities in the original draft",
+            "Accept the original Personal starting Bond through the character review."
+          ]
+        },
+        "choice_ownership": "The original owner selects their own described Assets. The existing review checks independent consent and source requirements.",
+        "target_policy": "Only the actual original draft, accepted links and exact playbook entry.",
+        "post_roll_effects": [
+          "Save original creation choices and project the private reviewed creation sheet."
+        ],
+        "mandatory_followups": [
+          "Independent review and normal entry safeguards still apply. Named Plays and advancement effects have separate source entries."
+        ],
+        "handler_or_gm_intervention": "The existing human review controls in-scope campaign decisions without taking over the original draft.",
+        "test_fixture_ids": [
+          "tests/test_creation.py::test_source_catalog_and_starting_identities[PRINCESS]",
+          "tests/test_creation_review.py::test_all_girl_review_branches_and_activation_gate[PRINCESS]"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/test_creation.py::test_source_catalog_and_starting_identities[PRINCESS]",
+        "tests/test_creation_review.py::test_all_girl_review_branches_and_activation_gate[PRINCESS]"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -9252,14 +9284,46 @@
         "heading": "MOCKINGBIRD"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original girl selects this original playbook at character creation.",
+        "actor_type": "Original Girl and the human overseeing the existing creation review.",
+        "pre_roll_sources": [
+          "Printed catalogue compared against the official sheet",
+          "Actual original private creation draft and reviewed eligibility"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "creation": [
+            "Two original described Girl Assets from the printed catalogue",
+            "Four printed starting Identities in the original draft",
+            "Choose exactly one of the selected Girl Assets to start Void-altered."
+          ]
+        },
+        "choice_ownership": "The original owner selects their own described Assets. The existing review checks independent consent and source requirements.",
+        "target_policy": "Only the actual original draft, accepted links and exact playbook entry.",
+        "post_roll_effects": [
+          "Save original creation choices and project the private reviewed creation sheet."
+        ],
+        "mandatory_followups": [
+          "Independent review and normal entry safeguards still apply. Named Plays and advancement effects have separate source entries."
+        ],
+        "handler_or_gm_intervention": "The existing human review controls in-scope campaign decisions without taking over the original draft.",
+        "test_fixture_ids": [
+          "tests/test_creation.py::test_source_catalog_and_starting_identities[MOCKINGBIRD]",
+          "tests/test_creation_review.py::test_all_girl_review_branches_and_activation_gate[MOCKINGBIRD]"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/test_creation.py::test_source_catalog_and_starting_identities[MOCKINGBIRD]",
+        "tests/test_creation_review.py::test_all_girl_review_branches_and_activation_gate[MOCKINGBIRD]"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -9634,14 +9698,46 @@
         "heading": "STIM-BLISSED"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original girl selects this original playbook at character creation.",
+        "actor_type": "Original Girl and the human overseeing the existing creation review.",
+        "pre_roll_sources": [
+          "Printed catalogue compared against the official sheet",
+          "Actual original private creation draft and reviewed eligibility"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "creation": [
+            "Two original described Girl Assets from the printed catalogue",
+            "Four printed starting Identities in the original draft",
+            "Preserve the original reviewed Personal starting Bond."
+          ]
+        },
+        "choice_ownership": "The original owner selects their own described Assets. The existing review checks independent consent and source requirements.",
+        "target_policy": "Only the actual original draft, accepted links and exact playbook entry.",
+        "post_roll_effects": [
+          "Save original creation choices and project the private reviewed creation sheet."
+        ],
+        "mandatory_followups": [
+          "Independent review and normal entry safeguards still apply. Named Plays and advancement effects have separate source entries."
+        ],
+        "handler_or_gm_intervention": "The existing human review controls in-scope campaign decisions without taking over the original draft.",
+        "test_fixture_ids": [
+          "tests/test_creation.py::test_source_catalog_and_starting_identities[STIM-BLISSED]",
+          "tests/test_creation_review.py::test_all_girl_review_branches_and_activation_gate[STIM-BLISSED]"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/test_creation.py::test_source_catalog_and_starting_identities[STIM-BLISSED]",
+        "tests/test_creation_review.py::test_all_girl_review_branches_and_activation_gate[STIM-BLISSED]"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -9763,14 +9859,46 @@
         "heading": "NEWGIRL"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original girl selects this original playbook at character creation.",
+        "actor_type": "Original Girl and the human overseeing the existing creation review.",
+        "pre_roll_sources": [
+          "Printed catalogue compared against the official sheet",
+          "Actual original private creation draft and reviewed eligibility"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "creation": [
+            "Two original described Girl Assets from the printed catalogue",
+            "Four printed starting Identities in the original draft",
+            "Preserve the accepted original Mentor and its scoped starting Bond and introduction."
+          ]
+        },
+        "choice_ownership": "The original owner selects their own described Assets. The existing review checks independent consent and source requirements.",
+        "target_policy": "Only the actual original draft, accepted links and exact playbook entry.",
+        "post_roll_effects": [
+          "Save original creation choices and project the private reviewed creation sheet."
+        ],
+        "mandatory_followups": [
+          "Independent review and normal entry safeguards still apply. Named Plays and advancement effects have separate source entries."
+        ],
+        "handler_or_gm_intervention": "The existing human review controls in-scope campaign decisions without taking over the original draft.",
+        "test_fixture_ids": [
+          "tests/test_creation.py::test_source_catalog_and_starting_identities[NEWGIRL]",
+          "tests/test_creation_review.py::test_all_girl_review_branches_and_activation_gate[NEWGIRL]"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/test_creation.py::test_source_catalog_and_starting_identities[NEWGIRL]",
+        "tests/test_creation_review.py::test_all_girl_review_branches_and_activation_gate[NEWGIRL]"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -9901,14 +10029,46 @@
         "heading": "CASUALTY"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original girl selects this original playbook at character creation.",
+        "actor_type": "Original Girl and the human overseeing the existing creation review.",
+        "pre_roll_sources": [
+          "Printed catalogue compared against the official sheet",
+          "Actual original private creation draft and reviewed eligibility"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "creation": [
+            "Two original described Girl Assets from the printed catalogue",
+            "Four printed starting Identities in the original draft",
+            "Preserve the actual original reviewed starting relationships."
+          ]
+        },
+        "choice_ownership": "The original owner selects their own described Assets. The existing review checks independent consent and source requirements.",
+        "target_policy": "Only the actual original draft, accepted links and exact playbook entry.",
+        "post_roll_effects": [
+          "Save original creation choices and project the private reviewed creation sheet."
+        ],
+        "mandatory_followups": [
+          "Independent review and normal entry safeguards still apply. Named Plays and advancement effects have separate source entries."
+        ],
+        "handler_or_gm_intervention": "The existing human review controls in-scope campaign decisions without taking over the original draft.",
+        "test_fixture_ids": [
+          "tests/test_creation.py::test_source_catalog_and_starting_identities[CASUALTY]",
+          "tests/test_creation_review.py::test_all_girl_review_branches_and_activation_gate[CASUALTY]"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/test_creation.py::test_source_catalog_and_starting_identities[CASUALTY]",
+        "tests/test_creation_review.py::test_all_girl_review_branches_and_activation_gate[CASUALTY]"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -10025,14 +10185,46 @@
         "heading": "OLDGEN"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original girl selects this original playbook at character creation.",
+        "actor_type": "Original Girl and the human overseeing the existing creation review.",
+        "pre_roll_sources": [
+          "Printed catalogue compared against the official sheet",
+          "Actual original private creation draft and reviewed eligibility"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "creation": [
+            "Two original described Girl Assets from the printed catalogue",
+            "Four printed starting Identities in the original draft",
+            "Preserve the actual original reviewed starting relationships."
+          ]
+        },
+        "choice_ownership": "The original owner selects their own described Assets. The existing review checks independent consent and source requirements.",
+        "target_policy": "Only the actual original draft, accepted links and exact playbook entry.",
+        "post_roll_effects": [
+          "Save original creation choices and project the private reviewed creation sheet."
+        ],
+        "mandatory_followups": [
+          "Independent review and normal entry safeguards still apply. Named Plays and advancement effects have separate source entries."
+        ],
+        "handler_or_gm_intervention": "The existing human review controls in-scope campaign decisions without taking over the original draft.",
+        "test_fixture_ids": [
+          "tests/test_creation.py::test_source_catalog_and_starting_identities[OLDGEN]",
+          "tests/test_creation_review.py::test_all_girl_review_branches_and_activation_gate[OLDGEN]"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/test_creation.py::test_source_catalog_and_starting_identities[OLDGEN]",
+        "tests/test_creation_review.py::test_all_girl_review_branches_and_activation_gate[OLDGEN]"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -10151,14 +10343,46 @@
         "heading": "VATGROWN"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original girl selects this original playbook at character creation.",
+        "actor_type": "Original Girl and the human overseeing the existing creation review.",
+        "pre_roll_sources": [
+          "Printed catalogue compared against the official sheet",
+          "Actual original private creation draft and reviewed eligibility"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "creation": [
+            "Two original described Girl Assets from the printed catalogue",
+            "Four printed starting Identities in the original draft",
+            "Require an explicit DNA basis and retain the original accepted starting relationships."
+          ]
+        },
+        "choice_ownership": "The original owner selects their own described Assets. The existing review checks independent consent and source requirements.",
+        "target_policy": "Only the actual original draft, accepted links and exact playbook entry.",
+        "post_roll_effects": [
+          "Save original creation choices and project the private reviewed creation sheet."
+        ],
+        "mandatory_followups": [
+          "Independent review and normal entry safeguards still apply. Named Plays and advancement effects have separate source entries."
+        ],
+        "handler_or_gm_intervention": "The existing human review controls in-scope campaign decisions without taking over the original draft.",
+        "test_fixture_ids": [
+          "tests/test_creation.py::test_source_catalog_and_starting_identities[VATGROWN]",
+          "tests/test_creation_review.py::test_all_girl_review_branches_and_activation_gate[VATGROWN]"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/test_creation.py::test_source_catalog_and_starting_identities[VATGROWN]",
+        "tests/test_creation_review.py::test_all_girl_review_branches_and_activation_gate[VATGROWN]"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -10452,14 +10676,46 @@
         "heading": "AM (ARTIFICIAL MIND)"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original girl selects this original playbook at character creation.",
+        "actor_type": "Original Girl and the human overseeing the existing creation review.",
+        "pre_roll_sources": [
+          "Printed catalogue compared against the official sheet",
+          "Actual original private creation draft and reviewed eligibility"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "creation": [
+            "Two original described Girl Assets from the printed catalogue",
+            "Four printed starting Identities in the original draft",
+            "Preserve the actual reviewed starting relationships. Later exposure and copy effects have their own entries."
+          ]
+        },
+        "choice_ownership": "The original owner selects their own described Assets. The existing review checks independent consent and source requirements.",
+        "target_policy": "Only the actual original draft, accepted links and exact playbook entry.",
+        "post_roll_effects": [
+          "Save original creation choices and project the private reviewed creation sheet."
+        ],
+        "mandatory_followups": [
+          "Independent review and normal entry safeguards still apply. Named Plays and advancement effects have separate source entries."
+        ],
+        "handler_or_gm_intervention": "The existing human review controls in-scope campaign decisions without taking over the original draft.",
+        "test_fixture_ids": [
+          "tests/test_creation.py::test_source_catalog_and_starting_identities[AM]",
+          "tests/test_creation_review.py::test_all_girl_review_branches_and_activation_gate[AM]"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/test_creation.py::test_source_catalog_and_starting_identities[AM]",
+        "tests/test_creation_review.py::test_all_girl_review_branches_and_activation_gate[AM]"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -10799,14 +11055,45 @@
         "heading": "The Prince"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original frame owner selects this original playbook at character creation.",
+        "actor_type": "Original Frame owner and the human overseeing the existing creation review.",
+        "pre_roll_sources": [
+          "Printed catalogue compared against the official sheet",
+          "Actual original private creation draft and reviewed eligibility"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "creation": [
+            "Two original described Frame Assets from the printed catalogue",
+            "The actual reviewed Fanbase setup supplies two additional Identity sources."
+          ]
+        },
+        "choice_ownership": "The original owner selects their own described Assets. The existing review checks independent consent and source requirements.",
+        "target_policy": "Only the actual original draft, accepted links and exact playbook entry.",
+        "post_roll_effects": [
+          "Save original creation choices and project the private reviewed creation sheet."
+        ],
+        "mandatory_followups": [
+          "Independent review and normal entry safeguards still apply. Named Plays and advancement effects have separate source entries."
+        ],
+        "handler_or_gm_intervention": "The existing human review controls in-scope campaign decisions without taking over the original draft.",
+        "test_fixture_ids": [
+          "tests/test_creation.py::test_frame_assets_for_each_printed_playbook[THE PRINCE]",
+          "tests/test_creation_review.py::test_all_frame_review_branches_explicit_rulings_and_extra_identities[THE PRINCE]"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/test_creation.py::test_frame_assets_for_each_printed_playbook[THE PRINCE]",
+        "tests/test_creation_review.py::test_all_frame_review_branches_explicit_rulings_and_extra_identities[THE PRINCE]"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "THE PRINCE",
@@ -11021,14 +11308,45 @@
         "heading": "CONSUME"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original frame owner selects this original playbook at character creation.",
+        "actor_type": "Original Frame owner and the human overseeing the existing creation review.",
+        "pre_roll_sources": [
+          "Printed catalogue compared against the official sheet",
+          "Actual original private creation draft and reviewed eligibility"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "creation": [
+            "Two original described Frame Assets from the printed catalogue",
+            "Select the actual Priestess catalogue and keep the separate Starvation and custody rules."
+          ]
+        },
+        "choice_ownership": "The original owner selects their own described Assets. The existing review checks independent consent and source requirements.",
+        "target_policy": "Only the actual original draft, accepted links and exact playbook entry.",
+        "post_roll_effects": [
+          "Save original creation choices and project the private reviewed creation sheet."
+        ],
+        "mandatory_followups": [
+          "Independent review and normal entry safeguards still apply. Named Plays and advancement effects have separate source entries."
+        ],
+        "handler_or_gm_intervention": "The existing human review controls in-scope campaign decisions without taking over the original draft.",
+        "test_fixture_ids": [
+          "tests/test_creation.py::test_frame_assets_for_each_printed_playbook[CONSUME]",
+          "tests/test_creation_review.py::test_all_frame_review_branches_explicit_rulings_and_extra_identities[CONSUME]"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/test_creation.py::test_frame_assets_for_each_printed_playbook[CONSUME]",
+        "tests/test_creation_review.py::test_all_frame_review_branches_explicit_rulings_and_extra_identities[CONSUME]"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "CONSUME",
@@ -12494,14 +12812,45 @@
         "heading": "The Enforcer"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "The original frame owner selects this original playbook at character creation.",
+        "actor_type": "Original Frame owner and the human overseeing the existing creation review.",
+        "pre_roll_sources": [
+          "Printed catalogue compared against the official sheet",
+          "Actual original private creation draft and reviewed eligibility"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "creation": [
+            "Two original described Frame Assets from the printed catalogue",
+            "Select the actual Autocrat catalogue and keep the separate authority, punishment and Requisition rules."
+          ]
+        },
+        "choice_ownership": "The original owner selects their own described Assets. The existing review checks independent consent and source requirements.",
+        "target_policy": "Only the actual original draft, accepted links and exact playbook entry.",
+        "post_roll_effects": [
+          "Save original creation choices and project the private reviewed creation sheet."
+        ],
+        "mandatory_followups": [
+          "Independent review and normal entry safeguards still apply. Named Plays and advancement effects have separate source entries."
+        ],
+        "handler_or_gm_intervention": "The existing human review controls in-scope campaign decisions without taking over the original draft.",
+        "test_fixture_ids": [
+          "tests/test_creation.py::test_frame_assets_for_each_printed_playbook[THE ENFORCER]",
+          "tests/test_creation_review.py::test_all_frame_review_branches_explicit_rulings_and_extra_identities[THE ENFORCER]"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/test_creation.py::test_frame_assets_for_each_printed_playbook[THE ENFORCER]",
+        "tests/test_creation_review.py::test_all_frame_review_branches_explicit_rulings_and_extra_identities[THE ENFORCER]"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "THE ENFORCER",
