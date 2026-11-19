@@ -24609,14 +24609,29 @@
         "heading": "Voidspace Invasion"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Every original current member of the Cadre has used a verified native traversal of the same actual Rift.",
+        "actor_type": "Actual human facilitator, original Cadre and actual Ace",
+        "pre_roll_sources": ["Exact original traversals reviewed by the original facilitator", "Original Ace’s effective Void Assets"],
+        "roll_kind": "2d6",
+        "allowed_modifiers": ["Number of the actual Ace’s effective Void Assets"],
+        "tier_options": {
+          "mid": ["Discover a genuine route further. Original participants may use it to propose a new offstage stage through the ordinary reviewed navigation flow."]
+        },
+        "choice_ownership": "The human facilitator records the table-selected Ace and actual discovery. The original travelers own their own onward choices.",
+        "target_policy": "Only the original traveling recipients acquire the usable route.",
+        "post_roll_effects": ["Preserve the roll, exact original travel sources, and actual onward movement when reviewed."],
+        "mandatory_followups": ["Other mid discoveries, high encounters and low whole-Cadre Void still require the genuine consequences."],
+        "handler_or_gm_intervention": "The human facilitator records the actual discovery and each verified route; no automatic movement.",
+        "test_fixture_ids": ["tests/rules/test_harpy_defeat.py"]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_harpy_defeat.py::test_invasion_uses_actual_ace_void_and_yields_an_owned_onward_leg"],
       "m2_play_id": null,
       "module": "core"
     },

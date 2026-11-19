@@ -1148,3 +1148,126 @@ def test_genuine_harpy_carry_can_apply_repeatable_owned_void_in_private(ledger):
     actual = next(x for x in state(game).harpy_states if x.origin == holder)
     assert actual.frame_instance == original.frame_instance
     assert actual.controller == OTHER.user_id
+
+
+def test_invasion_uses_actual_ace_void_and_yields_an_owned_onward_leg(ledger):
+    import asyncio
+
+    from test_cast_service import change as change_cast
+    from test_harpy_flirt import submit_form
+    from test_physical_operations import place
+
+    from girlframe.discord_adapter.m3_voidspace_invasion import open_invasion
+    from girlframe.engine.m3_actor_bonds import current_ref
+    from girlframe.engine.m3_voidspace_invasion import RULE, records
+    from girlframe.services.inbox import InboxService
+    from girlframe.services.m3_actors import ActorService
+    from girlframe.services.m3_cast import CastService
+    from girlframe.services.m3_missions import MissionService
+    from girlframe.services.m3_voidspace_invasion import InvasionService
+
+    routes, game, worker, gateway, _, _, _, _ = rolled(ledger, (3, 4))
+    with ledger.transaction() as c:
+        canon = place(place(state(game), 2, mode="outside_frame"), 3, mode="outside_frame")
+        ace = current_ref(canon, canon.order[0])
+        for i, asset in enumerate(canon.sheets[ace.entity].assets):
+            asset.void = i == 0
+        game.event(c, ADMIN.user_id, "synthetic-ace-void", "synthetic.position", canon)
+    choose(
+        routes,
+        game,
+        PLAYER,
+        "harpy_defeat_select",
+        options=("rift",),
+        text="The actual Harpy escapes through the Rift.",
+    )
+    tick(worker, gateway, 5)
+    party = CastService(ActorService(MissionService(ledger)))
+    change_cast(party, PLAYER, "join", current_ref(state(game), PLAYER.user_id))
+    rift = state(game).void_rifts[-1]
+    policy = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update=dict(
+            m3_approval=policy.model_copy(
+                update=dict(
+                    subsystems=policy.subsystems | {"world", "plays"},
+                    activity_specialist_rules=policy.activity_specialist_rules | {RULE},
+                )
+            )
+        )
+    )
+    service = InvasionService(game)
+    inbox = InboxService(ledger)
+    legs = {}
+    for viewer in (PLAYER, OTHER):
+        actor = current_ref(state(game), viewer.user_id)
+        proposed = routes.propose_route(
+            viewer,
+            f"first-{viewer.user_id}",
+            state(game).revision,
+            actor,
+            rift=rift.id,
+            account="I follow the others through.",
+            navigation="The actual visible Rift.",
+        )
+        leg = proposed["id"]
+        routes.review_route(
+            ADMIN,
+            f"verify-first-{viewer.user_id}",
+            leg,
+            state(game).revision,
+            allow=True,
+            account="This original Girl actually passed through.",
+        )
+        legs[viewer.user_id] = leg
+        ready = any(
+            x.identity == rift.id and x.task == "m3_voidspace_invasion"
+            for x in inbox.items(ADMIN)
+        )
+        assert ready is (viewer.user_id == OTHER.user_id)
+
+    def native(viewer, identity, values, number):
+        asyncio.run(
+            submit_form(
+                viewer, lambda click: open_invasion(click, service, identity), values, number
+            )
+        )
+
+    game.dice.faces = (3, 4)
+    native(
+        ADMIN,
+        rift.id,
+        dict(ace=(ace.token,), account="The original Cadre travels together."),
+        91800,
+    )
+    (invasion,) = records(state(game))
+    assert invasion.faces == (3, 4) and invasion.result == "mid" and len(invasion.void_assets) == 1
+    assert game.dice.calls == 2
+    with pytest.raises(WorkflowError, match="unavailable"):
+        service.get(PLAYER, invasion.id)
+    native(
+        ADMIN, invasion.id, dict(account="The Cadre discovers the blue route further in."), 91804
+    )
+    assert not any(x.identity == invasion.id for x in inbox.items(ADMIN))
+    ledger.engine.dispose()
+    view = service.get(OTHER, invasion.id)
+    assert "blue route" in view["route"] and view["traveler"]
+    native(OTHER, invasion.id, dict(account="I lead the next leg along the blue route."), 91808)
+    continuation = next(x for x in state(game).harpy_travels if x.state == "proposed")
+    assert continuation.continuation_of == legs[OTHER.user_id]
+    assert continuation.navigation_source == view["discovery"]
+    routes.review_route(
+        ADMIN,
+        "verify-discovered-leg",
+        continuation.id,
+        state(game).revision,
+        allow=True,
+        account="The original traveler actually took the blue route.",
+    )
+    confirmed = state(game)
+    assert next(x for x in confirmed.harpy_travels if x.id == legs[OTHER.user_id]).state == "ended"
+    assert next(x for x in confirmed.harpy_travels if x.id == continuation.id).state == "offstage"
+    assert (
+        next(x for x in confirmed.harpy_travels if x.id == legs[PLAYER.user_id]).state == "offstage"
+    )
+    assert service.get(OTHER, invasion.id)["traveler"] is None and game.dice.calls == 2

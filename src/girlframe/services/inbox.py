@@ -4126,6 +4126,32 @@ class InboxService:
             from girlframe.services.m3_npc_handover import LABELS as HANDOVER_LABELS
             from girlframe.services.m3_npc_handover import NpcHandoverService
             from girlframe.services.m3_npc_intelligence import IntelligenceService
+            from girlframe.services.m3_voidspace_invasion import InvasionService
+
+            invasion = InvasionService(GameService(self.store))
+            for invasion_id, invasion_step in invasion.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "voidspace-invasion:" + invasion_id,
+                        "voidspace_invasion",
+                        invasion_id,
+                        canon.revision,
+                        "plays",
+                        "Voidspace Invasion",
+                        "Original Cadre traversal",
+                        "pending" if invasion_step != "route" else "complete",
+                        True,
+                        False,
+                        {
+                            "roll": "Roll for the Cadre’s original traversal.",
+                            "review": "Record the original discovery.",
+                            "route": "Open the original Cadre’s discovered route.",
+                        }[invasion_step],
+                        "This choice belongs to the original participants.",
+                        "Open your choice",
+                        task="m3_voidspace_invasion",
+                    )
+                )
 
             rescues = EscapeService(GameService(self.store))
             for escape_case, escape_step in rescues.tasks(connection, canon, viewer):

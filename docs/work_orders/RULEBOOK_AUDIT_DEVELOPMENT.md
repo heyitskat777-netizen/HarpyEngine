@@ -3122,3 +3122,22 @@ the actual sheet effects. The finder’s Disobey-to-refuse
 branch, other settings and exceptional body types still
 require the appropriate source adapters.
 [Escape p. 195](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=197) · [Native cases](../../tests/rules/test_escape.py)
+
+### Voidspace Invasion’s discovered route
+
+Base `ddd5ae5`. Every original Cadre member must actually
+cross the same Rift through the existing reviewed
+navigation controls. A single group roll uses the number
+of the table-selected actual Ace’s effective Void Assets.
+The original human facilitator records the mid discovery
+of a route further in. Each original traveler can use it
+to start a real onward leg through the same reviewed
+navigation path.
+
+**One focused native case passed in 7.84 seconds**. It
+verified the whole-Cadre prerequisite, the Ace modifier,
+private discovery, reopening, and one actual new reviewed
+leg with the previous leg ended. Other mid choices, high
+encounters and low gains for the whole original Cadre still
+need their genuine effects.
+[Voidspace Invasion p. 195](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=197) · [Native case](../../tests/rules/test_harpy_defeat.py)
