@@ -130,19 +130,23 @@ def require_communication(
     speaker: ActorRef,
     recipients: tuple[ActorRef, ...],
 ) -> None:
+    from girlframe.services.m3_jackdaw import has_interference, require_audible
+
     world = state.world
-    if world is None or not world.corrupted_cells or not recipients:
+    if world is None or not recipients or not (world.corrupted_cells or has_interference(state)):
         return
     bound = profiles(c, campaign)
     try:
-        source = resolve(state, speaker, bound, require_current_profile=False).cell
-        targets = tuple(
-            resolve(state, actor, bound, require_current_profile=False).cell for actor in recipients
+        actual_speaker = resolve(state, speaker, bound, require_current_profile=False)
+        actual_recipients = tuple(
+            resolve(state, actor, bound, require_current_profile=False) for actor in recipients
         )
     except ValueError as exc:
         raise WorkflowError(
             "Recover the original communication roles and their positions."
         ) from exc
+    source = actual_speaker.cell
+    targets = tuple(x.cell for x in actual_recipients)
     corrupted = already_corrupted(world, source)
     if any(
         target != source and (corrupted or already_corrupted(world, target)) for target in targets
@@ -150,12 +154,15 @@ def require_communication(
         raise WorkflowError(
             "No verified communication route reaches the original recipient from this position."
         )
+    require_audible(c, campaign, state, (actual_speaker, *actual_recipients))
 
 
 def require_order_communication(
     c: Connection, campaign: str, state: GameState, issuer: int, recipient: int
 ) -> None:
-    if state.world is not None and state.world.corrupted_cells:
+    from girlframe.services.m3_jackdaw import has_interference
+
+    if state.world is not None and (state.world.corrupted_cells or has_interference(state)):
         from girlframe.engine.m3_actor_bonds import current_ref
 
         require_communication(

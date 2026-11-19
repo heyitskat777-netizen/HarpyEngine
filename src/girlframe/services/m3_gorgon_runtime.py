@@ -108,6 +108,23 @@ def start(game: Any, c: Connection, state: GameState, action: dict[str, Any]) ->
         )
         action["data"]["result"]["corrupted"] = cell
         return
+    if meta["kind"] == "jackdaw_jam":
+        from girlframe.engine.m3_jackdaw import apply as jam
+
+        declaration = Declaration.model_validate_json(json.dumps(meta["declaration"]))
+        assert declaration.interference is not None
+        cell = resolve(state, declaration.actor, (), require_current_profile=False).cell
+        jam(
+            state,
+            declaration.actor,
+            cell,
+            declaration.interference,
+            action=action["id"],
+            scene=action["scene_id"],
+            event=_event(action),
+        )
+        action["data"]["result"]["audible_communication_blocked"] = True
+        return
     if meta["kind"] in growth.KINDS:
         declaration = Declaration.model_validate_json(json.dumps(meta["declaration"]))
         assert state.world is not None

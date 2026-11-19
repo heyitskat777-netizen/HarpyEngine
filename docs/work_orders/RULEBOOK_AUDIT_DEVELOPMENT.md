@@ -1786,6 +1786,29 @@ roll and denied the now-remote proposal. Other actor-specific Tag
 windows and Withdraw Into Your Shell remain open.
 [Sentinel p. 171](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=173) · [Tag cases](../../tests/rules/test_gorgon_runtime.py)
 
+### Jackdaw audible communication
+
+Base `d1c6d08e6f2f7c8198e52b85e6f291669895b643`. A living original
+Jackdaw can drown out audible communication through native Gorgon
+controls. The declaration preserves actual affected map squares.
+Reach beyond the source square requires human review. Ordinary
+Orders and reviewed simulated dialogue recheck physical range as
+they are used. The restriction ends when the receiving Girl leaves
+the range, or the original source moves away or ends. The denial
+does not reveal the hidden Gorgon. Earlier hearing remains recorded.
+
+**162 related Gorgon, Tag, Order and shadow tests passed in 216.37
+seconds**. The native test verifies no roll, source review, wrong
+controller, stale revision, safety pause, replay, restart, blocked
+same-square Order and actual movement that restores the recipient's
+ability to receive. **8 standalone shadow checks passed in 14.35
+seconds** after the shadow fixture stopped importing from another
+pytest collection directory. There was no simulated hearing of the
+blocked dialogue. Visual alternatives, catatonia and Hallucinations
+remain separate. External out-of-character chat is outside these
+engine controls.
+[Jackdaw p. 169](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=171) · [Native case](../../tests/rules/test_gorgon_runtime.py) · [Shadow case](../../tests/test_activity_shadow_readiness.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

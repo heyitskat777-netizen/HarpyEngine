@@ -283,7 +283,7 @@ def test_parallel_activity_review_only_learns_approved_closeout(fixture):
     assert "APPROVED_PILOT_REPORT" in after and "PRIVATE_DISCOVERY" not in after
 
 
-@pytest.mark.parametrize("change", ["none", "cast", "corruption", "later_corruption"])
+@pytest.mark.parametrize("change", ["none", "cast", "corruption", "later_corruption", "jackdaw"])
 def test_simulated_npc_delivery_binds_controller_and_hearing(fixture, change):
     app, scene, game, _, _, _, dice = fixture
     opt(app, scene)
@@ -309,22 +309,57 @@ def test_simulated_npc_delivery_binds_controller_and_hearing(fixture, change):
         ),
     )
     npc_roles.respond(OTHER, "accept-mechanic", offer["id"], state(game).revision, "accept")
-    if change in ("corruption", "later_corruption"):
-        from test_physical_operations import place
-        from test_world import gorgon
-
+    if change in ("corruption", "later_corruption", "jackdaw"):
+        from girlframe.engine.m3_actors import resolve
+        from girlframe.engine.m3_physical import initial as initial_pose
+        from girlframe.engine.m3_physical_state import InitialPlacement
         from girlframe.engine.m3_sentinel import corrupt
         from girlframe.engine.m3_world import update
+        from girlframe.services.m3_actors import profiles
 
         with game.store.transaction() as c:
-            original = place(state(game), PLAYER.user_id, cell=(2, 0), mode="outside_frame")
-            sentinel = gorgon("erratic", "signal-sentinel", types=("sentinel",))
-            original.world = update(original.world, gorgons=(*original.world.gorgons, sentinel))
-            if change == "corruption":
+            original = state(game)
+            bound = profiles(c, game.store.campaign_id)
+            frame = resolve(original, pilot, bound).frame_instance
+            original = initial_pose(
+                original,
+                bound,
+                InitialPlacement(
+                    actor=pilot,
+                    frame_instance=frame,
+                    girl_cell=(2, 0),
+                    frame_cell=(2, 0),
+                    mode="outside_frame",
+                    facts_confirmed=True,
+                    account="Synthetic recipients occupy distinct map squares.",
+                ),
+                "synthetic-recipients-original-body",
+                "synthetic-recipients-proposal",
+                "synthetic-recipients-review",
+            )
+            terrain_type = "jackdaw" if change == "jackdaw" else "sentinel"
+            seed, *others = original.world.gorgons
+            source = seed.model_copy(
+                update=dict(id="signal-" + terrain_type, types=(terrain_type,), cell=(0, 0))
+            )
+            original.world = update(original.world, gorgons=(source, *others))
+            if change == "jackdaw":
+                from girlframe.engine.m3_jackdaw import Range, apply
+
+                apply(
+                    original,
+                    ActorRef(kind="gorgon", entity=source.id),
+                    source.cell,
+                    Range(cells=((0, 0), (2, 0))),
+                    action="synthetic-range-action",
+                    scene=scene,
+                    event="synthetic-range-effect",
+                )
+            elif change == "corruption":
                 original.world = corrupt(
                     original.world,
-                    sentinel,
-                    sentinel.cell,
+                    source,
+                    source.cell,
                     "synthetic-action",
                     scene,
                     "start-effect",
@@ -417,7 +452,7 @@ def test_simulated_npc_delivery_binds_controller_and_hearing(fixture, change):
             app.write(OTHER, "blocked-hearing", scene, "npc-deliver", delivery)
         assert text not in json.dumps(app.timeline(PLAYER, scene))
         return
-    if change == "corruption":
+    if change in ("corruption", "jackdaw"):
         with pytest.raises(WorkflowError, match="No verified communication route"):
             app.write(OTHER, "blocked-hearing", scene, "npc-deliver", delivery)
         assert text not in json.dumps(app.timeline(PLAYER, scene))

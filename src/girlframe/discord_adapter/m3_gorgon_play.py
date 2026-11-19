@@ -14,10 +14,19 @@ from girlframe.engine.m3_gorgon_type_tags import LABELS as TYPE_TAG_LABELS
 from girlframe.engine.m3_gorgon_type_tags import TYPES as TAG_TYPES
 from girlframe.engine.m3_growth import KINDS as GROWTH_KINDS
 from girlframe.engine.m3_growth import Adaptation, Regrowth
+from girlframe.engine.m3_jackdaw import Range as JackdawRange
 from girlframe.engine.m3_mother_sprite import BirthPlan
-from girlframe.engine.m3_world_state import CorePlan
+from girlframe.engine.m3_world_state import Cell, CorePlan
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_gorgon_play import GorgonPlayService
+
+
+def jackdaw_range(raw: str) -> JackdawRange:
+    cells: list[Cell] = []
+    for line in raw.splitlines():
+        x, y = line.split(",")
+        cells.append((int(x.strip()), int(y.strip())))
+    return JackdawRange(cells=tuple(cells))
 
 
 async def open_gorgon_play(interaction: discord.Interaction, game: GameService) -> None:
@@ -36,6 +45,8 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
             return "Choose a Growth whose current Core or damaged Assets permit this Play."
         if kind == "mother_sprite" and actor["token"] not in data["sprite_birth"]:
             return "Choose the original Mother with an intact Asset."
+        if kind == "jackdaw_jam" and actor["token"] not in data["jam"]:
+            return "Choose the actual Jackdaw with an established position."
         targets = [x for x in data["actors"] if x["ref"] != actor["ref"]]
         type_tag = kind in TAG_TYPES
         if type_tag:
@@ -99,6 +110,14 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
                     Field("sprite_weakness", "The Sprite's Core weakness", paragraph=True),
                 )
             )
+        if kind == "jackdaw_jam":
+            fields.append(
+                Field(
+                    "audible_range",
+                    "Enter each affected map square on its own x,y line",
+                    paragraph=True,
+                )
+            )
         fields.extend(
             [
                 Field("account", "Describe the action and actual reach", paragraph=True),
@@ -152,6 +171,9 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
                         weakness=details["sprite_weakness"],
                     )
                     if kind == "mother_sprite"
+                    else None,
+                    interference=jackdaw_range(details["audible_range"])
+                    if kind == "jackdaw_jam"
                     else None,
                 ),
             )

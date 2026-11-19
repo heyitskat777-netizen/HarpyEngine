@@ -32,6 +32,7 @@ def candidate_source_gate(monkeypatch):
             "gorgon.gorgon.collateral-damage",
             "gorgon.gorgon.warp",
             "gorgon-type.sentinel.sentinel-type",
+            "gorgon-type.jackdaw.jackdaw-type",
             "gorgon-type.incubus.incubus-type",
             "gorgon-type.mother.mother-type",
             "gorgon-type.growth.growth-type",
@@ -67,6 +68,7 @@ def gorgon_source(
     other_cell=(0, 0),
     tag=None,
     revealed=True,
+    interference=None,
 ):
     game, worker, gateway, _, _, _ = prepared(store, other_cell=other_cell)
     approval = store.policy.m3_approval
@@ -246,6 +248,7 @@ def gorgon_source(
         account="Actual declared source effect at the present battlefield",
         reach_confirmed=True,
         tag=tag,
+        interference=interference,
     )
     if not begin:
         return game, worker, gateway, None, declaration
@@ -480,6 +483,117 @@ def test_sentinel_terrain_is_one_real_native_tag_without_character_sheet_mutatio
             mark["revision"],
             invalid.model_copy(update={"denied": (tag,)}),
         )
+
+
+def test_jackdaw_native_jamming_blocks_orders_until_original_girl_leaves_range(ledger):
+    import asyncio
+    import json
+
+    from test_ledger import OTHER
+    from test_mission_ui import current
+
+    from girlframe.discord_adapter.m3_gorgon_play import open_gorgon_play
+    from girlframe.engine.m3_actor_bonds import current_ref
+    from girlframe.engine.m3_jackdaw import Range, ranges
+    from girlframe.services.m2_game import GameService
+    from girlframe.services.m3_movement import MovementService
+    from girlframe.services.onboarding import WorkflowError
+
+    game, worker, gateway, _, declaration = gorgon_source(
+        ledger,
+        kind="jackdaw_jam",
+        types=("jackdaw",),
+        begin=False,
+        other_cell=(2, 0),
+        interference=Range(cells=((0, 0), (1, 0))),
+    )
+    service = GorgonPlayService(game)
+    revision = state(game).revision
+    assert "jackdaw_jam" not in service.preview(PLAYER, 900)["plays"]
+    with pytest.raises(WorkflowError, match="actual owned"):
+        service.begin(PLAYER, "wrong-caller", 900, revision, declaration)
+    with pytest.raises(WorkflowError, match="STALE_GORGON_PLAY"):
+        service.begin(ADMIN, "stale-jackdaw", 900, revision - 1, declaration)
+    forged = declaration.model_copy(update=dict(interference=Range(cells=((0, 0), (80, 80)))))
+    with pytest.raises(WorkflowError, match="in-range map squares"):
+        service.begin(ADMIN, "forged-reach", 900, revision, forged)
+
+    async def native():
+        owner = current(ADMIN.user_id, 78900)
+        owner.channel_id = 900
+        await owner.response.defer(ephemeral=True)
+        await open_gorgon_play(owner, game)
+        form = owner.edit_original_response.call_args.kwargs["view"]
+        form.values.update(actor=(declaration.actor.token,), play=("jackdaw_jam",))
+        select = current(ADMIN.user_id, 78901)
+        await select.response.defer(ephemeral=True)
+        await form.confirm.callback(select)
+        confirm = select.edit_original_response.call_args.kwargs["view"]
+        confirm.values.update(
+            account=declaration.account, reach=("confirmed",), audible_range="0,0\n1,0"
+        )
+        sent = current(ADMIN.user_id, 78902)
+        await confirm.confirm.callback(sent)
+        assert confirm.completed, sent.followup.send.call_args
+
+    asyncio.run(native())
+    action = service.begin(ADMIN, "78902", 900, revision, declaration)["action_id"]
+    ledger.safety(PLAYER, "pause-jackdaw", ledger.status(PLAYER)["revision"], pause=True)
+    tick(worker, gateway, 3)
+    assert not ranges(state(game))
+    ledger.safety(PLAYER, "resume-jackdaw", ledger.status(PLAYER)["revision"], pause=False)
+    tick(worker, gateway, 5)
+    with ledger.engine.connect() as c:
+        started = game.action(c, action)["data"]["gorgon_play"]["started"]
+    if not started:
+        game.roll(ADMIN, "advance-original-jackdaw", action)
+    assert not ranges(state(game))
+    answer(
+        game,
+        ADMIN,
+        "gorgon_asset_capability",
+        flag=True,
+        text="The actual human referee verifies audible reach across these two squares.",
+    )
+    (interference,) = ranges(state(game))
+    assert interference.action == action and interference.range.cells == ((0, 0), (1, 0))
+    assert game.inspect(ADMIN, action)["state"] == "complete" and game.dice.calls == 0
+    tick(worker, gateway, 5)
+    change(CastService(ActorService(MissionService(ledger))), ADMIN, "withdraw", declaration.actor)
+    with ledger.transaction() as c:
+        canon = state(game)
+        canon.facts.append(
+            dict(
+                kind="ordinary_handler_movement",
+                actor=current_ref(canon, 1).model_dump_json(),
+                cell=json.dumps((0, 0)),
+                event="synthetic-position",
+            )
+        )
+        game.event(
+            c, ADMIN.user_id, "handler-present", "synthetic.original_handler_position", canon
+        )
+    ledger.engine.dispose()
+    restarted = GameService(ledger, dice=game.dice)
+    with pytest.raises(WorkflowError, match="No verified communication route"):
+        restarted.issue_order(ADMIN, "jam-even-in-same-square", 900, PLAYER.user_id, "Hold here.")
+    canon = state(restarted)
+    MovementService(restarted).move(
+        PLAYER,
+        "leave-original-jackdaw-range",
+        canon.revision,
+        900,
+        current_ref(canon, PLAYER.user_id),
+        (2, 0),
+        frame=True,
+        account="I drive my Frame beyond the original audible range.",
+    )
+    order = restarted.issue_order(
+        ADMIN, "receive-after-withdrawal", 900, PLAYER.user_id, "Hold here."
+    )
+    assert order["order_id"] and game.dice.calls == 0
+    assert ranges(state(restarted)) == (interference,)
+    assert not any(x["kind"] == "order_response" for x in restarted.choices(OTHER))
 
 
 def test_sentinel_prevents_orders_across_corrupted_square_boundary(ledger):

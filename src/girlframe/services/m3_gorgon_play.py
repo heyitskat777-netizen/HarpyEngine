@@ -10,6 +10,7 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_growth as growth
+from girlframe.engine import m3_jackdaw as jackdaw
 from girlframe.engine import m3_mother_sprite as mother_sprite
 from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, SceneCast
@@ -37,6 +38,7 @@ RULES: dict[str, str] = {
     "growth_adapt": growth.RULE,
     "growth_regrow": growth.RULE,
     "mother_sprite": mother_sprite.RULE,
+    "jackdaw_jam": jackdaw.RULE,
     **{str(kind): rule for kind, rule in TYPE_TAG_RULES.items()},
 }
 
@@ -77,6 +79,7 @@ class GorgonPlayService:
             can_corrupt = False
             can_grow: dict[str, list[str]] = {}
             can_birth: list[str] = []
+            can_jam: list[str] = []
             for role in cast.roles:
                 actual = resolve(state, role.actor, bound, require_current_profile=False)
                 if not _visible(state, role.actor, viewer.user_id):
@@ -90,6 +93,8 @@ class GorgonPlayService:
                     and state.world
                 ):
                     body = next(x for x in state.world.gorgons if x.id == role.actor.entity)
+                    if body.alive and "jackdaw" in body.types and not actual.offstage_source:
+                        can_jam.append(role.actor.token)
                     if body.alive and "growth" in body.types and not actual.offstage_source:
                         can_grow[role.actor.token] = [
                             k
@@ -161,6 +166,8 @@ class GorgonPlayService:
                     continue
                 if kind == "mother_sprite" and not can_birth:
                     continue
+                if kind == "jackdaw_jam" and not can_jam:
+                    continue
                 try:
                     access.registry.require_available(identity)
                 except ValueError:
@@ -175,6 +182,7 @@ class GorgonPlayService:
                 typed_targets=typed_targets,
                 growth=can_grow,
                 sprite_birth=can_birth,
+                jam=can_jam,
             )
 
     def begin(
@@ -230,6 +238,8 @@ class GorgonPlayService:
                 if actual.cell is None:
                     raise WorkflowError("Use this actual Mother's established map square")
                 mother_sprite.check(gorgon, declaration.birth)
+            if declaration.interference is not None:
+                jackdaw.check(state, declaration.actor, actual.cell, declaration.interference)
 
             if (
                 gorgon.gorgon_class == "benevolent"
@@ -332,7 +342,11 @@ class GorgonPlayService:
             approval = self.store.policy.m3_approval
             assert approval is not None
             reach_required = (
-                actual.cell is None or target_view is not None and target_view.cell != actual.cell
+                actual.cell is None
+                or target_view is not None
+                and target_view.cell != actual.cell
+                or declaration.interference is not None
+                and len(declaration.interference.cells) > 1
             )
             meta = dict(
                 declaration=declaration.model_dump(mode="json"),
