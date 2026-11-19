@@ -14781,8 +14781,8 @@
       "reviewer": null,
       "review_reference": null,
       "contract": {
-        "trigger": "The original Soldier shares a verified and independently consented private encounter with a standard Pilot.",
-        "actor_type": "Original Soldier, standard Pilot and original human facilitator",
+        "trigger": "The original Soldier shares a verified private encounter with a consenting standard Pilot or member of her confirmed Ancillary Cadre.",
+        "actor_type": "Original Soldier, original participating Pilot and human facilitator",
         "pre_roll_sources": [
           "Actual optional Play release",
           "Original roles and verified consent",
@@ -14795,7 +14795,7 @@
         ],
         "tier_options": {
           "low": [
-            "Keep the result pending for the original relative Status and Good Soldier effect"
+            "Place the original Soldier below the actual counterpart in the same Cadre, or at Dog if already lower. Grant Good Soldier and apply its −1 to a supported Order refusal. Keep unsupported rank relationships pending."
           ],
           "mid": [
             "Raise actual Status and optionally deepen or weaken the original Bond"
@@ -14810,7 +14810,7 @@
           "Apply actual Status and Bond or original resource mark and Asset repair."
         ],
         "mandatory_followups": [
-          "Low relative Status and Good Soldier, ordinary modifiers, other counterpart kinds and direct high verification remain open."
+          "Mixed-Cadre low outcomes, ordinary roll modifiers, other Order sources and direct high verification remain open."
         ],
         "handler_or_gm_intervention": "Actual facilitator verifies the encounter and separate moment alone.",
         "test_fixture_ids": [

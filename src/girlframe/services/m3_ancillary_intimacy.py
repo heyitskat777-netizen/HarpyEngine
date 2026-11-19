@@ -85,6 +85,7 @@ RESULTS = {
     "SOLDIER": {"low": "soldier_rank_low", "mid": "soldier_mid", "high": "soldier_high"},
 }
 KIND = "ancillary_private_play"
+GOOD_SOLDIER = "soldier_good_soldier"
 
 
 class Dice(Model):
@@ -155,6 +156,7 @@ class Encounter(Model):
         "abyssal_verify",
         "abyssal_damage",
         "soldier_rank_low",
+        "soldier_place",
         "soldier_mid",
         "soldier_high",
         "soldier_repair",
@@ -182,6 +184,23 @@ class Encounter(Model):
 def records(state: GameState) -> tuple[Encounter, ...]:
     return tuple(
         Encounter.model_validate_json(x["body"]) for x in state.facts if x.get("kind") == KIND
+    )
+
+
+def good_soldier_tag(state: GameState, actor: ActorRef) -> str | None:
+    source = ancillary.find(state, actor)
+    if source is None or source.draft.book != "SOLDIER":
+        return None
+    owned = {tag.id for tag in source.tags if tag.label == "Good Soldier"}
+    return next(
+        (
+            x["tag"]
+            for x in state.facts
+            if x.get("kind") == GOOD_SOLDIER
+            and x.get("actor") == actor.token
+            and x.get("tag") in owned
+        ),
+        None,
     )
 
 
@@ -290,13 +309,14 @@ class AncillaryIntimacyService:
     ) -> bool:
         if partner.ref.kind == "pilot" and partner.rules == "girl_frame":
             return True
-        if book != "PRODIGY":
+        if book not in ("PRODIGY", "SOLDIER"):
             return False
         actual = cadre_rank.current(state, actor)
         if actual is None:
             return False
         return (
-            partner.ref == actual.handler
+            book == "PRODIGY"
+            and partner.ref == actual.handler
             and partner.controller == actual.handler_owner
             or partner.rules == "ancillary"
             and partner.ref in cadre_rank.actual_members(state, actual)
@@ -470,6 +490,7 @@ class AncillaryIntimacyService:
             "abyssal_ask",
             "abyssal_damage",
             "soldier_mid",
+            "soldier_place",
             "soldier_high",
             "soldier_repair",
         ):
@@ -769,6 +790,12 @@ class AncillaryIntimacyService:
                     raise ValueError("Dice source returned invalid faces.")
                 dice = Dice(faces=faces, heat=heat, source=event, rng=self.game.rng_source)
                 update = dict(roll=dice, step=RESULTS[case.book][dice.result])
+                if case.book == "SOLDIER" and dice.result == "low":
+                    group = cadre_rank.current(state, case.actor.actor)
+                    if group is not None and case.partner.actor in cadre_rank.actual_members(
+                        state, group
+                    ):
+                        update["step"] = "soldier_place"
                 if case.book == "PRODIGY" and dice.result == "mid":
                     group = cadre_rank.current(state, case.actor.actor)
                     if group is not None:
@@ -1411,6 +1438,16 @@ def _soldier(
     event: str,
 ) -> tuple[GameState, dict[str, Any]]:
     actor, other = case.actor.actor, case.partner.actor
+    if case.step == "soldier_place" and choice == "apply" and not account:
+        cadre_rank.place_below(state, actor, other, event)
+        tag = good_soldier_tag(state, actor)
+        if tag is None:
+            tag = str(uuid4())
+            state = give_tag(
+                state, actor, actor, "Good Soldier", event, tag, (case.actor.controller,)
+            )
+        state.facts.append(dict(kind=GOOD_SOLDIER, actor=actor.token, event=event, tag=tag))
+        return state, dict(step="closed", disposition="soldier_placed_below", tag=tag)
     if case.step == "soldier_mid" and choice in ("pass", "deepen", "weaken") and not account:
         cadre_rank.shift(state, actor, -1, event)
         if choice in ("deepen", "weaken"):

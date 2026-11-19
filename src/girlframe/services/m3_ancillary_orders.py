@@ -52,6 +52,8 @@ class Order(Model):
     faces: tuple[int, int] | None = None
     rng_source: str | None = None
     heat: int = 0
+    base_modifier: int = 0
+    good_soldier: str | None = None
     modifier: int = 0
     tag: str | None = None
     total: int | None = None
@@ -158,6 +160,12 @@ def _rules(
     successor = personal_handler(game, state, target)
     if successor is not None:
         return (False, illegal(c, game, state, target)) if successor == issuer else None
+    if role.draft.book == "SOLDIER":
+        from girlframe.services.m3_ancillary_intimacy import SOLDIER
+
+        cadre = rank.current(state, target)
+        if cadre is not None and cadre.handler == issuer and _available(game, SOLDIER):
+            return False, False
     if not npc or not _independent(state, target):
         return None
     if role.draft.book == "ANGEL-WIFE" and _available(game, SERVICE):
@@ -478,6 +486,7 @@ class AncillaryOrderService:
                 tags=self._tags(state, value) if self_tag and value.stage == "tag" else {},
                 total=value.total,
                 level=tier(value.total) if value.total is not None else None,
+                good_soldier=value.good_soldier is not None,
             )
 
     def pronoun_menu(self, viewer: GuildViewer, actor: ActorRef) -> dict[str, Any]:
@@ -592,6 +601,13 @@ class AncillaryOrderService:
                         stage="closed", consequence="chosen_follow", account=account.strip()
                     )
                 elif choice == "disobey" and not forbidden and not account and not order.faces:
+                    from girlframe.services.m3_ancillary_intimacy import SOLDIER, good_soldier_tag
+
+                    soldier = (
+                        good_soldier_tag(state, actor.ref)
+                        if _available(self.game, SOLDIER)
+                        else None
+                    )
                     state = commit(
                         state,
                         actor.ref,
@@ -606,6 +622,8 @@ class AncillaryOrderService:
                         stage="tag",
                         faces=faces,
                         heat=heat,
+                        base_modifier=-1 if soldier is not None else 0,
+                        good_soldier=soldier,
                         roll_event=event,
                         rng_source=self.game.rng_source,
                     )
@@ -627,7 +645,7 @@ class AncillaryOrderService:
                     modifier = direction
                 else:
                     raise WorkflowError("Pass or use one eligible original own Tag.")
-                total = sum(order.faces) + order.heat + modifier
+                total = sum(order.faces) + order.heat + order.base_modifier + modifier
                 update = dict(
                     stage="review" if tier(total) == "low" else "outcome",
                     tag=tag,

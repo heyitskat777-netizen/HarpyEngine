@@ -87,6 +87,8 @@ async def open_order_response(
         )
     elif stage == "tag":
         choices = (("pass", "Pass"),)
+        if data["good_soldier"]:
+            instructions += "\nYour saved roll includes −1 from Good Soldier."
         if data["tags"]:
             choices += (("mark", "Mark one of my Tags"),)
             fields.extend(

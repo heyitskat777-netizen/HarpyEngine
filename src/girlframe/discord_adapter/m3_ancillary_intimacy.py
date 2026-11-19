@@ -285,6 +285,10 @@ async def open_ancillary_intimacy_choice(
             "Apply the original Status loss, then choose whether to request a repair.",
             (("apply", "Apply the Status loss"),),
         ),
+        "soldier_place": (
+            "Set your Status using the original counterpart and take Good Soldier.",
+            (("apply", "Apply the saved low result"),),
+        ),
         "soldier_repair": (
             "Select an actual damaged Asset and unmarked resource, or pass.",
             (("pass", "Pass"), *tuple(data.get("own_damaged", {}).items()))

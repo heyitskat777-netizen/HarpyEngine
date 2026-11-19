@@ -84,11 +84,25 @@ def become_ace(state: GameState, actor: ActorRef, event: str) -> None:
     cadre = current(state, actor)
     if cadre is None:
         raise ValueError("Recover the original Prodigy's actual Cadre.")
+    _place(state, cadre, actor, 0, event)
+
+
+def place_below(state: GameState, actor: ActorRef, other: ActorRef, event: str) -> None:
+    cadre = current(state, actor)
+    members = actual_members(state, cadre) if cadre else ()
+    if cadre is None or other not in members or other == actor:
+        raise ValueError("Use the other original member of the same active Cadre.")
+    index = members.index(other)
+    _place(state, cadre, actor, index if members.index(actor) < index else len(members) - 1, event)
+
+
+def _place(state: GameState, cadre: Cadre, actor: ActorRef, index: int, event: str) -> None:
     members = actual_members(state, cadre)
     ordered = list(cadre.order)
     places = [i for i, role in enumerate(ordered) if role.actor in members]
     roles = [ordered[i] for i in places]
     own = roles.pop(members.index(actor))
-    for i, role in zip(places, (own, *roles), strict=True):
+    roles.insert(index, own)
+    for i, role in zip(places, roles, strict=True):
         ordered[i] = role
     put(state, cadre.model_copy(update=dict(order=tuple(ordered), event=event)))

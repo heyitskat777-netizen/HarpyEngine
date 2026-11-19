@@ -3591,6 +3591,23 @@ consequence. The original counterpart can already decline both
 low effects.
 [Prodigy p. 99](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=101) · [Native case](../../tests/rules/test_prodigy_private_play.py)
 
+### Soldier’s low result and Good Soldier
+
+Base `af17db0fd3a76fd9835202af647ed4fb1edc8087`. The
+original Soldier can resolve her low result against a consenting
+member of the same confirmed Ancillary Cadre. If above the
+counterpart she moves directly below them. If already below,
+she becomes Dog. The original Girl receives Good Soldier and
+its −1 applies to her saved refusal roll while she owns the Tag.
+
+One focused case passed in 6.75 seconds. It moved the Soldier
+from second to Dog, created the original Tag, and turned the
+next saved 8 into a 7 on an actual Order from the original
+Handler. The existing middle case was deselected. Mixed-Cadre
+rank, other Order sources and the separate high case remain
+open for direct verification.
+[Soldier p. 95](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=97) · [Native case](../../tests/rules/test_soldier_private_play.py)
+
 ### Mercenary’s private Play
 
 Base `f071b9b`. The middle result can open a small favour
