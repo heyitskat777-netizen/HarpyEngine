@@ -147,6 +147,7 @@ def prepare_keep(
             "gorgon_frame_contact_consequence",
             "incubus_conditioning",
             "parasite_infection",
+            "mother_memetic_hazard",
         ):
             from girlframe.services.m3_gorgon_play import GorgonPlayService
 
@@ -172,6 +173,7 @@ def prepare_keep(
                 "gorgon_conditioning_threshold",
                 "gorgon_unreal_threshold",
                 "gorgon_infection_threshold",
+                "gorgon_hazard_threshold",
             )
             and x["actor_id"] == actor.entity
             and json.loads(x["body_json"]).get("work_id") == row["id"]
@@ -217,6 +219,7 @@ def authorize_keep(
         "gorgon_frame_contact_consequence",
         "incubus_conditioning",
         "parasite_infection",
+        "mother_memetic_hazard",
     ):
         from girlframe.services.m3_gorgon_play import GorgonPlayService
 

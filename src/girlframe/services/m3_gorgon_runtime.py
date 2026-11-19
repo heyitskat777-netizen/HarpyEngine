@@ -976,6 +976,11 @@ def complete_response(
         .values(state="completed_by_work", revision=choices.c.revision + 1)
     )
     state = load_state(c, game.store.campaign_id)
+    if meta["kind"] == hazard_play:
+        from girlframe.services.m3_mother_hazard import complete_response as finish_hazard
+
+        finish_hazard(game, c, state, parent, child, event, viewer, key)
+        return
     if meta["kind"] == incubus_play and source.get("conditioning_tag"):
         from girlframe.services.m3_incubus_conditioning import complete_response as finish
 
@@ -1072,6 +1077,10 @@ def synchronize(
     materialize_dormant(game, c, action, event)
     synchronize_damage(game, c, event)
     state = load_state(c, game.store.campaign_id)
+    if meta["kind"] == hazard_play:
+        from girlframe.services.m3_mother_hazard import materialize as materialize_hazard
+
+        materialize_hazard(game, c, state, action, event)
     if meta["kind"] == infection_play:
         from girlframe.services.m3_parasite_infection import materialize as materialize_infection
 
@@ -1113,6 +1122,7 @@ def synchronize(
                     "gorgon_conditioning_threshold",
                     "gorgon_unreal_threshold",
                     "gorgon_infection_threshold",
+                    "gorgon_hazard_threshold",
                 ):
                     c.execute(
                         choices.update()

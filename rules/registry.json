@@ -22186,25 +22186,31 @@
           "Owned Heat"
         ],
         "tier_options": {
+          "mid": [
+            "The Girl chooses ordinary Void or an immediate Mother-selected Play."
+          ],
+          "high": [
+            "Apply ordinary Void and the immediate sourced Play. Immunity lasts while the exact gained Asset is Void."
+          ],
           "low": [
             "The original Girl may immediately eject from her own Frame."
           ]
         },
-        "choice_ownership": "Mother selects an actual known Tag. The Girl owns actual Heat spend and immediate ejection.",
+        "choice_ownership": "Mother selects an actual known Tag. The Girl owns actual Heat spend, mid choice, Asset rewrite and ejection. Mother chooses the supported immediate Play and the original Girl owns her actual Play response.",
         "target_policy": "Original living Girl physically present in the Mother Gorgon's exact scene and square.",
         "post_roll_effects": [
-          "Apply actual ejection of the original Girl from her still-occupied Frame."
+          "Apply ordinary Void, source-scoped immunity and actual private Keep Your Head, or eject the original Girl from her still-occupied Frame."
         ],
         "mandatory_followups": [
-          "Preserve rolls for unsupported consequences. Do not release the effect based on acknowledgement."
+          "Resolve actual ordinary Void and complete any selected immediate Play. Unsupported consequences remain pending."
         ],
-        "handler_or_gm_intervention": "Original human GM retains the private review of unsupported consequences. Report-based exposure and further outcome paths remain open.",
+        "handler_or_gm_intervention": "Original human GM retains the private review of unsupported consequences. Report-based exposure, alternate selected Plays and further low consequences remain open.",
         "test_fixture_ids": [
           "tests/rules/test_gorgon_runtime.py"
         ]
       },
       "dependencies": [],
-      "test_evidence": ["tests/rules/test_gorgon_runtime.py::test_mother_local_hazard_preserves_the_actual_frame_through_owned_ejection"],
+      "test_evidence": ["tests/rules/test_gorgon_runtime.py::test_mother_local_hazard_applies_owned_ejection_or_both_high_effects"],
       "m2_play_id": null,
       "module": "core"
     },

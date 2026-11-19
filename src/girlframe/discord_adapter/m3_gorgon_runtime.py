@@ -731,6 +731,33 @@ async def open_hazard(
     elif kind == "hazard_eject":
         text = "Your low roll is saved. You can eject your Girl from her actual Vital Frame now."
         fields = [Field("account", "Describe your immediate ejection", paragraph=True)]
+    elif kind == "hazard_mid":
+        text = "Choose the actual consequence of your saved roll."
+        fields = [
+            Field(
+                "options",
+                "Your printed choice",
+                (
+                    ("void", "Gain Void"),
+                    ("play", "Mother chooses an immediate Play"),
+                ),
+            )
+        ]
+    elif kind == "hazard_pick_play":
+        text = "Select the immediate supported Play for the original Girl to perform."
+        fields = [Field("options", "Actual Play", (("keep_your_head", "Keep Your Head"),))]
+    elif kind == "hazard_void" and detail["assets"]:
+        text = "Choose and describe the actual Asset that gains ordinary Void."
+        fields = [
+            Field("options", "Your actual eligible Asset", tuple(detail["assets"].items())),
+            Field("account", "Describe the change", paragraph=True),
+        ]
+    elif kind == "hazard_threshold":
+        from girlframe.discord_adapter.m3_void import open_void
+        from girlframe.services.m3_void import VoidService
+
+        await open_void(interaction, VoidService(game.store), detail["work"])
+        return
     else:
         await reply(
             interaction,
@@ -745,6 +772,7 @@ async def open_hazard(
         answer = ChoiceAnswer(
             number=int(heat) if kind == "hazard_heat" else None,
             text=values.get("account", ""),
+            options=tuple(values.get("options", ())),
         )
         await asyncio.to_thread(
             game.respond,

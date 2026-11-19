@@ -25,6 +25,8 @@ class Exposure(Model):
     void_event: str | None = None
     void_work: str | None = None
     choice: str | None = None
+    requested_play: str | None = None
+    child: str | None = None
     completed: str | None = None
 
 

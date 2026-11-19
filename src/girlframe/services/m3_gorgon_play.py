@@ -1039,6 +1039,7 @@ def prepare_response(
             incubus.PLAY,
             unreal.PLAY,
             infection.PLAY,
+            hazard.PLAY,
         )
         and prepared.play == "keep_your_head"
         and prepared.source_work is not None
@@ -1069,7 +1070,7 @@ def prepare_response(
         cast=cast.model_dump(mode="json"),
         cast_sha256=fingerprint(cast),
         private_audience=source.get("private_audience")
-        if source.get("frame_intervention") or source["kind"] == incubus.PLAY
+        if source.get("frame_intervention") or source["kind"] in (incubus.PLAY, hazard.PLAY)
         else None,
         conditioning_tag=json.loads(row["body_json"]).get("conditioning_tag"),
         table=sorted(
@@ -1152,6 +1153,18 @@ def validate_child(
     row = _response(game, c, parent, actor)
     if prepared.parent != parent["id"]:
         raise WorkflowError("Use this exact held source parent for the response")
+    if parent["data"]["gorgon_play"]["kind"] == hazard.PLAY:
+        from girlframe.services.m3_mother_hazard import SUPPORTED_PLAY
+
+        case = hazard.get(load_state(c, game.store.campaign_id), parent["id"])
+        if (
+            case is None
+            or case.completed
+            or case.girl != actor
+            or case.requested_play != prepared.play
+            or prepared.play != SUPPORTED_PLAY
+        ):
+            raise WorkflowError("Use the actual original Mother's selected supported Play")
     if prepared.play in (
         "engage",
         "all_out_assault",

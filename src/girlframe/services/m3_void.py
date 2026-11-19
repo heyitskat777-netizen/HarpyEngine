@@ -178,6 +178,12 @@ def source(
 
             prove_temptation(game, c, first, body, actor)
             return current, body, actor
+        if body.get("reason") == "mother_memetic_hazard":
+            from girlframe.services.m3_mother_hazard import prove_void as prove_hazard_void
+
+            assert proof is not None
+            prove_hazard_void(game, c, proof, first, body, actor)
+            return current, body, actor
         if body.get("reason") == "parasite_infection":
             from girlframe.services.m3_parasite_infection import prove_void as prove_infection_void
 
@@ -614,6 +620,10 @@ def complete(
             from girlframe.services.m3_consume import resume_pending
 
             resume_pending(game, c, event)
+        elif body.get("reason") == "mother_memetic_hazard":
+            from girlframe.services.m3_mother_hazard import complete_void as complete_hazard_void
+
+            complete_hazard_void(game, c, identity, body["source_action"], event, viewer, key)
         elif body.get("reason") == "parasite_infection":
             from girlframe.services.m3_parasite_infection import (
                 complete_void as complete_infection_void,
@@ -755,6 +765,7 @@ class VoidService:
             "incubus_conditioning",
             "incubus_conditioning_rebirth",
             "parasite_infection",
+            "mother_memetic_hazard",
         ):
             parent = self.game.action(c, body["source_action"])
             handler = viewer.user_id in parent["data"].get("private_audience", ())

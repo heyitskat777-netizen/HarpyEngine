@@ -3854,7 +3854,8 @@ def test_parasite_infect_damages_an_actual_voided_asset_before_the_owned_roll(le
         assert next(x for x in final.sheets["2"].assets if x.id == selected).void
 
 
-def test_mother_local_hazard_preserves_the_actual_frame_through_owned_ejection(ledger):
+@pytest.mark.parametrize("tier", ("low", "high"))
+def test_mother_local_hazard_applies_owned_ejection_or_both_high_effects(ledger, tier):
     import asyncio
 
     from test_ledger import OTHER
@@ -3863,11 +3864,12 @@ def test_mother_local_hazard_preserves_the_actual_frame_through_owned_ejection(l
     from test_privacy_game_delivery import PrivateGateway
 
     from girlframe.discord_adapter.m2_ui import open_choice
+    from girlframe.engine.m2 import PlayInput
     from girlframe.engine.m3_actors import resolve
-    from girlframe.engine.m3_mother_hazard import get
+    from girlframe.engine.m3_mother_hazard import get, immune
     from girlframe.engine.m3_physical_state import CockpitAction
     from girlframe.services.m3_actors import profiles
-    from girlframe.services.m3_mother_hazard import EJECT, HEAT
+    from girlframe.services.m3_mother_hazard import EJECT, HEAT, PICK_PLAY, VOID
     from girlframe.services.m3_physical import PhysicalService
     from girlframe.services.onboarding import WorkflowError
 
@@ -3924,7 +3926,7 @@ def test_mother_local_hazard_preserves_the_actual_frame_through_owned_ejection(l
     operate("pilot", "enter-before-hazard")
     frame = actor().occupied_frame_instance
     assert frame and actor().piloting
-    game.dice = Dice((1, 2))
+    game.dice = Dice((1, 2) if tier == "low" else (5, 6))
     view = service.preview(ADMIN, 900)
     people = {x["token"]: x for x in view["actors"]}
     assert view["hazard_tags"][mutation.actor.token] == {
@@ -3949,6 +3951,45 @@ def test_mother_local_hazard_preserves_the_actual_frame_through_owned_ejection(l
     assert next(x for x in state(game).sheets["2"].tags if x.id == tagged.id).marked
     assert game.dice.calls == 0
     answer(game, PLAYER, HEAT, number=0)
+    if tier == "high":
+        owned = next(x for x in game.choices(PLAYER) if x["kind"] == VOID)
+        selected = next(iter(game.decision(PLAYER, owned["id"])["detail"]["assets"]))
+        answer(game, PLAYER, VOID, options=(selected,), text="Its surface spirals.")
+        saved = get(state(game), parent)
+        assert saved.void_asset == selected and saved.completed is None
+        assert immune(state(game), mutation.target)
+        assert game.inspect(PLAYER, parent)["state"] == "awaiting_choices"
+        answer(game, ADMIN, PICK_PLAY, options=("keep_your_head",))
+        still = get(state(game), parent)
+        assert still.requested_play == "keep_your_head" and still.child is None
+        game.dice.faces = (1, 2)
+        child = game.begin(
+            PLAYER,
+            "hazard-owned-response",
+            900,
+            state(game).sheets["2"].revision,
+            PlayInput(
+                play="keep_your_head",
+                heat=0,
+                parent=parent,
+                context="I attempt to stay focused.",
+                trigger_confirmed=True,
+            ),
+        )["action_id"]
+        tick(worker, gateway, 5)
+        for participant in (PLAYER, ADMIN):
+            answer(game, participant, "tag_window", options=("pass",))
+        answer(game, PLAYER, "actor_keep", options=("in_control",))
+        answer(game, ADMIN, "handler_keep", flag=True, text="The Girl holds together.")
+        assert game.inspect(PLAYER, child)["state"] == "complete"
+        assert game.inspect(PLAYER, parent)["state"] == "complete"
+        assert get(state(game), parent).child == child and game.dice.calls == 2
+        with pytest.raises(WorkflowError):
+            game.inspect(OTHER, child)
+        scratch = state(game)
+        next(x for x in scratch.sheets["2"].assets if x.id == selected).void = False
+        assert not immune(scratch, mutation.target)
+        return
     choice = next(x for x in game.choices(PLAYER) if x["kind"] == EJECT)
     with pytest.raises(WorkflowError):
         game.decision(OTHER, choice["id"])

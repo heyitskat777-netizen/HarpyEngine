@@ -2234,6 +2234,26 @@ then checked private access, restart and the original
 Frame's location after the immediate ejection.
 [Mother p. 170](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=172) · [Native case](../../tests/rules/test_gorgon_runtime.py)
 
+### Mother’s ordinary Void, immediate Play and exact-Asset immunity
+
+Base `f621949db7379418e126e8959561b6fbc22b8097`. The original Girl
+owns the mid choice. A high requires both ordinary Void and the
+immediate Play. The next choice waits for any original required
+Void work. Mother selects the supported immediate Keep Your Head
+and the original Girl makes her usual choices under the private
+source. The original high case grants immunity only while that
+exact Asset remains Void. The verified low ejection remains
+available. Out-of-Frame low stages ordinary Void and holds its
+further consequence. Refusing or being unable to eject, other
+Mother-selected Plays and discovery through a report remain open.
+
+**One focused high-outcome case passed in 5.75 seconds**, including
+actual Void, the complete private nested Play and the loss of
+immunity when the exact Asset is restored in a synthetic state.
+The previous low-ejection case passed in 5.68 seconds. Full
+regression is deferred per the owner.
+[Mother p. 170](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=172) · [Native cases](../../tests/rules/test_gorgon_runtime.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab
