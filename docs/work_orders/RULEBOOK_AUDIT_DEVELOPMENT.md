@@ -1248,3 +1248,19 @@ Inbox isolation, restart, retry, wrong owner and pause. The selected Handler,
 Status, marriage, mission, discipline, Off-Duty, reward and Inbox regression
 passed **163 tests in 104.45 seconds**.
 [Rulebook p. 125](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=127) · [Tests](../../tests/rules/test_dogrunner_status.py)
+
+### Trainer's Control Freak after a successful refusal
+
+Base `27d2f05e0cc7bf1b72933b583d1ab2441a64c7ed`. After a successful native
+refusal of the original Trainer's direct order, the original Girl may give
+the Trainer one private Tag or pass. Only those two players can see the Tag.
+A failed refusal opens no Tag decision. The shared order proof used by the
+Trainer and Advocate binds a real pre-existing order, original activation,
+character incarnation, scene and current appointment. The NPC condition for
+seeing the Trainer's eyes and hearing their voice still needs a source path.
+
+The three Trainer cases exercised a grant, pass and failed roll through the
+actual Play, private Inbox, wrong owner, retry, stale decision, and restart.
+The selected Handler, native orders, NPC, ritual and Inbox regression passed
+**135 tests in 88.37 seconds**.
+[Rulebook p. 137](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=139) · [Tests](../../tests/rules/test_trainer_control.py)

@@ -646,6 +646,13 @@ class ChoiceEngine:
             if not self.game.pending(c, action["id"]):
                 self.finish(c, state, action)
             return
+        if kind == "trainer_control_freak":
+            from girlframe.services.m3_trainer_control import apply as trainer_tag
+
+            trainer_tag(self.game, c, state, action, request, answer)
+            if not self.game.pending(c, action["id"]):
+                self.finish(c, state, action)
+            return
         from girlframe.services.m3_mistress_conditioning import CHOICE as MISTRESS_CONDITIONING
 
         if kind in ("tag_window", MISTRESS_CONDITIONING):
@@ -990,8 +997,10 @@ class ChoiceEngine:
             acting.revision += 1
             result["can_disobey"] = True
             from girlframe.services.m3_control_ritual import offer as offer_ritual
+            from girlframe.services.m3_trainer_control import offer as offer_trainer_tag
 
             offer_ritual(self.game, c, state, action)
+            offer_trainer_tag(self.game, c, state, action)
             self.game.request(c, action, state.handler, "handler_disobey")
             return
         if kind == "follow_disobey":

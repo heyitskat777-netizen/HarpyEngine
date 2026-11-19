@@ -220,6 +220,11 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
             flags("Develop my Control Ritual?"),
             text("text", "Describe my Control Ritual (up to 120 characters)", False),
         ]
+    elif kind == "trainer_control_freak":
+        fields = [
+            menu("options", "Give the Trainer a Tag or pass", ("give_tag", "pass")),
+            text("text", "Tag label (up to 120 characters)", False),
+        ]
     elif kind == "tag_resolution" and decision.get("cute_uniform_tag"):
         fields = [
             menu("options", "Your uniform response", ("reject", "embrace", "embrace_asset")),

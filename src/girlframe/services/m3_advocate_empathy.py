@@ -3,14 +3,10 @@
 import json
 from typing import TYPE_CHECKING, Any
 
-import sqlalchemy as sa
 from sqlalchemy import Connection
 
-from girlframe.database import tables as t
 from girlframe.engine.m2 import ChoiceAnswer, GameState, shift_status
-from girlframe.engine.m3_actor_bonds import current_ref
-from girlframe.engine.m3_handler_consequences import active_handler
-from girlframe.services.m3_access import Access, digest
+from girlframe.services.m3_handler_book_orders import direct_order_source
 from girlframe.services.onboarding import WorkflowError
 
 if TYPE_CHECKING:
@@ -30,60 +26,8 @@ def _source(
     action: dict[str, Any],
     order_state: str,
 ) -> dict[str, Any] | None:
-    persona = state.handler_persona
-    handler = active_handler(state)
-    if persona is None or persona.draft.playbook != "Advocate" or handler is None:
-        return None
-    policy = game.store.policy.m3_approval
-    if (
-        policy is None
-        or "plays" not in policy.subsystems
-        or game.store.policy.owner_m3_rulings is None
-    ):
-        return None
-    registry = Access(game.store).registry
-    if registry is None or digest(registry) != policy.registry_sha256:
-        return None
-    entry = registry.entry(RULE)
-    if (
-        entry.implementation == "unimplemented"
-        or entry.module not in registry.enabled_modules
-        or (policy.scope == "core_complete" and not entry.verified)
-    ):
-        return None
-    order_id = action["data"].get("order_id") or action["data"].get("prepared", {}).get("order_id")
-    table = t.m2["m2_orders"]
-    order = (
-        c.execute(
-            sa.select(table).where(
-                table.c.campaign_id == game.store.campaign_id,
-                table.c.id == order_id,
-                table.c.issuer_id == handler.entity,
-                table.c.state == order_state,
-                table.c.target_id == action["actor_id"],
-                table.c.channel_id == action["channel_id"],
-            )
-        )
-        .mappings()
-        .first()
-    )
-    if order is None or json.loads(order["body_json"]).get("npc_order"):
-        return None
-    proof = c.execute(
-        sa.select(t.events.c.kind, t.events.c.actor_id).where(
-            t.events.c.campaign_id == game.store.campaign_id,
-            t.events.c.id == persona.source_event,
-        )
-    ).first()
-    if proof is None or proof.kind != "m3.handler_activated" or proof.actor_id != handler.entity:
-        return None
-    target = current_ref(state, int(order["target_id"]))
-    return dict(
-        handler=handler.model_dump(mode="json"),
-        actor=target.model_dump(mode="json"),
-        persona=persona.source_event,
-        order=order_id,
-        rule=RULE,
+    return direct_order_source(
+        game, c, state, action, book="Advocate", rule=RULE, order_state=order_state
     )
 
 
