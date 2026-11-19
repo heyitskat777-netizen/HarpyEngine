@@ -395,3 +395,122 @@ def test_converted_harpy_has_its_own_advancement_and_preserves_the_original_arch
     assert current.career_archives == old.career_archives
     assert current.harpy_states == old.harpy_states
     assert advances(current, actor)[0].event == receipt["receipt"]
+
+
+@pytest.mark.parametrize("gain", (1, 2))
+def test_only_she_matters_native_death_applies_heat_and_keeps_cast_authority(ledger, gain):
+    from test_cast_service import change
+
+    from girlframe.discord_adapter.m3_cast import open_cast
+    from girlframe.engine.m3_harpy_advancements import ONLY_SHE_MATTERS
+    from girlframe.engine.m3_harpy_defeat import harpy
+    from girlframe.engine.m3_world_state import Npc
+    from girlframe.services.m3_harpy_only_she import OnlySheMattersService
+    from girlframe.services.m3_npc_roles import NpcRoleService
+    from girlframe.services.m3_world import WorldService
+    from girlframe.services.read_only_bot import GuildViewer
+
+    _, game, cast, actor = ready(ledger)
+    support = GuildViewer(4, 200, True, False)
+    ledger.join(support, "npc-only-controller")
+    roles = NpcRoleService(WorldService(cast.actors.missions))
+    target = ActorRef(kind="npc", entity="present-original-npc")
+    witness = ActorRef(kind="npc", entity="separate-present-npc")
+    remote = ActorRef(kind="npc", entity="different-square-npc")
+    for ref, controller, candidates in (
+        (target, OTHER, (0, 0)),
+        (witness, support, (0, 0)),
+        (remote, OTHER, (2, 0)),
+    ):
+        proposed = roles.offer(
+            ADMIN,
+            "create-" + ref.entity,
+            state(game).revision,
+            Npc(
+                id=ref.entity,
+                name=ref.entity,
+                detail="An original synthetic civilian.",
+                jobs=("civilian",),
+                controller=controller.user_id,
+                cell=candidates,
+                revealed=True,
+            ),
+        )
+        roles.respond(
+            controller, "accept-" + ref.entity, proposed["id"], state(game).revision, "accept"
+        )
+        change(cast, controller, "join", ref)
+    game.bind_scene(ADMIN, "unrelated-cast-room", 901)
+    current_policy = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update={
+            "m3_approval": current_policy.model_copy(
+                update={
+                    "activity_specialist_rules": current_policy.activity_specialist_rules
+                    | {ONLY_SHE_MATTERS}
+                }
+            )
+        }
+    )
+    career = HarpyAdvancementService(ledger)
+    career.select(PLAYER, "learn-only-she", actor.entity, state(game).revision, ONLY_SHE_MATTERS)
+    service = OnlySheMattersService(game)
+    assert set(service.get(PLAYER, 900, actor)["targets"]) == {target, witness}
+    original = state(game)
+    with ledger.engine.connect() as c:
+        unrelated = game.scene(c, 901)
+        assert support.user_id not in game.scene(c, 900)["participants"]
+    with pytest.raises(WorkflowError, match="actual living Harpy"):
+        service.act(OTHER, "wrong-owner", 900, original.revision, actor, target, 2, "No")
+    with pytest.raises(WorkflowError, match="STALE_HARPY"):
+        service.act(PLAYER, "stale", 900, original.revision - 1, actor, target, 2, "No")
+    with pytest.raises(WorkflowError, match="same|actual square"):
+        service.act(PLAYER, "target-remote", 900, original.revision, actor, remote, 2, "No")
+    ledger.safety(PLAYER, "pause-only-she", ledger.status(PLAYER)["revision"], pause=True)
+    with pytest.raises(WorkflowError, match="SAFETY_PAUSED"):
+        service.act(PLAYER, "paused", 900, original.revision, actor, target, 2, "No")
+    ledger.safety(PLAYER, "resume-only-she", ledger.status(PLAYER)["revision"], pause=False)
+    account = "The Harpy kills the original civilian in the scene."
+
+    async def native():
+        click = current(PLAYER.user_id, 70840)
+        click.channel_id = 900
+        await click.response.defer(ephemeral=True)
+        await open_cast(click, cast)
+        picker = click.edit_original_response.call_args.kwargs["view"]
+        select = current(PLAYER.user_id, 70841)
+        select.channel_id = 900
+        await select.response.defer(ephemeral=True)
+        await picker.open_item(select, "only-she:" + actor.token)
+        form = select.edit_original_response.call_args.kwargs["view"]
+        assert not await form.interaction_check(current(OTHER.user_id))
+        form.values.update(target=(target.token,), heat=(str(gain),), account=account)
+        submit = current(PLAYER.user_id, 70842)
+        await form.confirm.callback(submit)
+        assert form.completed, submit.followup.send.call_args
+
+    revision = state(game).revision
+    asyncio.run(native())
+    ledger.engine.dispose()
+    operation = service.act(PLAYER, "70842", 900, revision, actor, target, gain, account)
+    after = state(game)
+    assert {x.id: x.alive for x in after.world.npcs} == {
+        target.entity: False,
+        witness.entity: True,
+        remote.entity: True,
+    }
+    assert (
+        after.sheets == original.sheets
+        and harpy(after, actor).heat == harpy(original, actor).heat + gain
+    )
+    assert (
+        game.dice.calls == 0
+        and len([x for x in after.facts if x.get("id") == operation["event"]]) == 1
+    )
+    with ledger.engine.connect() as c:
+        assert game.scene(c, 901) == unrelated
+        assert support.user_id not in game.scene(c, 900)["participants"]
+    assert any(
+        x["ref"] == witness.model_dump(mode="json") for x in cast.view(support, 900)["roles"]
+    )
+    assert target not in service.get(PLAYER, 900, actor)["targets"]

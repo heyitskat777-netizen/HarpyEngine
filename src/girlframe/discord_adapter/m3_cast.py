@@ -48,6 +48,10 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
         key = "withdraw:" + token
         options.append((key, "Withdraw " + role["label"][:75]))
         actions[key] = ("withdraw", ActorRef.model_validate(role["ref"]))
+        if role.get("only_she_matters"):
+            key = "only-she:" + token
+            options.append((key, "Use Only She Matters as " + role["label"][:55]))
+            actions[key] = ("only_she", ActorRef.model_validate(role["ref"]))
         if role.get("director_phone"):
             phone = "phone:" + token
             options.append((phone, "Call the Handler as " + role["label"][:55]))
@@ -144,6 +148,13 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
             )
             return
         action, ref = actions[token]
+        if action == "only_she":
+            from girlframe.discord_adapter.m3_harpy_only_she import open_only_she
+            from girlframe.services.m3_harpy_only_she import OnlySheMattersService
+
+            assert ref is not None
+            await open_only_she(current, OnlySheMattersService(service.game), channel, ref)
+            return
         if action == "phone":
             from girlframe.discord_adapter.m3_director_strain import open_phone
             from girlframe.services.m3_director_strain import DirectorStrainService

@@ -6,9 +6,11 @@ from girlframe.engine.m3_strain_state import State as StrainState
 
 SPARROWS = "harpy.harpy.sparrows-led-you-over-the-black-earth"
 ECHOES = "harpy.harpy.echoes-of-old-command"
+ONLY_SHE_MATTERS = "harpy.harpy.only-she-matters"
 ADVANCEMENTS = (
     (SPARROWS, "Sparrows Led You Over the Black Earth"),
     (ECHOES, "Echoes of Old Command"),
+    (ONLY_SHE_MATTERS, "Only She Matters"),
 )
 SPARROWS_CHOICES = (
     ("shadow", "I’m a shadow in the corner of their eye"),

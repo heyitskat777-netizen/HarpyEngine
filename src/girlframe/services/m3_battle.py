@@ -1814,10 +1814,11 @@ def _apply_fatal(
 
 
 def synchronize_casts(game: "GameService", c: Connection, event: str) -> None:
+    history = t.m2["m2_state_history"]
     raw = c.scalar(
-        sa.select(t.m2["m2_state_history"].c.body_json).where(
-            t.m2["m2_state_history"].c.campaign_id == game.store.campaign_id,
-            t.m2["m2_state_history"].c.event_id == event,
+        sa.select(history.c.body_json).where(
+            history.c.campaign_id == game.store.campaign_id,
+            history.c.event_id == event,
         )
     )
     source = GameState.model_validate_json(raw) if raw else None
@@ -1825,14 +1826,30 @@ def synchronize_casts(game: "GameService", c: Connection, event: str) -> None:
         x.get("kind") == "battle_actor_cast_ended" and x.get("event") == event for x in source.facts
     ):
         return
+    previous = c.scalar(
+        sa.select(history.c.body_json)
+        .where(
+            history.c.campaign_id == game.store.campaign_id,
+            history.c.revision < source.revision,
+        )
+        .order_by(history.c.revision.desc())
+        .limit(1)
+    )
+    before = (
+        {x.id: x for x in GameState.model_validate_json(previous).scene_casts} if previous else {}
+    )
     scenes = t.m2["m2_scenes"]
     for cast in source.scene_casts:
+        if before.get(cast.id) == cast:
+            continue
         people = sorted(
-            {x.controller for x in cast.roles} | ({cast.facilitator} if cast.facilitator else set())
+            {x.controller for x in cast.roles if x.actor.kind == "pilot"}
+            | ({cast.facilitator} if cast.facilitator else set())
         )
         c.execute(
             scenes.update()
             .where(scenes.c.campaign_id == game.store.campaign_id, scenes.c.id == cast.id)
+            .where(scenes.c.participants_json != json.dumps(people))
             .values(participants_json=json.dumps(people), revision=scenes.c.revision + 1)
         )
 

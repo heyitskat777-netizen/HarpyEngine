@@ -1832,6 +1832,29 @@ wrong original persona, false voice, and the recipient's scoped
 view. Ruff and scoped mypy passed.
 [Echoes p. 182](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=184) · [Native cases](../../tests/rules/test_harpy_advancements.py)
 
+The broader Harpy, NPC Orders, Inbox and shadow selection passed
+**140 tests in 194.03 seconds** against the Echoes candidate.
+
+### Only She Matters
+
+Base `72b653961d9567336782b48abe2a8b1b3a3f96d8`. The original
+Harpy controller can choose an eligible ordinary NPC in the same
+actual scene and map square. The diceless effect ends the actual
+original NPC and gives the Harpy one or two Heat. The native control
+verifies the approved advancement, present roles, safety state and
+existing source protections. Distant pursuit and Heat on other
+sources of death still need their own workflows.
+
+The two native tests passed in **6.39 seconds**. They cover both
+Heat gains, actual target death, wrong owner, distant target, stale
+state, pause, restart and replay. The tests uncovered a shared cast
+projection issue. A death used to republish all casts as ordinary
+Pilot participation. The projection now updates only changed casts
+and keeps ordinary scene access with the actual Pilots and facilitator.
+An NPC-only controller keeps their own NPC cast role and gains no
+Pilot participation. The unrelated scene keeps its prior data.
+[Only She Matters p. 183](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=185) · [Native cases](../../tests/rules/test_harpy_advancements.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

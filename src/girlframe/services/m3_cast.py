@@ -214,6 +214,22 @@ class CastService:
                         if owned_npc
                         else {}
                     )
+                    only_she_matters = False
+                    if (
+                        actor.ref.kind == "external_pilot"
+                        and actor.girl == "harpy"
+                        and actor.controller == role.controller == viewer.user_id
+                    ):
+                        from girlframe.services.m3_harpy_only_she import OnlySheMattersService
+
+                        try:
+                            OnlySheMattersService(self.game).source(
+                                c, state, viewer, cast, actor.ref
+                            )
+                        except (ValueError, WorkflowError):
+                            pass
+                        else:
+                            only_she_matters = True
                     known_refs.add(actor.ref)
                     visible.append(
                         {
@@ -225,6 +241,7 @@ class CastService:
                             "stale": role.controller != actor.controller,
                             "own": role.controller == viewer.user_id,
                             **({"job_prompts": prompts} if prompts else {}),
+                            **({"only_she_matters": True} if only_she_matters else {}),
                             **(
                                 {"director_phone": True}
                                 if owned_npc
