@@ -238,7 +238,9 @@ def test_unreported_enemy_never_enters_handler_prompt_then_actual_comms_teaches_
     )
     final = context.build(ADMIN, target, actor=handler).model_dump_json()
     assert ENEMY in final and OTHER_SECRET not in final and PRIVATE not in final
-    Path("var/p2-knowledge-acquisition.json").write_text(
+    output = Path("var/p2-knowledge-acquisition.json")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(
         json.dumps(
             {
                 "synthetic_only": True,

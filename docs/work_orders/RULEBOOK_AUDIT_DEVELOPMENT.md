@@ -1979,3 +1979,7 @@ and campaign switching. This used disposable adapter instances and
 synthetic data. The JUnit evidence is at
 `var/activity-rulebook-3263a9d/pytest.xml`. Authenticated Discord
 Activity routes and real-player acceptance remain unverified.
+
+The P2 mission-cycle and knowledge-acquisition checks also create
+their own evidence directory. The connected campaign, mission
+cycle and knowledge suites passed **8 tests in 42.52 seconds**.

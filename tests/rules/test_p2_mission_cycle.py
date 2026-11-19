@@ -384,7 +384,9 @@ def test_mission_rewards_complete_off_duty_and_next_mission_share_one_campaign(l
         outcomes = " ".join(c.scalars(sa.select(t.commands.c.outcome_json)))
         assert "PRIVATE_CYCLE_PILOT_SCENE" not in metadata + outcomes
         assert "PRIVATE_CYCLE_HANDLER_SCENE" not in metadata + outcomes
-    Path("var/p2-mission-cycle.json").write_text(
+    output = Path("var/p2-mission-cycle.json")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(
         json.dumps(
             {
                 "synthetic_only": True,
