@@ -652,8 +652,24 @@ access. An off-scene original NPC is eligible. The native test
 introduced the real Gorgon through Low Void, then proved the tagged
 NPC's durable state, source actor, retry, reopen and view scope. A
 temporary reviewed fixture allowed the effect. The default review
-gate passed. Fleeing and pursuit remain open under this class entry.
+gate passed.
 [Erratic Gorgon p. 164](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=166) · [Erratic Gorgon Tag test](../../tests/rules/test_erratic_gorgon.py)
+
+On base `711141e`, the original Erratic Gorgon can flee after a saved
+battlefield exchange and change to a different actual map square. In the
+same scene, another direct strike needs a catch first. The scoped catch
+uses a later completed Engage with a real Advance or Pin and the pursuing
+Pilot's presence at the Gorgon's actual square. The Gorgon controller
+uses World controls and the pursuing Pilot uses their own Cast control.
+Two cases passed in 7.33 seconds using
+`python -m pytest -q --tb=short tests/rules/test_erratic_gorgon.py` with
+`PYTHONPATH="$PWD/src"`. They covered the existing NPC Tag, native flight
+and catch, wrong owner, replay, actual movement, denial before pursuit,
+restart and a fresh battle declaration after the catch. Other pursuit
+Play recipes and flight through another encounter service need separate
+source review. The final focused flight rerun passed in 5.39 seconds with
+`-k flight_moves` after the Cast and World menu filtering changes.
+[Flight and Tag cases](../../tests/rules/test_erratic_gorgon.py)
 
 ## NPC job prompts in scene roles
 

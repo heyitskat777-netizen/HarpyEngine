@@ -173,6 +173,8 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
         options.append(("ancillary-cadre-punishment", "Punish an Ancillary Cadre member"))
     if data.get("can_form_ancillary_cadre"):
         options.append(("form-ancillary-cadre", "Form an Ancillary Cadre"))
+    if data.get("erratic_pursuit"):
+        options.append(("erratic_catch", "Record pursuit of the fled Erratic Gorgon"))
     if data["own_facilitator"]:
         options.append(("withdraw_facilitator", "Stop facilitating this scene"))
         actions["withdraw_facilitator"] = ("withdraw_facilitator", None)
@@ -212,13 +214,17 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
         return role
 
     async def choose(current: discord.Interaction, token: str) -> None:
+        if token == "erratic_catch":
+            from girlframe.discord_adapter.m3_gorgon import open_erratic_flight
+            from girlframe.services.m3_erratic_gorgon import ErraticService
+
+            await open_erratic_flight(current, ErraticService(service.game), pursuit=True)
+            return
         if token == "ancillary-cadre-punishment":
             from girlframe.discord_adapter.m3_ancillary_discipline import open_cadre_punishment
             from girlframe.services.m3_ancillary_discipline import AncillaryDisciplineService
 
-            await open_cadre_punishment(
-                current, AncillaryDisciplineService(service.game), channel
-            )
+            await open_cadre_punishment(current, AncillaryDisciplineService(service.game), channel)
             return
         if token == "form-ancillary-cadre":
             from girlframe.discord_adapter.m3_ancillary_cadre import open_ancillary_cadre

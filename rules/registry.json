@@ -22308,7 +22308,10 @@
         "test_fixture_ids": ["tests/rules/test_erratic_gorgon.py"]
       },
       "dependencies": [],
-      "test_evidence": ["tests/rules/test_erratic_gorgon.py"],
+      "test_evidence": [
+        "tests/rules/test_erratic_gorgon.py::test_original_erratic_native_actor_applies_one_real_npc_tag",
+        "tests/rules/test_erratic_gorgon.py::test_erratic_flight_moves_original_and_waits_for_real_engage_advance"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

@@ -435,6 +435,12 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
 
             await open_erratic_tag(current, ErraticService(service.game))
             return
+        if action == "erratic_flee":
+            from girlframe.discord_adapter.m3_gorgon import open_erratic_flight
+            from girlframe.services.m3_erratic_gorgon import ErraticService
+
+            await open_erratic_flight(current, ErraticService(service.game), pursuit=False)
+            return
         if action in ("gorgon_contest", "gorgon_core"):
             from girlframe.discord_adapter.m3_gorgon_combat import open_contest, open_exposure
             from girlframe.services.m3_gorgon import GorgonService
@@ -571,7 +577,10 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
             ),
             ("gorgon_attack", "Gorgon Attack on an ordinary NPC"),
             *(
-                (("erratic_tag", "Erratic Gorgon Tags an NPC"),)
+                (
+                    ("erratic_tag", "Erratic Gorgon Tags an NPC"),
+                    ("erratic_flee", "Erratic Gorgon flees"),
+                )
                 if any(
                     x["gorgon_class"] == "erratic" and x["alive"] for x in data["world"]["gorgons"]
                 )

@@ -14,6 +14,7 @@ from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_gorgon import NpcAttack
 from girlframe.services.m3_erratic_gorgon import ErraticService
 from girlframe.services.m3_gorgon import GorgonService
+from girlframe.services.onboarding import WorkflowError
 
 
 async def open_gorgon_attack(interaction: discord.Interaction, service: GorgonService) -> None:
@@ -135,6 +136,66 @@ async def open_erratic_tag(interaction: discord.Interaction, service: ErraticSer
             Field("tag", "Tag"),
             Field("account", "What caused it?", paragraph=True),
         ],
+        submit,
+    )
+    await reply(interaction, form.text(), form)
+
+
+async def open_erratic_flight(
+    interaction: discord.Interaction, service: ErraticService, *, pursuit: bool
+) -> None:
+    channel = interaction.channel_id
+    if channel is None:
+        raise WorkflowError("Open the Erratic Gorgon's actual battlefield scene")
+    viewer = viewer_from_interaction(interaction)
+    data = await asyncio.to_thread(service.flight_view, viewer, channel)
+    cases = data["pursuits" if pursuit else "battles"]
+    if not cases:
+        raise WorkflowError(
+            "Use a completed Engage advance or pin"
+            if pursuit
+            else "Finish an actual exchange with your Erratic Gorgon first"
+        )
+    options = {str(i): case for i, case in enumerate(cases)}
+    fields = [
+        Field(
+            "case",
+            "Original battle or pursuit",
+            tuple(
+                (key, case.get("label", "Original Engage " + case["action"][:8]))
+                for key, case in options.items()
+            ),
+        )
+    ]
+    if not pursuit:
+        fields.extend(
+            [
+                Field("x", "Destination X"),
+                Field("y", "Destination Y"),
+                Field("account", "How the Gorgon escapes the battle", paragraph=True),
+            ]
+        )
+
+    async def submit(click: discord.Interaction, values: dict[str, Any]) -> str:
+        case = options[values["case"][0]]
+        args = (viewer_from_interaction(click), str(click.id), channel, data["revision"])
+        if pursuit:
+            await asyncio.to_thread(service.catch, *args, case["event"], case["action"])
+            return "The original pursuit caught the Erratic Gorgon."
+        try:
+            destination = (int(values["x"]), int(values["y"]))
+        except ValueError as exc:
+            raise WorkflowError("Enter actual mapped X and Y coordinates") from exc
+        await asyncio.to_thread(
+            service.flee, *args, case["gorgon"], case["action"], destination, values["account"]
+        )
+        return "Flight applied to the original Gorgon. Pursuit is open."
+
+    form = NativeForm(
+        viewer.user_id,
+        "Catch the Erratic Gorgon" if pursuit else "Erratic Gorgon flight",
+        "Use the actual completed battle or pursuit in this scene.",
+        fields,
         submit,
     )
     await reply(interaction, form.text(), form)

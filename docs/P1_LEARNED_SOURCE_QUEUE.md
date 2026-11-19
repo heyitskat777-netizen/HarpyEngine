@@ -22,8 +22,8 @@ separate learned Alpha/Elder and other deferred branches retain final gates.
 | `girl.mockingbird.call-of-the-void` | Queued | All three existing Dive effects now use actual selected lesson/receipt, components, consenting guest and real Gorgon; bind one whole original Dive | Native combined source/cancellation/classification/guest/Gorgon1/10.33s after fixture API fix; final gates pending |
 | `girl.princess.show-dog` | Queued | Real original Go-OffDuty source, both independent choices/NPCs/message/Bond and original Handler risk implemented | Native source normal passed in2passed2failed20.03s; final gates pending |
 | `girl.stim-blissed.disposable-psyche` | Queued | Actual independent Identity disposal/Heat and real Off-Duty Tag embraces now have distinct source-bound lesson uses; real Feedback preserved | Two-mode native episode1 of2passed13.64s retry after synthetic Malleable policy fixture fix; learned Ankou runtime deferred |
-| `girl.bonded.always-by-her-side` | Queued eligibility/consumer | Genuine independent original Pair first, then actual one-use source; learning creates no Pair/Hers/Paired Identity | Missing when genuinely applicable |
-| `girl.am.scrutinized`, `girl.am.just-code` | Queued eligibility/consumer | Real adjusted-mind discovery or actual accessible circuit/mind/operator source; a native biological Vatgrown label alone supplies neither | Missing when genuinely applicable |
+| `girl.bonded.always-by-her-side` | Existing original Pair adapter | The learned Play uses a genuine independent original Pair and one actual lesson. [Pair and one-use case](../tests/rules/test_learned_bonded_side.py) | Focused existing case passed on the rulebook audit candidate. |
+| `girl.am.scrutinized`, `girl.am.just-code` | Existing circuit and original operator adapters | Scrutinized uses actual adjusted-mind discovery and Just Code uses an accessible circuit and real operator. [Acquisition cases](../tests/rules/test_learned_am_circuit_acquisition.py) · [Use cases](../tests/rules/test_learned_am_circuit_use.py) | The focused existing Just Code case passed on the rulebook audit candidate. |
 | `girl.vatgrown.unassuming-doll` | Queued acquisition reconciliation | Actual native acquisition/history supported without stacking or spending on ordinary native use; later nonnative source stays explicit | Meaningful same-book native history/no-stack node authored NOT RUN for final regression |
 
 ## Sex and ongoing-source boundaries
@@ -57,10 +57,13 @@ nonnative mid/private once-use passed failed-only2/19.32s.
 AM now has its actual no-roll performance/gift use event: native earned lesson,
 separate original consent/performances, no-refund use, mandatory Animal gift and
 private readback/pause passed failed-only3/19.53s. No extra Action/receipt/Heat,
-rolled_event or Just Code. Rolled-counterpart consumer is implemented but runtime
-verification remains deferred. Remaining exact Sex providers are Casualty and
-Bonded plus Mockingbird/Newgirl group Links. Native AM+AM entry is being reconciled
-separately; borrowed-source success does not prove that ordinary native entry.
+rolled_event or Just Code. The later rulebook audit tree also contains native
+cases for [an earned Casualty lesson](../tests/rules/test_learned_casualty_sex.py),
+[an earned Bonded lesson](../tests/rules/test_learned_bonded_sex.py),
+[Mockingbird group consent](../tests/rules/test_learned_mockingbird_group.py), and
+[Newgirl group consent](../tests/rules/test_learned_newgirl_group.py). Those
+case references are historical evidence in this pass. More unusual body,
+operator and retained/counterpart combinations remain separately scoped.
 
 Higher Standard, Just The Way Things Are, Trainee/Mentor, Malleable, Barely A Girl/
 Wounded God, Experiment/Prime Investment and Pair/Intimacy are setup, diceless,

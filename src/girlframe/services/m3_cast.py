@@ -491,7 +491,9 @@ class CastService:
                     )
                 except (ValueError, WorkflowError):
                     pass
+            from girlframe.engine.m3_erratic_flight import flights
             from girlframe.services.m3_ancillary_discipline import AncillaryDisciplineService
+            from girlframe.services.m3_erratic_gorgon import RULE as ERRATIC_RULE
 
             can_cadre_punish = False
             if cast.facilitator == viewer.user_id or any(
@@ -503,6 +505,18 @@ class CastService:
                     )
                 except (ValueError, WorkflowError):
                     pass
+            registry = self.actors.missions.access.registry
+            erratic_pursuit = bool(
+                registry is not None
+                and any(entry.id == ERRATIC_RULE and entry.verified for entry in registry.entries)
+                and any(
+                    x.controller == viewer.user_id and x.actor.kind == "pilot" for x in cast.roles
+                )
+                and any(
+                    item.scene == cast.id and item.caught is None and item.gorgon in known_refs
+                    for item in flights(state).values()
+                )
+            )
             return {
                 "scene": cast.id,
                 "channel": channel,
@@ -514,6 +528,7 @@ class CastService:
                 "own_facilitator": cast.facilitator == viewer.user_id,
                 "can_form_ancillary_cadre": can_form_cadre,
                 "can_punish_ancillary_cadre": can_cadre_punish,
+                "erratic_pursuit": erratic_pursuit,
                 "may_facilitate": state.handler == viewer.user_id,
                 "adjudicator": cast.adjudicator.model_dump(mode="json")
                 if cast.adjudicator in known_refs

@@ -351,6 +351,9 @@ def prepare(
     context = Context.model_validate_json(raw["body"])
     _context_proof(game, c, context)
     declaration = context.declaration
+    from girlframe.services.m3_erratic_gorgon import require_caught
+
+    require_caught(state, declaration.target, context.scene)
     if bonded_child is not None and (
         context.source_work is not None
         or declaration.actor.model_dump(mode="json") != bonded_child["actor"]
@@ -3470,6 +3473,9 @@ class BattleService:
                 for ref in (declaration.actor, declaration.target)
             ):
                 raise WorkflowError("Both actual combatants must join this source scene.")
+            from girlframe.services.m3_erratic_gorgon import require_caught
+
+            require_caught(state, declaration.target, cast.id)
             bound = profiles(c, self.store.campaign_id)
             actor = resolve(state, declaration.actor, bound, require_current_profile=False)
             target = resolve(state, declaration.target, bound, require_current_profile=False)
