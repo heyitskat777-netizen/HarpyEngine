@@ -204,6 +204,33 @@ def good_soldier_tag(state: GameState, actor: ActorRef) -> str | None:
     )
 
 
+def warboy_refusal(state: GameState, actor: ActorRef, issuer: ActorRef) -> str | None:
+    body = ancillary.find(state, actor)
+    if body is None or body.draft.book != "WARBOY" or not depth(state, actor, issuer):
+        return None
+    completed = {
+        x.id
+        for x in records(state)
+        if x.actor.actor == actor
+        and x.partner.actor == issuer
+        and x.book == "WARBOY"
+        and x.step == "closed"
+        and x.roll is not None
+        and x.roll.result == "low"
+    }
+    return next(
+        (
+            x["event"]
+            for x in state.facts
+            if x.get("kind") == WARBOY_REFUSAL
+            and x.get("actor") == actor.token
+            and x.get("issuer") == issuer.token
+            and x.get("encounter") in completed
+        ),
+        None,
+    )
+
+
 def _related(state: GameState, actor: ActorRef) -> set[ActorRef]:
     people = {
         edge.second if edge.first == actor else edge.first
@@ -309,7 +336,7 @@ class AncillaryIntimacyService:
     ) -> bool:
         if partner.ref.kind == "pilot" and partner.rules == "girl_frame":
             return True
-        if book not in ("PRODIGY", "SOLDIER"):
+        if book not in ("PRODIGY", "SOLDIER", "WARBOY"):
             return False
         actual = cadre_rank.current(state, actor)
         if actual is None:

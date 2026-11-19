@@ -1,6 +1,7 @@
-"""The Warboy's private high result weakens actual counterpart Bonds."""
+"""The Warboy's private results act on the original Bond and Orders."""
 
-from test_ancillary_creation import enable, scenario
+import pytest
+from test_ancillary_creation import REBEL, enable, scenario
 from test_cast_service import change
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger
@@ -13,7 +14,10 @@ from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_physical_state import CockpitAction
 from girlframe.services.m3_actors import ActorService
 from girlframe.services.m3_ancillary import AncillaryService
+from girlframe.services.m3_ancillary_cadre import AncillaryCadreService
 from girlframe.services.m3_ancillary_intimacy import WARBOY, AncillaryIntimacyService, records
+from girlframe.services.m3_ancillary_orders import AncillaryOrderService
+from girlframe.services.m3_ancillary_orders import records as order_records
 from girlframe.services.m3_cast import CastService
 from girlframe.services.m3_chained_darling import ChainedPlacementService
 from girlframe.services.m3_missions import MissionService
@@ -21,9 +25,8 @@ from girlframe.services.m3_movement import MovementService
 from girlframe.services.m3_physical import PhysicalService
 
 
-def test_warboy_private_high_weakens_actual_bonds_and_applies_scoped_tag(
-    ledger, tmp_path, monkeypatch
-):
+@pytest.mark.parametrize("tier", ("high", "low"), ids=("original-high", "automatic-low"))
+def test_warboy_private_outcomes_use_actual_bonds(ledger, tmp_path, monkeypatch, tier):
     game = scenario(ledger)
     enable(ledger, game, tmp_path, monkeypatch, extra=(WARBOY,))
     missions = MissionService(ledger)
@@ -72,6 +75,69 @@ def test_warboy_private_high_weakens_actual_bonds_and_applies_scoped_tag(
         "I am outside my own Frame.",
     )
     placement.decide(ADMIN, "confirmed-warboy", initial["id"], state(game).revision, True)
+    if tier == "low":
+        invitation = creation.invite(
+            ADMIN,
+            "ace-invite",
+            state(game).revision,
+            OTHER.user_id,
+            "city0",
+            "group",
+            contacts=(REBEL,),
+        )
+        book = "REVOLUTIONARY IDEALIST"
+        ace_draft = ancillary.Draft(
+            name="Current independent Ace",
+            book=book,
+            bond=REBEL,
+            frame_catalogue="JANUS",
+            girl_assets=tuple(gear(x) for x in ancillary.STARTERS[book].assets[:2]),
+            frame_assets=tuple(gear(x) for x in ancillary.frame_assets(book, "JANUS")[:2]),
+        )
+        invited = creation.respond(
+            OTHER, "ace-created", invitation["id"], state(game).revision, ace_draft
+        )
+        ace = ActorRef.model_validate(invited["actor"])
+        change(cast, ADMIN, "join", REBEL)
+        change(cast, OTHER, "join", ace)
+        positioned = placement.propose(
+            OTHER, "ace-pose", 900, ace, state(game).revision, "outside_frame", "I step out."
+        )
+        placement.decide(ADMIN, "confirmed-ace", positioned["id"], state(game).revision, True)
+        cadres = AncillaryCadreService(game)
+        source = cadres.propose(
+            ADMIN, "actual-cadre", 900, state(game).revision, REBEL.token, (ace.token, actor.token)
+        )
+        for viewer, who in ((ADMIN, "handler"), (OTHER, ace.token), (PLAYER, actor.token)):
+            cadres.approve(viewer, who, source["id"], state(game).revision, who, True)
+        plays = AncillaryIntimacyService(game)
+        game.dice = Dice((2, 3))
+        identity = plays.offer(PLAYER, "actual-low", 900, actor, state(game).revision, ace.token)[
+            "id"
+        ]
+        for viewer, choice in (
+            (OTHER, "yes"),
+            (ADMIN, "yes"),
+            (PLAYER, "roll"),
+            (PLAYER, "apply"),
+            (OTHER, "pass"),
+        ):
+            plays.act(viewer, choice + str(viewer.user_id), identity, state(game).revision, choice)
+        assert depth(state(game), actor, ace) == 1
+
+        orders = AncillaryOrderService(game)
+        issued = orders.issue(
+            OTHER, "ace-order", 900, ace, state(game).revision, actor.token, "Stay put."
+        )["id"]
+        game.dice = Dice((6, 6))
+        orders.act(PLAYER, "actual-disobey", issued, state(game).revision, "disobey")
+        assert orders.get(PLAYER, issued)["warboy_low"]
+        result = orders.act(PLAYER, "finalize-roll", issued, state(game).revision, "pass")
+        assert result["total"] == 7 and result["stage"] == "review"
+        assert not orders.get(ADMIN, issued)["warboy_low"]
+        (order,) = order_records(state(game))
+        assert order.faces == (6, 6) and game.dice.calls == 1
+        return
     MovementService(game).move(
         OTHER,
         "warboy-counterpart-arrives",

@@ -3608,6 +3608,22 @@ rank, other Order sources and the separate high case remain
 open for direct verification.
 [Soldier p. 95](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=97) · [Native case](../../tests/rules/test_soldier_private_play.py)
 
+### Warboy’s low result and bonded Orders
+
+Base `44ea7258780d1966133efb94eb0f8a285faa78d9`. A Warboy’s
+completed low Play can make a later refusal resolve as 7− against
+the exact original counterpart. The effect requires a current Bond
+and a genuine Order from a superior in the same confirmed Cadre.
+The original roll and Heat stay saved. Only the original Warboy
+sees the private source of the forced result.
+
+One focused case passed in 7.08 seconds. It confirmed the actual
+Bond, routed an Order from the Cadre Ace, preserved both sixes,
+and resolved the refusal roll as 7 before the ordinary review.
+The existing high case was deselected. Mixed-Cadre Orders and
+direct evidence after the Bond ends remain open.
+[Warboy p. 107](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=109) · [Native case](../../tests/rules/test_warboy_private_play.py)
+
 ### Mercenary’s private Play
 
 Base `f071b9b`. The middle result can open a small favour

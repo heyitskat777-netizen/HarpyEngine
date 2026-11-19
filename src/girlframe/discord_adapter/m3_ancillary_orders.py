@@ -89,6 +89,8 @@ async def open_order_response(
         choices = (("pass", "Pass"),)
         if data["good_soldier"]:
             instructions += "\nYour saved roll includes −1 from Good Soldier."
+        if data["warboy_low"]:
+            instructions += "\nYour active Bond makes this a 7− result."
         if data["tags"]:
             choices += (("mark", "Mark one of my Tags"),)
             fields.extend(

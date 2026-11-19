@@ -54,6 +54,7 @@ class Order(Model):
     heat: int = 0
     base_modifier: int = 0
     good_soldier: str | None = None
+    warboy_low: str | None = None
     modifier: int = 0
     tag: str | None = None
     total: int | None = None
@@ -166,6 +167,14 @@ def _rules(
         cadre = rank.current(state, target)
         if cadre is not None and cadre.handler == issuer and _available(game, SOLDIER):
             return False, False
+    if role.draft.book == "WARBOY":
+        from girlframe.services.m3_ancillary_intimacy import WARBOY
+
+        cadre = rank.current(state, target)
+        if cadre is not None and _available(game, WARBOY):
+            people = rank.actual_members(state, cadre)
+            if issuer in people[: people.index(target)]:
+                return False, False
     if not npc or not _independent(state, target):
         return None
     if role.draft.book == "ANGEL-WIFE" and _available(game, SERVICE):
@@ -486,7 +495,10 @@ class AncillaryOrderService:
                 tags=self._tags(state, value) if self_tag and value.stage == "tag" else {},
                 total=value.total,
                 level=tier(value.total) if value.total is not None else None,
-                good_soldier=value.good_soldier is not None,
+                good_soldier=value.good_soldier is not None
+                and viewer.user_id == value.target.controller,
+                warboy_low=value.warboy_low is not None
+                and viewer.user_id == value.target.controller,
             )
 
     def pronoun_menu(self, viewer: GuildViewer, actor: ActorRef) -> dict[str, Any]:
@@ -601,11 +613,21 @@ class AncillaryOrderService:
                         stage="closed", consequence="chosen_follow", account=account.strip()
                     )
                 elif choice == "disobey" and not forbidden and not account and not order.faces:
-                    from girlframe.services.m3_ancillary_intimacy import SOLDIER, good_soldier_tag
+                    from girlframe.services.m3_ancillary_intimacy import (
+                        SOLDIER,
+                        WARBOY,
+                        good_soldier_tag,
+                        warboy_refusal,
+                    )
 
                     soldier = (
                         good_soldier_tag(state, actor.ref)
                         if _available(self.game, SOLDIER)
+                        else None
+                    )
+                    warboy = (
+                        warboy_refusal(state, actor.ref, issuer.ref)
+                        if _available(self.game, WARBOY)
                         else None
                     )
                     state = commit(
@@ -624,6 +646,7 @@ class AncillaryOrderService:
                         heat=heat,
                         base_modifier=-1 if soldier is not None else 0,
                         good_soldier=soldier,
+                        warboy_low=warboy,
                         roll_event=event,
                         rng_source=self.game.rng_source,
                     )
@@ -646,6 +669,8 @@ class AncillaryOrderService:
                 else:
                     raise WorkflowError("Pass or use one eligible original own Tag.")
                 total = sum(order.faces) + order.heat + order.base_modifier + modifier
+                if order.warboy_low is not None:
+                    total = min(total, 7)
                 update = dict(
                     stage="review" if tier(total) == "low" else "outcome",
                     tag=tag,
