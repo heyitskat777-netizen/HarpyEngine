@@ -23573,14 +23573,31 @@
         "heading": "Conditioning"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "An actual Girl is invited into reconditioning with the original trainer and accepts before rolling.",
+        "actor_type": "Original Girl trainee and separate NPC, Girl, or Handler controller",
+        "pre_roll_sources": ["Original private cast", "Owned trainee consent", "Current ordinary Identity slots"],
+        "roll_kind": "2d6",
+        "allowed_modifiers": ["NPC +1, Girl +2, or Handler +3", "+1 with fewer than four Identities"],
+        "tier_options": {
+          "low": ["Trainer chooses one; trainee can name a new Identity afterward"],
+          "mid": ["Trainer chooses two"],
+          "high": ["Trainer chooses three"]
+        },
+        "choice_ownership": "Trainee owns consent, the saved roll, and the final response. Trainer owns each effect. Either participant can withdraw before effects apply.",
+        "target_policy": "Only the original living separate participants in a current private scene. The trainer sees eligible resources after consent. Other Bonds require explicit sharing.",
+        "post_roll_effects": ["Replace, teach, embrace or erase Identities", "Establish and weaken Bonds", "Excise and optionally replace an ordinary Girl Asset", "Give a scoped Tag"],
+        "mandatory_followups": ["Trainer supplies the selected effects and account; trainee confirms their own response before effects commit."],
+        "handler_or_gm_intervention": "The actual Handler may be a trainer. The conditioning word and source-locked assets remain outside the current native scope.",
+        "test_fixture_ids": ["tests/rules/test_conditioning.py"]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_conditioning.py"],
       "m2_play_id": null,
       "module": "core"
     },

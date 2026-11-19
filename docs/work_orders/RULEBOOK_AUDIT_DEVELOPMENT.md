@@ -1874,3 +1874,23 @@ The longest partition ran **2,284.83 seconds**. Partition totals were
 942, 942, 941 and 941. Manifests and logs are under
 `var/rulebook-full-6e0ded6/`. This revision precedes the later
 Ancillary, Expanded Status, siege, Lobotomy and dissection work.
+
+### Situational Conditioning
+
+Base `e758bc96bb53ac0ec0bf3382b7c85494ee25e40f`. A separate
+NPC, Girl or Handler in an actual private cast offers training.
+The original trainee accepts and rolls with the printed trainer
+and Identity modifiers. Each trainer selection reserves one of
+the saved result's choices; only the original trainee's confirmed
+response applies them to the sheet. A low result gives her the
+option to name a new Identity. Other Bonds require explicit
+sharing, and either participant can withdraw before the effects
+are applied, including during a safety pause.
+
+**56 selected tests passed in 59.64 seconds**, covering the native
+Cast and private Inbox, all three trainer roles and tiers, seven
+concrete effects, repeated choices, stale source casts,
+wrong-owner denial, restart, replay and the default release gate.
+The remaining word-based Helplessness and source-locked or
+concealed Asset variants require their own effects and checks.
+[Conditioning p. 198](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=200)

@@ -14,6 +14,7 @@ from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_journalist import Job
 from girlframe.services.m3_cast import CastService
+from girlframe.services.m3_conditioning import ConditioningService
 from girlframe.services.onboarding import WorkflowError
 
 NPC_REQUEST_LABELS: dict[Job, str] = {
@@ -73,6 +74,13 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
         key = "adjudicate:" + role["token"]
         options.append((key, "Offer " + role["label"][:55] + " for Handler-rule responses"))
         actions[key] = ("adjudicate", ActorRef.model_validate(role["ref"]))
+    conditioning = ConditioningService(service.game)
+    try:
+        if conditioning.enabled():
+            await asyncio.to_thread(conditioning.menu, viewer, channel)
+            options.append(("conditioning", "Request private Conditioning"))
+    except WorkflowError:
+        pass
 
     async def prompt_role(current: discord.Interaction, key: str) -> dict[str, Any]:
         roles: list[dict[str, Any]] = (
@@ -86,6 +94,11 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
         return role
 
     async def choose(current: discord.Interaction, token: str) -> None:
+        if token == "conditioning":
+            from girlframe.discord_adapter.m3_conditioning import open_invite
+
+            await open_invite(current, conditioning, channel)
+            return
         if token in prompt_roles:
             role = await prompt_role(current, token)
 

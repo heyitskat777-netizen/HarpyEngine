@@ -1917,6 +1917,14 @@ class InboxView(discord.ui.View):
             await open_advocate(
                 interaction, AdvocateAloneService(self.service.store), item.identity
             )
+        elif item.task == "m3_conditioning":
+            from girlframe.discord_adapter.m3_conditioning import open_request as open_conditioning
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_conditioning import ConditioningService
+
+            await open_conditioning(
+                interaction, ConditioningService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_mistress_favor":
             from girlframe.discord_adapter.m3_handler_private_scene import open_favor
             from girlframe.services.m3_handler_private_scene import HandlerPrivateSceneService

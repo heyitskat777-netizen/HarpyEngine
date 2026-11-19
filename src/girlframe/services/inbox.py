@@ -2929,6 +2929,7 @@ class InboxService:
             from girlframe.engine.m3_last_resort import acquisitions as last_resort_acquisitions
             from girlframe.engine.m3_successor import acquisitions as successor_acquisitions
             from girlframe.services.m3_advocate_alone import AdvocateAloneService
+            from girlframe.services.m3_conditioning import ConditioningService
             from girlframe.services.m3_frantic_breakdown import FranticBreakdownService
             from girlframe.services.m3_frantic_crisis import CrisisService
             from girlframe.services.m3_handler_plays import HandlerPlayService
@@ -3063,6 +3064,26 @@ class InboxService:
                         "The private answer is held for its original audience.",
                         "Open private conversation",
                         task="m3_advocate_alone",
+                    )
+                )
+            conditioning = ConditioningService(GameService(self.store))
+            for conditioning_request in conditioning.tasks(connection, viewer, canon):
+                items.append(
+                    InboxItem(
+                        "conditioning:" + conditioning_request.id,
+                        "conditioning",
+                        conditioning_request.id,
+                        canon.revision,
+                        "plays",
+                        "Conditioning",
+                        "Original participants",
+                        "pending",
+                        conditioning._owner(conditioning_request) == viewer.user_id,
+                        False,
+                        "Reopen your private request or withdraw.",
+                        "Review the saved roll and owned choices.",
+                        "Open Conditioning",
+                        task="m3_conditioning",
                     )
                 )
             for favor, private_book in HandlerPrivateSceneService(self.store)._tasks(viewer, canon):
