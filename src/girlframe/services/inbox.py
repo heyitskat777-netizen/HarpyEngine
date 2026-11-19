@@ -2972,9 +2972,30 @@ class InboxService:
             from girlframe.services.m3_handler_tags import HandlerTagService
             from girlframe.services.m3_journalist import JournalistService
             from girlframe.services.m3_pilot_fears import access as fear_access
+            from girlframe.services.m3_rebel_ambush import visible as visible_ambushes
             from girlframe.services.m3_rebel_escape_offer import visible as visible_escape_offers
 
             journalism = JournalistService(GameService(self.store))
+            for ambush in visible_ambushes(canon, viewer):
+                pending = ambush.completed is None
+                items.append(
+                    InboxItem(
+                        "rebel-ambush:" + ambush.id,
+                        "work",
+                        ambush.id,
+                        canon.revision,
+                        "mission",
+                        "Rebel ambush",
+                        "Original Rebel and Handler",
+                        "pending" if pending else "resolved",
+                        pending and ambush.opening is None and viewer.user_id == ambush.controller,
+                        False,
+                        "Review the original mission ambush.",
+                        "",
+                        "Open ambush",
+                        task="m3_rebel_ambush",
+                    )
+                )
             for berserk in visible_berserk(canon, viewer):
                 items.append(
                     InboxItem(

@@ -620,6 +620,7 @@ class MissionService:
             state = load_state(c, self.store.campaign_id)
             from girlframe.engine.m3_budget_anarchy import dispatch as bind_protests
             from girlframe.engine.m3_orbital_threat import dispatch as bind_orbital_threats
+            from girlframe.engine.m3_rebel_ambush import bind as bind_ambush
             from girlframe.engine.m3_repairs import dispatch as bind_shortages
             from girlframe.services.m3_budget_conversion import bind as bind_capture
 
@@ -628,6 +629,7 @@ class MissionService:
             bind_orbital_threats(bound, identity, dispatch_event)
             bind_protests(bound, identity, dispatch_event)
             bind_capture(bound, updated, dispatch_event)
+            bind_ambush(bound, updated, dispatch_event)
             event = self.game.event(
                 c,
                 viewer.user_id,
@@ -684,8 +686,10 @@ class MissionService:
             state = load_state(c, self.store.campaign_id)
             from girlframe.services.m3_budget_assassination import before_rewards
             from girlframe.services.m3_budget_conversion import outcome as capture_outcome
+            from girlframe.services.m3_rebel_ambush import require_completed as require_ambush
 
             before_rewards(c, self.store, state, mission, success)
+            require_ambush(c, self.game, state, mission)
             if success and mission.capture_target is not None:
                 capture_outcome(c, self.game, state, mission)
             from girlframe.services.m3_supply_drop import expire_mission
@@ -766,8 +770,10 @@ class MissionService:
         from girlframe.engine.m3_budget_anarchy import deadline as protest_deadline
         from girlframe.engine.m3_orbital_threat import settle as settle_orbital_threats
         from girlframe.services.m3_budget_conversion import settle as settle_capture
+        from girlframe.services.m3_rebel_ambush import require_completed as settle_ambush
 
         settle_capture(c, self.game, state, mission, success, event_id)
+        settle_ambush(c, self.game, state, mission, event_id)
         protest_deadline(state, mission.id, event_id)
         loss = None
         if settle_orbital_threats(state, mission.id, event_id):

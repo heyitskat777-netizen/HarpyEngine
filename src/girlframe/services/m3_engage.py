@@ -465,6 +465,8 @@ def ensure_assault_extra(
 ) -> bool:
     if action["data"]["play"] != "all_out_assault":
         return True
+    if action["data"]["battle"].get("rebel_ambush"):
+        return True
     casualty = action["data"]["battle"].get("extra_source") == "girl.casualty.no-one-better"
     body = action["data"].get("actor_basic")
     if not casualty and (

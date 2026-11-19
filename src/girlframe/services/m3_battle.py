@@ -468,11 +468,27 @@ def prepare(
         and not context.outside_permission
     ):
         raise WorkflowError("The Conversation must establish this actual outside-Frame attack.")
+    ambush = None
+    from girlframe.engine.m3_actor_resources import rebel_inventory
+
+    if (
+        acting.ref.kind == "external_pilot"
+        and rebel_inventory(state, acting.ref) is not None
+        and target.ref.kind == "pilot"
+        and prepared.play == "all_out_assault"
+    ):
+        from girlframe.services.m3_rebel_ambush import context as ambush_context
+
+        ambush = ambush_context(c, game, state, acting.ref, target.ref, cast)
     for body, outside in (
         (acting, context.actor_outside_frame),
         (target, context.target_outside_frame),
     ):
-        if body.ref.kind == "external_pilot" and rules.category(state, body.ref) != "harpy":
+        if (
+            body.ref.kind == "external_pilot"
+            and rules.category(state, body.ref) != "harpy"
+            and (ambush is None or body.ref != ambush.attacker)
+        ):
             raise WorkflowError(
                 "UNSUPPORTED_RULE: support actual external Pilot Defeat/resources "
                 "before this battle can roll."
@@ -496,7 +512,9 @@ def prepare(
     from girlframe.services.m3_enforcer_firepower import prepare_firepower
 
     return dict(
-        firepower=prepare_firepower(game, c, state, declaration.actor, cast, prepared),
+        firepower=prepare_firepower(game, c, state, declaration.actor, cast, prepared)
+        if ambush is None
+        else None,
         actor=declaration.actor.model_dump(mode="json"),
         target=declaration.target.model_dump(mode="json"),
         attacking_asset=declaration.attacking_asset,
@@ -525,6 +543,7 @@ def prepare(
         defense=context.defense.model_dump(mode="json") if context.defense else None,
         dormant_awakened=context.dormant_awakened,
         dormant_close=context.dormant_close,
+        **({"rebel_ambush": ambush.id} if ambush is not None else {}),
         occupancy={
             ref.token: False
             for ref, outside in (
@@ -696,6 +715,10 @@ def pre_roll(
             "SOURCE_PORT_REQUIRED: resolve this battle Asset's sabotage before dice"
         )
     if commit:
+        if meta.get("rebel_ambush"):
+            from girlframe.services.m3_rebel_ambush import claim as claim_ambush
+
+            claim_ambush(c, game, state, action)
         commit_declaration(state, action)
 
 

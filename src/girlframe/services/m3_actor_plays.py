@@ -12,13 +12,14 @@ from girlframe.database import tables as t
 from girlframe.engine import m3_actor_plays as rules
 from girlframe.engine import m3_cast
 from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput, tier
-from girlframe.engine.m3_actor_resources import Commitment, Committed, commit
+from girlframe.engine.m3_actor_resources import Commitment, Committed, commit, rebel_inventory
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, SceneCast
 from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_policy import RULESET
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_actors import profiles
+from girlframe.services.m3_rebel_ambush import scoped as scoped_ambush
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -66,6 +67,8 @@ class ActorPlayService:
 
         can_act(state, actor)
         if actor.kind != "external_pilot":
+            return
+        if play == "all_out_assault" and rebel_inventory(state, actor) is not None:
             return
         from girlframe.engine.m3_actor_bonds import is_helpless
         from girlframe.engine.m3_harpy_defeat import harpy
@@ -227,12 +230,14 @@ class ActorPlayService:
             actor = next(
                 (x for x in actors if x.ref == ref and x.controller == viewer.user_id), None
             )
+            ambush = scoped_ambush(state, ref, channel)
             if actor is None or not (
                 actor.rules in ("handler_girl", "clone_am")
                 or actor.ref.kind == "external_pilot"
                 and actor.girl == "harpy"
+                or ambush
             ):
-                raise WorkflowError("Select your actual Handler Girl-rules role or Harpy body.")
+                raise WorkflowError("Select your actual supported role or original ambush actor.")
             judge = self._judge(c, state, cast, ref)
             from girlframe.engine.m3_enforcer_requisitions import PAVLOV, SNOOP
             from girlframe.engine.m3_harpy_defeat import harpy
@@ -266,9 +271,9 @@ class ActorPlayService:
                     for x in actors
                     if x.ref != ref and _visible(state, x.ref, viewer.user_id)
                 ],
-                "pavlov": owned(c, self.game, state, ref, PAVLOV) is not None,
+                "pavlov": not ambush and owned(c, self.game, state, ref, PAVLOV) is not None,
                 "snoop_targets": snoop_targets(self.game, c, state, ref)
-                if owned(c, self.game, state, ref, SNOOP) is not None
+                if not ambush and owned(c, self.game, state, ref, SNOOP) is not None
                 else [],
                 "enforcement_targets": initiative["targets"] if initiative["available"] else [],
                 "forbidden_plays": [x.play for x in harpy(state, ref).blocked_plays]
@@ -383,6 +388,8 @@ class ActorPlayService:
                     actor.rules in ("handler_girl", "clone_am")
                     or actor.ref.kind == "external_pilot"
                     and actor.girl == "harpy"
+                    or prepared.play == "all_out_assault"
+                    and scoped_ambush(state, ref, channel)
                 )
                 or actor.source_sha256 != expected
                 or judge.ref != adjudicator
@@ -451,11 +458,13 @@ class ActorPlayService:
             if battle_play:
                 from girlframe.services.m3_battle import prepare
 
-                if actor.girl != "harpy":
-                    raise ValueError("Use the actual Harpy's own combat role and resources")
+                if actor.girl != "harpy" and not (
+                    prepared.play == "all_out_assault" and scoped_ambush(state, ref, channel)
+                ):
+                    raise ValueError("Use the actual supported combat role and its own resources")
                 battle = prepare(self.game, c, viewer, state, self.game.scene(c, channel), prepared)
                 if battle["actor"] != ref.model_dump(mode="json"):
-                    raise ValueError("The declared combatant must be this exact Harpy body")
+                    raise ValueError("The declared combatant must use this exact original body")
             if prepared.play == "engage":
                 from girlframe.services.m3_engage import prepare as prepare_engage
 
@@ -811,6 +820,8 @@ class ActorPlayService:
                 actor.rules in ("handler_girl", "clone_am")
                 or actor.ref.kind == "external_pilot"
                 and actor.girl == "harpy"
+                or bool(action["data"].get("battle", {}).get("rebel_ambush"))
+                and scoped_ambush(state, ref, int(action["channel_id"]))
             )
             or judge.ref
             != (ActorRef.model_validate(meta["adjudicator"]) if meta["adjudicator"] else None)
@@ -1105,7 +1116,9 @@ class ActorPlayService:
 
             rest_results(self.game, c, state, action)
         elif action["data"].get("battle"):
-            if action["data"]["play"] == "all_out_assault":
+            if action["data"]["play"] == "all_out_assault" and not action["data"]["battle"].get(
+                "rebel_ambush"
+            ):
                 from girlframe.services.m3_engage import start_assault_extra
 
                 start_assault_extra(self.game, c, action)

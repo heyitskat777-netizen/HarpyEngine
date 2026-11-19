@@ -37,14 +37,15 @@ Off-Duty resumes only at its genuine completion boundary.
 | High Rebellion 2 | Verify the original unattended base, free actual prisoners, apply losses to original NPC staff, and give the Rebels the linked Vital Frame. | Deliver an offer between the original Rebel Handler controller and the contacted Girl only. Preserve her separate choice and require the actual Escape consumer for an attempt. [Rulebook p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) |
 | High Rebellion 3 | Reveal the original NPC Bond, retain that actor's history, and open an actual attack on the Handler that calls for Cadre intervention. | Have the fictional Director choose an actual Rebel faction and issue the order to demonstrate support. Resolve the actual public show of support without borrowing software Director authority. [Rulebook p. 146](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=148) |
 
-Other tracked table gaps are Low Void 2.2, 3.2, 4.2, 5.2, High Void 3.2,
-6.1, Low Rebellion 2.1, 4.1, 5.1, 6.2, High Rebellion 4.1, 5.1, 6.1,
-and High Budget 2.1, 3.1 and 5.2. Check each actor, outcome and timing
-from its printed column. A cascade already schedules its two actual
-children when eligible. Verify that both children resolve under their own
-saved rolls before closing the originating preparation. Endgames retain
-unique slots and the actual original faction. Still missing Void 1–3 and
-5, Rebellion 3–8, and Budget 1–2. [Strain selectors](../../src/girlframe/engine/m3_strain.py) · [Endgames](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=146)
+The registry tracks each source's current scope and its acceptance tests.
+The wholly open core table columns are High Rebellion 1.1, 2.1, 3.1,
+4.1 and 6.1, and High Budget 5.2. Rebellion Endgames 3–8 and Budget
+Endgames 1–2 have no effect resolver. Current subset limitations include
+the High Budget hearing's Severe finding and the High Void bunk's separate
+contact Play. The individual receipts below retain the rest of the source
+questions and missing variants. A cascade retains both child dice and
+requires their actual consequences before completing preparation.
+[Rules registry](../../rules/registry.json) · [Strain selectors](../../src/girlframe/engine/m3_strain.py) · [Endgames](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=146)
 
 Custom Events require separate additive, replace-after-roll and replace-a-roll
 checks. Keep the original rolled result immutable and require the actual
@@ -913,3 +914,25 @@ pending for human review. Successor Frames, substituted NPCs and overlapping
 forced transformations require separate verification. Defeat applies no
 automatic revival or extraction.
 [High Void p. 143](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=145) · [Aggressive Gorgons p. 163](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=165) · [Berserk Frame test](../../tests/rules/test_berserk_frame.py)
+
+## Low Rebellion next-mission ambush
+
+The base is `b53fc9f21424bd1237767153c98ef9ea5f3d7627`. Low Rebellion
+5.1 binds the original independently controlled Rebel to the next actual
+dispatch. The Rebel chooses an accepted original Girl joined in the same
+scene. The confirmed opening, native battle declaration, actual Frame and
+owned Heat are required before the assault can roll. The mission stays
+open through the real resulting combat consequences. Later missions do
+not reuse the attack. The targeted player does not receive the private
+preparation card.
+
+All 59 selected tests passed, including the native Strain and private
+Inbox controls, database reopen, pause, replay, an unrelated proposed
+recipient, the actual combat damage and the completed mission. Static
+checking passed on 11 modules. The Rebel's inventory spent Heat while its
+controller's separate Pilot sheet remained unchanged. Existing GM table
+outcome tests passed in the same run. The narrow combat route requires
+an existing Rebel roster, factual cockpit placement and confirmed ordinary
+resources. Capturing a Girl, a last-Asset Rebel Defeat and other Rebel combat
+remain separate workflows.
+[Low Rebellion p. 145](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=147) · [Ambush test](../../tests/rules/test_rebel_ambush.py)

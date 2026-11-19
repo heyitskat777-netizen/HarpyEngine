@@ -28,6 +28,7 @@ from girlframe.engine.m3_npc_interest import Timing as InterestTiming
 from girlframe.engine.m3_orbital_threat import RULE as ORBITAL_THREAT
 from girlframe.engine.m3_pilot_fears import APPEARANCE as PUBLIC_APPEARANCE
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
+from girlframe.engine.m3_rebel_ambush import RULE as REBEL_AMBUSH
 from girlframe.engine.m3_rebel_defection import RULE as REBEL_DEFECTION
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_rebel_strafe import RULE as REBEL_STRAFE
@@ -86,6 +87,7 @@ SUPPORTED = frozenset(
         REBEL_STRAFE,
         REBEL_TAUNT,
         REBEL_VOICE,
+        REBEL_AMBUSH,
         "strain.rebellion.low.5.2",
         REBEL_PROTEST,
         REBEL_ESCAPE_OFFER,
@@ -237,7 +239,7 @@ def apply(
         if not choice.target:
             raise ValueError("Choose the actual independently controlled unlinked Harpy")
     elif rule == BERSERK_FRAME:
-        from girlframe.engine.m3_berserk_frame import arm
+        from girlframe.engine.m3_berserk_frame import arm as arm_berserk
 
         fields(choice, {"target", "gorgon", "victim"})
         if (
@@ -248,13 +250,27 @@ def apply(
         ):
             raise ValueError("Bind the original Frame and actual prepared Aggressive form")
         assert choice.target is not None
-        arm(
+        arm_berserk(
             state,
             source_work,
             source_event,
             int(choice.target),
             choice.gorgon,
             choice.victim,
+            choice.account.strip(),
+        )
+    elif rule == REBEL_AMBUSH:
+        from girlframe.engine.m3_rebel_ambush import arm as arm_ambush
+
+        fields(choice, {"target"})
+        if not choice.target or source_event is None or period_id is None:
+            raise ValueError("Bind the actual Rebel Pilot and original preparing period")
+        arm_ambush(
+            state,
+            source_work,
+            period_id,
+            source_event,
+            ActorRef(kind="external_pilot", entity=choice.target),
             choice.account.strip(),
         )
     elif rule == ORBITAL_THREAT:

@@ -30,6 +30,7 @@ from girlframe.engine.m3_npc_void import MANIFESTATIONS
 from girlframe.engine.m3_orbital_threat import RULE as ORBITAL_THREAT
 from girlframe.engine.m3_pilot_fears import APPEARANCE as PUBLIC_APPEARANCE
 from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
+from girlframe.engine.m3_rebel_ambush import RULE as REBEL_AMBUSH
 from girlframe.engine.m3_rebel_defection import RULE as REBEL_DEFECTION
 from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
 from girlframe.engine.m3_rebel_strafe import RULE as REBEL_STRAFE
@@ -327,6 +328,17 @@ def effect_form(
     from girlframe.engine.m3_battle import category
     from girlframe.engine.m3_budget_sabotage import Pin
     from girlframe.engine.m3_doppelganger_reveal import original_bonds
+    from girlframe.engine.m3_rebel_ambush import attacker as ambush_attacker
+
+    ambushers = []
+    if rule == REBEL_AMBUSH:
+        for pilot in world["pilots"]:
+            actor = ActorRef(kind="external_pilot", entity=pilot["id"])
+            try:
+                if ambush_attacker(state, actor) != handler:
+                    ambushers.append((pilot["id"], pilot["name"]))
+            except ValueError:
+                continue
 
     masks = (
         {
@@ -645,6 +657,14 @@ def effect_form(
                             and x["controller"] != handler
                         ]
                     ),
+                )
+            )
+        if rule == REBEL_AMBUSH:
+            fields.append(
+                Field(
+                    "ambusher",
+                    "Which original Rebel launches the surprise attack?",
+                    tuple(ambushers) or WAIT,
                 )
             )
         if rule == REBEL_DEFECTION:
@@ -1343,6 +1363,8 @@ def effect_form(
             )
         if rule in (REBEL_ESCAPE_OFFER, REBEL_TAUNT, REBEL_VOICE):
             payload["target"] = values["rebel_handler"][0]
+        if rule == REBEL_AMBUSH:
+            payload["target"] = values["ambusher"][0]
         if rule == REBEL_DEFECTION:
             payload.update(
                 target=values["defection_npc"][0],
@@ -1595,6 +1617,8 @@ def effect_form(
             return "The appearance is available to its original Harpy controller."
         if rule == BERSERK_FRAME:
             return "The threat is tied to the original Frame's next activation."
+        if rule == REBEL_AMBUSH:
+            return "The original attack is pending for the next dispatched mission."
         if rule == PUBLIC_APPEARANCE:
             return "The original Cadre can record attendance from their private Inbox."
         if rule == HARPY_RAID:
