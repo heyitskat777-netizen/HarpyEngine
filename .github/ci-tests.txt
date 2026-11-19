@@ -194,4 +194,5 @@ tests/rules/test_erratic_gorgon.py
 tests/rules/test_journalist.py
 tests/rules/test_psychologist.py
 tests/rules/test_npc_care.py
+tests/rules/test_npc_handler_order.py
 tests/rules/test_sniff_out.py

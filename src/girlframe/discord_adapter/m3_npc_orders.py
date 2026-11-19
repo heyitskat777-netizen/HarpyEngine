@@ -13,6 +13,43 @@ from girlframe.engine.m3_npc_orders import Origin
 from girlframe.services.m3_npc_orders import NpcOrderService
 
 
+async def open_handler_order(
+    interaction: discord.Interaction, service: NpcOrderService, channel: int, issuer: ActorRef
+) -> None:
+    data = await asyncio.to_thread(
+        service.handler_recipients, viewer_from_interaction(interaction), channel, issuer
+    )
+    if not data["targets"]:
+        await reply(interaction, "There is no eligible Girl with this NPC Handler.")
+        return
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        await asyncio.to_thread(
+            service.issue,
+            viewer_from_interaction(current),
+            str(current.id),
+            channel,
+            issuer,
+            int(values["girl"][0]),
+            data["revision"],
+            values["instruction"],
+            origin_kind="npc_handler",
+        )
+        return "The order is saved in the original Girl’s private Inbox."
+
+    form = NativeForm(
+        interaction.user.id,
+        "Send a Girl",
+        "Choose the original Girl and state what the NPC Handler asks her to do.",
+        [
+            Field("girl", "Original Girl", tuple(data["targets"].items())),
+            Field("instruction", "Direct order", paragraph=True),
+        ],
+        submit,
+    )
+    await reply(interaction, form.text(), form)
+
+
 async def open_order(
     interaction: discord.Interaction,
     service: NpcOrderService,

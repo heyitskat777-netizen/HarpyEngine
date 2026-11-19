@@ -10,7 +10,7 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_npc_orders as rules
 from girlframe.engine.m2 import GameState, PlayInput
-from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_actor_state import ActorRef, SceneCast
 from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_alpha import RULE
 from girlframe.engine.m3_alpha_state import Broken
@@ -23,6 +23,49 @@ from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_enforcement_initiative import _cast
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
+
+NPC_HANDLER = "npc.npc.handler"
+
+
+def npc_handler_authority(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    cast: SceneCast,
+    issuer: ActorRef,
+    recipient: ActorRef,
+    owner: int,
+) -> str:
+    bound = profiles(c, game.store.campaign_id)
+    npc = resolve(state, issuer, bound, require_current_profile=False)
+    girl = resolve(state, recipient, bound, require_current_profile=False)
+    role = next((x for x in cast.roles if x.actor == issuer and x.controller == owner), None)
+    if (
+        role is None
+        or issuer.kind != "npc"
+        or npc.controller != owner
+        or npc.controller == girl.controller
+        or not npc.alive
+        or npc.offstage_source
+        or npc.custody
+        or "handler" not in npc.jobs
+        or "director" in npc.jobs
+        or npc.cell is None
+        or not girl.alive
+        or girl.rules != "girl_frame"
+        or girl.offstage_source
+        or girl.cell != npc.cell
+        or not any(x.actor == recipient and x.controller == girl.controller for x in cast.roles)
+    ):
+        raise WorkflowError("Use a living original NPC Handler and a local cast Girl")
+    from girlframe.services.m3_expanded_status import ExpandedStatusService
+
+    status = ExpandedStatusService(game)
+    issuer_level = status.view(c, state, npc)["level"]
+    recipient_level = status.view(c, state, girl)["level"]
+    if issuer_level is None or recipient_level is None or issuer_level >= recipient_level:
+        raise WorkflowError("This original NPC Handler does not outrank the Girl")
+    return role.source_event
 
 
 def _history(game: GameService, c: Connection, event: str) -> GameState:
@@ -66,10 +109,13 @@ def _access(
         "stim_sex": "girl.stim-blissed.sex-play",
         "rebel_voice": "strain.rebellion.high.5.1",
         "harpy_echoes": ECHOES,
+        "npc_handler": NPC_HANDLER,
     }[origin_kind]
     if origin_kind == "rebel_voice":
         access.authorize(c, viewer, "strain", director_response=True)
-    if origin_kind == "harpy_echoes":
+    if origin_kind == "npc_handler":
+        access.authorize(c, viewer, "world", director_response=True)
+    if origin_kind in ("harpy_echoes", "npc_handler"):
         try:
             access.require_specialist_rule(rule)
         except ValueError as error:
@@ -104,7 +150,16 @@ def source(
     )
     actual = resolve(state, value.issuer, profiles(c, game.store.campaign_id))
     recipient = resolve(state, value.target, profiles(c, game.store.campaign_id))
-    if value.origin_kind == "rebel_voice":
+    if value.origin_kind == "npc_handler":
+        current_cast = _cast(game, c, state, value.cast.channel)
+        condition_invalid = any(
+            npc_handler_authority(
+                game, c, canon, cast, value.issuer, value.target, value.controller
+            )
+            != value.condition
+            for canon, cast in ((original, value.cast), (state, current_cast))
+        )
+    elif value.origin_kind == "rebel_voice":
         from girlframe.services.m3_rebel_voice import authority as voice_authority
 
         rights = voice_authority(
@@ -185,7 +240,7 @@ def source(
         or fingerprint(_cast(game, c, state, value.cast.channel)) != fingerprint(value.cast)
         or condition_invalid
     ):
-        raise WorkflowError("Recover this original NPC, recipient, cast and Broken-source order")
+        raise WorkflowError("Recover the original NPC, recipient, cast and order authority")
 
 
 def order(game: GameService, c: Connection, action: dict[str, Any]) -> rules.Order:
@@ -206,6 +261,10 @@ def order(game: GameService, c: Connection, action: dict[str, Any]) -> rules.Ord
         or action["actor_id"] != value.target.entity
         or int(action["channel_id"]) != value.cast.channel
         or action["scene_id"] != value.cast.id
+        or value.origin_kind == "npc_handler"
+        and any(
+            action["data"].get(k) != value.audience() for k in ("private_audience", "participants")
+        )
         or action["data"]["play"] == "receive_orders"
         and (action["id"] != value.action or action["data"].get("order_text") != value.instruction)
         or action["data"]["play"] != "receive_orders"
@@ -311,6 +370,29 @@ class NpcOrderService:
     def __init__(self, game: GameService):
         self.game, self.store = game, game.store
 
+    def handler_recipients(
+        self, viewer: GuildViewer, channel: int, issuer: ActorRef
+    ) -> dict[str, Any]:
+        with self.store.engine.connect() as c:
+            _access(self.game, c, viewer, "npc_handler")
+            state = load_state(c, self.store.campaign_id)
+            cast = _cast(self.game, c, state, channel)
+            targets = {}
+            bound = profiles(c, self.store.campaign_id)
+            for role in cast.roles:
+                if role.actor.kind != "pilot":
+                    continue
+                try:
+                    npc_handler_authority(
+                        self.game, c, state, cast, issuer, role.actor, viewer.user_id
+                    )
+                    targets[role.actor.entity] = resolve(
+                        state, role.actor, bound, require_current_profile=False
+                    ).label
+                except (ValueError, WorkflowError):
+                    continue
+            return dict(revision=state.revision, targets=targets)
+
     def preview(
         self,
         viewer: GuildViewer,
@@ -359,6 +441,10 @@ class NpcOrderService:
                         if flirt_condition is None:
                             continue
                         condition_id = flirt_condition
+                    elif origin_kind == "npc_handler":
+                        condition_id = npc_handler_authority(
+                            self.game, c, state, cast, role.actor, recipient, viewer.user_id
+                        )
                     else:
                         condition_id = _condition(self.game, c, state, role.actor, recipient).id
                 except (ValueError, WorkflowError):
@@ -410,6 +496,7 @@ class NpcOrderService:
             "stim_sex",
             "rebel_voice",
             "harpy_echoes",
+            "npc_handler",
         ):
             raise WorkflowError("Use only an implemented actual NPC order source")
         if not text.strip() or len(text) > 1200:
@@ -480,6 +567,10 @@ class NpcOrderService:
                 from girlframe.services.m3_am_scrutinized import secret_authority
 
                 condition_id = secret_authority(self.game, c, state, issuer, recipient).id
+            elif origin_kind == "npc_handler":
+                condition_id = npc_handler_authority(
+                    self.game, c, state, cast, issuer, recipient, viewer.user_id
+                )
             else:
                 condition_id = _condition(self.game, c, state, issuer, recipient).id
             if (
@@ -493,7 +584,7 @@ class NpcOrderService:
                 )
                 or not any(x.actor == recipient and x.controller == target for x in cast.roles)
             ):
-                raise WorkflowError("STALE_NPC_ORDER: reopen the original NPC and Broken recipient")
+                raise WorkflowError("STALE_NPC_ORDER: reopen the original NPC and recipient")
             require_communication(c, self.store.campaign_id, state, issuer, (recipient,))
             lock = self.game.lock(c, channel)
             if lock and lock["state"] != "released":
@@ -529,10 +620,7 @@ class NpcOrderService:
                     body_json=json.dumps(dict(text=text, npc_order=value.model_dump(mode="json"))),
                 )
             )
-            table = sorted(
-                {x.controller for x in cast.roles}
-                | ({cast.facilitator} if cast.facilitator is not None else set())
-            )
+            table = value.audience()
             handler = active_handler(state)
             data = dict(
                 play="receive_orders",
@@ -560,6 +648,8 @@ class NpcOrderService:
                     cast_sha256=fingerprint(cast),
                 ),
             )
+            if origin_kind == "npc_handler":
+                data["private_audience"] = table
             from girlframe.services.m3_recovery import enable
 
             enable(self.game, c, viewer, data)

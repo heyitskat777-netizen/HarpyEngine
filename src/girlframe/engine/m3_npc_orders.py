@@ -10,7 +10,14 @@ from girlframe.engine.m3_alpha import conditions, current
 from girlframe.engine.m3_alpha_state import Broken
 
 Origin = Literal[
-    "broken", "am_secret", "secretary", "npc_flirt", "stim_sex", "rebel_voice", "harpy_echoes"
+    "broken",
+    "am_secret",
+    "secretary",
+    "npc_flirt",
+    "stim_sex",
+    "rebel_voice",
+    "harpy_echoes",
+    "npc_handler",
 ]
 
 FACT_KINDS: dict[Origin, str] = {
@@ -21,6 +28,7 @@ FACT_KINDS: dict[Origin, str] = {
     "stim_sex": "npc_stim_order",
     "rebel_voice": "npc_rebel_voice_order",
     "harpy_echoes": "harpy_echoes_order",
+    "npc_handler": "npc_handler_order",
 }
 
 
@@ -39,6 +47,12 @@ class Order(Model):
     origin_kind: Origin = Field(default="broken", exclude_if=lambda value: value == "broken")
     voice: ActorRef | None = Field(default=None, exclude_if=lambda value: value is None)
     voice_label: str | None = Field(default=None, exclude_if=lambda value: value is None)
+
+    def audience(self) -> list[int]:
+        facilitator = {self.cast.facilitator} if self.cast.facilitator is not None else set()
+        if self.origin_kind == "npc_handler":
+            return sorted({self.controller, int(self.target.entity)} | facilitator)
+        return sorted({x.controller for x in self.cast.roles} | facilitator)
 
     @model_validator(mode="after")
     def voice_source(self) -> "Order":

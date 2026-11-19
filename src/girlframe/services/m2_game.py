@@ -3201,6 +3201,7 @@ class GameService:
             if npc_order_scope is not None:
                 from girlframe.engine.m3_actors import fingerprint
                 from girlframe.engine.m3_handler_consequences import active_handler
+                from girlframe.engine.m3_npc_orders import Order as NpcOrder
 
                 data["npc_order"] = npc_order_scope
                 data["character_ids"] = {
@@ -3208,10 +3209,10 @@ class GameService:
                     for x in source_cast.roles
                     if x.actor.kind == "pilot"
                 }
-                npc_source_table = sorted(
-                    {x.controller for x in source_cast.roles}
-                    | ({source_cast.facilitator} if source_cast.facilitator is not None else set())
-                )
+                npc_order = NpcOrder.model_validate_json(json.dumps(npc_order_scope))
+                npc_source_table = npc_order.audience()
+                if npc_order.origin_kind == "npc_handler":
+                    data["private_audience"] = npc_source_table
                 data["participants"] = npc_source_table
                 body = active_handler(state)
                 data["tag_context"] = dict(

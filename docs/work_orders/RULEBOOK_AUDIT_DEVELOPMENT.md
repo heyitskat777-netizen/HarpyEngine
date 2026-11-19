@@ -2907,3 +2907,23 @@ and has no separate direct result here. Other actor types,
 more Plays, and care outside the demonstrated Base case
 remain open.
 [Harpy p. 182](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=184) · [Native case](../../tests/rules/test_harpy_advancements.py)
+
+### Ordinary NPC Handler Orders
+
+Base `369b87c86c491ce2d261ad0d79ff4ae47f89c7fa`. An actual
+local scene-cast NPC Handler can send an addressed Girl
+through the existing Receive Orders protocol. The original
+role, same-square hearing and higher canonical Expanded
+Status must all hold. The issuer, original Girl and human
+facilitator are the audience of both the order and its
+resulting Disobey. The Girl’s actual reply and any later
+movement remain her own decisions.
+
+**One focused native case passed in 5.94 seconds**. The
+original NPC’s Cast control issued the order, another player
+could not reopen it, the initial choice did not move the Girl,
+and her accepted Disobey produced one ordinary roll without
+inventing Broken. The synthetic delivery audience was the
+issuer/facilitator and recipient. The test does not establish
+remote Orders, Rebel authority or real Discord delivery.
+[Handler Job p. 188](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=190) · [Native case](../../tests/rules/test_npc_handler_order.py)

@@ -85,6 +85,10 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
                     request = job + ":" + token
                     options.append((request, label + role["label"][:55]))
                     npc_requests[request] = (job, ActorRef.model_validate(role["ref"]))
+            if "handler" in role["job_prompts"]:
+                order = "npc-handler-order:" + token
+                options.append((order, "Send a Girl as " + role["label"][:60]))
+                actions[order] = ("npc_handler_order", ActorRef.model_validate(role["ref"]))
     if data["may_facilitate"] and not data["own_facilitator"]:
         options.append(("facilitate", "Join as facilitator (no fictional character)"))
         actions["facilitate"] = ("facilitate", None)
@@ -213,6 +217,13 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
 
             assert ref is not None
             await open_visions(current, VisionsService(service.game), channel, ref)
+            return
+        if action == "npc_handler_order":
+            from girlframe.discord_adapter.m3_npc_orders import open_handler_order
+            from girlframe.services.m3_npc_orders import NpcOrderService
+
+            assert ref is not None
+            await open_handler_order(current, NpcOrderService(service.game), channel, ref)
             return
         if action == "phone":
             from girlframe.discord_adapter.m3_director_strain import open_phone
