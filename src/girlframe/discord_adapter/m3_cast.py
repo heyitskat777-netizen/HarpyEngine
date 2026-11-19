@@ -88,6 +88,10 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
             key = "mask:" + token
             options.append((key, "Use A Human Mask as " + role["label"][:65]))
             actions[key] = ("harpy_mask", ActorRef.model_validate(role["ref"]))
+        if role.get("patronage"):
+            key = "patronage:" + token
+            options.append((key, "Review Patron funding for " + role["label"][:60]))
+            actions[key] = ("patronage", ActorRef.model_validate(role["ref"]))
         if role.get("abysstech"):
             key = "abysstech:" + token
             options.append((key, "Use Experimental Abysstech as " + role["label"][:56]))
@@ -300,6 +304,13 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
 
             assert ref is not None
             await open_capture(current, CapturedService(service.game), channel, ref)
+            return
+        if action == "patronage":
+            from girlframe.discord_adapter.m3_mercenary_patron import open_patron
+            from girlframe.services.m3_mercenary_patron import MercenaryPatronService
+
+            assert ref is not None
+            await open_patron(current, MercenaryPatronService(service.game), channel, ref)
             return
         if action == "abysstech":
             from girlframe.discord_adapter.m3_abysstech import open_abysstech

@@ -3378,3 +3378,19 @@ could decline after the GM accepted the surprise. The same Play
 could no longer be used a second time. Other Play sources and
 direct verification of the linger choice remain open.
 [Kiss Me, Darling p. 183](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=185) · [Native case](../../tests/rules/test_harpy_kiss.py)
+
+### Mercenary’s Patron and replacement
+
+Base `fb52d5f`. The original Patron’s actual controller can withdraw
+in the source scene. A GM can independently confirm a Patron’s saved
+death. The original Mercenary may approach a known local Patron.
+That NPC’s actual controller accepts or declines privately. An
+accepted proposal creates a real Personal Bond with the new sponsor
+and changes the funding authority. The old Bond remains in the record.
+
+**One focused case passed in 5.77 seconds.** It used the native Cast
+and private Inbox for withdrawal and replacement, and checked the
+original Bond and new funding authority. Actual fines and sponsored
+medical, surgery and Frame spending remain open. The death trigger
+still needs direct verification.
+[Mercenary p. 96](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=98) · [Native case](../../tests/rules/test_mercenary_patron.py)

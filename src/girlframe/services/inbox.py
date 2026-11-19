@@ -4126,12 +4126,38 @@ class InboxService:
             from girlframe.services.m3_harpy_song import HarpySongService
             from girlframe.services.m3_harpy_visions import VisionsService
             from girlframe.services.m3_harpy_voidspace import HarpyVoidspaceService
+            from girlframe.services.m3_mercenary_patron import MercenaryPatronService
             from girlframe.services.m3_npc_handover import LABELS as HANDOVER_LABELS
             from girlframe.services.m3_npc_handover import NpcHandoverService
             from girlframe.services.m3_npc_intelligence import IntelligenceService
             from girlframe.services.m3_timeskip import TimeskipService
             from girlframe.services.m3_voidspace_invasion import InvasionService
             from girlframe.services.m3_warboy_hate import ConditionedHateService
+
+            patronage = MercenaryPatronService(GameService(self.store))
+            for patron_id, patron_step in patronage.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "mercenary-patron:" + patron_id,
+                        "mercenary_patron_" + patron_step,
+                        patron_id,
+                        canon.revision,
+                        "plays",
+                        "Mercenary patronage",
+                        "Original sponsorship",
+                        "pending" if patron_step != "loss" else "recorded",
+                        patron_step != "loss",
+                        False,
+                        {
+                            "offer": "Choose whether your NPC becomes the new Patron.",
+                            "loss": "Review the original loss of funding.",
+                            "death": "Verify the actual Patron’s death.",
+                        }[patron_step],
+                        "The original participants own these decisions.",
+                        "Review sponsorship",
+                        task="m3_mercenary_patron",
+                    )
+                )
 
             kisses = KissService(GameService(self.store))
             for kiss_id in kisses.tasks(connection, canon, viewer):

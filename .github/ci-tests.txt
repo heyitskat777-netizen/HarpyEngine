@@ -205,3 +205,4 @@ tests/rules/test_warboy_hate.py
 tests/rules/test_abysstech.py
 tests/rules/test_harpy_intimacy.py
 tests/rules/test_harpy_kiss.py
+tests/rules/test_mercenary_patron.py

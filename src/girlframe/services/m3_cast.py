@@ -314,6 +314,25 @@ class CastService:
                                 harpy_actions["harpy_intimacy"] = True
                         except (ValueError, WorkflowError):
                             pass
+                    can_patronage = False
+                    if actor.controller == viewer.user_id and (
+                        actor.rules == "ancillary"
+                        and actor.girl == "MERCENARY"
+                        or owned_npc is not None
+                        and "patron" in owned_npc.jobs
+                    ):
+                        from girlframe.services.m3_mercenary_patron import MercenaryPatronService
+
+                        patronage = MercenaryPatronService(self.game)
+                        try:
+                            patronage._gate(c, viewer)
+                            can_patronage = (
+                                bool(patronage.withdrawal(c, state, viewer, channel, actor.ref))
+                                if actor.ref.kind == "npc"
+                                else True
+                            )
+                        except (ValueError, WorkflowError):
+                            pass
                     known_refs.add(actor.ref)
                     visible.append(
                         {
@@ -328,6 +347,7 @@ class CastService:
                             **harpy_actions,
                             **({"escape_source": True} if can_escape else {}),
                             **({"abysstech": True} if can_abysstech else {}),
+                            **({"patronage": True} if can_patronage else {}),
                             **({"capture_source": True} if can_capture else {}),
                             **(
                                 {"director_phone": True}
