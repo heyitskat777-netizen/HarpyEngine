@@ -7,7 +7,7 @@ from pydantic import Field, model_validator
 from girlframe.engine import m3_strain as strain
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model
-from girlframe.engine.m3_custom_strain import Slot
+from girlframe.engine.m3_custom_strain import Design, Slot
 from girlframe.engine.m3_strain_state import Request, Severity, Track
 
 RULE = "director.director.strain-phone-calls"
@@ -25,16 +25,18 @@ DIRECT_EVENTS = frozenset(
 
 
 class Command(Model):
-    mode: Literal["severity", "trigger"]
+    mode: Literal["severity", "trigger", "replace"]
     track: Track
     severity: Severity
     slot: Slot | None = None
+    design: Design | None = Field(default=None, exclude_if=lambda value: value is None)
     account: str = Field(min_length=1, max_length=1200)
 
     @model_validator(mode="after")
     def actual_authority(self) -> "Command":
         if (
-            (self.mode == "trigger") != (self.slot is not None)
+            (self.mode in ("trigger", "replace")) != (self.slot is not None)
+            or (self.mode == "replace") != (self.design is not None)
             or self.slot is not None
             and (self.slot.track != self.track or self.slot.severity != self.severity)
             or not self.account.strip()

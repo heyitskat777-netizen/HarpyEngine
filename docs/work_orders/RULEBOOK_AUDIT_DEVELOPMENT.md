@@ -771,3 +771,15 @@ Orders, send a native learned Order, verify the NPC controller's owned
 response, and confirm expiry closes new Order authority. All six selected
 learned and direct Stim NPC Order tests passed. Gameplay code is unchanged.
 [Prior integration scope](../../reports/GIRL_FRAME_INTEGRATION_HANDOFF.md#stim-blissed-pilot-to-ordinary-npc-orders) · [Learned Stim tests](../../tests/rules/test_learned_stim_npc.py)
+
+## Fictional Director slot replacement
+
+The base is `c1c513789e06ed368cb20e103b31cd4847bbc4f7`.
+The original joined Director can replace any named printed slot before it
+is rolled. The call changes the table definition. The Handler still owns
+the actual choice and its consequences. The current effect shape applies
+an actual Tag to a known eligible NPC and verifies the original signed
+call before using the new slot. The detector exposes only eligible known
+targets. Three focused tests passed, covering both original phone powers,
+regular custom Strain and Director-authored replacement.
+[Director phone powers p. 190](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=192) · [Phone tests](../../tests/rules/test_director_strain_calls.py)

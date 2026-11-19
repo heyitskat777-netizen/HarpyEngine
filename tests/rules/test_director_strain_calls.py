@@ -16,7 +16,8 @@ from girlframe.discord_adapter.inbox import InboxView
 from girlframe.discord_adapter.m2_forms import NativeForm
 from girlframe.discord_adapter.m3_cast import open_cast
 from girlframe.engine.m3_actor_state import ActorRef
-from girlframe.engine.m3_custom_strain import Slot
+from girlframe.engine.m3_custom_strain import RULE as CUSTOM_RULE
+from girlframe.engine.m3_custom_strain import Design, Slot, occurrences, replacements
 from girlframe.engine.m3_director_strain import RULE, Command, calls
 from girlframe.engine.m3_strain_effects import Choice
 from girlframe.engine.m3_world_state import Npc
@@ -181,3 +182,87 @@ def test_director_severity_and_event_are_native_distinct_powers(ledger, tmp_path
     change(CastService(ActorService(strain.missions)), OTHER, "withdraw", director)
     with pytest.raises(WorkflowError, match="joined fictional Director"):
         service.call(OTHER, "call-after-withdrawal", 900, state(game).revision, director, command)
+
+
+def test_director_replaces_unrolled_printed_slot_without_picking_its_column(
+    ledger, tmp_path, monkeypatch
+):
+    strain, game, period, director = phone_scene(
+        ledger, tmp_path, monkeypatch, extra=(CUSTOM_RULE,)
+    )
+    service, world = DirectorStrainService(strain), WorldService(strain.missions)
+    for identity, revealed in (("public-tech", True), ("private-tech", False)):
+        world.npc(
+            ADMIN,
+            "new-" + identity,
+            state(game).revision,
+            Npc(
+                id=identity,
+                name=identity,
+                cell=(0, 0),
+                detail="Actual local technician.",
+                jobs=("mechanic",),
+                controller=1,
+                revealed=revealed,
+            ),
+        )
+    view = service.view(OTHER, 900, director)
+    assert tuple(x[0] for x in view["targets"]) == ("public-tech",)
+    before = state(game)
+    selected = Slot(track="budget", severity="low", face=5, column=2)
+    design = Design(
+        title="Score a safety failure",
+        tag="Under scrutiny",
+        npc="public-tech",
+        account="The technicians are called to account.",
+    )
+    command = Command(
+        mode="replace",
+        track="budget",
+        severity="low",
+        slot=selected,
+        design=design,
+        account=design.account,
+    )
+    with pytest.raises(WorkflowError, match="known eligible"):
+        service.call(
+            OTHER,
+            "unknown-npc",
+            900,
+            before.revision,
+            director,
+            command.model_copy(
+                update={"design": design.model_copy(update={"npc": "private-tech"})}
+            ),
+        )
+    assert state(game) == before
+    native_phone(
+        strain,
+        director,
+        "replace",
+        39740,
+        event=("strain.budget.low.5.2",),
+        title=design.title,
+        tag=design.tag,
+        npc=(design.npc,),
+        account=design.account,
+    )
+    saved = service.call(OTHER, "39743", 900, before.revision, director, command)
+    (replacement,) = replacements(state(game))
+    assert (
+        replacement.actor == director and replacement.roll is None and replacement.id == saved["id"]
+    )
+    assert replacement.period == period and state(game).strain == before.strain
+    assert not occurrences(state(game)) and strain.dice.calls == 0
+    work = next(x.id for x in state(game).strain.requests if x.track == "budget")
+    assert strain.roll(ADMIN, "roll-custom-phone", work, 1, state(game).revision)["face"] == 5
+    assert strain.work(ADMIN, work)["custom_columns"] == {"2": design.title}
+    with pytest.raises(WorkflowError):
+        strain.choose(OTHER, "director-cannot-choose", work, 2, state(game).revision, 2)
+    receipt = strain.choose(ADMIN, "choose-phone-replacement", work, 2, state(game).revision, 2)
+    assert receipt["rule_id"] == CUSTOM_RULE and not receipt["effects_pending"]
+    actual = state(game)
+    assert actual.strain.events[-1].rule_id == "strain.budget.low.5.2"
+    assert not actual.world.rooms and strain.dice.calls == 1
+    assert occurrences(actual)[0].replaces == replacement.id
+    assert actual.world.npcs[-2].tags[-1].label == design.tag

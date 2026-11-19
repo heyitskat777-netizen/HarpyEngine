@@ -43,7 +43,7 @@ class Replacement(Model):
     slot: Slot
     actor: ActorRef
     controller: int
-    period: str
+    period: str | None
     roll: str | None
     target_controller: int
     design: Design

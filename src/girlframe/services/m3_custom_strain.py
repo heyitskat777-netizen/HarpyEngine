@@ -52,6 +52,11 @@ def prove_slot(c: Connection, strain: "StrainService", value: custom.Replacement
     if registry is None:
         raise WorkflowError("Recover the actual custom Strain rules registry")
     registry.require_available(custom.RULE)
+    if value.actor.kind == "npc":
+        from girlframe.services.m3_director_strain import prove_replacement
+
+        prove_replacement(c, strain, value)
+        return
     original, audit = _source(c, strain, value.id, value.controller)
     if value not in custom.replacements(original):
         raise WorkflowError("Recover the original saved amendment to this Strain slot")

@@ -8,6 +8,7 @@ import sqlalchemy as sa
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
+from girlframe.engine import m3_custom_strain as custom
 from girlframe.engine import m3_director_strain as rules
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, SceneCast
@@ -16,7 +17,8 @@ from girlframe.engine.m3_handler_consequences import active_handler, same_handle
 from girlframe.engine.m3_strain import PAGES, effective_levels
 from girlframe.engine.m3_strain_state import Request
 from girlframe.services.m2_state import load_state
-from girlframe.services.m3_battle import _cast
+from girlframe.services.m3_battle import _cast, _visible
+from girlframe.services.m3_custom_strain import CustomStrainService
 from girlframe.services.m3_strain import StrainService
 from girlframe.services.m3_work import related
 from girlframe.services.onboarding import WorkflowError
@@ -25,20 +27,7 @@ from girlframe.services.read_only_bot import GuildViewer
 EVENT = "m3.fictional_director_strain_call"
 
 
-def prove_trigger(
-    c: Connection, strain: StrainService, state: GameState, row: dict[str, Any]
-) -> None:
-    source = json.loads(row["body_json"]).get("director_call")
-    call = next((x for x in rules.calls(state) if x.id == source), None)
-    if (
-        call is None
-        or call.command.mode != "trigger"
-        or call.command.target_rule != json.loads(row["body_json"]).get("rule_id")
-        or call.effect != row["id"]
-        or call.period != row["off_duty_id"]
-        or not same_handler_body(state, call.handler)
-    ):
-        raise WorkflowError("Recover the original fictional Director call and its named effect")
+def _proof(c: Connection, strain: StrainService, identity: str, controller: int) -> GameState:
     history = t.m2["m2_state_history"]
     born = c.scalar(
         sa.select(history.c.body_json)
@@ -49,13 +38,48 @@ def prove_trigger(
         )
         .where(
             history.c.campaign_id == strain.store.campaign_id,
-            history.c.event_id == call.id,
+            history.c.event_id == identity,
             t.events.c.kind == EVENT,
-            t.events.c.actor_id == str(call.controller),
+            t.events.c.actor_id == str(controller),
         )
     )
-    if born is None or call not in rules.calls(GameState.model_validate_json(born)):
+    if born is None:
         raise WorkflowError("Recover the actual original signed phone call")
+    return GameState.model_validate_json(born)
+
+
+def prove_trigger(
+    c: Connection, strain: StrainService, state: GameState, row: dict[str, Any]
+) -> None:
+    body = json.loads(row["body_json"])
+    call = next((x for x in rules.calls(state) if x.id == body.get("director_call")), None)
+    if (
+        call is None
+        or call.command.mode != "trigger"
+        or call.command.target_rule != body.get("rule_id")
+        or call.effect != row["id"]
+        or call.period != row["off_duty_id"]
+        or not same_handler_body(state, call.handler)
+        or call not in rules.calls(_proof(c, strain, call.id, call.controller))
+    ):
+        raise WorkflowError("Recover the original fictional Director call and its named effect")
+
+
+def prove_replacement(c: Connection, strain: StrainService, value: custom.Replacement) -> None:
+    registry = strain.missions.access.registry
+    assert registry is not None
+    registry.require_available(rules.RULE)
+    birth = _proof(c, strain, value.id, value.controller)
+    call = next((x for x in rules.calls(birth) if x.id == value.id), None)
+    if (
+        call is None
+        or call.sender != value.actor
+        or call.command.mode != "replace"
+        or call.command.slot != value.slot
+        or call.command.design != value.design
+        or value not in custom.replacements(birth)
+    ):
+        raise WorkflowError("Recover the actual Director-authored replacement for this slot")
 
 
 class DirectorStrainService:
@@ -106,7 +130,16 @@ class DirectorStrainService:
                 revision=state.revision,
                 levels=effective_levels(state.strain),
                 period=self._preparing(c, state),
+                targets=self._targets(state, viewer),
             )
+
+    @staticmethod
+    def _targets(state: GameState, viewer: GuildViewer) -> tuple[tuple[str, str], ...]:
+        return tuple(
+            (identity, label)
+            for identity, label in CustomStrainService._targets(state)
+            if _visible(state, ActorRef(kind="npc", entity=identity), viewer.user_id)
+        )
 
     def receipt(self, viewer: GuildViewer, identity: str) -> rules.Call:
         with self.store.engine.connect() as c:
@@ -142,6 +175,27 @@ class DirectorStrainService:
             period, effect, root = None, None, None
             if command.mode == "severity":
                 changed = rules.set_level(state, command.track, command.severity)
+            elif command.mode == "replace":
+                registry = self.strain.missions.access.registry
+                assert registry is not None
+                registry.require_available(custom.RULE)
+                assert command.slot is not None and command.design is not None
+                if command.design.npc not in dict(self._targets(state, viewer)):
+                    raise WorkflowError("Only a known eligible NPC can be the custom event target")
+                period = self._preparing(c, state)
+                custom.register(
+                    state,
+                    custom.Replacement(
+                        id=event,
+                        slot=command.slot,
+                        actor=sender,
+                        controller=viewer.user_id,
+                        period=period,
+                        roll=None,
+                        target_controller=int(handler.entity),
+                        design=command.design,
+                    ),
+                )
             else:
                 period = self._preparing(c, state)
                 if period is None or command.target_rule not in rules.DIRECT_EVENTS:

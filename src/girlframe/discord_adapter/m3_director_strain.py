@@ -11,7 +11,7 @@ from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.m3_punishments import Picker
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_actor_state import ActorRef
-from girlframe.engine.m3_custom_strain import Slot
+from girlframe.engine.m3_custom_strain import Design, Slot
 from girlframe.engine.m3_director_strain import DIRECT_EVENTS, Command
 from girlframe.engine.m3_strain_catalog import ROWS
 from girlframe.engine.m3_strain_state import TRACKS
@@ -26,9 +26,13 @@ async def open_phone(
 ) -> None:
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(service.view, viewer, channel, sender)
-    modes: dict[Literal["severity", "trigger"], str] = {"severity": "Set a track High or Low"}
+    modes: dict[Literal["severity", "trigger", "replace"], str] = {
+        "severity": "Set a track High or Low"
+    }
     if data["period"]:
         modes["trigger"] = "Trigger a Strain event"
+    if data["targets"]:
+        modes["replace"] = "Write a replacement Strain event"
     track_options = tuple((x, x.title()) for x in TRACKS)
 
     async def open_mode(click: discord.Interaction, choice: str) -> None:
@@ -40,7 +44,17 @@ async def open_phone(
             ]
         else:
             choices = []
-            for identity in sorted(DIRECT_EVENTS):
+            events = (
+                sorted(DIRECT_EVENTS)
+                if mode == "trigger"
+                else [
+                    f"strain.{track}.{level}.{face}.{column}"
+                    for track, level in ROWS
+                    for face in range(1, 7)
+                    for column in (1, 2)
+                ]
+            )
+            for identity in events:
                 _, track, level, face, column = identity.split(".")
                 slot = Slot.model_validate(
                     dict(track=track, severity=level, face=int(face), column=int(column))
@@ -49,16 +63,36 @@ async def open_phone(
                 choices.append(
                     (identity, f"{track.title()} {level.title()} {face}.{column} · {text}")
                 )
-            fields = [Field("event", "Event to trigger", tuple(choices))]
+            fields = [
+                Field(
+                    "event",
+                    "Printed slot to replace" if mode == "replace" else "Event to trigger",
+                    tuple(choices),
+                )
+            ]
+            if mode == "replace":
+                fields += [
+                    Field("title", "New event title"),
+                    Field("npc", "Known NPC who gains a Tag", data["targets"]),
+                    Field("tag", "Tag gained"),
+                ]
         fields.append(Field("account", "What do you tell the Handler?", paragraph=True))
 
         async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
             slot_data = None
-            if mode == "trigger":
+            design = None
+            if mode != "severity":
                 _, track, severity, face, column = values["event"][0].split(".")
                 slot_data = dict(track=track, severity=severity, face=int(face), column=int(column))
             else:
                 track, severity = values["track"][0], values["severity"][0]
+            if mode == "replace":
+                design = Design(
+                    title=values["title"].strip(),
+                    tag=values["tag"].strip(),
+                    npc=values["npc"][0],
+                    account=values["account"].strip(),
+                )
             result = await asyncio.to_thread(
                 service.call,
                 viewer_from_interaction(current),
@@ -73,9 +107,12 @@ async def open_phone(
                         severity=severity,
                         slot=slot_data,
                         account=values["account"],
+                        design=design,
                     )
                 ),
             )
+            if mode == "replace":
+                return "The replacement takes effect when the Handler chooses this slot."
             if result["effect"]:
                 return (
                     "The call was filed. The actual effect remains required in the Handler’s Inbox."
