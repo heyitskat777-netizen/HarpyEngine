@@ -630,7 +630,9 @@ def complete(
             "doctor_wings",
             "doctor_wings_return",
             "scientist_private_void",
+            "npc_scientist_void",
             "harpy_gaze",
+            "harpy_voidspace_carry",
         ):
             # These sources have no parent Play to resume after the owned outcome.
             continue

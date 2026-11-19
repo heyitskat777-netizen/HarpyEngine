@@ -59,6 +59,19 @@ class Round(Model):
     work: str | None = None
 
 
+class Return(Model):
+    event: str
+    work: str
+    frame: str
+    cell: tuple[int, int]
+    route: str
+    response: str | None = None
+    accepted: bool = False
+    completed: str | None = None
+    rejected: str | None = None
+    review: str | None = None
+
+
 class Carry(Model):
     id: str
     escape: str
@@ -73,11 +86,16 @@ class Carry(Model):
     declined: str | None = None
     verification: str | None = None
     rounds: tuple[Round, ...] = ()
+    returning: Return | None = None
 
     @property
     def outstanding(self) -> Round | None:
         current = self.rounds[-1] if self.rounds else None
         return current if current and current.response is None else None
+
+    @property
+    def threshold(self) -> str | None:
+        return next((step.work for step in reversed(self.rounds) if step.work), None)
 
 
 def carries(state: GameState) -> tuple[Carry, ...]:
@@ -260,6 +278,9 @@ class HarpyVoidspaceService:
         for carry in cases:
             if carry.declined is not None:
                 continue
+            returning = carry.returning
+            if returning is not None and returning.completed:
+                continue
             if not carry.verified and viewer.user_id == carry.gm:
                 steps.append((carry.id, "verify"))
             elif (
@@ -268,6 +289,19 @@ class HarpyVoidspaceService:
                 and int(carry.girl.entity) == viewer.user_id
             ):
                 steps.append((carry.id, "gain"))
+            elif carry.threshold and carry.verified:
+                if (
+                    returning is None
+                    or returning.rejected
+                    or returning.response
+                    and not returning.accepted
+                ):
+                    if viewer.user_id == carry.controller:
+                        steps.append((carry.id, "release_offer"))
+                elif returning.response is None and viewer.user_id == int(carry.girl.entity):
+                    steps.append((carry.id, "release_accept"))
+                elif returning.accepted and viewer.user_id == carry.gm:
+                    steps.append((carry.id, "release_verify"))
             elif (
                 carry.verified
                 and carry.outstanding is None
@@ -300,7 +334,14 @@ class HarpyVoidspaceService:
     ) -> tuple[Carry, str]:
         carry = next((x for x in carries(state) if x.id == identity), None)
         step = dict(self.tasks(c, state, viewer)).get(identity)
-        if carry is None or step not in ("verify", "offer", "gain"):
+        if carry is None or step not in (
+            "verify",
+            "offer",
+            "gain",
+            "release_offer",
+            "release_accept",
+            "release_verify",
+        ):
             raise WorkflowError("This original private Harpy passage is unavailable")
         effect, declared = self._escape(c, state, carry.escape)
         if (
@@ -314,16 +355,18 @@ class HarpyVoidspaceService:
         proposed = _history(
             c, self.game, carry.id, kind="m3.harpy_voidspace_proposed", human=carry.controller
         )
-        root = carry.model_copy(update=dict(verified=None, verification=None, rounds=()))
+        root = carry.model_copy(
+            update=dict(verified=None, verification=None, rounds=(), returning=None)
+        )
         if proposed is None or root not in carries(proposed):
             raise WorkflowError("Recover the original verified Voidspace passage")
         if carry.verified:
             verified = _history(
                 c, self.game, carry.verified, kind="m3.harpy_voidspace_verify", human=carry.gm
             )
-            if verified is None or carry.model_copy(update=dict(rounds=())) not in carries(
-                verified
-            ):
+            if verified is None or carry.model_copy(
+                update=dict(rounds=(), returning=None)
+            ) not in carries(verified):
                 raise WorkflowError("Recover the original GM’s actual Voidspace verification")
         if carry.outstanding:
             offered = _history(
@@ -335,7 +378,48 @@ class HarpyVoidspaceService:
             )
             if offered is None or carry not in carries(offered):
                 raise WorkflowError("Recover the actual original Void experience offered")
+        if carry.returning:
+            self._prove_return(c, carry)
         return carry, step
+
+    def _prove_return(self, c: Connection, carry: Carry) -> None:
+        value = carry.returning
+        assert value is not None
+        undecided = value.model_copy(update=dict(rejected=None, review=None))
+        original = undecided.model_copy(update=dict(response=None, accepted=False))
+        offered = _history(
+            c,
+            self.game,
+            value.event,
+            kind="m3.harpy_voidspace_release_offer",
+            human=carry.controller,
+        )
+        if offered is None or carry.model_copy(update=dict(returning=original)) not in carries(
+            offered
+        ):
+            raise WorkflowError("Recover the original retained route from the Harpy")
+        if value.response:
+            decided = _history(
+                c,
+                self.game,
+                value.response,
+                kind="m3.harpy_voidspace_release_accept",
+                human=int(carry.girl.entity),
+            )
+            if decided is None or carry.model_copy(update=dict(returning=undecided)) not in carries(
+                decided
+            ):
+                raise WorkflowError("Recover the original Girl’s actual decision about return")
+        if value.rejected:
+            reviewed = _history(
+                c,
+                self.game,
+                value.rejected,
+                kind="m3.harpy_voidspace_release_verify",
+                human=carry.gm,
+            )
+            if reviewed is None or carry not in carries(reviewed):
+                raise WorkflowError("Recover the original facilitator’s actual return review")
 
     def get(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
         with self.store.engine.connect() as c:
@@ -346,12 +430,17 @@ class HarpyVoidspaceService:
                 return dict(step=step, revision=state.revision)
             carry, step = self._case(c, state, viewer, identity)
             pending = carry.outstanding if step == "gain" else None
+            route = carry.returning
             return dict(
                 step=step,
                 revision=state.revision,
                 account=carry.account if step == "verify" else pending.account if pending else "",
                 method=pending.method if pending else None,
                 assets=self._assets(state, carry.girl) if step == "gain" else {},
+                route=route.route if route and step in ("release_accept", "release_verify") else "",
+                destination=route.cell
+                if route and step in ("release_accept", "release_verify")
+                else None,
             )
 
     def act(
@@ -376,7 +465,7 @@ class HarpyVoidspaceService:
                 revision != state.revision
                 or expected != step
                 or len(account.strip()) > 1200
-                or step != "gain"
+                or step not in ("gain", "release_accept")
                 and not account.strip()
             ):
                 raise WorkflowError("Refresh the actual original Voidspace decision")
@@ -446,6 +535,8 @@ class HarpyVoidspaceService:
                 carry = carry.model_copy(
                     update=dict(rounds=(*carry.rounds[:-1], original.model_copy(update=result)))
                 )
+            elif step.startswith("release_") and method is None and asset is None:
+                state, carry = self._release(c, state, carry, step, allow, account.strip(), event)
             else:
                 raise WorkflowError("Use only the fields for this original decision")
             _put(state, carry)
@@ -475,6 +566,77 @@ class HarpyVoidspaceService:
             ),
             operation,
         )
+
+    def _release(
+        self,
+        c: Connection,
+        state: GameState,
+        carry: Carry,
+        step: str,
+        allow: bool | None,
+        account: str,
+        event: str,
+    ) -> tuple[GameState, Carry]:
+        from girlframe.engine import m3_physical as physical
+        from girlframe.services.m3_void import prepare_threshold, source
+
+        work = carry.threshold
+        if work is None:
+            raise WorkflowError("Recover the actual pending Void threshold before return")
+        route = carry.returning
+        if route is not None and allow is False:
+            if step == "release_accept" and not account:
+                rejected = route.model_copy(update=dict(response=event, accepted=False))
+                return state, carry.model_copy(update=dict(returning=rejected))
+            if step == "release_verify" and route.accepted:
+                rejected = route.model_copy(update=dict(rejected=event, review=account))
+                return state, carry.model_copy(update=dict(returning=rejected))
+        row, _, owner = source(self.game, c, work)
+        _, threshold = prepare_threshold(c, self.game, work, state)
+        if row["state"] != "pending" or owner != carry.girl or threshold.stage != "allured":
+            raise WorkflowError("Recover the actual original Girl's pending approach to her Frame")
+        body = next((x for x in state.placements if x.actor == carry.girl), None)
+        if (
+            body is None
+            or body.frame_instance != threshold.frame_instance
+            or body.frame_cell is None
+            or body.custody != carry.harpy
+            or body.incapacitated
+            or not body.vitals_active
+            or state.sheets[carry.girl.entity].frame_scrapped
+        ):
+            raise WorkflowError("Recover the original capable Girl and her parked Frame")
+        if step == "release_offer" and allow is None:
+            route = Return(
+                event=event,
+                work=work,
+                frame=body.frame_instance,
+                cell=body.frame_cell,
+                route=account,
+            )
+        elif route is None or (route.frame, route.cell, route.work) != (
+            body.frame_instance,
+            body.frame_cell,
+            work,
+        ):
+            raise WorkflowError("Recover the original parked Frame and approved route")
+        elif step == "release_accept" and type(allow) is bool and not account:
+            route = route.model_copy(update=dict(response=event, accepted=allow))
+        elif step == "release_verify" and allow is True and route.accepted:
+            physical._source(state, event, account, carry.girl)
+            physical._save(
+                state,
+                body.model_copy(
+                    update=dict(
+                        custody=None, girl_cell=route.cell, source_event=event, account=account
+                    )
+                ),
+            )
+            state = physical._finish(state, carry.girl, event, account, "harpy_voidspace_return")
+            route = route.model_copy(update=dict(completed=event, review=account))
+        else:
+            raise WorkflowError("Record the original owned return decision")
+        return state, carry.model_copy(update=dict(returning=route))
 
     def _void(self, c: Connection, carry: Carry, work: str, event: str) -> None:
         related(

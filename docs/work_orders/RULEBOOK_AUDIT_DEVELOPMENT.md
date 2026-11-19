@@ -3002,3 +3002,23 @@ pending threshold. A verified route returning the captured
 Girl to her own Frame and other producers for taking a Girl
 into Voidspace still need direct support.
 [Harpy pp. 177–178](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=179) · [Native case](../../tests/rules/test_harpy_defeat.py)
+
+### Verified return to the original Frame and Apometanoia
+
+Base `1218a2dd0148af7173e45bd0361a6dc26660c6a0`. When the
+carry generates a Girl threshold, the Harpy can propose
+release at the exact original parked Frame. The original
+Girl owns acceptance and the original human facilitator
+reviews arrival. The Frame and the source remain the same.
+A rejected route leaves custody in place and can be offered
+again. Actual release allows the original Girl to enter and
+answer the regular Apometanoia questions herself.
+
+The focused end-to-end native case passed in **14.97 seconds**.
+It exercised a rejected route, verified release, owned
+answers and actual rebirth into the same Frame. The test
+found and corrected a shared completion defect for these
+Harpy and NPC Scientist thresholds, which have no parent
+Dive action. Other kinds of travel or forced rescue still
+need separate producers.
+[Harpy pp. 177–178](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=179) · [Native case](../../tests/rules/test_harpy_defeat.py)

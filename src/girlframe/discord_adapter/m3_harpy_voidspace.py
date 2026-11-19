@@ -35,6 +35,24 @@ async def open_passage(
             Field("method", "Voidspace experience", (*options, ("delegate", "Let her choose"))),
             Field("account", "Describe what you offer", paragraph=True),
         ]
+    elif step == "release_offer":
+        text = "Offer to release the original Girl at her parked Frame."
+        fields = [Field("account", "Describe her actual return route", paragraph=True)]
+    elif step == "release_accept":
+        text = clean(data["route"])
+        fields = [
+            Field("allow", "Your decision", (("yes", "Accept this route"), ("no", "Decline"))),
+        ]
+    elif step == "release_verify":
+        text = clean(data["route"]) + f"\nHer parked Frame is at {data['destination']}."
+        fields = [
+            Field(
+                "allow",
+                "Original Girl’s arrival",
+                (("yes", "Confirm actual arrival"), ("no", "Return the route for review")),
+            ),
+            Field("account", "Describe the verified release", paragraph=True),
+        ]
     else:
         text = clean(data["account"])
         method = data["method"]
@@ -63,7 +81,7 @@ async def open_passage(
             return "The original human facilitator can verify the passage."
         asset = values["asset"][0] if step == "gain" else None
         allow = None
-        if step == "verify":
+        if step in ("verify", "release_accept", "release_verify"):
             allow = values["allow"][0] == "yes"
         elif step == "gain":
             allow = asset != "decline"

@@ -1090,3 +1090,61 @@ def test_genuine_harpy_carry_can_apply_repeatable_owned_void_in_private(ledger):
     assert VoidService(ledger).get(OTHER, rounds[-1].work)["stage"] == "allured"
     with pytest.raises(WorkflowError):
         VoidService(ledger).get(PLAYER, rounds[-1].work)
+
+    native(PLAYER, {"account": "The Harpy offers to bring her to the parked Frame."}, 90774)
+    native(OTHER, {"allow": ("yes",)}, 90778)
+    assert next(x for x in state(game).placements if x.actor == holder).custody == ref
+    native(
+        ADMIN,
+        {"allow": ("no",), "account": "The actual route is not yet clear."},
+        90782,
+    )
+    assert next(x for x in state(game).placements if x.actor == holder).custody == ref
+    native(PLAYER, {"account": "The Harpy offers the now-clear return route."}, 90786)
+    native(OTHER, {"allow": ("yes",)}, 90790)
+    native(
+        ADMIN,
+        {"allow": ("yes",), "account": "I verify both arrived at the actual parked Frame."},
+        90794,
+    )
+    returned = next(x for x in state(game).placements if x.actor == holder)
+    assert returned.custody is None and returned.girl_cell == original.frame_cell
+    assert (
+        returned.frame_cell == original.frame_cell
+        and returned.frame_instance == original.frame_instance
+    )
+    from test_void_service import respond
+
+    resolver = VoidService(ledger)
+    work = rounds[-1].work
+    view = resolver.get(OTHER, work)
+    respond(
+        resolver,
+        work,
+        "begin",
+        dict(identity=view["identities"][0]["id"], account="I enter my affected Frame."),
+        viewer=OTHER,
+    )
+    assert resolver.get(OTHER, work)["stage"] == "questions"
+    for _ in range(5):
+        respond(
+            resolver,
+            work,
+            "answer",
+            dict(answer=False, honest=True, account="My character owns this answer."),
+            viewer=OTHER,
+        )
+    rebirth = resolver.get(OTHER, work)
+    choice = rebirth["rebirth_choice"] | dict(
+        new_identities=["Unbounded"], account="I choose this original Girl’s transformation."
+    )
+    respond(
+        resolver,
+        work,
+        "rebirth",
+        dict(choice=choice, account="I choose this original Girl’s transformation."),
+        viewer=OTHER,
+    )
+    actual = next(x for x in state(game).harpy_states if x.origin == holder)
+    assert actual.frame_instance == original.frame_instance
+    assert actual.controller == OTHER.user_id
