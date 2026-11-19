@@ -23,10 +23,11 @@ async def open_song(
     data = await asyncio.to_thread(
         service.options, viewer_from_interaction(interaction), channel, actor
     )
-    if not data["targets"]:
-        await reply(
-            interaction, "No Girl without an existing Bond is in audible reach for this move."
-        )
+    targets = dict(data["targets"])
+    if data["handler"]:
+        targets["handler"] = "Make the Handler flinch"
+    if not targets:
+        await reply(interaction, "No supported recipient is in audible reach for this move.")
         return
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
@@ -40,14 +41,14 @@ async def open_song(
             values["target"][0],
             values["account"],
         )
-        return "The Girl’s original private response is pending."
+        return "The original recipient’s private response is pending."
 
     fields = [
-        Field("target", "Original Girl without a Bond", tuple(data["targets"].items())),
+        Field("target", "Actual broadcast outcome", tuple(targets.items())),
         Field("account", "Describe your audible broadcast", paragraph=True),
     ]
     form = NativeForm(
-        interaction.user.id, TITLE, "Choose the actual Girl who hears you.", fields, submit
+        interaction.user.id, TITLE, "Choose the actual recipient who hears you.", fields, submit
     )
     await reply(interaction, form.text(), form)
 
@@ -66,7 +67,7 @@ async def open_song_response(
             str(current.id),
             identity,
             data["revision"],
-            accept=values["choice"][0] == "step",
+            accept=values["choice"][0] == "accept",
             account=values["account"],
         )
         return "Your original response is saved."

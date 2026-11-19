@@ -2375,6 +2375,21 @@ The coupled Bond and step require the Girl’s acceptance.
 Other printed options are still open.
 [Harpy advancements p. 182](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=184) · [Native case](../../tests/rules/test_harpy_advancements.py)
 
+### A Song of Love Lost and the fictional Handler’s reaction
+
+Base `660539f3600258f219589c6d3a8dfe55f9eb5887`. The Harpy
+can choose the original Handler reaction when that actual
+character is present and can hear the radio. The human GM’s
+appointment does not grant the fictional Handler hearing.
+Only the original character’s controller can record the
+reaction. The effect records that response without creating
+a numeric condition or changing the Handler’s body.
+
+**Two focused cases passed in 7.19 seconds**, covering the
+new Handler response and the existing original Girl path
+through the shared form. The NPC crowd outcome remains open.
+[Harpy advancements p. 182](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=184) · [Native cases](../../tests/rules/test_harpy_advancements.py)
+
 ### Scientist laboratory Void gain
 
 Base `1cf1a77067c7c514b2398cca9e92114d21ea2f45`. After the private lab

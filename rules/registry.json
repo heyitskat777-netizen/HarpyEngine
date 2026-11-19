@@ -23315,17 +23315,17 @@
         "roll_kind": "diceless",
         "allowed_modifiers": [],
         "tier_options": {
-          "direct": ["Choose an unbonded original Girl and offer the actual step toward the Harpy."]
+          "direct": ["Choose an unbonded original Girl and offer the actual step toward the Harpy.", "Make the actual present Handler flinch through an owned reaction."]
         },
         "choice_ownership": "Harpy chooses and describes the source. The original Girl owns her response and step.",
         "target_policy": "Same scene, no existing Bond, actual adjacent Girl outside her Frame and audible radio reach.",
         "post_roll_effects": ["Apply the actual owned body movement and deepen the original Bond once."],
         "mandatory_followups": ["Require the original Girl's explicit acceptance and currently possible movement."],
-        "handler_or_gm_intervention": "The Handler and NPC crowd options remain separate pending implementations.",
+        "handler_or_gm_intervention": "The fictional Handler owns its audible reaction. The human facilitator role alone grants no hearing. The NPC crowd option remains open.",
         "test_fixture_ids": ["tests/rules/test_harpy_advancements.py"]
       },
       "dependencies": [],
-      "test_evidence": ["tests/rules/test_harpy_advancements.py::test_song_of_love_lost_moves_only_the_original_accepting_girl"],
+      "test_evidence": ["tests/rules/test_harpy_advancements.py::test_song_of_love_lost_moves_only_the_original_accepting_girl", "tests/rules/test_harpy_advancements.py::test_song_of_love_lost_only_the_actual_handler_can_answer"],
       "m2_play_id": null,
       "module": "core"
     },

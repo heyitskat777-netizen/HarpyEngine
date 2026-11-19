@@ -584,7 +584,7 @@ def test_song_of_love_lost_moves_only_the_original_accepting_girl(ledger):
         await open_song_response(interaction, song, task.identity)
         form = interaction.edit_original_response.call_args.kwargs["view"]
         form.values.update(
-            choice=("step",), account="I step into the next square toward the Harpy."
+            choice=("accept",), account="I step into the next square toward the Harpy."
         )
         await form.confirm.callback(current(OTHER.user_id, 89604))
         assert form.completed
@@ -595,3 +595,72 @@ def test_song_of_love_lost_moves_only_the_original_accepting_girl(ledger):
     assert actual.girl_cell == (0, 0) and actual.frame_cell == (1, 0)
     assert depth(updated, actor, recipient) == 1 and records(updated)[0].moved
     assert game.dice.calls == 0
+
+
+def test_song_of_love_lost_only_the_actual_handler_can_answer(ledger):
+    from test_cast_service import change
+
+    from girlframe.engine.m3_handler_consequences import active_handler
+    from girlframe.engine.m3_harpy_advancements import SONG_OF_LOVE_LOST
+    from girlframe.services.m3_harpy_song import HarpySongService, records
+
+    _, game, casting, harpy = ready(ledger)
+    policy = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update=dict(
+            m3_approval=policy.model_copy(
+                update=dict(
+                    activity_specialist_rules=policy.activity_specialist_rules
+                    | {SONG_OF_LOVE_LOST},
+                )
+            ),
+        )
+    )
+    HarpyAdvancementService(ledger).select(
+        PLAYER,
+        "learn-song-for-handler",
+        harpy.entity,
+        state(game).revision,
+        SONG_OF_LOVE_LOST,
+    )
+    role = active_handler(state(game))
+    assert role
+    song = HarpySongService(game)
+    assert song.options(PLAYER, 900, harpy)["handler"] is None
+    with ledger.transaction() as c:
+        canon = state(game)
+        canon.facts.append(
+            dict(
+                kind="ordinary_handler_movement",
+                actor=role.model_dump_json(),
+                cell="[0, 0]",
+                event="synthetic-handler-position",
+            )
+        )
+        game.event(c, ADMIN.user_id, "synthetic-handler-position", "synthetic.position", canon)
+    change(casting, ADMIN, "join", role)
+    view = song.options(PLAYER, 900, harpy)
+    assert view["handler"] is not None
+    offered = song.act(
+        PLAYER,
+        "sing-to-original-handler",
+        900,
+        harpy,
+        view["revision"],
+        "handler",
+        "The song travels on the original radio channel.",
+    )["id"]
+    inbox = InboxService(ledger)
+    assert [x.identity for x in inbox.items(ADMIN) if x.task == "m3_harpy_song"] == [offered]
+    assert not [x for x in inbox.items(OTHER) if x.task == "m3_harpy_song"]
+    private = song.get(ADMIN, offered)
+    song.respond(
+        ADMIN,
+        "original-handler-flinch",
+        offered,
+        private["revision"],
+        accept=True,
+        account="The Handler flinches and lowers the volume.",
+    )
+    response = records(state(game))[0]
+    assert response.recipient == role and response.reaction and not response.moved

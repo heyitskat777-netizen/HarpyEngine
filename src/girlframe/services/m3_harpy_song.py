@@ -1,9 +1,10 @@
 """Private radio song and the original Girl's actual physical response."""
 
-from typing import Any
+from typing import Any, Literal
 from uuid import uuid4
 
 import sqlalchemy as sa
+from pydantic import AliasChoices, Field
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
@@ -11,6 +12,7 @@ from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import change, depth
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, Model, SceneCast
 from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_harpy_advancements import SONG_OF_LOVE_LOST
 from girlframe.engine.m3_world_state import Cell
 from girlframe.services.m2_game import GameService
@@ -35,10 +37,12 @@ class Song(Model):
     source: ActorRef
     controller: int
     advancement: str
-    girl: ActorRef
+    recipient: ActorRef = Field(validation_alias=AliasChoices("recipient", "girl"))
+    option: Literal["girl", "handler"] = "girl"
     location: Cell
     account: str
     response: str | None = None
+    reaction: str | None = None
     moved: bool = False
 
 
@@ -89,6 +93,41 @@ class HarpySongService:
             result[girl.ref.token] = girl
         return result
 
+    def _handler(
+        self,
+        c: Connection,
+        state: GameState,
+        cast: SceneCast,
+        source: ActorView,
+    ) -> ActorView | None:
+        ref = active_handler(state)
+        if ref is None or not any(r.actor == ref for r in cast.roles):
+            return None
+        actual = resolve(
+            state, ref, profiles(c, self.store.campaign_id), require_current_profile=False
+        )
+        if (
+            not actual.alive
+            or actual.offstage_source
+            or actual.cell is None
+            or source.cell is None
+            or max(abs(a - b) for a, b in zip(source.cell, actual.cell, strict=True)) > 1
+            or not any(r.actor == ref and r.controller == actual.controller for r in cast.roles)
+        ):
+            return None
+        try:
+            require_audible(c, self.store.campaign_id, state, (source, actual))
+        except WorkflowError:
+            return None
+        return actual
+
+    @staticmethod
+    def _original_recipient(state: GameState, case: Song) -> bool:
+        if case.option == "handler":
+            return active_handler(state) == case.recipient
+        sheet = state.sheets.get(case.recipient.entity)
+        return sheet is not None and sheet.character_id == case.recipient.incarnation
+
     def options(self, viewer: GuildViewer, channel: int, actor: ActorRef) -> dict[str, Any]:
         with self.store.engine.connect() as c:
             self._gate(c, viewer)
@@ -97,11 +136,13 @@ class HarpySongService:
             source, _ = scene_harpy(
                 self.game, c, state, viewer.user_id, cast, actor, SONG_OF_LOVE_LOST
             )
+            handler = self._handler(c, state, cast, source)
             return dict(
                 revision=state.revision,
                 targets={
                     key: view.label for key, view in self._targets(c, state, cast, source).items()
                 },
+                handler=handler.label if handler else None,
             )
 
     def act(
@@ -127,13 +168,19 @@ class HarpySongService:
             source, advancement = scene_harpy(
                 self.game, c, state, viewer.user_id, cast, actor, SONG_OF_LOVE_LOST
             )
-            girl = self._targets(c, state, cast, source).get(target)
-            if girl is None or not 0 < len(account.strip()) <= 1200:
+            handler_route = target == "handler"
+            actual = (
+                self._handler(c, state, cast, source)
+                if handler_route
+                else self._targets(c, state, cast, source).get(target)
+            )
+            if actual is None or not 0 < len(account.strip()) <= 1200:
                 raise WorkflowError(
-                    "Choose an actual audible Girl with no Bond and describe the song"
+                    "Choose the actual intended recipient and describe the broadcast"
                 )
             if any(
-                x.source == actor and x.girl == girl.ref and not x.response for x in records(state)
+                x.source == actor and x.recipient == actual.ref and not x.response
+                for x in records(state)
             ):
                 raise WorkflowError("Recover the original outstanding Harpy song")
             assert source.cell is not None
@@ -143,8 +190,9 @@ class HarpySongService:
                 channel=channel,
                 source=actor,
                 controller=source.controller,
-                girl=girl.ref,
+                recipient=actual.ref,
                 location=source.cell,
+                option="handler" if handler_route else "girl",
                 advancement=advancement,
                 account=account.strip(),
             )
@@ -178,10 +226,13 @@ class HarpySongService:
 
     def _owned(self, c: Connection, state: GameState, viewer: GuildViewer, identity: str) -> Song:
         case = next((x for x in records(state) if x.id == identity), None)
-        if case is None or case.girl.entity != str(viewer.user_id) or case.response is not None:
+        if (
+            case is None
+            or case.recipient.entity != str(viewer.user_id)
+            or case.response is not None
+        ):
             raise WorkflowError("This private Harpy song is unavailable")
-        sheet = state.sheets.get(case.girl.entity)
-        if sheet is None or sheet.character_id != case.girl.incarnation:
+        if not self._original_recipient(state, case):
             raise WorkflowError("Use the actual original recipient of the radio song")
         history = t.m2["m2_state_history"]
         raw = c.scalar(
@@ -203,10 +254,9 @@ class HarpySongService:
         cases = tuple(
             x
             for x in records(state)
-            if x.girl.entity == str(viewer.user_id)
+            if x.recipient.entity == str(viewer.user_id)
             and not x.response
-            and (sheet := state.sheets.get(x.girl.entity)) is not None
-            and sheet.character_id == x.girl.incarnation
+            and self._original_recipient(state, x)
         )
         if cases:
             try:
@@ -220,7 +270,7 @@ class HarpySongService:
             self._gate(c, viewer)
             state = load_state(c, self.store.campaign_id)
             case = self._owned(c, state, viewer, identity)
-            return dict(revision=state.revision, account=case.account)
+            return dict(revision=state.revision, account=case.account, option=case.option)
 
     def respond(
         self,
@@ -254,23 +304,39 @@ class HarpySongService:
                     cast.id != case.scene
                     or source.cell != case.location
                     or receipt != case.advancement
-                    or case.girl.token not in self._targets(c, state, cast, source)
                 ):
-                    raise WorkflowError("Recover the actual original Harpy, Girl and radio reach")
-                context = proposal_context(
-                    self.game,
-                    c,
-                    viewer,
-                    state,
-                    case.channel,
-                    case.girl,
-                    case.location,
-                    False,
-                    account,
+                    raise WorkflowError("Recover the actual original Harpy and scene")
+                if case.option == "handler":
+                    actual = self._handler(c, state, cast, source)
+                    if (
+                        actual is None
+                        or actual.ref != case.recipient
+                        or not 0 < len(account.strip()) <= 1200
+                    ):
+                        raise WorkflowError("Verify the original Handler's audible reaction")
+                else:
+                    if case.recipient.token not in self._targets(c, state, cast, source):
+                        raise WorkflowError("Recover the actual original Girl and radio reach")
+                    context = proposal_context(
+                        self.game,
+                        c,
+                        viewer,
+                        state,
+                        case.channel,
+                        case.recipient,
+                        case.location,
+                        False,
+                        account,
+                    )
+                    apply_reviewed_movement(self.game, c, viewer, state, context, event)
+                    state = change(state, case.source, case.recipient, 1, event)
+            current = case.model_copy(
+                update=dict(
+                    response=event,
+                    moved=accept and case.option == "girl",
+                    reaction=account.strip() if accept else None,
                 )
-                apply_reviewed_movement(self.game, c, viewer, state, context, event)
-                state = change(state, case.source, case.girl, 1, event)
-            current = case.model_copy(update=dict(response=event, moved=accept))
+            )
             state.facts = [
                 x for x in state.facts if (x.get("kind"), x.get("id")) != (KIND, identity)
             ]

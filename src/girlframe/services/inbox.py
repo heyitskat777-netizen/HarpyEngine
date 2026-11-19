@@ -4129,8 +4129,12 @@ class InboxService:
                         "pending",
                         True,
                         False,
-                        "Choose whether to step toward the actual Harpy.",
-                        "Your body moves and the Bond deepens only after your choice.",
+                        "Record your Handler’s reaction."
+                        if song.option == "handler"
+                        else "Choose whether to step toward the actual Harpy.",
+                        "Only the actual Handler owns this response."
+                        if song.option == "handler"
+                        else "Your body moves and the Bond deepens only after your choice.",
                         "Review the song",
                         task="m3_harpy_song",
                     )
