@@ -1053,3 +1053,86 @@ def test_harpy_gaze_failed_keep_applies_actual_owned_void(ledger):
     assert VoidService(ledger).get(OTHER, case.void_work)["stage"] == "allured"
     with pytest.raises(WorkflowError):
         VoidService(ledger).get(PLAYER, case.void_work)
+
+
+def test_visions_of_infinity_low_copies_actual_identities_and_exposes_original_core(ledger):
+    from test_physical_operations import place
+
+    from girlframe.discord_adapter.m3_harpy_visions import open_visions_response
+    from girlframe.engine.m3_harpy_advancements import VISIONS
+    from girlframe.engine.m3_harpy_defeat import harpy as actual_harpy
+    from girlframe.engine.m3_harpy_visions import records
+    from girlframe.services.m3_harpy_visions import VisionsService
+
+    _, game, _, harpy = ready(ledger, faces=(1, 2), heat=2)
+    policy = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update=dict(
+            m3_approval=policy.model_copy(
+                update=dict(
+                    activity_specialist_rules=policy.activity_specialist_rules | {VISIONS},
+                )
+            ),
+        )
+    )
+    HarpyAdvancementService(ledger).select(
+        PLAYER,
+        "learn-visions",
+        harpy.entity,
+        state(game).revision,
+        VISIONS,
+    )
+    with ledger.transaction() as c:
+        canon = place(state(game), OTHER.user_id, mode="outside_frame")
+        game.event(c, ADMIN.user_id, "synthetic-visions-placement", "synthetic.position", canon)
+    original = state(game)
+    recipient = current_ref(original, OTHER.user_id)
+    service = VisionsService(game)
+    offered = service.start(
+        PLAYER,
+        "begin-original-visions",
+        900,
+        harpy,
+        original.revision,
+        recipient.token,
+        "The Harpy asks to touch the original Girl and share the vision.",
+    )["id"]
+    assert game.dice.calls == 0
+    assert [
+        x.identity for x in InboxService(ledger).items(OTHER) if x.task == "m3_harpy_visions"
+    ] == [offered]
+    with pytest.raises(WorkflowError, match="unavailable"):
+        service.get(ADMIN, offered)
+    view = service.get(OTHER, offered)
+    service.respond(
+        OTHER, "allow-original-visions", offered, view["revision"], "consent", choice=True
+    )
+    roll_view = service.get(PLAYER, offered)
+    rolled = service.respond(
+        PLAYER, "roll-original-visions", offered, roll_view["revision"], "roll", heat=1
+    )
+    assert (
+        service.respond(
+            PLAYER, "roll-original-visions", offered, roll_view["revision"], "roll", heat=1
+        )
+        == rolled
+    )
+    assert game.dice.calls == 1 and actual_harpy(state(game), harpy).heat == 1
+    assert state(game).sheets["3"].identities == original.sheets["3"].identities
+    ledger.engine.dispose()
+
+    async def accept():
+        interaction = current(OTHER.user_id, 89960)
+        await interaction.response.defer(ephemeral=True)
+        await open_visions_response(interaction, service, offered)
+        form = interaction.edit_original_response.call_args.kwargs["view"]
+        form.values["choice"] = (form.fields[0].options[0][0],)
+        await form.confirm.callback(current(OTHER.user_id, 89961))
+        assert form.completed
+
+    asyncio.run(accept())
+    final = state(game)
+    assert [x.name for x in final.sheets["3"].identities] == ["Free"]
+    assert actual_harpy(final, harpy).identities == actual_harpy(original, harpy).identities
+    assert next(x for x in final.world.pilots if x.id == harpy.entity).exposed
+    assert records(final)[0].resolved and records(final)[0].roll.faces == (1, 2)

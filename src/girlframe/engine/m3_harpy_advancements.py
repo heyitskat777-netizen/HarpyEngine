@@ -10,6 +10,7 @@ ONLY_SHE_MATTERS = "harpy.harpy.only-she-matters"
 SONG_OF_LOVE_LOST = "harpy.harpy.a-song-of-love-lost"
 EAGLE = "harpy.harpy.eagle-cracks-the-shell"
 MANIC_PIXIE = "harpy.harpy.manic-pixie-dream-monster"
+VISIONS = "harpy.harpy.visions-of-infinity"
 ADVANCEMENTS = (
     (SPARROWS, "Sparrows Led You Over the Black Earth"),
     (ECHOES, "Echoes of Old Command"),
@@ -17,6 +18,7 @@ ADVANCEMENTS = (
     (SONG_OF_LOVE_LOST, "A Song of Love Lost"),
     (EAGLE, "Eagle Cracks the Shell"),
     (MANIC_PIXIE, "Manic Pixie Dream Monster"),
+    (VISIONS, "Visions of Infinity"),
 )
 SPARROWS_CHOICES = (
     ("shadow", "I’m a shadow in the corner of their eye"),

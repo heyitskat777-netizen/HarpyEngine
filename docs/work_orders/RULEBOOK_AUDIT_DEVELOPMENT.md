@@ -2854,3 +2854,18 @@ re-review when the terrain changes after approval. They include
 the existing Director, activity-shadow, private recovery and ordinary
 Roll suites. The terrain Tag and shell mechanics remain separate.
 [Sentinel p. 171](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=173)
+
+### Visions of Infinity’s low result
+
+Base `52c2126d78d80494390d14e710ef43b4bdfd23d1`. A Harpy
+with the actual advancement can offer contact to another
+present Girl outside her Frame. Her private consent precedes
+the Harpy’s actual Heat spend and saved roll. On low her
+private confirmation replaces her ordinary Identities with the
+Harpy’s original Identities and exposes the original Core.
+Protected recipient slots remain for case-specific adjudication.
+
+The focused native case passed in **5.42 seconds**, including
+restart, role access, original source Identities, actual Heat
+and exposure. Mid and high remain held at the saved roll.
+[Harpy p. 182](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=184) · [Native case](../../tests/rules/test_harpy_advancements.py)

@@ -65,6 +65,10 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
             key = "gaze:" + token
             options.append((key, "Use Manic Pixie Dream Monster as " + role["label"][:49]))
             actions[key] = ("harpy_gaze", ActorRef.model_validate(role["ref"]))
+        if role.get("harpy_visions"):
+            key = "visions:" + token
+            options.append((key, "Use Visions of Infinity as " + role["label"][:52]))
+            actions[key] = ("harpy_visions", ActorRef.model_validate(role["ref"]))
         if role.get("director_phone"):
             phone = "phone:" + token
             options.append((phone, "Call the Handler as " + role["label"][:55]))
@@ -202,6 +206,13 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
 
             assert ref is not None
             await open_gaze(current, GazeService(service.game), channel, ref)
+            return
+        if action == "harpy_visions":
+            from girlframe.discord_adapter.m3_harpy_visions import open_visions
+            from girlframe.services.m3_harpy_visions import VisionsService
+
+            assert ref is not None
+            await open_visions(current, VisionsService(service.game), channel, ref)
             return
         if action == "phone":
             from girlframe.discord_adapter.m3_director_strain import open_phone

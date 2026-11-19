@@ -4117,6 +4117,34 @@ class InboxService:
             from girlframe.services.m3_harpy_eagle import EagleService
             from girlframe.services.m3_harpy_gaze import GazeService
             from girlframe.services.m3_harpy_song import HarpySongService
+            from girlframe.services.m3_harpy_visions import VisionsService
+
+            for vision, step in VisionsService(GameService(self.store)).tasks(
+                connection, canon, viewer
+            ):
+                items.append(
+                    InboxItem(
+                        "harpy-visions:" + vision.id,
+                        "harpy_visions",
+                        vision.id,
+                        canon.revision,
+                        "plays",
+                        "Visions of Infinity",
+                        "Original Harpy encounter",
+                        "pending",
+                        True,
+                        False,
+                        {
+                            "consent": "Choose whether to allow the original contact.",
+                            "roll": "Spend the actual Harpy’s Heat and roll.",
+                            "replace": "Review the actual replacement of your Girl’s Identities.",
+                            "review": "Review the original saved roll and its pending consequence.",
+                        }[step],
+                        "This decision is private to its original role.",
+                        "Open your choice",
+                        task="m3_harpy_visions",
+                    )
+                )
 
             for gaze, step in GazeService(GameService(self.store)).tasks(connection, canon, viewer):
                 items.append(
