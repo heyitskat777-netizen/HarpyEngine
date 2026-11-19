@@ -1,4 +1,4 @@
-"""A nearby original Acolyte can follow the actual low Dive and add a printed effect."""
+"""A nearby original Acolyte can follow a Dive and apply her own printed effects."""
 
 import json
 from typing import TYPE_CHECKING, Any
@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy import Connection
 
 from girlframe.engine import m3_ancillary as ancillary
+from girlframe.engine import m3_ancillary_void as ancillary_void
 from girlframe.engine.m2 import ChoiceAnswer, GameState
 from girlframe.engine.m3_actor_bonds import make_helpless
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, CastRole, SceneCast
@@ -116,7 +117,6 @@ def open_choices(
         "void_drunk" in meta
         or meta["steps"]
         or meta["completed_steps"]
-        or action["data"]["result"]["tier"] != "low"
         or not _enabled(game)
         or ActorRef.model_validate(meta["actor"]).kind != "pilot"
     ):
@@ -155,10 +155,15 @@ def project(
     request: dict[str, Any],
 ) -> dict[str, Any]:
     target, actor = _owned(game, c, state, action, request)
+    primary = action["data"]["result"]["tier"] != "low"
     return dict(
         target=target.label,
         tags=_tags(state, target.ref, actor.controller, action["scene_id"]),
         shadow=_shadow_pose(state, actor, target) is not None,
+        primary=1 if primary else 0,
+        primary_assets={x.id: x.name for x in ancillary_void.gains(state, actor.actor)}
+        if primary
+        else {},
     )
 
 
@@ -171,11 +176,22 @@ def select(
     answer: ChoiceAnswer,
 ) -> None:
     target, actor = _owned(game, c, state, action, request)
+    latching = answer.options in (("latch",), ("shadow",))
+    primary = latching and action["data"]["result"]["tier"] != "low"
+    asset = answer.fields.get("primary_asset")
+    if primary:
+        if (
+            set(answer.fields) != {"primary_asset"}
+            or not answer.text.strip()
+            or asset not in {x.id for x in ancillary_void.gains(state, actor.actor)}
+        ):
+            raise WorkflowError("Choose one actual eligible Asset and describe its Void rewrite.")
+    elif answer.fields or answer.text:
+        raise WorkflowError("This actual choice takes no primary effect.")
     if (
         answer.options not in (("pass",), ("latch",), ("shadow",))
-        or answer.options == ("shadow",) and _shadow_pose(state, actor, target) is None
-        or answer.text
-        or answer.fields
+        or answer.options == ("shadow",)
+        and _shadow_pose(state, actor, target) is None
         or answer.number is not None
         or answer.member is not None
         or answer.flag is not None
@@ -190,9 +206,7 @@ def select(
             action["scene_id"],
         )
     ):
-        raise WorkflowError(
-            "Pass or choose an available Void-Drunk effect for the actual Dive."
-        )
+        raise WorkflowError("Pass or choose an available Void-Drunk effect for the actual Dive.")
     current = action["data"]["dive"]["void_drunk"]
     current.append(
         dict(
@@ -200,9 +214,11 @@ def select(
             controller=actor.controller,
             choice=request["id"],
             source=action["data"]["response_event"],
-            latch=answer.options != ("pass",),
+            latch=latching,
             tag=answer.denied[0] if answer.denied else None,
             shadow=answer.options == ("shadow",),
+            primary_asset=asset,
+            primary_rewrite=answer.text.strip() if asset else None,
         )
     )
 
@@ -231,16 +247,25 @@ def complete(
             result["settled"] = "expired"
             continue
         tag_id = result["tag"]
+        primary_asset = result.get("primary_asset")
         shadow = _shadow_pose(state, actor, target) if result.get("shadow") else None
         if (
-            tag_id and tag_id not in _tags(state, target.ref, actor.controller, action["scene_id"])
-            or result.get("shadow") and shadow is None
+            tag_id
+            and tag_id not in _tags(state, target.ref, actor.controller, action["scene_id"])
+            or result.get("shadow")
+            and shadow is None
+            or primary_asset is not None
+            and not any(x.id == primary_asset for x in ancillary_void.gains(state, actor.actor))
         ):
             selected.remove(result)
             game.request(
                 c, action, actor.controller, "dive_void_drunk", dict(acolyte=actor.actor.token)
             )
             return False
+        if primary_asset is not None:
+            ancillary_void.gain(
+                state, actor.actor, primary_asset, result["primary_rewrite"], unmark=True
+            )
         if tag_id:
             changed = make_helpless(state, target.ref, actor.actor, event)
             state.helpless_conditions = changed.helpless_conditions
@@ -269,6 +294,7 @@ def complete(
                 choice=result["choice"],
                 event=event,
                 tag=tag_id or "",
+                **(dict(primary_asset=primary_asset) if primary_asset else {}),
                 **(dict(emergence="shadow") if shadow is not None else {}),
             )
         )

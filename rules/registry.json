@@ -15991,11 +15991,11 @@
       "reviewer": null,
       "review_reference": null,
       "contract": {
-        "trigger": "The original Acolyte is actually nearby when a standard Pilot makes an approved low Dive Deep.",
+        "trigger": "The original Acolyte is actually nearby when a standard Pilot makes an approved Dive Deep.",
         "actor_type": "Original Acolyte and original standard Pilot",
         "pre_roll_sources": [
           "Approved optional role and rule",
-          "Exact saved low Dive and original cast",
+          "Exact saved Dive and original cast",
           "An actual observed unmarked Tag when chosen"
         ],
         "roll_kind": "diceless",
@@ -16004,15 +16004,18 @@
           "low": [
             "The diver chooses zero primary outcomes; the original Acolyte can pass or latch",
             "The Acolyte can mark an observed Tag on resurfacing and make the original diver Helpless, or emerge from shadow beside her"
+          ],
+          "mid_and_high": [
+            "The Acolyte independently chooses one primary effect. The current port supports nonterminal Void gain and unmarking her Identities."
           ]
         },
-        "choice_ownership": "Original Acolyte owns the latch and optional Tag or shadow emergence. The underlying Handler retains their ordinary low Dive choice.",
+        "choice_ownership": "The Acolyte owns the latch, her primary effect and optional Tag or shadow emergence. The diver and Handler keep their ordinary Dive choices.",
         "target_policy": "Actual original same-scene local actors and observed Tags only.",
         "post_roll_effects": [
           "When the original diver resurfaces, apply the exact selected Tag and Helplessness or place the Acolyte beside her outside the original parked Frame."
         ],
         "mandatory_followups": [
-          "Mid and high Dive outcomes, Apometanoia interception, cockpit emergence and nonstandard divers remain open."
+          "Other primary effects, terminal Void, direct high verification, Apometanoia interception, cockpit emergence and nonstandard divers remain open."
         ],
         "handler_or_gm_intervention": "The original Handler still chooses the low Dive consequence under the existing workflow.",
         "test_fixture_ids": [

@@ -37,29 +37,59 @@ async def open_dive(
     detail = data["dive"]
     kind = data["kind"]
     if kind == "dive_void_drunk":
-        choices: tuple[tuple[str, str], ...] = (("pass", "Pass"), ("latch", "Latch on"))
-        if detail.get("shadow"):
-            choices += (("shadow", "Latch on and emerge beside her from shadow"),)
+        choices: tuple[tuple[str, str], ...] = (("pass", "Pass"),)
+        if not detail["primary"] or detail["primary_assets"]:
+            choices += (("latch", "Latch on"),)
+            if detail.get("shadow"):
+                choices += (("shadow", "Latch on and emerge beside her from shadow"),)
         follower_fields = [Field("choice", "Your original decision", choices)]
         if detail["tags"]:
-            follower_fields.append(Field(
-                "tag", "Observed Tag to mark as they resurface", tuple(detail["tags"].items()),
-                0, 1, required=False,
-            ))
+            follower_fields.append(
+                Field(
+                    "tag",
+                    "Observed Tag to mark as they resurface",
+                    tuple(detail["tags"].items()),
+                    0,
+                    1,
+                    required=False,
+                )
+            )
+        if detail["primary_assets"]:
+            follower_fields.extend(
+                (
+                    Field(
+                        "primary_asset",
+                        "Gain Void and unmark Identities",
+                        tuple(detail["primary_assets"].items()),
+                        required=False,
+                    ),
+                    Field("rewrite", "Rewrite the original Asset", paragraph=True, required=False),
+                )
+            )
 
         async def void_drunk(current: discord.Interaction, values: dict[str, Any]) -> str:
+            asset = values.get("primary_asset", ())
             await asyncio.to_thread(
-                game.respond, viewer_from_interaction(current), str(current.id), identity,
-                data["revision"], ChoiceAnswer(
-                    options=values["choice"], denied=values.get("tag", ()),
+                game.respond,
+                viewer_from_interaction(current),
+                str(current.id),
+                identity,
+                data["revision"],
+                ChoiceAnswer(
+                    options=values["choice"],
+                    denied=values.get("tag", ()),
+                    text=values.get("rewrite", ""),
+                    fields={"primary_asset": asset[0]} if asset else {},
                 ),
             )
             return "Your original choice is saved."
 
         form = NativeForm(
-            interaction.user.id, "Void-Drunk",
+            interaction.user.id,
+            "Void-Drunk",
             "You can follow " + clean(detail["target"]) + " on the original Dive.",
-            follower_fields, void_drunk,
+            follower_fields,
+            void_drunk,
         )
         await reply(interaction, form.text(), form)
         return

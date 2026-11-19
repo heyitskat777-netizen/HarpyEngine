@@ -3671,6 +3671,21 @@ and recorded the response after reconnect. Decline, withdrawal
 and other encounter scopes remain open for direct verification.
 [Earned Confidence p. 98](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=100) · [Native case](../../tests/rules/test_prodigy_discipline.py)
 
+### Void-Drunk’s primary choice on a stronger Dive
+
+Base `2dbcaaaa726130cdc177b14d11b29096cf1f92e4`. A nearby
+Acolyte following a middle or high Dive has one supported
+primary choice of her own. She can gain nonterminal Void in an
+original Girl Asset and unmark her eligible Identities. The
+diver and original Handler keep their own printed choices.
+
+One focused middle case passed in 4.94 seconds. It committed
+the diver’s ordinary effect, rewrote only the follower’s
+selected Asset and unmarked her Identities using the same Dive
+receipt. Two older cases were deselected. The high entry point
+and alternate primary outcomes still need direct evidence.
+[Void-Drunk p. 109](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=111) · [Dive Deep p. 22](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=24) · [Native case](../../tests/rules/test_void_drunk.py)
+
 ### Actor-level Ancillary Cadre Status and the Warboy Dog
 
 Base `083b876`. The original facilitator privately proposes a

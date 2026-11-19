@@ -23,7 +23,9 @@ from girlframe.services.m3_movement import MovementService
 from girlframe.services.m3_void_drunk import KIND, RULE
 
 
-@pytest.mark.parametrize("effect", ("tag", "shadow"), ids=("original-tag", "shadow-emergence"))
+@pytest.mark.parametrize(
+    "effect", ("tag", "shadow", "gain"), ids=("original-tag", "shadow-emergence", "primary-gain")
+)
 def test_original_low_dive_retains_handler_choice_and_scoped_acolyte_effect(
     ledger,
     tmp_path,
@@ -81,6 +83,12 @@ def test_original_low_dive_retains_handler_choice_and_scoped_acolyte_effect(
     original_tag, private = "public-to-acolyte", "private-from-acolyte"
     with ledger.transaction() as c:
         canon = state(game)
+        if effect == "gain":
+            acolyte_body = ancillary.find(canon, acolyte)
+            identities = tuple(
+                x.model_copy(update=dict(marked=True)) for x in acolyte_body.identities
+            )
+            ancillary.put(canon, acolyte_body.model_copy(update=dict(identities=identities)))
         canon.sheets[diver.entity].tags.extend(
             (
                 TagState(id=original_tag, label="Loud in the link", giver=1, observers=(2, 3)),
@@ -89,7 +97,7 @@ def test_original_low_dive_retains_handler_choice_and_scoped_acolyte_effect(
         )
         game.event(c, ADMIN.user_id, "original-tags", "synthetic.existing_tags", canon)
 
-    game.dice = Dice((2, 3))
+    game.dice = Dice((4, 5) if effect == "gain" else (2, 3))
     action = game.begin(
         PLAYER,
         "real-low-dive",
@@ -107,14 +115,27 @@ def test_original_low_dive_retains_handler_choice_and_scoped_acolyte_effect(
     pass_tags(game)
     (choice,) = [x for x in game.choices(OTHER) if x["kind"] == "dive_void_drunk"]
     assert game.decision(OTHER, choice["id"])["dive"]["tags"] == {original_tag: "Loud in the link"}
-    if effect == "shadow":
+    if effect == "gain":
+        detail = game.decision(OTHER, choice["id"])["dive"]
+        assert detail["primary"] == 1
+        asset = next(iter(detail["primary_assets"]))
+        answer(
+            game,
+            OTHER,
+            "dive_void_drunk",
+            options=("latch",),
+            fields={"primary_asset": asset},
+            text="The lens lights up from within.",
+        )
+        assert all(x.marked for x in ancillary.find(state(game), acolyte).identities)
+    elif effect == "shadow":
         assert game.decision(OTHER, choice["id"])["dive"]["shadow"]
         answer(game, OTHER, "dive_void_drunk", options=("shadow",))
         assert external_pose(state(game), acolyte).mode == "piloting"
     else:
         answer(game, OTHER, "dive_void_drunk", options=("latch",), denied=(original_tag,))
     assert not is_helpless(state(game), diver, acolyte)
-    choose(game, ADMIN, "nearby_npcs_gain_void")
+    choose(game, PLAYER if effect == "gain" else ADMIN, "nearby_npcs_gain_void")
     answer(game, ADMIN, "dive_effect", fields={REBEL.entity: "brain"})
     final = state(game)
     assert game.inspect(PLAYER, action)["state"] == "complete"
@@ -127,3 +148,8 @@ def test_original_low_dive_retains_handler_choice_and_scoped_acolyte_effect(
         pose = external_pose(final, acolyte)
         assert pose.mode == "outside_frame" and pose.girl_cell == pose.frame_cell == (0, 4)
         assert pose.position_event != pose.source_event
+    if effect == "gain":
+        body = next(x for x in final.world.pilots if x.id == acolyte.entity)
+        assert {x.id for x in body.assets if x.void} == {asset}
+        assert not any(x.marked for x in ancillary.find(final, acolyte).identities)
+        assert game.dice.calls == 1
