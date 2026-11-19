@@ -77,6 +77,7 @@ def require_world_advancement(state: GameState) -> None:
 
 def _world_projection(state: GameState) -> dict[str, Any]:
     from girlframe.engine.m3_void_lab_portal import projection as lab_portals
+    from girlframe.services.m3_gorgon_type_tags import NPC_PREFIX
     from girlframe.services.m3_red_queen_accusation import official_allegations
 
     assert state.world is not None
@@ -86,6 +87,8 @@ def _world_projection(state: GameState) -> dict[str, Any]:
     for row in projected["locations"]:
         row["official_allegations"] = official_allegations(state, row["kind"], row["id"])
     for row in projected["npcs"]:
+        if "tags" in row:
+            row["tags"] = [tag for tag in row["tags"] if not tag["id"].startswith(NPC_PREFIX)]
         row["official_allegations"] = official_allegations(
             state, "npc", ActorRef(kind="npc", entity=row["id"])
         )

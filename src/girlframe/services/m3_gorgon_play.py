@@ -10,9 +10,12 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput
-from girlframe.engine.m3_actor_state import ActorRef, SceneCast
+from girlframe.engine.m3_actor_state import ActorRef, ActorView, SceneCast
 from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_gorgon_play_state import Declaration
+from girlframe.engine.m3_gorgon_type_tags import RULES as TYPE_TAG_RULES
+from girlframe.engine.m3_gorgon_type_tags import TYPES as TAG_TYPES
+from girlframe.engine.m3_gorgon_type_tags import present as tag_target_present
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_sentinel import RULE as corrupt_rule
 from girlframe.engine.m3_sentinel import already_corrupted
@@ -24,11 +27,12 @@ from girlframe.services.m3_medical import MedicalService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
-RULES = {
+RULES: dict[str, str] = {
     "attack": "gorgon.gorgon.attack",
     "collateral": "gorgon.gorgon.collateral-damage",
     "warp": "gorgon.gorgon.warp",
     "corrupt": corrupt_rule,
+    **TYPE_TAG_RULES,
 }
 
 
@@ -64,11 +68,13 @@ class GorgonPlayService:
             cast = _cast(self.game, c, state, channel)
             bound = profiles(c, self.store.campaign_id)
             rows = []
+            visible: dict[str, ActorView] = {}
             can_corrupt = False
             for role in cast.roles:
                 actual = resolve(state, role.actor, bound, require_current_profile=False)
                 if not _visible(state, role.actor, viewer.user_id):
                     continue
+                visible[role.actor.token] = actual
                 owned = actual.controller == viewer.user_id
                 if (
                     owned
@@ -93,11 +99,32 @@ class GorgonPlayService:
                         assets=[asset.model_dump(mode="json") for asset in actual.assets],
                     )
                 )
+            typed_targets: dict[str, dict[str, list[str]]] = {}
+            if state.world is not None:
+                for actor in state.world.gorgons:
+                    token = ActorRef(kind="gorgon", entity=actor.id).token
+                    caster = visible.get(token)
+                    if caster is None or caster.controller != viewer.user_id:
+                        continue
+                    options = {
+                        kind: [
+                            target.ref.token
+                            for target in visible.values()
+                            if target.ref != caster.ref and tag_target_present(kind, caster, target)
+                        ]
+                        for kind, gorgon_type in TAG_TYPES.items()
+                        if gorgon_type in actor.types
+                    }
+                    typed_targets[token] = {
+                        kind: targets for kind, targets in options.items() if targets
+                    }
             access = Access(self.store)
             assert access.registry is not None
             plays = []
             for kind, identity in RULES.items():
                 if kind == "corrupt" and not can_corrupt:
+                    continue
+                if kind in TAG_TYPES and not any(kind in x for x in typed_targets.values()):
                     continue
                 try:
                     access.registry.require_available(identity)
@@ -110,6 +137,7 @@ class GorgonPlayService:
                 cast_revision=cast.revision,
                 actors=rows,
                 plays=plays,
+                typed_targets=typed_targets,
             )
 
     def begin(
@@ -184,6 +212,13 @@ class GorgonPlayService:
                     raise WorkflowError(
                         "Use the actual present original target and source resources"
                     )
+                if declaration.kind in ("incubus_inflict", "mother_mutation") and (
+                    TAG_TYPES[declaration.kind] not in gorgon.types
+                    or not tag_target_present(declaration.kind, actual, target)
+                ):
+                    raise WorkflowError("Use a real body in this type's actual local reach")
+            if declaration.kind == "attack" and target_view is not None:
+                target = target_view
                 if target.ref.kind == "external_pilot":
                     from girlframe.engine.m3_harpy_defeat import harpy
 

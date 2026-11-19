@@ -21406,14 +21406,31 @@
         "heading": "Incubus-Type"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "An actual living Incubus declares its direct printed Tag effect on an eligible present body.",
+        "actor_type": "Actual source Incubus and its scene controller.",
+        "pre_roll_sources": [
+          "Actual old and current cast, original actor/type, real same-square bodies, and acknowledged scene lock."
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "diceless": ["Choose a printed Tag and apply it to a present eligible original body."]
+        },
+        "choice_ownership": "Only the original Incubus's human selects the direct Tag.",
+        "target_policy": "An actual ordinary Girl or NPC in the same source scene and occupied square.",
+        "post_roll_effects": ["Add the real Tag with its original giver and scoped heard result."],
+        "mandatory_followups": ["The non-Void stun and Emotional Conditioning roll need separate ports."],
+        "handler_or_gm_intervention": "The source Gorgon controller owns the effect. Unverified range or other bodies require human adjudication.",
+        "test_fixture_ids": ["tests/rules/test_gorgon_runtime.py::test_native_gorgon_type_tags_create_only_the_actual_scoped_effect"]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_gorgon_runtime.py::test_native_gorgon_type_tags_create_only_the_actual_scoped_effect"],
       "m2_play_id": null,
       "module": "core"
     },
@@ -21544,14 +21561,31 @@
         "heading": "Mother-Type"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "An actual living Mother changes the flesh of an eligible original body in its presence.",
+        "actor_type": "Actual source Mother and its scene controller.",
+        "pre_roll_sources": [
+          "Actual old and current cast, original actor/type, real same-square physical presence, and acknowledged scene lock."
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "diceless": ["Pick a printed physical alteration and assign its corresponding Tag."]
+        },
+        "choice_ownership": "Only the original Mother controller declares its physical effect.",
+        "target_policy": "An actual NPC or ordinarily capable Girl outside her Frame, in the same source scene and occupied square.",
+        "post_roll_effects": ["Persist the actual original giver and matching Tag with a private source result."],
+        "mandatory_followups": ["Sprite creation and maturation, and the Memetic Hazard threshold and Play, need separate ports."],
+        "handler_or_gm_intervention": "The original Mother controller owns the effect. Review unsupported bodies or unknown reach with a human.",
+        "test_fixture_ids": ["tests/rules/test_gorgon_runtime.py::test_native_gorgon_type_tags_create_only_the_actual_scoped_effect"]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": ["tests/rules/test_gorgon_runtime.py::test_native_gorgon_type_tags_create_only_the_actual_scoped_effect"],
       "m2_play_id": null,
       "module": "core"
     },

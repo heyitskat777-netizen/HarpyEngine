@@ -10,6 +10,7 @@ from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_gorgon_play_state import Declaration
+from girlframe.engine.m3_gorgon_type_tags import LABELS as TYPE_TAG_LABELS
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_gorgon_play import GorgonPlayService
 
@@ -27,12 +28,17 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
         actor = next(x for x in own if x["token"] == values["actor"][0])
         kind = values["play"][0]
         targets = [x for x in data["actors"] if x["ref"] != actor["ref"]]
-        if kind == "attack" and not targets:
-            return "Join the actual opposing body to the scene before declaring an Attack."
+        type_tag = kind in TYPE_TAG_LABELS
+        if type_tag:
+            eligible = data["typed_targets"].get(actor["token"], {}).get(kind, ())
+            targets = [x for x in targets if x["token"] in eligible]
+        targeted = kind == "attack" or type_tag
+        if targeted and not targets:
+            return "Join the actual eligible target to the scene before declaring this Play."
         if kind in ("attack", "collateral") and not actor["assets"]:
             return "Declare actual owned Gorgon Assets for this Play."
         fields: list[Field] = []
-        if kind == "attack":
+        if targeted:
             fields.append(
                 Field(
                     "target",
@@ -40,6 +46,8 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
                     tuple((x["token"], x["label"]) for x in targets),
                 )
             )
+        if type_tag:
+            fields.append(Field("tag", "Choose the printed effect", TYPE_TAG_LABELS[kind]))
         if kind in ("attack", "collateral"):
             fields.append(
                 Field(
@@ -65,9 +73,7 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
 
         async def declare(next_interaction: discord.Interaction, details: dict[str, Any]) -> str:
             target = (
-                next(x for x in targets if x["token"] == details["target"][0])
-                if kind == "attack"
-                else None
+                next(x for x in targets if x["token"] == details["target"][0]) if targeted else None
             )
             result = await asyncio.to_thread(
                 service.begin,
@@ -84,6 +90,7 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
                     target_sha256=target["source_sha256"] if target else None,
                     account=details["account"],
                     reach_confirmed=True,
+                    tag=(details.get("tag") or (None,))[0],
                 ),
             )
             return (
@@ -110,7 +117,11 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
         "Use your actual scene role. These Plays have no Gorgon roll or Heat spend.",
         [
             Field("actor", "Your actual Gorgon", tuple((x["token"], x["label"]) for x in own)),
-            Field("play", "Choose your Play", tuple((x, x.title()) for x in data["plays"])),
+            Field(
+                "play",
+                "Choose your Play",
+                tuple((x, x.replace("_", " ").title()) for x in data["plays"]),
+            ),
         ],
         choose,
     )

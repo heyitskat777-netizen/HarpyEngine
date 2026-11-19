@@ -1708,3 +1708,21 @@ private Inbox ownership, and the real abandoned Frame transformation.
 The remaining experiments require a personal memory with a provable
 linked Tag or Bond, and a later situation that triggers an actual Play.
 [Scientist p. 129](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=131) · [Void p. 17](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=19)
+
+### Incubus and Mother direct type effects
+
+Base `b1a867e7d047dc57a9f31b4722587bebad1204db`. An actual Incubus
+can inflict a printed Tag, and a Mother can apply the printed physical
+change and matching Tag. The current native route requires a living,
+same-square body in the original cast. The Mother path requires direct
+physical presence outside a Frame for a Girl. The original Gorgon
+controller chooses the effect. The engine records the original giver,
+and the source result is available to the original two controllers.
+General map views omit the private NPC Tag.
+
+**111 selected tests passed in 139.41 seconds**, including original
+Gorgon combat, both new native declarations, actual Tag state, remote
+and wrong-owner denial, replay after restart, and result isolation.
+The Incubus stun and Emotional Conditioning, and the Mother's Sprite
+maturation and Memetic Hazard, remain open.
+[Incubus p. 167](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=169) · [Mother p. 170](../../../attachments/d8b9bce2-0761-4629-a9fb-bd4cdc198327/GIRL_FRAME_rulebook.pdf#page=172)

@@ -6363,6 +6363,13 @@ class GameService:
                 prove_hound_status(self, c, load_state(c, self.store.campaign_id), action)
             result = action["data"]["result"] if action["state"] == "complete" else None
             parties = {int(action["actor_id"]), action["data"].get("prepared", {}).get("target")}
+            gorgon = action["data"].get("gorgon_play")
+            if gorgon and gorgon["kind"] in ("incubus_inflict", "mother_mutation"):
+                parties.update(
+                    x["controller"]
+                    for x in gorgon["cast"]["roles"]
+                    if x["actor"] == gorgon["target"]
+                )
             harpy_parties = (
                 action["data"].get("harpy_flirt")
                 or action["data"].get("harpy_followthrough")

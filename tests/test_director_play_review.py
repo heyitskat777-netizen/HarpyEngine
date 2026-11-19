@@ -33,6 +33,8 @@ def test_entire_inventory_and_every_native_identifier_have_explicit_review_route
             "gorgon_collateral",
             "gorgon_warp",
             "gorgon_corrupt",
+            "gorgon_incubus_inflict",
+            "gorgon_mother_mutation",
             "handler_advocate_alone",
             "handler_frantic_breakdown",
             "handler_casualty_parts",

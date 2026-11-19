@@ -95,6 +95,8 @@ NATIVE_RULES = {
     "gorgon_collateral": "gorgon.gorgon.collateral-damage",
     "gorgon_warp": "gorgon.gorgon.warp",
     "gorgon_corrupt": "gorgon-type.sentinel.sentinel-type",
+    "gorgon_incubus_inflict": "gorgon-type.incubus.incubus-type",
+    "gorgon_mother_mutation": "gorgon-type.mother.mother-type",
 }
 
 

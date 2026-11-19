@@ -32,6 +32,8 @@ def candidate_source_gate(monkeypatch):
             "gorgon.gorgon.collateral-damage",
             "gorgon.gorgon.warp",
             "gorgon-type.sentinel.sentinel-type",
+            "gorgon-type.incubus.incubus-type",
+            "gorgon-type.mother.mother-type",
         }:
             return next(x for x in registry.entries if x.id == identity)
         return actual(registry, identity)
@@ -61,6 +63,7 @@ def gorgon_source(
     types=("incubus",),
     begin=True,
     other_cell=(0, 0),
+    tag=None,
 ):
     game, worker, gateway, _, _, _ = prepared(store, other_cell=other_cell)
     approval = store.policy.m3_approval
@@ -229,15 +232,17 @@ def gorgon_source(
     data = svc.preview(ADMIN, 900)
     actual = next(x for x in data["actors"] if x["ref"] == actor.model_dump(mode="json"))
     victim = next(x for x in data["actors"] if x["ref"]["entity"] == (target or "2"))
+    targeted = kind in ("attack", "incubus_inflict", "mother_mutation")
     declaration = Declaration(
         kind=kind,
         actor=actor,
         assets=(actual["assets"][0]["id"],) if kind in ("attack", "collateral") else (),
         actor_sha256=actual["source_sha256"],
-        target=ActorRef.model_validate(victim["ref"]) if kind == "attack" else None,
-        target_sha256=victim["source_sha256"] if kind == "attack" else None,
+        target=ActorRef.model_validate(victim["ref"]) if targeted else None,
+        target_sha256=victim["source_sha256"] if targeted else None,
         account="Actual declared source effect at the present battlefield",
         reach_confirmed=True,
+        tag=tag,
     )
     if not begin:
         return game, worker, gateway, None, declaration
@@ -348,6 +353,103 @@ def test_sentinel_native_corruption_preserves_position_owner_privacy_and_restart
         OTHER, "unaffected-sensors", 900, state(restarted).sheets["3"].revision, request
     )
     assert unaffected["action_id"] != action and game.dice.calls == 0
+
+
+@pytest.mark.parametrize(
+    "kind,gorgon_type,selection,label,npc",
+    [
+        ("incubus_inflict", "incubus", "dysphoria", "Dysphoric", False),
+        ("mother_mutation", "mother", "branch", "Branching flesh", True),
+    ],
+)
+def test_native_gorgon_type_tags_create_only_the_actual_scoped_effect(
+    ledger, kind, gorgon_type, selection, label, npc
+):
+    import asyncio
+
+    from test_ledger import OTHER
+    from test_mission_ui import current
+
+    from girlframe.delivery.m2_worker import GameWorker
+    from girlframe.discord_adapter.m2_forms import NativeForm
+    from girlframe.discord_adapter.m3_gorgon_play import open_gorgon_play
+    from girlframe.services.m2_game import GameService
+    from girlframe.services.m3_world import WorldService
+    from girlframe.services.onboarding import WorkflowError
+
+    game, _, gateway, _, declaration = gorgon_source(
+        ledger,
+        kind=kind,
+        types=(gorgon_type,),
+        tag=selection,
+        begin=False,
+        npc=npc,
+        target="actual-guard" if npc else "2",
+        other_cell=(2, 0),
+    )
+    service = GorgonPlayService(game)
+    preview = service.preview(ADMIN, 900)
+    target = declaration.target
+    caster = declaration.actor.token
+    assert kind in preview["plays"]
+    assert target.token in preview["typed_targets"][caster][kind]
+    assert kind not in service.preview(PLAYER, 900)["plays"]
+    remote = next(x for x in preview["actors"] if x["ref"]["entity"] == "3")
+    invalid = declaration.model_copy(
+        update=dict(
+            target=ActorRef.model_validate(remote["ref"]), target_sha256=remote["source_sha256"]
+        )
+    )
+    with pytest.raises(WorkflowError, match="actual local reach"):
+        service.begin(ADMIN, "wrong-location", 900, preview["revision"], invalid)
+    with pytest.raises(WorkflowError, match="actual owned"):
+        service.begin(PLAYER, "wrong-controller", 900, preview["revision"], declaration)
+
+    async def declare():
+        owner = current(1)
+        owner.channel_id = 900
+        await owner.response.defer(ephemeral=True)
+        await open_gorgon_play(owner, game)
+        form = owner.edit_original_response.call_args.kwargs["view"]
+        assert isinstance(form, NativeForm)
+        form.values.update(actor=(caster,), play=(kind,))
+        select = current(1, 999400)
+        await select.response.defer(ephemeral=True)
+        await form.confirm.callback(select)
+        confirm = select.edit_original_response.call_args.kwargs["view"]
+        assert isinstance(confirm, NativeForm)
+        assert remote["token"] not in dict(confirm.fields[0].options)
+        confirm.values.update(
+            target=(target.token,),
+            tag=(selection,),
+            account=declaration.account,
+            reach=("confirmed",),
+        )
+        await confirm.confirm.callback(current(1, 999401))
+        assert confirm.completed
+
+    asyncio.run(declare())
+    action = service.begin(ADMIN, "999401", 900, preview["revision"], declaration)["action_id"]
+    before = state(game)
+    restarted = GameService(ledger, dice=game.dice)
+    tick(GameWorker(restarted), gateway, 5)
+    if not restarted.inspect(ADMIN, action)["result"]:
+        restarted.roll(ADMIN, "resume-type-tag", action)
+        tick(GameWorker(restarted), gateway, 5)
+    after = state(restarted)
+    received = restarted.inspect(OTHER if npc else PLAYER, action)["result"]
+    assert received["tag_label"] == label
+    assert label not in str(restarted.inspect(PLAYER if npc else OTHER, action)["result"])
+    if npc:
+        (person,) = after.world.npcs
+        assert [(x.id, x.label) for x in person.tags] == [(received["tag"], label)]
+        assert label not in str(WorldService(MissionService(ledger)).get(ADMIN, private=True))
+        assert before.sheets == after.sheets
+    else:
+        (tag,) = [x for x in after.sheets["2"].tags if x.id == received["tag"]]
+        assert tag.giver_actor == declaration.actor and set(tag.observers) == {1, 2}
+        assert after.sheets["3"] == before.sheets["3"]
+    assert game.dice.calls == 0
 
 
 def test_actual_gorgon_attack_owned_damage_no_dice_and_real_replay(ledger):
