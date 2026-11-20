@@ -32,9 +32,10 @@ TURNS = {
 FIXTURE = Path(__file__).resolve().parents[2] / "tools/fixtures/p2_timed_handler_rehearsal.json"
 
 
-def timed_archetype(store, playbook, recorder):
+def timed_archetype(store, playbook, recorder, *, identity=None):
     creation, game = ready(store)
-    save(creation, complete(creation, playbook))
+    draft = complete(creation, playbook)
+    save(creation, draft.model_copy(update=identity) if identity else draft)
     agree(creation)
     sheet = creation.view(ADMIN)
     creation.activate(

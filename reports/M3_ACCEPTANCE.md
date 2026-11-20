@@ -1,5 +1,15 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Paired Handler personalities
+
+On development base `31009ee`, 14 matched cases passed in 40.07 seconds.
+Two native Handler sheets for each archetype ran the same timed scene. The
+reviewed path received the current private notes, invalidated pre-edit review
+packets, and kept private narration and deliveries scoped. The results compare
+six pairs that intervened on different beats and two Trainers who used the same
+beat differently. The replies were generated from inspected synthetic packets
+and frozen for replay. [Sheet inventory, dialogue and recommendations](P2_HANDLER_PERSONALITY_PAIRS.md)
+
 ## Private timing review and archetype rehearsal
 
 Development base `6c5ed1a`. Timing work derives from the existing event ledger.

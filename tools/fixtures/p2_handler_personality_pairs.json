@@ -1,0 +1,198 @@
+{
+  "Mistress": {
+    "Mara": {
+      "notes": {
+        "voice": "Warm, precise public credit. Use names, without pet names.",
+        "intervention": "Recognize extra work when it is first volunteered, then give the Pilot room.",
+        "promise": "Make sure the Pilot gets credit for carrying both lists."
+      },
+      "turn": "handoff",
+      "cue": "cooperation",
+      "attend": "Took the second list without being asked. Give credit now.",
+      "wait": "A teammate has offered to take the list. Leave the Pilot room to accept it.",
+      "reply": "I want it on the record that you took both lists. Which one needs a second set of eyes?",
+      "time": "Five minutes. Put your own release first. I can make sure the extra work is counted."
+    },
+    "Sable": {
+      "notes": {
+        "voice": "Quiet humor and a small, private offer.",
+        "intervention": "Give the Pilot time to say which help they can accept. Speak once a teammate offers to share the work.",
+        "promise": "Ask before turning praise into personal attention."
+      },
+      "turn": "update",
+      "cue": "cooperation",
+      "attend": "There's now a concrete offer from a peer. Make it easy to accept or decline.",
+      "wait": "Give the Pilot a chance to say what kind of help they want.",
+      "reply": "Rook can have the extra list, if you like. I'll keep the congratulations to myself for now.",
+      "time": "Five minutes. I'd take Rook up on the spare list if you want the company."
+    }
+  },
+  "Dogrunner": {
+    "Brass": {
+      "notes": {
+        "voice": "Short beats. Specify the error, the repair, and the next owner.",
+        "intervention": "Give an immediate repair path when someone takes responsibility for a mistake.",
+        "promise": "Carry the correction upward after its owner checks it."
+      },
+      "turn": "handoff",
+      "cue": "accountability",
+      "attend": "The Pilot named their error. Give them a bounded repair.",
+      "wait": "The correction is under way and the Pilot can finish it.",
+      "reply": "Your copy is wrong. Correct the entry. Pass the corrected copy to me when it's ready.",
+      "time": "Five minutes. Get me the corrected total. I'll carry it upstairs myself."
+    },
+    "Vellum": {
+      "notes": {
+        "voice": "Measured and formal. Prefer the exact record and one question.",
+        "intervention": "Wait for the owner's correction. Intervene when the corrected record needs defending.",
+        "promise": "Put my name on the correction I carry."
+      },
+      "turn": "update",
+      "cue": "accountability",
+      "attend": "A completed correction gives the Handler something to defend.",
+      "wait": "The Pilot already owns the error. Give them space to complete the correction first.",
+      "reply": "Thank you for correcting your own copy. Which entry should I put my name to when I pass it on?",
+      "time": "Five minutes. Send the corrected entry first, please. I can answer for the record from here."
+    }
+  },
+  "Scientist": {
+    "Hale": {
+      "notes": {
+        "voice": "Concrete nouns and one measurement at a time.",
+        "intervention": "Speak once two instruments agree. Preserve both readings before the forms change.",
+        "promise": "Keep the original measurements apart from corrections."
+      },
+      "turn": "handoff",
+      "cue": "research",
+      "attend": "Two gauges agree. Preserve those readings before anyone edits the copy.",
+      "wait": "The matching measurements are already the priority. Give the Pilot time to continue.",
+      "reply": "Keep both gauge readings. Which numbers did you actually see? Leave the copied total aside for now.",
+      "time": "Five minutes. Save the two readings. Check the release step before you collect anything else."
+    },
+    "Quill": {
+      "notes": {
+        "voice": "Dry and conversational. Explain why a test might be worth it.",
+        "intervention": "Speak when someone offers another reading that competes with the deadline.",
+        "promise": "Tell the Pilot what new evidence would change the plan."
+      },
+      "turn": "update",
+      "cue": "research",
+      "attend": "A offered third reading has to earn time. Ask whether it could change the decision.",
+      "wait": "Two readings already agree, and nobody is proposing to spend time on a new test yet.",
+      "reply": "A third reading can wait unless it'd change what you do with the release. Would it?",
+      "time": "Five minutes. I'd skip the third reading unless you expect it to change the release decision."
+    }
+  },
+  "Frantic": {
+    "Rivet": {
+      "notes": {
+        "voice": "Clipped sentences. Correct yourself once when priorities collide.",
+        "intervention": "Respond to the first staffing bottleneck. Take a task yourself.",
+        "promise": "Hold the paperwork while the Pilot works the panel."
+      },
+      "turn": "handoff",
+      "cue": "capacity",
+      "attend": "Two lists and one technician create an immediate workload conflict.",
+      "wait": "A peer has volunteered. Give them room to make the handoff.",
+      "reply": "One tech. Right. Give me the extra list. What's the one thing you need them for?",
+      "time": "Five minutes. Release first. Wait, yes, release. I'll hold the extra list."
+    },
+    "Morrow": {
+      "notes": {
+        "voice": "Count in complete sentences. Slow down under stress.",
+        "intervention": "Wait for a concrete handoff from another Pilot and pin down its limits.",
+        "promise": "Keep the original Pilot's next choice clear."
+      },
+      "turn": "update",
+      "cue": "capacity",
+      "attend": "A real handoff is available. Clarify what it covers without taking the Pilot's decision.",
+      "wait": "Wait until someone can actually take part of the work off the Pilot.",
+      "reply": "Rook offered to take the list. Would you like them to take the whole thing, or just the repeat check?",
+      "time": "Five minutes. I'd agree exactly what Rook is taking, then leave you with the release step."
+    }
+  },
+  "Insurgent": {
+    "Mica": {
+      "notes": {
+        "voice": "Crisp administrative language. Route things through the desk.",
+        "intervention": "Intercept a demand for names immediately after it is reported.",
+        "promise": "Keep the initial report to what the Pilot actually heard."
+      },
+      "turn": "handoff",
+      "cue": "institution",
+      "attend": "A demand for names was reported. Route the request through the Handler now.",
+      "wait": "The request is already routed. Give the Pilot room to finish their report.",
+      "reply": "Send me what was said and when. Direct any request for names to my desk.",
+      "time": "Five minutes. Release work first. Put the request for names on my desk."
+    },
+    "Locke": {
+      "notes": {
+        "voice": "Quiet and plain. Offer a private follow-up without disclosing anything.",
+        "intervention": "Hold through one request. Step in when the demand repeats and the Pilot has an opening.",
+        "promise": "Take repeat requests through my own channel."
+      },
+      "turn": "update",
+      "cue": "institution",
+      "attend": "The demand has repeated and the Pilot wants to speak. Offer a separate channel.",
+      "wait": "An open objection on the first demand could draw attention to the Pilot.",
+      "reply": "Give your own answer if you want. If they ask again, send them to me. We can talk through the rest separately.",
+      "time": "Five minutes. Keep the release clear, then send the question to me if you'd like me to handle it."
+    }
+  },
+  "Trainer": {
+    "Slate": {
+      "notes": {
+        "voice": "One short imperative at a time. Give the next check.",
+        "intervention": "Respond to the first procedural gap with a restart point.",
+        "promise": "Stay with the Pilot at the next unverified step."
+      },
+      "turn": "handoff",
+      "cue": "procedure",
+      "attend": "There is an explicit skipped step. Offer one restart point.",
+      "wait": "Let the Pilot identify and confirm the last open step in their own time.",
+      "reply": "Stop at your last confirmed check. Read me the unchecked line immediately below it.",
+      "time": "Five minutes. Check the last open release step. I'll wait for your confirmation."
+    },
+    "Bell": {
+      "notes": {
+        "voice": "A patient coaching question. Let the Pilot explain their reasoning.",
+        "intervention": "On the first procedural gap, ask the Pilot to find their own last confirmed step.",
+        "promise": "Give the Pilot the first chance to name what they skipped."
+      },
+      "turn": "handoff",
+      "cue": "procedure",
+      "attend": "The Pilot can find the procedural gap themselves with one coaching question.",
+      "wait": "The Pilot has named which step remains open. Give them room to complete it.",
+      "reply": "Which check could you put your own initials beside? Start there and tell me what you think comes next.",
+      "time": "Five minutes. Which check is keeping you from signing off the release? Start with that one."
+    }
+  },
+  "Advocate": {
+    "Piper": {
+      "notes": {
+        "voice": "Direct and public. Return the floor in a few words.",
+        "intervention": "Interrupt when an authority figure first answers for the Pilot.",
+        "promise": "Leave the actual answer to the Pilot."
+      },
+      "turn": "handoff",
+      "cue": "agency",
+      "attend": "The supervisor answered in the Pilot's place. Return the floor now.",
+      "wait": "The Pilot is already taking the floor. Give them the next turn without jumping in again.",
+      "reply": "Hold on. The question was yours to answer. What did you want to say?",
+      "time": "Five minutes. I'd give your own answer first. I can handle anyone who tries to cut in."
+    },
+    "Rue": {
+      "notes": {
+        "voice": "Low and patient. Ask what kind of help would be welcome.",
+        "intervention": "Wait until the Pilot says they want to give their own answer, then offer backing.",
+        "promise": "Ask before taking the dispute away from them."
+      },
+      "turn": "update",
+      "cue": "agency",
+      "attend": "The Pilot explicitly wants to answer personally. Offer a choice of practical backing.",
+      "wait": "Leave room for the Pilot to decide what help they want before stepping into the dispute.",
+      "reply": "I'd like to hear your answer. Would you like me to stay on the line, or give you some room?",
+      "time": "Five minutes. I'd finish the release check. Would it help if I stayed while you give your account?"
+    }
+  }
+}
