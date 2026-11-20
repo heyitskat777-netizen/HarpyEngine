@@ -161,7 +161,9 @@ async def open_decision(
     narrative = kind == "defeat_select" and bool(decision.get("defeat", {}).get("narrative"))
     death_available = narrative and bool(decision["defeat"].get("narrative_death_available"))
     if kind == "defeat_select":
-        allowed = DEFEAT_LOW if level == "low" else DEFEAT_MID if level == "mid" else DEFEAT_HIGH
+        allowed: tuple[str, ...] = (
+            DEFEAT_LOW if level == "low" else DEFEAT_MID if level == "mid" else DEFEAT_HIGH
+        )
         if narrative and not death_available:
             allowed = tuple(x for x in allowed if x != "death")
         soldiers = decision["defeat"].get("soldiers", ())

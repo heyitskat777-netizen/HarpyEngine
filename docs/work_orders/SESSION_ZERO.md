@@ -54,7 +54,9 @@ creation.
 
 The feature uses the existing SQLite schema and dependencies. The
 `SessionZeroService` operates on the campaign's existing `OnboardingStore`.
-The bot registers `/session-zero` for its configured guild. Use the stable
+The legacy command mode registers `/session-zero` for its configured guild.
+The Activity-only runtime leaves campaign creation and launch with the Activity listener.
+Use the stable
 interaction delivery key for retries, a current worksheet revision when
 editing, and the exact proposal identity for each approval.
 

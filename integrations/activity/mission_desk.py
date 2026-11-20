@@ -1,21 +1,24 @@
 """Present native mission transitions and their assigned work in the Activity."""
 
+from typing import Any
 from uuid import UUID
 
 from girlframe.services.m3_mission_control import MissionControlService
+from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_off_duty import OffDutyService
 from girlframe.services.m3_reactions import ReactionService
+from girlframe.services.read_only_bot import GuildViewer
 
 REACTIONS = frozenset({"princess_mission_end", "doctor_obsolescence"})
 
 
 class MissionDesk:
-    def __init__(self, missions):
+    def __init__(self, missions: MissionService):
         self.missions = missions
         self.periods = OffDutyService(missions)
         self.reactions = ReactionService(missions)
 
-    def view(self, viewer, label, *, lifecycle):
+    def view(self, viewer: GuildViewer, label: str, *, lifecycle: bool) -> dict[str, Any]:
         if lifecycle:
             return {"pilot": label, **MissionControlService(self.missions).view(viewer)}
         offers = []
@@ -35,22 +38,26 @@ class MissionDesk:
             )
         return {"pilot": label, "offers": offers, "desk": None}
 
-    def perform(self, viewer, key, data):
+    def perform(self, viewer: GuildViewer, key: str, data: dict[str, Any]) -> dict[str, Any]:
         with self.missions.store.engine.connect() as c:
             self.missions._authorize(c, viewer)
             self.missions._handler(c, viewer)
         action = data.get("action")
         fields = data.keys() - {"action"}
-        if action == "offer" and fields in (
-            {"objective", "pilots"},
-            {"objective", "pilots", "capture_target"},
-        ):
+        if action == "offer" and {"objective", "pilots"} <= fields <= {
+            "objective",
+            "pilots",
+            "capture_target",
+            "hard_stake",
+        }:
             objective, pilots = data["objective"], data["pilots"]
             capture_target = data.get("capture_target")
+            hard_stake = data.get("hard_stake")
             if (
                 not isinstance(objective, str)
                 or not isinstance(pilots, list)
                 or ("capture_target" in fields and not isinstance(capture_target, str))
+                or ("hard_stake" in fields and not isinstance(hard_stake, str))
                 or any(
                     not isinstance(uid, str)
                     or not uid.isascii()
@@ -62,7 +69,12 @@ class MissionDesk:
             ):
                 raise ValueError("Use the current pilot roster and an objective.")
             return self.missions.offer(
-                viewer, key, objective, tuple(map(int, pilots)), capture_target=capture_target
+                viewer,
+                key,
+                objective,
+                tuple(map(int, pilots)),
+                capture_target=capture_target,
+                hard_stake=hard_stake,
             )
         if action == "off_duty" and not fields:
             return self.periods.begin(viewer, key)
@@ -84,16 +96,16 @@ class MissionDesk:
             ):
                 raise ValueError("Use the current reaction form.")
             work = self.reactions.get(viewer, identity)
-            args = (viewer, key, identity, revision, game_revision)
+            reaction_args = (viewer, key, identity, revision, game_revision)
             if work["kind"] == "doctor_obsolescence" and answer == {"confirm": True}:
-                return self.reactions.doctor(*args)
+                return self.reactions.doctor(*reaction_args)
             if (
                 work["kind"] == "princess_mission_end"
                 and answer.keys() == {"upheld", "rationale"}
                 and type(answer["upheld"]) is bool
                 and isinstance(answer["rationale"], str)
             ):
-                return self.reactions.princess(*args, **answer)
+                return self.reactions.princess(*reaction_args, **answer)
             raise ValueError("Use the fields assigned by HarpyEngine.")
         if not {"id", "revision"} <= fields:
             raise ValueError("Choose a current mission.")

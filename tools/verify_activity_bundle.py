@@ -42,11 +42,12 @@ def prepare(source: Path, output: Path, *, p2_routes: bool = False) -> Path:
         shutil.copyfile(ADAPTERS / "p2-desk.js", lab / "p2-desk.js")
         for test_path in (ADAPTERS / "tests").glob("test_*.py"):
             shutil.copyfile(test_path, lab / test_path.name)
-        subprocess.run(
-            ["patch", "--batch", "--fuzz=0", "-p1", "-i", str(ADAPTERS / "p2_lab_routes.patch")],
-            cwd=lab,
-            check=True,
-        )
+        for patch in ("p2_lab_routes.patch", "campaign_difficulty_ui.patch"):
+            subprocess.run(
+                ["patch", "--batch", "--fuzz=0", "-p1", "-i", str(ADAPTERS / patch)],
+                cwd=lab,
+                check=True,
+            )
     metadata = {
         "engine_revision": subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True

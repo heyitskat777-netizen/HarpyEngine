@@ -83,6 +83,34 @@ Activity checkout before scheduling a private Discord client trial.
   stored text, how long it stays, and what withdrawal and redaction do to
   derived knowledge. Paid providers are a later choice.
 
+## Campaign difficulty and Session Zero
+
+Apply [the campaign difficulty UI patch](campaign_difficulty_ui.patch) after
+[the P2 overlay](p2_lab_routes.patch). It uses the existing Activity Defeat
+form in the scene and private Inbox. An owned low Defeat can show **Death**
+and a separate confirmation when the engine says the Narrative exception is
+available. It submits `flag: true` with `options: ["death"]` for a confirmed
+lethal choice. Respect the saved decision revision and refresh after rejection.
+The engine checks the original owner and the campaign limit at submission.
+Narrative-restricted punishments are filtered in the relevant menus. The
+mission desk displays the introductory objective and posts a required
+`hard_stake` for later Hard-mode offers when the server requests it.
+
+The Activity still needs a Session Zero setup panel backed by
+`SessionZeroService`. It must let the group confirm a Handler, attach each
+Pilot's own saved sheet, and approve the same revision of goals and difficulty.
+It must let the appointed Handler complete the approved introduction and
+advance its roleplay days. Show the roleplay-only scene and first mission
+availability from the engine calendar. The existing Activity **Review &
+Launch** currently publishes recipient-scoped briefs. The rules setup and
+brief publication need a coordinated sequence in that interface. Activities
+that use the current brief setup alone follow Normal difficulty.
+
+Apply the newer `p2-desk.js` and route adapter to expose the private Handler
+questions, fictional calendar, timed mission and deadline reviews, and
+facilitator's scene-closeout controls. The approved dossier projection and
+experience recall are handled server-side.
+
 First browser acceptance should prove one scene for two Pilots and a Handler
 with a facilitator, a delivered scoped Handler line, a typed GM ruling, and a
 native owned choice. Include wrong-owner denial, exact retry after reconnect,

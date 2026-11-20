@@ -1,0 +1,118 @@
+--- a/defeat_play.py
++++ b/defeat_play.py
+@@ -98,16 +98,33 @@
+     tier = decision["result"]["tier"]
+     own = decision["own"] or {}
+     allowed = {"low": DEFEAT_LOW, "mid": DEFEAT_MID, "high": DEFEAT_HIGH}[tier]
++    detail = decision["defeat"]
++    narrative = detail.get("narrative", False)
++    can_confirm = narrative and tier == "low" and detail.get("narrative_death_available", False)
++    if narrative and not can_confirm:
++        allowed = tuple(key for key in allowed if key != "death")
+     fields = [
+         Field(
+             "options",
+-            "Choose your printed consequences",
++            "Choose nonlethal consequences" if narrative and not can_confirm
++            else "Choose your printed consequences",
+             tuple((key, LABELS[key]) for key in allowed),
+             2 if tier == "high" else 1,
+             1 if tier == "mid" else 2,
+         ),
+         text("text", "Describe the selected consequences"),
+     ]
++    if can_confirm:
++        fields.append(
++            Field(
++                "flag",
++                "If choosing Death, select Death alone and confirm separately",
++                (("yes", "End this character’s life and use the campaign’s one death"),),
++                0,
++                1,
++                required=False,
++            )
++        )
+     others = tuple(
+         (str(uid), decision["labels"][str(uid)])
+         for uid in decision["pilots"]
+--- a/mission-desk.js
++++ b/mission-desk.js
+@@ -37,13 +37,23 @@
+   });
+ }
+
+-function offerForm(pilots, captureTargets, send) {
++function offerForm(desk, send) {
++  const captureTargets = desk.capture_targets;
+   const form = element("form");
+   const objective = element("textarea");
+   objective.name = "objective";
+   objective.required = true;
+   objective.maxLength = 1200;
+-  field(form, captureTargets ? "Mission plan" : "Mission objective", objective);
++  const label = desk.introductory ? "One clear introductory objective"
++    : captureTargets ? "Mission plan" : "Mission objective";
++  field(form, label, objective);
++  if (desk.requires_hard_stake) {
++    const extra = element("textarea");
++    extra.name = "hard_stake";
++    extra.required = true;
++    extra.maxLength = 300;
++    field(form, "Extra Hard-mode obstacle", extra);
++  }
+   if (captureTargets) {
+     const target = element("select");
+     target.name = "capture_target";
+@@ -60,7 +70,7 @@
+   }
+   const choices = element("fieldset");
+   choices.append(element("legend", "Invite pilots"));
+-  for (const [id, callsign] of pilots) {
++  for (const [id, callsign] of desk.pilots) {
+     const input = element("input");
+     input.type = "checkbox";
+     input.name = "pilots";
+@@ -75,6 +85,7 @@
+   submit(form, "File mission offer", send, values => ({
+     action: "offer", objective: values.get("objective"), pilots: values.getAll("pilots"),
+     ...(captureTargets ? {capture_target: values.get("capture_target")} : {}),
++    ...(desk.requires_hard_stake ? {hard_stake: values.get("hard_stake")} : {}),
+   }));
+   return form;
+ }
+@@ -146,7 +157,7 @@
+       if (data.desk.can_offer ?? data.desk.pilots.length > 0) {
+         const offer = element("details");
+         offer.append(element("summary", "New mission offer"),
+-          offerForm(data.desk.pilots, data.desk.capture_targets, send));
++          offerForm(data.desk, send));
+         target.append(offer);
+       } else if (data.desk.offer_blocker) {
+         target.append(element("p", data.desk.offer_blocker));
+@@ -159,6 +170,8 @@
+     const ref = {id: mission.id, revision: mission.revision};
+     card.append(element("p", PHASES[mission.phase] ?? mission.phase, "eyebrow"),
+       element("h3", mission.objective));
++    if (mission.introductory) card.append(element("p", "Introductory mission"));
++    if (mission.hard_stake) card.append(element("p", mission.hard_stake));
+     if (mission.response) {
+       card.append(element("p", mission.response === "accept" ? "Response saved · Accepted" : "Response saved · Declined"));
+     }
+--- a/handler_punishments.py
++++ b/handler_punishments.py
+@@ -2,6 +2,7 @@
+
+ import json
+
++from girlframe.engine.campaign_opening import RESTRICTED_PUNISHMENTS
+ from girlframe.engine.m3_actor_state import ActorRef
+ from girlframe.engine.m3_lobotomy_state import OPTIONS, Plan
+ from girlframe.engine.m3_punishments import KINDS, Details
+@@ -228,6 +229,7 @@
+             kind
+             for kind, (_, severity) in KINDS.items()
+             if (severity != "severe" or not delegated)
++            and (not detail.get("narrative_limit") or kind not in RESTRICTED_PUNISHMENTS)
+             and (
+                 detail["required_severity"] is None
+                 or detail["required_severity"] == severity

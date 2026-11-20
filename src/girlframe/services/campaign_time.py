@@ -472,7 +472,7 @@ class CampaignTimeService:
                 key,
                 {"id": scene.id, "channel_id": str(scene.channel)},
                 str(uuid4()),
-                None,
+                apply_effects=False,
                 event_index=index,
             )
         body = {

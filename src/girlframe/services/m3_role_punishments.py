@@ -996,12 +996,18 @@ class RolePunishmentService:
                 from girlframe.services.m3_punishments import PunishmentService
 
                 pc_choices = PunishmentService(self.store).get(viewer, case.pc_work).get("choices")
+            from girlframe.engine.campaign_opening import RESTRICTED_PUNISHMENTS
+            from girlframe.services.campaign_difficulty import difficulty
+
+            kinds = list(available_for_case(state, case, bound)) if not stale else []
+            if kinds and difficulty(c, self.store.campaign_id) == "narrative":
+                kinds = [kind for kind in kinds if kind not in RESTRICTED_PUNISHMENTS]
             return dict(
                 id=identity,
                 revision=state.revision,
                 stale=stale,
                 case=projection,
-                kinds=list(available_for_case(state, case, bound)) if not stale else [],
+                kinds=kinds,
                 peers=peers,
                 pc_choices=pc_choices,
                 chooser=viewer.user_id == case.chooser_controller,

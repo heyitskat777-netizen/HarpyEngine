@@ -33,3 +33,37 @@ regular environment is below.
 ```
 
 Verification covers the offline engine and Discord SDK flow.
+
+## Combined candidate
+
+The integration starts from `81fa968` on `codex/narrative-death-integration`.
+The ZIP passed its integrity check and all nine manifest hashes matched.
+The two timing patches were already represented by `b79090e` and
+`6a9af80` with later Activity and Director changes on top. The remaining
+three patches were integrated. The new rules opening service lives in
+`campaign_difficulty.py` so that the existing Activity brief service can
+continue using its own contract. The shared calendar calls the current
+scene-close API. The reconciliation keeps the current Girl command
+structure, career-aware creation review, managed Activity startup,
+Soldier Defeat option, and Harpy capture fields.
+
+The first combined run found a mismatched scene-close signature during
+introductory day advancement. After repair, the focused opening, Session
+Zero, Defeat, calendar, Activity engine integration and native registration
+selection passed **38 tests in 38.74 seconds**. A follow-up covering the
+opening, severe punishments, Reign execution and Activity engine integration
+passed **15 tests in 22.40 seconds**. These selections overlap.
+
+The manifest-verified Activity snapshot and both overlays passed **4
+simulated checks in 18.93 seconds**. The Defeat field test uses the
+original Pilot's real saved outcome and exercises both an available and a
+spent Narrative exception. These results are separate from the 104 checks
+reported by the supplied package. See the
+[Activity handoff](../integrations/activity/P2_SESSION_UI_HANDOFF.md#campaign-difficulty-and-session-zero)
+for the required Session Zero controls and the supplied ports.
+
+The active Activity runs from the separate Windows checkout. Reconcile these
+ports onto its maintained routes and client files before deployment. The
+November 16 snapshot predates the current interface and serves as an offline
+test base. Authenticated Discord, a full repository regression, and cutover
+are pending.

@@ -357,8 +357,15 @@ class GameService:
             from girlframe.services.campaign_difficulty import guard_transition
 
             guard_transition(
-                c, self.store, previous_state, state, kind, event, actor,
-                action_id=metadata.get("action_id"), choice_id=metadata.get("choice_id"),
+                c,
+                self.store,
+                previous_state,
+                state,
+                kind,
+                event,
+                actor,
+                action_id=metadata.get("action_id"),
+                choice_id=metadata.get("choice_id"),
             )
             body = GameState.model_validate_json(state.model_dump_json()).model_dump_json()
             c.execute(

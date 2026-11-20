@@ -183,7 +183,8 @@ def projection(
     data: dict[str, Any] = dict(
         offer=action["data"].get("defeat_offer"),
         narrative=narrative,
-        narrative_death_available=narrative and narrative_death_available(c, game.store.campaign_id, state),
+        narrative_death_available=narrative
+        and narrative_death_available(c, game.store.campaign_id, state),
     )
     from girlframe.services import m3_soldier_expendable as expendable
 

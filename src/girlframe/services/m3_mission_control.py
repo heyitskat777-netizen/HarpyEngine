@@ -55,6 +55,10 @@ class MissionControlService:
                 and viewer.user_id in mission["offered_to"]
                 and row["response"] is None
             )
+            if mission.get("introductory"):
+                row["introductory"] = True
+            if mission.get("hard_stake"):
+                row["hard_stake"] = mission["hard_stake"]
             if is_handler:
                 actions: list[str] = []
                 blocked: dict[str, str] = {}
@@ -141,4 +145,10 @@ class MissionControlService:
             }
             if capture_targets is not None:
                 desk["capture_targets"] = capture_targets
+            if offer_reason is None:
+                intro, hard = missions.offer_requirements(viewer)
+                if intro:
+                    desk["introductory"] = True
+                if hard:
+                    desk["requires_hard_stake"] = True
         return {"offers": offers, "desk": desk}

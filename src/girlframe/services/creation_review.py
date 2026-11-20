@@ -227,11 +227,7 @@ class CreationReviewService:
             )
 
             def counterpart(row: dict[str, Any]) -> str:
-                return str(
-                    row["target_id"]
-                    if row["source_id"] == str(owner)
-                    else row["source_id"]
-                )
+                return str(row["target_id"] if row["source_id"] == str(owner) else row["source_id"])
 
             if (
                 extra is None
@@ -333,9 +329,7 @@ class CreationReviewService:
                 for x in sorted(current_bonds, key=lambda x: x["id"])
             ),
             shared=progress.shared_choices,
-            received_court=SharedSetupService(self.store).received_court(
-                connection, owner
-            ),
+            received_court=SharedSetupService(self.store).received_court(connection, owner),
             coordination=coordination,
             initial_conditions=self.store.policy.owner_initial_conditions,
             psych_strings=(
@@ -343,9 +337,7 @@ class CreationReviewService:
                     PsychStringAnchor(
                         kind="pilot",
                         reference=str(
-                            x["target_id"]
-                            if x["source_id"] == str(owner)
-                            else x["source_id"]
+                            x["target_id"] if x["source_id"] == str(owner) else x["source_id"]
                         ),
                         source_token=x["id"] + ":" + str(x["revision"]),
                     )
