@@ -106,6 +106,7 @@ tests/rules/test_director_handler_participation.py
 tests/rules/test_director_handler_play_examples.py
 tests/rules/test_director_handler_follow_through.py
 tests/rules/test_director_handler_character.py
+tests/rules/test_p2_handler_archetype_missions.py
 tests/rules/test_director_response_handoff.py
 # Reviewed world authorship, native sources and explicitly scoped established knowledge.
 tests/rules/test_world_development.py
