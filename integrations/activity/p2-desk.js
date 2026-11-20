@@ -278,6 +278,203 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     if (settings.human_fallback) agreement.append(element("p", "Human fallback · " + settings.human_fallback));
   }
 
+  const timeSlots = [["morning", "Morning"], ["afternoon", "Afternoon"], ["night", "Night"]];
+  const slotText = position => `Day ${position.day} · ${position.slot}`;
+  const minuteText = minute => `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`;
+
+  function timeField(parent, label) {
+    const [row, input] = field(label, "");
+    input.type = "time";
+    parent.append(row);
+    return () => {
+      if (!/^\d\d:\d\d$/.test(input.value)) throw new Error("Enter a fictional time.");
+      const [hour, minute] = input.value.split(":").map(Number);
+      return hour * 60 + minute;
+    };
+  }
+
+  function positionFields(parent, label, at) {
+    const [dayLabel, day] = field(`${label} day`, at?.day);
+    day.type = "number";
+    day.min = "1";
+    const [slotLabel, slot] = choiceField(`${label} slot`, timeSlots, at?.slot);
+    parent.append(dayLabel, slotLabel);
+    return () => ({day: Number(day.value), slot: slot.value});
+  }
+
+  function timeForm(parent, label) {
+    const panel = element("details");
+    panel.append(element("summary", label));
+    parent.append(panel);
+    return panel;
+  }
+
+  function timeSave(parent, label, route, values) {
+    parent.append(button(label, async key => {
+      const result = await write(route, values(), key);
+      await refresh();
+      if (result.reason) status.textContent = "Waiting for the Handler to review the timing.";
+      if (result.action_id) status.textContent = "Timed Play opened. Continue with the scene’s Play controls.";
+    }, () => {
+      try { return JSON.stringify(values()); } catch { return ""; }
+    }));
+  }
+
+  function renderCalendar(row, view, controls) {
+    if (view.mode === "legacy") {
+      if (!controls) return;
+      const form = timeForm(row, "Set the fictional calendar");
+      const [title, chapter] = field("Opening chapter", "");
+      const position = positionFields(form, "Opening", {day: 1, slot: "morning"});
+      form.append(title);
+      timeSave(form, "Initialize calendar", "time-initialize", () => ({anchor: {chapter: chapter.value, position: position()}}));
+      return;
+    }
+    row.append(element("p", `${view.anchor.chapter} · ${slotText(view.anchor.position)}`));
+    for (const booking of view.scenes) {
+      const line = `${booking.chapter} · ${slotText(booking.start)} to ${slotText(booking.end)} · ${booking.status}`;
+      row.append(element("p", line));
+      for (const entry of booking.entries) row.append(element("p", entry.account));
+      if (booking.status === "late" && (booking.joined || controls)) {
+        const form = timeForm(row, "Late debrief");
+        const [entryLabel, entry] = field("Debrief account", "");
+        form.append(entryLabel);
+        const submission = kind => ({scene: booking.id, cut: booking.late_cut, entry: {kind, account: entry.value}});
+        timeSave(form, "Request review", "time-late", () => submission("uncertain"));
+        if (controls) {
+          timeSave(form, "Record narration", "time-late", () => submission("narration"));
+          timeSave(form, "Close late debrief", "time-late-close", () => ({scene: booking.id, cut: booking.late_cut}));
+        }
+      }
+    }
+    if (!controls) return;
+    const scenes = [...view.unscheduled_scenes, ...view.scenes.filter(s => ["open", "scheduled"].includes(s.status))];
+    if (scenes.length && controls.pilots.length) {
+      const form = timeForm(row, "Schedule a scene");
+      const [selectLabel, select] = choiceField("Scene to schedule", scenes.map(s => [s.id, s.chapter ?? `Channel ${s.channel}`]), "");
+      const [pilotsLabel, pilots] = choiceField("Scheduled Pilots", controls.pilots.map(p => [p.id, p.label]), "");
+      pilots.options[0].remove();
+      pilots.multiple = true;
+      const [lateLabel, late] = field("Allow a late debrief", "");
+      late.type = "checkbox";
+      form.append(selectLabel, pilotsLabel);
+      const start = positionFields(form, "Scene starts", view.anchor.position);
+      const end = positionFields(form, "Scene ends", view.anchor.position);
+      form.append(lateLabel);
+      timeSave(form, "Save scene booking", "time-schedule", () => {
+        const booking = scenes.find(s => s.id === select.value);
+        if (!booking) throw new Error("Choose a scene to schedule.");
+        return {scene: booking.id, channel: booking.channel, revision: booking.scene_revision ?? booking.revision,
+          anchor: view.anchor_receipt, plan: {start: start(), end: end(),
+            participants: [...pilots.selectedOptions].map(p => p.value), allow_late_narration: late.checked}};
+      });
+    }
+    const form = timeForm(row, "Review a chapter cut");
+    const position = positionFields(form, "Cut to", view.anchor.position);
+    const [title, chapter] = field("Next chapter", view.anchor.chapter);
+    const review = element("div");
+    form.append(title, button("Preview chapter cut", async key => {
+      const cut = {target: {chapter: chapter.value, position: position()}};
+      const preview = await write("time-preview", {cut}, key);
+      review.replaceChildren();
+      for (const blocker of preview.blockers) {
+        review.append(element("p", blocker.kind.replaceAll("_", " ") + (blocker.id ? ` · ${blocker.id}` : "")));
+      }
+      if (!preview.blockers.length) timeSave(review, "Confirm chapter cut", "time-cut", () => ({cut, token: preview.token}));
+    }), review);
+    form.addEventListener("input", () => review.replaceChildren());
+  }
+
+  function renderMissionClock(row, view, controls) {
+    const clock = view.mission_timing;
+    if (!clock) {
+      const mission = controls?.active_mission;
+      const rooms = view.scenes.filter(s => s.status === "open");
+      if (!mission || !rooms.length) return;
+      const form = timeForm(row, "Open a timed mission scene");
+      const [roomLabel, room] = choiceField("Timed scene", rooms.map(s => [s.id, `${s.chapter} · ${slotText(s.start)}`]), "");
+      form.append(roomLabel);
+      const minute = timeField(form, "Clock starts");
+      const deadline = timeField(form, "Deadline time");
+      const [boundaryLabel, boundary] = choiceField("Cutoff", [["before", "Before this time"], ["by", "By this time"]], "before");
+      const [labelRow, label] = field("Deadline label", "");
+      form.append(boundaryLabel, labelRow);
+      timeSave(form, "Open mission clock", "time-open", () => {
+        const selected = rooms.find(s => s.id === room.value);
+        if (!selected) throw new Error("Choose an open scheduled scene.");
+        return {mission: mission.id, revision: mission.revision, channel: selected.channel, scene: selected.id,
+          anchor: view.anchor_receipt, start: {minute: minute(), deadline: {minute: deadline(), boundary: boundary.value, label: label.value}}};
+      });
+      return;
+    }
+    const head = `${minuteText(clock.minute)} · ${clock.deadline.label} ${clock.deadline.boundary} ${minuteText(clock.deadline.minute)}`;
+    row.append(element("h5", "Mission clock"), element("p", `${head} · ${clock.deadline_status.replaceAll("_", " ")}`));
+    if (clock.consequence_receipt) row.append(element("p", clock.deadline.consequence));
+    if (clock.ruling) row.append(element("p", clock.ruling.reason.replaceAll("_", " ")));
+    const own = clock.options.filter(option => option.pilot === view.viewer);
+    const chosen = own.some(option => clock.selected.some(choice => choice.option === option.id));
+    for (const option of own) {
+      const picked = clock.selected.find(choice => choice.option === option.id);
+      const quote = option.arrival_minute === null ? "Duration needs review" : `${option.estimated ? "Estimated arrival" : "Arrival"} ${minuteText(option.arrival_minute)}`;
+      row.append(element("p", `${option.label} · ${quote}${picked ? " · Selected" : ""}`));
+      if (!clock.ruling && !chosen) {
+        timeSave(row, `Choose ${option.label}`, "time-choose", () => ({id: clock.id, menu: clock.menu_receipt, option: option.id}));
+      }
+      if (picked && option.play) {
+        const play = timeForm(row, "Begin timed Keep Your Head");
+        const [contextLabel, context] = field("Describe what you do", "");
+        const [heatLabel, heat] = field("Heat to spend", 0);
+        heat.type = "number";
+        play.append(contextLabel, heatLabel);
+        timeSave(play, "Confirm and open native Play", "time-begin-play", () => ({channel: clock.channel,
+          sheet_revision: view.sheet_revision, selection: picked.receipt, context: context.value, heat: Number(heat.value)}));
+        timeSave(play, "Withdraw timed choice", "time-withdraw", () => ({id: clock.id, selection: picked.receipt}));
+      }
+    }
+    if (!controls) return;
+    const revision = () => ({id: clock.id, revision: clock.revision});
+    if (!clock.deadline.consequence) {
+      const form = timeForm(row, "Define the missed-deadline consequence");
+      const [label, answer] = field("Fictional consequence", "");
+      form.append(label);
+      timeSave(form, "Save consequence", "time-consequence", () => ({...revision(), account: answer.value}));
+    }
+    if (!clock.selected.length && controls.clock_pilots.length) {
+      const form = timeForm(row, "Publish Pilot options");
+      const [modeLabel, mode] = choiceField("Exchange", [["single", "One Pilot"], ["parallel", "Parallel Pilots"]], "single");
+      const list = element("div");
+      const choices = controls.pilots.filter(p => controls.clock_pilots.includes(p.id)).map(p => [p.id, p.label]);
+      const options = [];
+      const add = () => {
+        const id = crypto.randomUUID();
+        const group = element("fieldset");
+        const [pilotLabel, pilot] = choiceField("Option Pilot", choices, "");
+        const [labelRow, label] = field("Option", "");
+        const [minutesLabel, minutes] = field("Option minutes", "");
+        minutes.type = "number";
+        const [estimateLabel, estimate] = field("Estimated duration", "");
+        estimate.type = "checkbox";
+        const [playLabel, play] = field("Use Keep Your Head", "");
+        play.type = "checkbox";
+        group.append(pilotLabel, labelRow, minutesLabel, estimateLabel, playLabel);
+        list.append(group);
+        options.push(() => ({id, pilot: pilot.value, label: label.value, minutes: minutes.value === "" ? null : Number(minutes.value),
+          estimated: estimate.checked, play: play.checked ? "keep_your_head" : null}));
+      };
+      add();
+      form.append(modeLabel, list, button("Add option", async () => { if (options.length < 25) add(); }));
+      timeSave(form, "Publish options", "time-publish", () => ({...revision(), options: {mode: mode.value, available: options.map(read => read())}}));
+    }
+    if (clock.mode === "parallel" && clock.selected.length) {
+      const form = timeForm(row, "Resolve the parallel exchange");
+      const minute = timeField(form, "Common ending time");
+      const [label, account] = field("What brought the Pilots back together", "");
+      form.append(label);
+      timeSave(form, "Confirm parallel ending", "time-rejoin", () => ({...revision(), rejoin: {minute: minute(), account: account.value}}));
+    }
+    timeSave(row, "Close mission clock", "time-close", revision);
+  }
+
   function renderHandlerProfile(parent, profile) {
     parent.replaceChildren();
     parent.hidden = !profile;
@@ -537,6 +734,10 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
 
   function renderFacilitator(gm) {
     const queue = card(body, "Facilitator review");
+    if (gm.fictional_time?.clock) {
+      const clock = gm.fictional_time.clock;
+      queue.append(element("p", `Saved scene clock · ${minuteText(clock.minute)} ${clock.boundary} ${minuteText(clock.deadline)} · ${clock.status.replaceAll("_", " ")}`));
+    }
     if (!gm.handler_drafts.length && !gm.outcome_sources.length) {
       queue.append(element("p", "No pending reviews."));
     }
@@ -625,18 +826,24 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
   }
 
   async function refresh() {
-    const [work, gm, opening, brief, persona, policy, observation, review] = await Promise.all([
+    const [work, gm, opening, brief, persona, policy, observation, review, time] = await Promise.all([
       scene ? read("work", true) : null, scene ? read("gm-work", true) : null,
       read("opening", true), read("opening-brief", true), read("persona-setup", true),
       activityShadow ? read("activity-policy", true) : null,
       activityShadow ? read("status", true) : null,
       activityShadow ? read("activity-review", true) : null,
+      read("fictional-time", true),
     ]);
     body.replaceChildren();
     if (activityShadow) renderShadow(policy, observation, review);
     if (opening) renderOpening(opening);
     if (brief?.launched) renderBrief(brief);
     if (persona) renderPersona(persona);
+    if (time && (time.mode === "asynchronous" || time.handler_controls)) {
+      const row = card(body, "Fictional time");
+      renderCalendar(row, time, time.handler_controls);
+      if (time.mode === "asynchronous") renderMissionClock(row, time, time.handler_controls);
+    }
     if (!work && scene) {
       body.append(element("p", "Scene work is unavailable. Check scene membership and consent."));
     } else if (work) {

@@ -19,12 +19,14 @@ from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_handler_character import PROFILES
 from girlframe.engine.m3_handler_state import GEAR, HISTORY_LABELS, PLAYBOOKS, Draft, HandlerNotes
 from girlframe.services.activity_shadow import ActivityShadowReview
+from girlframe.services.activity_timing import ActivityTiming
 from girlframe.services.campaign_opening import CampaignOpeningService, OpeningDraft
 from girlframe.services.director_context import DirectorContextService
 from girlframe.services.director_conversation import DirectorConversationService
 from girlframe.services.director_npc_delivery import NpcDeliveryService
 from girlframe.services.director_observation import DirectorObservationService
 from girlframe.services.director_session import DirectorSessionService
+from girlframe.services.director_time import scene_time
 from girlframe.services.gm_outcomes import GMOutcomeService, SourceKind
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_game import GameService
@@ -48,6 +50,7 @@ class P2Scene:
         self.handler_setup = HandlerCreationService(session.store)
         self.shadow = ActivityShadowReview(session.conversation)
         self.npc_delivery = NpcDeliveryService(session.context)
+        self.time = ActivityTiming(session.game)
 
     @classmethod
     def model_fixture(
@@ -94,6 +97,7 @@ class P2Scene:
         with self.session.store.engine.connect() as c:
             self.session.outcomes._scope(c, viewer, scene, gm=True)
             row = self.session.observer._scene(c, scene, viewer)
+            time = scene_time(c, self.session.store.campaign_id, scene)
             state = load_state(c, self.session.store.campaign_id)
             names = {npc.id: npc.name for npc in state.world.npcs} if state.world else {}
             names.update({key: sheet.callsign for key, sheet in state.sheets.items()})
@@ -113,6 +117,7 @@ class P2Scene:
             "npc_roster": self.session.reactions.npc_roster(viewer, scene),
             "model_rulings": self.session.outcomes.provider is not None,
             "response_targets": targets,
+            **({"fictional_time": time.model_dump(mode="json")} if time else {}),
         }
 
     def open_ruling(
@@ -192,6 +197,8 @@ class P2Scene:
     def read(
         self, viewer: GuildViewer, scene: str, route: str, identity: str | None = None
     ) -> dict[str, Any]:
+        if route == "fictional-time" and identity is None:
+            return self.time.view(viewer)
         if route == "activity-policy":
             return self.session.observer.activity_policy(viewer)
         if route == "activity-review":
@@ -264,6 +271,8 @@ class P2Scene:
         route: str,
         data: dict[str, Any],
     ) -> dict[str, Any]:
+        if route.startswith("time-"):
+            return self.time.write(viewer, key, route, data)
         if route == "activity-policy-save" and data.keys() == {"revision", "enabled"}:
             return self.session.observer.configure_activity(
                 viewer, key, data["revision"], data["enabled"]

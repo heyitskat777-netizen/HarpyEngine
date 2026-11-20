@@ -321,6 +321,9 @@ class GMOutcomeService:
                     .order_by(*table.primary_key.columns)
                 ).mappings()
             ]
+        from girlframe.services.director_time import scene_time
+
+        time = scene_time(c, self.store.campaign_id, scene)
         packet = OutcomePacket(
             request_id="pending",
             scene_id=scene,
@@ -338,6 +341,7 @@ class GMOutcomeService:
                 "records": json.loads(json.dumps(records)),
                 "references": [r.model_dump(mode="json") for r in references],
                 "guard": self.observer._guard(c, scene_row, self.observer._state(c, scene)),
+                **({"fictional_time": time.model_dump(mode="json")} if time else {}),
             },
         )
         return packet.model_copy(update={"request_id": _digest(packet.model_dump(mode="json"))})

@@ -6,6 +6,8 @@ from pydantic import Field, model_validator
 
 from girlframe.ai.contracts import Contract
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.scenes.campaign_time import Identity, Position
+from girlframe.scenes.mission_timing import Boundary, DeadlineStatus, Minute
 
 
 class KnowledgeRelation(Contract):
@@ -43,6 +45,24 @@ class KnowledgeReference(Contract):
         return self
 
 
+class SceneClock(Contract):
+    receipt: Identity
+    day: int
+    minute: Minute
+    deadline: Minute
+    boundary: Boundary
+    status: DeadlineStatus
+    consequence_recorded: bool
+
+
+class SceneTime(Contract):
+    anchor_receipt: Identity
+    position: Position
+    start: Position | None = None
+    end: Position | None = None
+    clock: SceneClock | None = None
+
+
 class DirectorContext(Contract):
     schema_version: Literal[1] = 1
     campaign_id: str
@@ -51,6 +71,7 @@ class DirectorContext(Contract):
     actor: ActorRef | None = None
     revision: str
     references: tuple[KnowledgeReference, ...] = Field(max_length=100)
+    fictional_time: SceneTime | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class DirectorDecision(Contract):

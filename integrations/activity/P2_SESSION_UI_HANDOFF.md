@@ -666,6 +666,40 @@ server revises the original private sheet without changing the mechanical
 revision or agreed starting relationships. Reviewed Handler requests use the
 notes as portrayal guidance. Facts still come from authorized scene context.
 
+## Fictional time in the Activity and Director
+
+**Fictional time** uses the campaign's saved calendar and the native mission
+clock. The appointed Handler sets the calendar, books scenes, previews and
+confirms chapter cuts, and publishes route options. The original Pilot selects
+their own option. A timed **Keep Your Head** opens the ordinary native Play with
+its saved selection. The first native roll commits its time receipt. Other
+players see only their own bookings and eligible options. Late narration and
+requests for review use the private calendar ledger.
+
+The synthetic scene desk uses `/api/director/{scene}/fictional-time`. The managed
+Activity uses `/api/campaign-opening/fictional-time` for the authenticated
+campaign. Both return the calendar projection and role-specific control data.
+Use the normal Activity idempotency key with each write.
+
+| Action | Existing service through the Activity transport |
+| --- | --- |
+| Calendar and bookings | `time-initialize` and `time-schedule` |
+| Chapter cut | `time-preview` returns blockers and a token. `time-cut` confirms the identical cut with that token. |
+| Late debrief | `time-late` records authorized narration, a named knowledge grant, or a review request. `time-late-close` ends the original late scene. |
+| Open and publish | `time-open` binds the active dispatch and scheduled scene. `time-publish` uses the current clock revision. |
+| Owned selection | `time-choose` uses the exact published menu. `time-begin-play` and `time-withdraw` use the Pilot's selection receipt. |
+| Human timing rulings | `time-consequence`, `time-rejoin`, and `time-close` use the current clock revision. |
+
+The reviewed Handler receives only the current scheduled span and, for an
+eligible Pilot's heard turn, the scene's saved clock. A clock readback cites
+`clock_receipt` and goes through private GM review and original-Handler delivery.
+The service checks the current clock, the original recipients, and current consent
+again before delivery. Each native receipt can make earlier drafts stale. A clock
+change alone creates no new response need. The Director's private context and GM
+review expose the local time for coordination and preserve the original rules
+receipts. Calendar time and mission minutes leave Front advancement to its
+existing explicit review workflow.
+
 ## Offline Activity shadow readiness
 
 The isolated readiness fixture uses `--p2-fixture --p2-shadow-readiness`. Its

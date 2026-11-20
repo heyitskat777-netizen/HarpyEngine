@@ -13,9 +13,9 @@ from test_mission_service import service as setup_missions
 
 from girlframe.database import tables as t
 from girlframe.delivery.m2_worker import GameWorker
-from girlframe.engine.m2 import PlayInput
 from girlframe.scenes.campaign_time import Anchor, Cut, ScenePlan
 from girlframe.scenes.mission_timing import Deadline, Option, Options, Rejoin, SequenceStart
+from girlframe.services.activity_timing import ActivityTiming
 from girlframe.services.campaign_time import CampaignTimeService
 from girlframe.services.m2_game import GameService
 from girlframe.services.mission_timing import MissionTimingService
@@ -147,19 +147,17 @@ def test_timed_root_roll_and_required_responses_charge_once_after_reconnect(ledg
     menu = publish(timing, opened, route)
     selection = timing.choose(PLAYER, "select-timed-play", opened["id"], menu["receipt"], route.id)
     assert selection["status"] == "play_selected" and selection["minute"] == START
-    prepared = PlayInput(
-        play="keep_your_head",
-        context="Commit to the tunnel crossing",
-        trigger_confirmed=True,
-        heat=0,
-    )
-    action = game.begin(
+    action = ActivityTiming(game).write(
         PLAYER,
         "timed-play",
-        900,
-        state(game).sheets["2"].revision,
-        prepared,
-        timing_selection=selection["receipt"],
+        "time-begin-play",
+        {
+            "channel": "900",
+            "sheet_revision": state(game).sheets["2"].revision,
+            "context": "Commit to the tunnel crossing",
+            "heat": 0,
+            "selection": selection["receipt"],
+        },
     )["action_id"]
     assert timeline.projection(PLAYER)["mission_timing"]["minute"] == START
     with pytest.raises(WorkflowError, match="LOCK_NOT_ACKNOWLEDGED"):

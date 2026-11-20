@@ -1,5 +1,34 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Reviewed Handler and Director use of fictional time
+
+Integrated on the timed-missions development base `cee7a2a`. The Activity desk
+uses the same Handler-confirmed calendar, locked chapter cuts, and original
+Pilot selections as the engine. The reviewed Handler can read the local clock
+on an eligible Pilot's heard turn. A receipt-backed reply requires private
+review and original-Handler delivery. The Director receives the saved clock in
+private GM review and the existing context guards. An unrelated scene's clock
+changes leave that scene's work untouched. Front time remains an explicit review.
+
+**19 focused tests passed in 28.01 seconds.** The verification covered the current
+clock readback, routine WAIT, rejecting an unrelated recipient, a stale approved
+reply, an early IC turn, simultaneous scene isolation, and one native timed Keep
+with its original receipt. The managed simulated Discord host test passed in
+8.15 seconds. Offline Chromium exercised calendar initialization, scene booking,
+publish and choose, clock movement from 18:20 to 18:35, and scoped visibility.
+Ruff and JavaScript syntax passed. Scoped mypy passed for 11 engine source files.
+
+```sh
+PYTHONPATH=src .venv/bin/python -m pytest -q --tb=short \
+  tests/rules/test_director_timing.py tests/rules/test_campaign_time.py \
+  tests/rules/test_mission_timing.py tests/test_handler_contract_revision.py \
+  tests/test_director_activity_scene.py::test_parallel_scenes_file_only_approved_reports_after_native_close
+```
+
+The browser used a disposable campaign on the manifest-verified Activity
+handoff overlay. Full regression, provider calls and live Discord testing
+remain outside this verification. [Activity contract](../integrations/activity/P2_SESSION_UI_HANDOFF.md#fictional-time-in-the-activity-and-director)
+
 ## Campaign time and timed missions integration
 
 The two patches in `HarpyEngine-timed-missions.zip` were imported in order on

@@ -528,6 +528,8 @@ class DirectorContextService:
     def _build(
         self, c: Connection, viewer: GuildViewer, scene_id: str, *, actor: ActorRef | None = None
     ) -> DirectorContext:
+        from girlframe.services.director_time import scene_time
+
         scene = self.observations._scene(c, scene_id, viewer)
         state = self.observations._state(c, scene_id)
         if state.policy.mode != "shadow" or not self.observations._consented(c, scene, state):
@@ -570,6 +572,9 @@ class DirectorContextService:
             audience=audience,
             actor=actor,
             references=references,
+            fictional_time=scene_time(c, self.store.campaign_id, scene_id)
+            if actor is None
+            else None,
             revision=_digest(
                 {
                     "guard": self.observations._guard(c, scene, state),

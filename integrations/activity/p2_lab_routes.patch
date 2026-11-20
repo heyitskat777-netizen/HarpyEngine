@@ -20,7 +20,7 @@
 +SETUP_ROUTE = re.compile(
 +    r"/api/campaign-opening/([a-z-]{1,35})(?:/([A-Za-z0-9:-]{1,100}))?"
 +)
-+SETUP_READ = {"opening", "opening-brief", "persona-setup", "persona-agreement"}
++SETUP_READ = {"opening", "opening-brief", "persona-setup", "persona-agreement", "fictional-time"}
 +SETUP_WRITE = {
 +    "opening-save", "opening-launch", "persona-save", "persona-notes", "persona-activate", "persona-propose", "persona-answer"
 +}
@@ -176,7 +176,7 @@
              )
              handler = setup.handler
 +            if (catalog and campaign is not default and (match := SETUP_ROUTE.fullmatch(path))
-+                    and match[1] in SETUP_WRITE and match[2] is None):
++                    and (match[1] in SETUP_WRITE or match[1].startswith("time-")) and match[2] is None):
 +                try:
 +                    key = self.headers.get("Idempotency-Key", "")
 +                    if not KEY.fullmatch(key):

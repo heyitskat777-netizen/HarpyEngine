@@ -20,6 +20,7 @@ from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import resolve
 from girlframe.services.director_context import DirectorContextService, next_contribution_ordinal
 from girlframe.services.director_knowledge import DirectorKnowledgeService
+from girlframe.services.director_time import require_clock_audience
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_actors import profiles
@@ -87,6 +88,8 @@ class HandlerDeliveryService:
                 raise WorkflowError(
                     "HANDLER_CONCERN_AUDIENCE: report back to the original Pilot and listeners."
                 )
+        if reply.clock_receipt is not None:
+            require_clock_audience(c, self.store, scene, reply.clock_receipt, recipients)
         current = self.context._current(c, scene)
         if any(
             not set(reply.source_refs)
@@ -179,15 +182,14 @@ class HandlerDeliveryService:
             raise WorkflowError("HANDLER_DELIVERY_OWNER: the approved Handler must deliver.")
         if plan["consent"] != self.observer._state(c, scene).consent_generation:
             raise WorkflowError("HANDLER_DELIVERY_CONSENT: renew the actual review.")
-        if self.observer._state(
-            c, scene
-        ).activity_epoch is not None and not self.conversation._saved(
-            c, "handler-delivery:" + draft_id
-        ):
+        prior = self.conversation._saved(c, "handler-delivery:" + draft_id)
+        clock_receipt = draft["reply"].get("clock_receipt")
+        if clock_receipt and not prior:
+            recipients = tuple(ActorRef.model_validate(raw) for raw in plan["recipients"])
+            require_clock_audience(c, self.store, scene, clock_receipt, recipients)
+        if self.observer._state(c, scene).activity_epoch is not None and not prior:
             self.conversation._current_handler_draft(c, controller, scene, draft)
-        if plan.get("character_cue") and not self.conversation._saved(
-            c, "handler-delivery:" + draft_id
-        ):
+        if plan.get("character_cue") and not prior:
             source = self.conversation._need_source(c, scene, draft["source_id"])
             if self.conversation.peer_covered(c, scene, source, handler):
                 raise WorkflowError(

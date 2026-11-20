@@ -25,6 +25,14 @@ def test_bound_campaign_can_save_a_private_handler_sheet_before_any_pilot_activa
         assert "Advocate" in choices["playbooks"]
         assert choices["profiles"]["Advocate"]["behavior"]["wait"]
         assert request(host, path("persona-setup"), pilot)["sheet"] is None
+        assert request(host, path("fictional-time"), pilot)["mode"] == "legacy"
+        request(
+            host,
+            path("time-initialize"),
+            pilot,
+            {"anchor": {"chapter": "Relay", "position": {"day": 1, "slot": "morning"}}},
+            status=HTTPStatus.CONFLICT,
+        )
         request(host, path("opening"), pilot, status=HTTPStatus.FORBIDDEN)
 
         change = {

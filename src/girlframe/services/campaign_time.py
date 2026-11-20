@@ -592,88 +592,85 @@ class CampaignTimeService:
     def projection(self, viewer: GuildViewer) -> dict[str, Any]:
         with self.store.engine.connect() as c:
             c.exec_driver_sql("BEGIN")
-            self.game.authorize(c, viewer, game=False)
-            current = ledger.anchor(c, self.store.campaign_id)
-            if current is None:
-                return {"version": 1, "mode": "legacy"}
-            receipt, anchor = current
-            phase = self._phase(c)
-            appointed = HandlerService(self.store).current(c)[1].handler_id
-            handler = viewer.user_id == appointed == load_state(c, self.store.campaign_id).handler
-            rows = self._scene_rows(c)
-            scenes = self._scenes(c, rows)
-            visible = [
-                {
-                    "id": scene.id,
-                    "channel": str(scene.channel),
-                    "chapter": scene.chapter,
-                    "start": scene.plan.start.model_dump(),
-                    "end": scene.plan.end.model_dump(),
-                    "scheduled_participants": [str(uid) for uid in scene.plan.participants],
-                    "joined": viewer.user_id in scene.joined,
-                    "status": (
-                        ("closed" if scene.late_closed else "late")
-                        if scene.sealed_by
-                        else (
-                            "scheduled"
-                            if scene.plan.start.order > anchor.position.order
-                            else "open"
-                        )
-                        if scene.row and scene.row["open"]
-                        else "closed"
-                    ),
-                    "scene_revision": scene.row["revision"] if scene.row and handler else None,
-                    "late_cut": scene.sealed_by,
-                    "entries": [
-                        {k: x[k] for k in ("id", "kind", "account", "status")}
-                        for x in scene.entries
-                        if viewer.user_id == x["author"] or viewer.user_id in x["audience"]
-                    ],
-                }
-                for scene in sorted(
-                    scenes.values(), key=lambda item: (item.plan.start.order, item.id)
-                )
-                if handler
-                or viewer.user_id in scene.plan.participants
-                or viewer.user_id in scene.joined
-            ]
-            followups = [
-                {"route": "play_choice", "id": row["id"], "revision": row["revision"]}
-                for row in self.game.pending_choices(c, viewer)
-            ]
-            followups.extend(
-                {"route": "required_work", "id": row["id"], "revision": row["revision"]}
-                for row in self._work(c).values()
-                if (
-                    row["owner_id"] == str(viewer.user_id)
-                    and row["state"] != "resolved"
-                    and row["kind"] != MEDICAL_WORK
-                )
-            )
-            followups.extend(
-                {"route": "medical", "id": item["id"], "revision": item["revision"]}
-                for item in MedicalService(self.store)._tasks(c, viewer)
-                if item["actionable"]
-            )
-            result = {
-                "version": 1,
-                "mode": "asynchronous",
-                "anchor": anchor.model_dump(mode="json"),
-                "anchor_receipt": receipt,
-                "slots": list(SLOTS),
-                "cadre_phase": [{"kind": x["kind"], "phase": x["phase"]} for x in phase],
-                "scenes": visible,
-                "followups": followups,
-            }
-            from girlframe.services.mission_timing import MissionTimingService
+            return self._projection(c, viewer)
 
-            timing = MissionTimingService(self.store).project(c, viewer)
-            if timing is not None:
-                result["mission_timing"] = timing
-            if handler:
-                result["unscheduled_scenes"] = [
-                    {"id": identity, "channel": row["channel_id"], "revision": row["revision"]}
-                    for identity, row in rows.items()
-                    if row["open"] and identity not in scenes
-                ]
-            return result
+    def _projection(self, c: Connection, viewer: GuildViewer) -> dict[str, Any]:
+        self.game.authorize(c, viewer, game=False)
+        current = ledger.anchor(c, self.store.campaign_id)
+        if current is None:
+            return {"version": 1, "mode": "legacy"}
+        receipt, anchor = current
+        phase = self._phase(c)
+        appointed = HandlerService(self.store).current(c)[1].handler_id
+        handler = viewer.user_id == appointed == load_state(c, self.store.campaign_id).handler
+        rows = self._scene_rows(c)
+        scenes = self._scenes(c, rows)
+        visible = [
+            {
+                "id": scene.id,
+                "channel": str(scene.channel),
+                "chapter": scene.chapter,
+                "start": scene.plan.start.model_dump(),
+                "end": scene.plan.end.model_dump(),
+                "scheduled_participants": [str(uid) for uid in scene.plan.participants],
+                "joined": viewer.user_id in scene.joined,
+                "status": (
+                    ("closed" if scene.late_closed else "late")
+                    if scene.sealed_by
+                    else ("scheduled" if scene.plan.start.order > anchor.position.order else "open")
+                    if scene.row and scene.row["open"]
+                    else "closed"
+                ),
+                "scene_revision": scene.row["revision"] if scene.row and handler else None,
+                "late_cut": scene.sealed_by,
+                "entries": [
+                    {k: x[k] for k in ("id", "kind", "account", "status")}
+                    for x in scene.entries
+                    if viewer.user_id == x["author"] or viewer.user_id in x["audience"]
+                ],
+            }
+            for scene in sorted(scenes.values(), key=lambda item: (item.plan.start.order, item.id))
+            if handler
+            or viewer.user_id in scene.plan.participants
+            or viewer.user_id in scene.joined
+        ]
+        followups = [
+            {"route": "play_choice", "id": row["id"], "revision": row["revision"]}
+            for row in self.game.pending_choices(c, viewer)
+        ]
+        followups.extend(
+            {"route": "required_work", "id": row["id"], "revision": row["revision"]}
+            for row in self._work(c).values()
+            if (
+                row["owner_id"] == str(viewer.user_id)
+                and row["state"] != "resolved"
+                and row["kind"] != MEDICAL_WORK
+            )
+        )
+        followups.extend(
+            {"route": "medical", "id": item["id"], "revision": item["revision"]}
+            for item in MedicalService(self.store)._tasks(c, viewer)
+            if item["actionable"]
+        )
+        result = {
+            "version": 1,
+            "mode": "asynchronous",
+            "anchor": anchor.model_dump(mode="json"),
+            "anchor_receipt": receipt,
+            "slots": list(SLOTS),
+            "cadre_phase": [{"kind": x["kind"], "phase": x["phase"]} for x in phase],
+            "scenes": visible,
+            "followups": followups,
+        }
+        from girlframe.services.mission_timing import MissionTimingService
+
+        timing = MissionTimingService(self.store).project(c, viewer)
+        if timing is not None:
+            result["mission_timing"] = timing
+        if handler:
+            result["unscheduled_scenes"] = [
+                {"id": identity, "channel": row["channel_id"], "revision": row["revision"]}
+                for identity, row in rows.items()
+                if row["open"] and identity not in scenes
+            ]
+        return result

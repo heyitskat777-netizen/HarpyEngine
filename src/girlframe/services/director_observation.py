@@ -479,6 +479,10 @@ class DirectorObservationService:
                 return InputResult(
                     scene_id=scene_id, generation=state.generation, status="ignored_ooc"
                 ).model_dump(mode="json")
+            if command.source_id is None:
+                from girlframe.services.campaign_time_history import require_due
+
+                require_due(c, self.store.campaign_id, scene_id)
             if self.activity_shadow:
                 self._catch_up_plays(c, scene, state)
                 state = self._state(c, scene_id)
@@ -889,6 +893,9 @@ class DirectorObservationService:
             for name in ("subsystems", "activity_specialist_rules", "native_risk_plays"):
                 if name in approval:
                     approval[name] = sorted(approval[name])
+        from girlframe.services.director_time import scene_time
+
+        time = scene_time(c, self.store.campaign_id, scene["id"])
         return _digest(
             {
                 "generation": state.generation,
@@ -903,6 +910,7 @@ class DirectorObservationService:
                 "choices": [tuple(row) for row in choice_versions],
                 "required_work": [tuple(row) for row in work_versions],
                 "lock": (lock["action_id"], lock["state"]) if lock else None,
+                **({"fictional_time": time.model_dump(mode="json")} if time else {}),
             }
         )
 

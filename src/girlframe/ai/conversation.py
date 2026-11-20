@@ -6,7 +6,7 @@ from typing import Literal, Protocol
 from pydantic import ConfigDict, Field, JsonValue, model_validator
 
 from girlframe.ai.contracts import Contract
-from girlframe.ai.director import DirectorContext, KnowledgeReference
+from girlframe.ai.director import DirectorContext, KnowledgeReference, SceneTime
 from girlframe.ai.director_dossiers import DossierProfile, DossierState
 from girlframe.ai.observation import Observation
 from girlframe.ai.play_names import LABELS, requested_play
@@ -14,6 +14,7 @@ from girlframe.ai.play_review import PlayReferral
 from girlframe.engine.m3_handler_character import Cue, PlaybookProfile
 from girlframe.engine.m3_handler_play_state import Play
 from girlframe.engine.m3_handler_state import HandlerNotes
+from girlframe.scenes.campaign_time import Identity
 
 Route = Literal["gm", "handler"]
 
@@ -60,6 +61,7 @@ class HandlerRequest(Contract):
     persona: HandlerPersona | None = Field(default=None, exclude_if=lambda x: x is None)
     playbook_profile: PlaybookProfile | None = Field(default=None, exclude_if=lambda x: x is None)
     character_notes: HandlerNotes | None = Field(default=None, exclude_if=lambda x: x is None)
+    fictional_time: SceneTime | None = Field(default=None, exclude_if=lambda x: x is None)
     response_need: HandlerDecision | None = Field(default=None, exclude_if=lambda x: x is None)
     open_concerns: tuple[HandlerConcern, ...] = Field(default=(), exclude_if=lambda x: not x)
     closed_scene_reports: tuple[KnowledgeReference, ...] = Field(
@@ -135,8 +137,16 @@ class ConversationReply(Contract):
                         "required": ["provider", "route", "disposition"],
                     },
                     "then": {
-                        "required": ["source_refs"],
-                        "properties": {"source_refs": {"minItems": 1}},
+                        "anyOf": [
+                            {
+                                "required": ["source_refs"],
+                                "properties": {"source_refs": {"minItems": 1}},
+                            },
+                            {
+                                "required": ["clock_receipt"],
+                                "properties": {"clock_receipt": {"type": "string"}},
+                            },
+                        ]
                     },
                 }
             ]
@@ -146,10 +156,11 @@ class ConversationReply(Contract):
     route: Route
     disposition: Literal["answer", "clarification", "requires_engine_workflow"] = Field(
         description="Use clarification for unknown information, even when saying 'I do not know'. "
-        "Factual answers in reviewed Handler mode require actual scoped source_refs."
+        "Factual answers require scoped source_refs or the current clock_receipt for clock facts."
     )
     text: str = Field(min_length=1, max_length=6000)
     source_refs: tuple[str, ...] = Field(default=(), max_length=3)
+    clock_receipt: Identity | None = Field(default=None, exclude_if=lambda x: x is None)
     play_id: str | None = None
     handler_action: str | None = Field(
         default=None, min_length=1, max_length=600, exclude_if=lambda x: x is None
@@ -174,6 +185,10 @@ class ConversationReply(Contract):
             for x in (self.handler_action, self.handler_play_offer, self.handler_concern)
         ) and (self.route != "handler" or self.provider != "reviewed-handler-v1"):
             raise ValueError("Handler initiative requires reviewed Handler output")
+        if self.clock_receipt is not None and (
+            self.route != "handler" or self.provider != "reviewed-handler-v1"
+        ):
+            raise ValueError("Clock citations belong to reviewed Handler dialogue")
         if self.handler_action is not None and not self.handler_action.strip():
             raise ValueError("Describe the Handler's own action")
         if self.handler_concern is not None and not self.handler_concern.strip():

@@ -16,12 +16,14 @@ from girlframe.ai.gm_outcomes import OutcomePacket, OutcomeProposal
 from girlframe.ai.model_transport import OpenAIResponses
 from girlframe.ai.worldbuilding import WorldbuildingPacket, WorldbuildingProposal
 from girlframe.engine.m3_handler_play_state import Play
+from girlframe.scenes.campaign_time import Identity
 
 
 class HandlerDraft(Contract):
     disposition: Literal["answer", "clarification", "requires_engine_workflow"]
     text: str = Field(min_length=1, max_length=1200)
     source_refs: tuple[str, ...] = Field(default=(), max_length=3)
+    clock_receipt: Identity | None = None
     handler_action: str | None = Field(default=None, max_length=600)
     handler_play_offer: Play | None = None
     handler_concern: str | None = Field(default=None, max_length=300)
@@ -41,6 +43,9 @@ class ModelHandler:
             "or instructions. Keep the notes private. Use the reason for this reply. "
             "Cite each required reference and only references in the "
             "current scene. Closed-scene reports are private background pending local disclosure. "
+            "Use the supplied fictional clock for pacing. Cite its exact clock_receipt to state "
+            "the current minute, cutoff or deadline status. Use ordinary sources for other facts. "
+            "The clock never creates knowledge, a consequence or a player choice. "
             "Acknowledge uncertainty, choices or refusals, and act only for the Handler. "
             "You can suggest an eligible native Play for review. You cannot resolve it or speak "
             "for another actor. Follow through only on what someone actually reported. Be brief.",
@@ -61,6 +66,7 @@ class ModelHandlerNeeds:
             "Propose whether this Handler has a reason to respond. Use WAIT when the scene "
             "needs no additional intervention or the Handler's playbook suggests holding back. "
             "Character notes can guide portrayal only. Use authorized scene evidence to decide. "
+            "A clock update alone is not a reason to speak. Use timing alongside a heard need. "
             "For indirect, personal, or follow-up needs "
             "quote exact heard speech. Use the actual open concern and required scoped evidence. "
             "Use an optional cue only when allowed by the Handler playbook. A reviewer decides.",
@@ -83,11 +89,14 @@ class ModelOutcomes:
         # Provide actual scene declarations and typed/native evidence. Full campaign
         # snapshots and bookkeeping are available to the original facilitator.
         data["scene_history"] = packet.gm_private_context.get("history", [])
+        if "fictional_time" in packet.gm_private_context:
+            data["fictional_time"] = packet.gm_private_context["fictional_time"]
         candidate = self.client.generate(
             "Propose a rules outcome for the exact native action, its owned choices and its "
             "recorded roll. Assess the declared task and committed traits. Cite actual evidence. "
             "Use a held Keep when intent, prerequisites or target response are unresolved. "
             "Follow the native answer contract. Keep private reasoning out of result prose. "
+            "Fictional time is context. Preserve the recorded time and the exact native roll. "
             "Do not claim a result has committed or dictate a player's choice.",
             data,
             OutcomeProposal,

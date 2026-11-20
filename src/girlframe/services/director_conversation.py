@@ -39,6 +39,7 @@ from girlframe.services.director_closeout import handler_reports
 from girlframe.services.director_context import DirectorContextService
 from girlframe.services.director_observation import _digest
 from girlframe.services.director_play_catalog import PlayCatalog
+from girlframe.services.director_time import handler_time, scene_time
 from girlframe.services.m2_state import load_state
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
@@ -192,6 +193,9 @@ class DirectorConversationService:
                 else None,
                 playbook_profile=PROFILES[playbook] if playbook else None,
                 character_notes=notes,
+                fictional_time=handler_time(c, self.store, scene_id, source.actor)
+                if self.handler_mode == "reviewed" and question != "Scene update."
+                else None,
                 open_concerns=self.delivery.open_concerns(
                     c, scene_id, role.actor, source.actor, {ref.id for ref in role.references}
                 )
@@ -213,6 +217,7 @@ class DirectorConversationService:
                 scene_id=scene_id,
                 audience="gm",
                 references=references,
+                fictional_time=scene_time(c, self.store.campaign_id, scene_id),
                 revision=_digest(
                     {
                         "guard": self.observations._guard(c, scene, state),
@@ -676,7 +681,13 @@ class DirectorConversationService:
             raise WorkflowError(
                 "HANDLER_CITATION_INVALID: cite only actual Handler-known references."
             )
-        if reply.disposition == "answer" and not refs:
+        if reply.clock_receipt is not None and (
+            request.fictional_time is None
+            or request.fictional_time.clock is None
+            or request.fictional_time.clock.receipt != reply.clock_receipt
+        ):
+            raise WorkflowError("HANDLER_CLOCK_INVALID: cite the supplied scene clock receipt.")
+        if reply.disposition == "answer" and not refs and reply.clock_receipt is None:
             raise WorkflowError(
                 "HANDLER_CITATION_REQUIRED: factual answers need scoped references."
             )
@@ -895,6 +906,7 @@ class DirectorConversationService:
                     )
                 elif (
                     reply.handler_concern
+                    or reply.clock_receipt
                     or current_decision.concern_id
                     or current_decision.reason == "reviewed_character_cue"
                 ):
