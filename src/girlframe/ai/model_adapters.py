@@ -140,8 +140,10 @@ class ModelReactions:
             raise ValueError("Use the cast NPC reaction workflow.")
         candidate = self.client.generate(
             "Propose one optional reaction for this actor. Use their known speech, owned "
-            "dossier, currently known fronts and available actions. Waiting or declining "
-            "can be appropriate. Never speak for a Pilot or grant a new effect. "
+            "dossier, currently known fronts and available actions. Use the dossier's voice, "
+            "motives and reactions as portrayal guidance. A personal aim grants no authority "
+            "or new scene knowledge. Keep private portrayal notes out of dialogue. "
+            "Waiting or declining may fit. Never speak for a Pilot or grant a new effect. "
             "The actual controller reviews the proposal.",
             {"request_id": packet["request_id"], "role": role},
             ReactionProposal,

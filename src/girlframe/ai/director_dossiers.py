@@ -116,6 +116,11 @@ class Personnel(Contract):
     mannerisms: str = Field(default="", max_length=500)
 
 
+class PilotDossierOrigin(Contract):
+    plan: str = Field(min_length=1, max_length=100)
+    callsign: str = Field(min_length=1, max_length=100)
+
+
 class DossierProposal(Contract):
     id: str
     scene_id: str
@@ -128,6 +133,7 @@ class DossierProposal(Contract):
     personnel: Personnel
     binding: str
     application: Literal["controller_review_only"] = "controller_review_only"
+    pilot_origin: PilotDossierOrigin | None = Field(default=None, exclude_if=lambda x: x is None)
 
 
 class DossierRecord(Contract):
@@ -142,6 +148,7 @@ class DossierRecord(Contract):
     scene_id: str
     proposal_id: str
     source_event: str
+    pilot_origin: PilotDossierOrigin | None = Field(default=None, exclude_if=lambda x: x is None)
 
 
 class DossierNote(Contract):

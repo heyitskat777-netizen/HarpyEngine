@@ -46,6 +46,9 @@ def test_session_zero_difficulty_and_cast_use_the_current_private_group(tmp_path
         assert get(pilot)["handler_ready"] == hm
         assert get(pilot)["player_count"] == 1
         assert set(get(pilot)["difficulty_options"]) == {"narrative", "normal", "hard"}
+        presets = get()["pilot_generator"]["portrayals"]
+        assert len({item["archetype"] for item in presets}) == len(presets) == 12
+        assert "pilot_generator" not in get(pilot)
         plan = {
             "revision": get()["revision"],
             "difficulty": "narrative",
@@ -57,9 +60,23 @@ def test_session_zero_difficulty_and_cast_use_the_current_private_group(tmp_path
         post("plan", handler, plan)
         prior = get()["plan_proposal"]
         post("plan-vote", pilot, {"proposal": prior, "approve": True})
-        post("plan", handler, plan | {"revision": get()["revision"], "difficulty": "hard"})
+        mixed = presets[0] | {"voice": presets[1]["voice"], "vibe": "Quiet and irreverent"}
+        post(
+            "plan",
+            handler,
+            plan
+            | {
+                "revision": get()["revision"],
+                "difficulty": "hard",
+                "seats": {
+                    "player_count": 1,
+                    "ai_pilots": [{"callsign": "Orchard", "portrayal": mixed}],
+                },
+            },
+        )
         assert get(pilot)["plan_approvals"] == 0
         assert get(pilot)["seats"]["ai_pilots"][0]["callsign"] == "Orchard"
+        assert get(pilot)["seats"]["ai_pilots"][0]["portrayal"] == mixed
         post("plan-vote", pilot, {"proposal": prior, "approve": True}, HTTPStatus.CONFLICT)
         request(host, route("session-zero"), other, status=HTTPStatus.FORBIDDEN)
         assert get(handler, south)["members"] == []

@@ -101,9 +101,22 @@ The organizer selects the known members. The group approves the Handler
 and their portrayal mode, either **Player** or **AI with human review**.
 Each Pilot attaches their own current sheet. The group's approved plan
 includes shared goals, Narrative, Normal, or Hard difficulty, the human
-player count, and named AI Pilot concepts. A reviewer for an AI Handler
+player count, and AI Pilot drafts. A reviewer for an AI Handler
 counts toward group approvals. The player count excludes that reviewer
-seat. Planned AI Pilots are recorded for campaign preparation.
+seat. **Generate AI Pilot** draws a callsign and one of twelve portrayal
+presets. The organizer can choose an archetype, edit every field and lock
+individual traits before rerolling. Rerolling keeps the callsign, background,
+and selected archetype. The plan includes the edited voice, behavior under
+pressure, repair habits, values, fears, contradictions, and personal goal.
+The generator runs locally from a supplied deck.
+
+An owner of a cast Pilot Candidate or Ex-Pilot NPC can attach a plan entry
+from **AI Pilot dossiers** in that scene's Director work. The controller
+reviews and confirms the proposal through the existing dossier workflow.
+The confirmed profile enters that NPC's scoped reaction packet as portrayal
+guidance. The import requires a present owned NPC with no existing dossier.
+It supplies personality for that actor's reviewed responses. NPC creation,
+casting, native rules and consequences use their existing workflows.
 
 The appointed Handler opens the approved introduction. Its private
 roleplay thread and day advance are in Session Zero. The Mission Desk

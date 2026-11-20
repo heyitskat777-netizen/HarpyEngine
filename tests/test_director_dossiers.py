@@ -1,6 +1,7 @@
 """Controller-confirmed actor dossiers preserve private perspectives and native state."""
 
 import pytest
+from test_director_activity_scene import P2Scene
 from test_director_continuity import roles
 from test_director_conversation import routed as routed
 from test_director_observation import observed as observed
@@ -16,10 +17,14 @@ from girlframe.ai.director_dossiers import (
     DossierState,
     Personnel,
 )
+from girlframe.engine.campaign_opening import CampaignSeats, Opening, PlannedAIPilot
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_world_state import Npc
+from girlframe.engine.pilot_portrayal import PILOT_PORTRAYALS
+from girlframe.services.campaign_difficulty import EVENT
 from girlframe.services.director_context import DirectorContextService
 from girlframe.services.director_dossiers import DirectorDossierService
+from girlframe.services.director_session import DirectorSessionService
 from girlframe.services.m3_actors import ActorService
 from girlframe.services.m3_cast import CastService
 from girlframe.services.m3_missions import MissionService
@@ -203,3 +208,99 @@ def test_same_human_npc_and_pilot_self_fields_do_not_cross_roles_or_native_visib
         service.personnel(PLAYER, scene, pilot, npc)
     with pytest.raises(WorkflowError, match="DOSSIER_NOT_OWNED"):
         service.role_packet(OTHER, scene, npc)
+
+
+def test_generated_pilot_uses_the_approved_plan_and_actual_npc_controller(routed):
+    observer, context, scene, game, _ = routed
+    _, human_pilot = roles(observer, scene)
+    established(routed)
+    world = WorldService(MissionService(observer.store))
+    native_roles = NpcRoleService(world)
+    offer = native_roles.offer(
+        ADMIN,
+        "offer-pilot-npc",
+        state(game).revision,
+        Npc(
+            id="trainee",
+            name="Tern",
+            jobs=("pilot_candidate",),
+            detail="Uses the training bay.",
+            controller=PLAYER.user_id,
+            cell=(0, 0),
+        ),
+    )
+    native_roles.respond(PLAYER, "accept-trainee", offer["id"], state(game).revision, "accept")
+    npc = ActorRef(kind="npc", entity="trainee")
+    cast = CastService(ActorService(world.missions))
+    view = cast.view(PLAYER, 900)
+    cast.change(
+        PLAYER, "cast-trainee", 900, view["game_revision"], view["cast_revision"], "join", npc
+    )
+    portrayal = PILOT_PORTRAYALS[0].model_copy(update={"voice": "PRIVATE_MIXED_VOICE"})
+    record = Opening(
+        scene="approved-introduction",
+        channel=901,
+        handler=ADMIN.user_id,
+        audience=(ADMIN.user_id, PLAYER.user_id),
+        plan="approved-plan",
+        goals="Share handoffs.",
+        difficulty="normal",
+        introduction="Check in.",
+        first_mission_day=4,
+        seats=CampaignSeats(
+            player_count=2,
+            ai_pilots=(
+                PlannedAIPilot(
+                    callsign="Tern", concept="From the training wing.", portrayal=portrayal
+                ),
+            ),
+        ),
+    )
+    with observer.store.transaction() as c:
+        observer.store._audit(
+            c, ADMIN.user_id, "approved-pilot-plan", EVENT, record.model_dump(mode="json")
+        )
+    app = P2Scene(DirectorSessionService(context))
+    assert app.read(OTHER, scene, "pilot-dossiers") == {"pilots": [], "actors": []}
+    options = app.read(PLAYER, scene, "pilot-dossiers")
+    assert options["pilots"] == ["Tern"]
+    assert options["actors"] == [{"actor": npc.model_dump(mode="json"), "label": "Tern"}]
+    route = "pilot-dossier-propose"
+    data = {
+        "actor": npc.model_dump(mode="json"),
+        "origin": {"plan": options["plan"], "callsign": "Tern"},
+    }
+    with pytest.raises(WorkflowError, match="PILOT_DOSSIER_OWNER"):
+        app.write(ADMIN, "wrong-owner", scene, route, data)
+    with pytest.raises(WorkflowError, match="PILOT_DOSSIER_PLAN"):
+        app.write(
+            PLAYER,
+            "stale-plan",
+            scene,
+            route,
+            data | {"origin": {"plan": "old", "callsign": "Tern"}},
+        )
+    original = state(game)
+    draft = app.write(PLAYER, "prepare", scene, route, data)
+    assert app.write(PLAYER, "prepare", scene, route, data) == draft
+    assert app.session.dossiers.role_packet(PLAYER, scene, npc).profile is None
+    review = app.read(PLAYER, scene, "dossier-review", draft["id"])
+    assert review["pilot_origin"] == data["origin"]
+    assert "PRIVATE_MIXED_VOICE" == review["profile"]["voice"]
+    with pytest.raises(WorkflowError, match="DOSSIER_NOT_OWNED"):
+        app.read(ADMIN, scene, "dossier-review", draft["id"])
+    saved = app.write(PLAYER, "accept-dossier", scene, "dossier-confirm", {"id": draft["id"]})
+    assert saved["version"] == 1 and saved["effects_applied"] is False
+    assert state(game).model_dump(exclude={"revision", "facts"}) == original.model_dump(
+        exclude={"revision", "facts"}
+    )
+    assert app.read(PLAYER, scene, "pilot-dossiers")["pilots"] == []
+    assert app.session.dossiers.role_packet(PLAYER, scene, human_pilot).profile is None
+    _, source = send(
+        observer, scene, "pilot-turn", text="What did you find?", fictional_channel="comms"
+    )
+    reaction = app.session.reactions.open(ADMIN, "reaction", scene, npc, source.source_id)
+    dossier = app.session.reactions.packet(ADMIN, scene, reaction["id"])["role"]["dossier"]
+    assert dossier["profile"]["voice"] == "PRIVATE_MIXED_VOICE"
+    assert dossier["profile"]["reaction_tendencies"] == [portrayal.pressure]
+    assert dossier["context"]["actor"] == npc.model_dump(mode="json")

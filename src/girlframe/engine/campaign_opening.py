@@ -6,6 +6,7 @@ from pydantic import AfterValidator, Field, field_validator
 
 from girlframe.engine.identity import Snowflake
 from girlframe.engine.m2 import Model
+from girlframe.engine.pilot_portrayal import PilotPortrayal
 
 Difficulty = Literal["narrative", "normal", "hard"]
 HandlerControl = Literal["player", "ai"]
@@ -28,6 +29,7 @@ def _trim_callsign(value: str) -> str:
 class PlannedAIPilot(Model):
     callsign: Annotated[str, Field(max_length=100), AfterValidator(_trim_callsign)]
     concept: str = Field(default="", max_length=400)
+    portrayal: PilotPortrayal | None = Field(default=None, exclude_if=lambda x: x is None)
 
 
 class CampaignSeats(Model):

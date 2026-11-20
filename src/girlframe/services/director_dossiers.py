@@ -18,14 +18,17 @@ from girlframe.ai.director_dossiers import (
     HandlerExperience,
     HandlerIdentity,
     Personnel,
+    PilotDossierOrigin,
     StartingRelationship,
 )
 from girlframe.database import tables as t
+from girlframe.engine.campaign_opening import PlannedAIPilot
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, ActorView
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_world_development import current as current_developments
+from girlframe.services.campaign_difficulty import opening
 from girlframe.services.director_closeout import handler_experiences
 from girlframe.services.director_context import DirectorContextService
 from girlframe.services.director_knowledge import DirectorKnowledgeService
@@ -230,6 +233,107 @@ class DirectorDossierService:
             raise WorkflowError("DOSSIER_PROPOSAL_UNAVAILABLE: reopen the actual dossier proposal.")
         return DossierProposal.model_validate_json(json.dumps(body["proposal"]))
 
+    @staticmethod
+    def _pilot_npc(actual: ActorView, viewer: GuildViewer) -> bool:
+        return (
+            actual.rules == "npc"
+            and actual.controller == viewer.user_id
+            and bool({"pilot_candidate", "ex_pilot"}.intersection(actual.jobs))
+        )
+
+    @staticmethod
+    def _used_pilots(canon: GameState) -> set[PilotDossierOrigin]:
+        return {
+            dossier.pilot_origin
+            for fact in canon.facts
+            if fact.get("kind") == "director_dossier"
+            and (dossier := DossierRecord.model_validate_json(fact["body"])).pilot_origin
+            is not None
+        }
+
+    def pilot_options(self, viewer: GuildViewer, scene: str) -> dict[str, Any]:
+        with self.store.engine.connect() as c:
+            self._scope(c, viewer, scene)
+            record = opening(c, self.store.campaign_id)
+            if record is None or record.seats is None or viewer.user_id not in record.audience:
+                return {"pilots": [], "actors": []}
+            canon = load_state(c, self.store.campaign_id)
+            used = self._used_pilots(canon)
+            return {
+                "plan": record.plan,
+                "pilots": [
+                    p.callsign
+                    for p in record.seats.ai_pilots
+                    if PilotDossierOrigin(plan=record.plan, callsign=p.callsign) not in used
+                ],
+                "actors": [
+                    {"actor": x.ref.model_dump(mode="json"), "label": x.label}
+                    for x in self.knowledge._actor_views(c, self.observer._scene(c, scene))
+                    if self._pilot_npc(x, viewer) and not self._records(canon, x.ref)
+                ],
+            }
+
+    def _approved_pilot(
+        self, c: Connection, viewer: GuildViewer, actual: ActorView, origin: PilotDossierOrigin
+    ) -> PlannedAIPilot:
+        record = opening(c, self.store.campaign_id)
+        if not self._pilot_npc(actual, viewer):
+            raise WorkflowError("PILOT_DOSSIER_OWNER: use your own present pilot NPC.")
+        if (
+            record is None
+            or record.seats is None
+            or viewer.user_id not in record.audience
+            or origin.plan != record.plan
+        ):
+            raise WorkflowError("PILOT_DOSSIER_PLAN: use the group's approved Session Zero plan.")
+        if origin in self._used_pilots(load_state(c, self.store.campaign_id)):
+            raise WorkflowError("PILOT_DOSSIER_USED: this approved Pilot has a dossier.")
+        for pilot in record.seats.ai_pilots:
+            if pilot.callsign == origin.callsign:
+                return pilot
+        raise WorkflowError("PILOT_DOSSIER_PLAN: choose a Pilot on the approved plan.")
+
+    def propose_pilot(
+        self, viewer: GuildViewer, key: str, scene: str, actor: ActorRef, origin: PilotDossierOrigin
+    ) -> dict[str, Any]:
+        return self.propose(
+            viewer, key, scene, actor, 0, DossierProfile(), DossierState(), pilot_origin=origin
+        )
+
+    @staticmethod
+    def _pilot_profile(pilot: PlannedAIPilot) -> DossierProfile:
+        traits = pilot.portrayal
+        if traits is None:
+            return DossierProfile(presence="recurring", background=pilot.concept.strip())
+        style = " · ".join(x.strip() for x in (traits.archetype, traits.vibe) if x.strip())
+        background = "\n".join(
+            x
+            for x in (
+                style,
+                pilot.concept.strip(),
+                "Personal aim: " + traits.goal.strip() if traits.goal.strip() else "",
+            )
+            if x
+        )
+        behavior = "\n".join(
+            x
+            for x in (
+                traits.approach.strip(),
+                "After a mistake: " + traits.repair.strip() if traits.repair.strip() else "",
+            )
+            if x
+        )
+        return DossierProfile(
+            presence="recurring",
+            background=background,
+            voice=traits.voice.strip(),
+            behavior=behavior,
+            reaction_tendencies=(traits.pressure.strip(),) if traits.pressure.strip() else (),
+            values=(traits.value.strip(),) if traits.value.strip() else (),
+            fears=(traits.fear.strip(),) if traits.fear.strip() else (),
+            contradictions=(traits.contradiction.strip(),) if traits.contradiction.strip() else (),
+        )
+
     def propose(
         self,
         viewer: GuildViewer,
@@ -240,6 +344,8 @@ class DirectorDossierService:
         profile: DossierProfile,
         state: DossierState,
         personnel: Personnel | None = None,
+        *,
+        pilot_origin: PilotDossierOrigin | None = None,
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             actual = self._actor(c, scene, actor)
@@ -248,6 +354,11 @@ class DirectorDossierService:
             history = self._records(load_state(c, self.store.campaign_id), actor)
             if expected_version != len(history):
                 raise WorkflowError("STALE_DOSSIER: use the exact current dossier revision.")
+            portrayal = (
+                self._pilot_profile(self._approved_pilot(c, viewer, actual, pilot_origin))
+                if pilot_origin is not None
+                else profile
+            )
             self._validate_state(c, scene, actor, state)
             proposal = DossierProposal(
                 id="dossier-proposal:" + str(uuid4()),
@@ -256,10 +367,11 @@ class DirectorDossierService:
                 controller=actual.controller,
                 proposer=viewer.user_id,
                 expected_version=expected_version,
-                profile=profile,
+                profile=portrayal,
                 state=state,
                 personnel=personnel or Personnel(),
                 binding=self._binding(c, scene, actor),
+                pilot_origin=pilot_origin,
             )
             c.execute(
                 t.director_context["shadow"]
@@ -289,6 +401,7 @@ class DirectorDossierService:
                 "profile": profile.model_dump(mode="json"),
                 "state": state.model_dump(mode="json"),
                 "personnel": (personnel or Personnel()).model_dump(mode="json"),
+                **({"pilot_origin": pilot_origin.model_dump(mode="json")} if pilot_origin else {}),
             },
             operation,
             authorize=lambda c: self._scope(c, viewer, scene),
@@ -316,6 +429,7 @@ class DirectorDossierService:
                 for fact in canon.facts
                 if fact.get("kind") == "director_dossier"
             }
+            used_pilots = self._used_pilots(canon)
             table = t.director_context["shadow"]
             ids = c.scalars(
                 sa.select(table.c.id).where(
@@ -338,7 +452,10 @@ class DirectorDossierService:
                 ):
                     continue
                 try:
-                    current = proposal.binding == self._binding(c, scene, proposal.actor)
+                    current = (
+                        proposal.pilot_origin not in used_pilots
+                        and proposal.binding == self._binding(c, scene, proposal.actor)
+                    )
                 except WorkflowError:
                     # Recovery metadata must remain usable when an old source needs retirement.
                     current = False
@@ -348,6 +465,7 @@ class DirectorDossierService:
                         "actor": proposal.actor.model_dump(mode="json"),
                         "controller": proposal.controller,
                         "expected_version": proposal.expected_version,
+                        **({"generated_pilot": True} if proposal.pilot_origin else {}),
                         "status": "awaiting_controller_confirmation"
                         if current
                         else "stale_reopen_source",
@@ -373,6 +491,8 @@ class DirectorDossierService:
             if proposal.binding != self._binding(c, scene, proposal.actor):
                 raise WorkflowError("STALE_DOSSIER: reopen current actor, knowledge and revision.")
             self._validate_state(c, scene, proposal.actor, proposal.state)
+            if proposal.pilot_origin is not None:
+                self._approved_pilot(c, viewer, actual, proposal.pilot_origin)
             canon = load_state(c, self.store.campaign_id)
             history = self._records(canon, proposal.actor)
             event = str(uuid4())
@@ -388,6 +508,7 @@ class DirectorDossierService:
                 scene_id=scene,
                 proposal_id=identity,
                 source_event=event,
+                pilot_origin=proposal.pilot_origin,
             )
             canon.facts.append({"kind": "director_dossier", "body": record.model_dump_json()})
             self.game.event(

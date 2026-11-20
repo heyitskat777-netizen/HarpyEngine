@@ -3,7 +3,7 @@
 import json
 from typing import Any, cast
 
-from girlframe.ai.director_dossiers import HandlerExperienceSelection
+from girlframe.ai.director_dossiers import HandlerExperienceSelection, PilotDossierOrigin
 from girlframe.ai.director_reactions import ReactionProposal
 from girlframe.ai.gm_outcomes import OutcomeProposal
 from girlframe.ai.gm_protocol import TaskFrame
@@ -273,6 +273,10 @@ class P2Scene:
             return self.session.work(viewer, scene)
         if route == "gm-work":
             return self.gm_work(viewer, scene)
+        if route == "pilot-dossiers" and identity is None:
+            return self.session.dossiers.pilot_options(viewer, scene)
+        if route == "dossier-review" and identity is not None:
+            return self.session.dossiers.review(viewer, scene, identity).model_dump(mode="json")
         if route == "timing-review" and scene and identity is None:
             return {"items": self.timing_reviews.view(viewer, scene)}
         if route == "reports":
@@ -309,6 +313,16 @@ class P2Scene:
     ) -> dict[str, Any]:
         if route in SESSION_ZERO_WRITES:
             return self.session_zero.write(viewer, key, route, data)
+        if route == "pilot-dossier-propose" and data.keys() == {"actor", "origin"}:
+            return self.session.dossiers.propose_pilot(
+                viewer,
+                key,
+                scene,
+                ActorRef.model_validate(data["actor"]),
+                PilotDossierOrigin.model_validate(data["origin"]),
+            )
+        if route == "dossier-confirm" and data.keys() == {"id"} and isinstance(data["id"], str):
+            return self.session.dossiers.confirm(viewer, key, scene, data["id"])
         if route == "time-acknowledge" and data.keys() == {"scene", "source_receipt"}:
             if (
                 not isinstance(data["scene"], str)

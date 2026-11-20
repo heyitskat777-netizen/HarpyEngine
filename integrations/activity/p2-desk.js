@@ -241,8 +241,14 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     );
     if (state.goals) plan.append(element("p", state.goals));
     for (const pilot of state.seats?.ai_pilots ?? []) {
-      plan.append(element("p", "Planned AI Pilot · " + pilot.callsign +
-        (pilot.concept ? " · " + pilot.concept : "")));
+      const details = timeForm(plan, "Planned AI Pilot · " + pilot.callsign);
+      if (pilot.concept) details.append(element("p", pilot.concept));
+      const labels = {archetype: "Archetype", vibe: "Vibe", voice: "Voice", approach: "First move",
+        pressure: "Under pressure", repair: "After a mistake", value: "Value", fear: "Fear",
+        contradiction: "Contradiction", goal: "Personal goal"};
+      for (const [key, label] of Object.entries(labels)) {
+        if (pilot.portrayal?.[key]) details.append(element("p", label + " · " + pilot.portrayal[key]));
+      }
     }
     if (state.plan_proposal && !open) {
       plan.append(element("p", state.plan_approvals + "/" + state.members.length + " plan approvals"));
@@ -262,29 +268,106 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       const pilots = [];
       const list = element("div");
       panel.append(list);
+      const generator = state.pilot_generator ?? {portrayals: [], callsigns: []};
+      let deck = [];
+      const traits = {
+        vibe: "Vibe",
+        voice: "Voice",
+        approach: "Typical first move",
+        pressure: "Under pressure",
+        repair: "After a mistake",
+        value: "What they value",
+        fear: "What they fear",
+        contradiction: "Contradiction",
+        goal: "Personal goal",
+      };
+      const pick = choices => choices[Math.floor(Math.random() * choices.length)];
+      function nextArchetype(previous) {
+        if (!deck.length) deck = [...generator.portrayals];
+        const choices = deck.filter(item => item.archetype !== previous);
+        const next = pick(choices.length ? choices : deck);
+        deck.splice(deck.indexOf(next), 1);
+        return next;
+      }
+
+      function unusedCallsign() {
+        const used = new Set(pilots.map(pilot => pilot.callsign.value.trim().toLowerCase()));
+        const names = generator.callsigns.filter(name => !used.has(name.toLowerCase()));
+        if (names.length) return pick(names);
+        let number = 1;
+        while (used.has("pilot " + number)) number += 1;
+        return "Pilot " + number;
+      }
+
       function addPilot(saved) {
         const slot = element("fieldset");
+        slot.append(element("legend", "AI Pilot"));
         const [label, callsign] = field("AI Pilot callsign", saved?.callsign);
         callsign.maxLength = 100;
         slot.append(label);
-        const concept = textArea(slot, "AI Pilot concept", saved?.concept, 400, false);
-        const entry = {callsign, concept};
+        const concept = textArea(slot, "AI Pilot background", saved?.concept, 400, false);
+        const editor = timeForm(slot, "Edit AI Pilot personality");
+        const archetypes = generator.portrayals.map(item => item.archetype);
+        const savedArchetype = saved?.portrayal?.archetype;
+        if (savedArchetype && !archetypes.includes(savedArchetype)) archetypes.push(savedArchetype);
+        const [archetypeLabel, archetype] = choiceField("AI Pilot archetype",
+          archetypes.map(name => [name, name]), savedArchetype);
+        archetype.setAttribute("aria-label", "AI Pilot archetype");
+        editor.append(archetypeLabel);
+        const edits = Object.entries(traits).map(([key, label]) => {
+          const input = textArea(editor, label, saved?.portrayal?.[key], key === "vibe" ? 60 : 400, false);
+          const keepLabel = element("label", "Keep " + label.toLowerCase() + " on reroll");
+          const lock = element("input");
+          lock.type = "checkbox";
+          keepLabel.prepend(lock);
+          editor.append(keepLabel);
+          return {key, input, lock};
+        });
+        editor.append(button("Use selected archetype", () => {
+          const preset = generator.portrayals.find(item => item.archetype === archetype.value);
+          if (!preset) throw new Error("Choose an AI Pilot archetype first.");
+          for (const edit of edits) if (!edit.lock.checked) edit.input.value = preset[edit.key];
+        }), button("Reroll unlocked traits", () => {
+          const pool = generator.portrayals;
+          for (const edit of edits) {
+            if (edit.lock.checked) continue;
+            const choices = pool.map(item => item[edit.key]).filter(value => value !== edit.input.value);
+            if (choices.length) edit.input.value = pick(choices);
+          }
+        }));
+        const entry = {
+          callsign,
+          save() {
+            const portrayal = {archetype: archetype.value};
+            for (const {key, input} of edits) portrayal[key] = input.value.trim();
+            return {
+              callsign: callsign.value,
+              concept: concept.value,
+              ...(Object.values(portrayal).some(Boolean) ? {portrayal} : {}),
+            };
+          },
+        };
         pilots.push(entry);
         slot.append(button("Remove AI Pilot", () => {
           pilots.splice(pilots.indexOf(entry), 1);
           slot.remove();
         }));
         list.append(slot);
+        editor.open = Boolean(saved?.portrayal);
       }
       for (const pilot of state.seats?.ai_pilots ?? []) addPilot(pilot);
       panel.append(button("Add AI Pilot", () => {
         if (pilots.length >= state.limit) throw new Error("The AI Pilot list is full.");
         addPilot();
       }));
+      if (generator.portrayals.length) panel.append(button("Generate AI Pilot", () => {
+        if (pilots.length >= state.limit) throw new Error("The AI Pilot list is full.");
+        const last = pilots.at(-1)?.save().portrayal?.archetype;
+        addPilot({callsign: unusedCallsign(), portrayal: nextArchetype(last)});
+      }));
       sessionZeroSave(panel, "Save campaign plan for approval", "session-zero-plan", () => ({
         revision, difficulty: select.value, goals: goals.value,
-        seats: {player_count: state.player_count, ai_pilots: pilots.map(({callsign, concept}) =>
-          ({callsign: callsign.value, concept: concept.value}))},
+        seats: {player_count: state.player_count, ai_pilots: pilots.map(pilot => pilot.save())},
       }));
       if (state.plan_approved && sheets.every(([, value]) => value === "attached")) {
         const launch = timeForm(row, "Open the approved introduction");
@@ -931,6 +1014,46 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     }
   }
 
+  function renderPilotDossiers(options, work) {
+    const pending = work.dossiers.filter(item => item.generated_pilot);
+    if (!pending.length && (!options.pilots.length || !options.actors.length)) return;
+    const row = card(body, "AI Pilot dossiers");
+    if (options.pilots.length && options.actors.length) {
+      const form = timeForm(row, "Attach a planned Pilot");
+      const [pilotLabel, pilot] = choiceField("Approved AI Pilot",
+        options.pilots.map(callsign => [callsign, callsign]));
+      const [actorLabel, actor] = choiceField("Your Pilot NPC in this scene",
+        options.actors.map(item => [item.actor.entity, item.label]));
+      pilot.required = actor.required = true;
+      form.append(pilotLabel, actorLabel);
+      sessionZeroSave(form, "Prepare dossier for review", "pilot-dossier-propose", () => ({
+        actor: options.actors.find(item => item.actor.entity === actor.value)?.actor,
+        origin: {plan: options.plan, callsign: pilot.value},
+      }));
+    }
+    for (const item of pending) {
+      const panel = card(row, "Pilot dossier review");
+      if (item.status !== "awaiting_controller_confirmation") {
+        panel.append(element("p", "The actor or scene changed. Prepare a fresh dossier."));
+        continue;
+      }
+      panel.append(button("Review Pilot dossier", async () => {
+        const review = await read("dossier-review/" + routeId(item.id));
+        const profile = review.profile;
+        const fields = [["Background", profile.background], ["Voice", profile.voice],
+          ["Behavior", profile.behavior], ["Under pressure", profile.reaction_tendencies.join(" · ")],
+          ["Values", profile.values.join(" · ")], ["Fears", profile.fears.join(" · ")],
+          ["Contradictions", profile.contradictions.join(" · ")]];
+        panel.replaceChildren(element("h4", review.pilot_origin.callsign));
+        for (const [label, value] of fields) if (value) panel.append(element("p", label + " · " + value));
+        panel.append(button("Confirm Pilot dossier", async key => {
+          await write("dossier-confirm", {id: item.id}, key);
+          await refresh();
+        }));
+      }));
+    }
+  }
+
   function renderOwn(work) {
     const owned = card(body, "Your pending decisions");
     if (work.native.choices.length) {
@@ -1114,7 +1237,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
   }
 
   async function refresh() {
-    const [work, gm, opening, brief, persona, policy, observation, review, time, timingReview, sessionZero] = await Promise.all([
+    const [work, gm, opening, brief, persona, policy, observation, review, time, timingReview, sessionZero, pilotDossiers] = await Promise.all([
       scene ? read("work", true) : null, scene ? read("gm-work", true) : null,
       read("opening", true), read("opening-brief", true), read("persona-setup", true),
       activityShadow ? read("activity-policy", true) : null,
@@ -1123,6 +1246,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       read("fictional-time", true),
       scene ? read("timing-review", true) : null,
       !scene ? read("session-zero", true) : null,
+      scene ? read("pilot-dossiers", true) : null,
     ]);
     body.replaceChildren();
     if (activityShadow) renderShadow(policy, observation, review);
@@ -1143,6 +1267,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     } else if (work) {
       renderHandler(work);
       if (gm) renderFacilitator(gm);
+      if (pilotDossiers) renderPilotDossiers(pilotDossiers, work);
       renderOwn(work);
     }
     if (!work || !gm) renderTimingReviews(body, timingReview?.items);

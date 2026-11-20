@@ -8,6 +8,7 @@ from pydantic import TypeAdapter
 from girlframe.engine.campaign_opening import DIFFICULTIES, CampaignSeats, Difficulty
 from girlframe.engine.identity import Snowflake
 from girlframe.engine.m3_handler_state import PLAYBOOKS
+from girlframe.engine.pilot_portrayal import PILOT_CALLSIGNS, PILOT_PORTRAYALS
 from girlframe.engine.session_zero import MAX_GROUP, CharacterNotes, HandlerProfile
 from girlframe.services.read_only_bot import GuildViewer
 from girlframe.services.session_zero import SessionZeroService
@@ -59,7 +60,13 @@ class SessionZeroDesk:
         if state.get("opening"):
             for key in ("handler", "channel"):
                 state["opening"][key] = str(state["opening"][key])
-        return state | {"viewer": str(viewer.user_id), "playbooks": PLAYBOOKS, "limit": MAX_GROUP}
+        state.update(viewer=str(viewer.user_id), playbooks=PLAYBOOKS, limit=MAX_GROUP)
+        if state["handler_ready"] == state["viewer"] and state.get("opening") is None:
+            state["pilot_generator"] = {
+                "callsigns": PILOT_CALLSIGNS,
+                "portrayals": tuple(item.model_dump(mode="json") for item in PILOT_PORTRAYALS),
+            }
+        return state
 
     def write(
         self, viewer: GuildViewer, key: str, route: str, data: dict[str, Any]

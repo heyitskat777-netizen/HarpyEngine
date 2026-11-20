@@ -6618,3 +6618,41 @@ and approval. The existing Chromium timing-review and Director scene scripts
 passed their parallel-scene, reconnect, scoped-delivery, and closeout checks.
 Authenticated Discord, paid providers, and the full regression remain
 separate. [Activity handoff](../integrations/activity/P2_SESSION_UI_HANDOFF.md#campaign-difficulty-and-session-zero)
+
+## AI Pilot portrayal generator
+
+Development base `e2b282e` on `codex/narrative-death-integration`.
+Session Zero can generate an original callsign and a portrayal from
+twelve archetypes. The organizer can select a preset, edit its fields,
+and lock individual traits when rerolling. The older callsign and concept
+form still loads and saves. The group approves the resulting draft.
+
+The scene's **AI Pilot dossiers** control lets the actual controller link
+one approved plan entry to a present Pilot Candidate or Ex-Pilot NPC
+without a dossier. It reuses the normal controller proposal and
+confirmation receipts. The entry can seed one NPC. The confirmed dossier
+carries the source plan and appears in the NPC's scoped reaction packet.
+The test checks a mixed voice and pressure response, verifies a wrong
+controller and stale plan are rejected, and compares the native state
+before and after confirmation.
+
+```sh
+PYTHONPATH="$PWD/src" /workspace/HarpyEngine/.venv/bin/python -m pytest -q \
+  tests/test_director_dossiers.py tests/test_director_reactions.py \
+  tests/rules/test_campaign_opening.py --tb=short
+
+/workspace/HarpyEngine/.venv/bin/python tools/verify_activity_bundle.py \
+  --source /workspace/source-handoff-2026-11-16 \
+  --output var/activity-pilot-generator --p2-routes \
+  --test test_managed_session_zero.py --test test_managed_campaign_opening.py
+```
+
+The engine selection passed **18 tests in 23.15 seconds**. The simulated
+Activity selection passed **2 tests in 15.39 seconds**. Chromium exercised
+a complete twelve-preset run with distinct callsigns, picked a specific
+archetype, preserved a locked custom voice while rerolling other fields,
+and saved the mixed profile for group approval. The existing Director
+scene browser rehearsal also passed. Ruff, scoped mypy, and the JavaScript
+syntax check passed. The generator uses offline written presets. Actual
+model portrayals and authenticated Discord behavior remain unverified.
+[Activity handoff](../integrations/activity/P2_SESSION_UI_HANDOFF.md#campaign-difficulty-and-session-zero)
