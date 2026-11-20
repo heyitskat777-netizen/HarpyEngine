@@ -662,6 +662,9 @@ class MissionService:
         rules.revision(mission, expected)
         if mission.phase != "active":
             raise WorkflowError("Only an active mission can be ended.")
+        from girlframe.services.mission_timing_history import require_closed
+
+        require_closed(c, self.store.campaign_id, mission=mission.id)
 
     def end(
         self,

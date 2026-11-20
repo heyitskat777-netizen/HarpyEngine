@@ -330,6 +330,11 @@ class CampaignTimeService:
             for x, result in zip(cut.requires, dependencies, strict=True)
             if not result[0]
         ]
+        from girlframe.services.mission_timing_history import active as active_timing
+
+        clock = active_timing(c, self.store.campaign_id)
+        if clock is not None:
+            blockers.append({"kind": "timed_sequence_active", "id": clock.id})
         listed_work = {x.id for x in cut.requires if x.kind == "work"}
         for item in sorted(work.values(), key=lambda x: x["id"]):
             scene = scenes.get(item["scene_id"])
@@ -658,6 +663,11 @@ class CampaignTimeService:
                 "scenes": visible,
                 "followups": followups,
             }
+            from girlframe.services.mission_timing import MissionTimingService
+
+            timing = MissionTimingService(self.store).project(c, viewer)
+            if timing is not None:
+                result["mission_timing"] = timing
             if handler:
                 result["unscheduled_scenes"] = [
                     {"id": identity, "channel": row["channel_id"], "revision": row["revision"]}

@@ -86,8 +86,9 @@ retrying a delivery.
   Director integration can observe the committed anchor through an authorized
   projection. Commands stay with the Handler.
 
-The slice covers the offline service and synthetic workflow. Discord and
-Activity routing, duration and deadline mechanics, and any out-of-character
+The slice covers the offline service and synthetic workflow. The
+[precise mission timing work order](PRECISE_MISSION_TIMING.md) adds opt-in
+durations and deadlines. Discord and Activity routing and out-of-character
 reply-window controls are follow-on integrations. A proposed late mechanical
 effect is adjudicated with existing rules commands or retained for review. The
 late ledger has no generic resolution action that can change protected facts.

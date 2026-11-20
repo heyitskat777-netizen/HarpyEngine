@@ -1341,7 +1341,14 @@ class GameService:
         return False
 
     def begin(
-        self, viewer: GuildViewer, key: str, channel: int, sheet_revision: int, prepared: PlayInput
+        self,
+        viewer: GuildViewer,
+        key: str,
+        channel: int,
+        sheet_revision: int,
+        prepared: PlayInput,
+        *,
+        timing_selection: str | None = None,
     ) -> dict[str, Any]:
         prepared = PlayInput.model_validate_json(prepared.model_dump_json())
         if prepared.play not in (
@@ -3465,6 +3472,28 @@ class GameService:
                 audience = list(gorgon_response["private_audience"])
                 data["participants"] = data["private_audience"] = audience
                 data["tag_context"]["table"] = audience
+            if timing_selection is not None:
+                from girlframe.services.mission_timing import MissionTimingService
+
+                if (
+                    prepared.play != "keep_your_head"
+                    or prepared.parent is not None
+                    or prepared.source_work is not None
+                    or m3 is not None
+                    or adjudication is not None
+                    or void_keep is not None
+                    or gaze_keep is not None
+                    or gorgon_response is not None
+                    or secretary_response is not None
+                    or "actor_basic" in data
+                    or acting_ref.kind != "pilot"
+                    or mechanical_owner != viewer.user_id
+                ):
+                    raise WorkflowError("Timing supports an ordinary root Keep Your Head Play.")
+                MissionTimingService(self.store).attach_play(
+                    c, viewer, timing_selection, scene["id"], prepared.play
+                )
+                data["mission_timing"] = timing_selection
             from girlframe.services.m3_recovery import enable as enable_recovery
 
             enable_recovery(self, c, viewer, data)
@@ -4002,7 +4031,8 @@ class GameService:
                     "channel": channel,
                     "sheet_revision": sheet_revision,
                     "prepared": prepared.model_dump(mode="json"),
-                },
+                }
+                | ({"timing_selection": timing_selection} if timing_selection is not None else {}),
                 operation,
                 auto_audit=False,
                 authorize=lambda c: self.authorize(c, viewer),
@@ -4770,6 +4800,12 @@ class GameService:
                 from girlframe.services.m3_void_frame_entry import pre_roll as entry_pre_roll
 
                 entry_modifiers = entry_pre_roll(self, c, state, action, court_event)
+            timing = None
+            if action["data"].get("mission_timing"):
+                from girlframe.services.mission_timing import MissionTimingService
+
+                timing = MissionTimingService(self.store)
+            clock = timing.prepare_roll(c, viewer, action) if timing else None
             faces = self.dice.roll()
             if len(faces) != 2 or any(type(x) is not int or not 1 <= x <= 6 for x in faces):
                 raise ValueError("Dice source returned invalid faces")
@@ -5192,6 +5228,8 @@ class GameService:
                 )
 
                 sync_remote_source(self, c, self.action(c, action["id"]), event)
+            if timing is not None and clock is not None:
+                timing.record_play(c, viewer, action, receipt["id"], clock)
             return {"action_id": identity, "receipt": receipt}
 
         try:
@@ -6917,8 +6955,10 @@ class GameService:
 
     def _require_scene_close(self, c: Connection, scene: dict[str, Any]) -> None:
         from girlframe.engine.m3_deep_brain_spikes import require_return
+        from girlframe.services.mission_timing_history import require_closed
         from girlframe.services.p1_source_pause import require_clear as require_source_clear
 
+        require_closed(c, self.store.campaign_id, scene=scene["id"])
         require_source_clear(self, c, int(scene["channel_id"]))
         try:
             require_return(load_state(c, self.store.campaign_id), scene["id"])
