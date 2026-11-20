@@ -42,7 +42,11 @@ def prepare(source: Path, output: Path, *, p2_routes: bool = False) -> Path:
         shutil.copyfile(ADAPTERS / "p2-desk.js", lab / "p2-desk.js")
         for test_path in (ADAPTERS / "tests").glob("test_*.py"):
             shutil.copyfile(test_path, lab / test_path.name)
-        for patch in ("p2_lab_routes.patch", "campaign_difficulty_ui.patch"):
+        for patch in (
+            "p2_lab_routes.patch",
+            "campaign_difficulty_ui.patch",
+            "portrayal_sheet_ui.patch",
+        ):
             subprocess.run(
                 ["patch", "--batch", "--fuzz=0", "-p1", "-i", str(ADAPTERS / patch)],
                 cwd=lab,

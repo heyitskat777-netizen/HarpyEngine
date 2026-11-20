@@ -3,7 +3,11 @@
 import json
 from typing import Any, cast
 
-from girlframe.ai.director_dossiers import HandlerExperienceSelection, PilotDossierOrigin
+from girlframe.ai.director_dossiers import (
+    DossierPerspective,
+    HandlerExperienceSelection,
+    PilotDossierOrigin,
+)
 from girlframe.ai.director_reactions import ReactionProposal
 from girlframe.ai.gm_outcomes import OutcomeProposal
 from girlframe.ai.gm_protocol import TaskFrame
@@ -19,6 +23,7 @@ from girlframe.ai.observation import AppendSceneInput, ObservationPolicy
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_handler_character import PROFILES
 from girlframe.engine.m3_handler_state import GEAR, HISTORY_LABELS, PLAYBOOKS, Draft, HandlerNotes
+from girlframe.engine.pilot_portrayal import PilotPortrayal
 from girlframe.services.activity_session_zero import READS as SESSION_ZERO_READS
 from girlframe.services.activity_session_zero import WRITES as SESSION_ZERO_WRITES
 from girlframe.services.activity_session_zero import SessionZeroDesk
@@ -40,6 +45,7 @@ from girlframe.services.m3_handler_creation import HandlerCreationService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 from girlframe.services.session_zero import SessionZeroService
+from girlframe.services.sheet_portrayal import SheetPortrayalService
 
 
 class P2Scene:
@@ -61,6 +67,7 @@ class P2Scene:
         self.session_zero = SessionZeroDesk(
             SessionZeroService(session.store, group_owner=facilitator_id), opening_channel
         )
+        self.portrayal = SheetPortrayalService(session.dossiers)
         self.handler_setup = HandlerCreationService(session.store)
         self.shadow = ActivityShadowReview(session.conversation)
         self.npc_delivery = NpcDeliveryService(session.context)
@@ -218,6 +225,10 @@ class P2Scene:
     ) -> dict[str, Any]:
         if route in SESSION_ZERO_READS and identity is None:
             return self.session_zero.read(viewer, route)
+        if route == "portrayal-sheets" and identity is None:
+            return self.portrayal.view(viewer)
+        if route == "portrayal-preview" and identity is not None and scene:
+            return self.portrayal.preview(viewer, scene, identity)
         if route == "fictional-time" and identity is None:
             view = self.time.view(viewer)
             if not scene and "handler_controls" in view:
@@ -313,6 +324,45 @@ class P2Scene:
     ) -> dict[str, Any]:
         if route in SESSION_ZERO_WRITES:
             return self.session_zero.write(viewer, key, route, data)
+        if route == "portrayal-draft" and data.keys() == {"actor", "version", "portrayal"}:
+            if type(data["version"]) is not int:
+                raise ValueError("Use the current approved dossier revision.")
+            return self.portrayal.draft(
+                viewer,
+                key,
+                ActorRef.model_validate(data["actor"]),
+                data["version"],
+                portrayal=PilotPortrayal.model_validate(data["portrayal"]),
+            )
+        if (
+            route == "portrayal-experience"
+            and scene
+            and data.keys()
+            == {
+                "actor",
+                "version",
+                "reference",
+                "text",
+            }
+        ):
+            if type(data["version"]) is not int:
+                raise ValueError("Use the current approved dossier revision.")
+            return self.portrayal.draft(
+                viewer,
+                key,
+                ActorRef.model_validate(data["actor"]),
+                data["version"],
+                scene=scene,
+                experience=DossierPerspective(
+                    text=data["text"], knowledge_refs=(data["reference"],)
+                ),
+            )
+        if route == "portrayal-confirm" and data.keys() == {"actor", "id"}:
+            if not isinstance(data["id"], str):
+                raise ValueError("Choose the actual saved draft.")
+            return self.portrayal.confirm(
+                viewer, key, ActorRef.model_validate(data["actor"]), data["id"]
+            )
         if route == "pilot-dossier-propose" and data.keys() == {"actor", "origin"}:
             return self.session.dossiers.propose_pilot(
                 viewer,

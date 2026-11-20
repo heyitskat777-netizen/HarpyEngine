@@ -325,6 +325,11 @@ def test_approved_pilot_experience_changes_the_same_handlers_next_mission(ledger
     svc = app.session.conversation
     followup = ask(app, target, "second-mission")
     (memory,) = recorder.packets[-1]["persona"]["experiences"]
+    preview = app.read(ADMIN, target, "portrayal-preview", handler.token)
+    assert preview["character_notes"] == notes.model_dump(mode="json")
+    assert preview["handler_experiences"] == [memory]
+    with pytest.raises(WorkflowError, match="DOSSIER_NOT_OWNED"):
+        app.read(PLAYER, target, "portrayal-preview", handler.token)
     assert local_voice not in json.dumps(recorder.packets[-1])
     assert memory["kind"] == "declined_help" and memory["reference_id"] == posted[0]
     assert memory["pilot"] == pilot.model_dump(mode="json") and memory["scene"] == source

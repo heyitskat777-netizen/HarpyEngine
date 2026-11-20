@@ -20,9 +20,9 @@
 +SETUP_ROUTE = re.compile(
 +    r"/api/campaign-opening/([a-z-]{1,35})(?:/([A-Za-z0-9:-]{1,100}))?"
 +)
-+SETUP_READ = {"opening", "opening-brief", "persona-setup", "persona-agreement", "fictional-time"} | SESSION_ZERO_READS
++SETUP_READ = {"opening", "opening-brief", "persona-setup", "persona-agreement", "fictional-time", "portrayal-sheets"} | SESSION_ZERO_READS
 +SETUP_WRITE = {
-+    "opening-save", "opening-launch", "persona-save", "persona-notes", "persona-activate", "persona-propose", "persona-answer"
++    "opening-save", "opening-launch", "persona-save", "persona-notes", "persona-activate", "persona-propose", "persona-answer", "portrayal-draft", "portrayal-confirm"
 +} | SESSION_ZERO_WRITES.keys()
  TRANSCRIPT_ROUTE = re.compile(r"/api/rooms/(relay|[0-9a-f]{16})/transcript")
  COMMUNICATION_ROUTE = re.compile(

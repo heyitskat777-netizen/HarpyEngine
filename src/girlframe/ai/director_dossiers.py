@@ -7,6 +7,7 @@ from pydantic import Field, model_validator
 from girlframe.ai.contracts import Contract
 from girlframe.ai.director import DirectorContext
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.pilot_portrayal import PilotPortrayal
 
 
 class DossierPerspective(Contract):
@@ -66,6 +67,7 @@ class DossierProfile(Contract):
     values: tuple[str, ...] = Field(default=(), max_length=10)
     fears: tuple[str, ...] = Field(default=(), max_length=10)
     contradictions: tuple[str, ...] = Field(default=(), max_length=10)
+    pilot_portrayal: PilotPortrayal | None = Field(default=None, exclude_if=lambda x: x is None)
 
     @model_validator(mode="after")
     def bounded_traits(self) -> "DossierProfile":

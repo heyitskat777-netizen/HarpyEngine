@@ -6656,3 +6656,41 @@ scene browser rehearsal also passed. Ruff, scoped mypy, and the JavaScript
 syntax check passed. The generator uses offline written presets. Actual
 model portrayals and authenticated Discord behavior remain unverified.
 [Activity handoff](../integrations/activity/P2_SESSION_UI_HANDOFF.md#campaign-difficulty-and-session-zero)
+
+## Character sheet portrayal and experiences
+
+Development base `9374678` on `codex/narrative-death-integration`.
+The Activity's owned Pilot Profile, NPC dossier and Handler sheet open
+the native portrayal editor. Approved Pilot traits retain separate
+fields, including when recovered from the original generated plan.
+The private sheet saves drafts and confirms them into the same versioned
+dossier. The Handler's existing native notes appear at the top of its
+sheet. The scene preview uses the actual owner's scoped context and
+current approved portrayal. New experience notes cite a known source
+and enter the dossier on confirmation. Carry and consent govern recall.
+Older dossier versions retain their approved records.
+
+```sh
+PYTHONPATH="$PWD/src" /workspace/HarpyEngine/.venv/bin/python -m pytest -q \
+  tests/test_director_dossiers.py tests/test_director_reactions.py \
+  tests/test_director_activity_scene.py \
+  tests/rules/test_handler_personality_pairs.py::test_approved_pilot_experience_changes_the_same_handlers_next_mission \
+  --tb=short
+
+/workspace/HarpyEngine/.venv/bin/python tools/verify_activity_bundle.py \
+  --source /workspace/source-handoff-2026-11-16 \
+  --output var/portrayal-checked --p2-routes \
+  --test test_managed_session_zero.py --test test_managed_campaign_opening.py \
+  --test test_campaign_difficulty_activity.py
+```
+
+The focused engine checks passed **21 tests in 29.44 seconds**. The
+simulated Activity checks passed **4 tests in 19.93 seconds**. Scoped
+mypy passed on seven source files. Ruff and JavaScript syntax checks
+passed. A private Chromium smoke opened the actual Pilot Profile,
+saved and approved a voice, verified a different role's fact was absent,
+and approved a source-linked experience. The revised sheet reopened
+at the new revision. The existing Director scene browser rehearsal
+also passed. These checks used synthetic fixtures and a local browser.
+Authenticated Discord, real-model validation, and full regression
+remain separate. [Activity handoff](../integrations/activity/P2_SESSION_UI_HANDOFF.md#character-sheet-portrayal)

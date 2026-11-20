@@ -2,7 +2,7 @@
 
 import pytest
 from test_director_activity_scene import P2Scene
-from test_director_continuity import roles
+from test_director_continuity import carry, new_scene, reference, roles
 from test_director_conversation import routed as routed
 from test_director_observation import observed as observed
 from test_director_observation import send
@@ -24,6 +24,7 @@ from girlframe.engine.pilot_portrayal import PILOT_PORTRAYALS
 from girlframe.services.campaign_difficulty import EVENT
 from girlframe.services.director_context import DirectorContextService
 from girlframe.services.director_dossiers import DirectorDossierService
+from girlframe.services.director_observation import DirectorObservationService
 from girlframe.services.director_session import DirectorSessionService
 from girlframe.services.m3_actors import ActorService
 from girlframe.services.m3_cast import CastService
@@ -304,3 +305,110 @@ def test_generated_pilot_uses_the_approved_plan_and_actual_npc_controller(routed
     assert dossier["profile"]["voice"] == "PRIVATE_MIXED_VOICE"
     assert dossier["profile"]["reaction_tendencies"] == [portrayal.pressure]
     assert dossier["context"]["actor"] == npc.model_dump(mode="json")
+    sheet = next(
+        item
+        for item in app.read(PLAYER, "", "portrayal-sheets")["sheets"]
+        if item["actor"] == npc.model_dump(mode="json")
+    )
+    assert sheet["portrayal"]["archetype"] == portrayal.archetype
+    assert sheet["portrayal"]["repair"] == portrayal.repair
+    edited = sheet["portrayal"] | {"voice": "Use practical examples and a little dry humor."}
+    edit = {"actor": sheet["actor"], "version": sheet["version"], "portrayal": edited}
+    manual = P2Scene(
+        DirectorSessionService(DirectorContextService(DirectorObservationService(observer.store)))
+    )
+    draft = manual.write(PLAYER, "edit-from-sheet", "", "portrayal-draft", edit)
+    assert manual.write(PLAYER, "edit-from-sheet", "", "portrayal-draft", edit) == draft
+    assert (
+        "PRIVATE_MIXED_VOICE"
+        == app.read(PLAYER, scene, "portrayal-preview", npc.token)["profile"]["pilot_portrayal"][
+            "voice"
+        ]
+    )
+    with pytest.raises(WorkflowError):
+        app.read(OTHER, scene, "portrayal-preview", npc.token)
+    assert (
+        manual.write(
+            PLAYER,
+            "approve-sheet",
+            "",
+            "portrayal-confirm",
+            {"actor": sheet["actor"], "id": draft["id"]},
+        )["version"]
+        == 2
+    )
+    history = app.session.dossiers._records(state(game), npc)
+    assert history[0].pilot_origin == history[1].pilot_origin
+    next_reaction = app.session.reactions.open(
+        ADMIN, "edited-reaction", scene, npc, source.source_id
+    )
+    packet = app.session.reactions.packet(ADMIN, scene, next_reaction["id"])["role"]["dossier"]
+    assert packet["profile"]["pilot_portrayal"] == edited
+    assert packet["profile"]["voice"] == edited["voice"]
+    assert "PRIVATE_MIXED_VOICE" not in str(packet)
+
+
+def test_sheet_experiences_follow_the_owned_scoped_source(routed):
+    observer, context, scene, _, _ = routed
+    handler, pilot = roles(observer, scene)
+    app = P2Scene(DirectorSessionService(context))
+    npc_voice = {"voice": "Wait before offering help."}
+    actor = pilot.model_dump(mode="json")
+    draft = app.write(
+        PLAYER,
+        "pilot-portrayal",
+        "",
+        "portrayal-draft",
+        {"actor": actor, "version": 0, "portrayal": npc_voice},
+    )
+    assert app.read(PLAYER, scene, "portrayal-preview", pilot.token)["profile"] is None
+    app.write(
+        PLAYER,
+        "apply-pilot-portrayal",
+        "",
+        "portrayal-confirm",
+        {"actor": actor, "id": draft["id"]},
+    )
+    seen, _ = reference(context, scene, "pause", "Wait for my signal.", (pilot,))
+    private, _ = reference(context, scene, "unheard", "PRIVATE_HANDLER_NOTE", (handler,))
+    attempt = {"actor": actor, "version": 1, "reference": private, "text": "Do not take over."}
+    with pytest.raises(WorkflowError, match="DOSSIER_UNKNOWN_SOURCE"):
+        app.write(PLAYER, "fabricated-experience", scene, "portrayal-experience", attempt)
+    saved = app.write(
+        PLAYER, "actual-experience", scene, "portrayal-experience", attempt | {"reference": seen}
+    )
+    before = app.read(PLAYER, scene, "portrayal-preview", pilot.token)
+    assert before["pending_experience"]["entry"]["text"] == attempt["text"]
+    assert before["state"]["experiences"] == []
+    done = {"actor": actor, "id": saved["id"]}
+    accepted = app.write(PLAYER, "file-experience", "", "portrayal-confirm", done)
+    assert app.write(PLAYER, "file-experience", "", "portrayal-confirm", done) == accepted
+    with pytest.raises(WorkflowError, match="STALE_DOSSIER"):
+        app.write(PLAYER, "file-same-experience-again", "", "portrayal-confirm", done)
+    target = new_scene(observer)
+    shown = app.read(PLAYER, target, "portrayal-preview", pilot.token)
+    assert shown["state"]["experiences"] == []
+    assert shown["profile"]["pilot_portrayal"]["voice"] == npc_voice["voice"]
+    carry(context, scene, target, (seen,), "approved-lesson")
+    shown = app.read(PLAYER, target, "portrayal-preview", pilot.token)
+    assert [entry["text"] for entry in shown["state"]["experiences"]] == [attempt["text"]]
+    assert "PRIVATE_HANDLER_NOTE" not in str(shown)
+    recalled = next(
+        ref["id"] for ref in shown["context"]["references"] if ref["origin_reference"] == seen
+    )
+    new_draft = app.write(
+        PLAYER,
+        "more-lessons",
+        target,
+        "portrayal-experience",
+        {"actor": actor, "version": 2, "reference": recalled, "text": "Ask which signal they use."},
+    )
+    observer.set_consent(PLAYER, "withdraw", target, 1, consent=False)
+    with pytest.raises(WorkflowError, match="OBSERVATION_DISABLED"):
+        app.write(
+            PLAYER,
+            "withdrawn-experience",
+            "",
+            "portrayal-confirm",
+            {"actor": actor, "id": new_draft["id"]},
+        )

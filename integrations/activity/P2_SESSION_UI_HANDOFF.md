@@ -132,6 +132,31 @@ portrayal bypasses automated Handler drafts. AI portrayal uses the
 configured reviewed pipeline when available. The Session Zero settings
 themselves grant no provider access or player ownership.
 
+## Character sheet portrayal
+
+Apply [the sheet UI patch](portrayal_sheet_ui.patch) after the P2 and
+campaign difficulty overlays. **Open portrayal** is on the Activity's
+own Pilot Profile. The Director desk also opens owned NPC portrayal and the
+active Handler's portrayal. The Handler sheet puts the existing voice,
+priorities, intervention and repair notes above Play guidance.
+
+The Pilot and NPC editor retains the generator's fields individually.
+The existing approved dossier supplies the starting values. Saving stages
+a draft, and approving it appends the next native dossier revision.
+The modal shows the approved revision and any waiting draft. Edits to
+portrayal need only current character ownership. The scene and provider
+can be unavailable while the owner edits their sheet.
+
+**What the AI can see** calls the actor-scoped projection for a consented
+Director scene. It displays the approved portrayal, known references, and
+the Handler's eligible debrief information. **What changed in play** lets
+an owner choose one fact their character knows, describe how it changes
+their approach, and approve the resulting experience. New scenes show
+that experience when its fact is available through the existing approved
+continuity workflow. Withdrawn consent blocks confirmation and recall.
+Portable public sheets and personnel views continue to use their existing
+explicit field allowlists.
+
 First browser acceptance should prove one scene for two Pilots and a Handler
 with a facilitator, a delivered scoped Handler line, a typed GM ruling, and a
 native owned choice. Include wrong-owner denial, exact retry after reconnect,

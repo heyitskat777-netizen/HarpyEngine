@@ -166,12 +166,7 @@ class DirectorDossierService:
         self, c: Connection, scene: str, actor: ActorRef, state: DossierState
     ) -> None:
         context = self._context(c, scene, actor)
-        visible = {
-            identity
-            for ref in context.references
-            for identity in (ref.id, ref.origin_reference)
-            if identity is not None
-        }
+        visible = self._reference_ids(context)
         perspectives = (
             *state.pressures,
             *state.promises,
@@ -201,6 +196,15 @@ class DirectorDossierService:
             raise WorkflowError(
                 "DOSSIER_GOAL_UNAVAILABLE: disclose actual current canonical goals."
             )
+
+    @staticmethod
+    def _reference_ids(context: DirectorContext) -> set[str]:
+        return {
+            identity
+            for ref in context.references
+            for identity in (ref.id, ref.origin_reference)
+            if identity is not None
+        }
 
     def _binding(self, c: Connection, scene: str, actor: ActorRef) -> str:
         actual = self._actor(c, scene, actor)
@@ -327,11 +331,12 @@ class DirectorDossierService:
             presence="recurring",
             background=background,
             voice=traits.voice.strip(),
-            behavior=behavior,
+            behavior=behavior[:1000],
             reaction_tendencies=(traits.pressure.strip(),) if traits.pressure.strip() else (),
             values=(traits.value.strip(),) if traits.value.strip() else (),
             fears=(traits.fear.strip(),) if traits.fear.strip() else (),
             contradictions=(traits.contradiction.strip(),) if traits.contradiction.strip() else (),
+            pilot_portrayal=traits,
         )
 
     def propose(
@@ -495,33 +500,7 @@ class DirectorDossierService:
                 self._approved_pilot(c, viewer, actual, proposal.pilot_origin)
             canon = load_state(c, self.store.campaign_id)
             history = self._records(canon, proposal.actor)
-            event = str(uuid4())
-            record = DossierRecord(
-                id="dossier:" + str(uuid4()),
-                actor=proposal.actor,
-                controller=viewer.user_id,
-                version=len(history) + 1,
-                supersedes=history[-1].id if history else None,
-                profile=proposal.profile,
-                state=proposal.state,
-                personnel=proposal.personnel,
-                scene_id=scene,
-                proposal_id=identity,
-                source_event=event,
-                pilot_origin=proposal.pilot_origin,
-            )
-            canon.facts.append({"kind": "director_dossier", "body": record.model_dump_json()})
-            self.game.event(
-                c,
-                viewer.user_id,
-                key,
-                "director.dossier_confirmed",
-                canon,
-                event_id=event,
-                actor_token=record.actor.token,
-                version=record.version,
-            )
-            return {"id": record.id, "version": record.version, "effects_applied": False}
+            return self._commit(c, viewer, key, canon, proposal, history[-1] if history else None)
 
         return self.store._write(
             viewer,
@@ -532,6 +511,43 @@ class DirectorDossierService:
             authorize=authorize,
             auto_audit=False,
         )
+
+    def _commit(
+        self,
+        c: Connection,
+        viewer: GuildViewer,
+        key: str,
+        canon: GameState,
+        proposal: DossierProposal,
+        head: DossierRecord | None,
+    ) -> dict[str, Any]:
+        event = str(uuid4())
+        record = DossierRecord(
+            id="dossier:" + str(uuid4()),
+            actor=proposal.actor,
+            controller=viewer.user_id,
+            version=head.version + 1 if head else 1,
+            supersedes=head.id if head else None,
+            profile=proposal.profile,
+            state=proposal.state,
+            personnel=proposal.personnel,
+            scene_id=proposal.scene_id,
+            proposal_id=proposal.id,
+            source_event=event,
+            pilot_origin=proposal.pilot_origin or (head.pilot_origin if head else None),
+        )
+        canon.facts.append({"kind": "director_dossier", "body": record.model_dump_json()})
+        self.game.event(
+            c,
+            viewer.user_id,
+            key,
+            "director.dossier_confirmed",
+            canon,
+            event_id=event,
+            actor_token=record.actor.token,
+            version=record.version,
+        )
+        return {"id": record.id, "version": record.version, "effects_applied": False}
 
     def gm_notes(
         self,
@@ -617,6 +633,14 @@ class DirectorDossierService:
         context = self._context(c, scene, actor)
         portrayal = head if entitled else None
         if portrayal is not None:
+            seen = self._reference_ids(context)
+            visible = tuple(
+                entry for entry in portrayal.state.experiences if set(entry.knowledge_refs) <= seen
+            )
+            if visible != portrayal.state.experiences:
+                portrayal = portrayal.model_copy(
+                    update={"state": portrayal.state.model_copy(update={"experiences": visible})}
+                )
             try:
                 self._validate_state(c, scene, actor, portrayal.state)
             except WorkflowError as error:

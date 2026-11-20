@@ -27,6 +27,245 @@ function choiceField(label, choices, value) {
   return [row, control];
 }
 
+export function openSheetPortrayal({activityFetch, scene, kind}) {
+  const root = scene ? "/api/director/" + encodeURIComponent(scene) + "/" : "/api/campaign-opening/";
+  const dialog = element("dialog");
+  const body = element("section");
+  const status = element("p");
+  status.setAttribute("role", "status");
+  dialog.setAttribute("aria-label", "Character portrayal");
+  const close = element("button", "Close");
+  close.type = "button";
+  close.addEventListener("click", () => dialog.close());
+  dialog.append(element("h2", "Character portrayal"), close, status, body);
+  dialog.addEventListener("close", () => dialog.remove());
+  document.body.append(dialog);
+  dialog.showModal();
+  const active = new AbortController();
+  dialog.addEventListener("close", () => active.abort());
+  let token;
+  const traits = [
+    ["archetype", "Archetype", 60], ["vibe", "Vibe", 60], ["voice", "How they speak", 1000],
+    ["approach", "What they do first", 1000], ["pressure", "Under pressure", 500],
+    ["repair", "After a mistake", 400], ["value", "What they value", 500],
+    ["fear", "What they fear", 500], ["contradiction", "Contradiction", 500],
+    ["goal", "Personal goal", 400],
+  ];
+  const handlerLabels = {
+    voice:"Voice", priority:"What they protect first", intervention:"When they step in or wait",
+    repair:"How they repair trust", concern:"Current concern", promise:"Current promise",
+    obligation:"Obligation",
+  };
+
+  async function request(route, data, key) {
+    const response = await activityFetch(root + route, {
+      signal: active.signal,
+      ...(data ? {method:"POST", headers:{"Content-Type":"application/json", "Idempotency-Key":key},
+        body:JSON.stringify(data)} : {}),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "The current portrayal is unavailable.");
+    return result;
+  }
+
+  function action(parent, label, run, intent = () => "") {
+    const button = element("button", label);
+    button.type = "button";
+    let key = crypto.randomUUID();
+    let previous;
+    button.addEventListener("click", async () => {
+      const current = intent();
+      if (current !== previous) key = crypto.randomUUID();
+      previous = current;
+      button.disabled = true;
+      status.textContent = "";
+      try {
+        await run(key);
+        key = crypto.randomUUID();
+      } catch (error) {
+        if (!active.signal.aborted) status.textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+    parent.append(button);
+    return button;
+  }
+
+  function area(parent, name, value, maxLength) {
+    const label = element("label", name);
+    const input = element("textarea");
+    input.rows = 2;
+    input.maxLength = maxLength;
+    input.value = value ?? "";
+    label.append(input);
+    parent.append(label);
+    return input;
+  }
+
+  function details(parent, name) {
+    const panel = element("details");
+    panel.append(element("summary", name));
+    parent.append(panel);
+    return panel;
+  }
+
+  function writeConfirm(parent, sheet, id, label, openPreview = false) {
+    return action(parent, label, async key => {
+      await request("portrayal-confirm", {actor:sheet.actor, id}, key);
+      await load(openPreview);
+      status.textContent = "Approved and saved.";
+    });
+  }
+
+  function editPortrayal(parent, sheet) {
+    const pending = sheet.pending?.kind === "portrayal" && !sheet.pending.stale
+      ? sheet.pending : null;
+    const values = pending?.portrayal ?? sheet.portrayal ?? {};
+    const main = element("div");
+    parent.append(main);
+    const extra = details(parent, "Identity and motivations");
+    const featured = new Set(["voice", "approach", "pressure", "repair"]);
+    const inputs = traits.map(([key, label, limit]) => [
+      key, area(featured.has(key) ? main : extra, label, values[key], limit),
+    ]);
+    const save = () => ({
+      actor:sheet.actor, version:sheet.version,
+      portrayal:Object.fromEntries(inputs.map(([key, input]) => [key, input.value.trim()])),
+    });
+    action(parent, "Save portrayal draft", async key => {
+      await request("portrayal-draft", save(), key);
+      await load();
+      status.textContent = "Draft saved for your approval.";
+    }, () => JSON.stringify(save()));
+    if (pending) {
+      const approve = writeConfirm(parent, sheet, pending.id, "Approve saved portrayal");
+      for (const [, input] of inputs) input.addEventListener("input", () => { approve.disabled = true; });
+    }
+  }
+
+  function approvedProfile(parent, preview) {
+    const profile = preview.profile;
+    if (profile?.pilot_portrayal) {
+      for (const [key, label] of traits) {
+        if (profile.pilot_portrayal[key]) parent.append(element("p", label + " · " + profile.pilot_portrayal[key]));
+      }
+    } else if (profile) {
+      for (const [key, label] of [["voice","Voice"], ["behavior","Behavior"], ["background","Background"]]) {
+        if (profile[key]) parent.append(element("p", label + " · " + profile[key]));
+      }
+      for (const key of ["values", "fears", "contradictions", "reaction_tendencies", "limits"]) {
+        for (const value of profile[key]) parent.append(element("p", value));
+      }
+    }
+    if (preview.playbook_profile) parent.append(element("p", "Handler playbook · " + preview.playbook_profile.playbook));
+    const relationship = preview.handler_identity?.starting_relationship;
+    if (relationship) parent.append(element("p", "Approved starting relationship · " + relationship.shared_history));
+    for (const [key, value] of Object.entries(preview.character_notes ?? {})) {
+      parent.append(element("p", (handlerLabels[key] ?? key) + " · " + value));
+    }
+  }
+
+  async function showPreview(panel, changes, sheet) {
+    panel.replaceChildren(element("summary", "What the AI can see"));
+    changes.replaceChildren(element("summary", "What changed in play"));
+    panel.open = true;
+    let preview;
+    try {
+      preview = await request("portrayal-preview/" + encodeURIComponent(sheet.token));
+    } catch (error) {
+      panel.append(element("p", error.message));
+      action(panel, "Refresh scene context", () => showPreview(panel, changes, sheet));
+      return;
+    }
+    approvedProfile(panel, preview);
+    action(panel, "Refresh scene context", () => showPreview(panel, changes, sheet));
+    const refs = preview.context.references;
+    const reports = preview.closed_scene_reports ?? [];
+    panel.append(element("h3", "Known in this scene"));
+    if (!refs.length) panel.append(element("p", "No shared references are available to this character."));
+    for (const ref of refs) panel.append(element("p", ref.text));
+    const promises = preview.state?.promises ?? [];
+    for (const promise of promises) changes.append(element("p", "Promise · " + promise.text));
+    for (const experience of preview.state?.experiences ?? []) changes.append(element("p", experience.text));
+    for (const experience of preview.handler_experiences ?? []) {
+      changes.append(element("p", experience.reported_text));
+    }
+    if (reports.length) {
+      const debrief = details(changes, "Approved debrief reports");
+      for (const ref of reports) debrief.append(element("p", ref.text));
+    }
+    if (preview.pending_experience) {
+      changes.open = true;
+      changes.append(element("p", "Awaiting approval · " + preview.pending_experience.entry.text));
+      writeConfirm(changes, sheet, preview.pending_experience.id, "Approve experience", true);
+    }
+    if (refs.length) {
+      const form = details(changes, "Record an experience");
+      const [label, reference] = choiceField("What happened?",
+        refs.map(ref => [ref.id, ref.text]));
+      reference.setAttribute("aria-label", "Source for the experience");
+      reference.required = true;
+      form.append(label);
+      const input = area(form, "How does this change what you do?", "", 800);
+      input.required = true;
+      const save = () => ({
+        actor:sheet.actor, version:sheet.version, reference:reference.value, text:input.value.trim(),
+      });
+      action(form, "Save experience draft", async key => {
+        if (!reference.reportValidity() || !input.reportValidity()) return;
+        await request("portrayal-experience", save(), key);
+        await load(true);
+      }, () => JSON.stringify(save()));
+    }
+    changes.open = true;
+  }
+
+  async function load(openPreview = false) {
+    const view = await request("portrayal-sheets");
+    const sheets = view.sheets.filter(sheet => kind === "pilot"
+      ? ["pilot", "npc"].includes(sheet.actor.kind) : sheet.actor.kind === kind);
+    const sheet = sheets.find(sheet => sheet.token === token) ?? sheets.find(x => x.actor.kind === kind) ?? sheets[0];
+    body.replaceChildren();
+    if (!sheet) {
+      body.append(element("p", "No active owned character sheet is available."));
+      return;
+    }
+    token = sheet.token;
+    if (sheets.length > 1) {
+      const [label, select] = choiceField("Your character", sheets.map(x => [x.token, x.label]), token);
+      select.remove(0);
+      select.addEventListener("change", () => { token = select.value; load().catch(fail); });
+      body.append(label);
+    }
+    body.append(
+      element("h3", sheet.label),
+      element("p", sheet.approved ? "Approved portrayal · Revision " + sheet.approved
+        : sheet.actor.kind === "handler" ? "Handler portrayal comes from your private sheet notes."
+        : "Portrayal awaits your approval."),
+    );
+    if (sheet.pending?.stale) body.append(element("p", "The saved draft is stale. Reopen the current sheet before editing."));
+    else if (sheet.pending?.kind === "experience") body.append(element("p", "An experience awaits your approval in its source scene."));
+    else if (sheet.pending) body.append(element("p", "A portrayal draft awaits your approval."));
+    if (sheet.actor.kind !== "handler") editPortrayal(body, sheet);
+    const preview = details(body, "What the AI can see");
+    const changes = details(body, "What changed in play");
+    if (scene) {
+      action(preview, "Load current scene context", () => showPreview(preview, changes, sheet));
+      changes.append(element("p", "Load current scene context to review available experiences."));
+      if (openPreview) await showPreview(preview, changes, sheet);
+    } else {
+      preview.append(element("p", "Scene context requires a current consented Director scene."));
+      changes.append(element("p", "Open a consented scene to record an experience."));
+    }
+  }
+
+  function fail(error) {
+    if (!active.signal.aborted) status.textContent = error.message;
+  }
+  load().catch(fail);
+}
+
 export function mountDirectorDesk(parent, scene, activityFetch, activityShadow = false) {
   const details = element("details");
   details.append(element("summary", scene ? "Director work" : "Campaign setup"));
@@ -893,8 +1132,16 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     renderHandlerProfile(guidance, sheet.playbook_profile);
     renderHandlerRules(rules, sheet.rules);
     if (sheet.activated || !sheet.editable) {
-      row.append(element("p", [sheet.draft.name, sheet.playbook].filter(Boolean).join(" · ")), guidance, rules);
+      row.append(element("p", [sheet.draft.name, sheet.playbook].filter(Boolean).join(" · ")));
+      const notes = sheet.draft.notes ?? {};
+      for (const key of ["voice", "priority", "intervention", "repair", "concern", "promise"]) {
+        const field = sheet.note_fields.find(([name]) => name === key);
+        if (notes[key] && field) row.append(element("p", field[1] + " · " + notes[key]));
+      }
       renderHandlerNotes(row, sheet);
+      if (sheet.activated) row.append(button("Open Handler portrayal", () =>
+        openSheetPortrayal({activityFetch, scene, kind:"handler"})));
+      row.append(guidance, rules);
       for (const value of [sheet.draft.appearance, sheet.draft.outfit, sheet.draft.background]) {
         if (value) row.append(element("p", value));
       }
@@ -1268,6 +1515,8 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       renderHandler(work);
       if (gm) renderFacilitator(gm);
       if (pilotDossiers) renderPilotDossiers(pilotDossiers, work);
+      body.append(button("Open NPC portrayal", () =>
+        openSheetPortrayal({activityFetch, scene, kind:"npc"})));
       renderOwn(work);
     }
     if (!work || !gm) renderTimingReviews(body, timingReview?.items);

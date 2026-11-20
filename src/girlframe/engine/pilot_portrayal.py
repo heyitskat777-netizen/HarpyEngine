@@ -1,6 +1,6 @@
 """Offline Pilot portrayal prompts for Session Zero."""
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from girlframe.engine.m2 import Model
 
@@ -8,14 +8,19 @@ from girlframe.engine.m2 import Model
 class PilotPortrayal(Model):
     archetype: str = Field(default="", max_length=60)
     vibe: str = Field(default="", max_length=60)
-    voice: str = Field(default="", max_length=400)
-    approach: str = Field(default="", max_length=400)
-    pressure: str = Field(default="", max_length=400)
+    voice: str = Field(default="", max_length=1000)
+    approach: str = Field(default="", max_length=1000)
+    pressure: str = Field(default="", max_length=500)
     repair: str = Field(default="", max_length=400)
-    value: str = Field(default="", max_length=400)
-    fear: str = Field(default="", max_length=400)
-    contradiction: str = Field(default="", max_length=400)
+    value: str = Field(default="", max_length=500)
+    fear: str = Field(default="", max_length=500)
+    contradiction: str = Field(default="", max_length=500)
     goal: str = Field(default="", max_length=400)
+
+    @field_validator("*")
+    @classmethod
+    def trim(cls, value: str) -> str:
+        return value.strip()
 
 
 PILOT_PORTRAYALS = (
