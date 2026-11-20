@@ -13,6 +13,7 @@ from test_medical import proposed, selection
 from test_mission_service import service as setup_missions
 from test_off_duty_cycle import activate, finish_routine, movement, prepared, recover_both
 
+from girlframe.ai.observation import ObservationPolicy
 from girlframe.database import tables as t
 from girlframe.scenes.campaign_time import (
     Anchor,
@@ -23,6 +24,7 @@ from girlframe.scenes.campaign_time import (
     ScenePlan,
 )
 from girlframe.services.campaign_time import CampaignTimeService
+from girlframe.services.director_observation import DirectorObservationService
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_off_duty import OffDutyService
 from girlframe.services.m3_off_duty_cycle import CycleService
@@ -249,6 +251,33 @@ def test_calendar_rejects_overlapping_reservations_and_waits_for_a_future_slot(l
         game.join_scene(PLAYER, "wrong-roster", 902)
     game.join_scene(PLAYER, "actual-join", 901)
     assert timeline.projection(PLAYER)["scenes"][0]["joined"]
+
+
+def test_cut_waits_for_original_director_closeout(ledger):
+    _, game = setup_missions(ledger)
+    timeline = CampaignTimeService(ledger)
+    initial = timeline.initialize(ADMIN, "observed-anchor", ANCHOR)["receipt"]
+    scene = booked(timeline, game, initial, 900, (2, 3), late=True)
+    observer = DirectorObservationService(ledger, synthetic=True)
+    observer.configure_scene(
+        ADMIN, "configure-observation", scene, 0, ObservationPolicy(mode="shadow")
+    )
+    for person in (ADMIN, PLAYER, OTHER):
+        observer.set_consent(person, f"consent:{person.user_id}", scene, 1, consent=True)
+    cut = Cut(target=Anchor(chapter="After closeout", position=NIGHT))
+    preview = timeline.preview_cut(ADMIN, cut)
+    assert {"kind": "director_closeout_required", "id": scene} in preview["blockers"]
+    assert scene not in preview["late_scenes"]
+    with pytest.raises(WorkflowError, match="CUT_BLOCKED"):
+        timeline.commit_cut(ADMIN, "blocked-observed-cut", cut, preview["token"])
+    revision = observer.status(ADMIN, scene).scene_revision
+    closed = game.close_scene(ADMIN, "explicit-closeout", 900, director_scene=(scene, revision))
+    assert closed["handler_report_count"] == 0
+    preview = timeline.preview_cut(ADMIN, cut)
+    assert not preview["blockers"]
+    assert (
+        timeline.commit_cut(ADMIN, "cut-after-closeout", cut, preview["token"])["late_scenes"] == []
+    )
 
 
 def test_multiday_cut_preserves_explicit_off_duty_recovery_strain_and_world_state(ledger):

@@ -21,6 +21,7 @@ from girlframe.services.m3_medical import KIND as MEDICAL_WORK
 from girlframe.services.m3_medical import MedicalService
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_quadrant_loss import require_aftermath_clear
+from girlframe.services.mission_timing_history import active as active_timing
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -180,6 +181,9 @@ class CampaignTimeService:
             scenes = self._scenes(c, self._scene_rows(c))
             old = scenes.get(scene_id)
             if old and (old.plan.start, old.plan.end) != (plan.start, plan.end):
+                clock = active_timing(c, self.store.campaign_id)
+                if clock is not None and clock.scene == scene_id:
+                    raise WorkflowError("Finish the active timed sequence before moving its scene.")
                 actions = t.m2["m2_actions"]
                 if c.scalar(
                     sa.select(actions.c.id)
@@ -330,8 +334,6 @@ class CampaignTimeService:
             for x, result in zip(cut.requires, dependencies, strict=True)
             if not result[0]
         ]
-        from girlframe.services.mission_timing_history import active as active_timing
-
         clock = active_timing(c, self.store.campaign_id)
         if clock is not None:
             blockers.append({"kind": "timed_sequence_active", "id": clock.id})

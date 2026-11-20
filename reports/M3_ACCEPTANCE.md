@@ -1,5 +1,45 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Campaign time and timed missions integration
+
+The two patches in `HarpyEngine-timed-missions.zip` were imported in order on
+`codex/timed-missions-integration` from development base
+`31adfa42a4437889a248803a8d123625aec8a5cb`. All seven manifest checksums matched.
+Replaying the patches on their original base `c4550ecbd89bbf84363537e7bdf763c2177a998f`
+reproduced the manifest tree `b22bbbb26cacb298e5bf61461f21506a89965bae`.
+The calendar patch `2228ce7` became `b79090e`, and timing patch `1551083`
+became `6a9af80` after reconciliation.
+
+The combined candidate retains the development branch's CI selections, native
+scene closeout and scoped reports, source pauses, recoverable rolls, scene-bound
+effects, and mission debrief. A chapter cut checks for effects without committing
+them and waits for explicit closeout in observed scenes. Timing accepts the
+original dispatched Pilot in the scene, retains one roll and one linked time
+receipt for an ordinary root Keep Your Head, and prevents a scene span change
+during its active clock. The existing opt-in methods, campaign policy and
+database schema govern access and persistence.
+
+The following focused command ran against the integrated engine with disposable
+SQLite databases. **20 passed in 32.88 seconds.** Ruff lint and formatting passed
+for 11 changed Python files, and scoped mypy passed for nine source files.
+
+```sh
+PYTHONPATH=src .venv/bin/python -m pytest -q --tb=short \
+  tests/rules/test_campaign_time.py tests/rules/test_mission_timing.py \
+  tests/rules/test_scene_work.py::test_actual_bind_context_is_atomic_original_and_survives_channel_close_rebind \
+  tests/rules/test_scene_work.py::test_pending_scene_work_blocks_close_until_an_actual_typed_resolution_event \
+  tests/rules/test_scene_work.py::test_actual_known_actor_roll_cannot_lose_its_scene_after_staff_restores_chat \
+  tests/rules/test_mission_service.py::test_mission_rewards_and_absent_dog_are_atomic_idempotent_and_durable \
+  tests/test_director_activity_scene.py::test_parallel_scenes_file_only_approved_reports_after_native_close \
+  tests/rules/test_changeling_sight_expiry.py::test_native_unobserved_sight_expires_with_original_scene_without_forging_answers \
+  tests/test_m2_game.py::test_stale_forms_pauses_replay_restart_and_unsupported_no_rng
+```
+
+The incoming reports record historical package checks. Client routing for the
+calendar and clock, additional timed Plays, cross-midnight sequences, and live
+playtesting remain open. The full regression and remote CI were deferred.
+[Calendar evidence](ASYNC_CAMPAIGN_TIME.md) · [Timing evidence](PRECISE_MISSION_TIMING.md)
+
 ## Deep-Brain-Spikes private pagination — 2026-11-07 (America/Chicago)
 
 Reconciled the handoff's published `4096705` reference against current source

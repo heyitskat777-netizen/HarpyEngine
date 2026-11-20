@@ -14,7 +14,7 @@ from test_mission_service import service as setup_missions
 from girlframe.database import tables as t
 from girlframe.delivery.m2_worker import GameWorker
 from girlframe.engine.m2 import PlayInput
-from girlframe.scenes.campaign_time import Anchor, Cut
+from girlframe.scenes.campaign_time import Anchor, Cut, ScenePlan
 from girlframe.scenes.mission_timing import Deadline, Option, Options, Rejoin, SequenceStart
 from girlframe.services.campaign_time import CampaignTimeService
 from girlframe.services.m2_game import GameService
@@ -206,7 +206,20 @@ def test_timed_root_roll_and_required_responses_charge_once_after_reconnect(ledg
 
 
 def test_uncertain_timing_saves_ruling_and_requires_fresh_player_commitment(ledger, monkeypatch):
-    timing, timeline, opened, _, _, _ = setup(ledger, consequence=None)
+    timing, timeline, opened, _, _, game = setup(ledger, consequence=None)
+    calendar = timeline.projection(ADMIN)
+    with ledger.engine.connect() as c:
+        scene = game.scene(c, 900)
+    with pytest.raises(WorkflowError, match="active timed sequence"):
+        timeline.schedule(
+            ADMIN,
+            "move-active-timed-scene",
+            900,
+            scene["id"],
+            scene["revision"],
+            calendar["anchor_receipt"],
+            ScenePlan(start=NIGHT, end=NIGHT, participants=(2, 3)),
+        )
     unknown = option("Uncharted service access", None)
     menu = publish(timing, opened, unknown)
     args = (PLAYER, "request-duration", opened["id"], menu["receipt"], unknown.id)

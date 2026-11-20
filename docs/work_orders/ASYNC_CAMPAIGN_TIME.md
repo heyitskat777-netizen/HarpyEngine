@@ -32,6 +32,11 @@ binding as a playable scene. Existing scenes without a schedule require explicit
 classification before crossing a cut. Protected mechanical facts stay in the
 existing rules state.
 
+Scenes configured for Director shadow observation use the explicit scene
+closeout before a cut can proceed. This preserves the original consent and
+report-selection checks. An active timed sequence keeps its scene's booked span
+until the sequence closes.
+
 Test the ordinary cut, coarse overlap, late closure, audience filtering, stale
 preview, receipt retry and command rollback. Reuse existing tests for Play
 recovery, scene closure and the explicit Off-Duty cycle. Keep mission-minute

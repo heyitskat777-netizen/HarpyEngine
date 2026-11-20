@@ -8,6 +8,7 @@ import sqlalchemy as sa
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
+from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_missions import Mission
 from girlframe.scenes.mission_timing import (
     Clock,
@@ -139,6 +140,12 @@ class MissionTimingService:
             raise WorkflowError(
                 "Recover the originally dispatched Pilot before timing this action."
             )
+        cast = next((x for x in state.scene_casts if x.id == scene["id"] and x.open), None)
+        pilot_ref = ActorRef(kind="pilot", entity=str(pilot), incarnation=original)
+        if cast is not None and not any(
+            role.actor == pilot_ref and role.controller == pilot for role in cast.roles
+        ):
+            raise WorkflowError("Join the timed scene as the originally dispatched Pilot.")
 
     def open(
         self,
@@ -180,7 +187,13 @@ class MissionTimingService:
             mission, scene = self._context(c, clock)
             if mission.revision != mission_revision:
                 raise WorkflowError("STALE_MISSION: refresh the original dispatch.")
-            if not set(mission.participants).intersection(scene["participants"]):
+            for pilot in set(mission.participants).intersection(scene["participants"]):
+                try:
+                    self._pilot(c, mission, scene, pilot)
+                except WorkflowError:
+                    continue
+                break
+            else:
                 raise WorkflowError("A dispatched Pilot must actually join the timed scene first.")
             self._require_settled_play(c)
             return self._record(c, viewer, key, clock, "opened")
