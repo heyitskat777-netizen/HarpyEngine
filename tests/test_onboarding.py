@@ -290,6 +290,7 @@ def test_bot_registers_setup_join_character_sheet_when_store_enabled(store):
                 "mission",
                 "facilitator",
                 "shelving",
+                "session-zero",
             }
             assert not bot.tree.get_commands()
 

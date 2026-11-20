@@ -41,6 +41,7 @@ RETIRED_GUILD_COMMANDS = frozenset(
         "server",
         "sheet",
         "shelving",
+        "session-zero",
         "start",
     )
 )
@@ -214,6 +215,11 @@ class ReadOnlyDiscordBot(discord.Client):
             from girlframe.services.handler_setup import HandlerService
 
             register_handler_setup(self.tree, policy.guild_id, HandlerService(store))
+            from girlframe.discord_adapter.session_zero import register_session_zero
+            from girlframe.services.session_zero import SessionZeroService
+
+            register_session_zero(self.tree, policy.guild_id, SessionZeroService(store))
+
             from girlframe.discord_adapter.pair_assets import register_pair_assets
             from girlframe.services.pair_assets import PairService
 

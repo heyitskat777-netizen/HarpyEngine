@@ -208,12 +208,20 @@ class HandlerService:
         )
 
     def appoint(
-        self, viewer: GuildViewer, key: str, expected: int, member: int | None
+        self,
+        viewer: GuildViewer,
+        key: str,
+        expected: int,
+        member: int | None,
+        *,
+        apply_check: Callable[[Connection], None] | None = None,
     ) -> dict[str, Any]:
         def admin(connection: Connection) -> None:
             self.store.administrator(viewer)
 
         def change(connection: Connection, previous: HandlerSetup) -> HandlerSetup:
+            if apply_check is not None:
+                apply_check(connection)
             if member == previous.handler_id:
                 raise WorkflowError("This Handler appointment is already current.")
             if member is not None and not self._member(connection, member):
