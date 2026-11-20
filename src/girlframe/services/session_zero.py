@@ -11,6 +11,7 @@ import sqlalchemy as sa
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
+from girlframe.engine.campaign_opening import Difficulty, Opening
 from girlframe.engine.m2 import GameState
 from girlframe.engine.session_zero import (
     MAX_GROUP,
@@ -20,6 +21,9 @@ from girlframe.engine.session_zero import (
     SessionZero,
     SheetReference,
 )
+from girlframe.services import campaign_time_history as calendar
+from girlframe.services import session_zero_opening as introduction
+from girlframe.services.campaign_difficulty import opening
 from girlframe.services.creation_review import CreationReviewService
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_state import load_state
@@ -106,6 +110,8 @@ class SessionZeroService:
         members = tuple(sorted(members))
 
         def update(c: Connection, current: SessionZero) -> SessionZero:
+            if opening(c, self.store.campaign_id) is not None:
+                raise WorkflowError("The group's Session Zero is already complete.")
             self._expect(current, expected)
             if (
                 not 2 <= len(members) <= MAX_GROUP
@@ -135,6 +141,8 @@ class SessionZeroService:
         profile = HandlerProfile.model_validate_json(profile.model_dump_json())
 
         def update(c: Connection, current: SessionZero) -> SessionZero:
+            if opening(c, self.store.campaign_id) is not None:
+                raise WorkflowError("The group's Session Zero is already complete.")
             self._expect(current, expected)
             if profile.member not in current.members or not self._active_group(c, current):
                 raise WorkflowError("Choose an active member of this Session Zero group.")
@@ -145,6 +153,8 @@ class SessionZeroService:
                     "handler": profile,
                     "proposal": str(uuid4()),
                     "approvals": (),
+                    "plan_proposal": None,
+                    "plan_approvals": (),
                     "submissions": {
                         uid: x
                         for uid, x in current.submissions.items()
@@ -168,6 +178,8 @@ class SessionZeroService:
         self, viewer: GuildViewer, key: str, proposal: str, *, approve: bool
     ) -> dict[str, Any]:
         def update(c: Connection, current: SessionZero) -> SessionZero:
+            if opening(c, self.store.campaign_id) is not None:
+                raise WorkflowError("The group's Session Zero is already complete.")
             if current.proposal != proposal or current.handler is None:
                 raise WorkflowError("STALE_PROPOSAL: review the latest Handler proposal.")
             if not self._active_group(c, current):
@@ -294,15 +306,119 @@ class SessionZeroService:
             update,
         )
 
-    def goals(self, viewer: GuildViewer, key: str, expected: int, goals: str) -> dict[str, Any]:
+    def goals(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        expected: int,
+        goals: str,
+        difficulty: Difficulty | None = None,
+    ) -> dict[str, Any]:
         def update(c: Connection, current: SessionZero) -> SessionZero:
             self._expect(current, expected)
+            if opening(c, self.store.campaign_id) is not None:
+                raise WorkflowError("The group's Session Zero is already complete.")
             if self._ready_handler(c, current) != viewer.user_id:
                 raise WorkflowError("The approved, appointed Handler drafts the campaign goals.")
             current.goals = goals.strip()
+            current.difficulty = difficulty if difficulty is not None else current.difficulty
+            current.plan_proposal = str(uuid4()) if current.goals else None
+            current.plan_approvals = ()
             return current
 
-        return self._write(viewer, key, "goals", {"expected": expected, "goals": goals}, update)
+        return self._write(
+            viewer,
+            key,
+            "goals",
+            {"expected": expected, "goals": goals}
+            | ({"difficulty": difficulty} if difficulty is not None else {}),
+            update,
+        )
+
+    def decide_plan(
+        self, viewer: GuildViewer, key: str, proposal: str, *, approve: bool
+    ) -> dict[str, Any]:
+        def update(c: Connection, current: SessionZero) -> SessionZero:
+            if opening(c, self.store.campaign_id) is not None:
+                raise WorkflowError("The group's Session Zero is already complete.")
+            if (
+                not proposal
+                or current.plan_proposal != proposal
+                or self._ready_handler(c, current) is None
+            ):
+                raise WorkflowError("STALE_PLAN: review the group's current goals and difficulty.")
+            approvals = set(current.plan_approvals)
+            if (viewer.user_id in approvals) == approve:
+                raise WorkflowError("Your plan approval is already in that state.")
+            if approve:
+                approvals.add(viewer.user_id)
+            else:
+                approvals.discard(viewer.user_id)
+            current.plan_approvals = tuple(sorted(approvals))
+            return current
+
+        return self._write(
+            viewer,
+            key,
+            "plan_decision",
+            {"proposal": proposal, "approve": approve},
+            update,
+        )
+
+    def complete(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        expected: int,
+        channel: int,
+        account: str,
+        days: int = introduction.DEFAULT_ROLEPLAY_DAYS,
+    ) -> dict[str, Any]:
+        def update(c: Connection, current: SessionZero) -> SessionZero:
+            self._expect(current, expected)
+            if self._ready_handler(c, current) != viewer.user_id:
+                raise WorkflowError("The approved and appointed Handler opens the introduction.")
+            if not current.plan_approved:
+                raise WorkflowError(
+                    "Every group member must approve the same goals and difficulty."
+                )
+            if any(status != "attached" for status in self._submissions(c, current).values()):
+                raise WorkflowError("Every Pilot must attach a current character sheet first.")
+            introduction.launch(c, self.store, viewer, key, current, channel, account, days)
+            return current
+
+        return self._write(
+            viewer,
+            key,
+            "complete",
+            {"expected": expected, "channel": channel, "introduction": account, "days": days},
+            update,
+        )
+
+    def advance_opening(
+        self, viewer: GuildViewer, key: str, expected_anchor: str
+    ) -> dict[str, Any]:
+        def access(c: Connection) -> None:
+            current = self._latest(c)
+            self._group_member(c, viewer, current)
+            if self._ready_handler(c, current) != viewer.user_id:
+                raise WorkflowError("Only the appointed Handler advances an introductory day.")
+
+        def operation(c: Connection) -> dict[str, Any]:
+            record = opening(c, self.store.campaign_id)
+            if record is None or record.handler != viewer.user_id:
+                raise WorkflowError("Open the group's introduction first.")
+            return introduction.advance(c, self.store, viewer, key, expected_anchor, record)
+
+        return self.store._write(
+            viewer,
+            key,
+            "session_zero.advance_opening",
+            {"anchor": expected_anchor},
+            operation,
+            authorize=access,
+            auto_audit=False,
+        )
 
     def _submissions(self, c: Connection, current: SessionZero) -> dict[int, str]:
         game = load_state(c, self.store.campaign_id)
@@ -353,11 +469,23 @@ class SessionZeroService:
             if group:
                 submissions = self._submissions(c, current) if ready is not None else {}
                 own = current.submissions.get(str(viewer.user_id))
+                record = opening(c, self.store.campaign_id)
+                anchor = calendar.anchor(c, self.store.campaign_id) if record else None
                 result.update(
                     profile=proposal.model_dump() if proposal else None,
                     sheets=submissions,
                     own_notes=own.notes.model_dump() if own else {},
                     goals=current.goals,
+                    difficulty=current.difficulty,
+                    plan_proposal=current.plan_proposal,
+                    plan_approvals=len(current.plan_approvals),
+                    plan_approved=current.plan_approved,
+                    own_plan_approval=viewer.user_id in current.plan_approvals,
+                    opening=record.model_dump(mode="json", exclude={"audience"})
+                    if record
+                    else None,
+                    opening_day=anchor[1].position.day if anchor else None,
+                    opening_anchor=anchor[0] if anchor else None,
                     can_generate=bool(submissions)
                     and all(x == "attached" for x in submissions.values()),
                 )
@@ -375,14 +503,16 @@ class SessionZeroService:
             statuses = self._submissions(c, current)
             if not statuses or any(x != "attached" for x in statuses.values()):
                 raise WorkflowError("Every listed Pilot must attach their current character sheet.")
-            return _worksheet(current, profile)
+            return _worksheet(current, profile, opening(c, self.store.campaign_id))
 
 
 def _text(value: str) -> str:
-    return re.sub(r"[\\`*_{}\[\]()#+.!|]", lambda match: "\\" + match[0], escape(value))
+    return re.sub(
+        r"[\\`*_{}\[\]()#+.!|]", lambda match: "\\" + match[0], escape(value, quote=False)
+    )
 
 
-def _worksheet(current: SessionZero, profile: HandlerProfile) -> str:
+def _worksheet(current: SessionZero, profile: HandlerProfile, record: Opening | None = None) -> str:
     lines = [
         "# Session Zero",
         "## Handler",
@@ -390,12 +520,22 @@ def _worksheet(current: SessionZero, profile: HandlerProfile) -> str:
         "Played by " + _text(profile.player_name or f"Discord member {profile.member}"),
         f"**Appearance**\n\n{_text(profile.appearance)}",
         f"**Personality**\n\n{_text(profile.personality)}",
-        "## Campaign goal draft",
+        "## Campaign plan",
+        f"**Difficulty** · {current.difficulty.title()}",
+        "**Agreed short-term goals**" if current.plan_approved else "**Short-term goal draft**",
         _text(current.goals)
         if current.goals
         else "Use the character goals and hooks below to agree on shared goals.",
-        "## Characters and campaign input",
     ]
+    if record is not None:
+        lines.extend(
+            (
+                "## Cadre Introduction",
+                _text(record.introduction),
+                f"The first mission can start on Day {record.first_mission_day}.",
+            )
+        )
+    lines.append("## Characters and campaign input")
     for uid in current.pilots:
         item = current.submissions[str(uid)]
         sheet = item.sheet

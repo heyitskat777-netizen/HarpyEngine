@@ -64,3 +64,7 @@ group. The setup nomination still uses `/campaign mentor`. The M3 callbacks
 for `mentor`, `trainee`, `vatgrown`, `oldgen_sex`, `newgirl_sex` and `oldgen`
 are now under `/campaign pilot`. Their existing handlers and permission rules
 continue to apply.
+
+The [campaign opening work order](CAMPAIGN_OPENING.md) adds group approval of
+short-term goals and difficulty, the Handler's introduction, and the path into
+the first mission.

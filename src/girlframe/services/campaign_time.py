@@ -180,6 +180,8 @@ class CampaignTimeService:
                 raise WorkflowError("Include the Pilots already joined to this scene.")
             scenes = self._scenes(c, self._scene_rows(c))
             old = scenes.get(scene_id)
+            if plan.narrative_only or (old and old.plan.narrative_only):
+                raise WorkflowError("The Session Zero opening owns this roleplay scene.")
             if old and (old.plan.start, old.plan.end) != (plan.start, plan.end):
                 clock = active_timing(c, self.store.campaign_id)
                 if clock is not None and clock.scene == scene_id:
@@ -371,7 +373,8 @@ class CampaignTimeService:
             elif scene.plan.start.order >= target:
                 continue
             elif scene.plan.end.order >= target:
-                blockers.append({"kind": "cut_inside_scene_span", "id": scene_id})
+                if not scene.plan.narrative_only:
+                    blockers.append({"kind": "cut_inside_scene_span", "id": scene_id})
             elif not scene.plan.allow_late_narration:
                 blockers.append({"kind": "finish_or_classify_scene", "id": scene_id})
             elif observation._state(c, scene_id).policy.mode == "shadow":
@@ -452,6 +455,40 @@ class CampaignTimeService:
             self._handler(c, viewer)
             return self._preview(c, viewer, cut)[0]
 
+    def _record_cut(
+        self,
+        c: Connection,
+        viewer: GuildViewer,
+        key: str,
+        preview: dict[str, Any],
+        late: list[ScheduledScene],
+    ) -> dict[str, Any]:
+        if preview["blockers"]:
+            raise WorkflowError("CUT_BLOCKED: resolve the required work in the preview.")
+        for index, scene in enumerate(late, start=1):
+            self.game.record_scene_close(
+                c,
+                viewer.user_id,
+                key,
+                {"id": scene.id, "channel_id": str(scene.channel)},
+                str(uuid4()),
+                None,
+                event_index=index,
+            )
+        body = {
+            "anchor": preview["target"],
+            "previous": preview["anchor_receipt"],
+            "required": preview["dependency_receipts"],
+            "game_revision": preview["game_revision"],
+            "late_scenes": [{"scene": x.id, "participants": list(x.joined)} for x in late],
+        }
+        event = self._event(c, viewer, key, ledger.CUT, body)
+        return {
+            "anchor": body["anchor"],
+            "receipt": event,
+            "late_scenes": preview["late_scenes"],
+        }
+
     def commit_cut(self, viewer: GuildViewer, key: str, cut: Cut, token: str) -> dict[str, Any]:
         cut = Cut.model_validate_json(cut.model_dump_json())
         payload = {"cut": cut.model_dump(mode="json"), "token": token}
@@ -462,31 +499,7 @@ class CampaignTimeService:
                 raise WorkflowError(
                     "STALE_CUT: review a fresh preview of the current dependencies."
                 )
-            if preview["blockers"]:
-                raise WorkflowError("CUT_BLOCKED: resolve the required work in the preview.")
-            for index, scene in enumerate(late, start=1):
-                self.game.record_scene_close(
-                    c,
-                    viewer.user_id,
-                    key,
-                    {"id": scene.id, "channel_id": str(scene.channel)},
-                    str(uuid4()),
-                    apply_effects=False,
-                    event_index=index,
-                )
-            body = {
-                "anchor": preview["target"],
-                "previous": preview["anchor_receipt"],
-                "required": preview["dependency_receipts"],
-                "game_revision": preview["game_revision"],
-                "late_scenes": [{"scene": x.id, "participants": list(x.joined)} for x in late],
-            }
-            event = self._event(c, viewer, key, ledger.CUT, body)
-            return {
-                "anchor": body["anchor"],
-                "receipt": event,
-                "late_scenes": preview["late_scenes"],
-            }
+            return self._record_cut(c, viewer, key, preview, late)
 
         return self.store._write(
             viewer,
@@ -614,6 +627,7 @@ class CampaignTimeService:
                 "end": scene.plan.end.model_dump(),
                 "scheduled_participants": [str(uid) for uid in scene.plan.participants],
                 "joined": viewer.user_id in scene.joined,
+                "narrative_only": scene.plan.narrative_only,
                 "status": (
                     ("closed" if scene.late_closed else "late")
                     if scene.sealed_by

@@ -12,10 +12,16 @@ from pydantic import ValidationError
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.onboarding import action_gate, reply
+from girlframe.engine.campaign_opening import (
+    DEFAULT_DIFFICULTY,
+    DIFFICULTIES,
+    DIFFICULTY_DESCRIPTIONS,
+)
 from girlframe.engine.m3_handler_state import PLAYBOOKS, Playbook
 from girlframe.engine.session_zero import MAX_GROUP, CharacterNotes, HandlerProfile
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.session_zero import SessionZeroService
+from girlframe.services.session_zero_opening import DEFAULT_ROLEPLAY_DAYS
 
 
 async def open_panel(
@@ -27,7 +33,11 @@ async def open_panel(
         data = await asyncio.to_thread(service.view, viewer_from_interaction(interaction))
         await interaction.edit_original_response(
             content=panel_text(data, feedback),
-            embed=profile_embed(data),
+            embeds=[
+                embed
+                for embed in (profile_embed(data), plan_embed(data), opening_embed(data))
+                if embed is not None
+            ],
             view=SessionZeroView(service, interaction.user.id, data),
             allowed_mentions=discord.AllowedMentions.none(),
         )
@@ -75,6 +85,30 @@ def profile_embed(data: dict[str, Any]) -> discord.Embed | None:
     embed = discord.Embed(title=f"{clean(profile['name'])} · {profile['archetype']}")
     embed.add_field(name="Appearance", value=clean(profile["appearance"]), inline=False)
     embed.add_field(name="Personality", value=clean(profile["personality"]), inline=False)
+    return embed
+
+
+def plan_embed(data: dict[str, Any]) -> discord.Embed | None:
+    if not data.get("plan_proposal"):
+        return None
+    mode = data["difficulty"]
+    embed = discord.Embed(
+        title="Agreed campaign plan" if data["plan_approved"] else "Campaign plan for review",
+        description=clean(data["goals"]),
+    )
+    embed.add_field(name="Difficulty", value=f"{mode.title()} · {DIFFICULTY_DESCRIPTIONS[mode]}")
+    embed.add_field(name="Approvals", value=f"{data['plan_approvals']} of {len(data['members'])}")
+    return embed
+
+
+def opening_embed(data: dict[str, Any]) -> discord.Embed | None:
+    record = data.get("opening")
+    if not record:
+        return None
+    embed = discord.Embed(title="Cadre Introduction", description=clean(record["introduction"]))
+    embed.add_field(name="Scene", value=f"<#{record['channel']}>")
+    embed.add_field(name="Fictional day", value=str(data["opening_day"]))
+    embed.add_field(name="First mission", value=f"From Day {record['first_mission_day']}")
     return embed
 
 
@@ -126,6 +160,22 @@ class SessionZeroView(discord.ui.View):
         if data["handler_ready"] != owner:
             self.remove_item(self.goals)
         self.generate.disabled = not data.get("can_generate")
+
+        record = data.get("opening")
+        is_handler = data["handler_ready"] == owner
+        if record:
+            for item in (self.group, self.propose, self.approve, self.goals):
+                self.remove_item(item)
+        if record or not data.get("plan_proposal"):
+            self.remove_item(self.approve_plan)
+        elif data.get("own_plan_approval"):
+            self.approve_plan.label = "Withdraw plan approval"
+            self.approve_plan.style = discord.ButtonStyle.secondary
+        if not is_handler or record:
+            self.remove_item(self.complete)
+        self.complete.disabled = not bool(data.get("plan_approved") and data.get("can_generate"))
+        if not is_handler or not record or data["opening_day"] >= record["first_mission_day"]:
+            self.remove_item(self.advance)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id != self.owner:
@@ -199,9 +249,46 @@ class SessionZeroView(discord.ui.View):
     async def notes(self, interaction: discord.Interaction, button: discord.ui.Button[Any]) -> None:
         await interaction.response.send_modal(NotesModal(self))
 
-    @discord.ui.button(label="Draft campaign goals", row=1)
+    @discord.ui.button(label="Draft goals and difficulty", row=1)
     async def goals(self, interaction: discord.Interaction, button: discord.ui.Button[Any]) -> None:
         await interaction.response.send_modal(GoalsModal(self))
+
+    @discord.ui.button(label="Approve campaign plan", style=discord.ButtonStyle.primary, row=3)
+    async def approve_plan(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Any]
+    ) -> None:
+        viewer = viewer_from_interaction(interaction)
+        await write_action(
+            interaction,
+            self.service,
+            lambda: self.service.decide_plan(
+                viewer,
+                str(interaction.id),
+                self.data["plan_proposal"],
+                approve=not self.data["own_plan_approval"],
+            ),
+            "Your campaign plan decision is saved.",
+        )
+
+    @discord.ui.button(label="Complete and open introduction", row=3)
+    async def complete(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Any]
+    ) -> None:
+        await interaction.response.send_modal(OpeningModal(self))
+
+    @discord.ui.button(label="Advance one roleplay day", row=3)
+    async def advance(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Any]
+    ) -> None:
+        viewer = viewer_from_interaction(interaction)
+        await write_action(
+            interaction,
+            self.service,
+            lambda: self.service.advance_opening(
+                viewer, str(interaction.id), self.data["opening_anchor"]
+            ),
+            "The fictional calendar advanced by one day.",
+        )
 
     @discord.ui.button(
         label="Generate Session Zero sheet", style=discord.ButtonStyle.success, row=2
@@ -408,14 +495,28 @@ class NotesModal(SessionZeroModal):
 
 class GoalsModal(SessionZeroModal):
     def __init__(self, panel: SessionZeroView):
-        super().__init__(panel, "Draft campaign goals")
+        super().__init__(panel, "Draft goals and difficulty")
         self.goals: discord.ui.TextInput[Any] = discord.ui.TextInput(
             style=discord.TextStyle.paragraph,
             max_length=800,
             default=panel.data.get("goals"),
             required=False,
         )
-        self.add_item(discord.ui.Label(text="Shared campaign goal ideas", component=self.goals))
+        self.mode: discord.ui.Select[Any] = discord.ui.Select(
+            options=[
+                discord.SelectOption(
+                    label=mode.title(),
+                    value=mode,
+                    description=DIFFICULTY_DESCRIPTIONS[mode],
+                    default=mode == panel.data.get("difficulty", DEFAULT_DIFFICULTY),
+                )
+                for mode in DIFFICULTIES
+            ]
+        )
+        self.add_item(
+            discord.ui.Label(text="What should the cadre aim for first?", component=self.goals)
+        )
+        self.add_item(discord.ui.Label(text="Campaign difficulty", component=self.mode))
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         viewer = viewer_from_interaction(interaction)
@@ -423,9 +524,61 @@ class GoalsModal(SessionZeroModal):
             interaction,
             self.panel.service,
             lambda: self.panel.service.goals(
-                viewer, str(interaction.id), self.panel.data["revision"], self.goals.value
+                viewer,
+                str(interaction.id),
+                self.panel.data["revision"],
+                self.goals.value,
+                next(mode for mode in DIFFICULTIES if mode == self.mode.values[0]),
             ),
             "The campaign goal draft is saved.",
+        )
+
+
+class OpeningModal(SessionZeroModal):
+    def __init__(self, panel: SessionZeroView):
+        super().__init__(panel, "Open the cadre introduction")
+        self.channel: discord.ui.ChannelSelect[Any] = discord.ui.ChannelSelect(
+            channel_types=[discord.ChannelType.text],
+            required=True,
+        )
+        self.account: discord.ui.TextInput[Any] = discord.ui.TextInput(
+            style=discord.TextStyle.paragraph,
+            max_length=1200,
+        )
+        self.days: discord.ui.Select[Any] = discord.ui.Select(
+            options=[
+                discord.SelectOption(
+                    label=f"{days} fictional days",
+                    value=str(days),
+                    default=days == DEFAULT_ROLEPLAY_DAYS,
+                )
+                for days in range(2, 8)
+            ]
+        )
+        self.add_item(discord.ui.Label(text="Existing roleplay channel", component=self.channel))
+        self.add_item(
+            discord.ui.Label(
+                text="Handler's introduction to the cadre",
+                component=self.account,
+                description="Introduce yourself, explain the plan and invite discussion.",
+            )
+        )
+        self.add_item(discord.ui.Label(text="Time before the first mission", component=self.days))
+
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        viewer = viewer_from_interaction(interaction)
+        await write_action(
+            interaction,
+            self.panel.service,
+            lambda: self.panel.service.complete(
+                viewer,
+                str(interaction.id),
+                self.panel.data["revision"],
+                self.channel.values[0].id,
+                self.account.value,
+                int(self.days.values[0]),
+            ),
+            "The cadre introduction is open.",
         )
 
 

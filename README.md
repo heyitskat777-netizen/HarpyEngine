@@ -443,6 +443,7 @@ unimplemented mechanics, player responses or an M3 release.
 | `/campaign join` | Explicit self-enrollment as a player |
 | `/campaign handler [member]` | Configured administrator; review/confirm appointment, or omit member to revoke |
 | `/campaign mentor newgirl member` | Appointed Handler; review/confirm a Mentor nomination |
+| `/session-zero` | Legacy private fallback for the group worksheet and campaign opening |
 | `/campaign status_setup` | Appointed Handler; select, review and confirm the starting rank order |
 | `/campaign creation_rules` | Appointed Handler; review and explicitly confirm starting-resource rulings or leave them unresolved |
 | `/campaign setup` | Joined member; saved starting Status, Handler and permitted Mentor information |

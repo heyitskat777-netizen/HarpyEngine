@@ -1092,6 +1092,9 @@ class RolePunishmentService:
                         "Only the original chooser instructs before the actual scene begins."
                     )
                 details = Details.model_validate_json(instruction.details_json)
+                from girlframe.services.campaign_difficulty import require_consequence
+
+                require_consequence(c, self.store.campaign_id, details.kind)
                 if instruction.kind != details.kind or instruction.kind not in available_for_case(
                     state, case, profiles(c, self.store.campaign_id)
                 ):

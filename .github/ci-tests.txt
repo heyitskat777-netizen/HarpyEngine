@@ -240,3 +240,5 @@ tests/rules/test_mission_service.py::test_mission_rewards_and_absent_dog_are_ato
 # Session Zero group, character sources and SDK startup.
 tests/test_session_zero.py
 tests/test_onboarding.py::test_bot_registers_setup_join_character_sheet_when_store_enabled
+# Approved settings, fictional introduction, and first mission.
+tests/rules/test_campaign_opening.py

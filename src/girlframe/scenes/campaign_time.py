@@ -47,6 +47,7 @@ class ScenePlan(Model):
     end: Position
     participants: Annotated[tuple[Principal, ...], Field(min_length=1, max_length=32)]
     allow_late_narration: bool = False
+    narrative_only: bool = Field(default=False, exclude_if=lambda value: not value)
 
     @model_validator(mode="after")
     def validate_booking(self) -> Self:

@@ -26,6 +26,10 @@ def details(data: dict[str, Any]) -> str:
         + " · pending required work: "
         + str(data["pending_count"]),
     ]
+    if mission.get("introductory"):
+        lines.insert(1, "Introductory mission")
+    if mission.get("hard_stake"):
+        lines.insert(1, "**Hard-mode obstacle** · " + clean(mission["hard_stake"]))
     lines += [
         member_label(uid) + ": " + mission["responses"].get(str(uid), "awaiting response")
         for uid in mission["offered_to"]
@@ -103,6 +107,11 @@ async def open_mission(
             "Saved: "
             + str(result["phase"]).replace("_", " ")
             + ". Reopen /mission inbox for current progress."
+            + (
+                f" Join the first mission scene in <#{result['channel']}>."
+                if "channel" in result
+                else ""
+            )
         )
 
     form = NativeForm(
@@ -215,6 +224,20 @@ def register_missions(
                     "The next mission requires a known Harpy available for conversion."
                 )
 
+            introductory, hard = await asyncio.to_thread(
+                service.offer_requirements, viewer_from_interaction(interaction)
+            )
+            fields = [
+                Field("players", "Invite Pilots", roster, 1, min(25, len(roster))),
+                Field(
+                    "objective",
+                    "One clear introductory objective" if introductory else "Mission objective",
+                    paragraph=True,
+                ),
+            ]
+            if hard:
+                fields.append(Field("hard_stake", "Extra Hard-mode obstacle", paragraph=True))
+
             async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
                 result = await asyncio.to_thread(
                     service.offer,
@@ -223,6 +246,7 @@ def register_missions(
                     values["objective"],
                     tuple(int(x) for x in values["players"]),
                     capture_target=next(iter(values.get("capture_target", ())), None),
+                    hard_stake=values.get("hard_stake"),
                 )
                 return (
                     "Offer saved. Each invited player must answer through /mission inbox. Mission `"
@@ -237,10 +261,7 @@ def register_missions(
                     "Choose Pilots and describe the objective. Each player answers privately. "
                     "Opening a menu never accepts an offer."
                 ),
-                [
-                    Field("players", "Invite Pilots", roster, 1, min(25, len(roster))),
-                    Field("objective", "Mission objective", paragraph=True),
-                ]
+                fields
                 + (
                     [Field("capture_target", "Harpy to capture and convert", targets)]
                     if targets

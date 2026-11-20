@@ -178,7 +178,12 @@ def projection(
     request: dict[str, Any],
 ) -> dict[str, Any]:
     sheet = state.sheets[action["actor_id"]]
-    data: dict[str, Any] = dict(offer=action["data"].get("defeat_offer"))
+    from girlframe.services.campaign_difficulty import difficulty
+
+    data: dict[str, Any] = dict(
+        offer=action["data"].get("defeat_offer"),
+        narrative=difficulty(c, game.store.campaign_id) == "narrative",
+    )
     from girlframe.services import m3_soldier_expendable as expendable
 
     if request["kind"] == "defeat_select":
@@ -453,6 +458,10 @@ def apply(
         chosen = Decision.model_validate_json(json.dumps(action["data"]["defeat_selected"]))
         offer = Alternative.model_validate_json(json.dumps(action["data"]["defeat_offer"]))
     elif kind == "defeat_select":
+        from girlframe.services.campaign_difficulty import require_consequence
+
+        if "death" in answer.options:
+            require_consequence(c, game.store.campaign_id, "death")
         chosen = decision(game, c, state, answer)
         for ref in (chosen.rescuer, chosen.tag_giver):
             if ref is not None and int(ref.entity) not in action["data"]["participants"]:

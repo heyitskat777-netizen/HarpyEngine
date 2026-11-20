@@ -4,6 +4,7 @@ from typing import Annotated, Literal
 
 from pydantic import AfterValidator, Field
 
+from girlframe.engine.campaign_opening import DEFAULT_DIFFICULTY, Difficulty
 from girlframe.engine.identity import Snowflake
 from girlframe.engine.m2 import Model
 from girlframe.engine.m3_handler_state import Playbook
@@ -58,6 +59,13 @@ class SessionZero(Model):
     approvals: tuple[Snowflake, ...] = ()
     submissions: dict[str, CharacterSubmission] = Field(default_factory=dict)
     goals: str = Field(default="", max_length=800)
+    difficulty: Difficulty = DEFAULT_DIFFICULTY
+    plan_proposal: str | None = None
+    plan_approvals: tuple[Snowflake, ...] = ()
+
+    @property
+    def plan_approved(self) -> bool:
+        return self.plan_proposal is not None and set(self.members) == set(self.plan_approvals)
 
     @property
     def approved(self) -> bool:

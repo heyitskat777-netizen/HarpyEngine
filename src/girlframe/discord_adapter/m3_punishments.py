@@ -12,6 +12,7 @@ from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.member_names import member_label
 from girlframe.discord_adapter.onboarding import reply
+from girlframe.engine.campaign_opening import RESTRICTED_PUNISHMENTS
 from girlframe.engine.m3_punishments import KINDS, SUPPORTED, Details
 from girlframe.services.m3_punishments import PunishmentService
 from girlframe.services.onboarding import WorkflowError
@@ -342,6 +343,7 @@ async def open_discipline(
                 (kind, KINDS[kind][0])
                 for kind in KINDS
                 if kind in SUPPORTED
+                and (not data.get("narrative_limit") or kind not in RESTRICTED_PUNISHMENTS)
                 and (KINDS[kind][1] != "severe" or viewer.user_id == data["choices"]["handler"])
                 and (
                     data.get("required_severity") is None

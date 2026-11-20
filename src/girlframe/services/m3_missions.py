@@ -343,6 +343,18 @@ class MissionService:
         except ValueError as error:
             raise WorkflowError(str(error)) from None
 
+    def offer_requirements(self, viewer: GuildViewer) -> tuple[bool, bool]:
+        from girlframe.services.campaign_difficulty import initial_mission_needed, opening
+
+        with self.store.engine.connect() as c:
+            self._authorize(c, viewer, write=False)
+            self._handler(c, viewer)
+            record = opening(c, self.store.campaign_id)
+            if record is None:
+                return False, False
+            intro = initial_mission_needed(c, self.store.campaign_id)
+            return intro, record.difficulty == "hard" and not intro
+
     def offer(
         self,
         viewer: GuildViewer,
@@ -352,6 +364,7 @@ class MissionService:
         *,
         assassination: str | None = None,
         capture_target: str | None = None,
+        hard_stake: str | None = None,
     ) -> dict[str, Any]:
         if not objective.strip() or len(objective) > 1200:
             raise WorkflowError("Describe the mission objective in 1–1200 characters.")
@@ -389,11 +402,20 @@ class MissionService:
                 raise WorkflowError(
                     "Offer missions only to active campaign Pilots with canonical sheets."
                 )
+            from girlframe.services.campaign_difficulty import briefing
+
+            introductory, extra = briefing(c, self.store.campaign_id, players, hard_stake)
+            if introductory and (assassination is not None or capture_target is not None):
+                raise WorkflowError(
+                    "Use one simple introductory objective before special missions."
+                )
             mission = rules.Mission(
                 id=str(uuid4()),
                 handler=viewer.user_id,
                 objective=written_objective,
                 capture_target=capture_actor,
+                introductory=introductory,
+                hard_stake=extra,
                 offered_to=players,
                 offered_characters={
                     str(uid): self.game.character_binding(
@@ -426,7 +448,8 @@ class MissionService:
             "m3.mission_offered",
             {"objective": objective, "players": list(players)}
             | ({"assassination": assassination} if assassination is not None else {})
-            | ({"capture_target": capture_target} if capture_target is not None else {}),
+            | ({"capture_target": capture_target} if capture_target is not None else {})
+            | ({"hard_stake": hard_stake} if hard_stake is not None else {}),
             operation,
             lambda c: HandlerService(self.store).authorize(c, viewer),
         )
@@ -640,8 +663,14 @@ class MissionService:
                 mission_id=identity,
                 revision=updated.revision,
             )
+            binding: dict[str, int | str] = {}
+            if updated.introductory:
+                from girlframe.services.session_zero_opening import dispatch_scene
+
+                binding = dispatch_scene(c, self.store, viewer, key, updated.participants)
+                updated.intro_scene = str(binding["scene"])
             self._save(c, updated, event)
-            return {"id": identity, "revision": updated.revision, "phase": updated.phase}
+            return {"id": identity, "revision": updated.revision, "phase": updated.phase} | binding
 
         return self._write(
             viewer,

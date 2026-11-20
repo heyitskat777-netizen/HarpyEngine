@@ -17,6 +17,12 @@ class Mission(Model):
     revision: int = Field(default=1, ge=1)
     handler: Snowflake
     objective: str = Field(min_length=1, max_length=1200)
+    introductory: bool = Field(default=False, exclude_if=lambda value: not value)
+    intro_scene: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    hard_stake: str | None = Field(
+        default=None, max_length=300, exclude_if=lambda value: value is None
+    )
+
     offered_to: tuple[Snowflake, ...]
     responses: dict[str, Response] = Field(default_factory=dict)
     participants: tuple[Snowflake, ...] = ()

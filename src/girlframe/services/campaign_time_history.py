@@ -68,6 +68,8 @@ def require_due(c: Connection, campaign: str, scene: str) -> None:
     plan = booking(c, campaign, scene)
     if plan is None:
         raise WorkflowError("The Handler must schedule this scene before gameplay.")
+    if plan.narrative_only:
+        raise WorkflowError("This opening scene is reserved for roleplay.")
     if plan.start.order > current[1].position.order:
         raise WorkflowError("This scene's fictional opening slot has not arrived.")
     if plan.end.order < current[1].position.order:

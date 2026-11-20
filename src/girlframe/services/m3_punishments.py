@@ -485,6 +485,9 @@ class PunishmentService:
                     result["conditioning_phrases"] = training[2]
                 bundle = self._bundle(c, row)
                 result["causes"] = [self._body(x)["reason"] for x in bundle]
+                from girlframe.services.campaign_difficulty import difficulty
+
+                result["narrative_limit"] = difficulty(c, self.store.campaign_id) == "narrative"
                 result["required_severity"] = body.get("required_severity")
                 result["consultation"] = None
                 if body.get("consult_id"):
@@ -594,6 +597,9 @@ class PunishmentService:
             self._check(c, row, revision, game_revision)
             if row["kind"] != "punishment":
                 raise WorkflowError("Choose the typed resolver for this required task.")
+            from girlframe.services.campaign_difficulty import require_consequence
+
+            require_consequence(c, self.store.campaign_id, details.kind)
             severity = rules.validate(details)
             if conditioning_phrase is not None and details.kind in (
                 "passing_responsibility",
