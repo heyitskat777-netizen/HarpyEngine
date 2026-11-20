@@ -12,7 +12,7 @@ window and has one clear objective. Existing mission acceptance and rules
 apply, and regular missions follow after the introductory mission completes.
 
 Narrative restricts Execution, Lobotomization and Indefinite Imprisonment,
-and protects original player characters from lethal outcomes. Normal uses the
+and allows at most one player-character death over the campaign. Normal uses the
 existing rules. Hard starts with the same simple mission, then requires a
 specific additional obstacle in the briefing before players accept each
 subsequent mission. This is a campaign design setting with no extra rulebook
@@ -41,10 +41,15 @@ modifiers.
    finish the first mission before offering another.
 
 The approved difficulty takes effect on completion. Legacy campaigns use
-Normal. Narrative protects active Pilots, the player Handler, and tracked
-player Harpy bodies from lethal outcomes. Unsupported lethal outcomes stay
-pending for adjudication. Narrative never invents a substitute or changes a
-saved die result. Ordinary NPC combat remains governed by the existing rules.
+Normal. In Narrative, the one lethal exception is available on a low
+Defeat result. The affected player selects Death on its own and confirms the
+choice separately. A declined or abandoned lethal choice spends nothing.
+The campaign records the exception with the original decision and actual
+career ending in the same transaction. Earlier recorded player-character
+deaths count against the limit. Ordinary nonlethal outcomes remain available
+before and after the exception is used. Unsupported lethal results stay
+pending for the Handler to adjudicate. Ordinary NPC combat uses the existing
+rules.
 Hard expects a concrete obstacle such as a washed-out extraction route or a
 stated deadline. It records the obstacle in the briefing each invited player
 reviews before accepting.

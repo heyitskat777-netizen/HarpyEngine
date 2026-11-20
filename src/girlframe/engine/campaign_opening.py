@@ -12,7 +12,7 @@ DIFFICULTIES: tuple[Difficulty, ...] = ("narrative", "normal", "hard")
 DEFAULT_DIFFICULTY: Difficulty = "normal"
 RESTRICTED_PUNISHMENTS = frozenset({"execution", "lobotomization", "indefinite_imprisonment"})
 DIFFICULTY_DESCRIPTIONS: dict[Difficulty, str] = {
-    "narrative": "Protect player characters from death and restrict severe punishments.",
+    "narrative": "Allow up to one player-character death. Restrict the most severe punishments.",
     "normal": "Use the existing GIRL FRAME rules and campaign rulings.",
     "hard": "Use the normal rules and brief an extra obstacle for later missions.",
 }

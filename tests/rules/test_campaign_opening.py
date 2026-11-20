@@ -15,13 +15,21 @@ from test_punishment_service import ended, submit
 from test_session_zero import OUTSIDE, approve, group, interaction, reviewed_sheets
 
 from girlframe.database import tables as t
+from girlframe.discord_adapter.m3_defeat import open_decision
 from girlframe.discord_adapter.session_zero import GoalsModal, OpeningModal, open_panel
 from girlframe.engine.campaign_opening import Opening
+from girlframe.engine.m2 import ChoiceAnswer
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_careers import end
 from girlframe.engine.m3_punishments import Details
-from girlframe.services.campaign_difficulty import EVENT, opening
+from girlframe.services.campaign_difficulty import (
+    DEATH_USED,
+    EVENT,
+    narrative_death_available,
+    opening,
+)
 from girlframe.services.campaign_time import CampaignTimeService
+from girlframe.services.m2_game import GameService
 from girlframe.services.m3_punishments import PunishmentService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.session_zero import SessionZeroService
@@ -273,3 +281,79 @@ def test_narrative_defeat_keeps_the_roll_and_lets_the_player_choose_survival(led
     )
     assert state(game).sheets["2"].frame_scrapped
     assert state(game).sheets["2"].character_id == original.sheets["2"].character_id
+
+
+def test_narrative_uses_its_single_death_only_for_confirmed_owned_low_defeat(ledger):
+    game, *_ = rolled(ledger, faces=(1, 1))
+    narrative_fixture(ledger)
+    original = state(game)
+    choice = next(x for x in game.choices(PLAYER) if x["kind"] == "defeat_select")
+    decision = game.decision(PLAYER, choice["id"])
+    assert decision["defeat"]["narrative_death_available"]
+
+    account = "I choose this end for my character."
+
+    async def confirm_through_discord():
+        request = interaction(PLAYER.user_id, 981)
+        await request.response.defer(ephemeral=True)
+        await open_decision(request, game, decision)
+        form = request.edit_original_response.call_args.kwargs["view"]
+        fields = {field.key: field for field in form.fields}
+        assert "death" in dict(fields["options"].options)
+        assert not fields["confirm_death"].required
+        form.values.update(options=("death",), account=account, confirm_death=("yes",))
+        await form.confirm.callback(interaction(PLAYER.user_id, 982))
+        assert form.completed
+
+    asyncio.run(confirm_through_discord())
+    confirm = ChoiceAnswer(options=("death",), text=account, flag=True)
+    args = (PLAYER, "982", choice["id"], choice["revision"], confirm)
+    result = game.respond(*args)
+    recorded = state(game)
+    assert len(recorded.career_archives) == len(original.career_archives) + 1
+    assert recorded.career_archives[-1].actor == current_ref(original, PLAYER.user_id)
+    assert "3" in recorded.sheets
+
+    ledger.engine.dispose()
+    restarted = GameService(ledger)
+    assert restarted.respond(*args) == result
+    with ledger.engine.connect() as c:
+        assert not narrative_death_available(c, ledger.campaign_id, recorded)
+        # The private receipt alone still enforces the limit if a projection is rebuilt.
+        assert not narrative_death_available(c, ledger.campaign_id, original)
+        receipts = list(
+            c.scalars(
+                sa.select(t.events.c.id).where(
+                    t.events.c.campaign_id == ledger.campaign_id,
+                    t.events.c.kind == DEATH_USED,
+                )
+            )
+        )
+        assert len(receipts) == 1
+
+
+def test_spent_narrative_death_blocks_another_confirmed_lethal_choice(ledger):
+    game, *_ = rolled(ledger, faces=(1, 1))
+    narrative_fixture(ledger)
+    with ledger.transaction() as c:
+        ledger._audit(c, OTHER.user_id, "earlier-death", DEATH_USED, {"archive": "earlier-death"})
+    before = state(game)
+    choice = next(x for x in game.choices(PLAYER) if x["kind"] == "defeat_select")
+    assert not game.decision(PLAYER, choice["id"])["defeat"]["narrative_death_available"]
+    with pytest.raises(WorkflowError, match="already recorded its one death"):
+        game.respond(
+            PLAYER,
+            "attempt-second-narrative-death",
+            choice["id"],
+            choice["revision"],
+            ChoiceAnswer(options=("death",), text="I choose this end.", flag=True),
+        )
+    assert state(game) == before
+    answer(
+        game,
+        PLAYER,
+        "defeat_select",
+        options=("lose_frame_choose_later",),
+        text="I climb out alive and leave my wrecked Frame behind.",
+    )
+    assert state(game).sheets["2"].frame_scrapped

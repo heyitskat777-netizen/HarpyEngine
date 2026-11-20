@@ -158,9 +158,11 @@ async def open_decision(
     fields = []
     level = decision["result"]["tier"]
     own = decision.get("own") or {}
+    narrative = kind == "defeat_select" and bool(decision.get("defeat", {}).get("narrative"))
+    death_available = narrative and bool(decision["defeat"].get("narrative_death_available"))
     if kind == "defeat_select":
         allowed = DEFEAT_LOW if level == "low" else DEFEAT_MID if level == "mid" else DEFEAT_HIGH
-        if decision.get("defeat", {}).get("narrative"):
+        if narrative and not death_available:
             allowed = tuple(x for x in allowed if x != "death")
         soldiers = decision["defeat"].get("soldiers", ())
         outcomes = tuple((x, LABELS[x]) for x in allowed)
@@ -176,6 +178,17 @@ async def open_decision(
             ),
             Field("account", "Describe the selected actual consequences", paragraph=True),
         ]
+        if death_available and "death" in allowed:
+            fields.append(
+                Field(
+                    "confirm_death",
+                    "Only if you chose Death",
+                    (("yes", "End this character's life and use this campaign's one death"),),
+                    0,
+                    1,
+                    required=False,
+                )
+            )
         if soldiers:
             fields.append(
                 Field("soldier", "Original Soldier for Expendable", soldiers, 0, required=False)
@@ -335,6 +348,12 @@ async def open_decision(
             )
         ]
     instructions = "Your actual owned decision. Nothing applies until Confirm."
+    if death_available and level == "low":
+        instructions += (
+            " To use the campaign's one death, choose Death on its own and confirm it separately."
+        )
+    elif narrative and level == "low":
+        instructions += " This campaign's death has already been used. Choose how you survive."
     if kind == REQUEST:
         source = decision["defeat"]["soldier_request"]
         instructions = (
@@ -372,11 +391,21 @@ async def open_decision(
         else:
             extra = {}
             for key, value in values.items():
-                if key in ("options", "account") or not value:
+                if key in ("options", "account", "confirm_death") or not value:
                     continue
                 extra[key] = value[0] if isinstance(value, tuple) else value
+            options = tuple(values["options"])
             answer = ChoiceAnswer(
-                options=tuple(values["options"]), text=values.get("account", ""), fields=extra
+                options=options,
+                text=values.get("account", ""),
+                fields=extra,
+                flag=True
+                if (
+                    death_available
+                    and "death" in options
+                    and values.get("confirm_death") == ("yes",)
+                )
+                else None,
             )
         result = await asyncio.to_thread(
             game.respond,
