@@ -43,6 +43,23 @@ HISTORY_LABELS: dict[str, tuple[str, ...]] = {
     "Advocate": ("Unwanted attention", "Personal recruitment request", "Prior online friendship"),
 }
 TRAINER_PHRASES = {0: ("sit", "heel"), 1: ("hunt",), 2: ("speak", "play_gentle")}
+HANDLER_NOTE_FIELDS = (
+    ("voice", "Personal voice"),
+    ("intervention", "Personal intervention instinct"),
+    ("concern", "Current concern"),
+    ("obligation", "Obligation"),
+    ("promise", "Your view of a relationship or promise"),
+)
+
+
+class HandlerNotes(Model):
+    """The Handler's own roleplay prompts, separate from established facts."""
+
+    voice: str = Field(default="", max_length=400, exclude_if=lambda value: not value)
+    intervention: str = Field(default="", max_length=400, exclude_if=lambda value: not value)
+    concern: str = Field(default="", max_length=400, exclude_if=lambda value: not value)
+    obligation: str = Field(default="", max_length=400, exclude_if=lambda value: not value)
+    promise: str = Field(default="", max_length=400, exclude_if=lambda value: not value)
 
 
 class GearDetail(Model):
@@ -87,6 +104,7 @@ class Draft(Model):
     surveilled: tuple[str, ...] = Field(default=(), max_length=2)
     sympathizer: str | None = None
     npc_starting: tuple[NpcStarting, ...] = Field(default=(), max_length=3)
+    notes: HandlerNotes | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def distinct_choices(self) -> "Draft":

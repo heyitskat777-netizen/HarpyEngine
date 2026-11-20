@@ -22,7 +22,7 @@
 +)
 +SETUP_READ = {"opening", "opening-brief", "persona-setup", "persona-agreement"}
 +SETUP_WRITE = {
-+    "opening-save", "opening-launch", "persona-save", "persona-activate", "persona-propose", "persona-answer"
++    "opening-save", "opening-launch", "persona-save", "persona-notes", "persona-activate", "persona-propose", "persona-answer"
 +}
  TRANSCRIPT_ROUTE = re.compile(r"/api/rooms/(relay|[0-9a-f]{16})/transcript")
  COMMUNICATION_ROUTE = re.compile(

@@ -114,12 +114,16 @@ class DirectorConversationService:
         question = source.text or ""
         if route == "handler":
             role = self.context._handler_for_request(c, viewer, scene_id)
-            persona = (
-                load_state(c, self.store.campaign_id).handler_persona
-                if self.handler_mode == "reviewed"
-                else None
+            canon = (
+                load_state(c, self.store.campaign_id) if self.handler_mode == "reviewed" else None
             )
+            persona = canon.handler_persona if canon is not None else None
             playbook = persona.playbook if persona else None
+            notes = None
+            if canon is not None and role.actor is not None:
+                from girlframe.services.m3_handler_creation import HandlerCreationService
+
+                notes = HandlerCreationService(self.store).active_notes(c, canon, role.actor)
             if source.fictional_channel == "private":
                 # Scene membership is OOC access, not in-fiction hearing. Never
                 # expose the private narration as the Handler's current question.
@@ -187,6 +191,7 @@ class DirectorConversationService:
                 if self.handler_mode == "reviewed"
                 else None,
                 playbook_profile=PROFILES[playbook] if playbook else None,
+                character_notes=notes,
                 open_concerns=self.delivery.open_concerns(
                     c, scene_id, role.actor, source.actor, {ref.id for ref in role.references}
                 )
@@ -1270,6 +1275,11 @@ class DirectorConversationService:
                 **(
                     {"handler_playbook": request.playbook_profile.playbook}
                     if request.playbook_profile
+                    else {}
+                ),
+                **(
+                    {"handler_character_notes": request.character_notes.model_dump(mode="json")}
+                    if request.character_notes is not None
                     else {}
                 ),
                 **(

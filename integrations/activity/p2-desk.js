@@ -278,6 +278,69 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     if (settings.human_fallback) agreement.append(element("p", "Human fallback · " + settings.human_fallback));
   }
 
+  function renderHandlerProfile(parent, profile) {
+    parent.replaceChildren();
+    parent.hidden = !profile;
+    if (!profile) return;
+    const guidance = [["Routine voice", profile.voice], ["When to step in", profile.initiative],
+      ["When to hold back", profile.behavior.wait], ["Under pressure", profile.behavior.under_pressure],
+      ["After a mistake", profile.behavior.recovery], ["Strength", profile.behavior.strength],
+      ["Blind spot", profile.behavior.blind_spot]];
+    parent.append(element("summary", "Playbook guidance"));
+    for (const [label, detail] of guidance) parent.append(element("p", label + " · " + detail));
+  }
+
+  function renderHandlerRules(parent, rules) {
+    parent.append(element("summary", "Plays and advancement"), element("h5", "Shared Plays"));
+    for (const rule of rules.shared) parent.append(element("p", rule.title + " · " + rule.trigger));
+    const access = {draft: "On creation", owned: "Check the native trigger", gated: "Release or ownership required"};
+    for (const rule of rules.playbook) {
+      parent.append(element("h5", `${rule.title} · ${rule.book}`),
+        element("p", `${rule.kind} · ${access[rule.access]}`), element("p", rule.trigger));
+    }
+    for (const [label, triggers] of [["Shared advancement triggers", rules.shared_advancement_triggers],
+      ["Playbook advancement triggers", rules.advancement_triggers]]) {
+      if (!triggers.length) continue;
+      const list = element("ul");
+      for (const trigger of triggers) list.append(element("li", trigger));
+      parent.append(element("h5", label), list);
+    }
+  }
+
+  function renderHandlerNotes(parent, sheet) {
+    const notes = element("details");
+    notes.append(element("summary", "Private roleplay notes"));
+    parent.append(notes);
+    const current = sheet.draft.notes ?? {};
+    if (!sheet.editable && !sheet.notes_editable) {
+      for (const [key, label] of sheet.note_fields) {
+        if (current[key]) notes.append(element("p", label + " · " + current[key]));
+      }
+      return () => null;
+    }
+    const fields = sheet.note_fields.map(([key, name]) => {
+      const label = element("label", name);
+      const input = element("textarea");
+      input.value = current[key] ?? "";
+      input.rows = 2;
+      input.maxLength = 400;
+      label.append(input);
+      notes.append(label);
+      return [key, input];
+    });
+    function values() {
+      const saved = Object.fromEntries(fields.map(([key, input]) => [key, input.value.trim()]).filter(([, value]) => value));
+      return Object.keys(saved).length ? saved : null;
+    }
+    if (sheet.notes_editable) {
+      notes.append(button("Save roleplay notes", async key => {
+        await write("persona-notes", {revision: sheet.revision, persona_id: sheet.persona_id, notes: values()}, key);
+        await refresh();
+      }, () => JSON.stringify(values())));
+    }
+    return values;
+  }
+
   function renderPersona(setup) {
     for (const request of setup.requests.filter(x => x.kind !== "handler_creation" && !x.stale)) {
       const row = card(body, request.label);
@@ -306,8 +369,13 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     const sheet = setup.sheet;
     if (!sheet) return;
     const row = card(body, "Handler character sheet");
+    const guidance = element("details");
+    const rules = element("details");
+    renderHandlerProfile(guidance, sheet.playbook_profile);
+    renderHandlerRules(rules, sheet.rules);
     if (sheet.activated || !sheet.editable) {
-      row.append(element("p", [sheet.draft.name, sheet.draft.playbook].filter(Boolean).join(" · ")));
+      row.append(element("p", [sheet.draft.name, sheet.playbook].filter(Boolean).join(" · ")), guidance, rules);
+      renderHandlerNotes(row, sheet);
       for (const value of [sheet.draft.appearance, sheet.draft.outfit, sheet.draft.background]) {
         if (value) row.append(element("p", value));
       }
@@ -316,7 +384,11 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     }
     const draft = sheet.draft;
     const [playbookLabel, playbook] = choiceField("Handler playbook", setup.playbooks.map(x => [x, x]), draft.playbook);
-    row.append(playbookLabel);
+    row.append(playbookLabel, guidance, rules);
+    playbook.addEventListener("change", () => {
+      renderHandlerProfile(guidance, setup.profiles[playbook.value]);
+      rules.hidden = (playbook.value || null) !== sheet.playbook;
+    });
     const details = Object.fromEntries([
       ["name", "Handler name"], ["appearance", "Handler appearance"],
       ["outfit", "Handler outfit"], ["background", "Handler background"],
@@ -332,6 +404,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       row.append(pick, descriptionLabel);
       return {kind, description};
     });
+    const readNotes = renderHandlerNotes(row, sheet);
     const relationships = element("details");
     relationships.append(element("summary", "Starting relationships"));
     row.append(relationships);
@@ -387,6 +460,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
         starting: bondInputs.map(readBond => readBond()).filter(Boolean),
         surveilled: selected.slice(0, 2).filter(Boolean), sympathizer: selected[2] || null,
         npc_starting: [...npcStarting.values()],
+        notes: readNotes(),
       };
     }
     row.append(button("Save Handler draft", async key => {

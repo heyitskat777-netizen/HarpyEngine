@@ -16,7 +16,8 @@ from girlframe.ai.model_adapters import (
 from girlframe.ai.model_transport import OpenAIResponses
 from girlframe.ai.observation import AppendSceneInput, ObservationPolicy
 from girlframe.engine.m3_actor_state import ActorRef
-from girlframe.engine.m3_handler_state import GEAR, HISTORY_LABELS, PLAYBOOKS, Draft
+from girlframe.engine.m3_handler_character import PROFILES
+from girlframe.engine.m3_handler_state import GEAR, HISTORY_LABELS, PLAYBOOKS, Draft, HandlerNotes
 from girlframe.services.activity_shadow import ActivityShadowReview
 from girlframe.services.campaign_opening import CampaignOpeningService, OpeningDraft
 from girlframe.services.director_context import DirectorContextService
@@ -215,6 +216,11 @@ class P2Scene:
                 "sheet": sheet,
                 "requests": self.handler_setup.tasks(viewer),
                 "playbooks": PLAYBOOKS if appointed else (),
+                "profiles": {
+                    name: profile.model_dump(mode="json") for name, profile in PROFILES.items()
+                }
+                if appointed
+                else {},
                 "gear": GEAR if appointed else (),
                 "histories": HISTORY_LABELS if appointed else {},
             }
@@ -335,6 +341,15 @@ class P2Scene:
                 data["appointment"],
                 draft_sheet,
                 generation=data["generation"],
+            )
+        if route == "persona-notes" and data.keys() == {"revision", "persona_id", "notes"}:
+            if type(data["revision"]) is not int or not isinstance(data["persona_id"], str):
+                raise ValueError("Use your current saved Handler sheet.")
+            notes = (
+                HandlerNotes.model_validate(data["notes"]) if data["notes"] is not None else None
+            )
+            return self.handler_setup.save_notes(
+                viewer, key, data["revision"], data["persona_id"], notes
             )
         if route == "persona-propose" and data.keys() == {"revision", "generation"}:
             if type(data["revision"]) is not int or not isinstance(data["generation"], str):

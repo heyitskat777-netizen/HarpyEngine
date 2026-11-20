@@ -653,6 +653,19 @@ sheet and each participant's owned starting requests. `persona-save`,
 `persona-propose`, `persona-answer` and `persona-activate` reuse the native
 appointment, approval and activation workflows. See the [private trial runbook](../../reports/P2_ACTIVITY_TRIAL.md).
 
+`persona-setup` includes the playbook's routine voice, intervention instincts,
+restraint, pressure, recovery, strength and blind spot. The sheet lists printed
+triggers from rulebook pages 114–116, 123–139 and 151. Book access is checked
+against the native release and ownership rules. The original workflow checks
+scene eligibility, triggers, participants and consent at use time.
+
+The appointed Handler can include optional `draft.notes` when saving during
+creation. For an active Handler, `persona-notes` takes `revision`, `persona_id`
+and `notes`, with at most 400 characters per field and `null` to clear. The
+server revises the original private sheet without changing the mechanical
+revision or agreed starting relationships. Reviewed Handler requests use the
+notes as portrayal guidance. Facts still come from authorized scene context.
+
 ## Offline Activity shadow readiness
 
 The isolated readiness fixture uses `--p2-fixture --p2-shadow-readiness`. Its

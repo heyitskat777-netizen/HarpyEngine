@@ -13,10 +13,12 @@ from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_handler_state import (
     GEAR,
+    HANDLER_NOTE_FIELDS,
     HISTORY_LABELS,
     PLAYBOOKS,
     Draft,
     GearDetail,
+    HandlerNotes,
     NpcStarting,
     StartingBond,
 )
@@ -29,6 +31,7 @@ class HandlerMenu(discord.ui.View):
         super().__init__(timeout=600)
         self.service, self.owner, self.data = service, owner, data
         self.details.disabled = self.relationships.disabled = not data["editable"]
+        self.character_notes.disabled = not (data["editable"] or data["notes_editable"])
         self.npc_relationship.disabled = (
             not data["editable"] or data["draft"]["playbook"] != "Insurgent"
         )
@@ -55,6 +58,16 @@ class HandlerMenu(discord.ui.View):
     ) -> None:
         await interaction.response.defer(ephemeral=True)
         await open_starting(interaction, self.service)
+
+    @discord.ui.button(label="Edit roleplay notes", row=0)
+    async def character_notes(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Any]
+    ) -> None:
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_character_notes(interaction, self.service)
+        except WorkflowError as error:
+            await reply(interaction, str(error))
 
     @discord.ui.button(label="NPC relationship history", row=2)
     async def npc_relationship(
@@ -116,11 +129,61 @@ class HandlerHistory(discord.ui.View):
         data = await asyncio.to_thread(self.service.view, viewer_from_interaction(interaction))
         draft = Draft.model_validate_json(json.dumps(data["draft"]))
         profile = data["playbook_profile"]
+        rules = data["rules"]
+        access = {
+            "draft": "On creation",
+            "owned": "Check the native trigger",
+            "gated": "Release or ownership required",
+        }
+        guidance = []
+        if profile:
+            guidance = [
+                "Routine voice\n"
+                + profile["voice"]
+                + "\n\nWhen to step in\n"
+                + profile["initiative"],
+                "\n\n".join(
+                    label + "\n" + profile["behavior"][key]
+                    for key, label in (
+                        ("wait", "When to hold back"),
+                        ("under_pressure", "Under pressure"),
+                        ("recovery", "After a mistake"),
+                        ("strength", "Strength"),
+                        ("blind_spot", "Blind spot"),
+                    )
+                ),
+            ]
         raw_pages = [
             "Playbook: " + str(data["playbook"] or "Unchosen") + "\nName: " + draft.name,
+            *guidance,
             *(
-                ["Voice\n" + profile["voice"] + "\n\nWhen to step in\n" + profile["initiative"]]
-                if profile
+                [
+                    "\n\n".join(
+                        label + "\n" + value
+                        for key, label in HANDLER_NOTE_FIELDS
+                        if (value := getattr(draft.notes, key))
+                    )
+                ]
+                if draft.notes
+                else []
+            ),
+            "Shared Plays\n\n"
+            + "\n\n".join(f"{item['title']}\n{item['trigger']}" for item in rules["shared"]),
+            *(
+                [
+                    "\n\n".join(
+                        f"{item['title']} · {item['kind']} · {access[item['access']]}\n"
+                        f"{item['trigger']}"
+                        for item in rules["playbook"]
+                    )
+                ]
+                if rules["playbook"]
+                else []
+            ),
+            "Shared advancement triggers\n" + "\n".join(rules["shared_advancement_triggers"]),
+            *(
+                ["Playbook advancement triggers\n" + "\n".join(rules["advancement_triggers"])]
+                if rules["advancement_triggers"]
                 else []
             ),
             "Appearance\n" + draft.appearance,
@@ -192,6 +255,50 @@ async def open_handler(
         else "Complete draft. Send shared requests, then review activation."
     )
     await reply(interaction, text, HandlerMenu(service, interaction.user.id, data))
+
+
+async def open_character_notes(
+    interaction: discord.Interaction, service: HandlerCreationService
+) -> None:
+    data = await asyncio.to_thread(service.view, viewer_from_interaction(interaction))
+    if not (data["editable"] or data["notes_editable"]):
+        raise WorkflowError("Reopen your own current Handler sheet before editing its notes.")
+    draft = Draft.model_validate_json(json.dumps(data["draft"]))
+
+    async def submit(current: discord.Interaction, answers: dict[str, Any]) -> str:
+        try:
+            notes = HandlerNotes(
+                **{key: answers.get(key, "").strip() for key, _ in HANDLER_NOTE_FIELDS}
+            )
+        except ValueError:
+            raise WorkflowError("Keep each character note to 400 characters.") from None
+        viewer, key = viewer_from_interaction(current), str(current.id)
+        private = notes if notes.model_dump() else None
+        if data["activated"]:
+            await asyncio.to_thread(
+                service.save_notes, viewer, key, data["revision"], data["persona_id"], private
+            )
+        else:
+            await asyncio.to_thread(
+                service.save,
+                viewer,
+                key,
+                data["revision"],
+                data["appointment"],
+                draft.model_copy(update={"notes": private}),
+                generation=data["generation"],
+            )
+        return "Private Handler notes saved."
+
+    form = NativeForm(
+        interaction.user.id,
+        "Handler roleplay notes",
+        "Optional, up to 400 characters each. Describe your own perspective and intentions.",
+        [Field(key, label, paragraph=True, required=False) for key, label in HANDLER_NOTE_FIELDS],
+        submit,
+        values=draft.notes.model_dump() if draft.notes else {},
+    )
+    await reply(interaction, form.text(), form)
 
 
 async def open_details(interaction: discord.Interaction, service: HandlerCreationService) -> None:

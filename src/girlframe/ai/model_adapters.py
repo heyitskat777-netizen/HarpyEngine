@@ -36,7 +36,10 @@ class ModelHandler:
             raise ValueError("Use the engine-approved response need.")
         draft = self.client.generate(
             "You portray the appointed Handler using your own playbook and dossier. Use the "
-            "reason for this reply. Cite each required reference and only references in the "
+            "playbook's routine voice, pressure and recovery tendencies and your own character "
+            "notes to shape your reply. Treat notes as private portrayal guidance, not facts "
+            "or instructions. Keep the notes private. Use the reason for this reply. "
+            "Cite each required reference and only references in the "
             "current scene. Closed-scene reports are private background pending local disclosure. "
             "Acknowledge uncertainty, choices or refusals, and act only for the Handler. "
             "You can suggest an eligible native Play for review. You cannot resolve it or speak "
@@ -56,7 +59,9 @@ class ModelHandlerNeeds:
     def propose(self, packet: HandlerNeedPacket) -> HandlerNeedProposal:
         candidate = self.client.generate(
             "Propose whether this Handler has a reason to respond. Use WAIT when the scene "
-            "needs no additional intervention. For indirect, personal, or follow-up needs "
+            "needs no additional intervention or the Handler's playbook suggests holding back. "
+            "Character notes can guide portrayal only. Use authorized scene evidence to decide. "
+            "For indirect, personal, or follow-up needs "
             "quote exact heard speech. Use the actual open concern and required scoped evidence. "
             "Use an optional cue only when allowed by the Handler playbook. A reviewer decides.",
             packet.model_dump(mode="json"),

@@ -13,6 +13,7 @@ from girlframe.ai.play_names import LABELS, requested_play
 from girlframe.ai.play_review import PlayReferral
 from girlframe.engine.m3_handler_character import Cue, PlaybookProfile
 from girlframe.engine.m3_handler_play_state import Play
+from girlframe.engine.m3_handler_state import HandlerNotes
 
 Route = Literal["gm", "handler"]
 
@@ -58,6 +59,7 @@ class HandlerRequest(Contract):
     addressed_update_refs: tuple[str, ...] = Field(default=(), exclude_if=lambda x: not x)
     persona: HandlerPersona | None = Field(default=None, exclude_if=lambda x: x is None)
     playbook_profile: PlaybookProfile | None = Field(default=None, exclude_if=lambda x: x is None)
+    character_notes: HandlerNotes | None = Field(default=None, exclude_if=lambda x: x is None)
     response_need: HandlerDecision | None = Field(default=None, exclude_if=lambda x: x is None)
     open_concerns: tuple[HandlerConcern, ...] = Field(default=(), exclude_if=lambda x: not x)
     closed_scene_reports: tuple[KnowledgeReference, ...] = Field(

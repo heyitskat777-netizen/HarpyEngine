@@ -11,11 +11,28 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_handler_creation as rules
+from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import depth
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import fingerprint, resolve
-from girlframe.engine.m3_handler_character import PROFILES
-from girlframe.engine.m3_handler_state import Agreement, Draft, NpcAgreement, SavedDraft
+from girlframe.engine.m3_handler_character import (
+    ADVANCEMENT_TRIGGERS,
+    BOOK_RULES,
+    PROFILES,
+    SHARED_ADVANCEMENT_TRIGGERS,
+    SHARED_PLAY_TRIGGERS,
+)
+from girlframe.engine.m3_handler_consequences import active_handler
+from girlframe.engine.m3_handler_play_state import BASIC
+from girlframe.engine.m3_handler_state import (
+    HANDLER_NOTE_FIELDS,
+    Agreement,
+    Draft,
+    HandlerNotes,
+    NpcAgreement,
+    Playbook,
+    SavedDraft,
+)
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
@@ -28,6 +45,7 @@ from girlframe.services.read_only_bot import GuildViewer
 KIND = "handler_creation"
 AGREEMENT = "handler_creation_agreement"
 NPC_AGREEMENT = "handler_creation_npc_agreement"
+NOTES_SAVED = "m3.handler_character_notes_saved"
 Offer = Agreement | NpcAgreement
 
 
@@ -156,7 +174,8 @@ class HandlerCreationService:
             metadata = json.loads(source["payload_json"]) if source else {}
             if (
                 source is None
-                or source["kind"] not in ("m3.handler_draft_saved", "m3.handler_activated")
+                or source["kind"]
+                not in ("m3.handler_draft_saved", "m3.handler_activated", NOTES_SAVED)
                 or source["actor_id"] != row["owner_id"]
                 or row["owner_id"] != row["subject_id"]
                 or metadata.get("work_id") != row["id"]
@@ -318,6 +337,11 @@ class HandlerCreationService:
             draft=draft.model_dump(mode="json"),
             playbook=playbook,
             playbook_profile=PROFILES[playbook].model_dump(mode="json") if playbook else None,
+            note_fields=HANDLER_NOTE_FIELDS,
+            notes_editable=bool(
+                active and appointment == active.appointment and active_handler(state)
+            ),
+            rules=self._sheet_rules(c, state, playbook, bool(active and appointment)),
             missing=list(draft.missing)
             + [
                 "NPC relationship history: " + x["name"]
@@ -338,6 +362,126 @@ class HandlerCreationService:
     def view(self, viewer: GuildViewer) -> dict[str, Any]:
         with self.store.engine.connect() as c:
             return self._view(c, viewer)
+
+    def _sheet_rules(
+        self, c: Connection, state: GameState, playbook: Playbook | None, active: bool
+    ) -> dict[str, Any]:
+        from girlframe.engine.m3_handler_borrowed import PLAYS as portable
+        from girlframe.services.m3_handler_book_orders import active_book
+
+        try:
+            check_access = active and Access(self.store).registry is not None
+        except WorkflowError:
+            # The private sheet can still be read when a release registry is unavailable.
+            check_access = False
+        entries = []
+        for book, definitions in BOOK_RULES.items():
+            for suffix, title, kind, trigger in (
+                *definitions,
+                (
+                    "sex-play",
+                    "Sex Play",
+                    "Private Play",
+                    "Use the playbook's consensual private-scene workflow.",
+                ),
+            ):
+                rule = f"handler-playbook.{book.lower()}.{suffix}"
+                if book != playbook and (not active or rule not in portable):
+                    continue
+                owned = (
+                    check_access
+                    and active_book(self.game, c, state, book=book, rule=rule) is not None
+                )
+                if book == playbook or owned:
+                    entries.append(
+                        dict(
+                            rule=rule,
+                            title=title,
+                            kind=kind,
+                            trigger=trigger,
+                            book=book,
+                            access="owned" if owned else "gated" if active else "draft",
+                        )
+                    )
+        return dict(
+            shared=[dict(title=label, trigger=SHARED_PLAY_TRIGGERS[key]) for key, label in BASIC],
+            playbook=entries,
+            shared_advancement_triggers=SHARED_ADVANCEMENT_TRIGGERS,
+            advancement_triggers=ADVANCEMENT_TRIGGERS.get(playbook, ()) if playbook else (),
+        )
+
+    def active_notes(self, c: Connection, state: GameState, actor: ActorRef) -> HandlerNotes | None:
+        """Read the original private sheet for the active in-scene Handler only."""
+        persona = state.handler_persona
+        if persona is None or actor != active_handler(state) or persona.owner != int(actor.entity):
+            return None
+        row = self._draft_row(c, persona.owner, persona.appointment)
+        saved = self._draft(c, row) if row is not None and row["state"] == "resolved" else None
+        return saved.draft.notes if saved and saved.persona_id == persona.id else None
+
+    def save_notes(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        expected: int,
+        persona_id: str,
+        notes: HandlerNotes | None,
+    ) -> dict[str, Any]:
+        def access(c: Connection) -> None:
+            self._policy(c, viewer)
+            appointment = self._appointment(c, viewer)
+            state = load_state(c, self.store.campaign_id)
+            persona = state.handler_persona
+            if (
+                persona is None
+                or persona.id != persona_id
+                or persona.appointment != appointment
+                or persona.owner != viewer.user_id
+                or active_handler(state) is None
+            ):
+                raise WorkflowError("STALE_HANDLER: reopen your own active Handler sheet.")
+
+        def operation(c: Connection) -> dict[str, Any]:
+            row = self._draft_row(c, viewer.user_id, self._appointment(c, viewer))
+            if (
+                row is None
+                or row["state"] != "resolved"
+                or type(expected) is not int
+                or expected != row["revision"]
+            ):
+                raise WorkflowError("STALE_HANDLER_DRAFT: reopen the current Handler sheet.")
+            previous = self._draft(c, row)
+            if previous.persona_id != persona_id:
+                raise WorkflowError("STALE_HANDLER: reopen your own active Handler sheet.")
+            if previous.draft.notes == notes:
+                return dict(revision=expected, activated=True)
+            saved = previous.model_copy(
+                update={"draft": previous.draft.model_copy(update={"notes": notes})}
+            )
+            source = self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                NOTES_SAVED,
+                work_id=row["id"],
+                body_sha256=fingerprint(saved),
+            )
+            self._save_work(c, row, source, saved.model_dump(mode="json"), state="resolved")
+            return dict(revision=expected + 1, activated=True)
+
+        return self.store._write(
+            viewer,
+            key,
+            NOTES_SAVED,
+            dict(
+                expected=expected,
+                persona_id=persona_id,
+                notes=notes.model_dump(mode="json") if notes else None,
+            ),
+            operation,
+            authorize=access,
+            auto_audit=False,
+        )
 
     def save(
         self,
@@ -791,10 +935,14 @@ class HandlerCreationService:
                     else:
                         accepted.append(offer)
             source = str(uuid4())
+            # Keep roleplay notes on the owned sheet, outside gameplay and canonical snapshots.
+            activation = saved.model_copy(
+                update={"draft": saved.draft.model_copy(update={"notes": None})}
+            )
             updated = rules.activate(
                 state,
                 viewer.user_id,
-                saved,
+                activation,
                 profiles(c, self.store.campaign_id),
                 tuple(accepted),
                 source,

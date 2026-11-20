@@ -20,6 +20,7 @@ from girlframe.ai.conversation import (
     PeerResponse,
 )
 from girlframe.ai.observation import ObservationPolicy
+from girlframe.engine.m3_handler_state import HandlerNotes
 from girlframe.services.director_context import DirectorContextService
 from girlframe.services.director_conversation import DirectorConversationService
 from girlframe.services.director_observation import DirectorObservationService
@@ -140,10 +141,16 @@ def peer_actor(observer, scene):
 @pytest.mark.parametrize("playbook", VOICES)
 def test_all_printed_types_shape_the_saved_sheet_prompt_and_intervention(ledger, playbook):
     creation, game = ready(ledger)
-    save(creation, complete(creation, playbook))
+    notes = HandlerNotes(voice="Speak softly between check-ins.", concern="PRIVATE_PORTRAYAL_CUE")
+    save(creation, complete(creation, playbook).model_copy(update={"notes": notes}))
     agree(creation)
     preview = creation.view(ADMIN)
     assert preview["draft"]["playbook"] == preview["playbook_profile"]["playbook"] == playbook
+    assert all(preview["playbook_profile"]["behavior"].values())
+    assert len(preview["rules"]["shared"]) == 7
+    assert len(preview["rules"]["advancement_triggers"]) == 4
+    assert any(x["kind"] == "Signature Play" for x in preview["rules"]["playbook"])
+    assert all(x["access"] == "draft" for x in preview["rules"]["playbook"])
     creation.activate(
         ADMIN, "activate-character", preview["revision"], preview["game_revision"], True
     )
@@ -175,6 +182,10 @@ def test_all_printed_types_shape_the_saved_sheet_prompt_and_intervention(ledger,
     svc = app.session.conversation
     saved_sheet = app.read(ADMIN, scene, "handler-sheet")
     assert saved_sheet["playbook_profile"] == preview["playbook_profile"]
+    assert saved_sheet["draft"]["notes"] == notes.model_dump()
+    assert saved_sheet["notes_editable"]
+    assert "PRIVATE_PORTRAYAL_CUE" not in state(game).model_dump_json()
+    assert app.read(PLAYER, scene, "persona-setup")["sheet"] is None
     with pytest.raises(WorkflowError):
         app.read(PLAYER, scene, "handler-sheet")
     cue, speech, expected = VOICES[playbook]
@@ -207,12 +218,15 @@ def test_all_printed_types_shape_the_saved_sheet_prompt_and_intervention(ledger,
     assert route["handler_decision"]["decision"]["reason"] == "reviewed_character_cue"
     handler, pilot = roles(observer, scene)
     assert packet.request.context.actor == handler
+    assert packet.request.character_notes == notes
+    assert all("PRIVATE_PORTRAYAL_CUE" not in x.text for x in packet.request.context.references)
     assert len(recorder.requests) == 1
     assert (
         performer.requests[-1].playbook_profile.model_dump(mode="json")
         == preview["playbook_profile"]
     )
     assert "PRIVATE_BACKGROUND" not in performer.requests[-1].model_dump_json()
+    assert performer.requests[-1].character_notes == notes
     draft = route["handler"]["id"]
     approve(svc, scene, draft, pilot)
     assert svc.delivery.preview(ADMIN, scene, draft)["text"] == expected

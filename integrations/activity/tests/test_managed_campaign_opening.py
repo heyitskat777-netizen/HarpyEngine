@@ -23,6 +23,7 @@ def test_bound_campaign_can_save_a_private_handler_sheet_before_any_pilot_activa
         original = choices["sheet"]
         assert original["editable"] and original["revision"] == 0 and original["pilots"] == []
         assert "Advocate" in choices["playbooks"]
+        assert choices["profiles"]["Advocate"]["behavior"]["wait"]
         assert request(host, path("persona-setup"), pilot)["sheet"] is None
         request(host, path("opening"), pilot, status=HTTPStatus.FORBIDDEN)
 
@@ -30,12 +31,23 @@ def test_bound_campaign_can_save_a_private_handler_sheet_before_any_pilot_activa
             "revision": original["revision"],
             "appointment": original["appointment"],
             "generation": original["generation"],
-            "draft": original["draft"] | {"playbook": "Advocate", "name": "Anchor"},
+            "draft": original["draft"]
+            | {
+                "playbook": "Advocate",
+                "name": "Anchor",
+                "notes": {"concern": "PRIVATE_ACTIVITY_PORTRAYAL", "voice": "Slow and deliberate."},
+            },
         }
         request(host, path("persona-save"), pilot, change, status=HTTPStatus.CONFLICT)
         assert request(host, path("persona-save"), handler, change)["revision"] == 1
         saved = request(host, path("persona-setup"), handler)["sheet"]
         assert saved["draft"]["name"] == "Anchor" and saved["draft"]["playbook"] == "Advocate"
+        assert saved["draft"]["notes"] == change["draft"]["notes"]
+        assert "Get Them Alone" in {rule["title"] for rule in saved["rules"]["playbook"]}
+        notes = {"revision": saved["revision"], "persona_id": saved["persona_id"], "notes": None}
+        request(host, path("persona-notes"), pilot, notes, status=HTTPStatus.CONFLICT)
+        request(host, path("persona-notes"), handler, notes, status=HTTPStatus.CONFLICT)
+        assert "PRIVATE_ACTIVITY_PORTRAYAL" not in str(request(host, path("persona-setup"), pilot))
         assert request(host, path("persona-setup", south), handler)["sheet"]["revision"] == 0
 
         empty = request(host, path("opening"), handler)
