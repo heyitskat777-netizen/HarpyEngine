@@ -385,6 +385,34 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     form.addEventListener("input", () => review.replaceChildren());
   }
 
+  const timingLabels = {
+    unknown_duration: "Decide how long the option takes",
+    unknown_consequence: "Define the missed-cutoff consequence",
+    missed_cutoff: "Missed cutoff",
+  };
+
+  function renderTimingReviews(parent, items) {
+    if (!items?.length) return;
+    const group = card(parent, "Timing review");
+    for (const item of items) {
+      const work = element("section");
+      work.append(element("h5", timingLabels[item.kind]),
+        element("p", item.kind === "missed_cutoff"
+          ? `${minuteText(item.from_minute)} to ${minuteText(item.minute)} · Cutoff ${minuteText(item.deadline)}`
+          : `${minuteText(item.minute)} · Waiting for the Handler`));
+      const proof = timeForm(work, "Source receipt");
+      proof.append(element("code", item.source_receipt));
+      if (item.kind === "missed_cutoff") {
+        work.append(element("p", item.consequence));
+        timeSave(work, "Acknowledge cutoff", "time-acknowledge", () => ({scene: item.scene_id, source_receipt: item.source_receipt}));
+      } else {
+        if (item.option_label) work.append(element("p", item.option_label));
+        if (item.attempted_minute !== null) work.append(element("p", `Proposed arrival ${minuteText(item.attempted_minute)}`));
+      }
+      group.append(work);
+    }
+  }
+
   function renderMissionClock(row, view, controls) {
     const clock = view.mission_timing;
     if (!clock) {
@@ -432,15 +460,24 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       }
     }
     if (!controls) return;
+    const ruling = view.timing_ruling;
+    if (ruling) {
+      const link = element("a", timingLabels[ruling.kind]);
+      link.href = "#" + ruling.next_action;
+      link.addEventListener("click", () => document.getElementById(ruling.next_action)?.setAttribute("open", ""));
+      row.append(link);
+    }
     const revision = () => ({id: clock.id, revision: clock.revision});
     if (!clock.deadline.consequence) {
       const form = timeForm(row, "Define the missed-deadline consequence");
+      form.id = "define_consequence";
       const [label, answer] = field("Fictional consequence", "");
       form.append(label);
       timeSave(form, "Save consequence", "time-consequence", () => ({...revision(), account: answer.value}));
     }
     if (!clock.selected.length && controls.clock_pilots.length) {
       const form = timeForm(row, "Publish Pilot options");
+      form.id = "publish_options";
       const [modeLabel, mode] = choiceField("Exchange", [["single", "One Pilot"], ["parallel", "Parallel Pilots"]], "single");
       const list = element("div");
       const choices = controls.pilots.filter(p => controls.clock_pilots.includes(p.id)).map(p => [p.id, p.label]);
@@ -734,11 +771,12 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
 
   function renderFacilitator(gm) {
     const queue = card(body, "Facilitator review");
+    renderTimingReviews(queue, gm.timing_reviews);
     if (gm.fictional_time?.clock) {
       const clock = gm.fictional_time.clock;
       queue.append(element("p", `Saved scene clock · ${minuteText(clock.minute)} ${clock.boundary} ${minuteText(clock.deadline)} · ${clock.status.replaceAll("_", " ")}`));
     }
-    if (!gm.handler_drafts.length && !gm.outcome_sources.length) {
+    if (!gm.handler_drafts.length && !gm.outcome_sources.length && !gm.timing_reviews?.length) {
       queue.append(element("p", "No pending reviews."));
     }
     for (const item of gm.handler_drafts) {
@@ -826,13 +864,14 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
   }
 
   async function refresh() {
-    const [work, gm, opening, brief, persona, policy, observation, review, time] = await Promise.all([
+    const [work, gm, opening, brief, persona, policy, observation, review, time, timingReview] = await Promise.all([
       scene ? read("work", true) : null, scene ? read("gm-work", true) : null,
       read("opening", true), read("opening-brief", true), read("persona-setup", true),
       activityShadow ? read("activity-policy", true) : null,
       activityShadow ? read("status", true) : null,
       activityShadow ? read("activity-review", true) : null,
       read("fictional-time", true),
+      scene ? read("timing-review", true) : null,
     ]);
     body.replaceChildren();
     if (activityShadow) renderShadow(policy, observation, review);
@@ -843,6 +882,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       const row = card(body, "Fictional time");
       renderCalendar(row, time, time.handler_controls);
       if (time.mode === "asynchronous") renderMissionClock(row, time, time.handler_controls);
+      renderTimingReviews(row, time.timing_reviews);
     }
     if (!work && scene) {
       body.append(element("p", "Scene work is unavailable. Check scene membership and consent."));
@@ -851,6 +891,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       if (gm) renderFacilitator(gm);
       renderOwn(work);
     }
+    if (!work || !gm) renderTimingReviews(body, timingReview?.items);
     body.append(button(scene ? "Refresh Director work" : "Refresh campaign setup", refresh));
   }
 

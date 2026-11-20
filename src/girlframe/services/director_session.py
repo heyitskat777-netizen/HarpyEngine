@@ -15,6 +15,7 @@ from girlframe.services.director_context import DirectorContextService
 from girlframe.services.director_conversation import DirectorConversationService
 from girlframe.services.director_observation import _digest
 from girlframe.services.director_play_review import DirectorPlayReviewService
+from girlframe.services.director_timing_review import DirectorTimingReview
 from girlframe.services.gm_outcome_compile import CHOICES
 from girlframe.services.gm_outcomes import GMOutcomeService, SourceKind
 from girlframe.services.m2_state import load_state
@@ -41,6 +42,7 @@ class DirectorSessionService:
             context, require_response_scope=self.conversation.handler_mode == "reviewed"
         )
         self.reviews = DirectorPlayReviewService(context)
+        self.timing_reviews = DirectorTimingReview(self.observer)
         self.responses = self.outcomes.responses
         from girlframe.services.director_knowledge import DirectorKnowledgeService
 
@@ -308,6 +310,7 @@ class DirectorSessionService:
                 "scope": "gm" if gm else "own",
                 "knowledge_sources": self.knowledge.pending(viewer, scene) if gm else [],
                 "handler_drafts": self.conversation.pending_handler(viewer, scene) if gm else [],
+                "timing_reviews": self.timing_reviews.pending(c, scene) if gm else [],
                 "handler_play_offers": self.conversation.handler_play_offers(viewer, scene),
                 "handler_deliveries": self.conversation.delivery.pending(viewer, scene),
                 "handler_needs": self.conversation.pending_handler_needs(viewer, scene)

@@ -9,6 +9,7 @@ from girlframe.engine.m2 import PlayInput
 from girlframe.scenes.campaign_time import Account, Anchor, Cut, LateSubmission, ScenePlan
 from girlframe.scenes.mission_timing import Options, Rejoin, SequenceStart
 from girlframe.services.campaign_time import CampaignTimeService
+from girlframe.services.director_timing_review import pending_ruling
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
@@ -73,6 +74,10 @@ class ActivityTiming:
             view["viewer"] = str(viewer.user_id)
             if clock is not None and active is not None:
                 clock["channel"] = str(active.channel)
+                if "handler_controls" in view and (
+                    ruling := pending_ruling(c, self.store.campaign_id, active.scene)
+                ):
+                    view["timing_ruling"] = ruling
             if clock and (sheet := state.sheets.get(str(viewer.user_id))) is not None:
                 view["sheet_revision"] = sheet.revision
         return view

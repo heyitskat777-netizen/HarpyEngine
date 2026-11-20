@@ -27,6 +27,7 @@ from girlframe.services.director_npc_delivery import NpcDeliveryService
 from girlframe.services.director_observation import DirectorObservationService
 from girlframe.services.director_session import DirectorSessionService
 from girlframe.services.director_time import scene_time
+from girlframe.services.director_timing_review import DirectorTimingReview
 from girlframe.services.gm_outcomes import GMOutcomeService, SourceKind
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_game import GameService
@@ -51,6 +52,7 @@ class P2Scene:
         self.shadow = ActivityShadowReview(session.conversation)
         self.npc_delivery = NpcDeliveryService(session.context)
         self.time = ActivityTiming(session.game)
+        self.timing_reviews = DirectorTimingReview(session.observer, facilitator_id)
 
     @classmethod
     def model_fixture(
@@ -113,6 +115,7 @@ class P2Scene:
         return {
             "outcome_sources": work["outcome_sources"],
             "handler_drafts": work["handler_drafts"],
+            "timing_reviews": work["timing_reviews"],
             "response_requests": work["response_requests"],
             "npc_roster": self.session.reactions.npc_roster(viewer, scene),
             "model_rulings": self.session.outcomes.provider is not None,
@@ -198,7 +201,18 @@ class P2Scene:
         self, viewer: GuildViewer, scene: str, route: str, identity: str | None = None
     ) -> dict[str, Any]:
         if route == "fictional-time" and identity is None:
-            return self.time.view(viewer)
+            view = self.time.view(viewer)
+            if not scene and "handler_controls" in view:
+                reviews = []
+                for booking in view.get("scenes", ()):
+                    if booking["joined"]:
+                        try:
+                            items = self.timing_reviews.view(viewer, booking["id"])
+                        except WorkflowError:
+                            continue
+                        reviews.extend(item for item in items if item["kind"] == "missed_cutoff")
+                view["timing_reviews"] = reviews
+            return view
         if route == "activity-policy":
             return self.session.observer.activity_policy(viewer)
         if route == "activity-review":
@@ -241,6 +255,8 @@ class P2Scene:
             return self.session.work(viewer, scene)
         if route == "gm-work":
             return self.gm_work(viewer, scene)
+        if route == "timing-review" and scene and identity is None:
+            return {"items": self.timing_reviews.view(viewer, scene)}
         if route == "reports":
             return self.session.handler_reports(viewer, scene)
         if route == "rules" and identity is not None:
@@ -271,6 +287,16 @@ class P2Scene:
         route: str,
         data: dict[str, Any],
     ) -> dict[str, Any]:
+        if route == "time-acknowledge" and data.keys() == {"scene", "source_receipt"}:
+            if (
+                not isinstance(data["scene"], str)
+                or not isinstance(data["source_receipt"], str)
+                or (scene and data["scene"] != scene)
+            ):
+                raise ValueError("Use the original scene and cutoff receipt.")
+            return self.timing_reviews.acknowledge(
+                viewer, key, data["scene"], data["source_receipt"]
+            )
         if route.startswith("time-"):
             return self.time.write(viewer, key, route, data)
         if route == "activity-policy-save" and data.keys() == {"revision", "enabled"}:

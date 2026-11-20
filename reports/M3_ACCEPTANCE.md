@@ -1,5 +1,45 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Private timing review and archetype rehearsal
+
+Development base `6c5ed1a`. Timing work derives from the existing event ledger.
+The original ruling receipt stays visible until the Handler updates the native
+clock. The first committed cutoff miss stays in the GM queue until a human
+acknowledges that receipt. Reconnect, duplicate delivery, closing the clock and
+closing the original scene preserve the pending item. The queue reads existing
+canon and makes no additional mechanical change.
+
+The locked fixture advanced each of the seven native Handler archetypes to
+18:35 with a strict 18:40 cutoff. The synthetic replies were generated after
+inspecting the actual role packets, then frozen for a reproducible replay.
+Across 28 final decisions the engine returned 14 WAIT and 14 RESPOND. Each
+archetype waited on the routine turn and one optional turn, intervened once
+for a reviewed archetype-specific cue, and drafted one direct clock readback.
+All seven clock readbacks were deliberately made stale before delivery and
+rejected. A separate test delivered a fresh readback to its named Pilot.
+
+| Heard cue | Archetypes choosing to intervene |
+| --- | --- |
+| Pilot covering a second checklist, one technician, release steps out of order | Mistress recognizes extra work. Frantic takes a task off the Pilot. Trainer prompts the next unchecked step. |
+| Wrong total, two gauges agree, supervisor speaks for the Pilot and asks for names | Dogrunner requests the original correction. Scientist keeps the readings separate. Insurgent offers to take the request for names. Advocate offers to restore the Pilot's turn. |
+
+**17 focused tests passed in 32.95 seconds.** The managed simulated Discord
+host check passed in 8.50 seconds. The separate offline Chromium rehearsal
+covered two open scenes, a reconnected facilitator, stale and repeated choices,
+one 18:45 cutoff item, and explicit closeout sharing only the approved public
+report. The unreported private observation stayed private. Ruff, scoped mypy
+for three source files, JavaScript syntax and Git whitespace checks passed.
+
+```sh
+PYTHONPATH=src .venv/bin/python -m pytest -q --tb=short \
+  tests/rules/test_director_timing.py tests/rules/test_timed_handler_archetypes.py \
+  tests/rules/test_mission_timing.py \
+  tests/test_director_activity_scene.py::test_parallel_scenes_file_only_approved_reports_after_native_close
+```
+
+The replay uses an inert transport. A real Discord session, paid provider run
+and full regression remain unverified. [Activity workflow and rehearsal](../integrations/activity/P2_SESSION_UI_HANDOFF.md#timing-review-and-ownership)
+
 ## Reviewed Handler and Director use of fictional time
 
 Integrated on the timed-missions development base `cee7a2a`. The Activity desk

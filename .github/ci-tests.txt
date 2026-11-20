@@ -235,4 +235,5 @@ tests/rules/test_scene_work.py::test_pending_scene_work_blocks_close_until_an_ac
 # Opt-in fictional mission clock and the existing end/retry gates.
 tests/rules/test_mission_timing.py
 tests/rules/test_director_timing.py
+tests/rules/test_timed_handler_archetypes.py
 tests/rules/test_mission_service.py::test_mission_rewards_and_absent_dog_are_atomic_idempotent_and_durable

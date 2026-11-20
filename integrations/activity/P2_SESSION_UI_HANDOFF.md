@@ -700,6 +700,32 @@ review expose the local time for coordination and preserve the original rules
 receipts. Calendar time and mission minutes leave Front advancement to its
 existing explicit review workflow.
 
+### Timing review and ownership
+
+The private GM work queue derives its items from the native clock ledger. The
+first committed miss contributes one item keyed to the original cutoff receipt.
+The item shows the scene, time change and already recorded fictional consequence.
+At an inclusive cutoff, arrival at the cutoff still counts as on time. A timing
+ruling shows the requested decision and any proposed arrival. Its item follows
+the originating ruling receipt until the appointed Handler updates the native
+menu or records the missing consequence. The Pilot confirms the ensuing menu.
+
+The synthetic Activity exposes these items in `gm-work` and in the authorized
+`timing-review` scene route, including after the original scene closes. The
+configured facilitator in a managed manual Activity sees cutoff items for their
+joined scenes through `fictional-time`. The appointed Handler sees their own
+timing ruling linked to the native controls. `time-acknowledge` accepts the
+original `scene` and `source_receipt`. It records the GM's acknowledgement and
+returns the same acknowledgement on repeat. Use existing owned GM workflows
+for any separate rules consequence. The queue generates no Handler speech.
+
+The [offline browser rehearsal](verify_p2_timing_review.cjs) exercises two open
+scenes, a reconnect, the same cutoff receipt on retry, and explicit closeout.
+Build the synthetic Activity overlay with `tools/verify_activity_bundle.py`
+and pass its lab directory, the locked Python interpreter, and Chromium to the
+rehearsal script. The [archetype replay](../../tests/rules/test_timed_handler_archetypes.py)
+uses the inspected role packets and [generated synthetic replies](../../tools/fixtures/p2_timed_handler_rehearsal.json).
+
 ## Offline Activity shadow readiness
 
 The isolated readiness fixture uses `--p2-fixture --p2-shadow-readiness`. Its

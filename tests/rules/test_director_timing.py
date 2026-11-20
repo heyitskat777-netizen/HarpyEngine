@@ -1,5 +1,6 @@
 """One offline time-sensitive Handler exchange and its original human controls."""
 
+from dataclasses import replace
 from uuid import uuid4
 
 import pytest
@@ -9,6 +10,7 @@ from test_director_continuity import roles
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger
 from test_mission_timing import START, option, setup
+from test_mission_timing import publish as publish_options
 
 from girlframe.ai.conversation import ConversationReply
 from girlframe.ai.observation import ObservationPolicy
@@ -161,3 +163,123 @@ def test_reviewed_clock_reply_uses_saved_time_and_original_pilot_audience(ledger
     )
     with pytest.raises(WorkflowError, match="opening slot has not arrived"):
         message("premature-observation", "I try the hatch.")
+
+
+def test_timing_review_survives_reconnect_and_routes_to_original_authority(ledger):
+    timing, timeline, opened, _, _, game = setup(ledger, consequence=None)
+    handler = replace(ADMIN, is_administrator=False)
+    reviewer = replace(OTHER, is_administrator=True)
+    with ledger.engine.connect() as c:
+        scene = game.scene(c, 900)["id"]
+    anchor = timeline.projection(ADMIN)["anchor_receipt"]
+    game.bind_scene(ADMIN, "bind-review-parallel", 901)
+    parallel = booked(timeline, game, anchor, 901, (1,))
+    game.join_scene(ADMIN, "join-review-parallel", 901)
+    observer = DirectorObservationService(ledger, synthetic=True)
+    for identity, cast in ((scene, (ADMIN, PLAYER, OTHER)), (parallel, (ADMIN,))):
+        observer.configure_scene(
+            ADMIN, f"notice:{identity}", identity, 0, ObservationPolicy(mode="shadow")
+        )
+        for member in cast:
+            observer.set_consent(
+                member, f"consent:{identity}:{member.user_id}", identity, 1, consent=True
+            )
+
+    def app():
+        return P2Scene(DirectorSessionService(DirectorContextService(observer)))
+
+    adapter = app()
+    uncertain = option("Blind route", None)
+    menu = publish_options(timing, opened, uncertain)
+    needs_duration = timing.choose(
+        PLAYER, "request-duration", opened["id"], menu["receipt"], uncertain.id
+    )
+    (work,) = adapter.gm_work(reviewer, scene)["timing_reviews"]
+    assert (work["source_receipt"], work["owner"], work["next_action"]) == (
+        needs_duration["receipt"],
+        "handler",
+        "publish_options",
+    )
+    assert adapter.read(handler, scene, "fictional-time")["timing_ruling"] == work
+    assert "timing_ruling" not in adapter.read(PLAYER, scene, "fictional-time")
+    assert adapter.read(PLAYER, scene, "work")["timing_reviews"] == []
+    assert adapter.gm_work(ADMIN, parallel)["timing_reviews"] == []
+    with pytest.raises(WorkflowError):
+        adapter.gm_work(handler, scene)
+
+    route = option("Long route", 25)
+    revised = {
+        "id": opened["id"],
+        "revision": needs_duration["receipt"],
+        "options": {"available": [route.model_dump(mode="json") | {"pilot": "2"}]},
+    }
+    with pytest.raises(WorkflowError):
+        adapter.write(reviewer, "wrong-duration-owner", scene, "time-publish", revised)
+    menu = adapter.write(handler, "correct-duration", scene, "time-publish", revised)
+    assert adapter.gm_work(reviewer, scene)["timing_reviews"] == []
+    need_consequence = timing.choose(
+        PLAYER, "request-consequence", opened["id"], menu["receipt"], route.id
+    )
+    (work,) = adapter.gm_work(reviewer, scene)["timing_reviews"]
+    assert work["next_action"] == "define_consequence" and work["minute"] == START
+    assert work["option_label"] == "Long route" and work["attempted_minute"] == 1125
+    fixed = adapter.write(
+        handler,
+        "supply-consequence",
+        scene,
+        "time-consequence",
+        {
+            "id": opened["id"],
+            "revision": need_consequence["receipt"],
+            "account": "The shuttle leaves.",
+        },
+    )
+    assert adapter.gm_work(reviewer, scene)["timing_reviews"] == []
+    assert fixed["minute"] == START
+    with pytest.raises(WorkflowError, match="STALE_TIMING"):
+        timing.choose(PLAYER, "old-cutoff-menu", opened["id"], menu["receipt"], route.id)
+    choice = (PLAYER, "cross-cutoff", opened["id"], fixed["receipt"], route.id)
+    cutoff = timing.choose(*choice)
+    ledger.engine.dispose()
+    adapter = app()
+    assert timing.choose(*choice) == cutoff
+    (work,) = adapter.gm_work(reviewer, scene)["timing_reviews"]
+    assert (work["source_receipt"], work["from_minute"], work["minute"], work["owner"]) == (
+        cutoff["receipt"],
+        START,
+        1125,
+        "gm",
+    )
+    timing.close(handler, "close-after-cutoff", opened["id"], cutoff["receipt"])
+    assert adapter.gm_work(reviewer, scene)["timing_reviews"] == [work]
+    manual = P2Scene(
+        DirectorSessionService(DirectorContextService(DirectorObservationService(ledger))),
+        facilitator_id=handler.user_id,
+    )
+    assert manual.read(handler, "", "fictional-time")["timing_reviews"] == [work]
+    assert "timing_reviews" not in manual.read(PLAYER, "", "fictional-time")
+    with pytest.raises(WorkflowError, match="select a committed cutoff"):
+        adapter.write(
+            ADMIN,
+            "other-scene-cutoff",
+            parallel,
+            "time-acknowledge",
+            {
+                "scene": parallel,
+                "source_receipt": cutoff["receipt"],
+            },
+        )
+    data = {"scene": scene, "source_receipt": cutoff["receipt"]}
+    with pytest.raises(WorkflowError):
+        adapter.write(handler, "handler-cannot-ack", scene, "time-acknowledge", data)
+    observer.set_consent(PLAYER, "withdraw-clock-review", scene, 1, consent=False)
+    with pytest.raises(WorkflowError, match="OBSERVATION_DISABLED"):
+        adapter.write(reviewer, "consent-required", scene, "time-acknowledge", data)
+    observer.set_consent(PLAYER, "renew-clock-review", scene, 1, consent=True)
+    revision = observer.status(ADMIN, scene).scene_revision
+    adapter.close(ADMIN, "close-scene-after-cutoff", scene, 900, revision, ())
+    assert adapter.read(reviewer, scene, "timing-review")["items"] == [work]
+    first = adapter.write(reviewer, "acknowledge-cutoff", scene, "time-acknowledge", data)
+    assert first["effects_applied"] is False
+    assert adapter.write(reviewer, "repeat-cutoff-review", scene, "time-acknowledge", data) == first
+    assert adapter.read(reviewer, scene, "timing-review")["items"] == []

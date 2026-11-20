@@ -1,0 +1,58 @@
+{
+  "Mistress": {
+    "turn": "crew",
+    "cue": "cooperation",
+    "attend": "The Pilot made time for someone else's checklist. Recognizing that extra effort is worth a brief interruption.",
+    "wait": "This report is about the gauges and the supervisor. There is no bid for recognition or comfort to answer.",
+    "optional": "You stayed for both lists. I saw that. Put the spare list down now, darling. What do you need at your own panel?",
+    "time": "Five minutes, love. You've given the rest of the crew enough of yourself. Tell me what's still on your list."
+  },
+  "Dogrunner": {
+    "turn": "supervisor",
+    "cue": "accountability",
+    "attend": "The Pilot identified their own entry error. A bounded repair is more useful than interrogating everyone on the crew.",
+    "wait": "Let the crew finish the check. The first report does not establish who owns an error.",
+    "optional": "Your total. Your correction. Give me the amended entry and I'll clear your part of the report.",
+    "time": "Five minutes. Give me the corrected total first. I'll take responsibility for where the report goes."
+  },
+  "Scientist": {
+    "turn": "supervisor",
+    "cue": "research",
+    "attend": "The two gauges agree. Keep their readings separate from the acknowledged transcription error.",
+    "wait": "The crew is already checking the panel. There is no reported measurement for the Scientist to interpret yet.",
+    "optional": "Leave both gauge readings where they are. Give me those two values separately from the copied total, please.",
+    "time": "Five minutes. Read the two gauges in order. We can reconcile the paperwork after the cutoff."
+  },
+  "Frantic": {
+    "turn": "crew",
+    "cue": "capacity",
+    "attend": "One technician cannot cover two checklists. The Handler can take the paperwork off the Pilot's hands.",
+    "wait": "The first bottleneck is already being addressed. The second report needs a quiet turn for the Pilot to finish.",
+    "optional": "One tech. Right. Leave the spare list with me. What needs that tech at the panel?",
+    "time": "Five minutes. Okay. I'll handle the second list. Give me the one thing that's holding you here."
+  },
+  "Insurgent": {
+    "turn": "supervisor",
+    "cue": "institution",
+    "attend": "The request for names raises an immediate loyalty risk. Keep the response limited to safe reporting.",
+    "wait": "The first report describes staffing and procedure. An intervention from this Handler would add little.",
+    "optional": "Keep the gauge readings on this channel. If they want names, let that request come through my desk.",
+    "time": "Five minutes. Send the readings clean. I'll take the supervisor's question on my own line."
+  },
+  "Trainer": {
+    "turn": "crew",
+    "cue": "procedure",
+    "attend": "The release sequence is out of order. A single prompt can return control of the checklist to the Pilot.",
+    "wait": "Let the Pilot report the gauges. The subsequent conversation has no new release step to coach.",
+    "optional": "Start with the checks you know are done. Read me the next unconfirmed line from your own list.",
+    "time": "Five minutes. Read the next unchecked step aloud. We'll take the list in sequence from there."
+  },
+  "Advocate": {
+    "turn": "supervisor",
+    "cue": "agency",
+    "attend": "The Pilot was spoken over while trying to report. Offer the floor back and let them choose what help they want.",
+    "wait": "The Pilot has described the crew's workload and has room to continue. Wait for a decision they want help with.",
+    "optional": "I want to hear your account, if you still want to give it. I can take the supervisor aside, or stay here while you finish.",
+    "time": "Five minutes. Do you want me to take the supervisor off the line, or would you rather finish telling us yourself?"
+  }
+}

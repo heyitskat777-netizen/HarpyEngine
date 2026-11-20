@@ -17,6 +17,8 @@ from girlframe.scenes.campaign_time import Anchor, Cut, ScenePlan
 from girlframe.scenes.mission_timing import Deadline, Option, Options, Rejoin, SequenceStart
 from girlframe.services.activity_timing import ActivityTiming
 from girlframe.services.campaign_time import CampaignTimeService
+from girlframe.services.director_observation import DirectorObservationService
+from girlframe.services.director_timing_review import DirectorTimingReview
 from girlframe.services.m2_game import GameService
 from girlframe.services.mission_timing import MissionTimingService
 from girlframe.services.onboarding import WorkflowError
@@ -27,6 +29,11 @@ DEPARTURE = "The evacuation shuttle has left."
 
 def setup(store, *, boundary="before", consequence=DEPARTURE, both=False):
     missions, game = setup_missions(store)
+    return start_timed(missions, game, boundary=boundary, consequence=consequence, both=both)
+
+
+def start_timed(missions, game, *, boundary="before", consequence=DEPARTURE, both=False):
+    store = missions.store
     participants = (2, 3) if both else (2,)
     offered = missions.offer(ADMIN, "offer-timed", "Synthetic evacuation", participants)
     mission = missions.respond(PLAYER, "accept-timed", offered["id"], offered["revision"], "accept")
@@ -118,6 +125,12 @@ def test_stated_routes_and_deadline_boundaries(
     result = timing.choose(*request)
     assert result["minute"] == minute and result["deadline_status"] == status
     assert result.get("consequence") == (DEPARTURE if consequence else None)
+    with ledger.engine.connect() as c:
+        scene = game.scene(c, 900)["id"]
+        pending = DirectorTimingReview(DirectorObservationService(ledger)).pending(c, scene)
+    assert [item["source_receipt"] for item in pending] == (
+        [result["receipt"]] if consequence else []
+    )
     ledger.engine.dispose()
     assert MissionTimingService(ledger).choose(*request) == result
     with pytest.raises(WorkflowError, match="STALE_TIMING"):
