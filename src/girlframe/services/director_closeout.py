@@ -1,12 +1,15 @@
 """Commit an authorized Handler report at the native scene close boundary."""
 
 import json
+from collections.abc import Iterator
 from typing import Any
 
 import sqlalchemy as sa
 from sqlalchemy import Connection
 
 from girlframe.ai.director import KnowledgeReference
+from girlframe.ai.director_dossiers import HandlerExperience, HandlerExperienceSelection
+from girlframe.ai.observation import Observation
 from girlframe.database import tables as t
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_handler_consequences import active_handler
@@ -16,12 +19,54 @@ from girlframe.services.m2_state import load_state
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
 
 
+def _public_pilot_source(
+    observer: DirectorObservationService,
+    c: Connection,
+    scene: dict[str, Any],
+    ref: KnowledgeReference,
+) -> Observation | None:
+    if ref.classification != "reported_claim" or ref.origin_scene is not None:
+        return None
+    source_id = ref.source_id
+    if source_id.startswith("knowledge-acquired:"):
+        table = t.director_context["shadow"]
+        raw = c.scalar(
+            sa.select(table.c.body_json).where(
+                table.c.campaign_id == observer.store.campaign_id,
+                table.c.scene_id == scene["id"],
+                table.c.id == source_id,
+            )
+        )
+        source_id = json.loads(raw)["source"]["id"] if raw else ""
+    source = observer._latest_source(c, source_id)
+    inputs = t.director["inputs"]
+    if (
+        source is None
+        or source.kind != "message"
+        or source.fictional_channel != "comms"
+        or source.actor.kind != "pilot"
+        or source.actor.token not in ref.known_by
+        or source.audience_ids != tuple(sorted(str(x) for x in scene["participants"]))
+        or not c.scalar(
+            sa.select(inputs.c.source_id).where(
+                inputs.c.campaign_id == observer.store.campaign_id,
+                inputs.c.scene_id == scene["id"],
+                inputs.c.source_id == source_id,
+                inputs.c.source_revision == source.source_revision,
+            )
+        )
+    ):
+        return None
+    return source
+
+
 def file_report(
     store: OnboardingStore,
     c: Connection,
     scene: dict[str, Any],
     close_event: str,
     reports: tuple[str, ...],
+    experience: HandlerExperienceSelection | None = None,
 ) -> int:
     """Snapshot established references and selected public reports in the close transaction."""
     observer = DirectorObservationService(store, synthetic=True)
@@ -43,37 +88,30 @@ def file_report(
     selected = set(reports)
     if len(selected) != len(reports) or not selected <= {x.id for x in refs}:
         raise WorkflowError("SCENE_REPORT_SOURCE: select distinct current scene references.")
+    if experience is not None and experience.reference_id not in selected:
+        raise WorkflowError(
+            "HANDLER_EXPERIENCE_SOURCE: select a report approved for this closeout."
+        )
     table = t.director_context["shadow"]
     exported = []
+    memory = None
     for ref in refs:
         if ref.origin_scene is not None:
             if ref.id in selected:
                 raise WorkflowError("SCENE_REPORT_SOURCE: file a report from its original scene.")
             continue
-        if handler.token not in ref.known_by:
-            if ref.id not in selected:
-                continue
-            source_id = ref.source_id
-            if source_id.startswith("knowledge-acquired:"):
-                raw = c.scalar(
-                    sa.select(table.c.body_json).where(
-                        table.c.campaign_id == store.campaign_id,
-                        table.c.scene_id == identity,
-                        table.c.id == source_id,
-                    )
-                )
-                source_id = json.loads(raw)["source"]["id"] if raw else ""
-            source = observer._latest_source(c, source_id)
-            if (
-                ref.classification != "reported_claim"
-                or source is None
-                or source.kind != "message"
-                or source.fictional_channel != "comms"
-                or source.actor.kind != "pilot"
-                or source.actor.token not in ref.known_by
-                or source.audience_ids != tuple(sorted(str(x) for x in scene["participants"]))
-            ):
+        known = handler.token in ref.known_by
+        if not known and ref.id not in selected:
+            continue
+        chosen = experience is not None and ref.id == experience.reference_id
+        if chosen or not known:
+            source = _public_pilot_source(observer, c, scene, ref)
+            if source is None:
                 raise WorkflowError("SCENE_REPORT_SCOPE: select an accepted public pilot report.")
+            if chosen and experience is not None:
+                memory = experience.model_dump(mode="json") | {
+                    "pilot": source.actor.model_dump(mode="json")
+                }
         exported.append(
             ref.model_dump(mode="json") | {"origin_scene": identity, "origin_reference": ref.id}
         )
@@ -90,6 +128,7 @@ def file_report(
                     "people": scene["participants"],
                     "consent": policy.consent_generation,
                     "references": exported,
+                    **({"experience": memory} if memory else {}),
                 },
                 sort_keys=True,
             ),
@@ -98,11 +137,27 @@ def file_report(
     return len(exported)
 
 
-def handler_reports(
+def closeout_options(
+    context: DirectorContextService,
+    c: Connection,
+    scene: dict[str, Any],
+) -> list[dict[str, str]]:
+    observer = context.observations
+    handler = active_handler(load_state(c, context.store.campaign_id))
+    if handler is None:
+        return []
+    return [
+        {"id": ref.id, "text": ref.text}
+        for ref in context._current(c, scene["id"])
+        if _public_pilot_source(observer, c, scene, ref) is not None
+    ]
+
+
+def _authorized_reports(
     context: DirectorContextService,
     c: Connection,
     actor: ActorRef,
-) -> tuple[KnowledgeReference, ...]:
+) -> Iterator[tuple[dict[str, Any], set[str]]]:
     """Read sealed reports for the original Handler while source consent remains current."""
     store, observer = context.store, context.observations
     table = t.director_context["shadow"]
@@ -124,7 +179,6 @@ def handler_reports(
         )
         .order_by(t.events.c.seq)
     )
-    result: list[KnowledgeReference] = []
     for row in rows:
         saved = json.loads(row.body_json)
         if saved["handler"] != actor.model_dump(mode="json"):
@@ -136,15 +190,60 @@ def handler_reports(
             or not observer._consented(c, {"participants": saved["people"]}, policy)
         ):
             continue
-        retired = context._archived(c, row.scene_id)
-        result.extend(
-            KnowledgeReference.model_validate_json(json.dumps(x))
-            for x in saved["references"]
-            if x["id"] not in retired
-        )
+        yield saved, context._archived(c, row.scene_id)
+
+
+def handler_reports(
+    context: DirectorContextService,
+    c: Connection,
+    actor: ActorRef,
+) -> tuple[KnowledgeReference, ...]:
+    result = [
+        KnowledgeReference.model_validate_json(json.dumps(ref))
+        for saved, retired in _authorized_reports(context, c, actor)
+        for ref in saved["references"]
+        if ref["id"] not in retired
+    ]
     return context._actor_references(
         tuple(x.model_copy(update={"known_by": (actor.token,)}) for x in result[-100:]), actor
     )
+
+
+def handler_experiences(
+    context: DirectorContextService,
+    c: Connection,
+    handler: ActorRef,
+    pilots: tuple[ActorRef, ...],
+) -> tuple[HandlerExperience, ...]:
+    if not pilots:
+        return ()
+    result = []
+    for saved, retired in _authorized_reports(context, c, handler):
+        memory = saved.get("experience")
+        if (
+            not memory
+            or memory["reference_id"] in retired
+            or ActorRef.model_validate(memory["pilot"]) not in pilots
+        ):
+            continue
+        ref = next(
+            (ref for ref in saved["references"] if ref["id"] == memory["reference_id"]), None
+        )
+        if ref is not None:
+            result.append(
+                HandlerExperience.model_validate_json(
+                    json.dumps(
+                        memory
+                        | {
+                            "scene": ref["origin_scene"],
+                            "close_event": saved["close_event"],
+                            "reported_text": ref["text"],
+                        }
+                    )
+                )
+            )
+    # Keep recent experiences in order so a later report can supersede an earlier preference.
+    return tuple(result[-3:])
 
 
 def report_participant(store: OnboardingStore, c: Connection, scene: str, user: int) -> bool:

@@ -58,6 +58,19 @@ Activity checkout before scheduling a private Discord client trial.
   reports are Handler-only durable memory for later requests. Withdrawal blocks
   recall even after the original channel is rebound. Public delivery still
   requires a current-scene disclosure and scoped review.
+- **Handler portrayal.** Keep voice separate from the private sheet prompts for
+  protection priorities, when to intervene, and how to repair trust. An approved
+  Handler activation supplies the name and at most one originally accepted
+  starting relationship for the current speaker. The facilitator can carry one
+  reported experience forward at closeout. The resulting portrayal guidance
+  follows the original Handler and Pilot. It can inform a proposal to respond or
+  wait. Current scene evidence and the existing review still govern delivery.
+  The facilitator previews eligible reports with
+  `GET /api/director/{scene}/closeout`. The existing `close` route accepts
+  the returned revision, selected `reports`, and an optional `experience`
+  object with a selected `reference_id` and a `kind` of `declined_help`,
+  `completed_handoff`, or `kept_promise`. Closing and recording the selected
+  report share a transaction.
 - **GM work comes from Plays.** Build the review work list from `outcome_sources`
   after a native Play step or reconnect. Match the actual `action_id` where
   present. A typed choice opens when its real prerequisites exist. No GM chat

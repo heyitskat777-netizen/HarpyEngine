@@ -7,7 +7,12 @@ from pydantic import ConfigDict, Field, JsonValue, model_validator
 
 from girlframe.ai.contracts import Contract
 from girlframe.ai.director import DirectorContext, KnowledgeReference, SceneTime
-from girlframe.ai.director_dossiers import DossierProfile, DossierState
+from girlframe.ai.director_dossiers import (
+    DossierProfile,
+    DossierState,
+    HandlerExperience,
+    HandlerIdentity,
+)
 from girlframe.ai.observation import Observation
 from girlframe.ai.play_names import LABELS, requested_play
 from girlframe.ai.play_review import PlayReferral
@@ -43,9 +48,13 @@ class HandlerDecision(Contract):
 
 
 class HandlerPersona(Contract):
-    version: int = Field(ge=1)
+    version: int = Field(ge=0)
     profile: DossierProfile
     state: DossierState
+    identity: HandlerIdentity | None = Field(default=None, exclude_if=lambda value: value is None)
+    experiences: tuple[HandlerExperience, ...] = Field(
+        default=(), max_length=3, exclude_if=lambda value: not value
+    )
 
 
 class HandlerConcern(Contract):

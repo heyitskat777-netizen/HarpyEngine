@@ -6528,3 +6528,47 @@ simulated adapter tests in 47.74 seconds. Subsequent Jackdaw and
 Parasite work passed the source-linked focused selections in the
 work order. Authenticated Discord and live campaign acceptance
 remain separate.
+
+## Handler portrayal across missions
+
+Development base `a54f386fcbf4635d4bd9f05015ea88872c6a3e56` on
+`codex/timed-missions-integration`. Existing private sheet notes, original
+starting Bond approvals, actor dossiers, reviewed response decisions, and
+native scene closeout are the sources for this change. Older sheets can leave
+the new prompts blank. Approval keeps one selected experience per closeout,
+and the Handler model receives up to three recent eligible experiences for
+the Pilot who was heard. Each experience carries the original scene, report,
+and closeout receipt.
+
+The [synthetic rehearsal](../tests/rules/test_handler_personality_pairs.py)
+exercises two portrayals for each of the seven archetypes. In a separate
+two-mission case, the facilitator approves Rue's proposed offer of backup
+in the first mission. In the second she waits on the same indirect cue after
+the Pilot's request for space has been filed. A direct request still gets a reply. The approved
+experience stays with the original Pilot, survives reopening the database,
+and is unavailable before closeout or after withdrawal. Withdrawal also
+invalidates affected open need reviews and drafts. When an authored dossier
+depends on unavailable knowledge, the request carries only the approved
+identity and experience.
+
+The [Activity handoff](../integrations/activity/P2_SESSION_UI_HANDOFF.md)
+documents the facilitator closeout control and optional source selection.
+
+```bash
+PYTHONPATH="$PWD/src" /workspace/HarpyEngine/.venv/bin/python -m pytest -q \
+  tests/rules/test_handler_personality_pairs.py \
+  tests/rules/test_timed_handler_archetypes.py \
+  tests/test_director_dossiers.py \
+  tests/test_director_model_adapters.py \
+  tests/test_director_activity_scene.py::test_parallel_scenes_file_only_approved_reports_after_native_close \
+  tests/test_director_activity_scene.py::test_activity_timeline_shows_one_scoped_delivery_on_reopen \
+  tests/test_activity_shadow_readiness.py \
+  --tb=short
+```
+
+The focused selection passed **41 tests in 84.56 seconds**. Ruff passed on
+the changed Python files, mypy passed on 11 source files, and
+`node --input-type=module --check < integrations/activity/p2-desk.js` passed.
+The simulated provider used prepared outputs. The full repository suite,
+authenticated Discord browser interaction, and real-model portrayal were
+outside this check.

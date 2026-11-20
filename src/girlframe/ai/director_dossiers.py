@@ -31,6 +31,31 @@ class RelationshipPerspective(DossierPerspective):
     subject: ActorRef
 
 
+class StartingRelationship(Contract):
+    pilot: ActorRef
+    shared_history: str = Field(min_length=1, max_length=1200)
+
+
+class HandlerIdentity(Contract):
+    name: str = Field(min_length=1, max_length=120)
+    activation_event: str
+    starting_relationship: StartingRelationship | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+
+
+class HandlerExperienceSelection(Contract):
+    reference_id: str = Field(min_length=1, max_length=100)
+    kind: Literal["declined_help", "completed_handoff", "kept_promise"]
+
+
+class HandlerExperience(HandlerExperienceSelection):
+    pilot: ActorRef
+    scene: str
+    close_event: str
+    reported_text: str
+
+
 class DossierProfile(Contract):
     presence: Literal["background", "recurring"] = "background"
     background: str = Field(default="", max_length=2000)
@@ -136,6 +161,12 @@ class DossierPacket(Contract):
     dossier_id: str | None = None
     profile: DossierProfile | None = None
     state: DossierState | None = None
+    handler_identity: HandlerIdentity | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    handler_experiences: tuple[HandlerExperience, ...] = Field(
+        default=(), max_length=3, exclude_if=lambda value: not value
+    )
     context: DirectorContext
     source_refs: tuple[str, ...]
     revision: str

@@ -543,6 +543,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
 
   function renderHandlerNotes(parent, sheet) {
     const notes = element("details");
+    notes.open = sheet.editable;
     notes.append(element("summary", "Private roleplay notes"));
     parent.append(notes);
     const current = sheet.draft.notes ?? {};
@@ -772,6 +773,49 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
   function renderFacilitator(gm) {
     const queue = card(body, "Facilitator review");
     renderTimingReviews(queue, gm.timing_reviews);
+    if (scene) {
+      const closeout = element("div");
+      queue.append(closeout);
+      closeout.append(button("Review scene closeout", async () => {
+        const review = await read("closeout");
+        const reports = review.reports.map(report => {
+          const label = element("label");
+          const checkbox = element("input");
+          checkbox.type = "checkbox";
+          label.append(checkbox, report.text);
+          return {id: report.id, label, checkbox};
+        });
+        const [sourceLabel, source] = choiceField(
+          "Carry one Pilot experience forward (optional)",
+          review.reports.map(report => [report.id, report.text]),
+        );
+        const [kindLabel, kind] = choiceField("What did the Pilot report?", [
+          ["declined_help", "They declined help"],
+          ["completed_handoff", "A handoff was completed"],
+          ["kept_promise", "A promise was kept"],
+        ]);
+        kindLabel.hidden = true;
+        source.addEventListener("change", () => {
+          kindLabel.hidden = !source.value;
+          kind.required = Boolean(source.value);
+        });
+        const payload = () => ({
+          revision: review.revision,
+          reports: reports.filter(report => report.checkbox.checked || report.id === source.value)
+            .map(report => report.id),
+          ...(source.value ? {experience: {reference_id: source.value, kind: kind.value}} : {}),
+        });
+        const confirm = button("Close scene and file selected reports", async key => {
+          if (!kind.reportValidity()) return;
+          await write("close", payload(), key);
+          await refresh();
+        }, () => JSON.stringify(payload()));
+        closeout.replaceChildren(element("h4", "Approved Handler reports"));
+        for (const report of reports) closeout.append(report.label);
+        if (reports.length) closeout.append(sourceLabel, kindLabel);
+        closeout.append(confirm);
+      }));
+    }
     if (gm.fictional_time?.clock) {
       const clock = gm.fictional_time.clock;
       queue.append(element("p", `Saved scene clock · ${minuteText(clock.minute)} ${clock.boundary} ${minuteText(clock.deadline)} · ${clock.status.replaceAll("_", " ")}`));

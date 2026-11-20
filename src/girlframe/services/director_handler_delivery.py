@@ -187,8 +187,14 @@ class HandlerDeliveryService:
         if clock_receipt and not prior:
             recipients = tuple(ActorRef.model_validate(raw) for raw in plan["recipients"])
             require_clock_audience(c, self.store, scene, clock_receipt, recipients)
-        if self.observer._state(c, scene).activity_epoch is not None and not prior:
-            self.conversation._current_handler_draft(c, controller, scene, draft)
+        if not prior:
+            self.conversation._current_handler_draft(
+                c,
+                controller,
+                scene,
+                draft,
+                portrayal_only=self.observer._state(c, scene).activity_epoch is None,
+            )
         if plan.get("character_cue") and not prior:
             source = self.conversation._need_source(c, scene, draft["source_id"])
             if self.conversation.peer_covered(c, scene, source, handler):

@@ -3,6 +3,7 @@
 import json
 from typing import Any, cast
 
+from girlframe.ai.director_dossiers import HandlerExperienceSelection
 from girlframe.ai.director_reactions import ReactionProposal
 from girlframe.ai.gm_outcomes import OutcomeProposal
 from girlframe.ai.gm_protocol import TaskFrame
@@ -194,8 +195,11 @@ class P2Scene:
         channel: int,
         revision: int,
         reports: tuple[str, ...],
+        experience: HandlerExperienceSelection | None = None,
     ) -> dict[str, Any]:
-        return self.session.close_scene(viewer, key, scene, channel, revision, report_ids=reports)
+        return self.session.close_scene(
+            viewer, key, scene, channel, revision, report_ids=reports, experience=experience
+        )
 
     def read(
         self, viewer: GuildViewer, scene: str, route: str, identity: str | None = None
@@ -203,7 +207,7 @@ class P2Scene:
         if route == "fictional-time" and identity is None:
             view = self.time.view(viewer)
             if not scene and "handler_controls" in view:
-                reviews = []
+                reviews: list[dict[str, Any]] = []
                 for booking in view.get("scenes", ()):
                     if booking["joined"]:
                         try:
@@ -259,6 +263,8 @@ class P2Scene:
             return {"items": self.timing_reviews.view(viewer, scene)}
         if route == "reports":
             return self.session.handler_reports(viewer, scene)
+        if route == "closeout" and identity is None:
+            return self.session.closeout_options(viewer, scene)
         if route == "rules" and identity is not None:
             return self.play_results(viewer, scene, identity)
         if route == "ruling" and identity is not None:
@@ -445,7 +451,10 @@ class P2Scene:
             return self.submit(
                 viewer, scene, AppendSceneInput.model_validate(data | {"command_key": key})
             )
-        if route == "close" and data.keys() == {"revision", "reports"}:
+        if route == "close" and data.keys() in (
+            {"revision", "reports"},
+            {"revision", "reports", "experience"},
+        ):
             if (
                 type(data["revision"]) is not int
                 or not isinstance(data["reports"], list)
@@ -455,7 +464,15 @@ class P2Scene:
             with self.session.store.engine.connect() as c:
                 row = self.session.observer._scene(c, scene, viewer, allow_closed=True)
             return self.close(
-                viewer, key, scene, int(row["channel_id"]), data["revision"], tuple(data["reports"])
+                viewer,
+                key,
+                scene,
+                int(row["channel_id"]),
+                data["revision"],
+                tuple(data["reports"]),
+                HandlerExperienceSelection.model_validate(data["experience"])
+                if "experience" in data
+                else None,
             )
         if route == "consent" and data.keys() == {"policy_revision", "consent"}:
             if type(data["policy_revision"]) is not int or type(data["consent"]) is not bool:

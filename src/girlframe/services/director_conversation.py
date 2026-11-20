@@ -30,6 +30,7 @@ from girlframe.ai.conversation import (
     handler_updates,
 )
 from girlframe.ai.director import DirectorContext
+from girlframe.ai.director_dossiers import DossierProfile, DossierState
 from girlframe.ai.observation import Observation
 from girlframe.database import tables as t
 from girlframe.engine.m3_actor_state import ActorRef
@@ -188,7 +189,9 @@ class DirectorConversationService:
                 question=question,
                 context=role,
                 addressed_update_refs=addressed,
-                persona=self._handler_persona(c, scene_id, role)
+                persona=self._handler_persona(
+                    c, scene_id, role, (source.actor,) if question != "Scene update." else ()
+                )
                 if self.handler_mode == "reviewed"
                 else None,
                 playbook_profile=PROFILES[playbook] if playbook else None,
@@ -358,21 +361,23 @@ class DirectorConversationService:
             return self._action_heat(c, scene, actor, action_id)
 
     def _handler_persona(
-        self, c: Connection, scene: str, role: DirectorContext
+        self, c: Connection, scene: str, role: DirectorContext, subjects: tuple[ActorRef, ...]
     ) -> HandlerPersona | None:
         from girlframe.services.director_dossiers import DirectorDossierService
 
         assert role.actor is not None
-        try:
-            own = DirectorDossierService(self.context)._role_packet(c, scene, role.actor)
-        except WorkflowError as error:
-            # An outdated self dossier cannot expand knowledge or disable normal comms.
-            if str(error).startswith(("DOSSIER_UNKNOWN_", "DOSSIER_GOAL_UNAVAILABLE:")):
-                return None
-            raise
-        if own.profile is None or own.state is None:
+        own = DirectorDossierService(self.context)._role_packet(
+            c, scene, role.actor, subjects=subjects, omit_stale_portrayal=True
+        )
+        if own.profile is None and own.handler_identity is None and not own.handler_experiences:
             return None
-        return HandlerPersona(version=own.dossier_version, profile=own.profile, state=own.state)
+        return HandlerPersona(
+            version=own.dossier_version,
+            profile=own.profile or DossierProfile(),
+            state=own.state or DossierState(),
+            identity=own.handler_identity,
+            experiences=own.handler_experiences,
+        )
 
     def _update_key(
         self, c: Connection, scene_id: str, context: DirectorContext, reference_id: str
@@ -774,7 +779,13 @@ class DirectorConversationService:
         return saved
 
     def _current_handler_draft(
-        self, c: Connection, viewer: GuildViewer, scene: str, draft: dict[str, Any]
+        self,
+        c: Connection,
+        viewer: GuildViewer,
+        scene: str,
+        draft: dict[str, Any],
+        *,
+        portrayal_only: bool = False,
     ) -> HandlerRequest:
         from girlframe.services.director_knowledge import DirectorKnowledgeService
 
@@ -793,13 +804,26 @@ class DirectorConversationService:
         request, fingerprint = self._requests(
             c, viewer, scene, source.source_id, "handler", review_source=source
         )
-        if fingerprint != draft["context_revision"] or request.model_dump(mode="json") != {
+        assert isinstance(request, HandlerRequest)
+        current = request.model_dump(mode="json")
+        if portrayal_only:
+            prior = draft["request"]
+            if any(
+                current.get(key) != prior.get(key) for key in ("persona", "character_notes")
+            ) or any(
+                ref not in current.get("closed_scene_reports", [])
+                for ref in prior.get("closed_scene_reports", [])
+            ):
+                raise WorkflowError(
+                    "STALE_HANDLER_DRAFT: regenerate from current portrayal and approved reports."
+                )
+            return request
+        if fingerprint != draft["context_revision"] or current != {
             name: value for name, value in draft["request"].items() if name != "response_need"
         }:
             raise WorkflowError(
                 "STALE_HANDLER_DRAFT: regenerate from current knowledge and speech."
             )
-        assert isinstance(request, HandlerRequest)
         return request
 
     def pending_handler(self, viewer: GuildViewer, scene: str) -> list[dict[str, Any]]:
@@ -1292,6 +1316,11 @@ class DirectorConversationService:
                 **(
                     {"handler_character_notes": request.character_notes.model_dump(mode="json")}
                     if request.character_notes is not None
+                    else {}
+                ),
+                **(
+                    {"handler_persona": request.persona.model_dump(mode="json")}
+                    if request.persona is not None
                     else {}
                 ),
                 **(

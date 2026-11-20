@@ -45,7 +45,9 @@ HISTORY_LABELS: dict[str, tuple[str, ...]] = {
 TRAINER_PHRASES = {0: ("sit", "heel"), 1: ("hunt",), 2: ("speak", "play_gentle")}
 HANDLER_NOTE_FIELDS = (
     ("voice", "Personal voice"),
-    ("intervention", "Personal intervention instinct"),
+    ("priority", "What do you protect first?"),
+    ("intervention", "When do you step in or wait?"),
+    ("repair", "How do you repair trust after a mistake?"),
     ("concern", "Current concern"),
     ("obligation", "Obligation"),
     ("promise", "Your view of a relationship or promise"),
@@ -56,7 +58,9 @@ class HandlerNotes(Model):
     """The Handler's own roleplay prompts, separate from established facts."""
 
     voice: str = Field(default="", max_length=400, exclude_if=lambda value: not value)
+    priority: str = Field(default="", max_length=400, exclude_if=lambda value: not value)
     intervention: str = Field(default="", max_length=400, exclude_if=lambda value: not value)
+    repair: str = Field(default="", max_length=400, exclude_if=lambda value: not value)
     concern: str = Field(default="", max_length=400, exclude_if=lambda value: not value)
     obligation: str = Field(default="", max_length=400, exclude_if=lambda value: not value)
     promise: str = Field(default="", max_length=400, exclude_if=lambda value: not value)

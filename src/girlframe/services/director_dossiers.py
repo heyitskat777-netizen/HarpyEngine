@@ -15,13 +15,18 @@ from girlframe.ai.director_dossiers import (
     DossierProposal,
     DossierRecord,
     DossierState,
+    HandlerExperience,
+    HandlerIdentity,
     Personnel,
+    StartingRelationship,
 )
 from girlframe.database import tables as t
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, ActorView
 from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_world_development import current as current_developments
+from girlframe.services.director_closeout import handler_experiences
 from girlframe.services.director_context import DirectorContextService
 from girlframe.services.director_knowledge import DirectorKnowledgeService
 from girlframe.services.director_observation import _digest
@@ -473,27 +478,75 @@ class DirectorDossierService:
                 ],
             }
 
-    def _role_packet(self, c: Connection, scene: str, actor: ActorRef) -> DossierPacket:
+    def _role_packet(
+        self,
+        c: Connection,
+        scene: str,
+        actor: ActorRef,
+        *,
+        subjects: tuple[ActorRef, ...] | None = None,
+        omit_stale_portrayal: bool = False,
+    ) -> DossierPacket:
         """Internal projection; caller separately establishes actual GM/controller access."""
         actual = self._actor(c, scene, actor)
-        history = self._records(load_state(c, self.store.campaign_id), actor)
+        canon = load_state(c, self.store.campaign_id)
+        history = self._records(canon, actor)
         head = history[-1] if history else None
         entitled = head is not None and head.controller == actual.controller
         context = self._context(c, scene, actor)
-        if entitled and head:
-            self._validate_state(c, scene, actor, head.state)
+        portrayal = head if entitled else None
+        if portrayal is not None:
+            try:
+                self._validate_state(c, scene, actor, portrayal.state)
+            except WorkflowError as error:
+                if not omit_stale_portrayal or not str(error).startswith(
+                    ("DOSSIER_UNKNOWN_", "DOSSIER_GOAL_UNAVAILABLE:")
+                ):
+                    raise
+                portrayal = None
+        identity = None
+        experiences: tuple[HandlerExperience, ...] = ()
+        if actor.kind == "handler" and actor == active_handler(canon):
+            row = self.observer._scene(c, scene)
+            pilots = tuple(
+                subject
+                for subject in self.knowledge._actors(c, row)
+                if subject.kind == "pilot" and (subjects is None or subject in subjects)
+            )
+            experiences = handler_experiences(self.context, c, actor, pilots)
+            sheet = canon.handler_persona
+            if sheet is not None and sheet.id == actor.incarnation:
+                # Native activation verifies acceptance of each exact starting history.
+                agreed = next((x for x in sheet.draft.starting if x.pilot in pilots), None)
+                identity = HandlerIdentity(
+                    name=sheet.draft.name,
+                    activation_event=sheet.source_event,
+                    starting_relationship=StartingRelationship(
+                        pilot=agreed.pilot, shared_history=agreed.history
+                    )
+                    if agreed
+                    else None,
+                )
         payload = {
             "actor": actor.model_dump(mode="json"),
             "controller": actual.controller,
-            "dossier": head.model_dump(mode="json") if entitled and head else None,
+            "dossier": portrayal.model_dump(mode="json") if portrayal else None,
             "context": context.model_dump(mode="json"),
+            **({"handler_identity": identity.model_dump(mode="json")} if identity else {}),
+            **(
+                {"handler_experiences": [x.model_dump(mode="json") for x in experiences]}
+                if experiences
+                else {}
+            ),
         }
         return DossierPacket(
             actor=actor,
             dossier_version=head.version if head else 0,
-            dossier_id=head.id if entitled and head else None,
-            profile=head.profile if entitled and head else None,
-            state=head.state if entitled and head else None,
+            dossier_id=portrayal.id if portrayal else None,
+            profile=portrayal.profile if portrayal else None,
+            state=portrayal.state if portrayal else None,
+            handler_identity=identity,
+            handler_experiences=experiences,
             context=context,
             source_refs=tuple(ref.id for ref in context.references),
             revision=_digest(payload),

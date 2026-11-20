@@ -7,6 +7,7 @@ import sqlalchemy as sa
 from sqlalchemy import Connection
 
 from girlframe.ai.conversation import HandlerNeedProvider
+from girlframe.ai.director_dossiers import HandlerExperienceSelection
 from girlframe.ai.knowledge import KnowledgeProvider
 from girlframe.ai.observation import AppendSceneInput, Observation
 from girlframe.database import tables as t
@@ -179,12 +180,26 @@ class DirectorSessionService:
         expected_revision: int,
         *,
         report_ids: tuple[str, ...] = (),
+        experience: HandlerExperienceSelection | None = None,
     ) -> dict[str, Any]:
         """Close the native scene and file its approved Handler report atomically."""
         self.observer._scope()
         return self.game.close_scene(
-            viewer, key, channel, director_scene=(scene, expected_revision), report_ids=report_ids
+            viewer,
+            key,
+            channel,
+            director_scene=(scene, expected_revision),
+            report_ids=report_ids,
+            experience=experience,
         )
+
+    def closeout_options(self, viewer: GuildViewer, scene: str) -> dict[str, Any]:
+        from girlframe.services.director_closeout import closeout_options
+
+        with self.store.engine.connect() as c:
+            self.conversation._handler_review_scope(c, viewer, scene)
+            row = self.observer._scene(c, scene, viewer)
+            return {"revision": row["revision"], "reports": closeout_options(self.context, c, row)}
 
     def handler_reports(self, viewer: GuildViewer, scene: str) -> dict[str, Any]:
         from girlframe.services.director_closeout import handler_reports

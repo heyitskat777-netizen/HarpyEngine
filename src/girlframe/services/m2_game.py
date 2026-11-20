@@ -42,6 +42,7 @@ from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
 if TYPE_CHECKING:
+    from girlframe.ai.director_dossiers import HandlerExperienceSelection
     from girlframe.engine.m3_handler_play_state import Effect
 
 PUBLIC_FIELDS = {
@@ -7075,7 +7076,11 @@ class GameService:
         *,
         director_scene: tuple[str, int] | None = None,
         report_ids: tuple[str, ...] = (),
+        experience: "HandlerExperienceSelection | None" = None,
     ) -> dict[str, Any]:
+        if experience is not None and director_scene is None:
+            raise WorkflowError("HANDLER_EXPERIENCE_SOURCE: use the reviewed Director closeout.")
+
         def authorize(c: Connection) -> None:
             self.authorize(c, viewer, game=False)
             self.gate()
@@ -7094,9 +7099,10 @@ class GameService:
                 self.unpaused(c)
                 closeout = {
                     "handler_report_count": file_report(
-                        self.store, c, scene, close_event, report_ids
+                        self.store, c, scene, close_event, report_ids, experience
                     ),
                     "scene_id": scene["id"],
+                    **({"handler_experience_saved": True} if experience else {}),
                 }
             self.record_scene_close(c, viewer.user_id, key, scene, close_event, apply_effects=True)
             return {"channel": channel, "closed": True, **closeout}
@@ -7112,6 +7118,7 @@ class GameService:
                     if director_scene is not None
                     else {}
                 ),
+                **({"experience": experience.model_dump(mode="json")} if experience else {}),
             },
             operation,
             auto_audit=False,
