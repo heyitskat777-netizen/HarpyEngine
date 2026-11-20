@@ -4,7 +4,12 @@ from typing import Annotated, Literal
 
 from pydantic import AfterValidator, Field
 
-from girlframe.engine.campaign_opening import DEFAULT_DIFFICULTY, Difficulty
+from girlframe.engine.campaign_opening import (
+    DEFAULT_DIFFICULTY,
+    CampaignSeats,
+    Difficulty,
+    HandlerControl,
+)
 from girlframe.engine.identity import Snowflake
 from girlframe.engine.m2 import Model
 from girlframe.engine.m3_handler_state import Playbook
@@ -29,6 +34,7 @@ class HandlerProfile(Model):
     archetype: Playbook
     appearance: Description
     personality: Description
+    control: HandlerControl = Field(default="player", exclude_if=lambda x: x == "player")
 
 
 class CharacterNotes(Model):
@@ -62,6 +68,7 @@ class SessionZero(Model):
     difficulty: Difficulty = DEFAULT_DIFFICULTY
     plan_proposal: str | None = None
     plan_approvals: tuple[Snowflake, ...] = ()
+    seats: CampaignSeats | None = Field(default=None, exclude_if=lambda x: x is None)
 
     @property
     def plan_approved(self) -> bool:
@@ -76,3 +83,7 @@ class SessionZero(Model):
         return tuple(
             uid for uid in self.members if self.handler is None or uid != self.handler.member
         )
+
+    @property
+    def human_players(self) -> int:
+        return len(self.members) - int(self.handler is not None and self.handler.control == "ai")

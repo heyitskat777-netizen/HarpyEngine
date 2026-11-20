@@ -494,6 +494,11 @@ class CampaignTimeService:
         payload = {"cut": cut.model_dump(mode="json"), "token": token}
 
         def operation(c: Connection) -> dict[str, Any]:
+            from girlframe.services.campaign_difficulty import opening
+
+            record = opening(c, self.store.campaign_id)
+            if record is not None and self._current(c)[1].position.day < record.first_mission_day:
+                raise WorkflowError("Advance introductory days through Session Zero.")
             preview, late = self._preview(c, viewer, cut)
             if token != preview["token"]:
                 raise WorkflowError(

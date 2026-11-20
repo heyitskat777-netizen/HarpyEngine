@@ -41,6 +41,7 @@ class HandlerDecision(Contract):
         "peer_response",
         "need_already_addressed",
         "handler_absent",
+        "player_handler",
     ]
     source_refs: tuple[str, ...] = Field(default=(), max_length=3)
     concern_id: str | None = Field(default=None, exclude_if=lambda x: x is None)

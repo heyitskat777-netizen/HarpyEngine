@@ -128,6 +128,207 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     return row;
   }
 
+  function sessionZeroSave(panel, label, route, values) {
+    panel.append(button(label, async key => {
+      if (Array.from(panel.querySelectorAll("input, select, textarea"))
+        .some(input => !input.reportValidity())) return;
+      await write(route, values(), key);
+      await refresh();
+    }, () => JSON.stringify(values())));
+  }
+
+  function renderSessionZero(state) {
+    const row = card(body, "Session Zero");
+    const revision = state.revision;
+    const member = id => state.viewer === id ? "You" : "Discord member " + id;
+    const isHandler = state.handler_ready === state.viewer;
+    const profile = state.profile;
+    const open = state.opening;
+    const inIntro = open && state.opening_day < open.first_mission_day;
+    const control = profile?.control ?? "player";
+    function textArea(panel, label, value, maxLength, required = true) {
+      const row = element("label", label);
+      const text = element("textarea");
+      text.value = value ?? "";
+      text.maxLength = maxLength;
+      text.required = required;
+      row.append(text);
+      panel.append(row);
+      return text;
+    }
+    function vote(panel, title, route, proposal, approved) {
+      sessionZeroSave(panel, (approved ? "Withdraw approval of " : "Approve ") + title,
+        route, () => ({proposal, approve: !approved}));
+    }
+    if (state.can_set_group) {
+      const panel = timeForm(row, "Choose the Session Zero group");
+      const choices = state.group_options.map(id => {
+        const label = element("label");
+        const input = element("input");
+        input.type = "checkbox";
+        input.checked = state.members.includes(id) || id === state.appointed;
+        input.disabled = id === state.appointed;
+        label.append(input, member(id));
+        panel.append(label);
+        return {id, input};
+      });
+      if (state.members.length) panel.append(element("p", "Changing the group starts a new approval round."));
+      sessionZeroSave(panel, "Save group", "session-zero-group", () => ({
+        revision, members: choices.filter(x => x.input.checked).map(x => x.id),
+      }));
+    }
+    if (!state.in_group) return;
+    if (profile) {
+      const handler = card(row, "Handler");
+      handler.append(
+        element("p", profile.name + " · " + profile.archetype),
+        element("p", (control === "ai" ? "AI-assisted · Reviewed by " : "Played by ") +
+          (profile.player_name || member(profile.member))),
+        element("p", profile.appearance), element("p", profile.personality),
+      );
+      if (!open) {
+        handler.append(element("p", state.approvals + "/" + state.members.length + " approvals"));
+        vote(handler, "the Handler", "session-zero-handler-vote", state.proposal, state.own_approval);
+        if (state.can_appoint) sessionZeroSave(handler, "Appoint approved Handler", "session-zero-appoint", () => ({
+          setup_revision: state.setup_revision, proposal: state.proposal, nominee: state.nominee,
+        }));
+      }
+    }
+    if (!open) {
+      const panel = timeForm(row, profile ? "Edit Handler proposal" : "Propose the Handler");
+      const options = state.appointed ? [state.appointed] : state.members;
+      const [controllerLabel, controller] = choiceField("Handler player or AI reviewer",
+        options.map(id => [id, member(id)]), profile?.member ?? state.appointed);
+      const [modeLabel, mode] = choiceField("Who portrays the Handler?",
+        [["player", "Player"], ["ai", "AI with human review"]], control);
+      const [nameLabel, name] = field("Handler name", profile?.name);
+      const [bookLabel, book] = choiceField("Handler playbook",
+        state.playbooks.map(value => [value, value]), profile?.archetype);
+      for (const input of [controller, mode, book]) input.required = true;
+      name.maxLength = 100;
+      panel.append(controllerLabel, modeLabel, nameLabel, bookLabel);
+      const appearance = textArea(panel, "Appearance", profile?.appearance, 400);
+      const personality = textArea(panel, "Personality", profile?.personality, 400);
+      sessionZeroSave(panel, "Save Handler proposal", "session-zero-propose", () => ({
+        revision, profile: {member: controller.value, control: mode.value, name: name.value.trim(),
+          archetype: book.value, appearance: appearance.value.trim(), personality: personality.value.trim()},
+      }));
+    }
+    if (state.handler_ready === null) return;
+    const sheets = Object.entries(state.sheets);
+    if (!open) {
+      const panel = card(row, "Pilot sheets");
+      for (const [id, value] of sheets) panel.append(element("p", member(id) + " · " + value));
+      if (!isHandler) {
+        sessionZeroSave(panel, "Attach my current sheet", "session-zero-attach", () => ({revision}));
+        if (state.sheets[state.viewer] === "attached") {
+          const notes = timeForm(panel, "My character input");
+          const inputs = Object.fromEntries([["goal", "Character goal"], ["hook", "Story hook"],
+            ["spotlight", "Desired spotlight"]].map(([key, label]) =>
+            [key, textArea(notes, label, state.own_notes[key], 400, false)]));
+          sessionZeroSave(notes, "Save my input", "session-zero-notes", () => ({
+            revision, notes: Object.fromEntries(Object.entries(inputs).map(([key, input]) => [key, input.value])),
+          }));
+        }
+      }
+    }
+    const plan = card(row, "Campaign plan");
+    const title = value => value[0].toUpperCase() + value.slice(1);
+    const players = state.seats?.player_count ?? state.player_count;
+    plan.append(
+      element("p", title(state.difficulty) + " · " + players + (players === 1 ? " human player" : " human players")),
+      element("p", state.difficulty_options[state.difficulty]),
+    );
+    if (state.goals) plan.append(element("p", state.goals));
+    for (const pilot of state.seats?.ai_pilots ?? []) {
+      plan.append(element("p", "Planned AI Pilot · " + pilot.callsign +
+        (pilot.concept ? " · " + pilot.concept : "")));
+    }
+    if (state.plan_proposal && !open) {
+      plan.append(element("p", state.plan_approvals + "/" + state.members.length + " plan approvals"));
+      const voting = element("div");
+      plan.append(voting);
+      vote(voting, "the campaign plan", "session-zero-plan-vote", state.plan_proposal, state.own_plan_approval);
+    }
+    if (isHandler && !open) {
+      const panel = timeForm(plan, "Draft difficulty, players, and goals");
+      const [difficultyLabel, select] = choiceField("Difficulty",
+        Object.entries(state.difficulty_options).map(([key, note]) => [key, title(key) + " · " + note]),
+        state.difficulty);
+      select.required = true;
+      panel.append(difficultyLabel, element("p", state.player_count + " human player seats. " +
+        "Set the group size above. An AI Handler’s reviewer counts only for approvals."));
+      const goals = textArea(panel, "Shared short-term goals", state.goals, 800);
+      const pilots = [];
+      const list = element("div");
+      panel.append(list);
+      function addPilot(saved) {
+        const slot = element("fieldset");
+        const [label, callsign] = field("AI Pilot callsign", saved?.callsign);
+        callsign.maxLength = 100;
+        slot.append(label);
+        const concept = textArea(slot, "AI Pilot concept", saved?.concept, 400, false);
+        const entry = {callsign, concept};
+        pilots.push(entry);
+        slot.append(button("Remove AI Pilot", () => {
+          pilots.splice(pilots.indexOf(entry), 1);
+          slot.remove();
+        }));
+        list.append(slot);
+      }
+      for (const pilot of state.seats?.ai_pilots ?? []) addPilot(pilot);
+      panel.append(button("Add AI Pilot", () => {
+        if (pilots.length >= state.limit) throw new Error("The AI Pilot list is full.");
+        addPilot();
+      }));
+      sessionZeroSave(panel, "Save campaign plan for approval", "session-zero-plan", () => ({
+        revision, difficulty: select.value, goals: goals.value,
+        seats: {player_count: state.player_count, ai_pilots: pilots.map(({callsign, concept}) =>
+          ({callsign: callsign.value, concept: concept.value}))},
+      }));
+      if (state.plan_approved && sheets.every(([, value]) => value === "attached")) {
+        const launch = timeForm(row, "Open the approved introduction");
+        const introduction = textArea(launch, "Handler introduction", "", 1200);
+        const [daysLabel, days] = field("Introductory days", "3");
+        days.type = "number";
+        days.min = "2";
+        days.max = "7";
+        launch.append(daysLabel);
+        sessionZeroSave(launch, "Open introduction", "session-zero-open", () => ({
+          revision, introduction: introduction.value, days: Number(days.value),
+        }));
+      }
+    }
+    if (open) {
+      const intro = card(row, "Cadre introduction");
+      intro.append(element("p", open.introduction), element("p", inIntro
+        ? "Roleplay only · Day " + state.opening_day + ". First mission opens on Day " + open.first_mission_day + "."
+        : "The first mission can be offered in the Mission Desk."));
+      for (const post of state.opening_posts) intro.append(element("p", post.author + " · " + post.text));
+      if (inIntro) {
+        const composer = element("div");
+        intro.append(composer);
+        const text = textArea(composer, "Introductory roleplay", "", 1200);
+        sessionZeroSave(composer, "Post roleplay", "session-zero-post", () => ({
+          anchor: state.opening_anchor, text: text.value,
+        }));
+        if (isHandler) intro.append(button("Advance one introductory day", async key => {
+          await write("session-zero-advance", {anchor: state.opening_anchor}, key);
+          await refresh();
+        }));
+      }
+    }
+    if (state.can_generate) row.append(button("View group worksheet", async () => {
+      const result = await read("session-zero-worksheet");
+      let worksheet = row.querySelector("pre");
+      if (!worksheet) {
+        worksheet = element("pre");
+        row.append(worksheet);
+      }
+      worksheet.textContent = result.worksheet;
+    }));
+  }
+
   function renderOpening(opening) {
     const row = card(body, "Campaign opening");
     if (opening.launched) {
@@ -150,7 +351,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     pressure.required = false;
     row.append(locationLabel, situationLabel, choiceLabel, pressureLabel);
     const session = element("details");
-    session.append(element("summary", "Session Zero"));
+    session.append(element("summary", "Briefing guidance"));
     const [toneLabel, tone] = field("Campaign tone", draft.session_zero?.tone);
     const [offscreenLabel, offscreen] = field("What stays offscreen?", draft.session_zero?.offscreen);
     const [fallbackLabel, fallback] = field("Human fallback", draft.session_zero?.human_fallback);
@@ -576,7 +777,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     return values;
   }
 
-  function renderPersona(setup) {
+  function renderPersona(setup, approvedProfile) {
     for (const request of setup.requests.filter(x => x.kind !== "handler_creation" && !x.stale)) {
       const row = card(body, request.label);
       if (!request.actionable) {
@@ -618,7 +819,12 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       return;
     }
     const draft = sheet.draft;
-    const [playbookLabel, playbook] = choiceField("Handler playbook", setup.playbooks.map(x => [x, x]), draft.playbook);
+    const initialPlaybook = draft.playbook ?? approvedProfile?.archetype;
+    const [playbookLabel, playbook] = choiceField(
+      "Handler playbook", setup.playbooks.map(x => [x, x]), initialPlaybook);
+    if (!draft.playbook && initialPlaybook) {
+      renderHandlerProfile(guidance, setup.profiles[initialPlaybook]);
+    }
     row.append(playbookLabel, guidance, rules);
     playbook.addEventListener("change", () => {
       renderHandlerProfile(guidance, setup.profiles[playbook.value]);
@@ -628,7 +834,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       ["name", "Handler name"], ["appearance", "Handler appearance"],
       ["outfit", "Handler outfit"], ["background", "Handler background"],
     ].map(([key, label]) => {
-      const [inputLabel, input] = field(label, draft[key]);
+      const [inputLabel, input] = field(label, draft[key] || approvedProfile?.[key]);
       row.append(inputLabel);
       return [key, input];
     }));
@@ -908,7 +1114,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
   }
 
   async function refresh() {
-    const [work, gm, opening, brief, persona, policy, observation, review, time, timingReview] = await Promise.all([
+    const [work, gm, opening, brief, persona, policy, observation, review, time, timingReview, sessionZero] = await Promise.all([
       scene ? read("work", true) : null, scene ? read("gm-work", true) : null,
       read("opening", true), read("opening-brief", true), read("persona-setup", true),
       activityShadow ? read("activity-policy", true) : null,
@@ -916,13 +1122,17 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       activityShadow ? read("activity-review", true) : null,
       read("fictional-time", true),
       scene ? read("timing-review", true) : null,
+      !scene ? read("session-zero", true) : null,
     ]);
     body.replaceChildren();
     if (activityShadow) renderShadow(policy, observation, review);
+    if (sessionZero && (sessionZero.can_set_group || sessionZero.in_group)) renderSessionZero(sessionZero);
     if (opening) renderOpening(opening);
     if (brief?.launched) renderBrief(brief);
-    if (persona) renderPersona(persona);
-    if (time && (time.mode === "asynchronous" || time.handler_controls)) {
+    if (persona) renderPersona(persona, sessionZero?.handler_ready === sessionZero?.viewer
+      ? sessionZero?.profile : null);
+    const inIntro = sessionZero?.opening && sessionZero.opening_day < sessionZero.opening.first_mission_day;
+    if (time && !inIntro && (time.mode === "asynchronous" || time.handler_controls)) {
       const row = card(body, "Fictional time");
       renderCalendar(row, time, time.handler_controls);
       if (time.mode === "asynchronous") renderMissionClock(row, time, time.handler_controls);

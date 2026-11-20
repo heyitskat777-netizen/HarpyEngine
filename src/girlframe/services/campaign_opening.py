@@ -71,9 +71,16 @@ class OpeningRelease(Contract):
 
 
 class CampaignOpeningService:
-    def __init__(self, knowledge: DirectorKnowledgeService, *, facilitator_id: int | None = None):
+    def __init__(
+        self,
+        knowledge: DirectorKnowledgeService,
+        *,
+        facilitator_id: int | None = None,
+        managed_setup: bool = False,
+    ):
         self.knowledge, self.observer, self.store = knowledge, knowledge.observer, knowledge.store
         self.facilitator_id = facilitator_id
+        self.managed_setup = managed_setup
 
     def _scope(self, c: Connection, viewer: GuildViewer, scene: str) -> dict[str, Any]:
         self.observer.game.authorize(c, viewer, game=False)
@@ -126,6 +133,16 @@ class CampaignOpeningService:
         blockers = []
         if not saved:
             blockers.append("Save an opening draft.")
+        if self.managed_setup:
+            from girlframe.services.campaign_difficulty import historical_mission, opening
+
+            record = opening(c, self.store.campaign_id)
+            if record is None and not historical_mission(c, self.store.campaign_id):
+                blockers.append(
+                    "Complete Session Zero and its introductory days before publishing."
+                )
+            elif record and record.scene == row["id"]:
+                blockers.append("Publish briefing facts in the first playable mission scene.")
         try:
             self.observer.game.unpaused(c)
         except WorkflowError:

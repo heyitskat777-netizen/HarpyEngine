@@ -4,7 +4,7 @@ import sqlalchemy as sa
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
-from girlframe.engine.campaign_opening import Opening
+from girlframe.engine.campaign_opening import CampaignSeats, Opening
 from girlframe.engine.session_zero import SessionZero
 from girlframe.scenes.campaign_time import Anchor, Cut, Position, ScenePlan
 from girlframe.services import campaign_time_history as calendar
@@ -26,6 +26,8 @@ def launch(
     channel: int,
     introduction: str,
     days: int,
+    *,
+    reuse_empty: bool = False,
 ) -> Opening:
     if opening(c, store.campaign_id) is not None:
         raise WorkflowError("The campaign introduction is already open.")
@@ -60,10 +62,20 @@ def launch(
     )
     rows = time._scene_rows(c)
     schedules = time._scenes(c, rows)
+    reserved = None
     for scene_id, row in rows.items():
         if not row["open"]:
             continue
         other = schedules.get(scene_id)
+        if (
+            reuse_empty
+            and other is None
+            and row["channel_id"] == str(channel)
+            and row["revision"] == 1
+            and row["participants_json"] == "[]"
+        ):
+            reserved = scene_id
+            continue
         if other is None or (
             other.plan.overlaps(plan) and set(other.plan.participants).intersection(session.pilots)
         ):
@@ -78,14 +90,19 @@ def launch(
             event_index=1,
             ruleset_version="timeline-v1",
         )
-    binding = time.game._bind_scene_in_transaction(c, viewer.user_id, key, channel, event_index=2)
+    if reserved is None:
+        reserved = str(
+            time.game._bind_scene_in_transaction(c, viewer.user_id, key, channel, event_index=2)[
+                "scene"
+            ]
+        )
     store._audit(
         c,
         viewer.user_id,
         key,
         calendar.SCHEDULED,
         {
-            "scene": binding["scene"],
+            "scene": reserved,
             "channel": channel,
             "chapter": CHAPTER,
             "plan": plan.model_dump(mode="json"),
@@ -93,8 +110,9 @@ def launch(
         event_index=3,
         ruleset_version="timeline-v1",
     )
+    assert session.handler is not None
     result = Opening(
-        scene=binding["scene"],
+        scene=reserved,
         channel=channel,
         handler=viewer.user_id,
         audience=session.members,
@@ -103,6 +121,8 @@ def launch(
         difficulty=session.difficulty,
         introduction=introduction,
         first_mission_day=earliest,
+        handler_control=session.handler.control,
+        seats=session.seats or CampaignSeats(player_count=session.human_players),
     )
     store._audit(
         c,

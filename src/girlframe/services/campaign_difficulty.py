@@ -193,6 +193,8 @@ def briefing(
 ) -> tuple[bool, str | None]:
     applied = opening(c, campaign)
     if applied is None:
+        if session_zero_pending(c, campaign):
+            raise WorkflowError("Complete Session Zero before offering the first mission.")
         if hard_stake is not None:
             raise WorkflowError("Extra Hard-mode stakes require a Hard campaign.")
         return False, None
@@ -234,3 +236,12 @@ def historical_mission(c: Connection, campaign: str) -> bool:
         )
         is not None
     )
+
+
+def session_zero_pending(c: Connection, campaign: str) -> bool:
+    from girlframe.services.session_zero import EVENT as SESSION_ZERO_SAVED
+
+    started = c.scalar(
+        calendar.query(campaign, SESSION_ZERO_SAVED).with_only_columns(t.events.c.id).limit(1)
+    )
+    return started is not None and not historical_mission(c, campaign)

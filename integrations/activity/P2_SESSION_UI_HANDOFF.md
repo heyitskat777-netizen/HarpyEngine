@@ -96,20 +96,28 @@ Narrative-restricted punishments are filtered in the relevant menus. The
 mission desk displays the introductory objective and posts a required
 `hard_stake` for later Hard-mode offers when the server requests it.
 
-The Activity still needs a Session Zero setup panel backed by
-`SessionZeroService`. It must let the group confirm a Handler, attach each
-Pilot's own saved sheet, and approve the same revision of goals and difficulty.
-It must let the appointed Handler complete the approved introduction and
-advance its roleplay days. Show the roleplay-only scene and first mission
-availability from the engine calendar. The existing Activity **Review &
-Launch** currently publishes recipient-scoped briefs. The rules setup and
-brief publication need a coordinated sequence in that interface. Activities
-that use the current brief setup alone follow Normal difficulty.
+The **Session Zero** panel in Campaign setup uses `SessionZeroService`.
+The organizer selects the known members. The group approves the Handler
+and their portrayal mode, either **Player** or **AI with human review**.
+Each Pilot attaches their own current sheet. The group's approved plan
+includes shared goals, Narrative, Normal, or Hard difficulty, the human
+player count, and named AI Pilot concepts. A reviewer for an AI Handler
+counts toward group approvals. The player count excludes that reviewer
+seat. Planned AI Pilots are recorded for campaign preparation.
 
-Apply the newer `p2-desk.js` and route adapter to expose the private Handler
-questions, fictional calendar, timed mission and deadline reviews, and
-facilitator's scene-closeout controls. The approved dossier projection and
-experience recall are handled server-side.
+The appointed Handler opens the approved introduction. Its private
+roleplay thread and day advance are in Session Zero. The Mission Desk
+shows the first eligible day. Publish recipient-scoped briefing facts
+with **Review & Launch** once the first playable mission scene is open.
+Previously running campaigns use their established rules and briefs.
+
+The P2 desk also exposes the private Handler sheet prompts, fictional
+calendar, timed mission and deadline reviews, and scoped scene closeout.
+The approved Session Zero profile can prefill the Handler sheet form.
+The engine still requires the sheet's own save and approval steps. Player
+portrayal bypasses automated Handler drafts. AI portrayal uses the
+configured reviewed pipeline when available. The Session Zero settings
+themselves grant no provider access or player ownership.
 
 First browser acceptance should prove one scene for two Pilots and a Handler
 with a facilitator, a delivered scoped Handler line, a typed GM ruling, and a

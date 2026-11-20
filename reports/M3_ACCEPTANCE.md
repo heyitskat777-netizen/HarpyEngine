@@ -6572,3 +6572,49 @@ the changed Python files, mypy passed on 11 source files, and
 The simulated provider used prepared outputs. The full repository suite,
 authenticated Discord browser interaction, and real-model portrayal were
 outside this check.
+
+## Activity Session Zero and campaign roles
+
+Development base `5ce1141` on `codex/narrative-death-integration`.
+The managed Activity uses the current campaign binding and the native
+Session Zero service for group approvals, sheet attachment, and the
+introduction. The plan records Narrative, Normal, or Hard difficulty,
+the human player count derived from the approved group, and planned
+AI Pilot callsigns and concepts. Handler portrayal is a separate group
+approval, with a verified controller in both modes. Player portrayal
+suppresses reviewed Handler drafts. AI portrayal uses the existing
+review path where configured. The AI Pilot list supplies planning data
+and does not create characters or exercise their decisions.
+
+The introduction uses a private roleplay thread and dated receipts.
+The current Handler advances each day through the native calendar.
+The mission desk displays the setup or date blocker until the first
+mission is available. The existing cast-reviewed briefing publishes
+in the first playable mission scene. The roleplay and completion
+tests exercised approval, private audience, stale dates, retry, and
+the saved campaign settings.
+
+```sh
+PYTHONPATH="$PWD/src" /workspace/HarpyEngine/.venv/bin/python -m pytest -q \
+  tests/rules/test_campaign_opening.py tests/test_session_zero.py \
+  tests/rules/test_campaign_time.py tests/rules/test_director_timing.py \
+  tests/test_director_activity_scene.py \
+  tests/rules/test_handler_personality_pairs.py::test_approved_pilot_experience_changes_the_same_handlers_next_mission \
+  --tb=short
+
+/workspace/HarpyEngine/.venv/bin/python tools/verify_activity_bundle.py \
+  --source /workspace/source-handoff-2026-11-16 \
+  --output var/activity-session-zero-final --p2-routes \
+  --test test_managed_session_zero.py --test test_managed_campaign_opening.py \
+  --test test_campaign_difficulty_activity.py --test test_mission_lifecycle.py
+```
+
+The focused engine selection passed **26 tests in 48.49 seconds**.
+The managed Activity adapter selection passed **5 tests in 33.56 seconds**.
+Ruff passed for the changed Python files and mypy passed for 13 source files.
+Chromium exercised the managed Session Zero forms against simulated Discord
+sessions, including the AI Handler, all difficulty options, count, AI Pilot,
+and approval. The existing Chromium timing-review and Director scene scripts
+passed their parallel-scene, reconnect, scoped-delivery, and closeout checks.
+Authenticated Discord, paid providers, and the full regression remain
+separate. [Activity handoff](../integrations/activity/P2_SESSION_UI_HANDOFF.md#campaign-difficulty-and-session-zero)

@@ -17,6 +17,8 @@ from girlframe.ai.gm_outcomes import KeepOutcome, OutcomeProposal
 from girlframe.ai.gm_protocol import Assessment, Demand, TaskFrame, TraitClaim
 from girlframe.ai.observation import AppendSceneInput, ObservationPolicy
 from girlframe.database import tables as t
+from girlframe.engine.campaign_opening import Opening
+from girlframe.services.campaign_difficulty import EVENT
 from girlframe.services.director_context import DirectorContextService
 from girlframe.services.director_conversation import DirectorConversationService
 from girlframe.services.director_observation import DirectorObservationService
@@ -316,6 +318,36 @@ def test_room_without_handler_records_input_without_an_interjection(observed):
     outcome = app.session.submit(OTHER, scene, alone)["conversation"]
     assert outcome["handler_decision"]["decision"]["reason"] == "handler_absent"
     assert outcome["handler"] is None and not handler.requests
+
+
+@pytest.mark.parametrize("control", ("player", "ai"))
+def test_opening_handler_control_gates_reviewed_drafts(observed, control):
+    observer, scene, *_ = observed
+    app, handler = adapter(observer)
+    record = Opening(
+        scene="approved-introduction",
+        channel=901,
+        handler=ADMIN.user_id,
+        audience=(ADMIN.user_id, PLAYER.user_id),
+        plan="approved-session-zero",
+        goals="Inspect the relay",
+        difficulty="normal",
+        introduction="Check in.",
+        first_mission_day=4,
+        handler_control=control,
+    )
+    with observer.store.transaction() as c:
+        observer.store._audit(
+            c, ADMIN.user_id, "test-control", EVENT, record.model_dump(mode="json")
+        )
+    question = input_command(observer, PLAYER, scene, "question", "Handler, can you clarify?")
+    outcome = app.session.submit(PLAYER, scene, question)["conversation"]
+    if control == "player":
+        assert outcome["handler_decision"]["decision"]["reason"] == "player_handler"
+        assert outcome["handler"] is None and not handler.requests
+    else:
+        assert outcome["handler_decision"]["decision"]["action"] == "RESPOND"
+        assert outcome["handler"] and len(handler.requests) == 1
 
 
 def test_activity_timeline_shows_one_scoped_delivery_on_reopen(observed):

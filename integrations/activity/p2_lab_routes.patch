@@ -5,7 +5,7 @@
  from handler_playbook import HANDLER_PLAY_STEPS
  from mission_desk import MissionDesk
 -from player_setup import PlayerSetup, seed_players, seed_roster
-+from p2_scene import local_fixture_director, manual_campaign_setup
++from p2_scene import SESSION_ZERO_READS, SESSION_ZERO_WRITES, local_fixture_director, manual_campaign_setup
 +from player_setup import SCENE, PlayerSetup, seed_players, seed_roster
  from private_battlefield import PRIVATE_BATTLEFIELD_CHANNEL, PrivateBattlefield
 
@@ -20,10 +20,10 @@
 +SETUP_ROUTE = re.compile(
 +    r"/api/campaign-opening/([a-z-]{1,35})(?:/([A-Za-z0-9:-]{1,100}))?"
 +)
-+SETUP_READ = {"opening", "opening-brief", "persona-setup", "persona-agreement", "fictional-time"}
++SETUP_READ = {"opening", "opening-brief", "persona-setup", "persona-agreement", "fictional-time"} | SESSION_ZERO_READS
 +SETUP_WRITE = {
 +    "opening-save", "opening-launch", "persona-save", "persona-notes", "persona-activate", "persona-propose", "persona-answer"
-+}
++} | SESSION_ZERO_WRITES.keys()
  TRANSCRIPT_ROUTE = re.compile(r"/api/rooms/(relay|[0-9a-f]{16})/transcript")
  COMMUNICATION_ROUTE = re.compile(
      r"/api/communications/((?:pilot|handler)-[0-9a-z-]{1,80})"
@@ -82,7 +82,7 @@
 +            )
 +
 +    def campaign_opening(setup, route):
-+        opening = manual_campaign_setup(setup.game, setup.handler.user_id)
++        opening = manual_campaign_setup(setup.game, setup.handler.user_id, opening_channel=SCENE)
 +        if not route.startswith("opening"):
 +            return opening, ""
 +        with setup.game.store.engine.connect() as connection:

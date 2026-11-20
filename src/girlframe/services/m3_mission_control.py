@@ -6,6 +6,8 @@ from typing import Any
 
 from sqlalchemy import Connection
 
+from girlframe.services.campaign_difficulty import opening, session_zero_pending
+from girlframe.services.campaign_time_history import anchor
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_off_duty import OffDutyService
@@ -125,6 +127,13 @@ class MissionControlService:
                 roster = ()
             with missions.store.engine.connect() as c:
                 offer_reason = self._blocked(c, viewer, partial(missions._not_off_duty, c))
+                if offer_reason is None:
+                    record = opening(c, missions.store.campaign_id)
+                    current = anchor(c, missions.store.campaign_id) if record else None
+                    if record is None and session_zero_pending(c, missions.store.campaign_id):
+                        offer_reason = "Complete Session Zero before offering the first mission."
+                    elif record and current and current[1].position.day < record.first_mission_day:
+                        offer_reason = f"The first mission opens on Day {record.first_mission_day}."
             capture_targets = None
             if offer_reason is None:
                 try:

@@ -19,6 +19,9 @@ from girlframe.ai.observation import AppendSceneInput, ObservationPolicy
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_handler_character import PROFILES
 from girlframe.engine.m3_handler_state import GEAR, HISTORY_LABELS, PLAYBOOKS, Draft, HandlerNotes
+from girlframe.services.activity_session_zero import READS as SESSION_ZERO_READS
+from girlframe.services.activity_session_zero import WRITES as SESSION_ZERO_WRITES
+from girlframe.services.activity_session_zero import SessionZeroDesk
 from girlframe.services.activity_shadow import ActivityShadowReview
 from girlframe.services.activity_timing import ActivityTiming
 from girlframe.services.campaign_opening import CampaignOpeningService, OpeningDraft
@@ -36,6 +39,7 @@ from girlframe.services.m2_state import load_state
 from girlframe.services.m3_handler_creation import HandlerCreationService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
+from girlframe.services.session_zero import SessionZeroService
 
 
 class P2Scene:
@@ -45,10 +49,18 @@ class P2Scene:
         *,
         models: OpenAIResponses | None = None,
         facilitator_id: int | None = None,
+        opening_channel: int | None = None,
     ):
         self.session = session
         self.models = models
-        self.opening = CampaignOpeningService(session.knowledge, facilitator_id=facilitator_id)
+        self.opening = CampaignOpeningService(
+            session.knowledge,
+            facilitator_id=facilitator_id,
+            managed_setup=opening_channel is not None,
+        )
+        self.session_zero = SessionZeroDesk(
+            SessionZeroService(session.store, group_owner=facilitator_id), opening_channel
+        )
         self.handler_setup = HandlerCreationService(session.store)
         self.shadow = ActivityShadowReview(session.conversation)
         self.npc_delivery = NpcDeliveryService(session.context)
@@ -204,6 +216,8 @@ class P2Scene:
     def read(
         self, viewer: GuildViewer, scene: str, route: str, identity: str | None = None
     ) -> dict[str, Any]:
+        if route in SESSION_ZERO_READS and identity is None:
+            return self.session_zero.read(viewer, route)
         if route == "fictional-time" and identity is None:
             view = self.time.view(viewer)
             if not scene and "handler_controls" in view:
@@ -293,6 +307,8 @@ class P2Scene:
         route: str,
         data: dict[str, Any],
     ) -> dict[str, Any]:
+        if route in SESSION_ZERO_WRITES:
+            return self.session_zero.write(viewer, key, route, data)
         if route == "time-acknowledge" and data.keys() == {"scene", "source_receipt"}:
             if (
                 not isinstance(data["scene"], str)
@@ -585,12 +601,19 @@ class P2Scene:
         raise ValueError("Unknown scene operation or malformed fields.")
 
 
-def manual_campaign_setup(game: GameService, facilitator: int) -> P2Scene:
+def manual_campaign_setup(
+    game: GameService,
+    facilitator: int,
+    *,
+    opening_channel: int | None = None,
+) -> P2Scene:
     """Use verified campaign identity for setup with Director observation disabled."""
     observer = DirectorObservationService(game.store)
     observer.game = game
     return P2Scene(
-        DirectorSessionService(DirectorContextService(observer)), facilitator_id=facilitator
+        DirectorSessionService(DirectorContextService(observer)),
+        facilitator_id=facilitator,
+        opening_channel=opening_channel,
     )
 
 

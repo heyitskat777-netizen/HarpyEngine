@@ -1342,6 +1342,8 @@ class DirectorConversationService:
         source = self._need_source(c, scene, source_id)
         request, _ = self._requests(c, viewer, scene, source_id, "handler", review_source=source)
         assert isinstance(request, HandlerRequest)
+        if self._player_handler(c, request.context.actor):
+            raise WorkflowError("PLAYER_HANDLER: the campaign assigned portrayal to a player.")
         return HandlerNeedPacket(
             request_id=identity,
             scene_id=scene,
@@ -1870,9 +1872,22 @@ class DirectorConversationService:
             ), need_key
         return None
 
+    def _player_handler(self, c: Connection, actor: ActorRef | None) -> bool:
+        from girlframe.services.campaign_difficulty import opening
+
+        record = opening(c, self.store.campaign_id)
+        return (
+            record is not None
+            and record.handler_control == "player"
+            and actor is not None
+            and actor.entity == str(record.handler)
+        )
+
     def _handler_decision(
         self, c: Connection, scene_id: str, source: Observation, request: HandlerRequest
     ) -> tuple[HandlerDecision, str | None]:
+        if self._player_handler(c, request.context.actor):
+            return HandlerDecision(action="WAIT", reason="player_handler"), None
         if self.handler_mode == "reviewed" and source.actor == request.context.actor:
             return HandlerDecision(action="WAIT", reason="no_handler_need"), None
         decision = SyntheticHandlerPolicy().decide(request)

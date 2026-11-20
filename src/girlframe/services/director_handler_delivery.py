@@ -180,6 +180,8 @@ class HandlerDeliveryService:
             or plan["appointment"] != HandlerService(self.store).current(c)[0]
         ):
             raise WorkflowError("HANDLER_DELIVERY_OWNER: the approved Handler must deliver.")
+        if self.conversation._player_handler(c, role.actor):
+            raise WorkflowError("PLAYER_HANDLER: the campaign assigned portrayal to a player.")
         if plan["consent"] != self.observer._state(c, scene).consent_generation:
             raise WorkflowError("HANDLER_DELIVERY_CONSENT: renew the actual review.")
         prior = self.conversation._saved(c, "handler-delivery:" + draft_id)

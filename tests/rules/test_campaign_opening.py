@@ -22,6 +22,7 @@ from girlframe.engine.m2 import ChoiceAnswer
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_careers import end
 from girlframe.engine.m3_punishments import Details
+from girlframe.services.activity_session_zero import SessionZeroDesk
 from girlframe.services.campaign_difficulty import (
     DEATH_USED,
     EVENT,
@@ -66,6 +67,84 @@ def complete(session):
         901,
         "Cadre, I'm Anwen. Let's talk about what it will take to keep the relay open.",
     )
+
+
+def test_activity_session_zero_opens_private_roleplay_and_freezes_approved_seats(ledger):
+    missions, game = setup_missions(ledger)
+    game.close_scene(ADMIN, "close-setup-room", 900)
+    game.bind_scene(ADMIN, "reserve-activity-opening", 901)
+    ledger.join(OUTSIDE, "intro-outsider")
+    desk = SessionZeroDesk(SessionZeroService(ledger, group_owner=ADMIN.user_id), 901)
+
+    def view(viewer=ADMIN):
+        return desk.read(viewer, "session-zero")
+
+    def command(name, viewer, key, **data):
+        return desk.write(viewer, key, "session-zero-" + name, data)
+
+    command("group", ADMIN, "activity-group", revision=0, members=["1", "2", "3"])
+    with pytest.raises(WorkflowError, match="Complete Session Zero"):
+        missions.offer(ADMIN, "early-incomplete-setup", "Check the relay.", (2, 3))
+    command(
+        "propose",
+        ADMIN,
+        "activity-handler",
+        revision=view()["revision"],
+        profile={
+            "member": "1",
+            "control": "ai",
+            "name": "Anchor",
+            "archetype": "Advocate",
+            "appearance": "Plain uniform.",
+            "personality": "Unhurried.",
+        },
+    )
+    nomination = view()["proposal"]
+    for viewer in (ADMIN, PLAYER, OTHER):
+        command(
+            "handler-vote",
+            viewer,
+            "handler:" + str(viewer.user_id),
+            proposal=nomination,
+            approve=True,
+        )
+    for viewer in (PLAYER, OTHER):
+        command("attach", viewer, "sheets:" + str(viewer.user_id), revision=view()["revision"])
+    command(
+        "plan",
+        ADMIN,
+        "activity-plan",
+        revision=view()["revision"],
+        difficulty="hard",
+        goals="Find the source of the warning.",
+        seats={"player_count": 2, "ai_pilots": [{"callsign": "Fern", "concept": "Quiet scout."}]},
+    )
+    proposal = view()["plan_proposal"]
+    for viewer in (ADMIN, PLAYER, OTHER):
+        command("plan-vote", viewer, "plan:" + str(viewer.user_id), proposal=proposal, approve=True)
+    args = {"revision": view()["revision"], "introduction": "Check in as you arrive.", "days": 2}
+    completed = command("open", ADMIN, "activity-intro", **args)
+    assert command("open", ADMIN, "activity-intro", **args) == completed
+    saved = view(PLAYER)["opening"]
+    assert saved["handler_control"] == "ai" and saved["difficulty"] == "hard"
+    assert saved["seats"]["ai_pilots"][0]["callsign"] == "Fern"
+    assert saved["seats"]["player_count"] == 2 and saved["first_mission_day"] == 3
+    anchor = view()["opening_anchor"]
+    post = {"anchor": anchor, "text": "I check the readings by the door."}
+    with pytest.raises(WorkflowError, match="Only members"):
+        command("post", OUTSIDE, "outside", **post)
+    receipt = command("post", PLAYER, "roleplay", **post)
+    assert command("post", PLAYER, "roleplay", **post) == receipt
+    assert [item["text"] for item in view(OTHER)["opening_posts"]] == [post["text"]]
+    with pytest.raises(WorkflowError, match="first mission starts on Day 3"):
+        missions.offer(ADMIN, "early-intro", "Check the relay.", (2, 3))
+    command("advance", ADMIN, "day-two", anchor=anchor)
+    with pytest.raises(WorkflowError, match="STALE_INTRODUCTION"):
+        command("post", PLAYER, "old-day", **post)
+    command("advance", ADMIN, "day-three", anchor=view()["opening_anchor"])
+    with pytest.raises(WorkflowError, match="The introduction has ended"):
+        command("post", PLAYER, "late-post", anchor=view()["opening_anchor"], text="Too late.")
+    assert missions.offer_requirements(ADMIN) == (True, False)
 
 
 def test_native_completion_opens_private_roleplay_scene_before_character_activation(
