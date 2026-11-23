@@ -41,6 +41,44 @@ engine's native ports and identify which can support that integration.
   For the three acceptance cases, use a wrong controller, stale actor or turn,
   out-of-reach or forbidden target, human-owned response and exact retry.
 
+## Native target projections
+
+The Harpy native preview now exposes `beneath_targets` using the same known
+co-presence check as Put Someone Beneath You. The general `opponents` list
+can still contain a distant Girl. The native Discord form uses the restricted
+field. A target moving away before submission causes rejection before the
+Harpy's Heat changes or a die rolls.
+
+The Gorgon preview now exposes `attack_targets` keyed by the actual Gorgon
+and target `ActorRef.token` values. `same_cell` records known physical reach.
+`requires_judge` preserves the existing capability and reach decision. The
+native confirmation uses the same target checks as the projection and
+rejects a concealed target or a target with changed casting. The Gorgon's
+actual capability is still chosen from its own Assets. The target's original
+controller retains the defense and any resulting response Play.
+
+The Activity handoff's older `PrivateBattlefield` has a turn epoch and cursor
+in the canonical scene's `activity_battlefield_turn` fact. Its roster admits
+placed Pilot sheets and visible Handler-controlled NPC and Gorgon actors.
+It omits alternate Harpies from that turn roster. The current Activity source
+is needed to reconcile this limitation, consume the native target fields,
+and bind an approved action to the exact turn actor and cursor at submission.
+
+The synthetic native selection passed **16 tests** with 76 deselected. It
+included all three NPC handovers, the Harpy reach and original-sheet checks,
+and the Gorgon attack and defender checks. Every action used the native
+service or native Discord fixture. The final target-only selection passed
+**2 tests** in 4.02 seconds with 79 deselected. Ruff lint and scoped typing
+also passed. The newer Activity initiative projection
+and the AI approval-to-receipt flow remain separate open acceptance checks.
+
+```sh
+PYTHONPATH=src python -m pytest -q --tb=short \
+  tests/rules/test_npc_job_handover.py tests/rules/test_harpy_beneath.py \
+  tests/rules/test_harpy_actor_resources.py tests/rules/test_gorgon_runtime.py \
+  -k 'projection or native_harpy_mid or forced_heat_spend_pair or attack or npc_possession'
+```
+
 ## Baseline evidence
 
 On `5f520e9`, these focused native selections passed using disposable databases.

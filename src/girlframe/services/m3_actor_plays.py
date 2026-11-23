@@ -295,6 +295,7 @@ class ActorPlayService:
             from girlframe.services.m3_enforcement_initiative import preview as initiative_preview
             from girlframe.services.m3_enforcer_requisitions import owned
             from girlframe.services.m3_enforcer_snoop import _targets as snoop_targets
+            from girlframe.services.m3_harpy_beneath import harpy_targets
 
             initiative = initiative_preview(self.game, viewer, channel, actor_ref=ref)
 
@@ -302,6 +303,10 @@ class ActorPlayService:
             from girlframe.engine.m3_janus import has_tag
 
             original_core = core_body(state, ref)
+            visible = tuple(
+                x for x in actors if x.ref != ref and _visible(state, x.ref, viewer.user_id)
+            )
+            beneath_targets = harpy_targets(actor, visible) if actor.girl == "harpy" else ()
             return {
                 "actor": actor.model_dump(mode="json"),
                 "janus_core": {
@@ -318,8 +323,11 @@ class ActorPlayService:
                 "game_revision": state.revision,
                 "opponents": [
                     {"ref": x.ref.model_dump(mode="json"), "token": x.ref.token, "name": x.label}
-                    for x in actors
-                    if x.ref != ref and _visible(state, x.ref, viewer.user_id)
+                    for x in visible
+                ],
+                "beneath_targets": [
+                    {"ref": x.ref.model_dump(mode="json"), "token": x.ref.token, "name": x.label}
+                    for x in beneath_targets
                 ],
                 "pavlov": not ambush and owned(c, self.game, state, ref, PAVLOV) is not None,
                 "snoop_targets": snoop_targets(self.game, c, state, ref)

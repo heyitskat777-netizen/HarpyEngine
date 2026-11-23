@@ -58,6 +58,9 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
         if kind in JACKDAW_EFFECTS and actor["token"] not in data["jam"]:
             return "Choose the actual Jackdaw with an established position."
         targets = [x for x in data["actors"] if x["ref"] != actor["ref"]]
+        attack_reach = data["attack_targets"].get(actor["token"], {})
+        if kind == "attack":
+            targets = [x for x in targets if x["token"] in attack_reach]
         type_tag = kind in TAG_TYPES
         if kind in PARASITE_PLAYS:
             riding_choices = data["parasite"].get(actor["token"], {})
@@ -127,7 +130,15 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
                 Field(
                     "target",
                     "Actual NPC host" if kind == "parasite_hitch" else "Actual opposing body",
-                    tuple((x["token"], x["label"]) for x in targets),
+                    tuple(
+                        (
+                            x["token"],
+                            x["label"] + " · Reach needs review"
+                            if kind == "attack" and attack_reach[x["token"]] == "requires_judge"
+                            else x["label"],
+                        )
+                        for x in targets
+                    ),
                 )
             )
         if kind in TYPE_TAG_LABELS:

@@ -921,6 +921,45 @@ def test_actual_gorgon_attack_owned_damage_no_dice_and_real_replay(ledger):
         assert game.lock(c, 900)["state"] == "released"
 
 
+def test_attack_projection_marks_uncertain_reach_and_rejects_concealed_targets(ledger):
+    from girlframe.engine.m3_actors import resolve
+    from girlframe.services.onboarding import WorkflowError
+
+    game, _, _, _, initial = gorgon_source(ledger, npc=True, begin=False, other_cell=(1, 0))
+    service = GorgonPlayService(game)
+    target = ActorRef(kind="npc", entity="actual-guard")
+    preview = service.preview(ADMIN, 900)
+    local = next(x for x in preview["actors"] if x["ref"]["entity"] == "2")
+    distant = next(x for x in preview["actors"] if x["ref"]["entity"] == "3")
+    assert preview["attack_targets"][initial.actor.token] == {
+        local["token"]: "same_cell",
+        distant["token"]: "requires_judge",
+        target.token: "same_cell",
+    }
+    assert not service.preview(PLAYER, 900)["attack_targets"]
+
+    with ledger.transaction() as c:
+        private = state(game)
+        private.world = update(
+            private.world,
+            npcs=tuple(x.model_copy(update=dict(revealed=False)) for x in private.world.npcs),
+        )
+        game.event(c, 3, "conceal-guard", "synthetic.npc_concealment_changed", private)
+    before = state(game)
+    fresh = service.preview(ADMIN, 900)
+    assert target.token not in fresh["attack_targets"][initial.actor.token]
+    assert all(x["token"] != target.token for x in fresh["actors"])
+    forged = initial.model_copy(
+        update=dict(
+            target=target,
+            target_sha256=resolve(before, target, ()).source_sha256,
+        )
+    )
+    with pytest.raises(WorkflowError, match="visible original target"):
+        service.begin(ADMIN, "forbidden-target", 900, fresh["revision"], forged)
+    assert state(game) == before and game.dice.calls == 0
+
+
 def test_actual_directed_collateral_no_interrupt_and_concrete_structure_loss(ledger):
     game, _, _, action, _ = gorgon_source(ledger, kind="collateral", gorgon_class="directed")
     answer(

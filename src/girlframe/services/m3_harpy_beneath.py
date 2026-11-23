@@ -20,6 +20,22 @@ from girlframe.services.m3_harpy_flirt import finish
 from girlframe.services.onboarding import WorkflowError
 
 
+def _present(actor: ActorView, target: ActorView) -> bool:
+    return (
+        actor.cell is not None
+        and actor.cell == target.cell
+        and not actor.offstage_source
+        and not target.offstage_source
+    )
+
+
+def harpy_targets(actor: ActorView, cast: tuple[ActorView, ...]) -> tuple[ActorView, ...]:
+    """Target choices for the same original Harpy and Girl checked by the native Play."""
+    return tuple(
+        target for target in cast if target.ref.kind == "pilot" and _present(actor, target)
+    )
+
+
 def prepare(
     game: GameService,
     c: Connection,
@@ -44,12 +60,7 @@ def prepare(
         raise WorkflowError("Use this actual ordinary Beneath source without another work item")
     if not all(any(x.actor == v.ref for x in cast.roles) for v in (actor, target)):
         raise WorkflowError("Join both actual original people to this scene first")
-    if (
-        actor.cell is None
-        or actor.cell != target.cell
-        or actor.offstage_source
-        or target.offstage_source
-    ):
+    if not _present(actor, target):
         raise WorkflowError("Establish actual interaction between these original people")
     return dict(
         actor=ref.model_dump(mode="json"),

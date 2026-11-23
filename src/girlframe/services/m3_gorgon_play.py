@@ -21,7 +21,7 @@ from girlframe.engine import m3_parasite as parasite
 from girlframe.engine import m3_parasite_infection as infection
 from girlframe.engine import m3_sentinel_shell as shell
 from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput
-from girlframe.engine.m3_actor_state import ActorRef, ActorView, SceneCast
+from girlframe.engine.m3_actor_state import ActorRef, ActorView, ProfileBinding, SceneCast
 from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_gorgon_play_state import Declaration
 from girlframe.engine.m3_gorgon_type_tags import RULES as TYPE_TAG_RULES
@@ -73,6 +73,66 @@ class GorgonPlayService:
     def __init__(self, game: GameService):
         self.game, self.store = game, game.store
 
+    def _attack_target(
+        self,
+        c: Connection,
+        state: GameState,
+        cast: SceneCast,
+        actor: ActorView,
+        target: ActorView,
+        bound: tuple[ProfileBinding, ...],
+    ) -> None:
+        from girlframe.engine.m3_battle import assets
+        from girlframe.engine.m3_janus_pandora import require_can_harm
+        from girlframe.services.m3_battle import _visible
+
+        if (
+            target.ref == actor.ref
+            or target.offstage_source
+            or not _visible(state, target.ref, actor.controller)
+            or not any(
+                x.actor == target.ref and x.controller == target.controller for x in cast.roles
+            )
+        ):
+            raise WorkflowError("Use an actual visible original target in this Gorgon's scene")
+        require_can_harm(state, actor.ref, target.ref)
+        assert state.world is not None
+        if target.ref.kind == "external_pilot":
+            from girlframe.engine.m3_harpy_defeat import harpy
+
+            if not (
+                any(item.id == target.ref.entity for item in state.harpy_states)
+                or any(
+                    item.id == target.ref.entity and item.kind == "harpy"
+                    for item in state.world.pilots
+                )
+            ):
+                raise WorkflowError(
+                    "This original external Pilot needs its actual resource and Defeat port"
+                )
+            harpy(state, target.ref)
+        if target.rules in ("girl_frame", "handler_girl") and target.inside_frame is None:
+            raise WorkflowError(
+                "Record the original body's actual cockpit/occupancy facts before an Attack"
+            )
+        if target.ref.kind == "gorgon" and any(
+            item.id == target.ref.entity and item.gorgon_class == "dormant"
+            for item in state.world.gorgons
+        ):
+            from girlframe.services.m3_gorgon_dormant import awakened_source
+
+            # Check existing provenance. A new attack stages awakening after the lock.
+            awakened_source(self.game, c, state, target.ref)
+        available = assets(state, target.ref, bound)
+        if target.ref.kind in ("gorgon", "external_pilot") and not available:
+            raise WorkflowError(
+                "This original target needs an actual physically available Asset to pit"
+            )
+        if target.rules in ("girl_frame", "handler_girl") and not any(
+            not item.damaged for item in available
+        ):
+            raise WorkflowError("This exhausted original needs its actual source consequence first")
+
     def authorize(
         self, c: Connection, viewer: GuildViewer, action: dict[str, Any] | None = None
     ) -> None:
@@ -95,6 +155,7 @@ class GorgonPlayService:
             self.source(c, action)
 
     def preview(self, viewer: GuildViewer, channel: int) -> dict[str, Any]:
+        from girlframe.engine.m3_janus_pandora import vicious
         from girlframe.services.m3_battle import _cast, _visible
         from girlframe.services.m3_hallucinations import daily_case, next_day
         from girlframe.services.m3_hallucinations import eligible as isolated
@@ -106,6 +167,7 @@ class GorgonPlayService:
             bound = profiles(c, self.store.campaign_id)
             rows = []
             visible: dict[str, ActorView] = {}
+            owned_gorgons: set[ActorRef] = set()
             can_corrupt = False
             can_grow: dict[str, list[str]] = {}
             can_birth: list[str] = []
@@ -115,7 +177,7 @@ class GorgonPlayService:
                 if not _visible(state, role.actor, viewer.user_id):
                     continue
                 visible[role.actor.token] = actual
-                owned = actual.controller == viewer.user_id and not (
+                owned = actual.controller == role.controller == viewer.user_id and not (
                     role.actor.kind == "gorgon"
                     and infection.inhabits_original_body(state, role.actor)
                 )
@@ -157,6 +219,8 @@ class GorgonPlayService:
                     )
                 ):
                     can_corrupt = True
+                if owned and role.actor.kind == "gorgon":
+                    owned_gorgons.add(role.actor)
                 rows.append(
                     dict(
                         ref=role.actor.model_dump(mode="json"),
@@ -170,6 +234,7 @@ class GorgonPlayService:
                     )
                 )
             typed_targets: dict[str, dict[str, list[str]]] = {}
+            attack_targets: dict[str, dict[str, str]] = {}
             parasite_choices: dict[str, dict[str, list[str]]] = {}
             exposure_days: dict[str, dict[str, int]] = {}
             conditioning_tags: dict[str, dict[str, list[tuple[str, str]]]] = {}
@@ -179,12 +244,26 @@ class GorgonPlayService:
                 for actor in state.world.gorgons:
                     token = ActorRef(kind="gorgon", entity=actor.id).token
                     caster = visible.get(token)
-                    if (
-                        caster is None
-                        or caster.controller != viewer.user_id
-                        or infection.inhabits_original_body(state, caster.ref)
-                    ):
+                    if caster is None or caster.ref not in owned_gorgons:
                         continue
+                    if (
+                        not caster.offstage_source
+                        and caster.assets
+                        and (actor.gorgon_class != "benevolent" or vicious(state, caster.ref))
+                    ):
+                        valid = {}
+                        for target in visible.values():
+                            try:
+                                self._attack_target(c, state, cast, caster, target, bound)
+                            except (ValueError, WorkflowError):
+                                continue
+                            valid[target.ref.token] = (
+                                "same_cell"
+                                if caster.cell is not None and caster.cell == target.cell
+                                else "requires_judge"
+                            )
+                        if valid:
+                            attack_targets[token] = valid
                     if actor.alive and "parasite" in actor.types and not caster.offstage_source:
                         if parasite.active(state, caster.ref):
                             parasite_choices[token] = {"parasite_detach": []}
@@ -286,6 +365,8 @@ class GorgonPlayService:
             assert access.registry is not None
             plays = []
             for kind, identity in RULES.items():
+                if kind == "attack" and not attack_targets:
+                    continue
                 if kind == "corrupt" and not can_corrupt:
                     continue
                 if (
@@ -323,6 +404,7 @@ class GorgonPlayService:
                 actors=rows,
                 plays=plays,
                 typed_targets=typed_targets,
+                attack_targets=attack_targets if "attack" in plays else {},
                 growth=can_grow,
                 sprite_birth=can_birth,
                 jam=can_jam,
@@ -418,7 +500,7 @@ class GorgonPlayService:
                 raise WorkflowError(
                     "A Benevolent Gorgon will not Attack or cause Collateral Damage"
                 )
-            if declaration.target is not None:
+            if declaration.target is not None and declaration.kind != "attack":
                 require_can_harm(state, declaration.actor, declaration.target)
             if not any(
                 role.actor == actual.ref and role.controller == viewer.user_id
@@ -512,46 +594,7 @@ class GorgonPlayService:
                         "Use a real body in this revealed type's actual local reach"
                     )
             if declaration.kind == "attack" and target_view is not None:
-                target = target_view
-                if target.ref.kind == "external_pilot":
-                    from girlframe.engine.m3_harpy_defeat import harpy
-
-                    if not (
-                        any(item.id == target.ref.entity for item in state.harpy_states)
-                        or any(
-                            item.id == target.ref.entity and item.kind == "harpy"
-                            for item in state.world.pilots
-                        )
-                    ):
-                        raise WorkflowError(
-                            "This original external Pilot needs its actual resource and Defeat port"
-                        )
-                    harpy(state, target.ref)
-                if target.rules in ("girl_frame", "handler_girl") and target.inside_frame is None:
-                    raise WorkflowError(
-                        "Record the original body's actual cockpit/occupancy facts before an Attack"
-                    )
-                if target.ref.kind == "gorgon" and any(
-                    item.id == target.ref.entity and item.gorgon_class == "dormant"
-                    for item in state.world.gorgons
-                ):
-                    from girlframe.services.m3_gorgon_dormant import awakened_source
-
-                    # Prove any prior marker; a new attack stages the actual cost after lock.
-                    awakened_source(self.game, c, state, target.ref)
-                from girlframe.engine.m3_battle import assets
-
-                available = assets(state, target.ref, bound)
-                if target.ref.kind in ("gorgon", "external_pilot") and not available:
-                    raise WorkflowError(
-                        "This original target needs an actual physically available Asset to pit"
-                    )
-                if target.rules in ("girl_frame", "handler_girl") and not any(
-                    not item.damaged for item in available
-                ):
-                    raise WorkflowError(
-                        "This exhausted original needs its actual source consequence first"
-                    )
+                self._attack_target(c, state, cast, actual, target_view, bound)
             from girlframe.services.m3_gorgon_dormant import require_clear
 
             require_clear(self.game, c, declaration.actor)

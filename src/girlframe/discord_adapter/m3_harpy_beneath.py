@@ -92,7 +92,7 @@ async def open_beneath(
         lambda: service.preview(viewer_from_interaction(interaction), channel, ref)
     )
     actor = data["actor"]
-    targets = [x for x in data["opponents"] if x["ref"]["kind"] == "pilot"]
+    targets = data["beneath_targets"]
     if not targets:
         raise WorkflowError("Join an actual original Girl to this Harpy's scene first")
     fields = [

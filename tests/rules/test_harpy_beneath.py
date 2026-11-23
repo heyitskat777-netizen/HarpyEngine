@@ -16,6 +16,7 @@ from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_harpy_resources import assets as actual_assets
 from girlframe.engine.m3_punishments import Details
 from girlframe.engine.m3_role_punishment_state import Instruction
+from girlframe.services.m3_actor_plays import ActorPlayService
 from girlframe.services.m3_role_punishments import RolePunishmentService
 from girlframe.services.m3_tag_permissions import PermissionService
 from girlframe.services.onboarding import WorkflowError
@@ -54,6 +55,50 @@ def start_native(game, ref, worker, gateway):
     tick(worker, gateway, 3)
     pass_tags(game)
     return identity
+
+
+def test_harpy_beneath_projection_excludes_a_now_remote_original_girl(ledger):
+    _, game, _, ref, _, _ = prepared(ledger)
+    service = ActorPlayService(game)
+    original = current_ref(state(game), OTHER.user_id)
+    shown = service.preview(PLAYER, 900, ref)
+    initial_targets = {x["token"] for x in shown["beneath_targets"]}
+    assert original.token in initial_targets
+    with pytest.raises(WorkflowError, match="actual supported role"):
+        service.preview(OTHER, 900, ref)
+
+    with ledger.transaction() as c:
+        moved = state(game)
+        moved.placements = [
+            p.model_copy(update=dict(girl_cell=(1, 0), frame_cell=(1, 0)))
+            if p.actor == original
+            else p
+            for p in moved.placements
+        ]
+        game.event(c, OTHER.user_id, "remote-girl", "synthetic.position_changed", moved)
+
+    current = service.preview(PLAYER, 900, ref)
+    assert {x["token"] for x in current["beneath_targets"]} == initial_targets - {original.token}
+    assert any(x["token"] == original.token for x in current["opponents"])
+    before = state(game)
+    with pytest.raises(WorkflowError, match="actual interaction"):
+        service.begin(
+            PLAYER,
+            "out-of-reach-beneath",
+            900,
+            ref,
+            shown["actor"]["source_sha256"],
+            None,
+            shown["cast_revision"],
+            PlayInput(
+                play="put_someone_beneath_you",
+                context="This choice was queued while they were together.",
+                trigger_confirmed=True,
+                heat=1,
+                target_actor=original,
+            ),
+        )
+    assert state(game) == before and game.dice.calls == 0
 
 
 def test_native_harpy_mid_actual_tag_and_status_no_controller_sheet_receipt_retry(ledger):
