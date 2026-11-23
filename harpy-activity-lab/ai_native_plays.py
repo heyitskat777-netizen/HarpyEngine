@@ -1,11 +1,16 @@
 """Read the same native, owner-scoped Play controls used by the Activity."""
 
 from girlframe.engine import m3_disposable_psyche, m3_show_dog, m3_tracker_implants
+from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_handler_consequences import same_handler_body
 from girlframe.services.director_play_catalog import PlayCatalog
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
+from girlframe.services.m3_actor_plays import ActorPlayService
+from girlframe.services.m3_actors import profiles
+from girlframe.services.m3_gorgon_play import GorgonPlayService
 from girlframe.services.m3_handler_plays import _ordinary_scene_idle
+from girlframe.services.m3_npc_handover import NpcHandoverService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -99,6 +104,75 @@ class ActivityNativePlays:
             "control": control or identity,
             "room": room,
         }
+
+    def alternate(self, connection, scene, actor):
+        """Read actual scene roles and native options without looking up a Pilot sheet."""
+        state = load_state(connection, self.game.store.campaign_id)
+        channel = int(scene["channel_id"])
+        cast = next((x for x in state.scene_casts if x.id == scene["id"] and x.open), None)
+        if cast is None:
+            return ()
+        try:
+            self.game.unpaused(connection)
+            self.game.scene_unpaused(connection, scene["id"])
+            role = resolve(state, actor, profiles(connection, self.game.store.campaign_id))
+            if role.controller not in scene["participants"] or not any(
+                x.actor == actor and x.controller == role.controller for x in cast.roles
+            ):
+                return ()
+            lock = self.game.lock(connection, channel)
+            if self.game.pending_actions(connection) or lock and lock["state"] != "released":
+                return ()
+            turn = None
+            if any(
+                x.get("kind") == "activity_battlefield_turn" and x.get("scene") == cast.id
+                for x in state.facts
+            ):
+                arena = self.battlefield
+                if arena is None or arena.channel != channel:
+                    return ()
+                record = arena.turn_record(state, scene)
+                active = arena.current_turn(record, arena.placed(connection, state, scene))
+                if active is None or active[1] != actor.token:
+                    return ()
+                turn = f"{record['epoch']}:{active[0]}"
+            viewer = GuildViewer(role.controller, self.game.store.policy.guild_id, True, False)
+            binding = dict(channel=channel, revision=state.revision, turn=turn,
+                           actor_sha256=role.source_sha256, cast_revision=cast.revision)
+            if actor.kind == "npc" and "fan" in role.jobs:
+                menu = NpcHandoverService(self.game).menu(viewer, channel, actor, "fan")
+                return tuple(self._alternate_option("fan", "Fan handover", token, name, binding,
+                    costs={}, choices={}, reach="same_cell") for token, name in menu["targets"].items())
+            if actor.kind == "external_pilot" and role.girl == "harpy":
+                service = ActorPlayService(self.game)
+                service._eligible_play(state, actor, rejection=False, play="put_someone_beneath_you")
+                view = service.preview(viewer, channel, actor)
+                binding["adjudicator"] = view["adjudicator"]["ref"]
+                if role.heat is None:
+                    return ()
+                heat = [role.heat] if role.heat >= 5 else list(range(role.heat + 1))
+                return tuple(self._alternate_option(
+                    "harpy_beneath", "Put Someone Beneath You", target["token"], target["name"],
+                    binding, target=target["ref"], costs={"heat": heat}, choices={"heat": heat},
+                    reach="same_cell",
+                ) for target in view["beneath_targets"])
+            if actor.kind == "gorgon":
+                view = GorgonPlayService(self.game).preview(viewer, channel)
+                targets = view["attack_targets"].get(actor.token, {})
+                assets = {x.id: x.name for x in role.assets}
+                return tuple(self._alternate_option(
+                    "gorgon_attack", "Attack", target["token"], target["label"], binding,
+                    target=target["ref"], target_sha256=target["source_sha256"],
+                    costs={}, choices={"asset": assets}, reach=targets[target["token"]],
+                ) for target in view["actors"] if target["token"] in targets)
+        except (ValueError, WorkflowError):
+            return ()
+        return ()
+
+    def _alternate_option(self, play, label, token, name, binding, **details):
+        identity = f"{play}:{token}"
+        option = self.option(identity, f"{label} · {name}", "alternate_native")
+        return option | {"alternate": binding | {"play": play, "target_token": token} | details}
 
     def battlefield_plays(self, view, sheet, state):
         playable = {

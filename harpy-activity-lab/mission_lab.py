@@ -961,6 +961,8 @@ def serve(
             private_review = {
                 "timeline", "activity-review", "handler-draft", "handler-need", "gm-work",
                 "handler-native-work", "handler-hunt", "scene-initiative-review",
+                "npc-owner-review", "scene-alternate-actors", "scene-alternate-handovers",
+                "scene-alternate-choices",
             }
             trial_access = ai_trial and selected == UUID(ai_trial.campaign).hex and (
                 path in ("/api/activity/review-scenes", "/api/activity/ai-provider")

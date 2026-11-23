@@ -2093,15 +2093,48 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     renderAdditionalSignatures(native.signatures);
   }
 
+  function menu(parent, label, choices) {
+    const [caption, control] = choiceField(label, choices);
+    parent.append(caption);
+    return control;
+  }
+
+  function nativeChoiceForm(row, fields) {
+    const controls = fields.map(spec => {
+      const input = spec.options.length ? menu(row, spec.label, spec.options)
+        : textArea(row, spec.label, "", 1200, spec.required);
+      input.required = spec.required;
+      if (spec.maximum > 1 && input.tagName === "SELECT") {
+        input.multiple = true;
+        input.options[0].remove();
+        input.addEventListener("change", () => input.setCustomValidity(
+          input.selectedOptions.length > spec.maximum || input.selectedOptions.length < spec.minimum
+          ? "Choose the required number of entries." : ""
+        ));
+      }
+      return [spec.key,input];
+    });
+    function answerFields() {
+      const answer = {fields:{}};
+      for (const [name, control] of controls) {
+        const values = control.tagName === "SELECT" ? [...control.selectedOptions].map(x => x.value).filter(Boolean)
+          : control.value ? [control.value] : [];
+        if (!values.length) continue;
+        if (name === "options" || name === "denied") answer[name] = values;
+        else if (name === "flag") answer.flag = values[0] === "yes";
+        else if (name === "number") answer.number = Number(values[0]);
+        else if (name.startsWith("fields.")) answer.fields[name.slice(7)] = values[0];
+        else answer[name] = values[0];
+      }
+      return answer;
+    }
+    return [answerFields, () => controls.every(([,control]) => control.reportValidity())];
+  }
+
   function renderAdditionalSignatures(native) {
     if (!native || (!native.choices.length && !native.targets.length && !native.seated.length
       && !native.direct_targets.length && !native.hunts.length)) return;
     const section = card(body, "Signature Play decisions");
-    function menu(parent, label, choices) {
-      const [caption, control] = choiceField(label, choices);
-      parent.append(caption);
-      return control;
-    }
     for (const item of native.choices) {
       const kind = item.kind;
       if (kind === "trainer_hunt_play" && native.hunts.some(hunt => hunt.choice === item.id)) continue;
@@ -2124,32 +2157,9 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
         }, () => JSON.stringify(answer())));
       }
       if (item.fields?.length) {
-        const controls = item.fields.map(spec => {
-          const input = spec.options.length ? menu(row, spec.label, spec.options)
-            : textArea(row, spec.label, "", 1200, spec.required);
-          input.required = spec.required;
-          if (spec.maximum > 1 && input.tagName === "SELECT") {
-            input.multiple = true;
-            input.options[0].remove();
-            input.addEventListener("change", () => input.setCustomValidity(
-              input.selectedOptions.length > spec.maximum || input.selectedOptions.length < spec.minimum
-              ? "Choose the required number of entries." : ""
-            ));
-          }
-          return [spec.key,input];
-        });
+        const [answerFields, validate] = nativeChoiceForm(row, item.fields);
         confirm("Confirm my choice", () => {
-          const answer = {fields:{}};
-          for (const [name, control] of controls) {
-            const values = control.tagName === "SELECT" ? [...control.selectedOptions].map(x => x.value).filter(Boolean)
-              : control.value ? [control.value] : [];
-            if (!values.length) continue;
-            if (name === "options" || name === "denied") answer[name] = values;
-            else if (name === "flag") answer.flag = values[0] === "yes";
-            else if (name === "number") answer.number = Number(values[0]);
-            else if (name.startsWith("fields.")) answer.fields[name.slice(7)] = values[0];
-            else answer[name] = values[0];
-          }
+          const answer = answerFields();
           if (kind === "tag_window" && answer.options?.[0] === "tag" && item.tag_marker && !answer.fields.marker)
             answer.fields.marker = item.tag_marker;
           if (kind === "tag_window" && answer.options?.[0] === "gender_man" && answer.denied)
@@ -2157,7 +2167,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
           if (kind === "battle_counter" && answer.options?.length === 1 && answer.options[0] === "pass")
             return {flag:false};
           return answer;
-        }, () => controls.every(([,control]) => control.reportValidity()));
+        }, validate);
       } else if (kind === "mistress_honey_offer") {
         const rewards = [["praise","Praise or sympathy"], ["pet_name","A pet name"], ["raise_status","Raise Status"]];
         const picks = rewards.map(([value,label]) => {
@@ -2358,11 +2368,12 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
   }
 
   function renderAIPilotReview(work) {
-    const items = (work.reactions ?? []).filter(item => item.ai_pilot);
+    const items = (work.reactions ?? []).filter(item => item.ai_pilot || item.ai_alternate);
     if (!items.length) return;
-    const list = card(body, "AI Pilot contributions");
+    const list = card(body, "AI contributions");
     for (const item of items) {
-      const action = item.kind === "DIALOGUE" ? "Pilot dialogue" : item.initiative ? "Pilot initiative" : "Pilot intent";
+      const action = item.ai_alternate ? "Alternate actor initiative"
+        : item.kind === "DIALOGUE" ? "Pilot dialogue" : item.initiative ? "Pilot initiative" : "Pilot intent";
       const row = card(list, action);
       if (item.status === "stale_reopen_source") {
         row.append(element("p", "The scene changed. Review a fresh batch."));
@@ -2370,6 +2381,10 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       }
       row.append(button("Preview " + action.toLowerCase(), async () => {
         const draft = await read("npc-owner-review/" + routeId(item.id));
+        if (draft.receipt) {
+          row.replaceChildren(element("p", "Native start saved. Any outstanding choices remain with their owners."));
+          return;
+        }
         if (!draft.proposal) {
           row.replaceChildren(element("p", "The scene changed. Review a fresh batch."));
           return;
@@ -2377,7 +2392,24 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
         row.replaceChildren(element("h4", action), element("p", draft.proposal.text));
         if (draft.native_play) row.append(element("p", "Native Play · " + draft.native_play.label));
         if (draft.native_play_approved) {
-          if (openNativePlay) row.append(button("Open approved Play", () => openNativePlay(draft.native_play)));
+          if (draft.native_play.alternate) {
+            const native = draft.native_play.alternate;
+            if (native.reach === "requires_judge") row.append(element("p", "The original judge will review reach."));
+            const fields = Object.entries(native.choices).map(([field, values]) => {
+              const options = field === "heat" ? values.map(value => [String(value), String(value)]) : Object.entries(values);
+              const [label, select] = choiceField(field === "heat" ? "Own Heat to spend" : "Own attacking Asset", options);
+              select.required = true;
+              row.append(label);
+              return [field, select];
+            });
+            row.append(button("Start approved Play", async key => {
+              if (fields.some(([, select]) => !select.reportValidity())) return;
+              const choices = Object.fromEntries(fields.map(([field, select]) =>
+                [field, field === "heat" ? Number(select.value) : select.value]));
+              await write("scene-alternate-start", {proposal:item.id, choices}, key);
+              await refresh();
+            }));
+          } else if (openNativePlay) row.append(button("Open approved Play", () => openNativePlay(draft.native_play)));
           return;
         }
         if (draft.proposal.fiction?.own_action) {
@@ -2411,7 +2443,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
             : [],
         });
         if (item.kind !== "DIALOGUE" || (candidates.length && candidates.length >= intended.length)) {
-          if (draft.native_play && openNativePlay) {
+          if (draft.native_play && !draft.native_play.alternate && openNativePlay) {
             row.append(button("Approve intent and open Play", async key => {
               if (!reason.reportValidity()) return;
               await write("npc-review", payload("approve"), key);
@@ -2428,6 +2460,63 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     }
   }
 
+  function renderAlternateControls(actors) {
+    if (!actors?.length) return;
+    const panel = card(body, "Alternate actor initiative");
+    for (const actor of actors) {
+      const row = card(panel, actor.label);
+      if (actor.plays?.length) {
+        const plays = element("ul");
+        for (const play of actor.plays) {
+          plays.append(element("li", play.label + (play.reach === "requires_judge" ? " · Reach review required" : "")));
+        }
+        row.append(plays);
+      }
+      row.append(button(actor.enabled ? "Return to manual control" : "Allow AI initiative in this scene", async key => {
+        await write("scene-alternate-control", {actor:actor.actor, enabled:!actor.enabled,
+          revision:actor.revision ?? null}, key);
+        await refresh();
+      }));
+      if (actor.enabled) row.append(button("Refer " + actor.referral, async key => {
+        await write("scene-alternate-refer", {actor:actor.actor}, key);
+        status.textContent = "Filed for the assigned facilitator.";
+      }));
+    }
+  }
+
+  function renderNativeHandovers(handovers) {
+    if (!handovers?.length) return;
+    const panel = card(body, "Your handover decisions");
+    for (const item of handovers) {
+      const row = card(panel, "Handover");
+      row.append(element("p", item.account));
+      const [label, select] = choiceField("Item to hand over", Object.entries(item.items));
+      if (Object.keys(item.items).length) {
+        row.append(label);
+        timeSave(row, "Accept handover", "scene-alternate-handover-answer", () => ({
+          id:item.id, revision:item.revision, item:select.value,
+        }));
+      }
+      timeSave(row, "Decline handover", "scene-alternate-handover-answer", () => ({
+        id:item.id, revision:item.revision, item:null,
+      }));
+    }
+  }
+
+  function renderAlternateNativeChoices(choices) {
+    if (!choices?.length) return;
+    const panel = card(body, "Your alternate Play decisions");
+    for (const item of choices) {
+      const row = card(panel, item.kind.replaceAll("_", " "));
+      const [answer, validate] = nativeChoiceForm(row, item.fields);
+      row.append(button("Confirm my choice", async key => {
+        if (!validate()) return;
+        await write("scene-alternate-answer", {id:item.id, revision:item.revision, answer:answer()}, key);
+        await refresh();
+      }, () => JSON.stringify(answer())));
+    }
+  }
+
   function renderSceneInitiatives(gm, options) {
     const choices = options?.options ?? [];
     const pending = gm?.scene_initiatives ?? [];
@@ -2435,7 +2524,8 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     const panel = card(body, "Character initiatives");
     for (const item of choices) {
       const row = card(panel, item.label + " · " + item.subject);
-      row.append(element("p", item.source.kind === "opening" ? "Approved opening" : "Witnessed outcome"));
+      row.append(element("p", item.source.kind === "opening" ? "Approved opening"
+        : item.source.kind === "native" ? "Eligible native Play" : "Witnessed outcome"));
       if (!item.model_configured) {
         row.append(element("p", "Model unassigned for this role."));
         continue;
@@ -2961,7 +3051,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       body.append(button("Refresh Director work", refresh));
       return;
     }
-    const [work, gm, opening, brief, persona, policy, observation, review, time, timingReview, sessionZero, pilotDossiers, canon, missionDrafts, sceneOpening, nativeHandler, initiatives] = await Promise.all([
+    const [work, gm, opening, brief, persona, policy, observation, review, time, timingReview, sessionZero, pilotDossiers, canon, missionDrafts, sceneOpening, nativeHandler, initiatives, alternate, handovers, alternateChoices] = await Promise.all([
       scene ? read("work", true) : null, scene ? read("gm-work", true) : null,
       read("opening", true), read("opening-brief", true), read("persona-setup", true),
       activityShadow ? read("activity-policy", true) : null,
@@ -2979,11 +3069,17 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       scene ? read("scene-opening", true) : null,
       scene ? read("handler-native-work", true) : null,
       scene && liveTrial ? read("scene-initiative", true) : null,
+      scene && liveTrial ? read("scene-alternate-actors", true) : null,
+      scene && liveTrial ? read("scene-alternate-handovers", true) : null,
+      scene && liveTrial ? read("scene-alternate-choices", true) : null,
     ]);
     body.replaceChildren();
     if (scene) renderSceneOpening(sceneOpening ?? {});
     if (activityShadow) renderShadow(policy, observation, review, nativeHandler?.signatures);
     renderSceneInitiatives(gm, initiatives);
+    renderAlternateControls(alternate?.actors);
+    renderNativeHandovers(handovers?.handovers);
+    renderAlternateNativeChoices(alternateChoices?.choices);
     if (nativeHandler) renderNativeHandler(nativeHandler);
     if (canon) renderCanon(canon, time?.scenes?.find(booking => booking.id === scene));
     renderMissionDrafts(missionDrafts, canon?.[2], time?.handler_controls?.pilots);

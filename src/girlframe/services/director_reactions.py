@@ -307,6 +307,8 @@ class DirectorReactionService:
             raise WorkflowError("FICTION_INTENT_ONLY: use a reviewed AI Pilot contribution.")
         if proposal.kind != "WAIT" and not proposal.text.strip():
             raise WorkflowError("REACTION_TEXT: non-silent proposals need bounded text.")
+        if packet.get("activity_alternate") and proposal.play_id and len(proposal.text) > 1200:
+            raise WorkflowError("REACTION_TEXT: native Play accounts use at most 1200 characters.")
         if proposal.kind == "REQUEST_ACTION":
             if proposal.route == "none" or not proposal.source_work_id:
                 raise WorkflowError("NATIVE_ROUTE_REQUIRED: identify actual pending native work.")
@@ -493,6 +495,10 @@ class DirectorReactionService:
         """Inspect the actor's proposed reply; private GM reasoning stays excluded."""
         with self.store.engine.connect() as c:
             record, packet = self._owned(c, controller, scene, identity, fresh=False)
+            if packet.get("activity_alternate") and (
+                receipt := self._alternate_receipt(c, scene, identity)
+            ):
+                return dict(id=identity, status="native_started", receipt=receipt)
             if (
                 packet.get("initiative")
                 or self.observer._state(c, scene).activity_epoch is not None
@@ -530,6 +536,158 @@ class DirectorReactionService:
         return {
             "native_play": selected,
             "native_play_approved": bool(review and review["decision"] == "approve"),
+        }
+
+    def start_alternate_play(
+        self,
+        viewer: GuildViewer,
+        scene: str,
+        identity: str,
+        choices: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Start the one approved exact-role Play through its existing native command."""
+        from girlframe.engine.m2 import PlayInput
+        from girlframe.engine.m3_gorgon_play_state import Declaration
+        from girlframe.services.m3_actor_plays import ActorPlayService
+        from girlframe.services.m3_gorgon_play import GorgonPlayService
+        from girlframe.services.m3_npc_handover import NpcHandoverService
+
+        key = "director-alternate-play:" + _digest((scene, identity))
+
+        def approved(c: Connection) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+            record, packet = self._owned(c, viewer, scene, identity, fresh=False)
+            row = self.observer._scene(c, scene, viewer)
+            state = self.observer._state(c, scene)
+            actor = ActorRef.model_validate(packet["actor"])
+            role = self.initiative._alternate_roles(c, row).get(actor)
+            if (
+                not packet.get("activity_alternate")
+                or role is None
+                or self.initiative._delegated(c, row, role) != packet["activity_alternate"]
+            ):
+                raise WorkflowError(
+                    "INITIATIVE_CONTROL_OWNER: recover the original delegated role."
+                )
+            if state.policy.mode != "shadow" or not self.observer._consented(c, row, state):
+                raise WorkflowError("OBSERVATION_DISABLED: current scene consent required.")
+            result = self._native_play_preview(c, scene, identity, record, packet)
+            binding = result.get("native_play", {}).get("alternate")
+            if not result.get("native_play_approved") or binding is None:
+                raise WorkflowError("INITIATIVE_PLAY_REVIEW: approve this exact native Play first.")
+            return record, packet, binding
+
+        with self.store.engine.connect() as c:
+            record, packet, binding = approved(c)
+        actor = ActorRef.model_validate(packet["actor"])
+        channel = binding["channel"]
+        account = record["proposal"]["text"]
+        values = binding["choices"]
+        if choices.keys() != values.keys() or any(
+            type(value) is not (int if field == "heat" else str) or value not in values[field]
+            for field, value in choices.items()
+        ):
+            raise WorkflowError("INITIATIVE_PLAY_CHOICES: confirm only the listed native choices.")
+
+        def guard(c: Connection) -> None:
+            if approved(c) != (record, packet, binding):
+                raise WorkflowError("STALE_REACTION: the approved Play changed.")
+            if not c.scalar(
+                sa.select(t.commands.c.interaction_key).where(
+                    t.commands.c.campaign_id == self.store.campaign_id,
+                    t.commands.c.interaction_key == key,
+                )
+            ):
+                self._fresh(c, packet)
+                slot = "alternate-start:" + _digest(packet["source_id"])
+                table = t.director_context["shadow"]
+                if c.scalar(
+                    sa.select(table.c.id).where(
+                        table.c.campaign_id == self.store.campaign_id,
+                        table.c.scene_id == scene,
+                        table.c.id == slot,
+                    )
+                ):
+                    raise WorkflowError(
+                        "REACTION_ADDRESSED: this actor already acted in this episode."
+                    )
+                self._save(c, scene, slot, "alternate_native_start", reaction_id=identity)
+
+        game = self.observer.game
+        with self.store.source_guard(guard):
+            if binding["play"] == "fan" and actor.kind == "npc":
+                return NpcHandoverService(game).propose(
+                    viewer,
+                    key,
+                    channel,
+                    actor,
+                    "fan",
+                    binding["revision"],
+                    binding["target_token"],
+                    account,
+                    None,
+                )
+            if binding["play"] == "harpy_beneath" and actor.kind == "external_pilot":
+                return ActorPlayService(game).begin(
+                    viewer,
+                    key,
+                    channel,
+                    actor,
+                    binding["actor_sha256"],
+                    ActorRef.model_validate(binding["adjudicator"])
+                    if binding["adjudicator"]
+                    else None,
+                    binding["cast_revision"],
+                    PlayInput(
+                        play="put_someone_beneath_you",
+                        context=account,
+                        trigger_confirmed=True,
+                        heat=choices["heat"],
+                        target_actor=ActorRef.model_validate(binding["target"]),
+                    ),
+                )
+            if binding["play"] == "gorgon_attack" and actor.kind == "gorgon":
+                return GorgonPlayService(game).begin(
+                    viewer,
+                    key,
+                    channel,
+                    binding["revision"],
+                    Declaration(
+                        kind="attack",
+                        actor=actor,
+                        assets=(choices["asset"],),
+                        actor_sha256=binding["actor_sha256"],
+                        target=ActorRef.model_validate(binding["target"]),
+                        target_sha256=binding["target_sha256"],
+                        account=account,
+                        reach_confirmed=True,
+                    ),
+                )
+        raise WorkflowError("NATIVE_ROUTE_REQUIRED: recover the original alternate actor's Play.")
+
+    def _alternate_receipt(self, c: Connection, scene: str, identity: str) -> dict[str, Any] | None:
+        key = "director-alternate-play:" + _digest((scene, identity))
+        raw = c.scalar(
+            sa.select(t.commands.c.outcome_json).where(
+                t.commands.c.campaign_id == self.store.campaign_id,
+                t.commands.c.interaction_key == key,
+            )
+        )
+        return json.loads(raw) if raw else None
+
+    def alternate_action_ids(self, c: Connection, scene: str) -> set[str]:
+        table = t.director_context["shadow"]
+        proposals = c.scalars(
+            sa.select(sa.func.json_extract(table.c.body_json, "$.reaction_id")).where(
+                table.c.campaign_id == self.store.campaign_id,
+                table.c.scene_id == scene,
+                sa.func.json_extract(table.c.body_json, "$.record_type")
+                == "alternate_native_start",
+            )
+        )
+        return {
+            receipt["action_id"]
+            for proposal in proposals
+            if (receipt := self._alternate_receipt(c, scene, proposal)) and "action_id" in receipt
         }
 
     def _pilot_review_options(
@@ -751,10 +909,15 @@ class DirectorReactionService:
                     if approval
                     else "awaiting_controller_review"
                 )
-                try:
-                    self._fresh(c, packet)
-                except (WorkflowError, ValueError):
-                    status = "stale_reopen_source"
+                if packet.get("activity_alternate") and self._alternate_receipt(
+                    c, scene, record["id"]
+                ):
+                    status = "native_started"
+                else:
+                    try:
+                        self._fresh(c, packet)
+                    except (WorkflowError, ValueError):
+                        status = "stale_reopen_source"
                 result.append(
                     dict(
                         id=record["id"],
@@ -762,6 +925,7 @@ class DirectorReactionService:
                         kind=record["proposal"]["kind"],
                         status=status,
                         **({"ai_pilot": True} if packet.get("activity_pilot") else {}),
+                        **({"ai_alternate": True} if packet.get("activity_alternate") else {}),
                         **({"initiative": True} if packet.get("initiative") else {}),
                     )
                 )
@@ -901,7 +1065,7 @@ class DirectorReactionService:
             slot = "reaction-episode:" + _digest(
                 dict(actor=packet["actor"], source=packet["source_id"], run=packet["run_id"])
             )
-            if decision == "approve":
+            if decision == "approve" and not packet.get("activity_alternate"):
                 if c.scalar(
                     sa.select(table.c.id).where(
                         table.c.campaign_id == self.store.campaign_id,

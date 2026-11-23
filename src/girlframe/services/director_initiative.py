@@ -1,13 +1,16 @@
 """Role-scoped chances to act on an existing agenda without a dialogue trigger."""
 
+import json
 from typing import Any
 
+import sqlalchemy as sa
 from sqlalchemy import Connection
 
 from girlframe.ai.director import KnowledgeReference
-from girlframe.ai.director_dossiers import DossierPacket
-from girlframe.engine.campaign_opening import PilotPortrayal
-from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.ai.director_dossiers import DossierPacket, DossierPressure
+from girlframe.database import tables as t
+from girlframe.engine.m3_actor_state import ActorRef, CastRole
+from girlframe.engine.pilot_portrayal import PilotPortrayal
 from girlframe.services.activity_scene_opening import ActivitySceneOpening
 from girlframe.services.campaign_difficulty import opening
 from girlframe.services.director_context import DirectorContextService
@@ -15,8 +18,27 @@ from girlframe.services.director_dossiers import DirectorDossierService
 from girlframe.services.director_fronts import DirectorFrontService
 from girlframe.services.director_knowledge import DirectorKnowledgeService
 from girlframe.services.director_observation import _digest
+from girlframe.services.director_play_options import initiative_play_options
+from girlframe.services.m2_state import load_state
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
+
+ALTERNATE_REFERRALS = {
+    "npc": (
+        "Independent NPC Flirt",
+        "The native NPC Flirt needs a Pilot's original Flirt or another typed producer. "
+        "Independent NPC initiation has no native form.",
+    ),
+    "external_pilot": (
+        "Masked Harpy Disobey Orders",
+        "The Mask Order has no native Disobey continuation for this original Harpy body.",
+    ),
+    "gorgon": (
+        "Gorgon Collateral Damage",
+        "Independent initiative lacks the original threatened site, verified attacking "
+        "capabilities and reach, and the saving-Play follow-up binding.",
+    ),
+}
 
 
 class DirectorInitiative:
@@ -27,6 +49,182 @@ class DirectorInitiative:
         self.knowledge = DirectorKnowledgeService(context)
         self.dossiers = DirectorDossierService(context)
         self.fronts = DirectorFrontService(context)
+
+    def _alternate_roles(self, c: Connection, row: dict[str, Any]) -> dict[ActorRef, CastRole]:
+        state = load_state(c, self.store.campaign_id)
+        cast = next((x for x in state.scene_casts if x.id == row["id"] and x.open), None)
+        if cast is None:
+            return {}
+        actual = {x.ref: x for x in self.knowledge._actor_views(c, row)}
+        return {
+            role.actor: role
+            for role in cast.roles
+            if role.actor in actual
+            and role.controller == actual[role.actor].controller
+            and (
+                role.actor.kind == "gorgon"
+                or role.actor.kind == "npc"
+                and actual[role.actor].rules == "npc"
+                or role.actor.kind == "external_pilot"
+                and actual[role.actor].girl == "harpy"
+            )
+        }
+
+    def _control(self, c: Connection, scene: str, actor: ActorRef) -> dict[str, Any]:
+        events = t.events
+        row = c.execute(
+            sa.select(events.c.id, events.c.actor_id, events.c.payload_json)
+            .where(
+                events.c.campaign_id == self.store.campaign_id,
+                events.c.kind == "director.alternate_control_changed",
+                sa.func.json_extract(events.c.payload_json, "$.scene") == scene,
+                sa.func.json_extract(events.c.payload_json, "$.actor") == actor.token,
+            )
+            .order_by(events.c.seq.desc())
+            .limit(1)
+        ).first()
+        if row is None:
+            return {}
+        payload: dict[str, Any] = json.loads(row.payload_json)
+        return payload | {"controller": int(row.actor_id), "event": row.id}
+
+    def _delegated(self, c: Connection, row: dict[str, Any], role: CastRole) -> str | None:
+        current = self._control(c, row["id"], role.actor)
+        if (
+            current.get("enabled")
+            and current.get("controller") == role.controller
+            and current.get("cast_source") == role.source_event
+        ):
+            return str(current["event"])
+        return None
+
+    def alternate_controls(self, viewer: GuildViewer, scene: str) -> list[dict[str, Any]]:
+        with self.store.engine.connect() as c:
+            row = self.observer._scene(c, scene, viewer)
+            roles = self._alternate_roles(c, row)
+            state = self.observer._state(c, scene)
+            consented = state.policy.mode == "shadow" and self.observer._consented(c, row, state)
+            result = []
+            for actor in self.knowledge._actor_views(c, row):
+                if actor.ref not in roles or actor.controller != viewer.user_id:
+                    continue
+                enabled = bool(self._delegated(c, row, roles[actor.ref]))
+                native = (
+                    initiative_play_options(self.context, c, scene, actor.ref, alternate=True)
+                    if enabled and consented
+                    else ()
+                )
+                result.append(
+                    dict(
+                        actor=actor.ref.model_dump(mode="json"),
+                        label=actor.label,
+                        enabled=enabled,
+                        revision=self._control(c, scene, actor.ref).get("event"),
+                        referral=ALTERNATE_REFERRALS[actor.ref.kind][0],
+                        plays=[
+                            dict(
+                                id=play["id"],
+                                label=play["label"],
+                                target=play["alternate"]["target_token"],
+                                reach=play["alternate"]["reach"],
+                                costs=play["alternate"]["costs"],
+                                choices=play["alternate"]["choices"],
+                            )
+                            for play in native
+                        ],
+                    )
+                )
+            return result
+
+    def control_alternate(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        scene: str,
+        actor: ActorRef,
+        enabled: bool,
+        revision: str | None,
+    ) -> dict[str, Any]:
+        def authorize(c: Connection) -> None:
+            self.observer._scope()
+            row = self.observer._scene(c, scene, viewer)
+            role = self._alternate_roles(c, row).get(actor)
+            if role is None or role.controller != viewer.user_id:
+                raise WorkflowError("INITIATIVE_CONTROL_OWNER: choose your actual cast actor.")
+            if enabled:
+                self.observer.game.scene_unpaused(c, scene)
+                state = self.observer._state(c, scene)
+                if state.policy.mode != "shadow" or not self.observer._consented(c, row, state):
+                    raise WorkflowError("OBSERVATION_DISABLED: current scene consent required.")
+
+        def operation(c: Connection) -> dict[str, Any]:
+            row = self.observer._scene(c, scene, viewer)
+            role = self._alternate_roles(c, row)[actor]
+            if self._control(c, scene, actor).get("event") != revision:
+                raise WorkflowError("INITIATIVE_CONTROL_STALE: reopen the current actor setting.")
+            event = self.store._audit(
+                c,
+                viewer.user_id,
+                key,
+                "director.alternate_control_changed",
+                dict(
+                    scene=scene, actor=actor.token, enabled=enabled, cast_source=role.source_event
+                ),
+            )
+            return {"enabled": enabled, "revision": event}
+
+        return self.store._write(
+            viewer,
+            key,
+            "director.alternate_control_changed",
+            dict(scene=scene, actor=actor.token, enabled=enabled, revision=revision),
+            operation,
+            authorize=authorize,
+            auto_audit=False,
+        )
+
+    def refer_alternate(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        scene: str,
+        actor: ActorRef,
+    ) -> dict[str, Any]:
+        from girlframe.services.p1_facilitator import UNLISTED_ACTION, FacilitatorService
+
+        def scoped(c: Connection) -> tuple[int, int]:
+            row = self.observer._scene(c, scene, viewer)
+            state = self.observer._state(c, scene)
+            role = self._alternate_roles(c, row).get(actor)
+            if (
+                role is None
+                or role.controller != viewer.user_id
+                or self._delegated(c, row, role) is None
+            ):
+                raise WorkflowError("INITIATIVE_CONTROL_OWNER: choose your actual cast actor.")
+            if state.policy.mode != "shadow" or not self.observer._consented(c, row, state):
+                raise WorkflowError("OBSERVATION_DISABLED: current scene consent required.")
+            return int(row["channel_id"]), load_state(c, self.store.campaign_id).revision
+
+        with self.store.engine.connect() as c:
+            channel, revision = scoped(c)
+        title, missing = ALTERNATE_REFERRALS[actor.kind]
+
+        def guard(c: Connection) -> None:
+            scoped(c)
+
+        return FacilitatorService(self.observer.game).request(
+            viewer,
+            key,
+            channel,
+            "scene",
+            scene,
+            UNLISTED_ACTION,
+            revision,
+            f"{title} for {actor.token}. {missing}",
+            shared=True,
+            source_guard=guard,
+        )
 
     def scope(self, c: Connection, viewer: GuildViewer, scene: str) -> None:
         self.knowledge._scope(c, viewer, scene)
@@ -50,8 +248,36 @@ class DirectorInitiative:
         references = self.context._current(c, scene)
         native_guard = self.observer._guard(c, row, state)
         result = []
+        alternate = self._alternate_roles(c, row)
         for role in self.knowledge._actor_views(c, row):
             actor = role.ref
+            delegated = self._delegated(c, row, alternate[actor]) if actor in alternate else None
+            if delegated:
+                plays = initiative_play_options(self.context, c, scene, actor, alternate=True)
+                if plays:
+                    turn = plays[0]["alternate"]["turn"]
+                    source_id = "native:" + _digest((scene, actor.token, delegated, turn))
+                    dossier = self.dossiers._role_packet(c, scene, actor, omit_stale_portrayal=True)
+                    refs = self.context._actor_references(references, actor)
+                    result.append(
+                        dict(
+                            option=dict(
+                                id=_digest((source_id, "alternate")),
+                                actor=actor.model_dump(mode="json"),
+                                label=role.label,
+                                source=dict(kind="native", id=source_id),
+                                subject="Act in the current scene",
+                            ),
+                            controller=str(role.controller),
+                            dossier=dossier.model_dump(mode="json"),
+                            references=[ref.model_dump(mode="json") for ref in refs],
+                            agenda={},
+                            trigger={"kind": "current_turn" if turn else "current_scene"},
+                            native_guard=native_guard,
+                            alternate=delegated,
+                            native_plays=plays,
+                        )
+                    )
             pilot = pilots.get(actor)
             handler = (
                 actor.kind == "handler"
@@ -125,7 +351,8 @@ class DirectorInitiative:
                 },
             )
             for item in pressures
-            if item.pressure.status == "open"
+            if isinstance(item, DossierPressure)
+            and item.pressure.status == "open"
             and item.pressure.next_step
             and set(item.knowledge_refs) <= visible
         ]
@@ -159,8 +386,6 @@ class DirectorInitiative:
         return active
 
     def packet(self, c: Connection, scene: str, option: str) -> dict[str, Any]:
-        from girlframe.services.director_play_options import initiative_play_options
-
         candidate = next(
             (entry for entry in self.candidates(c, scene) if entry["option"]["id"] == option),
             None,
@@ -180,7 +405,11 @@ class DirectorInitiative:
                 "agenda": candidate["agenda"],
             },
             "available_actions": ["WAIT", "SCENE_OFFER"],
-            "native_plays": list(initiative_play_options(self.context, c, scene, actor)),
+            "native_plays": list(
+                candidate["native_plays"]
+                if candidate.get("alternate")
+                else initiative_play_options(self.context, c, scene, actor)
+            ),
         }
         revision = _digest((role, candidate["native_guard"]))
         return {
@@ -193,5 +422,11 @@ class DirectorInitiative:
             "role": role,
             "revision": revision,
             "initiative": option,
-            **({"activity_pilot": True} if actor.kind != "handler" else {}),
+            **(
+                {"activity_alternate": candidate["alternate"]}
+                if candidate.get("alternate")
+                else {"activity_pilot": True}
+                if actor.kind != "handler"
+                else {}
+            ),
         }

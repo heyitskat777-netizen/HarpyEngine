@@ -393,7 +393,10 @@ class GorgonPlayService:
                 if kind in jackdaw.EFFECTS and not can_jam:
                     continue
                 try:
-                    access.registry.require_available(identity)
+                    if kind == "attack":
+                        access.require_specialist_rule(identity)
+                    else:
+                        access.registry.require_available(identity)
                 except ValueError:
                     continue
                 plays.append(kind)
@@ -434,7 +437,10 @@ class GorgonPlayService:
                 )
             access = Access(self.store)
             assert access.registry is not None
-            access.registry.require_available(RULES[declaration.kind])
+            if declaration.kind == "attack":
+                access.require_specialist_rule(RULES[declaration.kind])
+            else:
+                access.registry.require_available(RULES[declaration.kind])
             cast = _cast(self.game, c, state, channel)
             bound = profiles(c, self.store.campaign_id)
             actual = resolve(state, declaration.actor, bound, require_current_profile=False)

@@ -38,6 +38,7 @@ from girlframe.ai.model_adapters import (
 from girlframe.ai.model_transport import OpenAIResponses
 from girlframe.ai.observation import AppendSceneInput, ObservationPolicy
 from girlframe.database import tables as t
+from girlframe.engine.m2 import ChoiceAnswer
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_advocate_alone import Order as AdvocateOrder
 from girlframe.engine.m3_handler_character import PROFILES
@@ -93,6 +94,38 @@ REVIEW_READS = frozenset(
         "world-draft",
     }
 )
+ALTERNATE_CHOICES = frozenset({
+    "gorgon_asset_capability", "gorgon_defend", "gorgon_damage_asset",
+    "tag_window", "harpy_beneath_select",
+})
+
+
+def alternate_choice_fields(decision):
+    from girlframe.discord_adapter.m2_forms import Field
+    from girlframe.discord_adapter.m2_ui import choice_fields
+
+    kind = decision["kind"]
+    if kind == "gorgon_asset_capability":
+        return [
+            Field("flag", "Approve capability and reach", (("yes", "Approve"), ("no", "Decline"))),
+            Field("text", "Your ruling", paragraph=True),
+        ]
+    if kind == "gorgon_defend":
+        labels = {"damage": "Take the blow", "play": "Make your assigned response Play"}
+        options = tuple((value, labels[value]) for value in decision["detail"]["options"])
+        return [
+            Field("options", "How do you respond?", options),
+            Field("text", "Describe your response", paragraph=True),
+        ]
+    if kind == "gorgon_damage_asset":
+        assets = tuple((asset["id"], asset["name"]) for asset in decision["detail"]["assets"])
+        return [
+            Field("options", "Your Asset taking the blow", assets),
+            Field("text", "Describe the hit", paragraph=True),
+        ]
+    return choice_fields(decision)
+
+
 MODEL_WRITES = frozenset({
     "activity-review-run", "handler-need-generate", "mission-briefing-queue",
     "mission-briefing-run", "plan-generate", "reaction-generate", "ruling-generate",
@@ -606,6 +639,33 @@ class P2Scene:
             }
         if route == "scene-initiative-review" and scene and identity is not None:
             return self.session.reactions.handler_initiative_review(viewer, scene, identity)
+        if route == "scene-alternate-actors" and scene and identity is None:
+            return {"actors": self.session.reactions.initiative.alternate_controls(viewer, scene)}
+        if route == "scene-alternate-handovers" and scene and identity is None:
+            from girlframe.services.m3_npc_handover import NpcHandoverService
+
+            native = NpcHandoverService(self.session.game)
+            with self.session.store.engine.connect() as c:
+                self.session.observer._scene(c, scene, viewer)
+                state = load_state(c, self.session.store.campaign_id)
+                owned = [x.id for x in native.tasks(c, state, viewer) if x.scene == scene]
+            return {"handovers": [native.get(viewer, ident) | {"id": ident} for ident in owned]}
+        if route == "scene-alternate-choices" and scene and identity is None:
+            with self.session.store.engine.connect() as c:
+                self.session.observer._scene(c, scene, viewer)
+                actions = self.session.reactions.alternate_action_ids(c, scene)
+            choices = []
+            for item in self.session.game.choices(viewer):
+                if item["action_id"] not in actions or item["kind"] not in ALTERNATE_CHOICES:
+                    continue
+                decision = self.session.game.decision(viewer, item["id"])
+                fields = alternate_choice_fields(decision)
+                if fields:
+                    choices.append(dict(
+                        id=item["id"], revision=item["revision"], kind=item["kind"],
+                        fields=[asdict(field) for field in fields],
+                    ))
+            return {"choices": choices}
         if route == "npc-hearing" and identity is not None:
             return self.npc_delivery.hearing(viewer, scene, identity)
         if route == "opening":
@@ -690,7 +750,7 @@ class P2Scene:
             provider = self.session.conversation.activity_batch
             if isinstance(provider, ModelActivityBatch):
                 return ModelReactions(provider.client)
-        elif actor_kind in ("npc", "pilot"):
+        elif actor_kind in ("npc", "pilot", "external_pilot", "gorgon"):
             provider = self.shadow.pilot_provider
             if isinstance(provider, ModelActivityPilot):
                 return ModelReactions(provider.client)
@@ -1204,6 +1264,63 @@ class P2Scene:
             and len(data["option"]) == 64
         ):
             return self.session.reactions.open_initiative(viewer, key, scene, data["option"])
+        if (
+            route == "scene-alternate-control" and scene
+            and data.keys() == {"actor", "enabled", "revision"}
+            and type(data["enabled"]) is bool
+            and (data["revision"] is None or isinstance(data["revision"], str))
+        ):
+            return self.session.reactions.initiative.control_alternate(
+                viewer, key, scene, ActorRef.model_validate(data["actor"]),
+                data["enabled"], data["revision"],
+            )
+        if (
+            route == "scene-alternate-start" and scene
+            and data.keys() == {"proposal", "choices"}
+            and isinstance(data["proposal"], str) and isinstance(data["choices"], dict)
+        ):
+            return self.session.reactions.start_alternate_play(
+                viewer, scene, data["proposal"], data["choices"],
+            )
+        if route == "scene-alternate-refer" and scene and data.keys() == {"actor"}:
+            return self.session.reactions.initiative.refer_alternate(
+                viewer, key, scene, ActorRef.model_validate(data["actor"]),
+            )
+        if (
+            route == "scene-alternate-handover-answer" and scene
+            and data.keys() == {"id", "revision", "item"} and isinstance(data["id"], str)
+            and type(data["revision"]) is int and (data["item"] is None or isinstance(data["item"], str))
+        ):
+            from girlframe.services.m3_npc_handover import NpcHandoverService, records
+
+            def guard(c: Connection) -> None:
+                self.session.observer._scene(c, scene, viewer)
+                state = load_state(c, self.session.store.campaign_id)
+                if not any(x.id == data["id"] and x.scene == scene for x in records(state)):
+                    raise WorkflowError("Use the original handover in its own scene.")
+
+            with self.session.store.source_guard(guard):
+                return NpcHandoverService(self.session.game).respond(
+                    viewer, key, data["id"], data["revision"], data["item"],
+                )
+        if (
+            route == "scene-alternate-answer" and scene
+            and data.keys() == {"id", "revision", "answer"} and isinstance(data["id"], str)
+            and type(data["revision"]) is int
+        ):
+            def guard(c: Connection) -> None:
+                self.session.observer._scene(c, scene, viewer)
+                table = t.m2["m2_choices"]
+                action = c.scalar(sa.select(table.c.action_id).where(
+                    table.c.campaign_id == self.session.store.campaign_id,
+                    table.c.id == data["id"], table.c.kind.in_(ALTERNATE_CHOICES),
+                    table.c.actor_id == str(viewer.user_id),
+                ))
+                if action not in self.session.reactions.alternate_action_ids(c, scene):
+                    raise WorkflowError("Use your own native choice from this scene's alternate Play.")
+
+            return self.session.game.respond(viewer, key, data["id"], data["revision"],
+                ChoiceAnswer.model_validate_json(json.dumps(data["answer"])), source_authorize=guard)
         if (
             route == "scene-initiative-review"
             and scene

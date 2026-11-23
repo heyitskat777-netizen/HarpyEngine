@@ -191,9 +191,18 @@ class PrivateBattlefield(Battlefield):
             ),
             None,
         )
-        visible = self.enemy_roster(state)
+        visible = {
+            ActorRef(kind=kind, entity=x.id).token
+            for kind, actors in (("npc", state.world.npcs), ("gorgon", state.world.gorgons))
+            for x in actors if x.revealed and x.alive
+        }
+        harpies = {x.id for x in state.harpy_states if x.alive and x.revealed}
+        harpies.update(x.id for x in state.world.pilots if x.kind == "harpy" and x.alive and x.revealed)
         for role in cast.roles if cast else ():
-            if role.actor.token not in visible or role.controller != state.handler:
+            harpy = role.actor.kind == "external_pilot" and role.actor.entity in harpies
+            if not harpy and role.actor.token not in visible:
+                continue
+            if role.controller not in scene["participants"]:
                 continue
             try:
                 actor = resolve(
@@ -205,6 +214,7 @@ class PrivateBattlefield(Battlefield):
                 actor.alive
                 and actor.controller == role.controller
                 and actor.cell is not None
+                and not actor.offstage_source
             ):
                 eligible[role.actor.token] = actor
         return eligible

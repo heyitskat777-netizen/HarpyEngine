@@ -588,6 +588,13 @@ class ModelReactions:
 
     def propose(self, packet: dict[str, Any]) -> ReactionProposal:
         role = packet["role"]
+        if packet.get("activity_alternate"):
+            role = role | {
+                "native_plays": [
+                    {"id": play["id"], "label": play["label"], "reach": play["alternate"]["reach"]}
+                    for play in role.get("native_plays", ())
+                ],
+            }
         initiative = bool(packet.get("initiative"))
         if role["actor"]["kind"] != "npc" and not initiative:
             raise ValueError("Use the cast NPC reaction workflow.")
