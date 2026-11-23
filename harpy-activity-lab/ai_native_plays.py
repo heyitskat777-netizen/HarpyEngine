@@ -10,7 +10,7 @@ from girlframe.services.m3_actor_plays import ActorPlayService
 from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_gorgon_play import GorgonPlayService
 from girlframe.services.m3_handler_plays import _ordinary_scene_idle
-from girlframe.services.m3_npc_handover import NpcHandoverService
+from girlframe.services.m3_npc_handover import LABELS, NpcHandoverService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -139,10 +139,27 @@ class ActivityNativePlays:
             viewer = GuildViewer(role.controller, self.game.store.policy.guild_id, True, False)
             binding = dict(channel=channel, revision=state.revision, turn=turn,
                            actor_sha256=role.source_sha256, cast_revision=cast.revision)
-            if actor.kind == "npc" and "fan" in role.jobs:
-                menu = NpcHandoverService(self.game).menu(viewer, channel, actor, "fan")
-                return tuple(self._alternate_option("fan", "Fan handover", token, name, binding,
-                    costs={}, choices={}, reach="same_cell") for token, name in menu["targets"].items())
+            if actor.kind == "npc":
+                native = NpcHandoverService(self.game)
+                handovers = []
+                for job in LABELS:
+                    if job not in role.jobs:
+                        continue
+                    try:
+                        menu = native.menu(viewer, channel, actor, job)
+                    except (ValueError, WorkflowError):
+                        continue
+                    if job != "fan" and not menu["items"]:
+                        continue
+                    choices = {"item": menu["items"]} if job != "fan" else {}
+                    handovers.extend(
+                        self._alternate_option(
+                            job, f"{job.title()} handover", token, name, binding,
+                            costs={}, choices=choices, reach="same_cell",
+                        )
+                        for token, name in menu["targets"].items()
+                    )
+                return tuple(handovers)
             if actor.kind == "external_pilot" and role.girl == "harpy":
                 service = ActorPlayService(self.game)
                 service._eligible_play(state, actor, rejection=False, play="put_someone_beneath_you")

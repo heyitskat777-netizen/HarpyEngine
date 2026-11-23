@@ -2397,7 +2397,8 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
             if (native.reach === "requires_judge") row.append(element("p", "The original judge will review reach."));
             const fields = Object.entries(native.choices).map(([field, values]) => {
               const options = field === "heat" ? values.map(value => [String(value), String(value)]) : Object.entries(values);
-              const [label, select] = choiceField(field === "heat" ? "Own Heat to spend" : "Own attacking Asset", options);
+              const labels = {heat:"Own Heat to spend", asset:"Own attacking Asset", item:"Your offered item"};
+              const [label, select] = choiceField(labels[field], options);
               select.required = true;
               row.append(label);
               return [field, select];
@@ -2490,7 +2491,8 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     for (const item of handovers) {
       const row = card(panel, "Handover");
       row.append(element("p", item.account));
-      const [label, select] = choiceField("Item to hand over", Object.entries(item.items));
+      const prompt = item.job === "fan" ? "Item to hand over" : "Item to accept";
+      const [label, select] = choiceField(prompt, Object.entries(item.items));
       if (Object.keys(item.items).length) {
         row.append(label);
         timeSave(row, "Accept handover", "scene-alternate-handover-answer", () => ({

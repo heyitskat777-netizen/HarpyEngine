@@ -550,7 +550,7 @@ class DirectorReactionService:
         from girlframe.engine.m3_gorgon_play_state import Declaration
         from girlframe.services.m3_actor_plays import ActorPlayService
         from girlframe.services.m3_gorgon_play import GorgonPlayService
-        from girlframe.services.m3_npc_handover import NpcHandoverService
+        from girlframe.services.m3_npc_handover import LABELS, NpcHandoverService
 
         key = "director-alternate-play:" + _digest((scene, identity))
 
@@ -614,17 +614,17 @@ class DirectorReactionService:
 
         game = self.observer.game
         with self.store.source_guard(guard):
-            if binding["play"] == "fan" and actor.kind == "npc":
+            if actor.kind == "npc" and binding["play"] in LABELS:
                 return NpcHandoverService(game).propose(
                     viewer,
                     key,
                     channel,
                     actor,
-                    "fan",
+                    binding["play"],
                     binding["revision"],
                     binding["target_token"],
                     account,
-                    None,
+                    choices.get("item"),
                 )
             if binding["play"] == "harpy_beneath" and actor.kind == "external_pilot":
                 return ActorPlayService(game).begin(

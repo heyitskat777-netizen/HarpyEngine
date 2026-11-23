@@ -96,6 +96,7 @@ REVIEW_READS = frozenset(
 )
 ALTERNATE_CHOICES = frozenset({
     "gorgon_asset_capability", "gorgon_defend", "gorgon_damage_asset",
+    "gorgon_contest_assets", "gorgon_contest_judge",
     "tag_window", "harpy_beneath_select",
 })
 
@@ -117,12 +118,30 @@ def alternate_choice_fields(decision):
             Field("options", "How do you respond?", options),
             Field("text", "Describe your response", paragraph=True),
         ]
-    if kind == "gorgon_damage_asset":
+    if kind in ("gorgon_damage_asset", "gorgon_contest_assets"):
         assets = tuple((asset["id"], asset["name"]) for asset in decision["detail"]["assets"])
+        if not assets:
+            return []
         return [
-            Field("options", "Your Asset taking the blow", assets),
-            Field("text", "Describe the hit", paragraph=True),
+            Field("options", "Your pitted Assets", assets, maximum=min(25, len(assets)))
+            if kind == "gorgon_contest_assets"
+            else Field("options", "Your Asset taking the blow", assets),
+            Field("text", "Describe the action", paragraph=True),
         ]
+    if kind == "gorgon_contest_judge":
+        detail = decision["detail"]
+        opposing = dict.fromkeys(detail["attacking_assets"] + detail["defending_assets"])
+        fields = [
+            Field("options", "Who wins the contest?", (("attacker", "Attacker"), ("defender", "Defender"))),
+            Field("fields.asset", "Actual losing Asset", tuple((asset, asset) for asset in opposing)),
+            Field("text", "Describe the outcome", paragraph=True),
+        ]
+        if detail.get("indirect_required"):
+            fields.append(Field(
+                "flag", "Confirm the indirect approach if needed", (("yes", "Yes"), ("no", "No")),
+                required=False,
+            ))
+        return fields
     return choice_fields(decision)
 
 

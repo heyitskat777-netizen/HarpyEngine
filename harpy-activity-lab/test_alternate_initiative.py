@@ -34,9 +34,9 @@ from girlframe.services.onboarding import WorkflowError
 from girlframe.services.p1_facilitator import FacilitatorService
 
 
-def native_case(store, kind):
+def native_case(store, kind, *, npc_job="fan", **gorgon_options):
     if kind == "gorgon":
-        game, worker, gateway, _, declaration = gorgon_source(store, begin=False)
+        game, worker, gateway, _, declaration = gorgon_source(store, begin=False, **gorgon_options)
         source = GorgonPlayService(game)
         assert "attack" not in source.preview(ADMIN, 900)["plays"]
         approval = store.policy.m3_approval
@@ -70,7 +70,7 @@ def native_case(store, kind):
             id=actor.entity,
             name="Local contact",
             detail="A regular on the landing.",
-            jobs=("fan",),
+            jobs=(npc_job,),
             cell=(0, 0),
             controller=ADMIN.user_id,
             revealed=True,
@@ -86,16 +86,17 @@ def native_case(store, kind):
             m3_approval=approval.model_copy(
                 update=dict(
                     subsystems=approval.subsystems | {"plays", "discipline"},
-                    activity_specialist_rules=approval.activity_specialist_rules | {"npc.npc.fan"},
+                    activity_specialist_rules=approval.activity_specialist_rules
+                    | {f"npc.npc.{npc_job}"},
                 )
             )
         )
     )
     items = ItemService(game)
     proposed = items.propose(
-        PLAYER,
+        PLAYER if npc_job == "fan" else ADMIN,
         "own-photo",
-        current_ref(state(game), PLAYER.user_id),
+        current_ref(state(game), PLAYER.user_id) if npc_job == "fan" else actor,
         "Folded photograph",
         "An actual carried photograph.",
     )
@@ -105,7 +106,7 @@ def native_case(store, kind):
         proposed["id"],
         1,
         exists=True,
-        account="The Pilot owns the original photograph.",
+        account="I confirm the original custodian of the photograph.",
     )["item"]
     return game, GameWorker(game), Gateway(), ADMIN, actor, PLAYER, item
 
@@ -187,7 +188,8 @@ def submit_choice(app, scene, actor, kind, **answer):
     )
     projected = {field["key"] for field in choice["fields"]}
     assert {"options", "text"} <= projected
-    assert all(not field["required"] or field["key"] in answer for field in choice["fields"])
+    provided = answer.keys() | {"fields." + key for key in answer.get("fields", {})}
+    assert all(not field["required"] or field["key"] in provided for field in choice["fields"])
     payload = {"id": choice["id"], "revision": choice["revision"], "answer": answer}
     receipt = app.write(actor, kind, scene, "scene-alternate-answer", payload)
     assert app.write(actor, kind, scene, "scene-alternate-answer", payload) == receipt
@@ -280,6 +282,117 @@ def test_alternate_play_uses_approved_native_role_and_recovers_on_restart(ledger
         reopened.write(owner, "transport-retry", scene, "scene-alternate-start", payload) == result
     )
     assert state(game) == after and game.dice.calls == calls and model.calls == 1
+
+
+@pytest.mark.parametrize("job", ("patron", "smuggler"))
+def test_activity_npc_handover_initiative_uses_only_the_npcs_own_item(ledger, job):
+    game, _, _, owner, actor, target, item = native_case(ledger, "npc", npc_job=job)
+    target_role = current_ref(state(game), target.user_id)
+    app = activity(game, Stub(target_role.token))
+    with ledger.engine.connect() as c:
+        scene = game.scene(c, 900)["id"]
+    setup_initiative(game, scene, app)
+    proposal = propose(app, scene, owner, actor)
+    menu = app.read(owner, scene, "npc-owner-review", proposal)["native_play"]["alternate"]
+    assert menu["play"] == job and list(menu["choices"]["item"]) == [item]
+    payload = {"proposal": proposal, "choices": {"item": item}}
+    with pytest.raises(WorkflowError, match="INITIATIVE_PLAY_CHOICES"):
+        app.write(
+            owner,
+            "bad-offer",
+            scene,
+            "scene-alternate-start",
+            payload
+            | {
+                "choices": {"item": "an-unowned-item"},
+            },
+        )
+    started = app.write(owner, "job-offer", scene, "scene-alternate-start", payload)
+    assert state(game).held_items[0].holder == actor
+    assert app.read(OTHER, scene, "scene-alternate-handovers")["handovers"] == []
+    (offer,) = app.read(target, scene, "scene-alternate-handovers")["handovers"]
+    assert offer["id"] == started["id"] and offer["job"] == job
+    accepted = app.write(
+        target,
+        "accept-item",
+        scene,
+        "scene-alternate-handover-answer",
+        {
+            "id": offer["id"],
+            "revision": offer["revision"],
+            "item": item,
+        },
+    )
+    assert accepted["transfer"] and state(game).held_items[0].holder == target_role
+    ledger.engine.dispose()
+    assert (
+        activity(game, Stub(target_role.token)).write(
+            owner, "retry-job-offer", scene, "scene-alternate-start", payload
+        )
+        == started
+    )
+
+
+@pytest.mark.parametrize(
+    ("opponent", "source_option"),
+    (("actual-guard", "npc"), ("actual-pitted-harpy", "harpy"), ("opposing-gorgon", "opposing")),
+)
+def test_activity_gorgon_attack_resolves_actual_cross_role_targets(ledger, opponent, source_option):
+    game, worker, gateway, owner, actor, _, _ = native_case(
+        ledger, "gorgon", target=opponent, **{source_option: True}
+    )
+    with ledger.engine.connect() as c:
+        scene = game.scene(c, 900)["id"]
+        cast = next(x for x in state(game).scene_casts if x.id == scene)
+    target = next(x.actor for x in cast.roles if x.actor.entity == opponent)
+    app = activity(game, Stub(target.token))
+    setup_initiative(game, scene, app)
+    proposal = propose(app, scene, owner, actor)
+    preview = app.read(owner, scene, "npc-owner-review", proposal)["native_play"]["alternate"]
+    assert preview["target_token"] == target.token
+    receipt = app.write(
+        owner,
+        "cross-role-start",
+        scene,
+        "scene-alternate-start",
+        {
+            "proposal": proposal,
+            "choices": {"asset": next(iter(preview["choices"]["asset"]))},
+        },
+    )
+    action = receipt["action_id"]
+    original_sheets = state(game).sheets
+    tick(worker, gateway, 3)
+    if source_option == "npc":
+        assert not next(x for x in state(game).world.npcs if x.id == opponent).alive
+    else:
+        defender = PLAYER if source_option == "harpy" else ADMIN
+        with ledger.engine.connect() as c:
+            row = next(x for x in game.pending(c, action) if x["kind"] == "gorgon_contest_assets")
+        if source_option == "harpy":
+            assert app.read(owner, scene, "scene-alternate-choices")["choices"] == []
+        assets = game.decision(defender, row["id"])["detail"]["assets"]
+        asset = next(
+            x["id"] for x in assets if source_option == "opposing" or x["family"] == "girl"
+        )
+        submit_choice(
+            app, scene, defender, "gorgon_contest_assets", options=[asset], text="I brace with it."
+        )
+        assert app.read(OTHER, scene, "scene-alternate-choices")["choices"] == []
+        submit_choice(
+            app,
+            scene,
+            owner,
+            "gorgon_contest_judge",
+            options=["attacker"],
+            fields={"asset": asset},
+            text="The attacker removes the pitted Asset.",
+        )
+        assert state(game).facts[-1]["kind"] == "gorgon_asset_contest"
+        assert state(game).facts[-1]["asset"] == asset
+    assert game.inspect(owner, action)["state"] == "complete"
+    assert state(game).sheets == original_sheets
+    assert game.dice.calls == 0
 
 
 @pytest.mark.parametrize("changed", ("turn", "controller", "consent", "control"))
