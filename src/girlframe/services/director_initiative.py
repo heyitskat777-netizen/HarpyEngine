@@ -249,6 +249,7 @@ class DirectorInitiative:
         native_guard = self.observer._guard(c, row, state)
         result = []
         alternate = self._alternate_roles(c, row)
+        canon = load_state(c, self.store.campaign_id) if alternate else None
         for role in self.knowledge._actor_views(c, row):
             actor = role.ref
             delegated = self._delegated(c, row, alternate[actor]) if actor in alternate else None
@@ -257,8 +258,21 @@ class DirectorInitiative:
                 if plays:
                     turn = plays[0]["alternate"]["turn"]
                     source_id = "native:" + _digest((scene, actor.token, delegated, turn))
-                    dossier = self.dossiers._role_packet(c, scene, actor, omit_stale_portrayal=True)
+                    dossier = self.dossiers._role_packet(
+                        c, scene, actor, omit_stale_portrayal=True, activity_pilot=True
+                    )
                     refs = self.context._actor_references(references, actor)
+                    portrayal = dossier.profile.pilot_portrayal if dossier.profile else None
+                    agendas = self._agendas(c, scene, dossier, refs, portrayal, "")
+                    subject, agenda = next(iter(agendas), ("Act in the current scene", {}))
+                    identity: dict[str, Any] = {"kind": actor.kind}
+                    if actor.kind == "npc":
+                        identity["jobs"] = list(role.jobs)
+                    elif actor.kind == "external_pilot":
+                        identity.update(kind="harpy", frame=role.frame)
+                    elif canon and canon.world:
+                        gorgon = next(x for x in canon.world.gorgons if x.id == actor.entity)
+                        identity.update(gorgon_class=gorgon.gorgon_class, types=list(gorgon.types))
                     result.append(
                         dict(
                             option=dict(
@@ -266,12 +280,13 @@ class DirectorInitiative:
                                 actor=actor.model_dump(mode="json"),
                                 label=role.label,
                                 source=dict(kind="native", id=source_id),
-                                subject="Act in the current scene",
+                                subject=subject,
                             ),
                             controller=str(role.controller),
                             dossier=dossier.model_dump(mode="json"),
                             references=[ref.model_dump(mode="json") for ref in refs],
-                            agenda={},
+                            agenda=agenda,
+                            role_identity=identity,
                             trigger={"kind": "current_turn" if turn else "current_scene"},
                             native_guard=native_guard,
                             alternate=delegated,
@@ -291,7 +306,12 @@ class DirectorInitiative:
             )
             refs = self.context._actor_references(references, actor)
             agendas = self._agendas(
-                c, scene, dossier, refs, pilot, approved.goals if handler else ""
+                c,
+                scene,
+                dossier,
+                refs,
+                pilot[1] if pilot else None,
+                approved.goals if handler else "",
             )
             for subject, agenda in agendas:
                 sources = []
@@ -336,7 +356,7 @@ class DirectorInitiative:
         scene: str,
         dossier: DossierPacket,
         references: tuple[KnowledgeReference, ...],
-        pilot: tuple[str, PilotPortrayal | None] | None,
+        portrayal: PilotPortrayal | None,
         handler_goals: str,
     ) -> list[tuple[str, dict[str, Any]]]:
         visible = {ref.id for ref in references}
@@ -358,7 +378,7 @@ class DirectorInitiative:
         ]
         # The current pressure list supersedes a starting aim when one has been filed.
         setup = dossier.profile.character_setup if dossier.profile else None
-        aim = (setup.drive if setup else "") or (pilot[1].goal if pilot and pilot[1] else "")
+        aim = (setup.drive if setup else "") or (portrayal.goal if portrayal else "")
         aim = aim or handler_goals
         if not pressures and aim.strip():
             active.append(
@@ -405,6 +425,7 @@ class DirectorInitiative:
                 "agenda": candidate["agenda"],
             },
             "available_actions": ["WAIT", "SCENE_OFFER"],
+            **({"identity": candidate["role_identity"]} if candidate.get("alternate") else {}),
             "native_plays": list(
                 candidate["native_plays"]
                 if candidate.get("alternate")

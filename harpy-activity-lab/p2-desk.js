@@ -483,8 +483,9 @@ export function openSheetPortrayal({activityFetch, scene, kind}) {
 
   async function load(openPreview = false) {
     const view = await request("portrayal-sheets");
-    const sheets = view.sheets.filter(sheet => kind === "pilot"
-      ? ["pilot", "npc"].includes(sheet.actor.kind) : sheet.actor.kind === kind);
+    const kinds = kind === "pilot" ? ["pilot", "npc"]
+      : kind === "alternate" ? ["npc", "gorgon", "external_pilot"] : [kind];
+    const sheets = view.sheets.filter(sheet => kinds.includes(sheet.actor.kind));
     const sheet = sheets.find(sheet => sheet.token === token) ?? sheets.find(x => x.actor.kind === kind) ?? sheets[0];
     body.replaceChildren();
     if (!sheet) {
@@ -3104,8 +3105,8 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       if (activityShadow) renderAIPilotReview(work);
       if (gm) renderFacilitator(gm);
       if (pilotDossiers) renderPilotDossiers(pilotDossiers, work);
-      body.append(button("Open NPC portrayal", () =>
-        openSheetPortrayal({activityFetch, scene, kind:"npc"})));
+      body.append(button("Open alternate actor portrayal", () =>
+        openSheetPortrayal({activityFetch, scene, kind:"alternate"})));
       renderOwn(work);
     }
     if (!work || !gm) renderTimingReviews(body, timingReview?.items);

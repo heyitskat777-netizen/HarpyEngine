@@ -608,6 +608,13 @@ class ModelReactions:
             "Waiting or declining may fit. Speak only for the actor in this request. "
             "The actual controller reviews the proposal and owns its decisions. "
         )
+        if packet.get("activity_alternate"):
+            instructions += (
+                "Use identity only to ground this character's own role and instincts. "
+                "Their approved drive, fear and situation determine what they do. "
+                "Keep rules terms and resources out of in-character lines. "
+                "Leave anyone else's actions, feelings and decisions open. "
+            )
         if initiative:
             draft = self.client.generate(
                 instructions

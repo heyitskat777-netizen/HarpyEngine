@@ -92,3 +92,81 @@ historical. The current verification covers the alternate initiative and
 affected native paths. Full regression, browser interaction on the real
 Discord Activity, paid provider validation, and real-player acceptance
 remain separate.
+
+## Mixed-cast verification
+
+The expanded suites ran on `6a3de3f` with disposable SQLite campaigns.
+The affected Activity tests also ran on the follow-up that adds Patron and
+Smuggler handovers and the Gorgon contest controls. The native suites cover
+candidate mechanics behind their existing fixture policies and release gates.
+
+| Synthetic selection | Result | Coverage |
+| --- | --- | --- |
+| `tests/rules/test_npc*.py` and `test_battlefield_attack_parity.py` | 32 passed | Local handovers, care, personal Bonds and Use, Intelligence, Orders and Disobey, source-bound Flirt, ownership and Battlefield assault. |
+| `tests/rules/test_harpy*.py` and `tests/rules/test_actor_play*.py` | 148 passed | Original Harpy body and resources, shared Plays and responses, actual NPC Core target, advancements, rest and Defeat. |
+| `tests/rules/test_gorgon*.py` | 157 passed | Class and Type mechanics with actual NPC, Harpy and Gorgon targets, defense ownership, Collateral Damage, Warp, Asset contests and source-bound restart. |
+| `harpy-activity-lab/test_alternate_initiative.py` on `1ce3ffdf` | 16 passed | Live-path HTTP in the local simulator, three NPC handovers and mixed-cast Gorgon Attack through the private owned controls. |
+
+| `test_sniff_out.py`, `test_leviathan_obsession_flow.py`, `test_journalist.py`, `test_sprite_source.py`, and `test_physiotherapist.py` | 21 passed | Specialist source and interaction cases held outside the role-prefixed files. |
+| `test_cast_service.py`, `test_alpha_brutalize.py`, `test_ankou_npc_brutalize_feedback.py`, `test_princess_npc_conversation.py`, `test_pilot_candidate_promotion.py`, and `test_psychologist.py` | 25 passed | Printed NPC job prompts, Guard response, directed discussion, approved promotion, and the Psychologist's owned countermeasures. |
+
+Run the three native selections with the same `PYTHONPATH`, adapter, and
+`mission_lab.ENGINE` wrapper documented above. Supply the full listed file
+selection without a `-k` expression. Run the synthetic Activity test file
+with `python -m pytest -q --tb=short harpy-activity-lab/test_alternate_initiative.py`.
+
+| Interaction | Proven behavior and remaining boundary |
+| --- | --- |
+| NPC to Girl | Fan, Patron and Smuggler work in the Activity. Intelligence, native care, journalist work, Orders and source-assigned Flirt use their native controls. The handover services require a local, out-of-Frame Girl as the recipient. |
+| NPC to Harpy or Gorgon | There is no general NPC attack or voluntary cross-cast handover in the reviewed projection. Guard counters and NPC Flirt stay tied to actual triggering Plays. NPC control transfers do not make another species eligible for a job effect. |
+| Harpy to NPC | Native Go For the Core completes against an eligible NPC without taking the controller's Pilot resources. Its independent AI Activity start still needs the actual battle declaration and follow-up form. |
+| Harpy to Gorgon or other Harpy | Source-linked Harpy Keep and the Gorgon Asset contest have native outcome evidence. Independent Harpy attack and normal answers outside the tested Activity choices still use the source-specific native controls. |
+| Gorgon to NPC, Harpy or Gorgon | Activity Attack completes against all three. The Harpy or Gorgon defender selects their own pitted Assets, and the original adjudicator selects the actual losing Asset. A Sprite interception, assigned counter or resulting Defeat follows its original workflow. Other Gorgon declarations require their typed trigger and an Activity initiative bridge. |
+
+## Alternate actor control and portrayal
+
+The facilitator can prepare an available alternate-role initiative and request
+a reviewed draft from the existing Pilot model route. Only the current native
+controller can delegate the role, confirm its dossier, approve the draft and
+start the native Play. A facilitator can do those steps for an actor they
+actually control and can adjudicate an outcome when the native workflow assigns
+them that role. The narrower role packet enters generation even when the
+facilitator can see more of the world.
+
+NPC, Harpy and Gorgon owners can use **Open alternate actor portrayal** in
+the Activity Director work. The approved version carries voice, current drive,
+fear, contradiction, limits and contextual reactions. NPC jobs, the actual
+Harpy Frame, and Gorgon Class and Types enter generation from the actor's own
+engine state. The existing scoped memory and agenda logic supplies approved
+motivations and witnessed evidence. Pending drafts and another actor's
+portrayal stay outside the prompt. The model can propose or wait, and a
+proposal or portrayal edit grants no native Play authority.
+
+NPCs already have an independent reviewed dialogue route when they are
+addressed. Harpy and Gorgon AI currently propose from available native
+initiative. They still need a reviewed standalone dialogue path with precise
+hearing, independently triggered scene participation, and a sustained
+mixed-cast rehearsal before comparing their narrative quality with the Girls
+and Handler. Cross-cast memory can reference authorized evidence, while
+relationship subjects outside the existing identity projection remain gated.
+The checks use authored traits and a stub, so they establish the actual
+prompt and privacy boundary.
+
+The final Activity suite passed 19 tests (49.33 seconds). Its three portrayal
+cases verify the approved voice, drive, and source-backed role identity after
+restart, a rejected edit from another controller, and exclusion of unpublished
+drafts before model generation. Nine focused Director, dossier, Pilot
+initiative and Play catalog checks passed (108 deselected, 10.64 seconds).
+Scoped Ruff, mypy, JavaScript syntax and patch whitespace checks passed.
+These runs exclude the full repository regression and authenticated Discord.
+
+```sh
+python -m pytest -q --tb=short \
+  tests/rules/test_{sniff_out,leviathan_obsession_flow,journalist,sprite_source,physiotherapist}.py
+python -m pytest -q --tb=short \
+  tests/rules/test_{cast_service,alpha_brutalize,ankou_npc_brutalize_feedback,princess_npc_conversation,pilot_candidate_promotion,psychologist}.py
+python -m pytest -q --tb=short \
+  tests/test_{director_initiative,director_dossiers,director_reactions}.py \
+  tests/test_native_ai_pilot_initiative.py harpy-activity-lab/test_play_catalog.py \
+  -k 'initiative or controller_confirmation or npc_and_pilot or generated_pilot_uses or sheet_experiences or reuse_a_human or delivery or npc_reaction'
+```

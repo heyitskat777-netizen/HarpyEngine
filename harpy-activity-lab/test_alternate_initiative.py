@@ -395,6 +395,115 @@ def test_activity_gorgon_attack_resolves_actual_cross_role_targets(ledger, oppon
     assert game.dice.calls == 0
 
 
+@pytest.mark.parametrize(
+    ("kind", "identity", "voice", "drive"),
+    (
+        (
+            "npc",
+            {"kind": "npc", "jobs": ["fan"]},
+            "Familiar, quick to tease, protective when asked to explain herself.",
+            "Keep the door open for one more person.",
+        ),
+        (
+            "external_pilot",
+            {"kind": "harpy", "frame": "harpy"},
+            "Dry and guarded, then names one practical thing she can do.",
+            "Keep the old squad's names out of the public account.",
+        ),
+        (
+            "gorgon",
+            {"kind": "gorgon", "gorgon_class": "erratic", "types": ["incubus"]},
+            "Carefully echoes a phrase, then asks for the one word it missed.",
+            "Hold a route open without separating from its own group.",
+        ),
+    ),
+)
+def test_alternate_personality_is_owned_approved_and_used_by_the_facilitator(
+    ledger, kind, identity, voice, drive
+):
+    game, _, _, owner, actor, target, _ = native_case(ledger, kind)
+    target_token = current_ref(state(game), target.user_id).token
+
+    packets = []
+
+    class PortrayalStub(Stub):
+        def generate(self, instructions, packet, response):
+            packets.append(packet["role"])
+            return super().generate(instructions, packet, response)
+
+    model = PortrayalStub(target_token)
+    app = activity(game, model)
+    with ledger.engine.connect() as c:
+        scene = game.scene(c, 900)["id"]
+    setup_initiative(game, scene, app)
+    actor_data = actor.model_dump(mode="json")
+    original = {"actor": actor_data, "version": 0, "portrayal": {"voice": voice}}
+    with pytest.raises(WorkflowError, match="controlled by another"):
+        app.write(OTHER, "borrow-voice", scene, "portrayal-draft", original)
+    draft = app.write(owner, "own-voice", scene, "portrayal-draft", original)
+    app.write(
+        owner,
+        "approve-voice",
+        scene,
+        "portrayal-confirm",
+        {
+            "actor": actor_data,
+            "id": draft["id"],
+        },
+    )
+    direction = app.write(
+        owner,
+        "own-drive",
+        scene,
+        "portrayal-draft",
+        {
+            "actor": actor_data,
+            "version": 1,
+            "character_setup": {"drive": drive},
+        },
+    )
+    app.write(
+        owner,
+        "approve-drive",
+        scene,
+        "portrayal-confirm",
+        {
+            "actor": actor_data,
+            "id": direction["id"],
+        },
+    )
+    app.write(
+        owner,
+        "private-draft",
+        scene,
+        "portrayal-draft",
+        {
+            "actor": actor_data,
+            "version": 2,
+            "portrayal": {"voice": "Unapproved private revision"},
+        },
+    )
+    assert all(
+        item["token"] != actor.token
+        for item in app.read(OTHER, scene, "portrayal-sheets")["sheets"]
+    )
+    assert any(
+        item["token"] == actor.token
+        for item in app.read(owner, scene, "portrayal-sheets")["sheets"]
+    )
+    ledger.engine.dispose()
+    reopened = activity(game, model)
+    before = state(game)
+    assert propose(reopened, scene, owner, actor)
+    assert model.calls == 1 and state(game) == before
+    (role,) = packets
+    assert role["identity"] == identity
+    assert role["dossier"]["profile"]["voice"] == voice
+    assert role["dossier"]["profile"]["character_setup"]["drive"] == drive
+    assert role["initiative"]["agenda"]["plan"]["stake"] == drive
+    assert "Unapproved private revision" not in str(role)
+
+
 @pytest.mark.parametrize("changed", ("turn", "controller", "consent", "control"))
 def test_changed_authority_or_turn_rejects_approved_start(ledger, changed):
     import json

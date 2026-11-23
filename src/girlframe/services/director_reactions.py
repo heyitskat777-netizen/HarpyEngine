@@ -122,9 +122,9 @@ class DirectorReactionService:
                 raise WorkflowError(
                     "AI_PILOT_UNAVAILABLE: recover the approved AI Pilot and batch."
                 )
-        own = dossiers._role_packet(c, scene, actor, activity_pilot=activity_pilot).model_dump(
-            mode="json"
-        )
+        own = dossiers._role_packet(
+            c, scene, actor, activity_pilot=activity_pilot or actor.kind == "npc"
+        ).model_dump(mode="json")
         fronts = DirectorFrontService(self.context)._actor_view(c, scene, actor)
         refs = self.context._actor_references(self.context._current(c, scene), actor)
         heard = knowledge.heard(c, scene, source_id, actor) if source.kind == "message" else ()

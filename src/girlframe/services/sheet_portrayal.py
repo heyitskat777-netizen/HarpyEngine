@@ -61,11 +61,16 @@ class SheetPortrayalService:
     def _own(
         self, c: Connection, viewer: GuildViewer, canon: GameState, actor: ActorRef
     ) -> ActorView:
-        if actor.kind not in ("pilot", "npc", "handler"):
-            raise WorkflowError("PORTRAYAL_ACTOR: select an owned Pilot, NPC or Handler sheet.")
+        if actor.kind not in ("pilot", "npc", "handler", "gorgon", "external_pilot"):
+            raise WorkflowError("PORTRAYAL_ACTOR: select a supported owned character sheet.")
         if actor.kind == "handler" and actor != active_handler(canon):
             raise WorkflowError("PORTRAYAL_ACTOR: select the active Handler's sheet.")
-        return self.dossiers.actors._actor(c, viewer, canon, actor)
+        actual = self.dossiers.actors._actor(c, viewer, canon, actor)
+        if actor.kind == "external_pilot" and actual.girl != "harpy":
+            raise WorkflowError("PORTRAYAL_ACTOR: select the actual Harpy body.")
+        if actor.kind in ("external_pilot", "gorgon") and not actual.alive:
+            raise WorkflowError("PORTRAYAL_ACTOR: select an active character.")
+        return actual
 
     def _latest(self, c: Connection, viewer: GuildViewer, actor: ActorRef) -> SheetDraft | None:
         body = c.scalar(
@@ -218,7 +223,9 @@ class SheetPortrayalService:
         return state.model_copy(update={"pressures": entries})
 
     def _memory_allowed(self, c: Connection, scene: str, actor: ActorRef) -> bool:
-        return actor.kind == "handler" or actor in self.dossiers.activity_pilots(c, scene)
+        return actor.kind in ("handler", "npc", "gorgon", "external_pilot") or (
+            actor in self.dossiers.activity_pilots(c, scene)
+        )
 
     def _pressure_available(
         self,
@@ -314,7 +321,7 @@ class SheetPortrayalService:
             if actor is None:
                 raise WorkflowError("DOSSIER_NOT_OWNED: use your own actual actor.")
             self._own(c, viewer, canon, actor)
-            guided_pilot = actor.kind == "npc" or (
+            guided_pilot = actor.kind in ("npc", "gorgon", "external_pilot") or (
                 actor.kind == "pilot" and actor in self.dossiers.activity_pilots(c, scene)
             )
             packet = self.dossiers._role_packet(
@@ -444,7 +451,7 @@ class SheetPortrayalService:
             elif memory is not None:
                 if not self._memory_allowed(c, scene, actor):
                     raise WorkflowError(
-                        "AI_PILOT_UNAVAILABLE: choose your approved AI Pilot or active Handler."
+                        "AI_PILOT_UNAVAILABLE: choose an owned, supported AI character."
                     )
                 context = self.dossiers._context(c, scene, actor)
                 references = {
