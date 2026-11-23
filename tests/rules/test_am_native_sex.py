@@ -82,7 +82,7 @@ def test_actual_native_am_pair_independent_no_roll_scene_animal_gift_and_private
     monkeypatch.setattr(
         game_fixture, "selected", lambda girl, frame: original_selected("AM", frame)
     )
-    missions, game = service(ledger, girl="AM", frame="JANUS-B")
+    missions, game = service(ledger, girl="AM", frame="JANUS")
     assert {x.girl for x in state(game).sheets.values()} == {"AM"}
     approved(ledger, game, tmp_path, monkeypatch, extra=(rules.RULE, gender.RULE, ordinary.RULE))
     ledger.policy = ledger.policy.model_copy(

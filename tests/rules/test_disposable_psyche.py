@@ -69,16 +69,14 @@ def mark_native(game, identity, gain, extra, heat):
         await interaction.response.defer(ephemeral=True)
         await open_play(interaction, game, _pilot=True)
         form = interaction.edit_original_response.call_args.kwargs["view"]
+        assert all(x.key != "disposable_heat" for x in form.fields)
+        form.values.update(play=("keep_your_head",), identity=(identity,))
+        form.controls()
         assert any(x.key == "disposable_heat" for x in form.fields)
         form.values.update(
-            play=("keep_your_head",),
-            target=(),
-            identity=(identity,),
             gain=(str(gain),),
-            pair_share=("0",),
             heat=(str(heat),),
             piloting=("no",),
-            witnessed=("no",),
             context="I rely on this real Identity and discard it while evading danger",
             trigger=("yes",),
             disposable_heat=(str(extra),),
@@ -385,6 +383,8 @@ def test_native_off_duty_disposal_keeps_status_roll_and_actual_heat_receipt(
         await interaction.response.defer(ephemeral=True)
         await open_action(interaction, cycle, period, "play")
         form = interaction.edit_original_response.call_args.kwargs["view"]
+        form.values.update(play=("keep_your_head",), identity=(identity,))
+        form.controls()
         assert any(x.key == "disposable_heat" for x in form.fields)
         form.values.update(
             context="I mark and discard this real Identity during my time at base",
@@ -559,7 +559,7 @@ def test_actual_native_battery_disposal_preserves_tag_modifier_and_owned_effects
     from girlframe.services.m3_frame_control import FrameControlService
     from girlframe.services.m3_janus import JanusService
 
-    _, game = service(ledger, girl="STIM-BLISSED", frame="JANUS-B")
+    _, game = service(ledger, girl="STIM-BLISSED", frame="JANUS")
     approved(ledger, game, tmp_path, monkeypatch, extra=(rules.RULE, janus.CORE, janus.BATTERY))
     approval = ledger.policy.m3_approval
     ledger.policy = ledger.policy.model_copy(
@@ -606,6 +606,8 @@ def test_actual_native_battery_disposal_preserves_tag_modifier_and_owned_effects
         await own.response.defer(ephemeral=True)
         await open_battery(own, game, core)
         form = own.edit_original_response.call_args.kwargs["view"]
+        form.values.update(play=("keep_your_head",), identity=(identity,))
+        form.controls()
         assert any(x.key == "disposable_heat" for x in form.fields)
         form.values.update(
             account="I remove this original Identity while using the actual connected Core",

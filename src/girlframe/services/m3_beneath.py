@@ -777,6 +777,22 @@ def discipline_action(
     return str(action["id"])
 
 
+def discipline_ready(
+    game: "GameService", c: Connection, root: dict[str, Any], latest: dict[str, Any]
+) -> bool:
+    for work in latest.values():
+        if work["state"] == "resolved" or work["scene_id"] != root["scene_id"]:
+            continue
+        # Standalone Feedback and Void resistance need a free scene.
+        # Their required work survives completion of the confrontation.
+        if work["kind"] in ("ankou_feedback_sequence", "void_threshold"):
+            continue
+        origin = work_root(game, c, work)
+        if origin is not None and origin["id"] == root["id"]:
+            return False
+    return True
+
+
 def discipline_finished(
     game: "GameService",
     c: Connection,
@@ -804,11 +820,8 @@ def discipline_finished(
             .order_by(table.c.revision)
         ).mappings()
     }
-    for work in latest.values():
-        if work["state"] != "resolved":
-            origin = work_root(game, c, work)
-            if origin is not None and origin["id"] == root["id"]:
-                return
+    if not discipline_ready(game, c, root, latest):
+        return
     action = game.action(c, action_id)
     continuation = json.loads(root["body_json"])["continuation"]
     choices = t.m2["m2_choices"]

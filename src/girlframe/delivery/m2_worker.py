@@ -12,6 +12,7 @@ from girlframe.engine.m2_permissions import LOCK_MASK, merge, records
 from girlframe.services.m2_game import GameService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
+from girlframe.services.scene_safety import paused_scenes
 
 
 class GameGateway(Protocol):
@@ -35,19 +36,25 @@ class GameWorker:
         table = t.m2[table_name]
         now = int(self.game.store.clock())
         with self.game.store.transaction() as c:
-            row = (
-                c.execute(
-                    sa.select(table)
-                    .where(
-                        table.c.campaign_id == self.game.store.campaign_id,
-                        table.c.state.in_(states),
-                        table.c.lease_until <= now,
-                    )
-                    .order_by(sa.literal_column("rowid"))
-                    .limit(1)
+            eligible = sa.select(table).where(
+                table.c.campaign_id == self.game.store.campaign_id,
+                table.c.state.in_(states),
+                table.c.lease_until <= now,
+            )
+            paused = paused_scenes(c, self.game.store.campaign_id)
+            if paused:
+                actions = t.m2["m2_actions"]
+                blocked = sa.select(actions.c.id).where(
+                    actions.c.campaign_id == self.game.store.campaign_id,
+                    actions.c.scene_id.in_(paused),
                 )
-                .mappings()
-                .first()
+                # Restoration and delivery reconciliation can still run during a pause.
+                held_states = ("acquiring",) if table_name == "m2_locks" else ("pending",)
+                eligible = eligible.where(
+                    sa.or_(table.c.state.not_in(held_states), table.c.action_id.not_in(blocked))
+                )
+            row = (
+                c.execute(eligible.order_by(sa.literal_column("rowid")).limit(1)).mappings().first()
             )
             if row is None:
                 return None
@@ -108,6 +115,11 @@ class GameWorker:
             if action["state"] == "aborted":
                 self.update_lock(job, "releasing", body)
                 return
+            with self.game.store.engine.connect() as c:
+                blocked = action["scene_id"] in paused_scenes(c, self.game.store.campaign_id)
+            if blocked:
+                self.update_lock(job, "acquiring", body)
+                return
             self.game.gate()
             if "records" not in body:
                 snapshot = await gateway.snapshot(channel, action["data"]["participants"])
@@ -139,6 +151,11 @@ class GameWorker:
                 body["message_id"] = message
                 body["prompt_state"] = "sent"
             if body["prompt_state"] == "pending":
+                with self.game.store.engine.connect() as c:
+                    blocked = action["scene_id"] in paused_scenes(c, self.game.store.campaign_id)
+                if blocked:
+                    self.update_lock(job, "acquiring", body)
+                    return
                 body["prompt_state"] = "uncertain"
                 self.save_lock_body(job, body)
                 message = await gateway.publish(
@@ -205,17 +222,20 @@ class GameWorker:
                 return
             table = t.m2["m2_outbox"]
             with self.game.store.transaction() as c:
-                result = c.execute(
-                    table.update()
-                    .where(
-                        table.c.campaign_id == self.game.store.campaign_id,
-                        table.c.id == job["id"],
-                        table.c.state == "pending",
-                        table.c.claim_token == job["claim_token"],
-                    )
-                    .values(state="sending")
+                update = table.update().where(
+                    table.c.campaign_id == self.game.store.campaign_id,
+                    table.c.id == job["id"],
+                    table.c.state == "pending",
+                    table.c.claim_token == job["claim_token"],
                 )
-                if result.rowcount != 1:
+                active_pauses = paused_scenes(c, self.game.store.campaign_id)
+                if (
+                    active_pauses
+                    and self.game.action(c, job["action_id"])["scene_id"] in active_pauses
+                ):
+                    c.execute(update.values(claim_token=None, lease_until=0))
+                    return
+                if c.execute(update.values(state="sending")).rowcount != 1:
                     # A stale claim must not publish or rewrite the newer owner's job.
                     return
             payload["action_id"] = job["action_id"]
@@ -301,6 +321,8 @@ class GameWorker:
                 if not lock or lock["state"] != "held":
                     continue
             try:
+                with self.game.store.engine.connect() as c:
+                    self.game.scene_unpaused(c, action["scene_id"])
                 if action["data"]["play"] == "reign_reject_tag":
                     from girlframe.services.m2_state import load_state
                     from girlframe.services.m3_reign_terror import complete_rejection

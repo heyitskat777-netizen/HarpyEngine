@@ -1,0 +1,205 @@
+--- a/off_duty_review.py
++++ b/off_duty_review.py
+@@ -2,7 +2,11 @@
+
+ import json
+
++from girlframe.engine.m3_actor_bonds import current_ref
++from girlframe.engine.m3_janus_storage import ids as stored_ids
+ from girlframe.engine.m3_off_duty import HANDLER_SCENES, HandlerContext
++from girlframe.engine.m3_scientist_lab import LabAnswer, LabProposal
++from girlframe.engine.m3_trainer_phrases import PHRASES
+ from girlframe.engine.m3_world import ClassChange, Movement
+ from girlframe.engine.m3_world_state import Goal, Gorgon, Location
+ from girlframe.services.m2_state import load_state
+@@ -44,6 +48,22 @@
+             if scene is not None
+             else None,
+         }
++        if scene and scene["kind"] == "scientist_lab":
++            attendance = card["attendance"]
++            attendance["lab"] = scene["lab"]
++            if not handler and not attendance["confirmed"]:
++                with self.cycle.store.engine.connect() as connection:
++                    state = load_state(connection, self.cycle.store.campaign_id)
++                    actor = current_ref(state, viewer.user_id)
++                    if scene["character_ids"].get(actor.entity) == actor.incarnation:
++                        stored = stored_ids(state, actor)
++                        assets = [x for x in state.sheets[actor.entity].assets if x.family == "girl"]
++                        attendance["lab_assets"] = {
++                            "restore": [(x.id, x.name) for x in assets if x.void and x.id not in stored],
++                            "replace": [(x.id, x.name) for x in assets],
++                        }
++        if scene and scene["kind"] == "trainer_conditioning":
++            card["attendance"]["phrase"] = dict(PHRASES)[scene["conditioning_phrase"]]
+         if not handler or review["phase"] != "active":
+             return card
+         with self.cycle.store.engine.connect() as connection:
+@@ -76,6 +96,13 @@
+                 for kind in HANDLER_SCENES
+                 if world or kind not in ("prisoner", "npc_employment")
+             ]
++            if review["scientist_lab_available"]:
++                card["scene_kinds"].append("scientist_lab")
++            if review["trainer_can_install_speak"]:
++                card["scene_kinds"].append("trainer_conditioning")
++                card["conditioning_phrases"] = [
++                    (key, label) for key, label in PHRASES
++                ]
+             card["npcs"] = [
+                 {
+                     "id": "npc:" + row["id"],
+@@ -170,19 +197,27 @@
+         viewer = args[0]
+         if action == "activate_period" and not answer:
+             return self.cycle.activate(*args)
+-        if action == "acknowledge_handler_scene" and not answer:
+-            return self.cycle.acknowledge(*args, None)
++        if action == "acknowledge_handler_scene":
++            if not answer:
++                return self.cycle.acknowledge(*args, None)
++            if answer.keys() == {"lab"}:
++                return self.cycle.acknowledge(*args, None, LabAnswer.model_validate(answer["lab"]))
+         if action == "review_status" and answer.keys() == {"order", "account"}:
+             return self.cycle.review_status(
+                 *args, account_ids(answer["order"]), answer["account"]
+             )
+-        if action == "set_handler_scene" and answer.keys() == {
+-            "kind",
+-            "participants",
+-            "summary",
+-            "recipient",
+-            "context",
+-        }:
++        if action == "set_handler_scene":
++            fields = {
++                "scientist_lab": {"lab"},
++                "trainer_conditioning": {"conditioning_phrase"},
++            }.get(answer.get("kind"), set())
++            if answer.keys() != fields | {
++                "kind", "participants", "summary", "recipient", "context",
++            }:
++                raise ValueError("Complete the selected Handler scene's fields.")
++            phrase = answer.get("conditioning_phrase")
++            if "conditioning_phrase" in fields and phrase not in dict(PHRASES):
++                raise ValueError("Choose a printed Conditioning Phrase.")
+             recipient = answer["recipient"]
+             return self.cycle.handler_scene(
+                 *args,
+@@ -193,6 +228,8 @@
+                 HandlerContext.model_validate_json(json.dumps(answer["context"]))
+                 if answer["context"] is not None
+                 else None,
++                conditioning_phrase=phrase,
++                lab=LabProposal.model_validate(answer["lab"]) if "lab" in fields else None,
+             )
+         if action == "finish_period" and answer.keys() == {"moves", "changes"}:
+             if not isinstance(answer["moves"], list) or not isinstance(
+--- a/handler_punishments.py
++++ b/handler_punishments.py
+@@ -239,6 +239,7 @@
+             "action": "apply_off_duty_punishment",
+             "forms": instruction_forms(kinds, choices, ()),
+             "consult_moderate": delegated,
++            "conditioning_phrases": detail.get("conditioning_phrases", ()),
+         }
+
+     def perform(self, viewer, key, data):
+@@ -378,11 +379,16 @@
+                         "The designated Handler must approve the proposal first."
+                     )
+                 answer = self.discipline.get(viewer, consultation["id"])["proposal"]
++            phrase = answer.get("conditioning_phrase")
++            if "conditioning_phrase" in answer:
++                if action != "apply_off_duty_punishment" or not isinstance(phrase, str):
++                    raise ValueError("Choose a phrase only for the original Trainer's Punishment.")
++                answer = {key: value for key, value in answer.items() if key != "conditioning_phrase"}
+             details = discipline_details(answer)
+             if action == "request_punishment_consult":
+                 return self.discipline.consult(*args, details)
+             if action in ("apply_off_duty_punishment", "apply_approved_punishment"):
+-                return self.discipline.apply(*args, details)
++                return self.discipline.apply(*args, details, conditioning_phrase=phrase)
+         if (
+             action == "punishment_helpless"
+             and answer.keys() == {"inside_frame", "evidence"}
+--- a/player-setup.js
++++ b/player-setup.js
+@@ -752,10 +752,15 @@
+       else if (spec.key === "asset" && value.startsWith("part:")) answer.body_part = value.slice(5);
+       else answer[spec.key] = value;
+     }
++    const phrase = values.get("conditioning_phrase");
++    if (phrase) answer.conditioning_phrase = phrase;
+     send(answer, card.consult_moderate && current.severity === "moderate" ? "request_punishment_consult" : card.action);
+   });
+   const kind = offDutySelect(entry, "kind", "Punishment", card.forms.filter(item => item.available)
+     .map(item => [item.id,item.label]), {required:true});
++  if (card.conditioning_phrases?.length) {
++    offDutySelect(entry, "conditioning_phrase", "Optional Conditioning Phrase to install", card.conditioning_phrases);
++  }
+   const fields = [];
+   kind.addEventListener("change", () => {
+     while (fields.length) fields.pop().remove();
+@@ -1076,7 +1081,26 @@
+   if (closing.attendance) {
+     const {summary, confirmed, remaining} = closing.attendance;
+     panel.append(element("p", summary));
+-    if (!confirmed) panel.append(action("Confirm my Handler scene attendance", () => send("acknowledge_handler_scene", {})));
++    if (closing.attendance.phrase) panel.append(element("p", closing.attendance.phrase));
++    if (closing.attendance.lab) {
++      panel.append(element("p", closing.attendance.lab.name), element("p", closing.attendance.lab.description));
++    }
++    if (!confirmed && closing.attendance.lab_assets) {
++      const assets = closing.attendance.lab_assets;
++      if (assets.restore.length) {
++        const lab = form(panel, "Confirm attendance and Asset choices", values => send("acknowledge_handler_scene", {
++          lab: {remove_void:values.get("restore"), replace:values.get("replace") || null},
++        }));
++        const restore = offDutySelect(lab, "restore", "Girl Asset to clear of Void", assets.restore, {required:true});
++        const replace = offDutySelect(lab, "replace", "Replace a different Girl Asset if needed", assets.replace);
++        const update = () => {
++          for (const option of replace.options) option.disabled = Boolean(option.value && option.value === restore.value);
++          if (replace.selectedOptions[0]?.disabled) replace.value = "";
++        };
++        restore.addEventListener("change", update);
++        update();
++      } else panel.append(element("p", "This scene needs one eligible Void-touched Girl Asset."));
++    } else if (!confirmed) panel.append(action("Confirm my Handler scene attendance", () => send("acknowledge_handler_scene", {})));
+     else if (remaining) panel.append(element("p", "Waiting for the other participants to confirm their attendance."));
+   } else if (closing.handler && closing.scene_kinds?.length && closing.participants.length) {
+     renderHandlerOffDutyScene(panel, closing, send);
+@@ -1245,14 +1269,20 @@
+     send("set_handler_scene", {
+       kind, participants:values.getAll("participants"), summary:values.get("summary"),
+       recipient:values.get("recipient"), context,
++      ...(kind === "scientist_lab" ? {lab:{name:values.get("lab_name"), description:values.get("lab_description")}} : {}),
++      ...(kind === "trainer_conditioning" ? {conditioning_phrase:values.get("conditioning_phrase")} : {}),
+     });
+   });
+-  const sceneType = offDutySelect(scene, "kind", "Handler scene", closing.scene_kinds.map(kind => [kind, kind.replaceAll("_", " ")]), {required:true});
++  const sceneType = offDutySelect(scene, "kind", "Handler scene", closing.scene_kinds.map(kind => [kind,
++    ({scientist_lab:"Head to the Lab", trainer_conditioning:"Conditioning Phrases"})[kind] ?? kind.replaceAll("_", " ")]), {required:true});
+   const people = offDutySelect(scene, "participants", "Participating pilots", closing.participants, {required:true,multiple:true});
+   const recipient = offDutySelect(scene, "recipient", "Affected pilot", []);
+   const entity = offDutySelect(scene, "entity", "Original NPC or prisoner", []);
+   const operation = offDutySelect(scene, "operation", "Employment decision", []);
+   const tags = offDutySelect(scene, "tags", "Actual NPC Tags", [], {multiple:true});
++  const labName = input(scene, "lab_name", "New Void Asset name", "", 80);
++  const labDescription = input(scene, "lab_description", "New Void Asset description", "", 1200);
++  const phrase = offDutySelect(scene, "conditioning_phrase", "Phrase to install", closing.conditioning_phrases ?? []);
+   input(scene, "summary", "Scene account", "", 1200);
+   function options(control, rows, multiple = false) {
+     const selected = new Set([...control.selectedOptions].map(option => option.value));
+@@ -1277,6 +1307,11 @@
+     toggleField(entity, employment || prisoner);
+     toggleField(operation, employment);
+     toggleField(tags, employment && operation.value === "deprogram");
++    toggleField(labName, kind === "scientist_lab");
++    toggleField(labDescription, kind === "scientist_lab");
++    toggleField(phrase, kind === "trainer_conditioning");
++    const privatePair = ["scientist_lab", "trainer_conditioning"].includes(kind);
++    people.setCustomValidity(privatePair && participants.size !== 1 ? "Choose one attending Girl." : "");
+   };
+   for (const control of [sceneType, people, entity, operation]) control.addEventListener("change", update);
+   update();

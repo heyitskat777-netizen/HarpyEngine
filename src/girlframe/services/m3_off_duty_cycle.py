@@ -20,7 +20,9 @@ from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_careers import can_pilot, original_sheet
 from girlframe.engine.m3_core import Recovery
 from girlframe.engine.m3_intracadre_marriage import status_groups
+from girlframe.engine.m3_scientist_lab import LabAnswer, LabProposal
 from girlframe.engine.m3_strain_state import TRACKS, Trigger
+from girlframe.engine.m3_trainer_phrases import Phrase
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_choices import ChoiceEngine
 from girlframe.services.m2_state import load_state
@@ -226,8 +228,10 @@ class CycleService:
                 punishment_body.update(character=subject.incarnation)
                 punishment_body.update(marriage.allocation_fields(state, updated.handler_work))
             if kind == "m3.off_duty_activated":
+                from girlframe.services.m3_mother_sprite import mature_at_start
                 from girlframe.services.m3_red_queen import reset_at_start as reset_court
 
+                mature_at_start(self.game, c, state, identity, event_id)
                 for uid in updated.pilots:
                     sheet = state.sheets.get(str(uid))
                     if sheet is not None and sheet.character_id == updated.character_ids.get(
@@ -324,19 +328,37 @@ class CycleService:
             ):
                 raise WorkflowError("Finish the real world setup and Strain cycle first.")
             base = [x for x in strain.events if x.period_id == identity and x.parent is None]
+            from girlframe.services.m3_custom_strain import completed_replacements
+            from girlframe.services.m3_strain import StrainService
+
+            custom_events = completed_replacements(c, StrainService(self.periods), state, identity)
+            tracks = [x.track for x in base] + [x.track for x in custom_events]
             if (
-                len(base) != 3
-                or {x.track for x in base} != set(TRACKS)
+                len(tracks) != 3
+                or set(tracks) != set(TRACKS)
                 or any(x.column is None for x in base)
             ):
-                raise WorkflowError("All three real Strain rolls need saved column choices.")
+                raise WorkflowError(
+                    "Each Strain track needs a saved choice or performed custom event."
+                )
             work = self.periods._pending(c, identity)
             start = [x for x in work if x["kind"] == "off_duty_strain_start"]
+            from girlframe.services.m3_budget_demotion import due as due_demotion
+            from girlframe.services.m3_budget_trial import due as due_trial
+            from girlframe.services.m3_rebel_succession import due as due_succession
+
+            strain_service = StrainService(self.periods)
+            demotion = due_demotion(c, strain_service, state, identity)
+            execution = due_trial(c, strain_service, state, identity)
+            succession = due_succession(c, strain_service, state, identity)
             blockers = frozenset(
                 x["id"]
                 for x in work
                 if x["kind"]
                 not in ("off_duty_strain_start", "off_duty_handler_scene", "off_duty_status_review")
+                and (execution is None or x["id"] != execution[1].id)
+                and (demotion is None or x["id"] != demotion.id)
+                and (succession is None or x["id"] != succession.id)
                 and not (
                     x["kind"] == "punishment"
                     and json.loads(x["body_json"]).get("due_stage") == "active"
@@ -369,7 +391,30 @@ class CycleService:
             ):
                 raise WorkflowError("Resolve actual start triggers and immediate sheet work first.")
             updated = rules.activate(period, period.revision, pending_preparation=blockers)
-            return updated, state, start, {"source_pdf": 142, "strain_events": [x.id for x in base]}
+            from girlframe.engine.m3_void_leave import leaves as reserved_leave
+            from girlframe.engine.m3_void_leave import start as start_leave
+
+            if any(x.period == identity and x.departed is None for x in reserved_leave(state)):
+                from girlframe.services.m3_medical import MedicalService
+
+                _, appointment = MedicalService(self.store)._handler(c)
+                away = start_leave(state, identity, event_id, appointment)
+                assert away is not None
+                updated.handler_scene = rules.Scene(
+                    kind="void_leave",
+                    participants=(viewer.user_id,),
+                    roles=(away.handler,),
+                    summary=away.account,
+                )
+            return (
+                updated,
+                state,
+                start,
+                (
+                    {"source_pdf": 142, "strain_events": [x.id for x in base]}
+                    | ({"custom_events": [x.id for x in custom_events]} if custom_events else {})
+                ),
+            )
 
         return self._change(
             viewer, key, identity, expected, game_revision, "m3.off_duty_activated", {}, change
@@ -509,13 +554,23 @@ class CycleService:
         expected: int,
         game_revision: int,
         scene_owner: int | None,
+        lab_answer: LabAnswer | None = None,
     ) -> dict[str, Any]:
+        if lab_answer is not None:
+            lab_answer = LabAnswer.model_validate_json(lab_answer.model_dump_json())
+
         def change(c: Connection, period: rules.Period, state: GameState, event_id: str) -> Outcome:
             actual_scene = (
                 period.handler_scene
                 if scene_owner is None
                 else (period.progress.get(str(scene_owner), rules.Progress()).scene)
             )
+            if lab_answer is not None and (
+                scene_owner is not None
+                or actual_scene is None
+                or actual_scene.kind != "scientist_lab"
+            ):
+                raise WorkflowError("Asset choices belong only to an actual Scientist lab scene")
             if actual_scene is not None and str(viewer.user_id) in (
                 actual_scene.character_ids or period.character_ids
             ):
@@ -559,7 +614,17 @@ class CycleService:
             if scene_owner is None:
                 scene = updated.handler_scene
                 assert scene is not None
+                if scene.kind == "scientist_lab":
+                    from girlframe.services.m3_scientist_lab import attest as lab_attest
+
+                    lab_attest(
+                        self.game, c, state, updated, scene, viewer.user_id, lab_answer, event_id
+                    )
                 if set(scene.participants) == set(scene.acknowledgements):
+                    if scene.kind == "trainer_conditioning":
+                        from girlframe.services.m3_trainer_phrases import complete_training
+
+                        complete_training(self.game, c, state, updated, event_id)
                     if scene.kind in ("npc_employment", "prisoner"):
                         self.missions.access.authorize(c, viewer, "world")
                         self._handler_entity(
@@ -712,7 +777,8 @@ class CycleService:
             expected,
             game_revision,
             "m3.off_duty_scene_attested",
-            {"scene_owner": scene_owner},
+            {"scene_owner": scene_owner}
+            | ({"lab_answer": lab_answer.model_dump(mode="json")} if lab_answer else {}),
             change,
             director_response=scene_owner is not None,
         )
@@ -838,13 +904,17 @@ class CycleService:
         summary: str,
         recipient: int | None = None,
         context: rules.HandlerContext | None = None,
+        conditioning_phrase: Phrase | None = None,
+        lab: LabProposal | None = None,
     ) -> dict[str, Any]:
         if context is not None:
             context = rules.HandlerContext.model_validate_json(context.model_dump_json())
+        if lab is not None:
+            lab = LabProposal.model_validate_json(lab.model_dump_json())
 
         def change(c: Connection, period: rules.Period, state: GameState, event_id: str) -> Outcome:
             self.missions._handler(c, viewer)
-            if kind not in rules.HANDLER_SCENES:
+            if kind not in (*rules.HANDLER_SCENES, "trainer_conditioning", "scientist_lab"):
                 raise WorkflowError("Choose a printed Handler scene.")
             extra: frozenset[int] = frozenset()
             if kind in ("npc_employment", "prisoner"):
@@ -864,6 +934,14 @@ class CycleService:
                 tuple(dict.fromkeys(participants + tuple(extra))),
                 independent=extra,
             )
+            if kind == "trainer_conditioning":
+                from girlframe.services.m3_trainer_phrases import training_target
+
+                training_target(self.game, c, state, period, people, conditioning_phrase)
+            if kind == "scientist_lab":
+                from girlframe.services.m3_scientist_lab import scope as lab_scope
+
+                lab_scope(self.game, c, state, period, people)
             updated = rules.handler_scene(
                 period,
                 expected,
@@ -872,6 +950,8 @@ class CycleService:
                 people,
                 summary,
                 extra_participants=extra,
+                conditioning_phrase=conditioning_phrase,
+                lab=lab,
             )
             if (
                 kind in ("permission", "punish", "exploit")
@@ -902,6 +982,12 @@ class CycleService:
                 "summary": summary,
                 "recipient": recipient,
                 "context": context.model_dump(mode="json") if context else None,
+                **(
+                    {"conditioning_phrase": conditioning_phrase}
+                    if conditioning_phrase is not None
+                    else {}
+                ),
+                **({"lab": lab.model_dump(mode="json")} if lab is not None else {}),
             },
             change,
         )
@@ -919,7 +1005,22 @@ class CycleService:
         def change(c: Connection, period: rules.Period, state: GameState, event_id: str) -> Outcome:
             self.missions._handler(c, viewer)
             rules.current(period, expected)
-            pending = self.periods._pending(c, identity)
+            from girlframe.services.m3_budget_demotion import due as due_demotion
+            from girlframe.services.m3_budget_trial import due as due_trial
+            from girlframe.services.m3_rebel_succession import due as due_succession
+            from girlframe.services.m3_strain import StrainService
+
+            strain_service = StrainService(self.periods)
+            demotion = due_demotion(c, strain_service, state, identity)
+            execution = due_trial(c, strain_service, state, identity)
+            succession = due_succession(c, strain_service, state, identity)
+            pending = [
+                x
+                for x in self.periods._pending(c, identity)
+                if execution is None or x["id"] != execution[1].id
+                if demotion is None or x["id"] != demotion.id
+                if succession is None or x["id"] != succession.id
+            ]
             review = [x for x in pending if x["kind"] == "off_duty_status_review"]
             if (
                 (period.status_review is None and len(review) != 1)
@@ -948,12 +1049,19 @@ class CycleService:
                 positions = sorted(order.index(uid) for uid in group)
                 if positions != list(range(positions[0], positions[0] + len(group))):
                     raise WorkflowError("Review each actual married Status group together")
+            from girlframe.engine.m3_dogrunner import after_rank_change
+            from girlframe.engine.m3_dogrunner import owners as dogrunner_owners
+
+            designated_dogs = dogrunner_owners(state)
             former_dogs = set(groups[-1]) if groups else set()
             state.order = order
-            current_dogs = set(status_groups(state)[-1]) if state.order else set()
-            for former_dog in former_dogs - current_dogs:
-                # Hound's actual mark ends when this Girl is no longer The Dog.
-                state.sheets[str(former_dog)].status_marked = False
+            if designated_dogs is not None:
+                after_rank_change(state, designated_dogs, groups[-1] if groups else ())
+            else:
+                current_dogs = set(status_groups(state)[-1]) if state.order else set()
+                for former_dog in former_dogs - current_dogs:
+                    # Hound's actual mark ends when this Girl is no longer The Dog.
+                    state.sheets[str(former_dog)].status_marked = False
             return (
                 updated,
                 state,
@@ -974,6 +1082,9 @@ class CycleService:
 
     def review(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
         from girlframe.services.m3_frame_rewards import needs_refresh
+        from girlframe.services.m3_handler_book_orders import active_book
+        from girlframe.services.m3_scientist_lab import available as lab_available
+        from girlframe.services.m3_trainer_phrases import RULE as conditioning_rule
 
         with self.store.engine.connect() as c:
             period = self.periods._get(c, identity)
@@ -986,6 +1097,13 @@ class CycleService:
                 if progress.scene is not None and viewer.user_id in progress.scene.participants
             ]
             handler_scene = period.handler_scene
+            handler_scene_view = None
+            if handler_scene and viewer.user_id in handler_scene.participants:
+                handler_scene_view = handler_scene.model_dump(mode="json")
+                if viewer.user_id == period.handler and set(handler_scene.participants) != set(
+                    handler_scene.acknowledgements
+                ):
+                    handler_scene_view.pop("lab_answer", None)
             observation_people: frozenset[int] = frozenset()
             if own is not None and own.observation is not None:
                 from girlframe.engine.m3_observation import scene_roles
@@ -1043,12 +1161,30 @@ class CycleService:
                         ]
                     except (ValueError, WorkflowError):
                         pass
+            from girlframe.engine.m3_actor_bonds import current_ref
+            from girlframe.services.m3_princess_npc_orders import authority as princess_authority
+            from girlframe.services.m3_princess_npc_orders import review_candidates
+
+            princess = (
+                princess_authority(self.game, c, state, current_ref(state, viewer.user_id))
+                if period.phase == "active" and viewer.user_id in state.order
+                else None
+            )
             return {
                 **self.periods.get(viewer, identity),
                 "prime_investors": prime_investors,
                 "game_revision": state.revision,
                 "modular": modular,
                 "handler": period.handler,
+                "princess_upkeep_candidates": review_candidates(
+                    self.game, c, state, period, viewer
+                ),
+                "princess_can_order": princess is not None and princess.period == period.id,
+                "trainer_can_install_speak": viewer.user_id == period.handler
+                and active_book(self.game, c, state, book="Trainer", rule=conditioning_rule)
+                is not None,
+                "scientist_lab_available": viewer.user_id == period.handler
+                and lab_available(self.game, c, state) is not None,
                 "participants": tuple(
                     (str(uid), state.sheets[str(uid)].callsign) for uid in state.order
                 ),
@@ -1084,9 +1220,7 @@ class CycleService:
                     for uid in sorted(observation_people)
                     if uid not in period.pilots and uid != period.handler
                 ),
-                "handler_scene": handler_scene.model_dump(mode="json")
-                if handler_scene and viewer.user_id in handler_scene.participants
-                else None,
+                "handler_scene": handler_scene_view,
                 "status_reviewed": period.status_review is not None
                 and period.status_review_game_revision == state.revision,
                 "rewards_need_refresh": needs_refresh(c, self.store, state, period),
@@ -1133,7 +1267,22 @@ class CycleService:
                     require_prince_off_duty(
                         self.game, c, state, identity, prince_ref(state, prince_owner)
                     )
-            pending = frozenset(x["id"] for x in self.periods._pending(c, identity))
+            from girlframe.services.m3_budget_demotion import due as due_demotion
+            from girlframe.services.m3_budget_trial import due as due_trial
+            from girlframe.services.m3_rebel_succession import due as due_succession
+            from girlframe.services.m3_strain import StrainService
+
+            strain_service = StrainService(self.periods)
+            demotion = due_demotion(c, strain_service, state, identity)
+            execution = due_trial(c, strain_service, state, identity)
+            succession = due_succession(c, strain_service, state, identity)
+            pending = frozenset(
+                x["id"]
+                for x in self.periods._pending(c, identity)
+                if execution is None or x["id"] != execution[1].id
+                if demotion is None or x["id"] != demotion.id
+                if succession is None or x["id"] != succession.id
+            )
             # Prove actual completion before advancing any world entity.
             finished, updated = rules.finish(
                 period,
@@ -1205,9 +1354,14 @@ class CycleService:
                 updated.strain = updated.strain.model_copy(
                     update={"triggers": updated.strain.triggers + additions}
                 )
+            settled_trial = None
             if not severe:
+                from girlframe.engine.m3_handler_retirement import finish as retire_handler
+                from girlframe.engine.m3_rebel_defection import settle as settle_defections
                 from girlframe.engine.m3_repairs import close_period
+                from girlframe.engine.m3_void_leave import finish as finish_leave
 
+                settle_defections(updated, identity, event)
                 updated = close_period(updated, identity)
                 from girlframe.engine.m3_actor_bonds import current_ref as ended_period_actor
                 from girlframe.services.m3_ankou import off_duty_complete as finish_ankou_period
@@ -1220,6 +1374,50 @@ class CycleService:
                         finish_ankou_period(
                             self.game, c, updated, ended_period_actor(updated, uid), identity, event
                         )
+                if sum(x is not None for x in (execution, demotion, succession)) > 1:
+                    raise WorkflowError(
+                        "Review competing original Handler endings before period close"
+                    )
+                if loss_episode is None:
+                    finish_leave(updated, identity, event)
+                    updated = retire_handler(updated, identity, event, appointment)
+                if execution is not None:
+                    from girlframe.engine.m3_budget_trial import execute
+                    from girlframe.engine.m3_void_leave import leaves
+
+                    if loss_episode is not None or any(
+                        x.period == identity for x in leaves(updated)
+                    ):
+                        raise WorkflowError(
+                            "Review overlapping leave or quadrant loss before the court sentence"
+                        )
+                    row, trial = execution
+                    updated = execute(updated, trial, event, appointment)
+                    settled_trial = row
+                if demotion is not None:
+                    from girlframe.engine.m3_budget_demotion import demote
+                    from girlframe.engine.m3_void_leave import leaves as pending_leaves
+
+                    if (
+                        loss_episode is not None
+                        or execution is not None
+                        or any(x.period == identity for x in pending_leaves(updated))
+                    ):
+                        raise WorkflowError(
+                            "Review overlapping Handler endings before the demotion"
+                        )
+                    updated = demote(updated, demotion, event, appointment)
+                if succession is not None:
+                    from girlframe.engine.m3_rebel_succession import execute as execute_succession
+                    from girlframe.engine.m3_void_leave import leaves as source_leaves
+
+                    if loss_episode is not None or any(
+                        x.period == identity for x in source_leaves(updated)
+                    ):
+                        raise WorkflowError(
+                            "Review overlapping leave or quadrant loss before succession"
+                        )
+                    updated = execute_succession(updated, succession, event, appointment)
             self.game.event(
                 c,
                 viewer.user_id,
@@ -1230,7 +1428,25 @@ class CycleService:
                 period_id=identity,
                 completed=not severe,
             )
+            if settled_trial is not None:
+                strain_service._save(
+                    c, settled_trial, event, json.loads(settled_trial["body_json"]), resolved=True
+                )
             self.periods._save(c, finished, event)
+            departed = next(
+                (
+                    x
+                    for x in updated.handler_archives
+                    if x.source_event == event and x.ending in ("retired", "death", "demoted")
+                ),
+                None,
+            )
+            if departed is not None:
+                from girlframe.services.m3_battle import synchronize_casts
+                from girlframe.services.m3_handler_consequences import end_body_reviews
+
+                synchronize_casts(self.game, c, event)
+                end_body_reviews(self.game, c, departed)
             if loss_episode is not None:
                 from girlframe.services.m3_quadrant_loss import materialize_loss
 

@@ -6,6 +6,7 @@ import pytest
 import sqlalchemy as sa
 from alembic import command
 from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy.exc import IntegrityError
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger_fixture
@@ -260,8 +261,15 @@ def test_downgrade_refuses_to_discard_real_scene_or_campaign_work(ledger):
 
     before = snapshot()
     assert len(before[2]) == 1
-    with pytest.raises(RuntimeError, match="Do not remove the draining barrier"):
+    # The current schema protects persisted Director references before reaching
+    # the older draining barrier. Both protections must remain in place.
+    with pytest.raises(RuntimeError, match="Director references must be retained"):
         command.downgrade(config, "0013")
+    assert snapshot() == before
+    barrier = ScriptDirectory.from_config(config).get_revision("0020")
+    assert barrier is not None
+    with pytest.raises(RuntimeError, match="Do not remove the draining barrier"):
+        barrier.module.downgrade()
     assert snapshot() == before
 
 

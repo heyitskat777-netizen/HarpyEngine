@@ -1,0 +1,391 @@
+{
+  "$defs": {
+    "AssetChoice": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "default": "",
+          "maxLength": 700,
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "AssetChoice",
+      "type": "object"
+    },
+    "DesireChoice": {
+      "additionalProperties": false,
+      "properties": {
+        "slots": {
+          "items": {
+            "type": "integer"
+          },
+          "maxItems": 2,
+          "minItems": 1,
+          "title": "Slots",
+          "type": "array"
+        }
+      },
+      "required": [
+        "slots"
+      ],
+      "title": "DesireChoice",
+      "type": "object"
+    },
+    "Fanbase": {
+      "additionalProperties": false,
+      "properties": {
+        "custom_demographic": {
+          "default": "",
+          "maxLength": 80,
+          "title": "Custom Demographic",
+          "type": "string"
+        },
+        "custom_quality_1": {
+          "default": "",
+          "maxLength": 80,
+          "title": "Custom Quality 1",
+          "type": "string"
+        },
+        "custom_quality_2": {
+          "default": "",
+          "maxLength": 80,
+          "title": "Custom Quality 2",
+          "type": "string"
+        },
+        "demanded": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 2,
+          "title": "Demanded",
+          "type": "array"
+        },
+        "demographics": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 2,
+          "title": "Demographics",
+          "type": "array"
+        },
+        "rejected": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 2,
+          "title": "Rejected",
+          "type": "array"
+        }
+      },
+      "title": "Fanbase",
+      "type": "object"
+    },
+    "GirlDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "investors": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/NpcInvestor"
+          },
+          "maxItems": 2,
+          "title": "Investors",
+          "type": "array"
+        },
+        "maxims": {
+          "default": [],
+          "items": {
+            "type": "integer"
+          },
+          "maxItems": 2,
+          "title": "Maxims",
+          "type": "array"
+        },
+        "own_standard": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StandardChoice"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "GirlDetails",
+      "type": "object"
+    },
+    "NpcBond": {
+      "additionalProperties": false,
+      "properties": {
+        "feelings": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Feelings",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "maxLength": 80,
+          "title": "Name",
+          "type": "string"
+        },
+        "slot": {
+          "maximum": 3,
+          "minimum": 0,
+          "title": "Slot",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "slot"
+      ],
+      "title": "NpcBond",
+      "type": "object"
+    },
+    "NpcInvestor": {
+      "additionalProperties": false,
+      "properties": {
+        "desires": {
+          "$ref": "#/$defs/DesireChoice"
+        },
+        "npc_slot": {
+          "maximum": 3,
+          "minimum": 0,
+          "title": "Npc Slot",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "npc_slot",
+        "desires"
+      ],
+      "title": "NpcInvestor",
+      "type": "object"
+    },
+    "PortableChoices": {
+      "additionalProperties": false,
+      "description": "Player-owned descriptions/choices only; live agreement IDs are excluded.",
+      "properties": {
+        "dna_basis": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Dna Basis",
+          "type": "string"
+        },
+        "fanbase": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Fanbase"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "frame_appearance": {
+          "default": "",
+          "maxLength": 700,
+          "title": "Frame Appearance",
+          "type": "string"
+        },
+        "frame_assets": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/AssetChoice"
+          },
+          "maxItems": 2,
+          "title": "Frame Assets",
+          "type": "array"
+        },
+        "frame_name": {
+          "default": "",
+          "maxLength": 80,
+          "title": "Frame Name",
+          "type": "string"
+        },
+        "girl_appearance": {
+          "default": "",
+          "maxLength": 700,
+          "title": "Girl Appearance",
+          "type": "string"
+        },
+        "girl_assets": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/AssetChoice"
+          },
+          "maxItems": 2,
+          "title": "Girl Assets",
+          "type": "array"
+        },
+        "girl_details": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GirlDetails"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "npc_bonds": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/NpcBond"
+          },
+          "maxItems": 2,
+          "title": "Npc Bonds",
+          "type": "array"
+        },
+        "pair_asset_descriptions": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/AssetChoice"
+          },
+          "maxItems": 2,
+          "title": "Pair Asset Descriptions",
+          "type": "array"
+        },
+        "void_asset": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Void Asset"
+        }
+      },
+      "title": "PortableChoices",
+      "type": "object"
+    },
+    "PortableProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "callsign": {
+          "maxLength": 32,
+          "minLength": 1,
+          "title": "Callsign",
+          "type": "string"
+        },
+        "frame_playbook": {
+          "maxLength": 60,
+          "minLength": 1,
+          "title": "Frame Playbook",
+          "type": "string"
+        },
+        "girl_playbook": {
+          "maxLength": 60,
+          "minLength": 1,
+          "title": "Girl Playbook",
+          "type": "string"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        }
+      },
+      "required": [
+        "callsign",
+        "girl_playbook",
+        "frame_playbook"
+      ],
+      "title": "PortableProfile",
+      "type": "object"
+    },
+    "StandardChoice": {
+      "additionalProperties": false,
+      "properties": {
+        "custom": {
+          "default": "",
+          "maxLength": 160,
+          "title": "Custom",
+          "type": "string"
+        },
+        "slot": {
+          "maximum": 9,
+          "minimum": 0,
+          "title": "Slot",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "slot"
+      ],
+      "title": "StandardChoice",
+      "type": "object"
+    }
+  },
+  "$id": "urn:harpyengine:character-draft-v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "creation": {
+      "$ref": "#/$defs/PortableChoices",
+      "default": {
+        "dna_basis": "",
+        "fanbase": null,
+        "frame_appearance": "",
+        "frame_assets": [],
+        "frame_name": "",
+        "girl_appearance": "",
+        "girl_assets": [],
+        "girl_details": null,
+        "npc_bonds": [],
+        "pair_asset_descriptions": [],
+        "void_asset": null
+      }
+    },
+    "format": {
+      "const": "harpyengine.character-draft",
+      "default": "harpyengine.character-draft",
+      "title": "Format",
+      "type": "string"
+    },
+    "profile": {
+      "$ref": "#/$defs/PortableProfile"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "format",
+    "profile",
+    "schema_version"
+  ],
+  "title": "CharacterDraftDocument",
+  "type": "object"
+}

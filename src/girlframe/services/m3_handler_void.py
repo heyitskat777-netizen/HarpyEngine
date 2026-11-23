@@ -57,6 +57,10 @@ class HandlerVoidService:
             )
 
             prove_dive_source(self.game, c, first, body, actor)
+        elif first["kind"] == "void_spread_handler_void":
+            from girlframe.services.m3_void_spread import handler_source
+
+            handler_source(c, self.store, first)
         else:
             prove_handler_void_source(self.game, c, first, body, actor)
         state = load_state(c, self.store.campaign_id)
@@ -212,6 +216,10 @@ class HandlerVoidService:
                 )
 
                 complete_dive_handler_void(self.game, c, row["id"], event, viewer, key)
+            elif row["kind"] == "void_spread_handler_void":
+                from girlframe.services.m3_void_spread import complete_handler
+
+                complete_handler(c, self.store, row, event)
             else:
                 from girlframe.services.m3_mockingbird_void import complete_handler_void
 

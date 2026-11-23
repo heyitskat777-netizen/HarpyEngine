@@ -20,7 +20,7 @@ from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_enforcement_initiative import _cast
-from girlframe.services.m3_frame_control import prepare_battery
+from girlframe.services.m3_frame_control import known_battery, prepare_battery
 from girlframe.services.m3_frame_control import prove as prove_contact
 from girlframe.services.m3_janus import prove_core
 from girlframe.services.onboarding import WorkflowError
@@ -75,7 +75,7 @@ def prepare(
     target = prepared.target_actor
     own = resolve(state, actor, profiles(c, game.store.campaign_id))
     value = bound(state, actor, str(own.frame_instance))
-    if state.sheets[actor.entity].frame not in ("JANUS", "JANUS-B"):
+    if state.sheets[actor.entity].frame != "JANUS":
         raise WorkflowError("Recover actual Living Battery ownership on this non-JANUS Frame")
     from girlframe.engine.m3_janus_requisitions import UNIVERSAL
     from girlframe.services.m3_janus_requisitions import owned
@@ -663,7 +663,7 @@ def preview(
             state = load_state(c, game.store.campaign_id)
             actor = current_ref(state, viewer.user_id)
             sheet = state.sheets[actor.entity]
-            if sheet.frame not in ("JANUS", "JANUS-B"):
+            if sheet.frame != "JANUS":
                 return dict(available=False)
             actual = resolve(state, actor, profiles(c, game.store.campaign_id))
             core = bound(state, actor, str(actual.frame_instance))
@@ -675,9 +675,17 @@ def preview(
                 refs.extend(x.actor for x in cast.roles if x.actor != actor)
             targets = []
             for body in dict.fromkeys(refs):
-                view = resolve(
-                    state, body, profiles(c, game.store.campaign_id), require_current_profile=False
-                )
+                if not known_battery(state, cast, actor, body, viewer.user_id):
+                    continue
+                try:
+                    view = resolve(
+                        state,
+                        body,
+                        profiles(c, game.store.campaign_id),
+                        require_current_profile=False,
+                    )
+                except ValueError:
+                    continue
                 if view.alive:
                     targets.append(
                         dict(ref=body.model_dump(mode="json"), token=body.token, label=view.label)

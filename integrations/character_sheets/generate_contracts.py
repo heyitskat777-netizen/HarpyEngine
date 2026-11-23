@@ -37,7 +37,7 @@ def generate(destination: Path) -> None:
         "campaign_defaults_require_engine": True,
         "girl_types": GIRL_TYPES,
         "frame_types": FRAME_TYPES,
-        "frame_rules_aliases": {"JANUS-B": "JANUS"},
+        "frame_rules_aliases": {},
         "playbooks": CATALOG,
         "npc_roles": NPC_ROLES,
         "standards": STANDARDS,
@@ -61,7 +61,7 @@ def generate(destination: Path) -> None:
     )
     example = CharacterDraftDocument(
         profile=PortableProfile(
-            callsign="SYNTHETIC_DEMO", girl_playbook="MOCKINGBIRD", frame_playbook="JANUS-B"
+            callsign="SYNTHETIC_DEMO", girl_playbook="MOCKINGBIRD", frame_playbook="JANUS"
         ),
         creation=PortableChoices(
             girl_assets=girl_assets,
@@ -76,7 +76,7 @@ def generate(destination: Path) -> None:
             ),
         ),
     )
-    (destination / "example-mockingbird-janus-b.json").write_bytes(encode_document(example))
+    (destination / "example-mockingbird-janus.json").write_bytes(encode_document(example))
     owner, peer = "100000000000000001", "100000000000000002"
     sheet = CharacterSheetDocument(
         engine_version="synthetic-example",
@@ -88,7 +88,7 @@ def generate(destination: Path) -> None:
         sheet={
             "callsign": example.profile.callsign,
             "girl_playbook": "MOCKINGBIRD",
-            "frame_playbook": "JANUS-B",
+            "frame_playbook": "JANUS",
             "heat": 0,
             "permissions": 0,
             "girl_appearance": example.creation.girl_appearance,

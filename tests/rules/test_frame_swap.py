@@ -22,7 +22,7 @@ canon, ledger = canon_fixture, ledger_fixture
 DESTINATIONS = (
     "THE PRINCE",
     "CONSUME",
-    "JANUS-B",
+    "JANUS",
     "DOCTORDOCTOR MK. II",
     "WYVERN 0.4",
     "THE ENFORCER",
@@ -78,9 +78,9 @@ def selection(state, frame="THE ENFORCER"):
 
 
 def prepared(canon, frame="THE ENFORCER"):
-    canon.sheets["2"].frame = "THE ENFORCER" if frame == "JANUS-B" else "JANUS-B"
+    canon.sheets["2"].frame = "THE ENFORCER" if frame == "JANUS" else "JANUS"
     canon.sheets["2"].permissions = 10
-    return buy(canon, kind="ability_unlock" if frame == "JANUS-B" else "frame_grafting")
+    return buy(canon, kind="ability_unlock" if frame == "JANUS" else "frame_grafting")
 
 
 @pytest.mark.parametrize("frame", DESTINATIONS)
@@ -124,7 +124,7 @@ def test_candidate_exchanges_actual_baseline_keeps_girl_and_one_old_item_rule_wi
         == original.personal_firearms[0].issues
     )
     assert result.bonds == original.bonds and result.placements == original.placements
-    if frame == "JANUS-B":
+    if frame == "JANUS":
         assert len(sheet.frame_runtime.harpy_core.tags) == 4
     elif frame == "CONSUME":
         assert sheet.frame_runtime.consume_hunger == "Quiet"
@@ -154,7 +154,7 @@ def test_real_unimplemented_destination_gate_does_not_debit_or_claim_complete_ba
 
 def test_no_repeat_same_playbook_or_missing_actual_court_consent(canon):
     original = prepared(canon)
-    for pick in (selection(original, "JANUS-B"), selection(original, "THE RED QUEEN")):
+    for pick in (selection(original, "JANUS"), selection(original, "THE RED QUEEN")):
         with pytest.raises(ValueError, match="different|accept"):
             rules.purchase(
                 original,

@@ -1,0 +1,40 @@
+{
+  "hangar": {
+    "name": "Hangar Deck",
+    "artwork": "scene-empty-hangar",
+    "minimum": [-1, -1],
+    "floor": [
+      "wwwwwwwwwwww",
+      "w..c.w..c..w",
+      "w....d.....w",
+      "wwdwwwwdwwww",
+      "w.......c..w",
+      "w..c.......w",
+      "wwwwwwwwwwww"
+    ],
+    "rooms": [
+      ["Maintenance", "2 / 2 / 3 / 5"],
+      ["Relay room", "2 / 7 / 3 / 11"],
+      ["Service corridor", "5 / 4 / 6 / 9"]
+    ]
+  },
+  "outpost": {
+    "name": "Outpost K-12",
+    "artwork": "scene-snowbound-transit-checkpoint",
+    "minimum": [-1, -1],
+    "floor": [
+      "wwwwwwwwwwww",
+      "w.c..w..c..w",
+      "w....d.....w",
+      "wwdwwwwwwdww",
+      "w.c......c.w",
+      "w..........w",
+      "wwwwwddwwwww"
+    ],
+    "rooms": [
+      ["Guard post", "2 / 2 / 3 / 5"],
+      ["Control room", "2 / 7 / 3 / 11"],
+      ["Inspection bay", "5 / 4 / 6 / 10"]
+    ]
+  }
+}

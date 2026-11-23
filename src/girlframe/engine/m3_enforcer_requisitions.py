@@ -69,8 +69,11 @@ def frame(state: GameState, actor: ActorRef) -> str | None:
             sheet.frame_runtime.id if sheet.frame_runtime else "initial:" + str(actor.incarnation)
         )
     if actor.kind == "external_pilot":
+        from girlframe.engine.m3_ancillary import find
         from girlframe.engine.m3_harpy_defeat import harpy
 
+        if find(state, actor) is not None:
+            return None
         body = harpy(state, actor)
         return body.frame_instance
     return None

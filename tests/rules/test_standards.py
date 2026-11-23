@@ -22,6 +22,193 @@ from girlframe.services.m3_standards import StandardsService
 from girlframe.services.onboarding import WorkflowError
 
 
+def test_princess_npc_order_uses_current_off_duty_upkeep_and_private_gm_refusal(
+    ledger, tmp_path, monkeypatch
+):
+    import json
+
+    import sqlalchemy as sa
+    from test_cast_service import change
+    from test_disposable_psyche import real_period
+    from test_enforcer_requisitions import approved
+    from test_harpy_flirt import submit_form
+    from test_mission_service import service
+    from test_off_duty_cycle import call, finish_routine, movement, roll_for
+    from test_physical_operations import place
+    from test_show_dog import first, second
+    from test_world import initial
+
+    from girlframe.database import tables as t
+    from girlframe.discord_adapter.inbox import InboxView
+    from girlframe.discord_adapter.m3_off_duty_cycle import open_action
+    from girlframe.engine.m3_actor_state import ActorRef
+    from girlframe.engine.m3_off_duty import RecoveryChoice
+    from girlframe.engine.m3_show_dog import RULE as SHOW_DOG
+    from girlframe.engine.m3_world_state import Npc
+    from girlframe.services.inbox import InboxService
+    from girlframe.services.m3_actors import ActorService
+    from girlframe.services.m3_cast import CastService
+    from girlframe.services.m3_npc_roles import NpcRoleService
+    from girlframe.services.m3_princess_npc_orders import review
+    from girlframe.services.m3_show_dog import ShowDogService
+    from girlframe.services.m3_succubus import SuccubusService
+    from girlframe.services.m3_world import WorldService
+
+    _, game = service(ledger, girl="PRINCESS")
+    approved(ledger, game, tmp_path, monkeypatch, extra=(RULE, SHOW_DOG))
+    approval = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update=dict(
+            m3_approval=approval.model_copy(
+                update=dict(
+                    subsystems=approval.subsystems | {"plays", "world", "strain", "playbooks"}
+                )
+            )
+        )
+    )
+    missions = MissionService(ledger)
+    world = WorldService(missions)
+    layout = initial()
+    world.initialize(
+        ADMIN, "base-map", state(game).revision, layout.board, layout.locations, layout.gorgons[0]
+    )
+    guard = Npc(
+        id="original-guard",
+        name="Original guard",
+        jobs=("guard",),
+        controller=OTHER.user_id,
+        detail="An actual guard at base.",
+        cell=(0, 0),
+        revealed=True,
+    )
+    roles = NpcRoleService(world)
+    invite = roles.offer(ADMIN, "original-guard-offer", state(game).revision, guard)
+    roles.respond(OTHER, "original-guard-accept", invite["id"], state(game).revision, "accept")
+    npc = ActorRef(kind="npc", entity=guard.id)
+    cast = CastService(ActorService(missions))
+    change(cast, OTHER, "join", npc)
+    with ledger.transaction() as c:
+        placed = place(state(game), mode="outside_frame")
+        game.event(c, 1, "original-princess-placement", "synthetic.placement", placed)
+    cycle, period = real_period(missions, game)
+    orders = SuccubusService(game)
+    data = cycle.review(ADMIN, period)
+    assert set(data["princess_upkeep_candidates"]) == {"2"}
+    assert not cycle.review(OTHER, period)["princess_upkeep_candidates"]
+    with pytest.raises(WorkflowError, match="appointed human GM"):
+        review(
+            cycle.periods,
+            PLAYER,
+            "self-authorized",
+            period,
+            data["revision"],
+            data["game_revision"],
+            2,
+            ("own", "peer", "handler"),
+            "No self approval.",
+        )
+    assert not review(
+        cycle.periods,
+        ADMIN,
+        "two-standards",
+        period,
+        data["revision"],
+        data["game_revision"],
+        2,
+        ("own", "peer"),
+        "Two upheld.",
+    )["approved"]
+    with pytest.raises(WorkflowError, match="current Off-Duty"):
+        orders.targets(PLAYER, 900, princess_period=period)
+    assert "princess_optional_pronouns" not in game.sheet(PLAYER)
+
+    asyncio.run(
+        submit_form(
+            ADMIN,
+            lambda click: open_action(click, cycle, period, "princess_upkeep"),
+            dict(girl=("2",), upheld=("own", "peer", "handler"), account="PRIVATE_UPKEEP_EVIDENCE"),
+            47430,
+        )
+    )
+    assert cycle.review(PLAYER, period)["princess_can_order"]
+    assert game.sheet(PLAYER)["princess_optional_pronouns"] == "she/her"
+    assert "princess_optional_pronouns" not in game.sheet(OTHER, PLAYER.user_id)
+
+    from girlframe.engine.m2 import shift_status
+
+    with ledger.transaction() as c:
+        lower = state(game)
+        shift_status(lower, 2, -1)
+        game.event(c, 1, "standards-ace-lowered", "synthetic.status", lower)
+    assert "princess_optional_pronouns" not in game.sheet(PLAYER)
+    with ledger.transaction() as c:
+        up = state(game)
+        shift_status(up, 2, 1)
+        game.event(c, 1, "standards-ace-restored", "synthetic.status", up)
+    assert game.sheet(PLAYER)["princess_optional_pronouns"] == "she/her"
+
+    async def issue():
+        click = current(2, 47434)
+        click.channel_id = 900
+        await click.response.defer(ephemeral=True)
+        await open_action(click, cycle, period, "princess_order")
+        form = click.edit_original_response.call_args.kwargs["view"]
+        form.values.update(target=(npc.token,), instruction="Open the supply room.")
+        await form.confirm.callback(current(2, 47436))
+        assert form.completed
+
+    asyncio.run(issue())
+    with ledger.engine.connect() as c:
+        (request,) = orders._tasks(c, OTHER)
+    identity = request["id"]
+    worker, gateway = GameWorker(game), Gateway()
+    tick(worker, gateway, 3)
+    inbox = InboxService(ledger)
+
+    async def route(click):
+        actor = OTHER if click.user.id == OTHER.user_id else ADMIN
+        item = next(x for x in inbox.items(actor) if x.identity == identity)
+        await InboxView(inbox, actor.user_id).route(click, item)
+
+    asyncio.run(
+        submit_form(OTHER, route, dict(option=("reason",), account="PRIVATE_NPC_REASON"), 47440)
+    )
+    with pytest.raises(WorkflowError):
+        orders.inspect(PLAYER, identity)
+    ledger.engine.dispose()
+    assert orders.inspect(ADMIN, identity)["refusal_reason"] == "PRIVATE_NPC_REASON"
+    asyncio.run(
+        submit_form(
+            ADMIN, route, dict(option=("allow_refusal",), account="PRIVATE_GM_RULING"), 47444
+        )
+    )
+    readback = orders.inspect(PLAYER, identity)
+    assert readback["result"]["response"] == "refused" and not readback["refusal_reason"]
+    assert not any("PRIVATE_" in json.dumps(data) for data in (readback, gateway.messages))
+    assert game.dice.calls == 0
+    with ledger.engine.connect() as c:
+        assert not any("PRIVATE_" in raw for raw in c.scalars(sa.select(t.events.c.payload_json)))
+
+    tick(worker, gateway, 4)
+    change(cast, OTHER, "withdraw", npc)
+    roll_for(cycle, game, period, PLAYER, (2, 2))
+    show_dog = ShowDogService(game)
+    with ledger.engine.connect() as c:
+        show = next(x["id"] for x in show_dog._tasks(c, PLAYER) if x["pending"])
+    first(show_dog, PLAYER, show, "quiet", account="I quietly meet the witnesses at base.")
+    second(show_dog, show, npc, "emulate")
+    call(cycle, game, PLAYER, period, "scene", None, (), "")
+    call(cycle, game, PLAYER, period, "recover", RecoveryChoice())
+    roll_for(cycle, game, period, OTHER, (4, 4))
+    call(cycle, game, OTHER, period, "scene", None, (), "")
+    call(cycle, game, OTHER, period, "recover", RecoveryChoice())
+    finish_routine(cycle, game, period)
+    call(cycle, game, ADMIN, period, "finish", movement(game))
+    with pytest.raises(WorkflowError, match="current Off-Duty"):
+        orders.targets(PLAYER, 900, princess_period=period)
+    assert "princess_optional_pronouns" not in game.sheet(PLAYER)
+
+
 def pending(store):
     medical, game, identity = awake(store)
     selected = Exchange(removed=selection().removed, acquired=RULE)
@@ -409,6 +596,40 @@ def test_actual_keep_runtime_and_native_ui_respect_borrowed_and_removed_rules(
     assert expected <= positives
     assert ("sexy" in positives) == ("sexy" in expected)
     assert ("vicious" in positives) == ("vicious" in expected)
+
+
+@pytest.mark.parametrize(
+    ("girl", "extra"),
+    [("OLDGEN", "experienced"), ("ALPHA", "vicious")],
+)
+def test_native_keep_rider_adds_trait_alongside_the_ordinary_choices(ledger, girl, extra):
+    from test_m2_game import setup_game
+
+    from girlframe.discord_adapter.m2_ui import choice_fields
+
+    game, worker, gateway, dice = setup_game(ledger, girl=girl, faces=(4, 5))
+    action = start(game)
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    owned = next(row for row in game.choices(PLAYER) if row["kind"] == "actor_keep")
+    fields = choice_fields(game.decision(PLAYER, owned["id"]))
+    if girl == "OLDGEN":
+        assert any(field.key == "flag" and "experienced" in field.label for field in fields)
+    else:
+        forbidden = next(field for field in fields if field.key == "denied")
+        assert "vicious" not in dict(forbidden.options)
+    answer(
+        game,
+        PLAYER,
+        "actor_keep",
+        options=("tough", "in_control"),
+        denied=("desperate",),
+        flag=girl == "OLDGEN",
+    )
+    answer(game, ADMIN, "handler_keep", flag=True, text="Actual contextual ruling")
+    finished = game.inspect(PLAYER, action)
+    assert finished["state"] == "complete" and dice.calls == 1
+    assert set(finished["result"]["positive"]) == {"tough", "in_control", extra}
 
 
 def test_removed_mockingbird_risk_factor_stops_its_corruption_exception(ledger):

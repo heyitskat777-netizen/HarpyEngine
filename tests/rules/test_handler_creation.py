@@ -92,8 +92,10 @@ def save(svc, draft, key=None):
     return svc.save(ADMIN, key or str(uuid4()), preview["revision"], preview["appointment"], draft)
 
 
-def agree(svc):
-    result = svc.propose(ADMIN, "actual-handler-proposals", svc.view(ADMIN)["revision"])
+def agree(svc, *, generation=None):
+    result = svc.propose(
+        ADMIN, "actual-handler-proposals", svc.view(ADMIN)["revision"], generation=generation
+    )
     for identity in result["ids"]:
         owner = int(svc.get_agreement(ADMIN, identity)["proposal"]["bond"]["pilot"]["entity"])
         viewer = PLAYER if owner == 2 else OTHER
@@ -131,6 +133,9 @@ def test_all_seven_actual_starting_variants_save_reopen_agree_and_activate(ledge
     assert after.sheets == original.sheets and after.handler_tags == original.handler_tags
     assert after.handler_heat == original.handler_heat
     assert len(after.world.npcs) == 1  # Gear never spawns fictional personnel or transport.
+    for choice in draft.starting:
+        assert depth(after, current_ref(after, 1), choice.pilot) == choice.depth
+        assert after.order[0 if choice.rank == "ace" else -1] == int(choice.pilot.entity)
     if playbook == "Mistress":
         assert depth(after, current_ref(after, 1), current_ref(after, 3)) == 2
     if playbook == "Trainer":
@@ -230,7 +235,9 @@ def test_scientist_can_choose_dog_and_other_relative_ranks_are_preserved(ledger)
     svc.activate(
         ADMIN, "scientist-starting-dog", preview["revision"], preview["game_revision"], True
     )
-    assert state(game).order == (3, 2)
+    after = state(game)
+    assert after.order == (3, 2)
+    assert depth(after, current_ref(after, 1), draft.starting[0].pilot) == 1
 
 
 def test_changed_original_girl_or_handler_appointment_cannot_reuse_old_shared_requests(ledger):

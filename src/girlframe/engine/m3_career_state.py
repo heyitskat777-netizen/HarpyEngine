@@ -16,6 +16,8 @@ Ending = Literal[
     "harpy",
     "factory_reset",
     "am_branch_terminated",
+    "rebel_ancillary",
+    "player_reset",
 ]
 
 

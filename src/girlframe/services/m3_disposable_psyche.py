@@ -705,6 +705,7 @@ class PsycheService:
             trigger = _prove_trigger(self.game, c, row)
             if trigger.actor.entity != str(viewer.user_id):
                 raise WorkflowError("Only the original owner reads her private Tag rebuilding")
+            source = dict(period=trigger.period, source_action=trigger.action)
             if row["state"] == "resolved":
                 if json.loads(row["body_json"]).get("no_available_tags"):
                     if trigger.tags:
@@ -712,7 +713,8 @@ class PsycheService:
                             "The original source did have Tags; finish actual conversion"
                         )
                     return dict(
-                        id=identity, revision=state.revision, phase="no_tags", identities=[]
+                        id=identity, revision=state.revision, phase="no_tags",
+                        identities=[], **source,
                     )
                 converted = prove_conversion(self.game, c, state, identity)
                 return dict(
@@ -721,6 +723,7 @@ class PsycheService:
                     phase="converted",
                     identities=[x.name for x in converted.created],
                     tags=[x.label for x in converted.tags],
+                    **source,
                 )
             if current_ref(state, viewer.user_id) != trigger.actor:
                 raise WorkflowError("Explicitly recover the ended original Girl's pending source")
@@ -746,6 +749,7 @@ class PsycheService:
                 count=len(
                     [x for x in sheet.identities if not x.protected or x.paired or x.am_limiter]
                 ),
+                **source,
             )
 
     def convert(

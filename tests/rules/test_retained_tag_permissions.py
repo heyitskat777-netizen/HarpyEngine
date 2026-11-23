@@ -32,7 +32,7 @@ def reborn_with_lock(
     *,
     locker_converts=False,
     retain=True,
-    frame="JANUS-B",
+    frame="JANUS",
     configure=None,
     retained_plays=None,
 ):

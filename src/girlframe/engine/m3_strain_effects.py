@@ -7,12 +7,49 @@ from pydantic import Field
 
 from girlframe.engine import m3_world as world_rules
 from girlframe.engine.m2 import GameState, Model, TagState, pair_key
+from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_benevolent_contact import RULE as BENEVOLENT_CONTACT
+from girlframe.engine.m3_benevolent_contact import Contact
+from girlframe.engine.m3_benevolent_contact import Play as ContactPlay
+from girlframe.engine.m3_berserk_frame import RULE as BERSERK_FRAME
+from girlframe.engine.m3_budget_anarchy import REBELLION as REBEL_PROTEST
+from girlframe.engine.m3_budget_conversion import RULE as BUDGET_CONVERSION
+from girlframe.engine.m3_budget_hearing import RULE as BUDGET_HEARING
 from girlframe.engine.m3_budget_sabotage import Pin
+from girlframe.engine.m3_bunk_harpy import RULE as BUNK_HARPY
+from girlframe.engine.m3_cadre_leak import RULE as CADRE_LEAK
+from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_contraband_state import ContrabandFind
+from girlframe.engine.m3_cult_occupation import RULE as CULT_OCCUPATION
+from girlframe.engine.m3_doppelganger_reveal import RULE as DOPPELGANGER_REVEAL
+from girlframe.engine.m3_foundation_attack import RULE as FOUNDATION_ATTACK
+from girlframe.engine.m3_harpy_raid import RULE as HARPY_RAID
+from girlframe.engine.m3_npc_interest import RULE as NPC_INTEREST
+from girlframe.engine.m3_npc_interest import Timing as InterestTiming
+from girlframe.engine.m3_orbital_threat import RULE as ORBITAL_THREAT
+from girlframe.engine.m3_pilot_fears import APPEARANCE as PUBLIC_APPEARANCE
+from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
+from girlframe.engine.m3_rebel_ambush import HUNT_RULE as REBEL_HUNT
+from girlframe.engine.m3_rebel_ambush import RULE as REBEL_AMBUSH
+from girlframe.engine.m3_rebel_ambush import SIEGE_RULE as REBEL_SIEGE
+from girlframe.engine.m3_rebel_base_capture import RULE as REBEL_BASE_CAPTURE
+from girlframe.engine.m3_rebel_bond_attack import RULE as REBEL_BOND_ATTACK
+from girlframe.engine.m3_rebel_defection import RULE as REBEL_DEFECTION
+from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
+from girlframe.engine.m3_rebel_frame_theft import RULE as REBEL_FRAME_THEFT
+from girlframe.engine.m3_rebel_strafe import RULE as REBEL_STRAFE
+from girlframe.engine.m3_rebel_taunt import RULE as REBEL_TAUNT
+from girlframe.engine.m3_rebel_voice import RULE as REBEL_VOICE
 from girlframe.engine.m3_refusal_state import RefusalBonus
 from girlframe.engine.m3_scientific_observation import Demand, require_orders
 from girlframe.engine.m3_supply_state import SupplyLoss
+from girlframe.engine.m3_void_revelation import RULE as VOID_REVELATION
+from girlframe.engine.m3_void_revelation import Play as RevelationPlay
+from girlframe.engine.m3_void_revelation import Revelation
+from girlframe.engine.m3_void_rift import RULE as VOID_RIFT
+from girlframe.engine.m3_void_signal import RULE as VOID_SIGNAL
 from girlframe.engine.m3_world_state import (
+    AdversaryPilot,
     Asset,
     CorePlan,
     Faction,
@@ -20,22 +57,56 @@ from girlframe.engine.m3_world_state import (
     GorgonType,
     Location,
     NpcRecruitment,
+    SpriteEscort,
+    SpriteEscortDesign,
 )
+
+VOID_EXAMINATION = "strain.void.low.6.2"
+SPRITE_ESCORT = "strain.void.low.2.2"
 
 SUPPORTED = frozenset(
     {
         "strain.void.low.1.1",
         "strain.void.low.2.1",
+        SPRITE_ESCORT,
+        PUBLIC_APPEARANCE,
         "strain.void.low.4.1",
+        BENEVOLENT_CONTACT,
         "strain.void.low.5.1",
+        NPC_INTEREST,
+        ORBITAL_THREAT,
+        VOID_EXAMINATION,
         "strain.void.high.3.1",
+        VOID_REVELATION,
+        VOID_RIFT,
+        VOID_SIGNAL,
+        PILOT_FEARS,
+        DOPPELGANGER_REVEAL,
+        HARPY_RAID,
+        BUNK_HARPY,
+        BERSERK_FRAME,
+        CULT_OCCUPATION,
+        CADRE_LEAK,
         "strain.rebellion.low.1.1",
         "strain.rebellion.low.1.2",
         "strain.rebellion.low.2.2",
+        REBEL_STRAFE,
+        REBEL_TAUNT,
+        REBEL_VOICE,
+        REBEL_AMBUSH,
+        REBEL_HUNT,
+        REBEL_SIEGE,
+        REBEL_BASE_CAPTURE,
+        REBEL_BOND_ATTACK,
+        REBEL_FRAME_THEFT,
         "strain.rebellion.low.5.2",
+        REBEL_PROTEST,
+        REBEL_ESCAPE_OFFER,
+        *CIVIC_DIRECTIVES,
         "strain.rebellion.high.4.2",
         "strain.rebellion.high.5.2",
         "strain.rebellion.low.6.1",
+        REBEL_DEFECTION,
         "strain.budget.low.5.2",
         "strain.budget.low.5.1",
         "strain.budget.low.6.1",
@@ -49,11 +120,14 @@ SUPPORTED = frozenset(
         "strain.budget.low.3.1",
         "strain.budget.low.6.2",
         "strain.budget.high.2.2",
+        BUDGET_CONVERSION,
+        BUDGET_HEARING,
         "strain.budget.high.1.1",
         "strain.budget.high.4.2",
         "strain.budget.high.4.1",
         "strain.budget.high.3.2",
         "strain.budget.high.5.1",
+        FOUNDATION_ATTACK,
         "strain.budget.high.6.1",
     }
 )
@@ -70,8 +144,12 @@ class Choice(Model):
     target: str | None = None
     gorgon: Gorgon | None = None
     faction: Faction | None = None
+    faction_id: str | None = Field(default=None, exclude_if=lambda x: x is None)
     location: Location | None = None
     victim: str | None = None
+    foundation_person: Literal["pilot", "handler"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     new_assets: tuple[Asset, ...] = ()
     new_type: GorgonType | None = None
     core_plan: CorePlan | None = None
@@ -90,7 +168,27 @@ class Choice(Model):
     fighters: tuple[int, ...] = Field(default=(), exclude_if=lambda value: not value)
     backstory_observers: tuple[int, ...] = Field(default=(), exclude_if=lambda value: not value)
     storage_owner: int | None = Field(default=None, ge=1, exclude_if=lambda value: value is None)
+    captured_frame: str | None = Field(default=None, exclude_if=lambda x: x is None)
     fight_channel: int | None = Field(default=None, ge=1, exclude_if=lambda value: value is None)
+    revelation_play: RevelationPlay | None = Field(default=None, exclude_if=lambda x: x is None)
+    revelation_channel: int | None = Field(default=None, ge=1, exclude_if=lambda x: x is None)
+    protest_city: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    raid_base: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    new_raid_harpy: AdversaryPilot | None = Field(default=None, exclude_if=lambda x: x is None)
+    cult_harpy: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    new_cult_harpy: AdversaryPilot | None = Field(default=None, exclude_if=lambda x: x is None)
+    rift_harpy: AdversaryPilot | None = Field(default=None, exclude_if=lambda x: x is None)
+    sprite_escort: SpriteEscortDesign | None = Field(default=None, exclude_if=lambda x: x is None)
+    contact_play: ContactPlay | None = Field(default=None, exclude_if=lambda x: x is None)
+    contact_channel: int | None = Field(default=None, ge=1, exclude_if=lambda x: x is None)
+    defection_recipient: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    interest_timing: InterestTiming | None = Field(default=None, exclude_if=lambda x: x is None)
+    interest_manifestation: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    leak_parties: tuple[ActorRef, ...] = Field(default=(), exclude_if=lambda x: not x)
+    leak_report: str | None = Field(default=None, max_length=1200, exclude_if=lambda x: x is None)
+    siege_recruits: tuple[AdversaryPilot, ...] = Field(
+        default=(), max_length=3, exclude_if=lambda x: not x
+    )
 
 
 def fields(choice: Choice, allowed: set[str]) -> None:
@@ -116,6 +214,8 @@ def apply(
     tag_setter_appointment: str | None = None,
     cleanup_index: int | None = None,
     cleanup_rng: Literal["os", "test_injected"] | None = None,
+    revelation: Revelation | None = None,
+    contact: Contact | None = None,
 ) -> GameState:
     if choice.rule_id not in SUPPORTED:
         raise ValueError("UNSUPPORTED_RULE: this Strain effect has no complete typed resolver")
@@ -126,7 +226,323 @@ def apply(
     from girlframe.engine.m3_promotional_opportunity import in_responsibility, responsibility_edge
 
     rule = choice.rule_id
-    if rule == "strain.rebellion.low.2.2":
+    if rule == VOID_RIFT:
+        from girlframe.engine.m3_void_rift import arrive
+
+        fields(choice, {"gorgon", "rift_harpy", "victim"})
+        if source_event is None or period_id is None:
+            raise ValueError("Recover the actual Strain arrival's source and period")
+        return arrive(
+            state,
+            source_work,
+            period_id,
+            source_event,
+            choice.account,
+            choice.gorgon,
+            choice.rift_harpy,
+            choice.victim,
+        )
+    if rule == BUDGET_CONVERSION:
+        from girlframe.engine.m3_budget_conversion import require_next
+
+        fields(choice, set())
+        if source_event is None or period_id is None:
+            raise ValueError("Recover the actual High Budget source and original period")
+        require_next(state, source_work, period_id, source_event, choice.account.strip())
+    elif rule == BUDGET_HEARING:
+        fields(choice, {"target", "victim"})
+        if not choice.target or choice.victim not in {str(x) for x in state.order}:
+            raise ValueError("Choose the original Girl and the fictional Director for the hearing")
+    elif rule == BUNK_HARPY:
+        fields(choice, {"target"})
+        if not choice.target:
+            raise ValueError("Choose the actual independently controlled unlinked Harpy")
+    elif rule == BERSERK_FRAME:
+        from girlframe.engine.m3_berserk_frame import arm as arm_berserk
+
+        fields(choice, {"target", "gorgon", "victim"})
+        if (
+            source_event is None
+            or choice.target not in {str(x) for x in state.order}
+            or choice.gorgon is None
+            or not choice.victim
+        ):
+            raise ValueError("Bind the original Frame and actual prepared Aggressive form")
+        assert choice.target is not None
+        arm_berserk(
+            state,
+            source_work,
+            source_event,
+            int(choice.target),
+            choice.gorgon,
+            choice.victim,
+            choice.account.strip(),
+        )
+    elif rule == FOUNDATION_ATTACK:
+        fields(choice, {"target", "victim", "foundation_person"})
+        if not choice.target or not choice.victim:
+            raise ValueError("Choose the original target and actual Foundation Pilot")
+    elif rule == REBEL_SIEGE:
+        fields(choice, {"target", "victim", "siege_recruits", "faction"})
+        if not choice.target or choice.victim not in (None, "ace", "handler"):
+            raise ValueError("Choose the actual occupied base and its original Ace or Handler")
+    elif rule == REBEL_AMBUSH:
+        from girlframe.engine.m3_rebel_ambush import arm as arm_ambush
+
+        fields(choice, {"target"})
+        if not choice.target or source_event is None or period_id is None:
+            raise ValueError("Bind the actual Rebel Pilot and original preparing period")
+        arm_ambush(
+            state,
+            source_work,
+            period_id,
+            source_event,
+            ActorRef(kind="external_pilot", entity=choice.target),
+            choice.account.strip(),
+        )
+    elif rule == REBEL_HUNT:
+        from girlframe.engine.m3_actor_bonds import current_ref
+        from girlframe.engine.m3_rebel_ambush import arm_hunt
+
+        fields(choice, {"target", "victim"})
+        if (
+            not choice.target
+            or source_event is None
+            or period_id is None
+            or choice.victim not in {str(x) for x in state.order}
+        ):
+            raise ValueError("Bind the actual Rebel and original target of this pursuit")
+        assert choice.victim is not None
+        arm_hunt(
+            state,
+            source_work,
+            period_id,
+            source_event,
+            ActorRef(kind="external_pilot", entity=choice.target),
+            current_ref(state, int(choice.victim)),
+            choice.account.strip(),
+        )
+    elif rule == REBEL_BASE_CAPTURE:
+        from girlframe.engine.m3_rebel_base_capture import apply as overrun
+
+        fields(choice, {"target", "victim", "captured_frame"})
+        if (
+            source_event is None
+            or not choice.target
+            or not choice.victim
+            or not choice.captured_frame
+        ):
+            raise ValueError(
+                "Bind the actual base, its Rebel attacker and one original parked Frame"
+            )
+        state = overrun(
+            state,
+            source_work,
+            source_event,
+            choice.target,
+            choice.victim,
+            choice.captured_frame,
+            choice.account.strip(),
+        )
+        world = state.world
+    elif rule == REBEL_BOND_ATTACK:
+        from girlframe.engine.m3_rebel_bond_attack import arm as arm_betrayal
+
+        fields(choice, {"target", "faction_id"})
+        if not choice.target or not choice.faction_id or source_event is None or period_id is None:
+            raise ValueError("Bind the original NPC Bond and their actual Rebel Group")
+        arm_betrayal(
+            state,
+            source_work,
+            period_id,
+            source_event,
+            choice.target,
+            choice.faction_id,
+            choice.account.strip(),
+        )
+        world = state.world
+    elif rule == REBEL_FRAME_THEFT:
+        fields(choice, {"target", "victim"})
+        if not choice.target or not choice.victim or source_event is None or period_id is None:
+            raise ValueError("Choose the actual base and living Rebel for the original Frame draw")
+    elif rule == ORBITAL_THREAT:
+        from girlframe.engine.m3_orbital_threat import introduce
+
+        fields(choice, {"gorgon"})
+        if choice.gorgon is None or period_id is None or source_event is None:
+            raise ValueError("Supply the actual orbital Gorgon, period and event")
+        introduce(state, choice.gorgon, source_work, period_id, source_event, choice.account)
+        world = state.world
+    elif rule == SPRITE_ESCORT:
+        fields(choice, {"sprite_escort"})
+        if source_event is None or choice.sprite_escort is None:
+            raise ValueError("Record the original pending Sprite group and source")
+        world = world_rules.update(
+            world,
+            sprite_escorts=(
+                *world.sprite_escorts,
+                SpriteEscort(work=source_work, event=source_event, design=choice.sprite_escort),
+            ),
+        )
+    elif rule == BENEVOLENT_CONTACT:
+        from girlframe.engine.m3_benevolent_contact import commit as commit_contact
+
+        fields(choice, {"target", "victim", "contact_play", "contact_channel"})
+        if (
+            contact is None
+            or contact.id != source_work
+            or contact.grant != source_work
+            or contact.event != source_event
+            or contact.speaker.actor.entity != choice.target
+            or contact.speaker.controller != state.handler
+            or contact.recipient.actor.entity != choice.victim
+            or contact.play != choice.contact_play
+            or contact.account != choice.account.strip()
+        ):
+            raise ValueError("Recover the performed original Benevolent Gorgon Play")
+        commit_contact(state, contact)
+    elif rule == NPC_INTEREST:
+        fields(choice, {"target", "victim", "interest_timing", "interest_manifestation"})
+        if (
+            not choice.target
+            or choice.victim is None
+            or not choice.victim.isascii()
+            or not choice.victim.isdecimal()
+            or int(choice.victim) not in state.order
+            or choice.interest_timing is None
+        ):
+            raise ValueError("Choose an original NPC, Girl and the timing of her discovery")
+    elif rule == VOID_REVELATION:
+        from girlframe.engine.m3_void_revelation import commit
+
+        fields(choice, {"revelation_play", "revelation_channel"})
+        if (
+            revelation is None
+            or revelation.id != source_work
+            or revelation.event != source_event
+            or revelation.play != choice.revelation_play
+            or revelation.account != choice.account.strip()
+        ):
+            raise ValueError("Recover the actual revelation and original scene audience")
+        commit(state, revelation)
+    elif rule == VOID_EXAMINATION:
+        fields(choice, set())
+        if period_id is None or source_event is None or not state.order:
+            raise ValueError("Bind the required exams to the actual period and its Girls")
+    elif rule == VOID_SIGNAL:
+        fields(choice, {"target"})
+        if (
+            period_id is None
+            or source_event is None
+            or not any(x.id == choice.target and x.alive for x in world.gorgons)
+        ):
+            raise ValueError("Bind the original living Gorgon to the preparing period")
+    elif rule == PUBLIC_APPEARANCE:
+        fields(choice, {"target"})
+        if not any(
+            x.id == choice.target
+            and x.kind == "city"
+            and x.operational
+            and in_responsibility(state, x.cell)
+            for x in world.locations
+        ):
+            raise ValueError("Choose an actual available city for the Cadre's public appearance")
+    elif rule == PILOT_FEARS:
+        from girlframe.engine.m3_civic_directive import director
+
+        fields(choice, {"target"})
+        director(state, choice.target)
+    elif rule == DOPPELGANGER_REVEAL:
+        from girlframe.engine.m3_doppelganger_reveal import reveal as reveal_disguise
+
+        fields(choice, {"target", "gorgon"})
+        if choice.gorgon is None or period_id is None or source_event is None:
+            raise ValueError("Recover the original mask revelation in this preparing period")
+        state = reveal_disguise(
+            state,
+            source_work,
+            source_event,
+            choice.target,
+            choice.gorgon,
+            choice.account.strip(),
+        )
+        assert state.world is not None
+        world = state.world
+    elif rule == HARPY_RAID:
+        fields(choice, {"target", "victim", "raid_base", "new_raid_harpy"})
+        if (
+            not choice.target
+            or not choice.raid_base
+            or choice.victim is None
+            or not choice.victim.isascii()
+            or not choice.victim.isdecimal()
+            or int(choice.victim) not in state.order
+        ):
+            raise ValueError("Choose the original Harpy, occupied base and obsession")
+    elif rule == CULT_OCCUPATION:
+        from girlframe.engine.m3_cult_occupation import occupy
+
+        fields(choice, {"target", "faction", "cult_harpy", "new_cult_harpy"})
+        if source_event is None:
+            raise ValueError("Recover the original High Void capture event")
+        occupy(
+            state,
+            work=source_work,
+            event=source_event,
+            site_id=choice.target,
+            faction=choice.faction,
+            harpy=choice.cult_harpy,
+            new=choice.new_cult_harpy,
+            account=choice.account.strip(),
+        )
+        assert state.world is not None
+        world = state.world
+    elif rule == CADRE_LEAK:
+        fields(choice, {"target", "leak_parties", "leak_report"})
+        if not choice.target or not choice.leak_parties or not (choice.leak_report or "").strip():
+            raise ValueError("Bind the actual incident, original parties and fictional Director")
+    elif rule in CIVIC_DIRECTIVES:
+        from girlframe.engine.m3_civic_directive import create as create_civic_directive
+
+        fields(choice, {"target", "protest_city"})
+        if period_id is None or source_event is None:
+            raise ValueError("Recover the original civic directive and Strain period")
+        create_civic_directive(
+            state,
+            rule=rule,
+            identity=source_work,
+            event=source_event,
+            period=period_id,
+            speaker=choice.target,
+            city=choice.protest_city,
+        )
+    elif rule == REBEL_STRAFE:
+        from girlframe.engine.m3_rebel_strafe import source as strafe_source
+
+        fields(choice, {"target", "victim"})
+        strafe_source(state, choice.victim, choice.target)
+    elif rule == REBEL_DEFECTION:
+        from girlframe.engine.m3_rebel_defection import contact as stage_defection
+
+        fields(choice, {"target", "faction_id", "defection_recipient"})
+        if source_event is None or period_id is None:
+            raise ValueError("Recover the original preparing defection source")
+        stage_defection(
+            state,
+            identity=source_work,
+            event=source_event,
+            period=period_id,
+            target=choice.target,
+            group=choice.faction_id,
+            recipient=choice.defection_recipient,
+            account=choice.account.strip(),
+        )
+    elif rule in (REBEL_ESCAPE_OFFER, REBEL_TAUNT, REBEL_VOICE):
+        from girlframe.engine.m3_rebel_escape_offer import speaker
+
+        fields(choice, {"target"})
+        speaker(state, choice.target)
+    elif rule == "strain.rebellion.low.2.2":
         fields(choice, {"target"})
         if (
             contraband is None
@@ -389,7 +805,7 @@ def apply(
                 or incoming.cell not in {x.cell for x in bases}
             ):
                 raise ValueError("A single Sprite has entered an actual base")
-        outcome = world_rules.introduce_gorgon(world, incoming)
+        outcome = world_rules.introduce_gorgon(world, incoming, event=source_event)
         world = outcome.world
         if rule == "strain.void.low.4.1":
             event_city = next(x for x in cities if x.cell == incoming.cell)
@@ -420,58 +836,18 @@ def apply(
             if victim is None:
                 raise ValueError("Choose an actual living NPC at the event's location")
             if rule == "strain.void.low.4.1":
-                from girlframe.engine.m3_actor_state import ActorRef
-                from girlframe.engine.m3_battle import category, end_actor_casts
-                from girlframe.engine.m3_enforcer import end_grasps
-                from girlframe.engine.m3_physical import interrupt_journeys
-
-                ref = ActorRef(kind="npc", entity=victim.id)
                 if source_event is None:
                     raise ValueError(
                         "The actual Aggressive introduction needs its real source event"
                     )
-                if category(state, ref) == "harpy":
-                    raise ValueError(
-                        "A captured Harpy Core is not an ordinary NPC introduction victim"
-                    )
-                state.world = world
-                if "director" in victim.jobs:
-                    from girlframe.engine.m3_battle_director import die
+                from girlframe.engine.m3_gorgon_arrival import aggressive_casualty
 
-                    state = die(state, ref, source_event, choice.account)
-                else:
-                    state = end_actor_casts(
-                        end_grasps(
-                            interrupt_journeys(state, ref, source_event, choice.account),
-                            ref,
-                            source_event,
-                        ),
-                        ref,
-                        source_event,
-                    )
-                    assert state.world is not None
-                    state.world = world_rules.update(
-                        state.world,
-                        npcs=tuple(
-                            x.model_copy(update={"alive": False}) if x.id == victim.id else x
-                            for x in state.world.npcs
-                        ),
-                    )
-                assert state.world is not None
-                world = state.world
-                state.facts.append(
-                    dict(
-                        kind="aggressive_introduction_consumed",
-                        source_work=source_work,
-                        source_event=source_event,
-                        gorgon=incoming.id,
-                        followup="aggressive_introduction_npc_death",
-                        source_pdf="165",
-                        victim=ref.model_dump_json(),
-                        original_body=victim.model_dump_json(),
-                        account=choice.account,
-                    )
+                state.world = world
+                state = aggressive_casualty(
+                    state, incoming, victim, source_work, source_event, choice.account
                 )
+                world = state.world
+                assert world is not None
             else:
                 world = world_rules.update(
                     world,
@@ -517,6 +893,7 @@ def apply(
                 for x in world.gorgons
             ),
         )
+        world = world_rules.arrive_with_sprites(world, returned, source_event)
     elif rule == "strain.rebellion.low.1.1":
         fields(choice, {"target", "faction"})
         city = next(
@@ -628,7 +1005,6 @@ def apply(
         fields(choice, {"target", "npc_jobs"})
         from girlframe.engine.m3_actor_bonds import current_ref
         from girlframe.engine.m3_actor_bonds import depth as bond_depth
-        from girlframe.engine.m3_actor_state import ActorRef
         from girlframe.engine.m3_handler_consequences import active_handler
 
         people = [
@@ -748,10 +1124,10 @@ def apply(
             factions=world.factions
             + (faction.model_copy(update={"description": choice.account.strip()}),),
         )
-    elif rule == "strain.budget.high.5.1":
+    elif rule in ("strain.budget.high.5.1", REBEL_PROTEST):
         from girlframe.engine.m3_budget_anarchy import create as create_anarchy
 
-        fields(choice, {"target"})
+        fields(choice, {"target", "faction_id"} if rule == REBEL_PROTEST else {"target"})
         city = next(
             (
                 x
@@ -767,16 +1143,24 @@ def apply(
             raise ValueError("Choose an actual surviving city to fall into anarchy")
         if source_event is None:
             raise ValueError("Record the actual anarchy source event")
-        create_anarchy(state, source_work, source_event, city.id, choice.account)
-        world = world_rules.update(
-            world,
-            locations=tuple(
-                x.model_copy(update={"blocked_by": x.blocked_by + (source_work,)})
-                if x.id == city.id
-                else x
-                for x in world.locations
-            ),
+        if rule == REBEL_PROTEST and not any(
+            faction.id == choice.faction_id and faction.kind == "rebel" and faction.active
+            for faction in world.factions
+        ):
+            raise ValueError("Choose the actual active Rebel faction leading the protest")
+        create_anarchy(
+            state, source_work, source_event, city.id, choice.account, faction=choice.faction_id
         )
+        if rule != REBEL_PROTEST:
+            world = world_rules.update(
+                world,
+                locations=tuple(
+                    x.model_copy(update={"blocked_by": x.blocked_by + (source_work,)})
+                    if x.id == city.id
+                    else x
+                    for x in world.locations
+                ),
+            )
     else:
         raise ValueError("UNSUPPORTED_RULE: missing Strain effect application")
     state.world = world

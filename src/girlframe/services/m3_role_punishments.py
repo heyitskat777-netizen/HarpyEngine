@@ -105,6 +105,7 @@ def open_case(
         "trainee",
         "succubus_npc_disobey",
         "harpy_beneath",
+        "ancillary_cadre",
     ],
     action: str | None,
     source_event: str,
@@ -468,6 +469,11 @@ def current(c: Connection, game: GameService, state: GameState, case: RolePunish
         or target.controller != case.subject_controller
     ):
         raise WorkflowError("Recover the actual original executor, Frame and affected person.")
+    if case.source_kind == "ancillary_cadre":
+        from girlframe.services.m3_ancillary_discipline import prove_case
+
+        prove_case(game, c, state, case)
+        return
     if case.source_kind == "harpy_beneath":
         from girlframe.services.m3_harpy_beneath import prove_punishment
 
@@ -564,17 +570,24 @@ def pc_execution(
     row: dict[str, Any],
     viewer: GuildViewer,
     details: Details | None = None,
+    *,
+    allow_resolved: bool = False,
 ) -> RolePunishment | None:
-    identity = json.loads(row["body_json"]).get("role_case")
+    source = json.loads(row["body_json"])
+    identity = source.get("role_case")
     if identity is None:
         return None
     case = case_proof(c, game, identity)
     current(c, game, load_state(c, game.store.campaign_id), case)
+    saved_effect = (
+        allow_resolved and row["state"] == "resolved"
+        and source.get("applied_event") == case.effect_event
+    )
     if (
         case.pc_work != row["id"]
         or viewer.user_id != case.executor_controller
         or case.instruction is None
-        or case.effect_event is not None
+        or case.effect_event is not None and not saved_effect
         or case.ended_event is not None
         or set(case.attendance) != {case.executor_controller, case.subject_controller}
     ):
@@ -740,6 +753,13 @@ def synchronize(
     for case in tuple(state.role_punishments):
         if not case.effect_event or case.completion_event or case.ended_event:
             continue
+        if case.source_kind == "ancillary_cadre":
+            from girlframe.services.m3_chained_isolation import pending as isolation_pending
+            from girlframe.services.m3_soldier_surgery import pending as soldier_pending
+
+            if isolation_pending(state, case.id) or soldier_pending(state, case.id):
+                continue
+
         pending = False
         if case.pc_work:
             work = _latest_work(c, game)
@@ -983,12 +1003,18 @@ class RolePunishmentService:
                 from girlframe.services.m3_punishments import PunishmentService
 
                 pc_choices = PunishmentService(self.store).get(viewer, case.pc_work).get("choices")
+            from girlframe.engine.campaign_opening import RESTRICTED_PUNISHMENTS
+            from girlframe.services.campaign_difficulty import difficulty
+
+            kinds = list(available_for_case(state, case, bound)) if not stale else []
+            if kinds and difficulty(c, self.store.campaign_id) == "narrative":
+                kinds = [kind for kind in kinds if kind not in RESTRICTED_PUNISHMENTS]
             return dict(
                 id=identity,
                 revision=state.revision,
                 stale=stale,
                 case=projection,
-                kinds=list(available_for_case(state, case, bound)) if not stale else [],
+                kinds=kinds,
                 peers=peers,
                 pc_choices=pc_choices,
                 chooser=viewer.user_id == case.chooser_controller,
@@ -1028,9 +1054,24 @@ class RolePunishmentService:
                         raise WorkflowError(
                             "The actual chooser must instruct the Punishment first."
                         )
+                    work_revision = row["revision"]
+                    if case.effect_event:
+                        work = t.m3["m3_required_work"]
+                        applied_revision = c.scalar(
+                            sa.select(work.c.revision).where(
+                                work.c.campaign_id == self.store.campaign_id,
+                                work.c.id == case.pc_work,
+                                work.c.event_id == case.effect_event,
+                                work.c.state == "resolved",
+                            )
+                        )
+                        if applied_revision is None:
+                            raise WorkflowError(
+                                "Recover the original on-screen Punishment receipt."
+                            )
+                        work_revision = applied_revision - 1
                     pc_call = (
-                        case.pc_work,
-                        row["revision"],
+                        case.pc_work, work_revision,
                         Details.model_validate_json(case.instruction.details_json),
                     )
             if pc_call:
@@ -1079,6 +1120,9 @@ class RolePunishmentService:
                         "Only the original chooser instructs before the actual scene begins."
                     )
                 details = Details.model_validate_json(instruction.details_json)
+                from girlframe.services.campaign_difficulty import require_consequence
+
+                require_consequence(c, self.store.campaign_id, details.kind)
                 if instruction.kind != details.kind or instruction.kind not in available_for_case(
                     state, case, profiles(c, self.store.campaign_id)
                 ):
@@ -1161,6 +1205,10 @@ class RolePunishmentService:
                     raise WorkflowError(
                         "Carry out the exact actual instruction after the on-screen scene."
                     )
+                from girlframe.services.m3_chained_isolation import stage
+
+                suppressed = stage(self.game, state, case, event)
+                tag = str(uuid4())
                 state = rules.social(
                     state,
                     case.subject,
@@ -1168,9 +1216,16 @@ class RolePunishmentService:
                     case.instruction,
                     profiles(c, self.store.campaign_id),
                     event,
-                    str(uuid4()),
+                    tag,
                     source_kind=case.source_kind,
+                    suppress_bond=suppressed,
                 )
+                if case.source_kind == "ancillary_cadre":
+                    from girlframe.services.m3_ancillary_discipline import applied_consequences
+                    from girlframe.services.m3_soldier_surgery import stage as stage_soldier
+
+                    state = applied_consequences(self.game, state, case, event)
+                    stage_soldier(self.game, state, case, event, tag)
                 case = case.model_copy(update=dict(effect_event=event, execution_account=account))
                 kind = "executed"
             _replace(state, case)

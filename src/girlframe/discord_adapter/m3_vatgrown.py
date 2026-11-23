@@ -15,9 +15,7 @@ from girlframe.services.m2_game import GameService
 from girlframe.services.m3_vatgrown import DollService
 
 
-async def open_choice(
-    interaction: discord.Interaction, game: GameService, decision: dict[str, Any]
-) -> None:
+def doll_choice_fields(decision: dict[str, Any]) -> list[Field]:
     detail = decision["detail"]
     fields = []
     if detail["options"]:
@@ -39,7 +37,13 @@ async def open_choice(
                 required=decision["kind"] == "vat_doll_information",
             )
         )
+    return fields
 
+
+async def open_choice(
+    interaction: discord.Interaction, game: GameService, decision: dict[str, Any]
+) -> None:
+    detail = decision["detail"]
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
         await asyncio.to_thread(
             game.respond,
@@ -68,7 +72,11 @@ async def open_choice(
             "another person's private notes."
         )
     form = NativeForm(
-        interaction.user.id, "Unassuming Doll: your choice", instructions, fields, submit
+        interaction.user.id,
+        "Unassuming Doll: your choice",
+        instructions,
+        doll_choice_fields(decision),
+        submit,
     )
     await reply(interaction, form.text(), form)
 

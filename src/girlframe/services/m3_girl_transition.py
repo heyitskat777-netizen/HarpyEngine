@@ -1,4 +1,4 @@
-"""Resumable original-CID Girl baseline setup after an actual Defeat book change."""
+"""Resumable original-CID Girl baseline setup after an actual source-owned book change."""
 
 import json
 from typing import Any
@@ -49,16 +49,32 @@ def synchronize(c: Connection, store: OnboardingStore, action: dict[str, Any], e
         ),
         None,
     )
-    if fact is None:
-        return
-    identity = str(uuid5(NAMESPACE_URL, "girlframe:girl-transition:" + action["id"] + ":" + event))
+    if fact is not None:
+        stage_baseline(c, store, owner, fact, event, action["id"])
+
+
+def baseline_id(source: str, event: str) -> str:
+    return str(uuid5(NAMESPACE_URL, "girlframe:girl-transition:" + source + ":" + event))
+
+
+def stage_baseline(
+    c: Connection,
+    store: OnboardingStore,
+    owner: ActorRef,
+    fact: dict[str, str],
+    event: str,
+    source: str,
+    *,
+    timeskip: bool = False,
+) -> str:
+    identity = baseline_id(source, event)
     table = t.m3["m3_required_work"]
     if c.scalar(
         sa.select(table.c.id)
         .where(table.c.campaign_id == store.campaign_id, table.c.id == identity)
         .limit(1)
     ):
-        return
+        return identity
     related(
         c,
         store,
@@ -72,13 +88,15 @@ def synchronize(c: Connection, store: OnboardingStore, action: dict[str, Any], e
             epoch=event,
             old_book=fact["old_book"],
             new_book=fact["new_book"],
-            source_action=action["id"],
+            source_action=source,
             source_event=event,
             entries={},
             immediate=True,
+            **({"timeskip": True} if timeskip else {}),
         ),
         event,
     )
+    return identity
 
 
 class GirlTransitionService:
@@ -129,18 +147,10 @@ class GirlTransitionService:
                         "new_book",
                         "source_action",
                         "source_event",
+                        "timeskip",
                     )
                 )
-                or identity
-                != str(
-                    uuid5(
-                        NAMESPACE_URL,
-                        "girlframe:girl-transition:"
-                        + start["source_action"]
-                        + ":"
-                        + start["epoch"],
-                    )
-                )
+                or identity != baseline_id(start["source_action"], start["epoch"])
             ):
                 raise ValueError()
             source = (
@@ -154,16 +164,24 @@ class GirlTransitionService:
                 .first()
             )
             meta = json.loads(source["payload_json"]) if source else {}
-            action = self.game.action(c, start["source_action"])
-            if (
-                source is None
-                or source["kind"] != "m3.choice_resolved"
-                or source["actor_id"] != owner.entity
-                or meta.get("action_id") != action["id"]
-                or action["data"].get("play") != "defeat"
-                or action["data"].get("defeat", {}).get("actor") != start["owner"]
-            ):
+            if source is None or source["actor_id"] != owner.entity:
                 raise ValueError()
+            if start.get("timeskip"):
+                if (
+                    source["kind"] != "m3.timeskip_newgirl_changed"
+                    or meta.get("timeskip_id") != start["source_action"]
+                    or start["old_book"] != "NEWGIRL"
+                ):
+                    raise ValueError()
+            else:
+                action = self.game.action(c, start["source_action"])
+                if (
+                    source["kind"] != "m3.choice_resolved"
+                    or meta.get("action_id") != action["id"]
+                    or action["data"].get("play") != "defeat"
+                    or action["data"].get("defeat", {}).get("actor") != start["owner"]
+                ):
+                    raise ValueError()
             history = c.scalar(
                 sa.select(t.m2["m2_state_history"].c.body_json).where(
                     t.m2["m2_state_history"].c.campaign_id == self.store.campaign_id,
@@ -191,6 +209,16 @@ class GirlTransitionService:
                 or fact["old_book"] != start["old_book"]
             ):
                 raise ValueError()
+            if start.get("timeskip"):
+                from girlframe.services.m3_timeskip import records as timeskips
+
+                if original is None or not any(
+                    x.id == start["source_action"]
+                    and owner in x.graduates
+                    and x.baselines.get(owner.token) == start["epoch"]
+                    for x in timeskips(original)
+                ):
+                    raise ValueError()
             expected = {"plan": owner.entity, "completed": owner.entity}
             entries = body["entries"]
             if "assignment" in entries:
@@ -433,6 +461,15 @@ class GirlTransitionService:
             )
         )
 
+    def _authorize_change(self, c: Connection, viewer: GuildViewer, identity: str) -> None:
+        gate = Access(self.store)
+        gate.authorize(c, viewer, "plays")
+        if json.loads(self._row(c, identity, first=True)["body_json"]).get("timeskip"):
+            from girlframe.services.m3_timeskip import RULE
+
+            gate.authorize(c, viewer, "world")
+            gate.require_specialist_rule(RULE)
+
     def _write(
         self,
         viewer: GuildViewer,
@@ -443,7 +480,7 @@ class GirlTransitionService:
         data: dict[str, Any],
     ) -> dict[str, Any]:
         def access(c: Connection) -> None:
-            Access(self.store).authorize(c, viewer, "plays")
+            self._authorize_change(c, viewer, identity)
             self._view(c, viewer, identity)
 
         def operation(c: Connection) -> dict[str, Any]:
@@ -578,7 +615,7 @@ class GirlTransitionService:
         self, viewer: GuildViewer, key: str, identity: str, revision: int, game_revision: int
     ) -> dict[str, Any]:
         def access(c: Connection) -> None:
-            Access(self.store).authorize(c, viewer, "plays")
+            self._authorize_change(c, viewer, identity)
             if not self._view(c, viewer, identity)["owner"]:
                 raise WorkflowError("Only the original Girl confirms the complete actual setup.")
 

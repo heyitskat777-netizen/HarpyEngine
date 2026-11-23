@@ -18,11 +18,13 @@ from test_physical_operations import place
 
 from girlframe.database import tables as t
 from girlframe.delivery.m2_worker import GameWorker
+from girlframe.discord_adapter.inbox import InboxView
+from girlframe.discord_adapter.m3_handler_plays import open_handler_plays
 from girlframe.engine import m3_casualty as rules
 from girlframe.engine.m2 import PlayInput
 from girlframe.engine.m3_actor_bonds import current_ref, depth, is_helpless
 from girlframe.engine.m3_actors import resolve
-from girlframe.engine.m3_handler_play_state import Effect
+from girlframe.engine.m3_handler_play_state import SOURCE_RULE, Effect
 from girlframe.engine.m3_physical_state import CockpitAction
 from girlframe.engine.m3_punishments import Details
 from girlframe.engine.m3_role_punishment_state import Instruction
@@ -547,6 +549,86 @@ def test_real_source_authored_brain_destruction_ends_original_not_broken_brain_c
     with pytest.raises(WorkflowError):
         game.sheet(PLAYER)
     assert game.dice.calls == 0
+
+
+def test_extra_handler_play_applies_real_owned_casualty_part_damage(ledger, tmp_path, monkeypatch):
+    game, _, _, controls = ready(ledger, tmp_path, monkeypatch)
+    before = state(game)
+    target = current_ref(before, 2)
+    with pytest.raises(WorkflowError, match="original Casualty"):
+        controls.damage_part(
+            ADMIN,
+            "not-a-casualty",
+            before.revision,
+            current_ref(before, 3),
+            "brain",
+            "broken",
+            "Unsupported target.",
+            handler_play=True,
+        )
+    account = "PRIVATE_ACTUAL_PART_CHANGE"
+    inbox = InboxService(ledger)
+
+    async def use():
+        click = current(1, 49000)
+        click.channel_id = 900
+        await click.response.defer(ephemeral=True)
+        await open_handler_plays(click, HandlerPlayService(ledger))
+        menu = click.edit_original_response.call_args.kwargs["view"]
+        await menu.open_item(click, "casualty_parts")
+        form = click.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            actor=(target.token,), part=("brain",), condition=("broken",), account=account
+        )
+        sent = current(1, 49001)
+        await form.confirm.callback(sent)
+        assert form.completed, sent.followup.send.call_args
+
+    asyncio.run(use())
+    result = controls.damage_part(
+        ADMIN,
+        "49001",
+        before.revision,
+        target,
+        "brain",
+        "broken",
+        account,
+        handler_play=True,
+    )
+    after = state(game)
+    assert controls.view(PLAYER, result["id"])["record"]["condition"] == "broken"
+    assert after.sheets["2"].permissions == before.sheets["2"].permissions
+    assert after.sheets["3"] == before.sheets["3"]
+    with ledger.engine.connect() as c:
+        event = c.scalar(
+            sa.select(t.events.c.payload_json).where(
+                t.events.c.command_key == "49001",
+                t.events.c.kind == "m3.casualty_part_damaged",
+            )
+        )
+    assert json.loads(event)["rule_id"] == SOURCE_RULE and account not in event
+    assert not any(x.identity == result["id"] for x in inbox.items(OTHER))
+    ledger.engine.dispose()
+    with pytest.raises(WorkflowError):
+        controls.damage_part(
+            ADMIN,
+            "stale-part-change",
+            before.revision,
+            target,
+            "brain",
+            "destroyed",
+            "Wrong revision.",
+            handler_play=True,
+        )
+
+    async def reopen():
+        click = current(2, 49002)
+        await click.response.defer(ephemeral=True)
+        item = next(x for x in inbox.items(PLAYER) if x.identity == result["id"])
+        await InboxView(inbox, 2).route(click, item)
+        assert account in click.edit_original_response.call_args.kwargs["content"]
+
+    asyncio.run(reopen())
 
 
 def test_actual_dormant_work_owned_resistance_native_cost_reopen_and_real_completion(

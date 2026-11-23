@@ -21,6 +21,9 @@ def test_console_reopens_held_play_retains_native_keys_and_finishes_gm_review(tm
     trial = Trial(directory, create=True)
     try:
         console = Console(trial)
+        campaign = console.execute("/campaign-work")
+        assert campaign["scope"] == "recipient_ooc" and campaign["period"] is None
+        assert campaign["missions"]["desk"] is None and trial.dice.calls == 0
         first = console.execute("Handler, what is the established objective?")
         assert console.execute("/retry") == first
         declaration = console.execute(

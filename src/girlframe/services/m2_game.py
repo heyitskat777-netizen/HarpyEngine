@@ -3,7 +3,7 @@
 import json
 from collections.abc import Callable
 from datetime import UTC, datetime
-from typing import Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 from uuid import UUID, uuid4
 
 import sqlalchemy as sa
@@ -41,6 +41,10 @@ from girlframe.services.m2_state import load_state, public_sheet
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
+if TYPE_CHECKING:
+    from girlframe.ai.director_dossiers import HandlerExperienceSelection
+    from girlframe.engine.m3_handler_play_state import Effect
+
 PUBLIC_FIELDS = {
     "frame_name",
     "appearance",
@@ -76,6 +80,9 @@ class GameService:
                     "UNSUPPORTED_RULE: resolve the Director's Handler/Girl rules context first."
                 )
             state = load_state(c, self.store.campaign_id)
+            from girlframe.services.m3_void_leave import require_story
+
+            require_story(state)
             if (
                 state.sheets
                 and HandlerService(self.store).current(c)[1].handler_id != state.handler
@@ -102,6 +109,27 @@ class GameService:
         event_index: int = 0,
         **metadata: Any,
     ) -> str:
+        if scene_id := metadata.get("scene_id"):
+            self.scene_unpaused(c, scene_id)
+        elif action_id := metadata.get("action_id"):
+            actions = t.m2["m2_actions"]
+            action_scene = c.scalar(
+                sa.select(actions.c.scene_id).where(
+                    actions.c.campaign_id == self.store.campaign_id, actions.c.id == action_id
+                )
+            )
+            if action_scene:
+                self.scene_unpaused(c, action_scene)
+        elif work_id := metadata.get("work_id"):
+            work = t.m3["m3_required_work"]
+            work_scene = c.scalar(
+                sa.select(work.c.scene_id)
+                .where(work.c.campaign_id == self.store.campaign_id, work.c.id == work_id)
+                .order_by(work.c.revision.desc())
+                .limit(1)
+            )
+            if work_scene:
+                self.scene_unpaused(c, work_scene)
         if state is not None:
             from girlframe.services.p1_canonical_barrier import require_canonical_writable
 
@@ -259,6 +287,10 @@ class GameService:
                 setattr(state, field, getattr(bound, field))
             from girlframe.engine.m3_red_queen import JUDGEMENT as COURT_JUDGEMENT
 
+            if state.handler_persona and state.handler_persona.playbook == "Frantic":
+                from girlframe.services.m3_frantic_crisis import observe_births as crisis_births
+
+                crisis_births(self, c, previous_state, state, event)
             if any(getattr(x, "rule_id", None) == COURT_JUDGEMENT for x in state.requisitions):
                 from girlframe.services.m3_red_queen_support import stage_tag_births
 
@@ -339,6 +371,23 @@ class GameService:
             from girlframe.services.m3_harpy_bond_void import stage as stage_temptation
 
             stage_temptation(self, c, state, event, metadata)
+            if any(fact.get("kind") == "parasite_ride" for fact in state.facts):
+                from girlframe.engine.m3_parasite import follow_hosts
+
+                follow_hosts(state, event)
+            from girlframe.services.campaign_difficulty import guard_transition
+
+            guard_transition(
+                c,
+                self.store,
+                previous_state,
+                state,
+                kind,
+                event,
+                actor,
+                action_id=metadata.get("action_id"),
+                choice_id=metadata.get("choice_id"),
+            )
             body = GameState.model_validate_json(state.model_dump_json()).model_dump_json()
             c.execute(
                 t.m2["m2_state_history"]
@@ -560,25 +609,30 @@ class GameService:
                         ],
                     )
             if sheet.owner == viewer.user_id and sheet.character_id:
-                from girlframe.engine.m3_actor_bonds import current_ref as prince_sheet_ref
+                from girlframe.engine.m3_actor_bonds import current_ref as original_sheet_ref
                 from girlframe.engine.m3_prince import official_pronouns
+                from girlframe.services.m3_princess_npc_orders import ace_pronouns
 
-                pronouns = official_pronouns(state, prince_sheet_ref(state, sheet.owner))
+                sheet_actor = original_sheet_ref(state, sheet.owner)
+                pronouns = official_pronouns(state, sheet_actor)
                 if pronouns:
                     data["official_pronouns"] = pronouns
+                optional = ace_pronouns(self, c, state, sheet_actor)
+                if optional:
+                    data["princess_optional_pronouns"] = optional
                 if sheet.frame == "CONSUME":
                     from girlframe.engine.m3_consume import hunger
                     from girlframe.services.m3_consume_support import appearance
 
                     data["consume_runtime"] = dict(
-                        hunger=hunger(state, prince_sheet_ref(state, sheet.owner))
+                        hunger=hunger(state, sheet_actor)
                         if not sheet.frame_scrapped
                         else "Unavailable (scrapped Frame)",
-                        appearance=appearance(state, prince_sheet_ref(state, sheet.owner)),
+                        appearance=appearance(state, sheet_actor),
                     )
             return data
 
-    def helpless_status(self, viewer: GuildViewer) -> bool:
+    def helpless_status(self, viewer: GuildViewer, *, ordinary_recovery: bool = False) -> bool:
         """Read the current person's condition, including actor-bound NPC opponents."""
         from girlframe.engine.m3_actor_bonds import current_ref, is_helpless
 
@@ -587,7 +641,9 @@ class GameService:
             state = load_state(c, self.store.campaign_id)
             if str(viewer.user_id) not in state.sheets:
                 raise WorkflowError("This Pilot has no activated sheet.")
-            return is_helpless(state, current_ref(state, viewer.user_id))
+            return is_helpless(
+                state, current_ref(state, viewer.user_id), ignore_conditioning=ordinary_recovery
+            )
 
     def activate(
         self, viewer: GuildViewer, key: str, fingerprint: str, public_fields: tuple[str, ...] = ()
@@ -627,12 +683,24 @@ class GameService:
                 raise WorkflowError(
                     "The replacement needs its own explicit current-Handler Status assignment."
                 )
+            if current_career is not None and current_career.previous_archive is not None:
+                from girlframe.services.m3_careers import require_timeskip_replacement
+
+                require_timeskip_replacement(
+                    self.store,
+                    state,
+                    current_career.previous_archive,
+                    review.creation.girl_playbook,
+                )
             absent_careers = {
                 int(x.actor.entity)
                 for x in state.career_archives
                 if int(x.actor.entity) not in state.order
             }
             expected_roster = {x.user_id for x in setup.status_order} - absent_careers
+            from girlframe.services.m3_budget_demotion import girl_slot
+
+            demotion = girl_slot(state, viewer.user_id, setup)
             if not state.order and not state.career_archives:
                 state.order = tuple(x.user_id for x in setup.status_order)
                 state.handler = setup.handler_id
@@ -771,6 +839,27 @@ class GameService:
             stage_activation(
                 self, c, state, activated_actor(state, viewer.user_id), activation_event
             )
+            if (
+                current_career is not None
+                and current_career.previous_archive is not None
+                and viewer.user_id not in state.order
+            ):
+                position = current_career.status_position
+                if position is None or not 0 <= position <= len(state.order):
+                    raise WorkflowError("Recover the replacement's actual assigned Cadre Status.")
+                state.order = (*state.order[:position], viewer.user_id, *state.order[position:])
+            if demotion is not None:
+                from girlframe.engine.m3_budget_demotion import save as save_demotion
+
+                save_demotion(
+                    state,
+                    demotion.model_copy(
+                        update=dict(
+                            girl=activated_actor(state, viewer.user_id),
+                            girl_activation=activation_event,
+                        )
+                    ),
+                )
             self.event(
                 c,
                 viewer.user_id,
@@ -804,7 +893,9 @@ class GameService:
             authorize=authorize,
         )
 
-    def scene(self, c: Connection, channel: int | str) -> dict[str, Any]:
+    def scene(
+        self, c: Connection, channel: int | str, *, check_slot: bool = True
+    ) -> dict[str, Any]:
         table = t.m2["m2_scenes"]
         row = (
             c.execute(
@@ -819,7 +910,62 @@ class GameService:
         )
         if row is None:
             raise WorkflowError("Bind an open M2 scene channel first.")
+        if check_slot:
+            from girlframe.services.campaign_time_history import require_due
+
+            plan = require_due(c, self.store.campaign_id, row["id"])
+            self.scene_unpaused(c, row["id"])
+            if plan is not None and plan.requires:
+                from girlframe.services.campaign_time import CampaignTimeService
+
+                CampaignTimeService(self.store).require_dependencies(c, plan)
         return dict(row) | {"participants": json.loads(row["participants_json"])}
+
+    def scene_unpaused(self, c: Connection, scene: str) -> None:
+        from girlframe.services.scene_safety import require_scene_unpaused
+
+        require_scene_unpaused(c, self.store.campaign_id, scene)
+
+    def _bind_scene_in_transaction(
+        self, c: Connection, actor: int, key: str, channel: int, *, event_index: int = 0
+    ) -> dict[str, Any]:
+        if type(channel) is not int or not 0 < channel < 2**64:
+            raise WorkflowError("Choose an actual server text channel.")
+        table = t.m2["m2_scenes"]
+        where = sa.and_(
+            table.c.campaign_id == self.store.campaign_id, table.c.channel_id == str(channel)
+        )
+        old = c.execute(sa.select(table).where(where)).mappings().first()
+        if old and old["open"]:
+            raise WorkflowError("This scene is already open.")
+        identity = str(uuid4())
+        values = {
+            "id": identity,
+            "revision": old["revision"] + 1 if old else 1,
+            "participants_json": "[]",
+            "open": True,
+        }
+        if old:
+            c.execute(table.update().where(where).values(**values))
+        else:
+            c.execute(
+                table.insert().values(
+                    campaign_id=self.store.campaign_id, channel_id=str(channel), **values
+                )
+            )
+        event = self.event(
+            c,
+            actor,
+            key,
+            "m2.scene_bound",
+            channel=channel,
+            scene_id=identity,
+            event_index=event_index,
+        )
+        from girlframe.services.m3_work import bind_scene_context
+
+        bind_scene_context(c, self.store, identity, channel, event)
+        return {"channel": channel, "scene": identity}
 
     def bind_scene(self, viewer: GuildViewer, key: str, channel: int) -> dict[str, Any]:
         def authorize(c: Connection) -> None:
@@ -828,37 +974,7 @@ class GameService:
             self.store.administrator(viewer)
 
         def operation(c: Connection) -> dict[str, Any]:
-            if type(channel) is not int or not 0 < channel < 2**64:
-                raise WorkflowError("Choose an actual server text channel.")
-            table = t.m2["m2_scenes"]
-            where = sa.and_(
-                table.c.campaign_id == self.store.campaign_id, table.c.channel_id == str(channel)
-            )
-            old = c.execute(sa.select(table).where(where)).mappings().first()
-            if old and old["open"]:
-                raise WorkflowError("This scene is already open.")
-            identity = str(uuid4())
-            values = {
-                "id": identity,
-                "revision": old["revision"] + 1 if old else 1,
-                "participants_json": "[]",
-                "open": True,
-            }
-            if old:
-                c.execute(table.update().where(where).values(**values))
-            else:
-                c.execute(
-                    table.insert().values(
-                        campaign_id=self.store.campaign_id, channel_id=str(channel), **values
-                    )
-                )
-            event = self.event(
-                c, viewer.user_id, key, "m2.scene_bound", channel=channel, scene_id=identity
-            )
-            from girlframe.services.m3_work import bind_scene_context
-
-            bind_scene_context(c, self.store, identity, channel, event)
-            return {"channel": channel, "scene": identity}
+            return self._bind_scene_in_transaction(c, viewer.user_id, key, channel)
 
         return self.store._write(
             viewer,
@@ -901,6 +1017,11 @@ class GameService:
                 )
             table = t.m2["m2_scenes"]
             if str(viewer.user_id) in state.sheets:
+                from girlframe.services.campaign_time_history import require_reserved
+
+                require_reserved(
+                    c, self.store.campaign_id, scene["id"], viewer.user_id, ref.incarnation
+                )
                 rows = c.execute(
                     sa.select(table).where(
                         table.c.campaign_id == self.store.campaign_id, table.c.open.is_(True)
@@ -968,6 +1089,7 @@ class GameService:
         return dict(row) | {"data": json.loads(row["body_json"])}
 
     def save_action(self, c: Connection, action: dict[str, Any], **changes: Any) -> None:
+        self.scene_unpaused(c, action["scene_id"])
         action.update(changes)
         action["revision"] += 1
         table = t.m2["m2_actions"]
@@ -989,6 +1111,7 @@ class GameService:
         kind: str,
         body: dict[str, Any] | None = None,
     ) -> str:
+        self.scene_unpaused(c, action["scene_id"])
         if actor is None:
             raise WorkflowError("The required decision owner is unavailable.")
         identity = str(uuid4())
@@ -1278,7 +1401,15 @@ class GameService:
         return False
 
     def begin(
-        self, viewer: GuildViewer, key: str, channel: int, sheet_revision: int, prepared: PlayInput
+        self,
+        viewer: GuildViewer,
+        key: str,
+        channel: int,
+        sheet_revision: int,
+        prepared: PlayInput,
+        *,
+        timing_selection: str | None = None,
+        after_begin: Callable[[Connection, str], None] | None = None,
     ) -> dict[str, Any]:
         prepared = PlayInput.model_validate_json(prepared.model_dump_json())
         if prepared.play not in (
@@ -1391,6 +1522,38 @@ class GameService:
             mechanical_owner = (
                 int(princess_child["actor_controller"]) if princess_child else viewer.user_id
             )
+            from girlframe.engine.m3_harpy_visions import blocked as visions_blocked
+            from girlframe.engine.m3_lobotomy import blocked_play
+            from girlframe.engine.m3_plays import FRAME_ROLL_BOOKS, GIRL_ROLL_RULES
+
+            original_sheet = state.sheets.get(str(mechanical_owner))
+            if original_sheet and original_sheet.character_id:
+                from girlframe.engine.m3_actor_state import ActorRef as EscapeActor
+                from girlframe.services.m3_escape import held as escape_held
+
+                original_actor = EscapeActor(
+                    kind="pilot",
+                    entity=str(mechanical_owner),
+                    incarnation=original_sheet.character_id,
+                )
+                if escape_held(state, original_actor):
+                    raise WorkflowError("The original Girl has an unfinished owned consequence.")
+            if prepared.play == "go_off_duty" and original_sheet and original_sheet.character_id:
+                from girlframe.engine.m3_actor_bonds import current_ref as captured_actor
+                from girlframe.engine.m3_captured import active as captured_active
+
+                if captured_active(state, captured_actor(state, mechanical_owner)):
+                    raise WorkflowError("Use the original Girl’s Captured! choice while held.")
+            if visions_blocked(state, original_sheet, prepared.play):
+                raise WorkflowError("This Girl’s Play requires Foundation reconditioning.")
+            if (
+                original_sheet is not None
+                and (prepared.play in GIRL_ROLL_RULES or prepared.play in FRAME_ROLL_BOOKS)
+                and blocked_play(original_sheet, prepared.play) is not None
+            ):
+                raise WorkflowError(
+                    "This original Girl cannot roll that Play after actual surgery."
+                )
             if any(x.get("kind") == "fuel_shortage" for x in state.facts):
                 from girlframe.engine.m3_actor_bonds import current_ref as fuel_actor
                 from girlframe.services.m3_fuel_shortage import require_complete as fuel_complete
@@ -1541,6 +1704,9 @@ class GameService:
             )
 
             gorgon_response = prepare_gorgon_response(self, c, viewer, prepared, state, channel)
+            from girlframe.services.m3_private_harpy_keep import prepare_keep as prepare_gaze_keep
+
+            gaze_keep = prepare_gaze_keep(self, c, state, viewer, prepared, channel)
             from girlframe.services.m3_secretary import (
                 prepare_response as prepare_secretary_response,
             )
@@ -1589,6 +1755,7 @@ class GameService:
             elif (
                 prepared.play == "keep_your_head"
                 and prepared.source_work is not None
+                and gaze_keep is None
                 and bomb_collar_source is None
                 and princess_child is None
                 and easy_target_child is None
@@ -1644,6 +1811,7 @@ class GameService:
                 mockingbird = prepare_mockingbird(self, c, viewer, prepared, state, channel=channel)
             elif (
                 prepared.source_work is not None
+                and gaze_keep is None
                 and harpy_followthrough is None
                 and void_frame_entry is None
                 and bomb_collar_source is None
@@ -1940,9 +2108,15 @@ class GameService:
                     "Link Surgery Reversal prevents this original Girl's Frame Plays."
                 )
             from girlframe.engine.m3_actor_bonds import is_helpless
+            from girlframe.services.m3_conditioning_refusal import trainer_for_refusal
 
+            conditioning_trainer = trainer_for_refusal(
+                self, c, state, current_ref, channel, prepared
+            )
             if (
-                is_helpless(state, current_ref)
+                is_helpless(
+                    state, current_ref, ignore_conditioning=conditioning_trainer is not None
+                )
                 and defeat is None
                 and void_keep is None
                 and janus is None
@@ -1954,6 +2128,12 @@ class GameService:
             if HandlerService(self.store).current(c)[1].handler_id != state.handler:
                 raise WorkflowError("STALE_HANDLER: canonical Handler replacement needs review.")
             scene = self.scene(c, channel)
+            if prepared.heat and any(x.get("kind") == "sentinel_shell" for x in state.facts):
+                from girlframe.engine.m3_actor_bonds import current_ref as trapped_pilot_ref
+                from girlframe.engine.m3_sentinel_shell import holds
+
+                if holds(state, trapped_pilot_ref(state, mechanical_owner), "trapped"):
+                    raise WorkflowError("This original Girl cannot spend Heat until she is freed")
             scoped_defeat = False
             if defeat is not None and defeat.get("source_work"):
                 from girlframe.services.m3_defeat import work as defeat_work
@@ -1963,7 +2143,6 @@ class GameService:
                 scoped_defeat = (
                     isinstance(json.loads(source_defeat_work["body_json"]).get("requirement"), dict)
                     and source_defeat_work["scene_id"] == scene["id"]
-                    and prepared.parent is not None
                 )
             if (
                 all(
@@ -2017,6 +2196,7 @@ class GameService:
                         alpha_counter_scope,
                         npc_order_scope,
                         gorgon_response,
+                        gaze_keep,
                         secretary_scope,
                         npc_flirt,
                         harpy_flirt,
@@ -2069,6 +2249,8 @@ class GameService:
                     source_cast = SceneCast.model_validate_json(json.dumps(princess_child["cast"]))
                 elif gorgon_response is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(gorgon_response["cast"]))
+                elif gaze_keep is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(gaze_keep["cast"]))
                 elif secretary_scope is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(secretary_scope["cast"]))
                 elif scoped_defeat:
@@ -2180,7 +2362,7 @@ class GameService:
                     )
                     assert void_keep is not None
                     void_keep["cast"] = source_cast.model_dump(mode="json")
-                    void_keep["table"] = sorted(
+                    void_keep["table"] = void_keep.get("private_audience") or sorted(
                         {role.controller for role in source_cast.roles}
                         | ({source_cast.facilitator} if source_cast.facilitator else set())
                     )
@@ -2200,6 +2382,16 @@ class GameService:
                     raise WorkflowError(
                         "STALE_CAST: recover the actual Dive participants and facilitator."
                     )
+                if (
+                    scoped_defeat
+                    and defeat is not None
+                    and not any(
+                        role.actor.model_dump(mode="json") == defeat["actor"]
+                        and role.controller == mechanical_owner
+                        for role in source_cast.roles
+                    )
+                ):
+                    raise WorkflowError("Recover the original Defeat actor in its source scene.")
             from girlframe.engine.m3_actor_state import ActorRef
             from girlframe.services.m3_scene_requisitions import guard as guard_private_scene
 
@@ -2210,6 +2402,26 @@ class GameService:
                     c, state, mechanical_owner, require_current_profile=False
                 ),
             )
+            if (
+                defeat is None
+                and void_keep is None
+                and any(x.get("kind") == "jackdaw_hallucinations" for x in state.facts)
+            ):
+                from girlframe.engine.m3_actors import resolve as resolve_pilot
+                from girlframe.services.m3_actors import profiles
+                from girlframe.services.m3_jackdaw import require_action
+
+                original_body = resolve_pilot(
+                    state,
+                    acting_ref,
+                    profiles(c, self.store.campaign_id),
+                    require_current_profile=False,
+                )
+                require_action(c, self.store.campaign_id, state, original_body)
+            if prepared.play == "check_sensors":
+                from girlframe.services.m3_sentinel import require_sensors
+
+                require_sensors(c, self.store.campaign_id, state, acting_ref)
             if defeat is None and void_keep is None:
                 from girlframe.services.m3_ankou import require_free as require_ankou_free
 
@@ -2293,6 +2505,8 @@ class GameService:
                                 "escape_play",
                                 "secretary_response_play",
                                 "order_disobey",
+                                "trainer_flirt_play",
+                                "trainer_hunt_play",
                                 "am_prepare",
                                 "am_code_prepare",
                                 "beneath_response_play",
@@ -2321,6 +2535,13 @@ class GameService:
                                 "mockingbird_void_threshold",
                                 "mockingbird_sex_void_threshold",
                                 "janus_void_threshold",
+                                "gorgon_hallucinations_void",
+                                "gorgon_contact_frame_void",
+                                "gorgon_shell_threshold",
+                                "gorgon_conditioning_threshold",
+                                "gorgon_unreal_threshold",
+                                "gorgon_infection_threshold",
+                                "gorgon_hazard_threshold",
                                 "snoop_item_void_threshold",
                                 "gorgon_response_play",
                             )
@@ -2394,6 +2615,13 @@ class GameService:
                     "mockingbird_void_threshold",
                     "mockingbird_sex_void_threshold",
                     "janus_void_threshold",
+                    "gorgon_hallucinations_void",
+                    "gorgon_contact_frame_void",
+                    "gorgon_shell_threshold",
+                    "gorgon_conditioning_threshold",
+                    "gorgon_unreal_threshold",
+                    "gorgon_infection_threshold",
+                    "gorgon_hazard_threshold",
                     "snoop_item_void_threshold",
                 ) and (void_keep is None or prepared.play != "keep_your_head"):
                     raise WorkflowError("Use the actual source-owned Void resistance controls.")
@@ -2467,6 +2695,14 @@ class GameService:
                     raise WorkflowError(
                         "Receive Orders requires the actual Disobey Orders response."
                     )
+                if required["kind"] == "trainer_flirt_play":
+                    from girlframe.services.m3_trainer_phrases import validate_gentle
+
+                    validate_gentle(self, c, state, parent, required, prepared)
+                if required["kind"] == "trainer_hunt_play" and (
+                    battle is None or battle.get("trainer_hunt_choice") != required["id"]
+                ):
+                    raise WorkflowError("Play the original Hunt's actual All Out Assault")
                 actions = t.m2["m2_actions"]
                 if c.execute(
                     sa.select(actions.c.id).where(
@@ -3039,6 +3275,10 @@ class GameService:
                 data["gorgon_counter_source"] = {
                     k: gorgon_response[k] for k in ("choice", "actor", "attacker")
                 }
+                if gorgon_response.get("conditioning_tag"):
+                    data["gorgon_counter_source"]["conditioning_tag"] = gorgon_response[
+                        "conditioning_tag"
+                    ]
                 data["participants"] = list(gorgon_response["table"])
                 handler_body = active_handler(state)
                 data["tag_context"] = dict(
@@ -3091,17 +3331,22 @@ class GameService:
             if npc_order_scope is not None:
                 from girlframe.engine.m3_actors import fingerprint
                 from girlframe.engine.m3_handler_consequences import active_handler
+                from girlframe.engine.m3_npc_orders import Order as NpcOrder
 
-                data["npc_order"] = npc_order_scope
+                data[
+                    "ranked_order"
+                    if npc_order_scope.get("origin_kind") == "ranked"
+                    else "npc_order"
+                ] = npc_order_scope
                 data["character_ids"] = {
                     str(x.controller): x.actor.incarnation
                     for x in source_cast.roles
                     if x.actor.kind == "pilot"
                 }
-                npc_source_table = sorted(
-                    {x.controller for x in source_cast.roles}
-                    | ({source_cast.facilitator} if source_cast.facilitator is not None else set())
-                )
+                npc_order = NpcOrder.model_validate_json(json.dumps(npc_order_scope))
+                npc_source_table = npc_order.audience()
+                if npc_order.origin_kind == "npc_handler":
+                    data["private_audience"] = npc_source_table
                 data["participants"] = npc_source_table
                 body = active_handler(state)
                 data["tag_context"] = dict(
@@ -3111,6 +3356,11 @@ class GameService:
                     table=npc_source_table,
                     cast=source_cast.model_dump(mode="json"),
                     cast_sha256=fingerprint(source_cast),
+                )
+            if conditioning_trainer is not None:
+                data["conditioning_refusal"] = dict(
+                    subject=current_ref.model_dump(mode="json"),
+                    trainer=conditioning_trainer.model_dump(mode="json"),
                 )
             if am_code is not None:
                 from girlframe.engine.m3_handler_consequences import active_handler
@@ -3265,8 +3515,50 @@ class GameService:
             if void_keep is not None:
                 data["void_keep"] = void_keep
                 data["participants"] = list(void_keep["table"])
+                if void_keep.get("private_audience"):
+                    data["private_audience"] = list(void_keep["private_audience"])
             if secretary_response is not None:
                 data["secretary_response"] = secretary_response
+            if gaze_keep is not None:
+                data["harpy_gaze_keep"] = gaze_keep
+                data["participants"] = data["private_audience"] = gaze_keep["audience"]
+                data["character_ids"] = {
+                    gaze_keep["actor"]["entity"]: gaze_keep["actor"]["incarnation"]
+                }
+                data["tag_context"] = dict(
+                    actor=gaze_keep["actor"],
+                    handler=None,
+                    gm_controller=gaze_keep["gm"],
+                    table=gaze_keep["audience"],
+                    cast=gaze_keep["cast"],
+                    cast_sha256=gaze_keep["cast_sha256"],
+                )
+            if gorgon_response is not None and gorgon_response.get("private_audience"):
+                audience = list(gorgon_response["private_audience"])
+                data["participants"] = data["private_audience"] = audience
+                data["tag_context"]["table"] = audience
+            if timing_selection is not None:
+                from girlframe.services.mission_timing import MissionTimingService
+
+                if (
+                    prepared.play != "keep_your_head"
+                    or prepared.parent is not None
+                    or prepared.source_work is not None
+                    or m3 is not None
+                    or adjudication is not None
+                    or void_keep is not None
+                    or gaze_keep is not None
+                    or gorgon_response is not None
+                    or secretary_response is not None
+                    or "actor_basic" in data
+                    or acting_ref.kind != "pilot"
+                    or mechanical_owner != viewer.user_id
+                ):
+                    raise WorkflowError("Timing supports an ordinary root Keep Your Head Play.")
+                MissionTimingService(self.store).attach_play(
+                    c, viewer, timing_selection, scene["id"], prepared.play
+                )
+                data["mission_timing"] = timing_selection
             from girlframe.services.m3_recovery import enable as enable_recovery
 
             enable_recovery(self, c, viewer, data)
@@ -3371,6 +3663,7 @@ class GameService:
             begin_source_event = (
                 str(uuid4())
                 if remote_sex_link is not None
+                or gaze_keep is not None
                 or secretary_response is not None
                 or princess_child
                 or princess_sex
@@ -3639,6 +3932,11 @@ class GameService:
 
                 assert begin_source_event is not None
                 link_response(state, secretary_response["gunpoint"], identity, begin_source_event)
+            if gaze_keep is not None:
+                from girlframe.services.m3_private_harpy_keep import bind_keep as bind_gaze_keep
+
+                assert begin_source_event is not None
+                bind_gaze_keep(state, gaze_keep, identity, begin_source_event)
             event = self.event(
                 c,
                 viewer.user_id,
@@ -3698,6 +3996,7 @@ class GameService:
                 or npc_order_scope is not None
                 or engage is not None
                 or void_keep is not None
+                or gaze_keep is not None
                 or dampener is not None
                 or kicked_puppy is not None
                 or nightmare_core is not None
@@ -3706,6 +4005,7 @@ class GameService:
                 state
                 if (
                     void_frame_entry is not None
+                    or gaze_keep is not None
                     or void_keep is not None
                     or alpha_sex is not None
                     or dose_up is not None
@@ -3787,6 +4087,12 @@ class GameService:
                 reserve(self, c, action, event)
             return {"action_id": identity, "state": action["state"]}
 
+        def committed_operation(c: Connection) -> dict[str, Any]:
+            result = operation(c)
+            if after_begin is not None:
+                after_begin(c, result["action_id"])
+            return result
+
         try:
             return self.store._write(
                 viewer,
@@ -3796,8 +4102,9 @@ class GameService:
                     "channel": channel,
                     "sheet_revision": sheet_revision,
                     "prepared": prepared.model_dump(mode="json"),
-                },
-                operation,
+                }
+                | ({"timing_selection": timing_selection} if timing_selection is not None else {}),
+                committed_operation,
                 auto_audit=False,
                 authorize=lambda c: self.authorize(c, viewer),
             )
@@ -3843,7 +4150,7 @@ class GameService:
 
             if valid_virus_order(self, c, state, owner, channel, dict(row)):
                 return dict(row)
-        if row is not None and json.loads(row["body_json"]).get("npc_order"):
+        if row is not None and (set(json.loads(row["body_json"])) & {"npc_order", "ranked_order"}):
             from girlframe.services.m3_npc_orders import valid_order as valid_npc_order
 
             if valid_npc_order(self, c, state, owner, channel, dict(row)):
@@ -3987,7 +4294,7 @@ class GameService:
                 from girlframe.services.m3_alpha import authorize as authorize_alpha
 
                 authorize_alpha(self, c, viewer, action)
-            if action["data"].get("npc_order"):
+            if action["data"].get("npc_order") or action["data"].get("ranked_order"):
                 from girlframe.services.m3_npc_orders import authorize as authorize_npc_order
 
                 authorize_npc_order(self, c, viewer, action)
@@ -4018,6 +4325,7 @@ class GameService:
             if action["data"].get("gorgon_play", {}).get("started"):
                 return {"action_id": identity, "receipt": None}
             self.unpaused(c)
+            self.scene_unpaused(c, action["scene_id"])
             if action["data"].get("hidden_sidearm"):
                 from girlframe.services.m3_hidden_sidearm import require_clear as sidearm_clear
 
@@ -4062,6 +4370,12 @@ class GameService:
                 raise WorkflowError("This action is diceless.")
             state = load_state(c, self.store.campaign_id)
             self.action_characters(c, action, state)
+            if action["data"].get("harpy_gaze_keep"):
+                from girlframe.services.m3_private_harpy_keep import (
+                    validate_keep as validate_gaze_keep,
+                )
+
+                validate_gaze_keep(self, c, state, action)
             if action["data"].get("harpy_beneath"):
                 from girlframe.services.m3_harpy_beneath import validate as validate_harpy_beneath
 
@@ -4247,6 +4561,18 @@ class GameService:
             if sheet.revision != action["data"]["sheet_revision"]:
                 raise WorkflowError("STALE_SHEET: recover the unrolled action; no dice consumed.")
             prepared = PlayInput.model_validate_json(json.dumps(action["data"]["prepared"]))
+            if prepared.play == "check_sensors" and sheet.character_id:
+                from girlframe.engine.m3_actor_state import ActorRef
+                from girlframe.services.m3_sentinel import require_sensors
+
+                require_sensors(
+                    c,
+                    self.store.campaign_id,
+                    state,
+                    ActorRef(
+                        kind="pilot", entity=str(action["actor_id"]), incarnation=sheet.character_id
+                    ),
+                )
             if prepared.play == "keep_your_head":
                 from girlframe.services.m3_nightmare import pre_roll as nightmare_pre_roll
 
@@ -4330,7 +4656,7 @@ class GameService:
                 from girlframe.services.m3_mockingbird_plays import pre_roll as mockingbird_pre_roll
 
                 mockingbird_pre_roll(self, c, state, action)
-            if action["data"].get("npc_order"):
+            if action["data"].get("npc_order") or action["data"].get("ranked_order"):
                 self.valid_order(
                     c, state, int(action["actor_id"]), int(action["channel_id"]), prepared.order_id
                 )
@@ -4546,6 +4872,12 @@ class GameService:
                 from girlframe.services.m3_void_frame_entry import pre_roll as entry_pre_roll
 
                 entry_modifiers = entry_pre_roll(self, c, state, action, court_event)
+            timing = None
+            if action["data"].get("mission_timing"):
+                from girlframe.services.mission_timing import MissionTimingService
+
+                timing = MissionTimingService(self.store)
+            clock = timing.prepare_roll(c, viewer, action) if timing else None
             faces = self.dice.roll()
             if len(faces) != 2 or any(type(x) is not int or not 1 <= x <= 6 for x in faces):
                 raise ValueError("Dice source returned invalid faces")
@@ -4679,7 +5011,7 @@ class GameService:
                 or prepared.disposable_heat
                 or action["data"].get("am_scrutinized")
                 or action["data"].get("am_code")
-                or action["data"].get("npc_order")
+                or (action["data"].get("npc_order") or action["data"].get("ranked_order"))
                 or action["data"].get("npc_flirt")
                 or action["data"].get("bonded_rejection_child")
                 or action["data"].get("dampener")
@@ -4775,6 +5107,7 @@ class GameService:
 
             if (
                 psychic_flirt
+                or ankou_modifiers
                 or prepared.ankou_pulse
                 or court_doll is not None
                 or any(
@@ -4807,6 +5140,9 @@ class GameService:
             self.save_action(c, action, state="tag_window")
             for person in action["data"]["participants"]:
                 self.request(c, action, person, "tag_window")
+            from girlframe.services.m3_mistress_conditioning import offer as mistress_conditioning
+
+            mistress_conditioning(self, c, state, action)
             self.queue(
                 c,
                 action,
@@ -4934,7 +5270,7 @@ class GameService:
                 or prepared.disposable_heat
                 or action["data"].get("am_scrutinized")
                 or action["data"].get("am_code")
-                or action["data"].get("npc_order")
+                or (action["data"].get("npc_order") or action["data"].get("ranked_order"))
                 or action["data"].get("npc_flirt")
                 or action["data"].get("bonded_rejection_child")
                 or action["data"].get("dampener")
@@ -4964,6 +5300,8 @@ class GameService:
                 )
 
                 sync_remote_source(self, c, self.action(c, action["id"]), event)
+            if timing is not None and clock is not None:
+                timing.record_play(c, viewer, action, receipt["id"], clock)
             return {"action_id": identity, "receipt": receipt}
 
         try:
@@ -5239,7 +5577,7 @@ class GameService:
 
                 authorize_alpha_sex(self, c, viewer, action)
                 director_tag_response = True
-            elif action["data"].get("npc_order"):
+            elif action["data"].get("npc_order") or action["data"].get("ranked_order"):
                 from girlframe.services.m3_npc_orders import authorize as authorize_npc_order
 
                 authorize_npc_order(self, c, viewer, action)
@@ -5377,6 +5715,7 @@ class GameService:
             if row["state"] != "pending" or row["revision"] != revision:
                 raise WorkflowError("STALE_CHOICE: reopen your current decisions.")
             action = self.action(c, row["action_id"])
+            self.scene_unpaused(c, action["scene_id"])
             if action["state"] in ("complete", "aborted"):
                 raise WorkflowError("This action no longer accepts decisions.")
             lock = self.lock(c, action["channel_id"])
@@ -5533,7 +5872,7 @@ class GameService:
                 or (action["data"].get("receipt") or {}).get("disposable_psyche")
                 or action["data"].get("am_scrutinized")
                 or action["data"].get("am_code")
-                or action["data"].get("npc_order")
+                or (action["data"].get("npc_order") or action["data"].get("ranked_order"))
                 or action["data"].get("npc_flirt")
                 or action["data"].get("bonded_rejection_child")
                 or action["data"].get("gorgon_play")
@@ -5624,6 +5963,12 @@ class GameService:
 
                 synchronize_keep(self, c, action, event, viewer, key)
             current_action = self.action(c, action["id"])
+            if current_action["state"] == "complete" and current_action["data"].get(
+                "harpy_gaze_keep"
+            ):
+                from girlframe.services.m3_private_harpy_keep import finish_keep as finish_gaze_keep
+
+                finish_gaze_keep(self, c, current_action, event, viewer, key)
             if current_action["state"] == "complete" and current_action["data"].get(
                 "gorgon_counter_source"
             ):
@@ -5893,6 +6238,11 @@ class GameService:
                 )
 
                 sync_remote_source(self, c, self.action(c, action["id"]), event)
+            if action["data"].get("dive", {}).get("void_drunk"):
+                from girlframe.services.m3_void_drunk import intercept
+
+                if intercept(self, c, self.action(c, action["id"]), key):
+                    action = self.action(c, action["id"])
             return {"action_id": action["id"], "state": action["state"], "choice_id": choice_id}
 
         try:
@@ -5916,6 +6266,24 @@ class GameService:
         except ValueError as error:
             raise WorkflowError(str(error)) from None
 
+    def direct_order_targets(self, viewer: GuildViewer, channel: int) -> dict[str, Any]:
+        with self.store.engine.connect() as c:
+            self.authorize(c, viewer)
+            self.unpaused(c)
+            state = load_state(c, self.store.campaign_id)
+            scene = self.scene(c, channel)
+            self.pilot_cast(c, state, scene, owners=(viewer.user_id,))
+            lock = self.lock(c, channel)
+            targets = []
+            if viewer.user_id in scene["participants"] and (
+                not lock or lock["state"] == "released"
+            ):
+                for target in scene["participants"]:
+                    sheet = state.sheets.get(str(target))
+                    if sheet and higher(state, viewer.user_id, target):
+                        targets.append((str(target), sheet.callsign))
+            return {"revision": state.revision, "targets": targets}
+
     def issue_order(
         self,
         viewer: GuildViewer,
@@ -5925,15 +6293,52 @@ class GameService:
         text: str,
         *,
         dose_up: bool = False,
+        conditioning_phrase: str | None = None,
+        phrase_target: int | None = None,
+        phrase_actor: str | None = None,
+        advocate_conversation: tuple[str, int, str] | None = None,
+        dress_order: tuple[str, int, "Effect"] | None = None,
+        final_dress_order: bool = False,
+        expected_revision: int | None = None,
     ) -> dict[str, Any]:
         if not text.strip() or len(text) > 1200:
             raise WorkflowError("Provide a direct order in 1–1200 characters.")
+        from girlframe.engine.m3_trainer_phrases import TARGETED
+
+        if phrase_target is not None and conditioning_phrase not in TARGETED:
+            raise WorkflowError("Only a targeted Conditioning Phrase nominates another Girl")
+        if phrase_actor is not None and conditioning_phrase not in ("hunt", "protect"):
+            raise WorkflowError("Only Hunt and Protect use a battlefield actor target")
+        if advocate_conversation is not None and (dose_up or conditioning_phrase is not None):
+            raise WorkflowError("Choose one source for this direct order")
+        if dress_order is not None and (dose_up or conditioning_phrase or advocate_conversation):
+            raise WorkflowError("Choose one source for this direct order")
+        if final_dress_order and dress_order is None:
+            raise WorkflowError("Recover the actual recorded Dress Them Down before its dismissal")
+        dress_step = (
+            "dismissal"
+            if final_dress_order
+            else dress_order[2].dress_order
+            if dress_order is not None
+            else None
+        )
+        if dress_order is not None and dress_step is None:
+            raise WorkflowError("Choose the actual direct Order option for Dress Them Down")
+
+        def authorize(c: Connection) -> None:
+            self.authorize(c, viewer)
+            if dress_order is not None:
+                from girlframe.services.m3_handler_plays import authorize_dress_order
+
+                authorize_dress_order(self, c, viewer, dress_order[0])
 
         def operation(c: Connection) -> dict[str, Any]:
             self.unpaused(c)
             state = load_state(c, self.store.campaign_id)
             scene = self.scene(c, channel)
             self.pilot_cast(c, state, scene, owners=(viewer.user_id, target))
+            if expected_revision is not None and state.revision != expected_revision:
+                raise WorkflowError("STALE_ORDER: reopen the current issuer and recipient.")
             if (
                 viewer.user_id not in scene["participants"]
                 or target not in scene["participants"]
@@ -5942,13 +6347,28 @@ class GameService:
                 raise WorkflowError(
                     "Only a current superior in this scene can issue a direct order."
                 )
-            from girlframe.services.m3_bonded_support import issue_requested_order
+            if viewer.user_id == state.handler:
+                from girlframe.services.m3_handler_retirement import require_successor
 
-            requested = issue_requested_order(
-                self, c, state, viewer, key, channel, target, text, dose_up=dose_up
-            )
-            if requested is not None:
-                return requested
+                require_successor(state)
+            from girlframe.services.m3_bonded_support import issue_requested_order
+            from girlframe.services.m3_sentinel import require_order_communication
+
+            if dress_order is not None:
+                from girlframe.services.m3_handler_plays import stage_dress_order
+
+                stage_dress_order(
+                    self, c, state, dress_order, scene, target, text, final=final_dress_order
+                )
+            elif advocate_conversation is None:
+                requested = issue_requested_order(
+                    self, c, state, viewer, key, channel, target, text, dose_up=dose_up
+                )
+                if requested is not None:
+                    require_order_communication(
+                        c, self.store.campaign_id, state, viewer.user_id, target
+                    )
+                    return requested
             authority = None
             am_secret = None
             from girlframe.services.m3_gender_designation import (
@@ -5979,10 +6399,13 @@ class GameService:
                         raise WorkflowError(
                             "A current superior or qualifying order source is required."
                         )
+            require_order_communication(c, self.store.campaign_id, state, viewer.user_id, target)
             lock = self.lock(c, channel)
             if lock and lock["state"] != "released":
                 raise WorkflowError("SCENE_BUSY: resolve the current action first.")
             identity, order_id = str(uuid4()), str(uuid4())
+            if dose_up and conditioning_phrase is not None:
+                raise WorkflowError("Choose one source for this direct order")
             dose_order = None
             order_event = None
             if dose_up:
@@ -5993,6 +6416,44 @@ class GameService:
                 order_event = str(uuid4())
                 dose_order = stage_order(
                     self, c, state, viewer.user_id, target, order_id, channel, order_event
+                )
+            conditioning = None
+            if conditioning_phrase is not None:
+                from girlframe.engine.m3_trainer_phrases import PHRASE_LABELS
+                from girlframe.services.m3_trainer_phrases import stage as stage_phrase
+
+                order_event = str(uuid4())
+                conditioning = stage_phrase(
+                    self,
+                    c,
+                    state,
+                    viewer.user_id,
+                    target,
+                    conditioning_phrase,
+                    order_id,
+                    order_event,
+                    scene=scene,
+                    counterpart=phrase_target,
+                    actor_token=phrase_actor,
+                )
+                text_for_target = PHRASE_LABELS[conditioning_phrase] + ". " + text
+            else:
+                text_for_target = text
+            if advocate_conversation is not None:
+                from girlframe.services.m3_advocate_alone import stage_order as stage_advocate_order
+
+                order_event = str(uuid4())
+                stage_advocate_order(
+                    self,
+                    c,
+                    state,
+                    viewer,
+                    advocate_conversation,
+                    channel,
+                    target,
+                    text,
+                    order_id,
+                    order_event,
                 )
             c.execute(
                 t.m2["m2_orders"]
@@ -6009,6 +6470,7 @@ class GameService:
                         | ({"succubus": authority} if authority else {})
                         | ({"gender_designation": gender_authority} if gender_authority else {})
                         | ({"dose_up": dose_order} if dose_order else {})
+                        | ({"conditioning_phrase": conditioning} if conditioning else {})
                         | ({"stim_sex": stim_authority} if stim_authority else {})
                     ),
                     state="awaiting_response",
@@ -6022,7 +6484,7 @@ class GameService:
                     if str(uid) in state.sheets
                 },
                 "order_id": order_id,
-                "order_text": text,
+                "order_text": text_for_target,
                 "participants": scene["participants"],
                 "handler": state.handler,
                 "depth": 0,
@@ -6033,6 +6495,8 @@ class GameService:
             }
             from girlframe.services.m3_recovery import enable as enable_recovery
 
+            if conditioning:
+                data["conditioning_phrase"] = conditioning
             enable_recovery(self, c, viewer, data)
             c.execute(
                 t.m2["m2_actions"]
@@ -6075,16 +6539,47 @@ class GameService:
             order_source_payload: dict[str, Any] = (
                 {"stim_sex": stim_authority} if stim_authority else {}
             )
-            self.event(
+            taunt_works: tuple[tuple[str, int, dict[str, Any]], ...] = ()
+            if viewer.user_id == state.handler:
+                from girlframe.engine.m3_actor_bonds import current_ref
+                from girlframe.engine.m3_handler_consequences import active_handler
+                from girlframe.services.m3_rebel_taunt import bind_interaction, materialize
+                from girlframe.services.m3_rebel_taunt import pending as taunt_pending
+
+                handler = active_handler(state)
+                if taunt_pending(state, handler):
+                    order_event = order_event or str(uuid4())
+                    taunt_works = bind_interaction(
+                        self, c, state, handler, current_ref(state, target), order_event
+                    )
+            applied_event = self.event(
                 c,
                 viewer.user_id,
                 key,
                 "m2.order_issued",
-                state if dose_order or stim_authority else None,
+                state
+                if dose_order or stim_authority or taunt_works or advocate_conversation
+                else None,
                 event_id=order_event,
                 action_id=identity,
                 **order_source_payload,
             )
+            if taunt_works:
+                materialize(self, c, viewer.user_id, applied_event, taunt_works)
+            if dress_order is not None:
+                from girlframe.services.m3_handler_plays import complete_dress_order
+
+                return complete_dress_order(
+                    self,
+                    c,
+                    state,
+                    viewer,
+                    key,
+                    dress_order,
+                    order_id,
+                    applied_event,
+                    final=final_dress_order,
+                )
             return {"action_id": identity, "order_id": order_id}
 
         try:
@@ -6093,10 +6588,35 @@ class GameService:
                 key,
                 "m2.order_issued",
                 {"channel": channel, "target": target, "text": text}
-                | ({"dose_up": True} if dose_up else {}),
+                | ({"dose_up": True} if dose_up else {})
+                | ({"conditioning_phrase": conditioning_phrase} if conditioning_phrase else {})
+                | ({"phrase_target": phrase_target} if phrase_target is not None else {})
+                | ({"phrase_actor": phrase_actor} if phrase_actor is not None else {})
+                | ({"final_dress_order": True} if final_dress_order else {})
+                | (
+                    {"expected_revision": expected_revision}
+                    if expected_revision is not None
+                    else {}
+                )
+                | (
+                    {"advocate_conversation": advocate_conversation}
+                    if advocate_conversation
+                    else {}
+                )
+                | (
+                    {
+                        dress_step: [
+                            dress_order[0],
+                            dress_order[1],
+                            dress_order[2].model_dump(mode="json"),
+                        ]
+                    }
+                    if dress_order is not None and dress_step is not None
+                    else {}
+                ),
                 operation,
                 auto_audit=False,
-                authorize=lambda c: self.authorize(c, viewer),
+                authorize=authorize,
             )
         except ValidationError:
             raise WorkflowError(
@@ -6243,6 +6763,12 @@ class GameService:
                 return ObsessionService(self).inspect(viewer, identity)
             snoop = action["data"].get("snoop")
             allowed = set(action["data"]["participants"])
+            if gorgon_source := action["data"].get("gorgon_play"):
+                from girlframe.services.m3_gorgon_play import PRIVATE_PLAYS, GorgonPlayService
+
+                if gorgon_source.get("kind") in PRIVATE_PLAYS:
+                    GorgonPlayService(self).authorize(c, viewer, action)
+                    allowed = set(action["data"]["private_audience"])
             if snoop:
                 allowed.update((snoop["target_controller"], snoop["procedural_gm"]))
             if viewer.user_id not in allowed:
@@ -6253,6 +6779,15 @@ class GameService:
                 prove_hound_status(self, c, load_state(c, self.store.campaign_id), action)
             result = action["data"]["result"] if action["state"] == "complete" else None
             parties = {int(action["actor_id"]), action["data"].get("prepared", {}).get("target")}
+            gorgon = action["data"].get("gorgon_play")
+            from girlframe.engine.m3_gorgon_type_tags import TYPES as direct_gorgon_tags
+
+            if gorgon and gorgon["kind"] in direct_gorgon_tags:
+                parties.update(
+                    x["controller"]
+                    for x in gorgon["cast"]["roles"]
+                    if x["actor"] == gorgon["target"]
+                )
             harpy_parties = (
                 action["data"].get("harpy_flirt")
                 or action["data"].get("harpy_followthrough")
@@ -6517,108 +7052,173 @@ class GameService:
             authorize=authorize,
         )
 
-    def close_scene(self, viewer: GuildViewer, key: str, channel: int) -> dict[str, Any]:
+    def _require_scene_close(self, c: Connection, scene: dict[str, Any]) -> None:
+        self.scene_unpaused(c, scene["id"])
+        from girlframe.engine.m3_deep_brain_spikes import require_return
+        from girlframe.services.mission_timing_history import require_closed
+        from girlframe.services.p1_source_pause import require_clear as require_source_clear
+
+        require_closed(c, self.store.campaign_id, scene=scene["id"])
+        require_source_clear(self, c, int(scene["channel_id"]))
+        try:
+            require_return(load_state(c, self.store.campaign_id), scene["id"])
+        except ValueError as error:
+            raise WorkflowError(str(error)) from None
+        lock = self.lock(c, scene["channel_id"])
+        if lock and lock["state"] != "released":
+            raise WorkflowError("Resolve or recover the pending action before closing this scene.")
+        actions = t.m2["m2_actions"]
+        for body in c.scalars(
+            sa.select(actions.c.body_json).where(
+                actions.c.campaign_id == self.store.campaign_id,
+                actions.c.scene_id == scene["id"],
+                actions.c.state == "aborted",
+            )
+        ):
+            saved = json.loads(body)
+            if saved.get("shared_recovery"):
+                raise WorkflowError("Resume or cancel the saved Play before closing its scene.")
+            if saved.get("receipt") and (saved.get("m3_recovery") or saved.get("actor_recovery")):
+                raise WorkflowError(
+                    "Resume the actual known roll before closing its original scene."
+                )
+        work = t.m3["m3_required_work"]
+        latest = {
+            x["id"]: x
+            for x in c.execute(
+                sa.select(work)
+                .where(
+                    work.c.campaign_id == self.store.campaign_id,
+                )
+                .order_by(work.c.revision)
+            ).mappings()
+        }
+        if any(x["scene_id"] == scene["id"] and x["state"] != "resolved" for x in latest.values()):
+            raise WorkflowError("Resolve the actual source-bound scene work before closing it.")
+
+    def _scene_close_effects(
+        self, c: Connection, scene: dict[str, Any], close_event: str
+    ) -> GameState | None:
+        state = load_state(c, self.store.campaign_id)
+        cast = next((x for x in state.scene_casts if x.id == scene["id"] and x.open), None)
+        if cast:
+            state.scene_casts = [
+                x.model_copy(update={"open": False, "revision": x.revision + 1})
+                if x.id == cast.id
+                else x
+                for x in state.scene_casts
+            ]
+        from girlframe.services.m3_ankou import expire_scene as expire_ankou_scene
+        from girlframe.services.m3_changeling_effects import expire_scene as expire_eyes
+
+        drugs_changed = expire_ankou_scene(self, c, state, scene["id"], close_event)
+        drugs_changed = expire_eyes(self, c, state, scene["id"], close_event) or drugs_changed
+        if any(x.get("kind") == "stim_sex_drug" for x in state.facts):
+            from girlframe.services.m3_stim_sex import expire_scene as expire_stim
+
+            drugs_changed = expire_stim(self, c, state, scene, close_event) or drugs_changed
+        if any(x.get("kind") == "dose_up_result" for x in state.facts):
+            from girlframe.services.m3_dose_up import expire_scene
+
+            drugs_changed = expire_scene(self, c, state, scene, close_event) or drugs_changed
+        return state if cast or drugs_changed else None
+
+    def scene_close_state(
+        self, c: Connection, scene: dict[str, Any], close_event: str
+    ) -> GameState | None:
+        """Preview close effects without retaining any writes."""
+        self._require_scene_close(c, scene)
+        preview = c.begin_nested()
+        try:
+            return self._scene_close_effects(c, scene, close_event)
+        finally:
+            preview.rollback()
+
+    def record_scene_close(
+        self,
+        c: Connection,
+        actor: int,
+        key: str,
+        scene: dict[str, Any],
+        close_event: str,
+        *,
+        apply_effects: bool,
+        event_index: int = 0,
+    ) -> None:
+        table = t.m2["m2_scenes"]
+        c.execute(
+            table.update()
+            .where(
+                table.c.campaign_id == self.store.campaign_id,
+                table.c.id == scene["id"],
+            )
+            .values(open=False)
+        )
+        state = self._scene_close_effects(c, scene, close_event) if apply_effects else None
+        self.event(
+            c,
+            actor,
+            key,
+            "m2.scene_closed",
+            state,
+            channel=int(scene["channel_id"]),
+            scene_id=scene["id"],
+            event_index=event_index,
+            event_id=close_event,
+        )
+
+    def close_scene(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        channel: int,
+        *,
+        director_scene: tuple[str, int] | None = None,
+        report_ids: tuple[str, ...] = (),
+        experience: "HandlerExperienceSelection | None" = None,
+    ) -> dict[str, Any]:
+        if experience is not None and director_scene is None:
+            raise WorkflowError("HANDLER_EXPERIENCE_SOURCE: use the reviewed Director closeout.")
+
         def authorize(c: Connection) -> None:
             self.authorize(c, viewer, game=False)
             self.gate()
             self.store.administrator(viewer)
 
         def operation(c: Connection) -> dict[str, Any]:
-            scene = self.scene(c, channel)
-            from girlframe.services.p1_source_pause import require_clear as require_source_clear
-
-            require_source_clear(self, c, channel)
-            from girlframe.engine.m3_deep_brain_spikes import require_return
-
-            try:
-                require_return(load_state(c, self.store.campaign_id), scene["id"])
-            except ValueError as error:
-                raise WorkflowError(str(error)) from None
-            lock = self.lock(c, channel)
-            if lock and lock["state"] != "released":
-                raise WorkflowError(
-                    "Resolve or recover the pending action before closing this scene."
-                )
-            actions = t.m2["m2_actions"]
-            for body in c.scalars(
-                sa.select(actions.c.body_json).where(
-                    actions.c.campaign_id == self.store.campaign_id,
-                    actions.c.scene_id == scene["id"],
-                    actions.c.state == "aborted",
-                )
-            ):
-                saved = json.loads(body)
-                if saved.get("shared_recovery"):
-                    raise WorkflowError("Resume or cancel the saved Play before closing its scene.")
-                if saved.get("receipt") and (
-                    saved.get("m3_recovery") or saved.get("actor_recovery")
-                ):
-                    raise WorkflowError(
-                        "Resume the actual known roll before closing its original scene."
-                    )
-            work = t.m3["m3_required_work"]
-            latest = {
-                x["id"]: x
-                for x in c.execute(
-                    sa.select(work)
-                    .where(
-                        work.c.campaign_id == self.store.campaign_id,
-                    )
-                    .order_by(work.c.revision)
-                ).mappings()
-            }
-            if any(
-                x["scene_id"] == scene["id"] and x["state"] != "resolved" for x in latest.values()
-            ):
-                raise WorkflowError("Resolve the actual source-bound scene work before closing it.")
-            table = t.m2["m2_scenes"]
-            c.execute(
-                table.update()
-                .where(
-                    table.c.campaign_id == self.store.campaign_id,
-                    table.c.channel_id == str(channel),
-                )
-                .values(open=False)
-            )
-            state = load_state(c, self.store.campaign_id)
-            cast = next((x for x in state.scene_casts if x.id == scene["id"] and x.open), None)
-            if cast:
-                state.scene_casts = [
-                    x.model_copy(update={"open": False, "revision": x.revision + 1})
-                    if x.id == cast.id
-                    else x
-                    for x in state.scene_casts
-                ]
+            scene = self.scene(c, channel, check_slot=False)
+            if director_scene is not None and director_scene != (scene["id"], scene["revision"]):
+                raise WorkflowError("STALE_SCENE: reopen the original scene for closeout.")
+            self._require_scene_close(c, scene)
             close_event = str(uuid4())
-            from girlframe.services.m3_ankou import expire_scene as expire_ankou_scene
-            from girlframe.services.m3_changeling_effects import expire_scene as expire_eyes
+            closeout = {}
+            if director_scene is not None:
+                from girlframe.services.director_closeout import file_report
 
-            drugs_changed = expire_ankou_scene(self, c, state, scene["id"], close_event)
-            drugs_changed = expire_eyes(self, c, state, scene["id"], close_event) or drugs_changed
-            if any(x.get("kind") == "stim_sex_drug" for x in state.facts):
-                from girlframe.services.m3_stim_sex import expire_scene as expire_stim
-
-                drugs_changed = expire_stim(self, c, state, scene, close_event) or drugs_changed
-            if any(x.get("kind") == "dose_up_result" for x in state.facts):
-                from girlframe.services.m3_dose_up import expire_scene
-
-                drugs_changed = expire_scene(self, c, state, scene, close_event) or drugs_changed
-            self.event(
-                c,
-                viewer.user_id,
-                key,
-                "m2.scene_closed",
-                state if cast or drugs_changed else None,
-                channel=channel,
-                event_id=close_event,
-            )
-            return {"channel": channel, "closed": True}
+                self.unpaused(c)
+                closeout = {
+                    "handler_report_count": file_report(
+                        self.store, c, scene, close_event, report_ids, experience
+                    ),
+                    "scene_id": scene["id"],
+                    **({"handler_experience_saved": True} if experience else {}),
+                }
+            self.record_scene_close(c, viewer.user_id, key, scene, close_event, apply_effects=True)
+            return {"channel": channel, "closed": True, **closeout}
 
         return self.store._write(
             viewer,
             key,
             "m2.scene_closed",
-            {"channel": channel},
+            {
+                "channel": channel,
+                **(
+                    {"director_scene": director_scene, "report_ids": report_ids}
+                    if director_scene is not None
+                    else {}
+                ),
+                **({"experience": experience.model_dump(mode="json")} if experience else {}),
+            },
             operation,
             auto_audit=False,
             authorize=authorize,
@@ -6695,6 +7295,41 @@ class GameService:
 
                 return SpriteService(self.store).decision(viewer, choice_id)
             action = self.action(c, row["action_id"])
+            if row["kind"] == "trainer_flirt_play":
+                from girlframe.services.m3_trainer_phrases import prove_counterpart
+
+                prove_counterpart(self, c, load_state(c, self.store.campaign_id), action, dict(row))
+            if row["kind"] == "trainer_hunt_play":
+                from girlframe.services.m3_trainer_phrases import prove_hunt
+
+                hunt_actor, hunt_target = prove_hunt(
+                    self, c, load_state(c, self.store.campaign_id), action, dict(row)
+                )
+                return dict(row) | dict(
+                    body=dict(
+                        actor=hunt_actor.model_dump(mode="json"),
+                        target=hunt_target.model_dump(mode="json"),
+                    ),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                )
+            from girlframe.services.m3_trainer_phrases import RESPONSE_CHOICES as TRAINER_CHOICES
+
+            if row["kind"] in TRAINER_CHOICES:
+                from girlframe.services.m3_trainer_phrases import display as display_phrase
+
+                return dict(row) | dict(
+                    body={},
+                    play=action["data"]["play"],
+                    actor=int(action["actor_id"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    result={},
+                    own=None,
+                    conditioning_text=display_phrase(
+                        self, c, load_state(c, self.store.campaign_id), action, dict(row)
+                    ),
+                )
             if (
                 action["data"].get("harpy_flirt") or action["data"].get("harpy_followthrough")
             ) and row["kind"].startswith("harpy_flirt_"):
@@ -7376,7 +8011,7 @@ class GameService:
                 from girlframe.services.m3_actor_plays import ActorPlayService
 
                 return ActorPlayService(self).decision(c, viewer, action, dict(row))
-            if action["data"].get("npc_order"):
+            if action["data"].get("npc_order") or action["data"].get("ranked_order"):
                 from girlframe.services.m3_npc_orders import authorize as authorize_npc_order
 
                 authorize_npc_order(self, c, viewer, action)
@@ -7534,6 +8169,14 @@ class GameService:
                 ):
                     eligible_reign.append(item)
             tags += [item.model_dump(mode="json") for item in eligible_reign]
+            if row["kind"] == "tag_window":
+                from girlframe.services.m3_sentinel import TAG_LABEL, TERRAIN_TAG, terrain_tag
+
+                terrain = terrain_tag(self, c, state, action, decision_owner)
+                if terrain is not None:
+                    tags.append(
+                        dict(id=TERRAIN_TAG + terrain.event, label=TAG_LABEL, name=TAG_LABEL)
+                    )
             result = dict(row) | {
                 "body": body,
                 "play": action["data"]["play"],
@@ -7583,12 +8226,17 @@ class GameService:
                 result["am_can_refuse"] = am_free(
                     state, am_order_original(state, int(action["actor_id"])), "refuse"
                 )
-            if action["data"].get("npc_order"):
+            if action["data"].get("npc_order") or action["data"].get("ranked_order"):
                 from girlframe.engine.m3_actors import resolve as resolve_npc_issuer
                 from girlframe.services.m3_npc_orders import order as original_npc_order
 
-                issuer = original_npc_order(self, c, action).issuer
-                result["npc_order_issuer"] = resolve_npc_issuer(state, issuer, ()).label
+                npc_order = original_npc_order(self, c, action)
+                if npc_order.voice_label is not None:
+                    result["heard_order_voice"] = npc_order.voice_label
+                elif npc_order.origin_kind != "rebel_voice":
+                    result["npc_order_issuer"] = resolve_npc_issuer(
+                        state, npc_order.issuer, ()
+                    ).label
             if action["data"].get("beneath") and row["kind"].startswith("beneath_"):
                 from girlframe.services.m3_beneath import projection
 
@@ -7715,6 +8363,12 @@ class GameService:
                 result["tag_marker_discussion"] = discussion_projection(
                     self, c, state, action, viewer.user_id
                 )
+            if row["kind"] in ("gorgon_tag_selection", "gorgon_tag_removal"):
+                from girlframe.services.m3_gorgon_tags import projection as gorgon_tags
+
+                result["gorgon_tags"] = gorgon_tags(
+                    self, c, state, action, row["kind"], viewer.user_id
+                )
             if row["kind"] in ("actor_keep", "handler_keep") and action["data"].get(
                 "cute_uniforms"
             ):
@@ -7776,7 +8430,9 @@ class GameService:
             if (
                 sheet is None
                 or sheet.revision != revision
-                or not is_helpless(state, current_ref(state, viewer.user_id))
+                or not is_helpless(
+                    state, current_ref(state, viewer.user_id), ignore_conditioning=True
+                )
             ):
                 raise WorkflowError("STALE_SHEET: no matching Helpless recovery is available.")
             scenes = t.m2["m2_scenes"]

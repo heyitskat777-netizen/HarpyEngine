@@ -182,6 +182,124 @@ def test_actual_universal_plug_uses_other_original_body_and_earns_optional_tag(
     assert actual.placements == original_poses
 
 
+def test_universal_plug_uses_an_original_known_npc_and_hides_the_other(
+    ledger, tmp_path, monkeypatch
+):
+    import pytest
+    from test_cast_service import change
+    from test_frame_control import place_original
+    from test_janus_battery import start
+    from test_janus_core_service import cast_core
+    from test_m2_game import Gateway, answer, pass_tags, tick
+    from test_world import initial
+
+    from girlframe.delivery.m2_worker import GameWorker
+    from girlframe.engine.m3_actor_bonds import current_ref
+    from girlframe.engine.m3_actor_state import ActorRef
+    from girlframe.engine.m3_janus_requisitions import UNIVERSAL
+    from girlframe.engine.m3_world_state import Npc
+    from girlframe.services.m3_actors import ActorService
+    from girlframe.services.m3_cast import CastService
+    from girlframe.services.m3_changeling import ChangelingService
+    from girlframe.services.m3_frame_control import FrameControlService
+    from girlframe.services.m3_janus_play import preview
+    from girlframe.services.m3_missions import MissionService
+    from girlframe.services.m3_npc_roles import NpcRoleService
+    from girlframe.services.m3_world import WorldService
+    from girlframe.services.onboarding import WorkflowError
+
+    service, game, core = training(ledger, tmp_path, monkeypatch, rule=UNIVERSAL)
+    cast_core(service, game, core)
+    caster = current_ref(state(game), 2)
+    place_original(game, caster, mode="outside_frame")
+    missions = MissionService(ledger)
+    world = WorldService(missions)
+    if state(game).world is None:
+        layout = initial()
+        world.initialize(
+            ADMIN,
+            "battery-base",
+            state(game).revision,
+            layout.board,
+            layout.locations,
+            layout.gorgons[0],
+        )
+    roles = NpcRoleService(world)
+    cast = CastService(ActorService(missions))
+    for known in (True, False):
+        npc = Npc(
+            id="known-guard" if known else "concealed-guard",
+            name="Known person" if known else "PRIVATE_NEURAL_CANARY",
+            jobs=("guard",),
+            controller=3,
+            detail="An original guard.",
+            cell=(0, 0),
+            revealed=known,
+        )
+        offer = roles.offer(ADMIN, "battery-offer-" + npc.id, state(game).revision, npc)
+        roles.respond(
+            OTHER, "battery-accept-" + npc.id, offer["id"], state(game).revision, "accept"
+        )
+        change(cast, OTHER, "join", ActorRef(kind="npc", entity=npc.id))
+
+    known_npc, secret_npc = (
+        ActorRef(kind="npc", entity=identity) for identity in ("known-guard", "concealed-guard")
+    )
+    projected = preview(game, PLAYER, 900)
+    assert any(x["token"] == known_npc.token for x in projected["targets"])
+    assert "PRIVATE_NEURAL_CANARY" not in str(projected) and secret_npc.token not in str(projected)
+    contact = FrameControlService(game)
+    with pytest.raises(WorkflowError, match="known original battery"):
+        contact.propose(
+            PLAYER,
+            "unknown-battery",
+            900,
+            caster,
+            secret_npc,
+            "The target has not been encountered.",
+        )
+    with pytest.raises(WorkflowError, match="actual original physical vessels"):
+        contact.propose(
+            PLAYER, "guard-body-unconfirmed", 900, caster, known_npc, "Existing facts only."
+        )
+    ChangelingService(game).body_fact(
+        ADMIN,
+        "guard-native-body",
+        state(game).revision,
+        900,
+        known_npc,
+        "human_npc",
+        "The original guard is here in their own physical body.",
+    )
+    wire = contact.propose(
+        PLAYER, "known-battery", 900, caster, known_npc, "I ask to connect at the exposed port."
+    )["id"]
+    contact.decide(
+        OTHER, "guard-contact", wire, state(game).revision, True, "The actual guard agrees."
+    )
+    contact.decide(
+        ADMIN, "guard-reach", wire, state(game).revision, True, "Confirm the actual contact here."
+    )
+    game.dice.faces = (4, 5)
+    identity = start(game, known_npc)
+    tick(GameWorker(game), Gateway(), 3)
+    pass_tags(game)
+    answer(
+        game,
+        PLAYER,
+        "janus_select",
+        options=("heat", "cognition"),
+        number=2,
+        fields={"tag": "Actual Tag for the guard"},
+    )
+    actual = state(game)
+    guard, hidden = (
+        next(x for x in actual.world.npcs if x.id == ref.entity) for ref in (known_npc, secret_npc)
+    )
+    assert guard.tags[-1].label == "Actual Tag for the guard" and not hidden.tags
+    assert game.inspect(PLAYER, identity)["state"] == "complete" and game.dice.calls == 1
+
+
 def test_actual_pandora_off_duty_birth_creates_handler_authored_obedient_child(
     ledger, tmp_path, monkeypatch
 ):

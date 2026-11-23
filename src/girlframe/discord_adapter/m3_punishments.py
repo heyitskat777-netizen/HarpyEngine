@@ -12,6 +12,7 @@ from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.member_names import member_label
 from girlframe.discord_adapter.onboarding import reply
+from girlframe.engine.campaign_opening import RESTRICTED_PUNISHMENTS
 from girlframe.engine.m3_punishments import KINDS, SUPPORTED, Details
 from girlframe.services.m3_punishments import PunishmentService
 from girlframe.services.onboarding import WorkflowError
@@ -217,11 +218,26 @@ async def open_details(
         fields.append(
             Field("confirm", "Confirm the printed effect", (("yes", "Apply " + KINDS[kind][0]),))
         )
+    if data.get("conditioning_phrases") and kind not in (
+        "passing_responsibility",
+        "lobotomization",
+        "execution",
+        "indefinite_imprisonment",
+    ):
+        fields.append(
+            Field(
+                "conditioning_phrase",
+                "Install a Conditioning Phrase (optional)",
+                tuple(data["conditioning_phrases"]),
+                minimum=0,
+                required=False,
+            )
+        )
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
         details: dict[str, Any] = {"kind": kind}
         for field in fields:
-            if field.key in ("operation", "confirm"):
+            if field.key in ("operation", "confirm", "conditioning_phrase"):
                 continue
             value = values[field.key]
             if field.key != "identities" and isinstance(value, tuple):
@@ -247,6 +263,11 @@ async def open_details(
             data["revision"],
             data["game_revision"],
             Details(**details),
+            **(
+                {"conditioning_phrase": values["conditioning_phrase"][0]}
+                if values.get("conditioning_phrase")
+                else {}
+            ),
         )
         return (
             "Saved: "
@@ -322,6 +343,7 @@ async def open_discipline(
                 (kind, KINDS[kind][0])
                 for kind in KINDS
                 if kind in SUPPORTED
+                and (not data.get("narrative_limit") or kind not in RESTRICTED_PUNISHMENTS)
                 and (KINDS[kind][1] != "severe" or viewer.user_id == data["choices"]["handler"])
                 and (
                     data.get("required_severity") is None

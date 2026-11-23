@@ -123,12 +123,8 @@ def test_native_doll_sleep_opportunity_completes_real_effects_before_wake(
             sleeping_doll_observer=(handler.token,),
             heat=("1",),
             context=prepared.context,
-            gain=("0",),
-            pair_share=("0",),
             piloting=("no",),
-            witnessed=("no",),
             trigger=("yes",),
-            disposable_heat=("0",),
         )
         submitted = interaction()
         await form.confirm.callback(submitted)

@@ -1,0 +1,53 @@
+--- a/mission-desk.js
++++ b/mission-desk.js
+@@ -55,4 +55,16 @@
+     field(form, "Extra Hard-mode obstacle", extra);
+   }
++  if (desk.briefing_drafts?.length) {
++    const briefing = element("select");
++    briefing.name = "briefing_draft";
++    briefing.append(element("option", "Choose a saved briefing"));
++    briefing.options[0].value = "";
++    for (const draft of desk.briefing_drafts) {
++      const option = element("option", draft.label);
++      option.value = draft.id;
++      briefing.append(option);
++    }
++    field(form, "Canon briefing (optional)", briefing);
++  }
+   if (captureTargets) {
+     const target = element("select");
+@@ -77,4 +89,5 @@
+     ...(captureTargets ? {capture_target: values.get("capture_target")} : {}),
+     ...(desk.requires_hard_stake ? {hard_stake: values.get("hard_stake")} : {}),
++    ...(values.get("briefing_draft") ? {briefing_draft: values.get("briefing_draft")} : {}),
+   }));
+   return form;
+@@ -160,4 +173,19 @@
+     if (mission.introductory) card.append(element("p", "Introductory mission"));
+     if (mission.hard_stake) card.append(element("p", mission.hard_stake));
++    if (mission.briefing_terms) {
++      card.append(element("h4", "Mission boundary"));
++      card.append(element("p", mission.briefing_terms.scope));
++      card.append(element("h4", "What to confirm"));
++      card.append(element("p", mission.briefing_terms.completion));
++    }
++    if (mission.briefing?.length) {
++      const details = element("details");
++      details.append(element("summary", "Mission briefing"));
++      for (const fact of mission.briefing) {
++        details.append(element("p", fact.statement));
++      }
++      card.append(details);
++    }
++    if (mission.briefing_needs_review) card.append(element("p", "A briefing fact needs review."));
+     if (mission.response) {
+       card.append(element("p", mission.response === "accept" ? "Response saved · Accepted" : "Response saved · Declined"));
+@@ -173,5 +201,6 @@
+     const actions = element("div", undefined, "actions");
+     if (mission.needs_response) {
+-      for (const choice of ["accept", "decline"]) {
++      const choices = mission.briefing_needs_review ? ["decline"] : ["accept", "decline"];
++      for (const choice of choices) {
+         actions.append(button(choice === "accept" ? "Accept mission" : "Decline mission",
+           control => respond(mission, choice, control), choice === "accept"));

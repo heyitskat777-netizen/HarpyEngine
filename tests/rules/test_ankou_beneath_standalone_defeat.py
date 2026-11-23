@@ -108,7 +108,6 @@ def test_native_standalone_beneath_feedback_requires_real_defeat(ledger, tmp_pat
             heat=("1",),
             disposable_heat=("0",),
             piloting=("no",),
-            witnessed=("no",),
             context="PRIVATE_STANDALONE_DEFEAT: our actual confrontation while piloting",
             trigger=("yes",),
         )

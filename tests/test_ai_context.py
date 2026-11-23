@@ -41,7 +41,7 @@ def test_actual_authorized_projection_excludes_private_starting_knowledge(ledger
     assert PRIVATE not in gm.model_dump_json() + response.model_dump_json()
     assert "SYNTHETIC_STARTING_NPC" not in gm.model_dump_json() + response.model_dump_json()
     assert "SYNTH_IMPORT" in response.proposal.text
-    assert "JANUS-B" in response.proposal.text
+    assert "JANUS" in response.proposal.text
     assert {fact.field for fact in handler.facts} == {"callsign"}
     assert len(handler.facts) < len(gm.facts)
     assert all(fact.knowledge == "ooc_reference" for fact in gm.facts + handler.facts)

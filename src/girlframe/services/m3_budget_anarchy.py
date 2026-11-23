@@ -15,6 +15,7 @@ from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_handler_plays import _ordinary_scene_idle
+from girlframe.services.m3_missions import MissionService
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -47,11 +48,11 @@ class AnarchyService:
             or original is None
             or event["kind"] != "m3.strain_effect_applied"
             or event["actor_id"] != value.handler.entity
-            or json.loads(event["payload_json"]).get("rule_id") != "strain.budget.high.5.1"
+            or json.loads(event["payload_json"]).get("rule_id") != value.rule_id
             or json.loads(event["payload_json"]).get("work_id") != identity
             or any(
                 getattr(original, k) != getattr(value, k)
-                for k in ("id", "source_event", "handler", "city", "account")
+                for k in ("id", "source_event", "handler", "city", "account", "faction")
             )
         ):
             raise WorkflowError("Recover the original selected city's anarchy source")
@@ -86,6 +87,12 @@ class AnarchyService:
                 revision=state.revision,
                 city=city.name if city else "Original city",
                 restored=bool(value.restored_event),
+                waits_for_mission=value.faction is not None and value.mission is None,
+                address_during_mission=(
+                    value.faction is not None
+                    and value.mission is not None
+                    and value.blockade_event is None
+                ),
             )
 
     def restore(
@@ -114,18 +121,34 @@ class AnarchyService:
             if state.revision != expected:
                 raise WorkflowError("STALE_ANARCHY: reopen the actual city and source")
             event = str(uuid4())
-            changed = rules.restore(state, value, method, result, event)
+            engagement = value.faction is not None and value.blockade_event is None
+            if engagement:
+                if (
+                    value.mission is None
+                    or MissionService(self.store)._mission(c, value.mission).phase != "active"
+                ):
+                    raise WorkflowError("Record what the actual next mission spent on the protest")
+                rules.address(state, value, method.strip(), result.strip(), event)
+                changed = state
+            else:
+                changed = rules.restore(state, value, method, result, event)
+            metadata: dict[str, Any] = {"mission_id": value.mission} if engagement else {}
             self.game.event(
                 c,
                 viewer.user_id,
                 key,
-                "m3.city_order_restored",
+                "m3.city_protest_addressed" if engagement else "m3.city_order_restored",
                 changed,
                 event_id=event,
                 source_work=identity,
                 city=value.city,
+                **metadata,
             )
-            return dict(id=identity, restored=True)
+            return (
+                dict(id=identity, addressed=True)
+                if engagement
+                else dict(id=identity, restored=True)
+            )
 
         try:
             return self.store._write(

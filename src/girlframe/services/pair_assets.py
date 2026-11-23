@@ -81,9 +81,12 @@ class PairService:
 
     def for_owner(self, connection: Connection, viewer: GuildViewer) -> PairChoice | None:
         self.bonds._authorize(connection, viewer)
-        for bond in self.bonds._latest(connection, str(viewer.user_id)):
+        return self._for_owner(connection, viewer.user_id)
+
+    def _for_owner(self, connection: Connection, owner: int) -> PairChoice | None:
+        for bond in self.bonds._latest(connection, str(owner)):
             if (
-                bond["source_id"] == str(viewer.user_id)
+                bond["source_id"] == str(owner)
                 and bond["girl_playbook"] == "BONDED"
                 and bond["state"] == "accepted"
                 and not self.bonds._stale(connection, bond)

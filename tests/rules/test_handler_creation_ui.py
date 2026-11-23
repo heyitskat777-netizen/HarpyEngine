@@ -3,12 +3,14 @@
 import asyncio
 
 import pytest
+import sqlalchemy as sa
 from test_handler_creation import complete, ready, save
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger
 from test_m2_game import state
 from test_mission_ui import current
 
+from girlframe.database import tables as t
 from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import NativeForm
 from girlframe.discord_adapter.m3_handler_creation import (
@@ -21,6 +23,7 @@ from girlframe.discord_adapter.m3_handler_creation import (
     open_handler,
     open_starting,
 )
+from girlframe.engine.m3_handler_state import HandlerNotes
 from girlframe.services.m3_handler_creation import HandlerCreationService
 from girlframe.services.onboarding import WorkflowError
 
@@ -90,6 +93,44 @@ def test_native_handler_details_starting_requests_and_exact_owned_activation(led
     asyncio.run(run())
     assert state(game).handler_persona.draft.playbook == "Trainer"
     assert not svc.tasks(PLAYER) and not svc.tasks(OTHER)
+
+    async def edit_active():
+        owner = current(1, 25121)
+        await owner.response.defer(ephemeral=True)
+        await open_handler(owner, svc)
+        menu = owner.edit_original_response.call_args.kwargs["view"]
+        assert not menu.character_notes.disabled and menu.details.disabled
+        form_click = current(1, 25124)
+        await menu.character_notes.callback(form_click)
+        notes = form_click.edit_original_response.call_args.kwargs["view"]
+        assert isinstance(notes, NativeForm)
+        notes.values.update(concern="PRIVATE_NATIVE_NOTES", obligation="Check the relay by dusk")
+        await notes.confirm.callback(current(1, 25125))
+        assert notes.completed
+
+    preview = svc.view(ADMIN)
+    before = state(game)
+    asyncio.run(edit_active())
+    restarted = HandlerCreationService(ledger)
+    actual = HandlerNotes(concern="PRIVATE_NATIVE_NOTES", obligation="Check the relay by dusk")
+    assert restarted.view(ADMIN)["draft"]["notes"] == actual.model_dump()
+    assert state(game) == before
+    assert restarted.save_notes(
+        ADMIN, "25125", preview["revision"], preview["persona_id"], actual
+    ) == {
+        "revision": preview["revision"] + 1,
+        "activated": True,
+    }
+    with pytest.raises(WorkflowError, match="STALE_HANDLER_DRAFT"):
+        restarted.save_notes(ADMIN, "notes-stale", preview["revision"], preview["persona_id"], None)
+    with pytest.raises(WorkflowError):
+        restarted.save_notes(
+            PLAYER, "notes-unowned", preview["revision"] + 1, preview["persona_id"], None
+        )
+    with ledger.engine.connect() as c:
+        assert not any(
+            "PRIVATE_NATIVE_NOTES" in body for body in c.scalars(sa.select(t.events.c.payload_json))
+        )
 
 
 def test_shared_long_escaped_history_is_complete_paginated_owned_and_rechecks_membership(ledger):

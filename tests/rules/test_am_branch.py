@@ -53,15 +53,13 @@ def test_actual_branch_npc_counter_then_owned_takeover_and_current_girl_play(
                 viewer,
                 "draft-3",
                 0,
-                DraftInput(
-                    callsign="Actual Alpha", girl_playbook="ALPHA", frame_playbook="JANUS-B"
-                ),
+                DraftInput(callsign="Actual Alpha", girl_playbook="ALPHA", frame_playbook="JANUS"),
             )
         else:
             actual_seed(store, viewer)
 
     monkeypatch.setattr(test_creation_review, "seed", seed_alpha)
-    monkeypatch.setattr(test_m2_game, "selected", lambda *_: selected("ALPHA", "JANUS-B"))
+    monkeypatch.setattr(test_m2_game, "selected", lambda *_: selected("ALPHA", "JANUS"))
     game, _, operator, discovery, _, _, worker, gateway = scrutiny_rolled(
         ledger, tmp_path, monkeypatch, (1, 1)
     )
@@ -393,13 +391,13 @@ def test_actual_pilot_native_branch_handler_npc_then_original_owner_takeover(
             DraftInput(
                 callsign="Actual Pilot operator",
                 girl_playbook="ALPHA",
-                frame_playbook="JANUS-B",
+                frame_playbook="JANUS",
                 notes="PRIVATE_OPERATOR_NOT_BRANCH_MEMORY",
             ),
         )
 
     monkeypatch.setattr(test_creation_review, "seed", actual_seed)
-    monkeypatch.setattr(test_m2_game, "selected", lambda *_: selected("ALPHA", "JANUS-B"))
+    monkeypatch.setattr(test_m2_game, "selected", lambda *_: selected("ALPHA", "JANUS"))
     _, game = actual_service(ledger, girl="AM", frame="THE ENFORCER")
     approved(
         ledger,

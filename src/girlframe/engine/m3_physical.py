@@ -14,6 +14,7 @@ from girlframe.engine.m3_physical_state import (
     ParkedFrame,
     Placement,
 )
+from girlframe.engine.m3_rebel_frame_theft import missing
 
 
 def validate(
@@ -25,6 +26,8 @@ def validate(
     actor = resolve(state, proposal.actor, bindings, require_current_profile=False)
     if actor.rules != "girl_frame" or actor.frame_instance != proposal.frame_instance:
         raise ValueError("STALE_PLACEMENT: recover the actual original character and Frame")
+    if missing(state, proposal.actor, proposal.frame_instance):
+        raise ValueError("Recover the stolen original Frame through its private Inbox workflow")
     previous = next((x for x in state.placements if x.actor == proposal.actor), None)
     if previous is not None:
         replacement = previous.frame_instance != actor.frame_instance
@@ -431,12 +434,19 @@ def cockpit_enter(
     pilot: bool,
     void_threshold: str | None = None,
 ) -> GameState:
+    from girlframe.engine.m3_trainer_phrases import require_can_leave_seat
+
+    require_can_leave_seat(original, actor)
     state = GameState.model_validate_json(original.model_dump_json())
     _source(state, source_event, account, actor)
     view = resolve(state, actor, bindings, require_current_profile=False)
     placement = next((x for x in state.placements if x.actor == actor), None)
     if placement is None or type(pilot) is not bool:
         raise ValueError("Record the actual original physical facts first")
+    from girlframe.engine.m3_harpy_eagle import missing
+
+    if missing(state, actor, placement.frame_instance):
+        raise ValueError("Recover the original cockpit removed by the Harpy before entering it")
     if pilot:
         from girlframe.engine.m3_casualty import can_pilot
         from girlframe.engine.m3_frame_control import active_takeover
@@ -501,8 +511,12 @@ def cockpit_enter(
         placement.model_copy(update=dict(mode=mode, source_event=source_event, account=account)),
     )
     if pilot:
+        from girlframe.engine.m3_berserk_frame import activate as activate_berserk
         from girlframe.engine.m3_frame_control import recover_control
 
+        berserk = activate_berserk(state, bindings, actor, placement.frame_instance, source_event)
+        if berserk is not None:
+            return berserk
         state = recover_control(state, actor, placement.frame_instance, source_event)
     return _finish(state, actor, source_event, account, "cockpit_enter" if pilot else "cockpit_sit")
 
@@ -829,12 +843,7 @@ def frame_voice(state: GameState, owner: ActorRef, frame_instance: str) -> int:
         ):
             raise ValueError("Recover the actual captured Harpy Core's original Frame binding")
         return harpy_core.controller
-    if (
-        same_character
-        and frame == frame_instance
-        and sheet is not None
-        and sheet.frame in ("JANUS", "JANUS-B")
-    ):
+    if same_character and frame == frame_instance and sheet is not None and sheet.frame == "JANUS":
         raise ValueError("CORE_SETUP_REQUIRED: admit this original JANUS's actual Core first")
     if state.world is not None and core_id is not None:
         npc = next((x for x in state.world.npcs if x.id == core_id), None)
@@ -907,6 +916,10 @@ def consent_to_extract(
     lock = cockpit_lock(state, *occupied) if occupied else None
     if lock is None or type(allowed) is not bool:
         raise ValueError("The actual occupied cockpit has no active extraction gate")
+    from girlframe.engine.m3_berserk_frame import active as active_berserk
+
+    if active_berserk(state, lock.owner, lock.frame_instance):
+        raise ValueError("Defeat the actual Berserk Gorgon before extraction")
     if frame_voice(state, lock.owner, lock.frame_instance) != controller:
         raise ValueError("Only the actual Frame's human voice can give its extraction consent")
     consent = ExtractionConsent(
@@ -953,6 +966,10 @@ def open_cockpit(
     state = GameState.model_validate_json(original.model_dump_json())
     _source(state, source_event, account, owner)
     lock = cockpit_lock(state, owner, frame_instance)
+    from girlframe.engine.m3_berserk_frame import active as active_berserk
+
+    if active_berserk(state, owner, frame_instance):
+        raise ValueError("Defeat the actual Berserk Gorgon before opening that cockpit")
     if lock is None or frame_voice(state, owner, frame_instance) != controller:
         raise ValueError("Only the actual Frame's human voice can open its active cockpit lock")
     state.frame_locks = [

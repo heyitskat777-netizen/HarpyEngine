@@ -9,9 +9,12 @@ from girlframe.engine.m2 import GameState, higher
 from girlframe.engine.m3_actor_bonds import depth
 from girlframe.engine.m3_actor_state import ActorRef, Model, SceneCast
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
+from girlframe.engine.m3_standards import RULE as PRINCESS_ORDER_RULE
+from girlframe.engine.m3_stim_sex import RULE as STIM_ORDER_RULE
 from girlframe.engine.m3_world_state import Npc, WorldTag
 
 RULE = "frame.class.autocrat.succubus-protocol"
+TRAINER_ORDER_RULE = "handler-playbook.trainer.control-freak"
 RESPONSES = (
     ("obedient", "Obey"),
     ("immediate", "Act immediately and without thinking"),
@@ -41,6 +44,25 @@ class Order(Model):
     instruction: str = Field(min_length=1, max_length=1200)
     event: str
     registry: str
+    stim_effect: str | None = Field(default=None, min_length=1, exclude_if=lambda x: x is None)
+    princess_upkeep: str | None = Field(default=None, min_length=1, exclude_if=lambda x: x is None)
+    trainer_authority: int | None = Field(default=None, ge=1, exclude_if=lambda x: x is None)
+
+    @property
+    def source_rule(self) -> str:
+        if self.trainer_authority is not None:
+            return TRAINER_ORDER_RULE
+        if self.princess_upkeep is not None:
+            return PRINCESS_ORDER_RULE
+        return STIM_ORDER_RULE if self.stim_effect is not None else RULE
+
+    @property
+    def event_prefix(self) -> str:
+        if self.trainer_authority is not None:
+            return "m3.trainer_npc_"
+        if self.princess_upkeep is not None:
+            return "m3.princess_npc_"
+        return "m3.stim_pilot_npc_" if self.stim_effect is not None else "m3.succubus_npc_"
 
 
 class RankLoss(Model):

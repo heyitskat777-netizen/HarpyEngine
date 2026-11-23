@@ -268,8 +268,9 @@ def test_actual_relief_dormancy_awakening_strain_consumer_and_real_breach(
     assert game.dice.calls == 1
 
 
+@pytest.mark.parametrize("via_director", [False, True], ids=["native", "director"])
 def test_actual_group_harpy_study_warp_protection_expiry_and_private_history(
-    ledger, tmp_path, monkeypatch
+    ledger, tmp_path, monkeypatch, via_director
 ):
     game, service, worker, gateway = setup(ledger, tmp_path, monkeypatch)
     world = WorldService(MissionService(ledger))
@@ -363,17 +364,57 @@ def test_actual_group_harpy_study_warp_protection_expiry_and_private_history(
         )
         replay["key"] = str(confirmation.id)
 
-    asyncio.run(actual_warp())
+    handler_plays = HandlerPlayService(ledger)
+    if via_director:
+        from test_director_handler_play_examples import open_offer, record_example
+        from test_gm_outcome_consumers import attach, consume
+
+        from girlframe.ai.gm_outcomes import HandlerOutcome
+        from girlframe.engine.m3_handler_play_state import Effect
+
+        change(casting, ADMIN, "join", zone.handler)
+        director, scene = attach(game)
+        raw_grant = handler_plays.start_warp(
+            ADMIN, str(uuid4()), state(game).revision, zone.id, scene=scene
+        )
+        linked = open_offer(
+            director,
+            scene,
+            game,
+            "contaminant_warp",
+            "I can address the established quarantine boundary.",
+            raw_grant["id"],
+        )
+        consume(
+            director,
+            scene,
+            "handler_grant",
+            linked,
+            HandlerOutcome(
+                play="contaminant_warp",
+                effect=Effect(
+                    kind="contaminant_warp",
+                    zone=zone.id,
+                    cell=(2, 1),
+                    source_label="The singing boundary",
+                    detail="The ground bends into a visible spiral inside the quarantine.",
+                    account="The Handler warps an established part of the quarantine.",
+                ),
+            ),
+        )
+        record_example(game, linked)
+    else:
+        asyncio.run(actual_warp())
     warped = state(game)
     feature = warped.world.features[0]
     assert feature.zone == zone.id and feature.cell == (2, 1)
     assert next(x for x in warped.handler_plays if x.id == feature.grant).state == "complete"
     grant = next(x for x in warped.handler_plays if x.id == feature.grant)
-    handler_plays = HandlerPlayService(ledger)
-    repeated = handler_plays.submit(
-        ADMIN, replay["key"], grant.id, replay["revision"], "contaminant_warp", grant.effect
-    )
-    assert repeated["state"] == "complete" and state(game) == warped
+    if not via_director:
+        repeated = handler_plays.submit(
+            ADMIN, replay["key"], grant.id, replay["revision"], "contaminant_warp", grant.effect
+        )
+        assert repeated["state"] == "complete" and state(game) == warped
     with pytest.raises(WorkflowError):
         handler_plays.submit(
             ADMIN, str(uuid4()), grant.id, warped.revision, "contaminant_warp", grant.effect

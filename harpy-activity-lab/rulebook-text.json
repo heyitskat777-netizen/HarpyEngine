@@ -1,0 +1,345 @@
+{
+  "source": {
+    "file": "GIRL_FRAME_rulebook.pdf",
+    "sha256": "0f8dbaae7f0a254cdbfb4856b9f50c44fd31a97b36234062db4ae7f4874b55f0",
+    "normalization": "Whitespace and typographic ligatures only; wording and punctuation retained."
+  },
+  "bonds": {
+    "PRINCESS": {
+      "pdf_page": 31,
+      "printed_page": 29,
+      "text": [
+        "You used to be as famous as me, but you got replaced.",
+        "You saw something that could have ruined me, and you haven’t told anyone."
+      ]
+    },
+    "MOCKINGBIRD": {
+      "pdf_page": 34,
+      "printed_page": 32,
+      "text": [
+        "When I was a Harpy, I was obsessed with you.",
+        "After my surgeries, you told me about when I was once human."
+      ]
+    },
+    "STIM-BLISSED": {
+      "pdf_page": 37,
+      "printed_page": 35,
+      "text": [
+        "You’ve snuck into my bunks and gotten high with me.",
+        "You held me down while they injected me with sedatives and shoved me in the cockpit. Maybe you even held the needle yourself."
+      ]
+    },
+    "NEWGIRL": {
+      "pdf_page": 40,
+      "printed_page": 38,
+      "text": [
+        "You have a Personal Bond with your Mentor."
+      ]
+    },
+    "CASUALTY": {
+      "pdf_page": 43,
+      "printed_page": 41,
+      "text": [
+        "We had a mutual friend who the Foundation chose not to save.",
+        "Even now, nobody thinks you have a chance of being a better pilot than me."
+      ]
+    },
+    "OLDGEN": {
+      "pdf_page": 45,
+      "printed_page": 43,
+      "text": [
+        "I met you when you were too young to pilot, and froze when I saw you again in the briefing room.",
+        "You were the newest member of my last Cadre, which we were the only survivors of."
+      ]
+    },
+    "VATGROWN": {
+      "pdf_page": 48,
+      "printed_page": 46,
+      "text": [
+        "I watch you every day, and you haven’t noticed me yet.",
+        "You’ve talked to me once."
+      ]
+    },
+    "ALPHA": {
+      "pdf_page": 51,
+      "printed_page": 49,
+      "text": [
+        "We’ve tried to murder each other.",
+        "You’ve crawled into my bunk in the middle of the night."
+      ]
+    },
+    "AM": {
+      "pdf_page": 54,
+      "printed_page": 52,
+      "text": [
+        "The mechanics taught you how to tune up my body.",
+        "I flagged you for recruitment when you were a civilian."
+      ]
+    },
+    "BONDED": {
+      "pdf_page": 57,
+      "printed_page": 55,
+      "text": [
+        "You took hold of me when I was broken, and have never let me go.",
+        "We’re sisters, and I’ve promised to protect you."
+      ]
+    }
+  },
+  "questions": {
+    "flirt": {
+      "pdf_page": 23,
+      "printed_page": 21,
+      "text": {
+        "hurt": "Who do you want me to hurt?",
+        "be": "Who do you want me to be?",
+        "hide": "What do you want me to hide?",
+        "fears": "How could I alleviate your fears?",
+        "name": "What do you want me to call you?",
+        "intimacy": "Do you want to fuck me? If we have an Intense Bond, you won’t be able to restrain yourself.",
+        "rejection": "what’s pushing you away from me?"
+      }
+    },
+    "sensors": {
+      "pdf_page": 26,
+      "printed_page": 24,
+      "text": {
+        "foundation_destination": "Where does the Foundation want us to go?",
+        "foundation_avoid": "What does the Foundation want us to avoid?",
+        "enemy_activity": "What do the satellites say the enemy is doing?",
+        "repair_rest": "Where is a place we can rest and repair?",
+        "civilian_danger": "Where are civilians in danger?",
+        "orders": "What orders do you have for us?"
+      }
+    },
+    "snoop": {
+      "pdf_page": 80,
+      "printed_page": 78,
+      "text": {
+        "illegal": "What illegal item do I find?",
+        "embarrassing": "What embarrassing thing do I show off to everyone?",
+        "valuable": "What valuable thing do I pocket?",
+        "personal": "What personal thing do I leave ruined or defiled?",
+        "rebel_evidence": "What do I find that could be used as proof of rebel activity?",
+        "missed": "what are you glad I missed?"
+      }
+    },
+    "wyvern": {
+      "pdf_page": 74,
+      "printed_page": 72,
+      "text": {
+        "servers": "What do I find in the server rooms, beeping and humming?",
+        "engine": "What do I find in the engine room, burning hot?",
+        "cots": "What do I find in the cots, hidden beneath the beds and blankets?",
+        "cockpit": "What do I find in the cockpit, most of its chairs lying cold and empty?",
+        "halls": "What do I find in the halls, seemingly endless and terribly dark?",
+        "kitchen": "What do I find in the kitchen, between expired ration packets?",
+        "panel": "What do I find in a secret panel, installed with rudimentary tools?",
+        "armour": "What do I find outside the Frame, wedged in the vast tracts of armour plating?"
+      }
+    },
+    "red_queen": {
+      "pdf_page": 90,
+      "printed_page": 88,
+      "text": {
+        "where": "Where are you?",
+        "hour": "Where will you be in an hour?",
+        "fidget": "How do you fidget when you’re alone?",
+        "flinch": "What makes you flinch?",
+        "clothes": "What are you hiding under your clothes?",
+        "opinion": "What opinion are you keeping a secret?",
+        "ashamed": "What are you ashamed of?",
+        "light": "What makes your eyes light up?",
+        "repulsive": "Who do you find repulsive?",
+        "void": "Where have you gained Void?"
+      }
+    },
+    "kicked_puppy": {
+      "pdf_page": 94,
+      "printed_page": 92,
+      "text": {
+        "kicked_care": "How do you want to care for me?"
+      }
+    },
+    "human_hound": {
+      "pdf_page": 66,
+      "printed_page": 64,
+      "text": {
+        "smell": "what can I smell?"
+      }
+    },
+    "void_threshold": {
+      "pdf_page": 179,
+      "printed_page": 177,
+      "text": {
+        "prepared": "Are you prepared?",
+        "handler": "Do you hear the voice of your Handler?",
+        "matter": "Does anything still really matter to you other than this?",
+        "hesitate": "Will you hesitate?",
+        "choice": "Do you have any other choice?"
+      }
+    }
+  },
+  "choices": {
+    "dive": {
+      "pdf_page": 24,
+      "printed_page": 22,
+      "text": {
+        "void_and_unmark_all": "I embrace her, flesh trading for flesh, gaining Void and unmarking all Identities",
+        "erase_identity_and_table_question": "I allow her to grow up my brainstem, erasing an Identity in exchange for strange insight; I ask any question, and the table answers.",
+        "nearby_npcs_gain_void": "I spew un-real radiation, causing nearby NPCs to gain Void.",
+        "table_replaces_identity": "I submit to her wholly. The table will decide what new Identity she grants me, and which it replaces",
+        "locked_cockpit_extraction_requires_frame_consent": "I am subsumed by her, molding with her flesh. The cockpit is locked, all vitals are dead. I cannot be extracted without her consent."
+      }
+    },
+    "princess_standards": {
+      "pdf_page": 32,
+      "printed_page": 30,
+      "text": [
+        "Report on your cadremates behaviour and activities.",
+        "Always refer to Girls by their official pronouns (it/its)",
+        "Always be kind, helpful, and obedient towards civilians and base staff, unless it would contradict your other orders.",
+        "Take care of your Handler’s day-to-day — cleaning their weapons, making their bed, pouring their tea.",
+        "Never show weakness or hesitancy in front of an underling.",
+        "Present yourself as finely-groomed and impeccably dressed at all times.",
+        "Never act in a way that would stain your family’s name.",
+        "Encourage any young girls you meet to take the aptitude test to become a pilot.",
+        "Never have a romantic relationship with any of your cadremates (your Handler may designate you an appropriate alternative partner)."
+      ]
+    },
+    "oldgen_maxims": {
+      "pdf_page": 46,
+      "printed_page": 44,
+      "text": [
+        "It’s the duty of the strong to make use of the weak.",
+        "No matter where the meat comes from, say thank you for the meal.",
+        "Nothing feels better than piloting.",
+        "The cogs of the Foundation will grind everyone to dust — no exceptions.",
+        "Keeping yourself alive is the only thing that matters.",
+        "There’s nothing waiting for us if we retire.",
+        "A good grudge is the best fuel.",
+        "Never piss off your engineer.",
+        "A pretty face looks best when bloody.",
+        "There’s no point getting attached to a doomed dog."
+      ]
+    },
+    "investor_desires": {
+      "pdf_page": 49,
+      "printed_page": 47,
+      "text": [
+        "A display piece",
+        "A daughter",
+        "A weapon",
+        "A pet",
+        "A punching bag",
+        "A fucktoy",
+        "A reminder",
+        "A triumph",
+        "An opportunity",
+        "A tormentor",
+        "A pair of eyes"
+      ]
+    }
+  },
+  "npc_bonds": {
+    "PRINCESS": {
+      "pdf_page": 31,
+      "printed_page": 29,
+      "text": [
+        "Doe-eyed captain",
+        "Corrupt politician",
+        "Glamorous celebrity",
+        "Cute junior handler"
+      ]
+    },
+    "MOCKINGBIRD": {
+      "pdf_page": 34,
+      "printed_page": 32,
+      "text": [
+        "The lunch lady",
+        "The surgeon who fixed you",
+        "The guard who doesn’t talk",
+        "Whatever lives in the vents by your cot"
+      ]
+    },
+    "STIM-BLISSED": {
+      "pdf_page": 37,
+      "printed_page": 35,
+      "text": [
+        "Fried ex-pilot",
+        "Sharp-jawed janitor",
+        "Nurse who gives you checkups",
+        "Leader of the supply corps"
+      ]
+    },
+    "NEWGIRL": {
+      "pdf_page": 40,
+      "printed_page": 38,
+      "text": [
+        "Your sister, also a pilot",
+        "Junior engineer, who joined at the same time as you",
+        "The intelligence agent who recruited you",
+        "A girl from a nearby town"
+      ]
+    },
+    "CASUALTY": {
+      "pdf_page": 43,
+      "printed_page": 41,
+      "text": [
+        "A stray cat that hangs around the base.",
+        "Your physiotherapist.",
+        "A civilian you text with on a stolen cell phone.",
+        "A prisoner you died capturing."
+      ]
+    },
+    "OLDGEN": {
+      "pdf_page": 45,
+      "printed_page": 43,
+      "text": [
+        "A retired Handler.",
+        "A former Pilot, confined to a hospital bed.",
+        "A Mockingbird you knew, what feels like a lifetime ago.",
+        "The Director, who fucking hates you."
+      ]
+    },
+    "VATGROWN": {
+      "pdf_page": 48,
+      "printed_page": 46,
+      "text": [
+        "The head scientist whose personal project you are.",
+        "The team of doctors who work on you.",
+        "Your older vat-sibling.",
+        "Someone very very rich."
+      ]
+    },
+    "ALPHA": {
+      "pdf_page": 51,
+      "printed_page": 49,
+      "text": [
+        "The guard with that fucking taser",
+        "A loser from highschool, now an officer",
+        "A terrified civilian",
+        "Someone who didn’t deserve to lose those fingers"
+      ]
+    },
+    "AM": {
+      "pdf_page": 54,
+      "printed_page": 52,
+      "text": [
+        "Someone who commissioned your design",
+        "A cheerful techie",
+        "A blank page in the Foundation’s records",
+        "A dormant copy of yourself"
+      ]
+    },
+    "BONDED": {
+      "pdf_page": 57,
+      "printed_page": 55,
+      "text": [
+        "Someone who disapproves of your relationship.",
+        "An experimental therapist.",
+        "An older guy you avoid.",
+        "The girl she looks at instead of you."
+      ]
+    }
+  }
+}

@@ -150,12 +150,31 @@ class ActorService:
             }
 
     def inspect(self, viewer: GuildViewer, ref: ActorRef) -> dict[str, Any]:
+        from girlframe.engine.m3_ancillary_cadre import actual_members, current
+        from girlframe.services.m3_ancillary_orders import address_directives, pronoun_setting
+        from girlframe.services.m3_ancillary_traits import pronouns
+        from girlframe.services.m3_expanded_status import ExpandedStatusService
+
         with self.store.engine.connect() as c:
             self.game.authorize(c, viewer, game=False)
             state = load_state(c, self.store.campaign_id)
+            actor = self._actor(c, viewer, state, ref)
+            status = ExpandedStatusService(self.game)
+            language = pronouns(self.game, state, ref) or (
+                pronoun_setting(c, self.game, state, ref) if actor.rules == "ancillary" else None
+            )
+            cadre = current(state, ref) if actor.rules == "ancillary" else None
+            position = actual_members(state, cadre).index(ref) + 1 if cadre else None
+            directives = (
+                address_directives(self.game, state, ref) if actor.rules == "ancillary" else ()
+            )
             return {
                 "game_revision": state.revision,
-                "actor": self._actor(c, viewer, state, ref).model_dump(mode="json"),
+                "actor": actor.model_dump(mode="json"),
+                **({"ancillary_status": position} if position else {}),
+                **({"pronouns": language} if language else {}),
+                **({"address_directives": directives} if directives else {}),
+                **({"expanded_status": status.view(c, state, actor)} if status.enabled() else {}),
             }
 
     def known(
@@ -211,10 +230,15 @@ class ActorService:
                         and self._patrol_known(c, state, perspective, x.id)
                     )
                 )
+                from girlframe.engine.m3_doppelganger_reveal import reveals as disguise_reveals
+
+                known_masks = {
+                    x.mask.id for x in disguise_reveals(state) if perspective in x.recipients
+                }
                 refs.extend(
                     ActorRef(kind="gorgon", entity=x.id)
                     for x in state.world.gorgons
-                    if x.alive and x.revealed
+                    if x.alive and (x.revealed or x.id in known_masks)
                 )
             known = []
             for ref in dict.fromkeys(refs):
@@ -419,6 +443,7 @@ class ActorService:
         account: str,
         *,
         actual: bool,
+        siege_case: str | None = None,
     ) -> dict[str, Any]:
         from uuid import uuid4
 
@@ -457,6 +482,45 @@ class ActorService:
                     "inventory once"
                 )
             event = str(uuid4())
+            from girlframe.engine.m3_rebel_ambush import ambushes, sieges
+
+            introduced = next(
+                (x for x in ambushes(state) if x.attacker == actor and x.introduced), None
+            )
+            if siege_case is not None or introduced is not None:
+                from girlframe.engine.m3_handler_consequences import active_handler
+                from girlframe.engine.m3_leviathan_arrival import install_external_pose
+                from girlframe.services.m3_handler_advancements import _history
+                from girlframe.services.m3_off_duty import OffDutyService
+
+                siege = next(
+                    (x for x in sieges(state) if introduced and x.id == introduced.siege), None
+                )
+                if (
+                    introduced is None
+                    or siege is None
+                    or introduced.id != siege_case
+                    or introduced.controller != viewer.user_id
+                    or siege.completed
+                    or pilot.cell != siege.cell
+                    or active_handler(state) != siege.handler
+                    or OffDutyService(self.missions)._get(c, siege.period).phase != "preparing"
+                    or introduced not in ambushes(_history(c, self.game, introduced.source))
+                ):
+                    raise WorkflowError(
+                        "Use the original introduced Rebel's preparing siege assignment"
+                    )
+                state = install_external_pose(
+                    state,
+                    actor,
+                    siege.cell,
+                    siege.cell,
+                    "piloting",
+                    event,
+                    account.strip(),
+                    owner=viewer.user_id,
+                    judge=int(siege.handler.entity),
+                )
             inventory = RebelInventory(
                 actor=actor,
                 controller=viewer.user_id,
@@ -490,7 +554,8 @@ class ActorService:
                 heat=heat,
                 account=account,
                 actual=actual,
-            ),
+            )
+            | ({"siege_case": siege_case} if siege_case is not None else {}),
             operation,
             authorize=lambda c: self.missions.access.authorize(c, viewer, "world"),
             auto_audit=False,

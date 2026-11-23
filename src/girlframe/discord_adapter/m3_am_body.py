@@ -53,6 +53,93 @@ async def open_spinal_controls(
     await reply(interaction, form.text(), form)
 
 
+def body_spec(values: dict[str, Any]) -> BodySpec:
+    vessel = values["vessel"].strip()
+    assets = []
+    asset_lines = "" if values["assets"].strip().lower() == "none" else values["assets"]
+    for index, line in enumerate(asset_lines.splitlines()):
+        if not line.strip():
+            continue
+        parts = tuple(x.strip() for x in line.split("|"))
+        if (
+            len(parts) != 4
+            or parts[2] not in ("intact", "damaged")
+            or parts[3] not in ("clear", "void")
+        ):
+            raise WorkflowError(
+                "Each actual Asset: name | source description | intact/damaged | clear/void"
+            )
+        assets.append(
+            AssetState(
+                id=vessel + ":physical:" + str(index),
+                family="girl",
+                name=parts[0],
+                description=parts[1],
+                damaged=parts[2] == "damaged",
+                void=parts[3] == "void",
+            )
+        )
+    return BodySpec.model_validate(
+        dict(
+            vessel=vessel,
+            label=values["label"],
+            source=values["source"],
+            processing_confirmed=values["processing"] == ("yes",),
+            unoccupied_confirmed=values["unoccupied"] == ("yes",),
+            medical=values["medical"][0],
+            assets=tuple(assets),
+            mind_assets=tuple(values.get("mind_assets", ())),
+            carried_items=tuple(values.get("carried_items", ())),
+        )
+    )
+
+
+def body_preparation_fields(source: dict[str, Any]) -> list[Field]:
+    return [
+        Field("vessel", "Actual unique hardware identity"),
+        Field("label", "Actual body label"),
+        Field("source", "Actual hardware/processing/preparation source", paragraph=True),
+        Field("processing", "Requisite processing power actually prepared", YES),
+        Field("unoccupied", "This actual body is empty and available", YES),
+        Field(
+            "medical",
+            "Actual prepared body condition",
+            (
+                ("fit", "Fit"),
+                ("unconscious_injured", "Unconscious / injured"),
+            ),
+        ),
+        Field(
+            "assets",
+            "Actual Assets per line; 'none' for none: "
+            "name | source | intact/damaged | clear/void",
+            paragraph=True,
+        ),
+        *(
+            [
+                Field(
+                    "carried_items",
+                    "Actual own objects to physically convey at transfer",
+                    tuple((x["id"], x["label"]) for x in source["carried_items"]),
+                    0,
+                    len(source["carried_items"]),
+                    required=False,
+                )
+            ]
+            if source["carried_items"]
+            else []
+        ),
+        Field(
+            "mind_assets",
+            "Existing mind-linked Assets that remain with this same AM",
+            tuple((x["id"], x["name"]) for x in source["mind_assets"]),
+            0,
+            len(source["mind_assets"]),
+            required=False,
+        ),
+    ]
+
+
 async def open_prepare(
     interaction: discord.Interaction, service: BodyService, maintenance: str
 ) -> None:
@@ -62,44 +149,7 @@ async def open_prepare(
         raise WorkflowError("Use the actual original Handler's current circuit source")
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
-        vessel = values["vessel"].strip()
-        assets = []
-        asset_lines = "" if values["assets"].strip().lower() == "none" else values["assets"]
-        for index, line in enumerate(asset_lines.splitlines()):
-            if not line.strip():
-                continue
-            parts = tuple(x.strip() for x in line.split("|"))
-            if (
-                len(parts) != 4
-                or parts[2] not in ("intact", "damaged")
-                or parts[3] not in ("clear", "void")
-            ):
-                raise WorkflowError(
-                    "Each actual Asset: name | source description | intact/damaged | clear/void"
-                )
-            assets.append(
-                AssetState(
-                    id=vessel + ":physical:" + str(index),
-                    family="girl",
-                    name=parts[0],
-                    description=parts[1],
-                    damaged=parts[2] == "damaged",
-                    void=parts[3] == "void",
-                )
-            )
-        spec = BodySpec.model_validate(
-            dict(
-                vessel=vessel,
-                label=values["label"],
-                source=values["source"],
-                processing_confirmed=values["processing"] == ("yes",),
-                unoccupied_confirmed=values["unoccupied"] == ("yes",),
-                medical=values["medical"][0],
-                assets=tuple(assets),
-                mind_assets=tuple(values.get("mind_assets", ())),
-                carried_items=tuple(values.get("carried_items", ())),
-            )
-        )
+        spec = body_spec(values)
         await asyncio.to_thread(
             service.prepare,
             viewer_from_interaction(current),
@@ -119,49 +169,7 @@ async def open_prepare(
         "Record actual available empty hardware at this circuit scene, with sufficient processing. "
         "Choose mind-linked Assets; other current Girl Assets stay with the original body. "
         "List the prepared physical Girl Assets, their actual source and current condition.",
-        [
-            Field("vessel", "Actual unique hardware identity"),
-            Field("label", "Actual body label"),
-            Field("source", "Actual hardware/processing/preparation source", paragraph=True),
-            Field("processing", "Requisite processing power actually prepared", YES),
-            Field("unoccupied", "This actual body is empty and available", YES),
-            Field(
-                "medical",
-                "Actual prepared body condition",
-                (
-                    ("fit", "Fit"),
-                    ("unconscious_injured", "Unconscious / injured"),
-                ),
-            ),
-            Field(
-                "assets",
-                "Actual Assets per line; 'none' for none: "
-                "name | source | intact/damaged | clear/void",
-                paragraph=True,
-            ),
-            *(
-                [
-                    Field(
-                        "carried_items",
-                        "Actual own objects to physically convey at transfer",
-                        tuple((x["id"], x["label"]) for x in source["carried_items"]),
-                        0,
-                        len(source["carried_items"]),
-                        required=False,
-                    )
-                ]
-                if source["carried_items"]
-                else []
-            ),
-            Field(
-                "mind_assets",
-                "Existing mind-linked Assets that remain with this same AM",
-                tuple((x["id"], x["name"]) for x in source["mind_assets"]),
-                0,
-                len(source["mind_assets"]),
-                required=False,
-            ),
-        ],
+        body_preparation_fields(source),
         submit,
     )
     await reply(interaction, form.text(), form)

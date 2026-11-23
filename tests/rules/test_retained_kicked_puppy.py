@@ -222,7 +222,6 @@ def test_retained_kicked_real_flirt_gift_care_followthrough_and_source_suspensio
             gain=("0",),
             pair_share=("0",),
             piloting=("no",),
-            witnessed=("no",),
             trigger=("yes",),
             context="Actual original target-gift Flirt from replacement Frame",
         )

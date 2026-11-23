@@ -77,7 +77,6 @@ def actual_escape(game, worker, gateway):
             heat=("1",),
             disposable_heat=("0",),
             piloting=("no",),
-            witnessed=("yes",),
             trigger=("yes",),
             context="PRIVATE_ESCAPE_KEEP: rely on my own last Identity to escape",
         )

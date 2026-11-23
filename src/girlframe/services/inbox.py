@@ -486,6 +486,28 @@ class InboxService:
                     )
                 )
             if canon.world is not None:
+                from girlframe.engine.m3_ancillary import offers as ancillary_offers
+
+                for ancillary in ancillary_offers(canon):
+                    if ancillary.controller == viewer.user_id and ancillary.phase == "offered":
+                        items.append(
+                            InboxItem(
+                                "ancillary:" + ancillary.id,
+                                "ancillary",
+                                ancillary.id,
+                                canon.revision,
+                                "world",
+                                "Ancillary invitation",
+                                "Your optional character",
+                                "pending",
+                                True,
+                                False,
+                                "Choose and configure an eligible book or decline.",
+                                "Only the original invited controller owns this decision.",
+                                "Review invitation",
+                                task="m3_ancillary_invitation",
+                            )
+                        )
                 for offer in canon.world.npc_role_offers:
                     if viewer.user_id not in (offer.proposer, offer.npc.controller, canon.handler):
                         continue
@@ -529,6 +551,58 @@ class InboxService:
                         "Saved response survives restart; no timeout chooses for you.",
                         "Respond",
                         task="m2_choice",
+                    )
+                )
+            from girlframe.engine.m3_trainer_phrases import pending_heel
+
+            sheet = canon.sheets.get(str(viewer.user_id))
+            if viewer.user_id in canon.order and sheet is not None and sheet.character_id:
+                from girlframe.engine.m3_actor_bonds import current_ref
+
+                heel = pending_heel(canon, current_ref(canon, viewer.user_id))
+                if heel is not None:
+                    items.append(
+                        InboxItem(
+                            "trainer-heel:" + heel.event,
+                            "trainer_heel",
+                            heel.event,
+                            canon.revision,
+                            "plays",
+                            "Heel",
+                            "Original issuer",
+                            "pending",
+                            True,
+                            False,
+                            "Go to the original issuer's side.",
+                            "Record your actual movement in the source scene.",
+                            "Record movement",
+                            task="trainer_heel",
+                        )
+                    )
+
+            from girlframe.services.m3_gorgon_contact_disclosure import (
+                FrameContactDisclosureService,
+            )
+
+            for report in FrameContactDisclosureService(GameService(self.store)).available(
+                connection, viewer
+            ):
+                items.append(
+                    InboxItem(
+                        "frame-contact-report:" + report["id"],
+                        "frame_contact_report",
+                        report["id"],
+                        report["revision"],
+                        "plays",
+                        "Disclose your private Gorgon contact",
+                        "Original participant",
+                        "pending",
+                        True,
+                        False,
+                        "The actual Handler hears the report in the selected scene.",
+                        "The printed Punishment becomes due after the disclosure.",
+                        "Review disclosure",
+                        task="m3_gorgon_contact_report",
                     )
                 )
             actions = t.m2["m2_actions"]
@@ -2570,9 +2644,51 @@ class InboxService:
             from girlframe.services.m3_battle_dormant import DormantService
             from girlframe.services.m3_careers import CareerService
             from girlframe.services.m3_handler_creation import HandlerCreationService
+            from girlframe.services.m3_harpy_advancements import HarpyAdvancementService
+            from girlframe.services.m3_harpy_creation import HarpyCreationService
             from girlframe.services.m3_harpy_defeat import HarpyDefeatService
             from girlframe.services.m3_harpy_physical import HarpyPhysicalService
 
+            for harpy_offer in HarpyCreationService(frame_game).tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "harpy-creation:" + harpy_offer.actor.entity,
+                        "harpy_creation",
+                        harpy_offer.actor.entity,
+                        canon.revision,
+                        "playbook",
+                        "New Harpy invitation",
+                        "Original invited controller",
+                        "pending",
+                        True,
+                        False,
+                        "Choose your original starting Assets or decline.",
+                        "",
+                        "Review invitation",
+                        task="m3_harpy_creation",
+                    )
+                )
+            for advancing, available in HarpyAdvancementService(self.store).tasks(
+                connection, canon, viewer
+            ):
+                items.append(
+                    InboxItem(
+                        "harpy-advancement:" + advancing.entity,
+                        "harpy_advancement",
+                        advancing.entity,
+                        canon.revision,
+                        "plays",
+                        "Harpy advancements",
+                        "Original controller",
+                        "pending" if available else "resolved",
+                        available,
+                        False,
+                        "Review your Harpy's available advancements.",
+                        "",
+                        "Open advancements",
+                        task="m3_harpy_advancement",
+                    )
+                )
             harpy_service = HarpyDefeatService(self.store)
             for harpy_task in harpy_service._tasks(connection, viewer):
                 if (
@@ -2644,6 +2760,7 @@ class InboxService:
                         task="m3_dormant",
                     )
                 )
+            from girlframe.engine.m3_void_privacy import notices as handler_void_notices
             from girlframe.services.m3_handler_void import HandlerVoidService
             from girlframe.services.m3_mockingbird_plays import MockingbirdService
 
@@ -2670,6 +2787,26 @@ class InboxService:
                         task="handler_void",
                     )
                 )
+            for void_notice in handler_void_notices(canon):
+                if any(x.controller == viewer.user_id for x in void_notice.witnesses):
+                    items.append(
+                        InboxItem(
+                            "handler-void-notice:" + void_notice.id,
+                            "observation",
+                            void_notice.id,
+                            1,
+                            "plays",
+                            "Witnessed Handler Void",
+                            "Original scene",
+                            "resolved",
+                            False,
+                            False,
+                            "Your Girl saw the Handler gain Void.",
+                            "",
+                            "Read original observation",
+                            task="m3_void_privacy_notice",
+                        )
+                    )
             from girlframe.services.m3_handler_girl_void import HandlerGirlVoidService
             from girlframe.services.m3_sprite import SpriteService
 
@@ -2880,11 +3017,210 @@ class InboxService:
                         task="m3_battle_context",
                     )
                 )
+            from girlframe.engine.m3_handler_consequences import (
+                active_handler as current_successor_handler,
+            )
+            from girlframe.engine.m3_last_resort import acquisitions as last_resort_acquisitions
+            from girlframe.engine.m3_successor import acquisitions as successor_acquisitions
+            from girlframe.services.m3_advocate_alone import AdvocateAloneService
+            from girlframe.services.m3_conditioning import ConditioningService
+            from girlframe.services.m3_dogrunner_dress import DressPerformanceService
+            from girlframe.services.m3_frantic_breakdown import FranticBreakdownService
+            from girlframe.services.m3_frantic_crisis import CrisisService
             from girlframe.services.m3_handler_plays import HandlerPlayService
+            from girlframe.services.m3_handler_private_scene import HandlerPrivateSceneService
+            from girlframe.services.m3_insurgent_cover import CoverService
             from girlframe.services.m3_medical import MedicalService
             from girlframe.services.m3_privacy_trouble import PrivacyTroubleService
             from girlframe.services.m3_scene_requisitions import SceneRequisitionService
 
+            for reserve in last_resort_acquisitions(canon):
+                if reserve.handler == current_successor_handler(
+                    canon
+                ) and reserve.handler.entity == str(viewer.user_id):
+                    items.append(
+                        InboxItem(
+                            "last-resort:" + reserve.id,
+                            "last_resort",
+                            reserve.id,
+                            canon.revision,
+                            "playbook",
+                            "Private Last / Resort reserve",
+                            "Your original Handler",
+                            "available",
+                            True,
+                            False,
+                            "Review your actual reserve and Cadre losses.",
+                            "Linking and succession require their separate source.",
+                            "Review Last / Resort",
+                            task="m3_last_resort",
+                        )
+                    )
+            for star_record in successor_acquisitions(canon):
+                if star_record.handler == current_successor_handler(
+                    canon
+                ) and star_record.handler.entity == str(viewer.user_id):
+                    items.append(
+                        InboxItem(
+                            "successor:" + star_record.id,
+                            "successor",
+                            star_record.id,
+                            canon.revision,
+                            "playbook",
+                            "Successor Gold Stars",
+                            "Your original Handler",
+                            "available",
+                            True,
+                            False,
+                            "Review performed lessons and the original Gold Stars.",
+                            "Use the actual source Play to grant a new Star.",
+                            "Review Successor",
+                            task="m3_successor",
+                        )
+                    )
+
+            if any(x.get("kind") == "insurgent_cover_strain" for x in canon.facts):
+                covers = CoverService(OffDutyService(MissionService(self.store)))
+                for request in covers._tasks(connection, viewer):
+                    items.append(
+                        InboxItem(
+                            "insurgent-evidence:" + request["id"],
+                            "insurgent_cover_evidence",
+                            request["id"],
+                            canon.revision,
+                            "plays",
+                            "Original Cover evidence",
+                            "You own the evidence decision",
+                            "pending",
+                            True,
+                            False,
+                            "Record actual discovery or the loss of evidence you held.",
+                            "Only the original holder sees these controls.",
+                            "Review your evidence",
+                            task="m3_insurgent_cover",
+                        )
+                    )
+            for crisis in CrisisService(self.store)._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "frantic-crisis:" + crisis,
+                        "frantic_crisis",
+                        crisis,
+                        canon.revision,
+                        "plays",
+                        "Crisis Management",
+                        "Your original Frantic",
+                        "pending",
+                        True,
+                        False,
+                        "Choose the actual consequence of gaining your Tag.",
+                        "Previously chosen printed options remain spent.",
+                        "Review Crisis Management",
+                        task="m3_frantic_crisis",
+                    )
+                )
+            for request in FranticBreakdownService(self.store)._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "frantic-breakdown:" + request["id"],
+                        "frantic_breakdown",
+                        request["id"],
+                        canon.revision,
+                        "plays",
+                        "Break Down",
+                        "Original Frantic or printed outcome owner",
+                        "pending",
+                        request["can_act"],
+                        False,
+                        "Review the saved roll and your own decision.",
+                        "Office discovery and actual Punishment have separate owners.",
+                        "Review breakdown",
+                        task="m3_frantic_breakdown",
+                    )
+                )
+            for conversation, can_issue in AdvocateAloneService(self.store)._tasks(
+                connection, viewer, canon
+            ):
+                items.append(
+                    InboxItem(
+                        "advocate-alone:" + conversation,
+                        "advocate_alone",
+                        conversation,
+                        canon.revision,
+                        "plays",
+                        "Get Them Alone",
+                        "Original two participants",
+                        "pending",
+                        True,
+                        False,
+                        "Choose the Tag and issue the order."
+                        if can_issue
+                        else "Answer the question.",
+                        "The private answer is held for its original audience.",
+                        "Open private conversation",
+                        task="m3_advocate_alone",
+                    )
+                )
+            conditioning = ConditioningService(GameService(self.store))
+            for conditioning_request in conditioning.tasks(connection, viewer, canon):
+                items.append(
+                    InboxItem(
+                        "conditioning:" + conditioning_request.id,
+                        "conditioning",
+                        conditioning_request.id,
+                        canon.revision,
+                        "plays",
+                        "Conditioning",
+                        "Original participants",
+                        "pending",
+                        conditioning._owner(conditioning_request) == viewer.user_id,
+                        False,
+                        "Reopen your private request or withdraw.",
+                        "Review the saved roll and owned choices.",
+                        "Open Conditioning",
+                        task="m3_conditioning",
+                    )
+                )
+            for favor, private_book in HandlerPrivateSceneService(self.store)._tasks(viewer, canon):
+                items.append(
+                    InboxItem(
+                        "mistress-favor:" + favor,
+                        "mistress_favor",
+                        favor,
+                        canon.revision,
+                        "plays",
+                        private_book + " private scene",
+                        "Original participants",
+                        "pending",
+                        True,
+                        False,
+                        "Open your own saved choice.",
+                        "Consent, performance and the playbook decision have separate steps.",
+                        "Open private choice",
+                        task="m3_mistress_favor",
+                    )
+                )
+            for identity in DressPerformanceService(GameService(self.store)).tasks(
+                connection, viewer, canon
+            ):
+                items.append(
+                    InboxItem(
+                        "dress-performance:" + identity,
+                        "dress_performance",
+                        identity,
+                        canon.revision,
+                        "plays",
+                        "Dress Them Down",
+                        "Original participant",
+                        "pending",
+                        True,
+                        False,
+                        "Open your own performance choice.",
+                        "Status changes apply once the recorded steps finish.",
+                        "Open Dress Them Down",
+                        task="m3_dress_performance",
+                    )
+                )
             for request in HandlerPlayService(self.store)._tasks(connection, viewer):
                 items.append(
                     InboxItem(
@@ -2926,7 +3262,823 @@ class InboxService:
                         task="m3_handler_notice",
                     )
                 )
+            from girlframe.engine.m3_benevolent_contact import contacts as benevolent_contacts
+            from girlframe.engine.m3_cadre_leak import leaks as cadre_leaks
+            from girlframe.engine.m3_civic_directive import cases as civic_directives
+            from girlframe.engine.m3_director_strain import calls as director_strain_calls
+            from girlframe.engine.m3_doppelganger_reveal import reveals as disguise_reveals
+            from girlframe.engine.m3_handler_consequences import (
+                active_handler as employment_handler,
+            )
+            from girlframe.engine.m3_harpy_raid import raids as harpy_raids
+            from girlframe.engine.m3_journalist import questions as journalist_questions
+            from girlframe.engine.m3_npc_interest import interests as npc_interests
+            from girlframe.engine.m3_pilot_fears import cases as public_fears
+            from girlframe.engine.m3_rebel_assimilation import work_plays as assimilated_work_plays
+            from girlframe.engine.m3_rebel_defection import audience as defection_audience
+            from girlframe.engine.m3_rebel_defection import cases as rebel_defections
+            from girlframe.engine.m3_rebel_strafe import passes as rebel_passes
+            from girlframe.engine.m3_rebel_taunt import taunts as rebel_taunts
+            from girlframe.engine.m3_rebel_voice import voices as rebel_voices
+            from girlframe.engine.m3_void_leave import leaves as void_leaves
+            from girlframe.engine.m3_void_revelation import revelations
+            from girlframe.engine.m3_void_signal import signals as void_signals
+            from girlframe.services.m3_berserk_frame import visible as visible_berserk
+            from girlframe.services.m3_budget_demotion import visible as visible_demotions
+            from girlframe.services.m3_budget_hearing import options as hearing_options
+            from girlframe.services.m3_budget_hearing import visible as visible_hearings
+            from girlframe.services.m3_budget_trial import options as trial_options
+            from girlframe.services.m3_budget_trial import visible as visible_trials
+            from girlframe.services.m3_bunk_harpy import options as bunk_options
+            from girlframe.services.m3_bunk_harpy import visible as visible_bunks
+            from girlframe.services.m3_foundation_attack import (
+                visible as visible_foundation_attacks,
+            )
             from girlframe.services.m3_handler_tags import HandlerTagService
+            from girlframe.services.m3_journalist import JournalistService
+            from girlframe.services.m3_pilot_fears import access as fear_access
+            from girlframe.services.m3_rebel_ambush import hunt_options, visible_hunts
+            from girlframe.services.m3_rebel_ambush import visible as visible_ambushes
+            from girlframe.services.m3_rebel_bond_attack import visible as visible_betrayals
+            from girlframe.services.m3_rebel_escape_offer import visible as visible_escape_offers
+            from girlframe.services.m3_rebel_frame_theft import choices as theft_choices
+            from girlframe.services.m3_rebel_frame_theft import visible as visible_thefts
+            from girlframe.services.m3_rebel_funding import visible as visible_participation
+            from girlframe.services.m3_rebel_succession import visible as visible_succession
+            from girlframe.services.m3_rebel_takeover import visible as visible_takeovers
+
+            journalism = JournalistService(GameService(self.store))
+            for takeover in visible_takeovers(canon, viewer):
+                items.append(
+                    InboxItem(
+                        "rebel-takeover:" + takeover.id,
+                        "work",
+                        takeover.id,
+                        canon.revision,
+                        "off_duty",
+                        "Rebel Group takeover",
+                        "Actual original participants",
+                        "resolved" if takeover.completed else "pending",
+                        not bool(takeover.completed),
+                        False,
+                        "Review the original takeover.",
+                        "",
+                        "Open takeover",
+                        task="m3_rebel_takeover",
+                    )
+                )
+            for succession in visible_succession(canon, viewer):
+                items.append(
+                    InboxItem(
+                        "foundation-succession:" + succession.id,
+                        "work",
+                        succession.id,
+                        canon.revision,
+                        "campaign",
+                        "New Foundation court",
+                        "Original court participants",
+                        "resolved" if succession.completed else "pending",
+                        not bool(succession.completed),
+                        False,
+                        "Review your original court record.",
+                        "",
+                        "Open court",
+                        task="m3_rebel_succession",
+                    )
+                )
+            for participation in visible_participation(canon, viewer):
+                items.append(
+                    InboxItem(
+                        "rebel-participation:" + participation.id,
+                        "work",
+                        participation.id,
+                        canon.revision,
+                        "off_duty",
+                        "Rebellion event participation",
+                        "Original actor",
+                        "pending" if not participation.participation else "resolved",
+                        not bool(participation.participation),
+                        False,
+                        "Review your own actor's part in the event.",
+                        "",
+                        "Open participation",
+                        task="m3_rebel_funding",
+                    )
+                )
+            play_owner = employment_handler(canon)
+            if play_owner is not None and play_owner.entity == user:
+                for employment in assimilated_work_plays(canon, play_owner):
+                    assert employment.employment_play is not None
+                    items.append(
+                        InboxItem(
+                            "foundation-employment:" + employment.id,
+                            "work",
+                            employment.id,
+                            canon.revision,
+                            "campaign",
+                            employment.employment_play.title,
+                            "Original Handler",
+                            "active",
+                            True,
+                            False,
+                            "Use the original group's work Play in your scene.",
+                            "",
+                            "Open work Play",
+                            task="m3_rebel_assimilation",
+                        )
+                    )
+            for demotion in visible_demotions(
+                canon, viewer, administrator=self.store.policy.allow_guild_administrators
+            ):
+                items.append(
+                    InboxItem(
+                        "budget-demotion:" + demotion.id,
+                        "work",
+                        demotion.id,
+                        canon.revision,
+                        "campaign",
+                        "Budget Endgame succession",
+                        "Original authorized participants",
+                        "resolved" if demotion.completed else "pending",
+                        not bool(demotion.completed),
+                        False,
+                        "Review the original demotion and succession.",
+                        "",
+                        "Open succession",
+                        task="m3_budget_demotion",
+                    )
+                )
+            for trial in visible_trials(canon, viewer):
+                trial_pending = trial.phase not in ("saved", "executed")
+                items.append(
+                    InboxItem(
+                        "budget-trial:" + trial.id,
+                        "work",
+                        trial.id,
+                        canon.revision,
+                        "off_duty",
+                        "Private Budget trial",
+                        "Original court participants",
+                        "pending" if trial_pending else "resolved",
+                        bool(trial_options(trial, viewer.user_id)),
+                        False,
+                        "Review the original court record.",
+                        "",
+                        "Open trial",
+                        task="m3_budget_trial",
+                    )
+                )
+            for base_attack in visible_foundation_attacks(canon, viewer):
+                attack_pending = base_attack.resolution is None
+                items.append(
+                    InboxItem(
+                        "foundation-attack:" + base_attack.id,
+                        "work",
+                        base_attack.id,
+                        canon.revision,
+                        "off_duty",
+                        "Foundation attack on the base"
+                        if base_attack.base
+                        else "Foundation attack on a person",
+                        "Original participants and referee",
+                        "pending" if attack_pending else "resolved",
+                        attack_pending
+                        and (
+                            not base_attack.attempt
+                            and viewer.user_id == base_attack.controller
+                            or bool(base_attack.attempt)
+                            and user == base_attack.handler.entity
+                        ),
+                        False,
+                        "Review the original attack.",
+                        "",
+                        "Open attack",
+                        task="m3_foundation_attack",
+                    )
+                )
+            for frame_theft in visible_thefts(canon, viewer):
+                can_act = bool(theft_choices(frame_theft, viewer))
+                items.append(
+                    InboxItem(
+                        "rebel-frame-theft:" + frame_theft.id,
+                        "work",
+                        frame_theft.id,
+                        canon.revision,
+                        "off_duty",
+                        "Original Frame theft",
+                        "Original participants",
+                        "pending"
+                        if can_act
+                        or not (frame_theft.lost or frame_theft.stopped_by or frame_theft.returned)
+                        else "resolved",
+                        can_act,
+                        False,
+                        "Review the original Frame theft.",
+                        "",
+                        "Open Frame theft",
+                        task="m3_rebel_frame_theft",
+                    )
+                )
+            for betrayal in visible_betrayals(canon, viewer):
+                pending = betrayal.finished is None
+                can_act = (
+                    viewer.user_id == betrayal.controller
+                    and not betrayal.attempt
+                    or any(x.entity == user for x in betrayal.defenders)
+                )
+                items.append(
+                    InboxItem(
+                        "rebel-betrayal:" + betrayal.id,
+                        "work",
+                        betrayal.id,
+                        canon.revision,
+                        "off_duty",
+                        "Betrayal by an NPC Bond",
+                        "Original participants",
+                        "pending" if pending else "resolved",
+                        pending and can_act,
+                        False,
+                        "Review the original betrayal.",
+                        "",
+                        "Open betrayal",
+                        task="m3_rebel_bond_attack",
+                    )
+                )
+            for hunt in visible_hunts(canon, viewer):
+                items.append(
+                    InboxItem(
+                        "rebel-hunt:" + hunt.id,
+                        "work",
+                        hunt.id,
+                        canon.revision,
+                        "campaign",
+                        "Rebel pursuit",
+                        "Original Rebel and Handler",
+                        "resolved" if hunt.ended else "pending",
+                        bool(hunt_options(canon, hunt, viewer)),
+                        False,
+                        "Review the original Rebel pursuit.",
+                        "",
+                        "Open pursuit",
+                        task="m3_rebel_hunt",
+                    )
+                )
+            for ambush in visible_ambushes(canon, viewer):
+                pending = ambush.completed is None
+                items.append(
+                    InboxItem(
+                        "rebel-ambush:" + ambush.id,
+                        "work",
+                        ambush.id,
+                        canon.revision,
+                        "off_duty" if ambush.siege else "mission",
+                        "Rebel siege attack" if ambush.siege else "Rebel ambush",
+                        "Original Rebel and Handler",
+                        "pending" if pending else "resolved",
+                        pending and ambush.opening is None and viewer.user_id == ambush.controller,
+                        False,
+                        "Review the original base attack."
+                        if ambush.siege
+                        else "Review the original mission ambush.",
+                        "",
+                        "Open ambush",
+                        task="m3_rebel_ambush",
+                    )
+                )
+            for berserk in visible_berserk(canon, viewer):
+                items.append(
+                    InboxItem(
+                        "berserk-frame:" + berserk.id,
+                        "work",
+                        berserk.id,
+                        canon.revision,
+                        "campaign",
+                        "Berserk Frame",
+                        "Original Handler and affected Girl",
+                        "resolved" if berserk.defeated else "pending",
+                        False,
+                        False,
+                        "Review the status of the original Berserk Frame.",
+                        "",
+                        "Open Berserk Frame receipt",
+                        task="m3_berserk_frame",
+                    )
+                )
+            for hearing in visible_hearings(canon, viewer):
+                actionable = bool(hearing_options(hearing, viewer))
+                items.append(
+                    InboxItem(
+                        "budget-hearing:" + hearing.id,
+                        "work",
+                        hearing.id,
+                        canon.revision,
+                        "off_duty",
+                        "Private higher-ups hearing",
+                        "Original Director and Girl",
+                        "resolved" if hearing.phase == "dismissed" else "pending",
+                        actionable,
+                        False,
+                        "Review the original private hearing.",
+                        "Human rules review required." if hearing.phase == "review" else "",
+                        "Open hearing",
+                        task="m3_budget_hearing",
+                    )
+                )
+            for bunk in visible_bunks(canon, viewer):
+                actionable = bool(bunk_options(bunk, viewer))
+                items.append(
+                    InboxItem(
+                        "void-bunk:" + bunk.id,
+                        "work",
+                        bunk.id,
+                        canon.revision,
+                        "off_duty",
+                        "Private Harpy encounter",
+                        "Original audience",
+                        "pending" if actionable else "resolved",
+                        actionable,
+                        False,
+                        "Review the actual private encounter.",
+                        "",
+                        "Open encounter",
+                        task="m3_bunk_harpy",
+                    )
+                )
+            for leave in void_leaves(canon):
+                requester = leave.handler.entity == user
+                voter = next((x for x in leave.voters if x.entity == user), None)
+                if not leave.returned or not (requester or voter):
+                    continue
+                responded = {x.voter for x in leave.votes}
+                can_act = (
+                    responded == set(leave.voters) if requester else voter not in responded
+                ) and leave.decision is None
+                items.append(
+                    InboxItem(
+                        "void-leave-poll:" + leave.id,
+                        "work",
+                        leave.id,
+                        canon.revision,
+                        "strain",
+                        "Continue the campaign?",
+                        "Original Off-Duty table",
+                        "resolved" if leave.decision else "pending",
+                        can_act,
+                        False,
+                        "Review your private choice about the next phase.",
+                        "",
+                        "Open table follow-up",
+                        task="m3_void_leave_poll",
+                    )
+                )
+            for phone_call in director_strain_calls(canon):
+                if viewer.user_id in (phone_call.controller, int(phone_call.handler.entity)):
+                    items.append(
+                        InboxItem(
+                            "director-strain-call:" + phone_call.id,
+                            "observation",
+                            phone_call.id,
+                            1,
+                            "world",
+                            "Director’s call",
+                            "Original participants",
+                            "resolved",
+                            False,
+                            False,
+                            "Read the original call.",
+                            "",
+                            "Open call",
+                            task="m3_director_strain_call",
+                        )
+                    )
+            for question in journalist_questions(canon):
+                if viewer.user_id not in (question.controller, int(question.girl.entity)):
+                    continue
+                actionable = (
+                    question.response is None
+                    and question.girl.entity == user
+                    and journalism.live(connection, canon, question)
+                )
+                title, summary = {
+                    "journalist": (
+                        "Private Journalist question",
+                        "Review the original direct question.",
+                    ),
+                    "family": ("Private Family discrepancy", "Review the original discrepancy."),
+                    "psychologist": (
+                        "Private Psychologist directive",
+                        "Review the original directive and Identity.",
+                    ),
+                    "public_relations": (
+                        "Private Public Relations expectation",
+                        "Review the original expectation and report the outcome.",
+                    ),
+                }[question.job]
+                items.append(
+                    InboxItem(
+                        "journalist:" + question.id,
+                        "work",
+                        question.id,
+                        1,
+                        "playbook",
+                        title,
+                        "Original scene roles",
+                        "pending" if question.response is None else "resolved",
+                        actionable,
+                        False,
+                        summary,
+                        "",
+                        "Open response",
+                        task="m3_journalist",
+                    )
+                )
+
+            for interest in npc_interests(canon):
+                discoverer = interest.girl.entity == str(viewer.user_id)
+                author = interest.handler.entity == str(viewer.user_id)
+                if not (discoverer or author):
+                    continue
+                actionable = bool(
+                    discoverer
+                    and not interest.seen_event
+                    or author
+                    and interest.seen_event
+                    and not interest.gain_event
+                )
+                items.append(
+                    InboxItem(
+                        "npc-interest:" + interest.id,
+                        "npc_interest",
+                        interest.id,
+                        canon.revision,
+                        "off_duty",
+                        "Private NPC discovery",
+                        "Original discoverer and Handler",
+                        "resolved" if interest.complete else "pending",
+                        actionable,
+                        False,
+                        "Review the actual discovery.",
+                        "",
+                        "Open discovery",
+                        task="m3_npc_interest",
+                    )
+                )
+
+            for taunt in rebel_taunts(canon):
+                addressed = (
+                    taunt.handler.entity == str(viewer.user_id) and taunt.radio_event is not None
+                )
+                if viewer.user_id != taunt.controller and not addressed:
+                    continue
+                actionable = (
+                    taunt.radio_event is None or addressed and taunt.interaction_event is None
+                )
+                items.append(
+                    InboxItem(
+                        "rebel-taunt:" + taunt.id,
+                        "rebel_taunt",
+                        taunt.id,
+                        canon.revision,
+                        "off_duty",
+                        "Private Rebel radio taunt",
+                        "Original speaker and Handler",
+                        "pending" if actionable else "resolved",
+                        actionable,
+                        False,
+                        "Review the actual original taunt.",
+                        "",
+                        "Open radio taunt",
+                        task="m3_rebel_taunt",
+                    )
+                )
+
+            for voice in rebel_voices(canon):
+                if viewer.user_id != voice.controller:
+                    continue
+                from girlframe.engine.m3_handler_consequences import same_handler_body
+                from girlframe.engine.m3_rebel_escape_offer import speaker
+
+                try:
+                    actual = speaker(canon, voice.issuer.entity)
+                except ValueError:
+                    continue
+                if actual.controller != viewer.user_id or not same_handler_body(
+                    canon, voice.handler
+                ):
+                    continue
+                items.append(
+                    InboxItem(
+                        "rebel-voice:" + voice.id,
+                        "work",
+                        voice.id,
+                        1,
+                        "off_duty",
+                        "Private Rebel voice",
+                        "Original Rebel controller",
+                        "pending",
+                        True,
+                        False,
+                        "Issue an Order in a scene with an original Girl."
+                        if voice.prepared
+                        else "Synthesize the original Handler's voice.",
+                        "",
+                        "Open voice",
+                        task="m3_rebel_voice",
+                    )
+                )
+
+            for rebel_pass in rebel_passes(canon):
+                if viewer.user_id not in (rebel_pass.controller, int(rebel_pass.handler.entity)):
+                    continue
+                items.append(
+                    InboxItem(
+                        "rebel-pass:" + rebel_pass.id,
+                        "rebel_pass",
+                        rebel_pass.id,
+                        canon.revision,
+                        "off_duty",
+                        "Private Rebel strafing pass",
+                        "Original Rebel controller and Handler",
+                        "resolved" if rebel_pass.performance else "pending",
+                        not rebel_pass.performance,
+                        False,
+                        "Review the original cockpit or pass.",
+                        "",
+                        "Open pass",
+                        task="m3_rebel_strafe",
+                    )
+                )
+
+            for defection in rebel_defections(canon):
+                contacted, heard_report = defection_audience(canon, defection, viewer.user_id)
+                if not (contacted or heard_report):
+                    continue
+                can_stay = contacted and defection.outcome is None
+                items.append(
+                    InboxItem(
+                        "rebel-defection:" + defection.id,
+                        "rebel_defection",
+                        defection.id,
+                        canon.revision,
+                        "off_duty",
+                        "Private defection report" if heard_report else "Private Rebel contact",
+                        "Original Rebel Group",
+                        "pending" if can_stay else "resolved",
+                        can_stay,
+                        False,
+                        "Review the contact before Off-Duty ends."
+                        if can_stay
+                        else "Read the original case.",
+                        "",
+                        "Review contact",
+                        task="m3_rebel_defection",
+                    )
+                )
+
+            contact_notices = [
+                x
+                for x in benevolent_contacts(canon)
+                if viewer.user_id in (x.speaker.controller, x.recipient.controller)
+            ]
+            grants = [
+                x
+                for x in contact_notices
+                if x.id == x.grant and x.speaker.controller == viewer.user_id
+            ]
+            for contact_notice in contact_notices[-25:] + [
+                x for x in grants if x not in contact_notices[-25:]
+            ]:
+                items.append(
+                    InboxItem(
+                        "benevolent-contact:" + contact_notice.id,
+                        "benevolent_contact",
+                        contact_notice.id,
+                        canon.revision,
+                        "plays",
+                        "Private Benevolent Gorgon Play",
+                        "Original speaker and addressee",
+                        "resolved",
+                        False,
+                        False,
+                        "Read this original Gorgon contact.",
+                        "",
+                        "Review contact",
+                        task="m3_benevolent_contact",
+                    )
+                )
+
+            for revelation in revelations(canon)[-25:]:
+                if any(role.controller == viewer.user_id for role in revelation.recipients):
+                    items.append(
+                        InboxItem(
+                            "void-revelation:" + revelation.id,
+                            "void_revelation",
+                            revelation.id,
+                            canon.revision,
+                            "plays",
+                            "Actual Void revelation",
+                            "Original scene",
+                            "resolved",
+                            False,
+                            False,
+                            "Read the Handler's revelation heard in your original scene.",
+                            "",
+                            "Read revelation",
+                            task="m3_strain_revelation",
+                        )
+                    )
+
+            for directive in civic_directives(canon):
+                is_director = viewer.user_id == directive.controller
+                is_handler = str(viewer.user_id) == directive.handler.entity
+                if not is_director and (not is_handler or not directive.order_event):
+                    continue
+                can_order = is_director and not directive.order_event
+                can_act = is_handler and not directive.action_event
+                items.append(
+                    InboxItem(
+                        "civic-directive:" + directive.id,
+                        "civic_directive",
+                        directive.id,
+                        canon.revision,
+                        "off_duty",
+                        "Private civic directive",
+                        "Original Director and Handler",
+                        "pending" if (can_order or can_act) else "resolved",
+                        can_order or can_act,
+                        False,
+                        "Issue the actual order." if can_order else "Read the original order.",
+                        "",
+                        "Review directive",
+                        task="m3_civic_directive",
+                    )
+                )
+
+            for leak in cadre_leaks(canon)[-25:]:
+                items.append(
+                    InboxItem(
+                        "cadre-report:" + leak.id,
+                        "cadre_report",
+                        leak.id,
+                        canon.revision,
+                        "off_duty",
+                        "Public report on Cadre treatment",
+                        "Campaign bulletin",
+                        "resolved",
+                        False,
+                        False,
+                        "Read the public account of the leak.",
+                        "",
+                        "Read report",
+                        task="m3_cadre_report",
+                    )
+                )
+                if viewer.user_id in (int(leak.handler.entity), leak.controller):
+                    items.append(
+                        InboxItem(
+                            "cadre-leak:" + leak.id,
+                            "cadre_leak",
+                            leak.id,
+                            canon.revision,
+                            "off_duty",
+                            "Private leaked incident",
+                            "Original Handler and Director",
+                            "resolved" if leak.outcome_event else "pending",
+                            not leak.outcome_event,
+                            False,
+                            "Review the original follow-up.",
+                            "",
+                            "Review incident",
+                            task="m3_cadre_leak",
+                        )
+                    )
+                if leak.apology and leak.outcome_event:
+                    items.append(
+                        InboxItem(
+                            "cadre-apology:" + leak.id,
+                            "cadre_apology",
+                            leak.id,
+                            canon.revision,
+                            "off_duty",
+                            "Public apology",
+                            "Campaign bulletin",
+                            "resolved",
+                            False,
+                            False,
+                            "Read the Handler's published statement.",
+                            "",
+                            "Read statement",
+                            task="m3_cadre_apology",
+                        )
+                    )
+
+            for raid in harpy_raids(canon):
+                if raid.controller == viewer.user_id:
+                    items.append(
+                        InboxItem(
+                            "harpy-raid:" + raid.id,
+                            "harpy_raid",
+                            raid.id,
+                            canon.revision,
+                            "off_duty",
+                            "Original Harpy raid",
+                            "Original Harpy controller",
+                            "resolved" if raid.action else "pending",
+                            not raid.action,
+                            False,
+                            "Confirm the actual attack and obsession.",
+                            "",
+                            "Review raid",
+                            task="m3_harpy_raid",
+                        )
+                    )
+
+            for disguise in disguise_reveals(canon)[-25:]:
+                if any(r.entity == str(viewer.user_id) for r in disguise.recipients):
+                    items.append(
+                        InboxItem(
+                            "strain-disguise:" + disguise.id,
+                            "disguise_revealed",
+                            disguise.id,
+                            canon.revision,
+                            "off_duty",
+                            "Original Bond revelation",
+                            "Original audience",
+                            "resolved",
+                            False,
+                            False,
+                            "Read what your original Bond revealed.",
+                            "",
+                            "Read revelation",
+                            task="m3_strain_disguise_revelation",
+                        )
+                    )
+
+            for fear in public_fears(canon):
+                is_director, is_cadre, is_handler = fear_access(fear, viewer.user_id)
+                if not is_director and (not (is_cadre or is_handler) or not fear.demand_event):
+                    continue
+                actionable = not fear.result and (is_director or is_cadre)
+                items.append(
+                    InboxItem(
+                        "pilot-fears:" + fear.id,
+                        "pilot_fears",
+                        fear.id,
+                        canon.revision,
+                        "off_duty",
+                        "Cadre public appearance" if fear.city else "Directors' public-fear demand",
+                        "Original participants",
+                        "pending" if not fear.result else "resolved",
+                        actionable,
+                        False,
+                        "Review the original demand.",
+                        "",
+                        "Open demand",
+                        task="m3_pilot_fears",
+                    )
+                )
+
+            for signal in void_signals(canon):
+                if signal.actor.entity == str(viewer.user_id) and signal.gain_event is None:
+                    items.append(
+                        InboxItem(
+                            "strain-void-signal:" + signal.id,
+                            "void_signal",
+                            signal.id,
+                            canon.revision,
+                            "off_duty",
+                            "Void contact",
+                            "Original recipient",
+                            "pending",
+                            True,
+                            False,
+                            "Choose your own Asset and describe how the Void alters it.",
+                            "",
+                            "Review the Void gain",
+                            task="m3_strain_void_signal",
+                        )
+                    )
+
+            for escape_offer in visible_escape_offers(canon, viewer.user_id)[-25:]:
+                delivered = escape_offer.delivered_event is not None
+                items.append(
+                    InboxItem(
+                        "rebel-escape-offer:" + escape_offer.id,
+                        "rebel_escape_offer",
+                        escape_offer.id,
+                        canon.revision,
+                        "off_duty",
+                        "Private Rebel escape offer",
+                        "Original actor",
+                        "resolved" if delivered else "pending",
+                        not delivered,
+                        False,
+                        "Read the actual offer." if delivered else "Make the actual private offer.",
+                        "",
+                        "Read offer" if delivered else "Compose offer",
+                        task="m3_rebel_escape_offer",
+                    )
+                )
 
             for notice in HandlerTagService(GameService(self.store)).notices(connection, viewer):
                 items.append(
@@ -3008,6 +4160,803 @@ class InboxService:
                         "Private-room secrets are never disclosed automatically.",
                         "Review inquiry",
                         task="m3_privacy_trouble",
+                    )
+                )
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_abysstech import AbysstechService
+            from girlframe.services.m3_ancillary_cadre import AncillaryCadreService
+            from girlframe.services.m3_ancillary_intimacy import AncillaryIntimacyService
+            from girlframe.services.m3_ancillary_orders import AncillaryOrderService
+            from girlframe.services.m3_captured import CapturedService
+            from girlframe.services.m3_chained_darling import ChainedPlacementService
+            from girlframe.services.m3_chained_isolation import IsolationService
+            from girlframe.services.m3_chronically_online import ChronicallyOnlineService
+            from girlframe.services.m3_escape import EscapeService
+            from girlframe.services.m3_harpy_eagle import EagleService
+            from girlframe.services.m3_harpy_gaze import GazeService
+            from girlframe.services.m3_harpy_intimacy import HarpyIntimacyService
+            from girlframe.services.m3_harpy_kiss import KissService
+            from girlframe.services.m3_harpy_mask import MaskService
+            from girlframe.services.m3_harpy_rewrite import RewriteService
+            from girlframe.services.m3_harpy_song import HarpySongService
+            from girlframe.services.m3_harpy_visions import VisionsService
+            from girlframe.services.m3_harpy_voidspace import HarpyVoidspaceService
+            from girlframe.services.m3_mercenary_debt import DebtService
+            from girlframe.services.m3_mercenary_patron import MercenaryPatronService
+            from girlframe.services.m3_npc_handover import LABELS as HANDOVER_LABELS
+            from girlframe.services.m3_npc_handover import NpcHandoverService
+            from girlframe.services.m3_npc_intelligence import IntelligenceService
+            from girlframe.services.m3_prodigy_swoon import SwoonService
+            from girlframe.services.m3_soldier_surgery import SoldierSurgeryService
+            from girlframe.services.m3_timeskip import TimeskipService
+            from girlframe.services.m3_voidspace_invasion import InvasionService
+            from girlframe.services.m3_warboy_hate import ConditionedHateService
+
+            optional_orders = AncillaryOrderService(GameService(self.store))
+            for optional_id, optional_step in optional_orders.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "ancillary-order:" + optional_id,
+                        "ancillary_order_" + optional_step,
+                        optional_id,
+                        canon.revision,
+                        "plays",
+                        "Ancillary Order",
+                        "Original source",
+                        "pending",
+                        optional_step != "held",
+                        False,
+                        "Review your original received or disputed Order.",
+                        "Original role and scene determine authority.",
+                        "Open the original Order",
+                        task="m3_ancillary_order",
+                    )
+                )
+
+            ancillary_cadres = AncillaryCadreService(GameService(self.store))
+            for cadre_id in ancillary_cadres.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "ancillary-cadre:" + cadre_id,
+                        "ancillary_cadre",
+                        cadre_id,
+                        canon.revision,
+                        "playbooks",
+                        "Ancillary Cadre",
+                        "Original proposed role",
+                        "pending",
+                        True,
+                        False,
+                        "Choose whether your original character joins the proposed Cadre.",
+                        "The original roles approve their own membership.",
+                        "Review proposed Cadre",
+                        task="m3_ancillary_cadre",
+                    )
+                )
+
+            ancillary_private = AncillaryIntimacyService(GameService(self.store))
+            for private_id, private_step in ancillary_private.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "ancillary-private:" + private_id + ":" + private_step,
+                        "ancillary_private_" + private_step,
+                        private_id,
+                        canon.revision,
+                        "plays",
+                        "Private Ancillary Play",
+                        "Original private choice",
+                        "pending",
+                        True,
+                        False,
+                        "Withdraw from your original encounter."
+                        if private_step == "withdraw"
+                        else "Review only the original choice assigned to you.",
+                        "Only the original participants control their choices.",
+                        "Open private choice",
+                        task="m3_ancillary_private_play",
+                    )
+                )
+
+            for identity, role in SwoonService(GameService(self.store)).tasks(
+                connection, canon, viewer
+            ):
+                items.append(
+                    InboxItem(
+                        "prodigy-swoon:" + identity,
+                        "prodigy_swoon",
+                        identity,
+                        canon.revision,
+                        "plays",
+                        "Earned Confidence",
+                        "Original Prodigy" if role == "withdraw" else "Original NPC",
+                        "pending",
+                        True,
+                        False,
+                        "Withdraw your offer."
+                        if role == "withdraw"
+                        else "Choose your NPC’s reaction.",
+                        "The original notch remains reserved until a response.",
+                        "Open private choice",
+                        task="m3_prodigy_swoon",
+                    )
+                )
+
+            for identity in SoldierSurgeryService(GameService(self.store)).tasks(
+                connection, canon, viewer
+            ):
+                items.append(
+                    InboxItem(
+                        "soldier-surgery:" + identity,
+                        "soldier_external_tag",
+                        identity,
+                        canon.revision,
+                        "discipline",
+                        "Simplification Surgery",
+                        "Original Tag",
+                        "pending",
+                        True,
+                        False,
+                        "Resolve your part of the original Tag embrace.",
+                        "The original source stays pending until the choice resolves.",
+                        "Open private choice",
+                        task="m3_soldier_surgery",
+                    )
+                )
+
+            isolation = IsolationService(GameService(self.store))
+            for isolation_id in isolation.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "chained-isolation:" + isolation_id,
+                        "chained_isolation",
+                        isolation_id,
+                        canon.revision,
+                        "discipline",
+                        "Isolation Protocol",
+                        "Original Handler",
+                        "pending",
+                        True,
+                        False,
+                        "Choose the replacement for the original blocked Bond.",
+                        "Only the actual original Handler owns this choice.",
+                        "Open replacement",
+                        task="m3_chained_isolation",
+                    )
+                )
+
+            placements = ChainedPlacementService(GameService(self.store))
+            for placement_id, placement_step in placements.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "chained-placement:" + placement_id,
+                        "chained_placement",
+                        placement_id,
+                        canon.revision,
+                        "world",
+                        "Ancillary placement",
+                        "Original helper" if placement_step == "assist" else "Original facilitator",
+                        "pending",
+                        True,
+                        False,
+                        "Choose whether to help this original character."
+                        if placement_step == "assist"
+                        else "Verify the actual placement or cockpit operation.",
+                        "Use the original body and Frame.",
+                        "Review placement",
+                        task="m3_chained_placement",
+                    )
+                )
+
+            recollections = ChronicallyOnlineService(GameService(self.store))
+            for recall_id, recall_step in recollections.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "recollection:" + recall_id,
+                        "chronically_online_" + recall_step,
+                        recall_id,
+                        canon.revision,
+                        "plays",
+                        "Chronically Online",
+                        "Original participants",
+                        "pending",
+                        True,
+                        False,
+                        {
+                            "confirm": "Verify the exact earlier facts.",
+                            "meet": "Record the original meeting.",
+                            "encounter": "Confirm the meeting and apply the verified facts.",
+                        }[recall_step],
+                        "Both participants keep their original choices.",
+                        "Review recollection",
+                        task="m3_chronically_online",
+                    )
+                )
+
+            debt_service = DebtService(GameService(self.store))
+            for debt_id, debt_step in debt_service.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "mercenary-debt:" + debt_id,
+                        "mercenary_debt_" + debt_step,
+                        debt_id,
+                        canon.revision,
+                        "plays",
+                        "Mercenary Debt",
+                        "Original cash offer",
+                        "pending",
+                        True,
+                        False,
+                        {
+                            "verify": "Verify the original fictional cash offer.",
+                            "respond": "Choose your response to the order.",
+                            "result": "Choose your response to the saved result.",
+                            "witness": "Review who noticed the attempted refusal.",
+                            "referred": "Resolve the original witnessed or uncertain refusal.",
+                        }[debt_step],
+                        "Access follows the actual scene and original decision owner.",
+                        "Review Debt",
+                        task="m3_mercenary_debt",
+                    )
+                )
+
+            patronage = MercenaryPatronService(GameService(self.store))
+            for patron_id, patron_step in patronage.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "mercenary-patron:" + patron_id,
+                        "mercenary_patron_" + patron_step,
+                        patron_id,
+                        canon.revision,
+                        "plays",
+                        "Mercenary patronage",
+                        "Original sponsorship",
+                        "pending" if patron_step != "loss" else "recorded",
+                        patron_step != "loss",
+                        False,
+                        {
+                            "offer": "Choose whether your NPC becomes the new Patron.",
+                            "loss": "Review the original loss of funding.",
+                            "death": "Verify the actual Patron’s death.",
+                        }[patron_step],
+                        "The original participants own these decisions.",
+                        "Review sponsorship",
+                        task="m3_mercenary_patron",
+                    )
+                )
+
+            kisses = KissService(GameService(self.store))
+            for kiss_id in kisses.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "harpy-kiss:" + kiss_id,
+                        "harpy_kiss",
+                        kiss_id,
+                        canon.revision,
+                        "plays",
+                        "Kiss Me, Darling",
+                        "Original facilitator",
+                        "pending",
+                        True,
+                        False,
+                        "Verify the actual surprise during the original Harpy Play.",
+                        "The original Girl still owns her private consent.",
+                        "Review actual surprise",
+                        task="m3_harpy_kiss",
+                    )
+                )
+
+            intimacies = HarpyIntimacyService(GameService(self.store))
+            for intimacy_id, intimacy_step in intimacies.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "harpy-intimacy:" + intimacy_id,
+                        "harpy_intimacy",
+                        intimacy_id,
+                        canon.revision,
+                        "plays",
+                        "Private Harpy encounter",
+                        "Original participant",
+                        "pending",
+                        True,
+                        False,
+                        {
+                            "consent": "Make your own private consent decision.",
+                            "escape": "Choose whether to attempt the original escape.",
+                            "void": "Choose the actual owned Void gain.",
+                            "rebirth": "Open the original Apometanoia.",
+                        }[intimacy_step],
+                        "The original Girl owns this decision.",
+                        "Open your private choice",
+                        task="m3_harpy_intimacy",
+                    )
+                )
+
+            abysstech = AbysstechService(GameService(self.store))
+            for abysstech_id, abysstech_step in abysstech.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "abysstech:" + abysstech_id,
+                        "abysstech",
+                        abysstech_id,
+                        canon.revision,
+                        "plays",
+                        "Experimental Abysstech",
+                        "Original scene contact",
+                        "pending",
+                        True,
+                        False,
+                        {
+                            "contact": "Confirm or decline the original Asset contact.",
+                            "choose": "Choose your actual effect from the confirmed contact.",
+                            "pressure": "Choose your consequence from the original contact.",
+                        }[abysstech_step],
+                        "The original scene roles own their separate responses.",
+                        "Review original choice",
+                        task="m3_abysstech",
+                    )
+                )
+
+            hatred = ConditionedHateService(GameService(self.store))
+            for hate_id, hate_step in hatred.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "conditioned-hate:" + hate_id,
+                        "conditioned_hate",
+                        hate_id,
+                        canon.revision,
+                        "plays",
+                        "Conditioned Hate",
+                        "Original Warboy response",
+                        "pending",
+                        True,
+                        False,
+                        "Verify the actual immediate action."
+                        if hate_step == "review"
+                        else "Choose your own Tag and act to reaffirm it.",
+                        "The original Warboy and facilitator each own their decision.",
+                        "Review original choice",
+                        task="m3_warboy_hate",
+                    )
+                )
+
+            timeskips = TimeskipService(GameService(self.store))
+            for timeskip_id, timeskip_step in timeskips.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "timeskip:" + timeskip_id,
+                        "timeskip",
+                        timeskip_id,
+                        canon.revision,
+                        "plays",
+                        "Timeskip",
+                        "Original campaign table",
+                        "pending",
+                        True,
+                        False,
+                        {
+                            "agreement": "Review the proposed duration.",
+                            "city_ruin": "Record the ruined city and its Gorgon.",
+                            "city_foundation": "Establish the actual new city.",
+                            "base_ruin": "Record the ruined base, its losses, and its Gorgon.",
+                            "newgirl": "Check whether the original Newgirl setup is complete.",
+                            "choose_book": "Choose your original Newgirl’s new playbook.",
+                            "death": "Review the table’s next Timeskip choice.",
+                            "death_ballot": "Make your own decision about the nominated character.",
+                            "replacement": "Check for the original Newgirl’s activation.",
+                            "base_foundation": "Establish the actual new base.",
+                            "base_contacts": "Check the original players’ NPC contributions.",
+                            "create_contact": "Describe your new NPC at the original base.",
+                            "rebel_succession": "Review the change in Rebel groups.",
+                            "identities": "Check the original players’ Identity choices.",
+                            "replace_identities": "Replace two of your original Girl’s Identities.",
+                            "benefits": "Review the actual Timeskip benefits.",
+                            "choose_requisition": "Choose your Girl’s Timeskip Requisition.",
+                            "electives": "Review the original table’s elective choices.",
+                            "choose_elective": "Choose an optional Timeskip benefit.",
+                            "opening": "Set the actual follow-on scene as the Handler.",
+                            "introduce_self": "Describe how your actual character has changed.",
+                            "introductions": "Check the original scene’s reintroductions.",
+                        }[timeskip_step],
+                        "Only the original owners can make each decision.",
+                        "Open Timeskip",
+                        task="m3_timeskip",
+                    )
+                )
+
+            invasion = InvasionService(GameService(self.store))
+            for invasion_id, invasion_step in invasion.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "voidspace-invasion:" + invasion_id,
+                        "voidspace_invasion",
+                        invasion_id,
+                        canon.revision,
+                        "plays",
+                        "Voidspace Invasion",
+                        "Original Cadre traversal",
+                        "complete" if invasion_step in ("route", "settled") else "pending",
+                        True,
+                        False,
+                        {
+                            "roll": "Roll for the Cadre’s original traversal.",
+                            "review": "Record the original discovery.",
+                            "route": "Open the original Cadre’s discovered route.",
+                            "encounter": "Record which actual being the Cadre encountered.",
+                            "gain": "Choose your original Girl’s actual Void gain.",
+                            "report": "Open the original recorded encounter.",
+                            "settled": "Open the resolved original encounter.",
+                        }[invasion_step],
+                        "This choice belongs to the original participants.",
+                        "Open your choice",
+                        task="m3_voidspace_invasion",
+                    )
+                )
+
+            rescues = EscapeService(GameService(self.store))
+            for escape_case, escape_step in rescues.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "escape:" + escape_case.id,
+                        "escape",
+                        escape_case.id,
+                        canon.revision,
+                        "plays",
+                        "Escape",
+                        "Original Foundation scene",
+                        "pending",
+                        True,
+                        False,
+                        {
+                            "erase": "Choose the original Identity that is erased.",
+                            "find": "Record who actually finds the original Girl.",
+                            "rescue": "Choose whether to carry out the original rescue.",
+                            "ward": "Record the actual base personnel and sickbay outcome.",
+                            "release": "Verify the actual sickbay restraint has ended.",
+                        }[escape_step],
+                        "This choice belongs to the original participant.",
+                        "Open your choice",
+                        task="m3_escape",
+                    )
+                )
+
+            captive = CapturedService(GameService(self.store))
+            for capture_case, capture_step in captive.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "captured:" + capture_case.id,
+                        "captured",
+                        capture_case.id,
+                        canon.revision,
+                        "plays",
+                        "Captured!",
+                        "Original Rebel base",
+                        "pending",
+                        True,
+                        False,
+                        {
+                            "consent": "Confirm the original narrated capture.",
+                            "roll": "Roll Captured! with your actual permitted Heat.",
+                            "mid": "Set your original fighting-chance scene.",
+                            "room_review": "Play your character in the proposed room scene.",
+                            "high_scene": "Set an actual punishment scene at the Rebel base.",
+                            "erase": "Choose your exact original Identity to erase.",
+                            "low_review": "The original low awaits the Ancillary consequence.",
+                            "convert": "Choose your approved Rebel Ancillary playbook.",
+                        }[capture_step],
+                        "This choice belongs to the original participant.",
+                        "Open your choice",
+                        task="m3_captured",
+                    )
+                )
+
+            masks = MaskService(GameService(self.store))
+            for mask_case, mask_step in masks.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "harpy-mask:" + mask_case.event,
+                        "harpy_mask",
+                        mask_case.event,
+                        canon.revision,
+                        "plays",
+                        "A Human Mask",
+                        "Original Harpy scene",
+                        "pending",
+                        True,
+                        False,
+                        "Review the Harpy’s account."
+                        if mask_step == "review"
+                        else "End the original human appearance.",
+                        "This choice belongs to the original participant.",
+                        "Open your choice",
+                        task="m3_harpy_mask",
+                    )
+                )
+
+            rewrite = RewriteService(GameService(self.store))
+            for edit, edit_step in rewrite.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "harpy-rewrite:" + edit.id,
+                        "harpy_rewrite",
+                        edit.id,
+                        canon.revision,
+                        "plays",
+                        "Nothing Can Ever Be As Important As Us",
+                        "Original Harpy encounter",
+                        "pending",
+                        True,
+                        False,
+                        {
+                            "verify": "Verify the pair are alone and no help is coming.",
+                            "authorize": "Choose which of your Girl’s Identities to open.",
+                            "draft": "Submit your accepted scope of edits within one minute.",
+                            "apply": "Review the original Harpy’s proposed edits.",
+                            "expire": "Close the elapsed editing window.",
+                        }[edit_step],
+                        "This choice belongs to the original participants.",
+                        "Open your choice",
+                        task="m3_harpy_rewrite",
+                    )
+                )
+
+            passages = HarpyVoidspaceService(GameService(self.store))
+            for passage_id, passage_step in passages.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "harpy-voidspace:" + passage_id,
+                        "harpy_voidspace",
+                        passage_id,
+                        canon.revision,
+                        "plays",
+                        "Come to Me Now Once Again",
+                        "Original Harpy escape",
+                        "pending",
+                        True,
+                        False,
+                        {
+                            "propose": "Describe the original pair’s passage into Voidspace.",
+                            "verify": "Verify the original carried characters’ actual passage.",
+                            "offer": "Choose an experience for the Girl or let her choose it.",
+                            "gain": "Choose whether to accept the experience and alter your Asset.",
+                            "release_offer": "Offer to release the original Girl at her Frame.",
+                            "release_accept": "Choose whether to accept the proposed return.",
+                            "release_verify": "Verify the original Girl’s actual arrival.",
+                        }[passage_step],
+                        "This choice belongs to the original participants.",
+                        "Open your choice",
+                        task="m3_harpy_voidspace",
+                    )
+                )
+
+            intelligence = IntelligenceService(GameService(self.store))
+            for inquiry, step in intelligence.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "npc-intelligence:" + inquiry.id,
+                        "npc_intelligence",
+                        inquiry.id,
+                        canon.revision,
+                        "plays",
+                        "Intelligence Agent inquiry",
+                        "Original NPC scene",
+                        "pending" if step == "review" else "complete",
+                        True,
+                        False,
+                        "Review the original inquiry"
+                        if step == "review"
+                        else "Open the Agent’s verified discovery",
+                        "The result belongs to the original Intelligence Agent.",
+                        "Open the inquiry",
+                        task="m3_npc_intelligence",
+                    )
+                )
+
+            handover = NpcHandoverService(GameService(self.store))
+            for item_handover in handover.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "npc-handover:" + item_handover.id,
+                        "npc_handover",
+                        item_handover.id,
+                        canon.revision,
+                        "plays",
+                        HANDOVER_LABELS[item_handover.job],
+                        "Original NPC scene",
+                        "pending",
+                        True,
+                        False,
+                        "Choose whether the existing possession changes hands.",
+                        "This choice belongs to the original Girl.",
+                        "Open your choice",
+                        task="m3_npc_handover",
+                    )
+                )
+
+            visions = VisionsService(GameService(self.store))
+            for vision, step in visions.tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "harpy-visions:" + vision.id,
+                        "harpy_visions",
+                        vision.id,
+                        canon.revision,
+                        "plays",
+                        "Visions of Infinity",
+                        "Original Harpy encounter",
+                        "pending",
+                        True,
+                        False,
+                        {
+                            "consent": "Choose whether to allow the original contact.",
+                            "roll": "Spend the actual Harpy’s Heat and roll.",
+                            "replace": "Review the actual replacement of your Girl’s Identities.",
+                            "plan": "Choose the effects allowed by your original saved roll.",
+                            "confirm": "Review the Harpy’s choices for your original Girl.",
+                        }[step],
+                        "This decision is private to its original role.",
+                        "Open your choice",
+                        task="m3_harpy_visions",
+                    )
+                )
+
+            for restriction, step in visions.recovery_tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "harpy-visions-reconditioning:" + restriction.id,
+                        "harpy_visions_reconditioning",
+                        restriction.id,
+                        canon.revision,
+                        "plays",
+                        "Foundation reconditioning",
+                        "Original Visions of Infinity consequence",
+                        "pending",
+                        True,
+                        False,
+                        "Record your Girl’s Foundation care."
+                        if step == "request"
+                        else "Verify the original Girl’s actual Foundation care.",
+                        "This decision is private to its original role.",
+                        "Open your choice",
+                        task="m3_harpy_visions_recovery",
+                    )
+                )
+
+            for gaze, step in GazeService(GameService(self.store)).tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "harpy-gaze:" + gaze.event,
+                        "harpy_gaze",
+                        gaze.event,
+                        canon.revision,
+                        "plays",
+                        "Manic Pixie Dream Monster",
+                        "Original Harpy encounter",
+                        "pending",
+                        True,
+                        False,
+                        {
+                            "choose": "Choose two actual responses to the original gaze.",
+                            "break": "Review your original promise and withdraw if you back down.",
+                            "tag": "Give a Tag for the original promise that was withdrawn.",
+                            "keep": "Make the original Keep Your Head Play.",
+                            "void": "Resolve the original ordinary Void gain.",
+                        }[step],
+                        "This decision is private to its original role.",
+                        "Open your choice",
+                        task="m3_harpy_gaze",
+                    )
+                )
+
+            eagle = EagleService(GameService(self.store))
+            for cockpit in eagle.restoration_tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "eagle-cockpit:" + cockpit.event,
+                        "eagle_cockpit",
+                        cockpit.event,
+                        canon.revision,
+                        "world",
+                        "Reinstall recovered cockpit",
+                        "Original Frame",
+                        "pending",
+                        True,
+                        False,
+                        "Verify the actual recovered cockpit was fitted.",
+                        "This review uses the human GM role.",
+                        "Review reinstallation",
+                        task="m3_eagle_restore",
+                    )
+                )
+
+            for song in HarpySongService(GameService(self.store)).tasks(connection, canon, viewer):
+                items.append(
+                    InboxItem(
+                        "harpy-song:" + song.id,
+                        "harpy_song",
+                        song.id,
+                        canon.revision,
+                        "plays",
+                        "A Song of Love Lost",
+                        "Original Harpy contact",
+                        "pending",
+                        True,
+                        False,
+                        {
+                            "crowd": "Verify the actual local NPCs approached the Harpy.",
+                            "handler": "Record your Handler’s reaction.",
+                            "girl": "Choose whether to step toward the actual Harpy.",
+                        }[song.option],
+                        {
+                            "crowd": "This decision uses the human GM role.",
+                            "handler": "Only the actual Handler owns this response.",
+                            "girl": "Your body moves and the Bond deepens only after your choice.",
+                        }[song.option],
+                        "Review the song",
+                        task="m3_harpy_song",
+                    )
+                )
+
+            from girlframe.services.m3_npc_care import NpcCareService
+            from girlframe.services.m3_parasite_excision import ExcisionService
+            from girlframe.services.m3_sniff_out import SniffOutService
+
+            for request in SniffOutService(self.store).tasks(connection, viewer, canon):
+                items.append(
+                    InboxItem(
+                        "sniff-out:" + request["id"],
+                        "sniff_out",
+                        request["id"],
+                        request["revision"],
+                        "plays",
+                        request["label"],
+                        "Original investigator and human GM",
+                        "pending" if request["pending"] else "established",
+                        request["pending"],
+                        False,
+                        "Resolve the original search and its selected conditions.",
+                        "The concealed identity stays private until an actual discovery.",
+                        "Open search",
+                        task="m3_sniff_out",
+                    )
+                )
+
+            for request in NpcCareService(self.store).tasks(connection, viewer, canon):
+                items.append(
+                    InboxItem(
+                        "npc-care:" + request["id"],
+                        "npc_care",
+                        request["id"],
+                        request["revision"],
+                        "world",
+                        request["label"],
+                        "Original NPC and intended recipient",
+                        "pending",
+                        True,
+                        False,
+                        "Offer or accept care in the actual scene.",
+                        "The original Girl decides whether to repair an actual damaged Asset.",
+                        "Open care",
+                        task="m3_npc_care",
+                    )
+                )
+
+            for request in ExcisionService(self.store).tasks(connection, viewer, canon):
+                items.append(
+                    InboxItem(
+                        "parasite-excision:" + request["id"],
+                        "parasite_excision",
+                        request["id"],
+                        request["revision"],
+                        "plays",
+                        request["label"],
+                        "Original patient and human GM",
+                        "pending",
+                        True,
+                        False,
+                        "Resolve the original infestation through actual experimental surgery.",
+                        "The patient chooses the doctor and can withdraw consent before review.",
+                        "Review excision",
+                        task="m3_parasite_excision",
                     )
                 )
             for request in MedicalService(self.store)._tasks(connection, viewer, history=True):
@@ -3665,6 +5614,7 @@ class InboxService:
                     "mockingbird_redirect_handler_void",
                     "mockingbird_redirect_handler_girl_void",
                     "dive_handler_void",
+                    "void_spread_handler_void",
                     "call_guest_handler_girl_void",
                     "sprite_intercept",
                     "gorgon_dormant_void",
@@ -3707,10 +5657,16 @@ class InboxService:
                     primary, task_name = "Review reaction", "m3_reaction"
                 elif kind in ("off_duty_strain_start", "strain_roll", "strain_endgame"):
                     primary, task_name = "Review Strain", "m3_strain"
+                elif kind == "insurgent_cover_strain":
+                    primary, task_name = "Review Cover Strain", "m3_insurgent_cover"
                 elif kind == "doctor_credit":
                     primary, task_name = "Record credit sharing", "m3_off_duty_credit"
                 elif kind in ("observation_choice", "observation_effect"):
                     primary, task_name = "Review Observation", "m3_observation"
+                elif kind == "strain_void_exam":
+                    primary, task_name = "Record your examination", "m3_strain_void_exam"
+                elif kind == "void_spread_gain":
+                    primary, task_name = "Resolve the original Void gain", "m3_void_spread_gain"
                 elif kind == "director_presence":
                     primary, task_name = "Review actual presence", "m3_director_review"
                 elif kind in (
@@ -3721,6 +5677,22 @@ class InboxService:
                     primary, task_name = "Review Frame bonus", "m3_frame_reward"
                 elif kind in ("off_duty_handler_scene", "off_duty_status_review"):
                     primary, task_name = "Review Off-Duty", "m3_off_duty"
+                elif (
+                    kind == "strain_endgame_effect"
+                    and json.loads(work["body_json"]).get("rule_id") == "strain.budget.endgame.1"
+                ):
+                    if any(x.identity == work["id"] and x.task == "m3_budget_trial" for x in items):
+                        continue
+                    primary, task_name = "Open the Budget trial", "m3_budget_trial"
+                elif (
+                    kind == "strain_endgame_effect"
+                    and json.loads(work["body_json"]).get("rule_id") == "strain.budget.endgame.2"
+                ):
+                    if any(
+                        x.identity == work["id"] and x.task == "m3_budget_demotion" for x in items
+                    ):
+                        continue
+                    primary, task_name = "Review the original demotion", "m3_budget_demotion"
                 elif (
                     kind == "strain_endgame_effect"
                     and json.loads(work["body_json"]).get("rule_id") == "strain.budget.endgame.6"
@@ -3738,6 +5710,22 @@ class InboxService:
                     and json.loads(work["body_json"]).get("rule_id") == "strain.rebellion.endgame.2"
                 ):
                     primary, task_name = "Resolve actual group merger", "m3_rebel_merge"
+                elif kind == "strain_endgame_effect" and json.loads(work["body_json"]).get(
+                    "rule_id"
+                ) in (
+                    "strain.rebellion.endgame.4",
+                    "strain.rebellion.endgame.5",
+                    "strain.rebellion.endgame.6",
+                ):
+                    if any(
+                        x.identity == work["id"] and x.task == "m3_rebel_assimilation"
+                        for x in items
+                    ):
+                        continue
+                    primary, task_name = (
+                        "Review the group's assimilation",
+                        "m3_rebel_assimilation",
+                    )
                 elif (
                     kind == "strain_endgame_effect"
                     and json.loads(work["body_json"]).get("rule_id") == "strain.rebellion.endgame.1"
@@ -3745,9 +5733,47 @@ class InboxService:
                     primary, task_name = "Identify actual leader opportunity", "m3_rebel_leader"
                 elif (
                     kind == "strain_endgame_effect"
+                    and json.loads(work["body_json"]).get("rule_id") == "strain.rebellion.endgame.7"
+                ):
+                    if any(
+                        x.identity == work["id"] and x.task == "m3_rebel_succession" for x in items
+                    ):
+                        continue
+                    primary, task_name = "Convene the new Foundation court", "m3_rebel_succession"
+                elif (
+                    kind == "strain_endgame_effect"
+                    and json.loads(work["body_json"]).get("rule_id") == "strain.rebellion.endgame.8"
+                ):
+                    if any(
+                        x.identity == work["id"] and x.task == "m3_rebel_takeover" for x in items
+                    ):
+                        continue
+                    primary, task_name = "Write up the new Rebel Group", "m3_rebel_takeover"
+                elif (
+                    kind == "strain_endgame_effect"
+                    and json.loads(work["body_json"]).get("rule_id") == "strain.void.endgame.2"
+                ):
+                    primary, task_name = "Open the stable laboratory portal", "m3_void_lab_portal"
+                elif (
+                    kind == "strain_endgame_effect"
+                    and json.loads(work["body_json"]).get("rule_id") == "strain.void.endgame.1"
+                ):
+                    primary, task_name = "Take leave outside the Quadrant", "m3_void_leave"
+                elif (
+                    kind == "strain_endgame_effect"
+                    and json.loads(work["body_json"]).get("rule_id") == "strain.void.endgame.3"
+                ):
+                    primary, task_name = "Receive the retirement medal", "m3_handler_retirement"
+                elif (
+                    kind == "strain_endgame_effect"
                     and json.loads(work["body_json"]).get("rule_id") == "strain.void.endgame.4"
                 ):
                     primary, task_name = "Offer retirement with stipend", "m3_void_retirement"
+                elif (
+                    kind == "strain_endgame_effect"
+                    and json.loads(work["body_json"]).get("rule_id") == "strain.void.endgame.5"
+                ):
+                    primary, task_name = "Conceal the next Void gain", "m3_void_privacy_grant"
                 elif kind == "strain_endgame_effect" and json.loads(work["body_json"]).get(
                     "rule_id"
                 ) in ("strain.void.endgame.6", "strain.void.endgame.7"):
@@ -3755,6 +5781,8 @@ class InboxService:
                         "Claim actual Handler advancement",
                         "m3_handler_advancements",
                     )
+                elif kind == "named_strain_roll":
+                    primary, task_name = "Resolve the named Strain track", "m3_named_strain"
                 elif (
                     kind == "strain_endgame_effect"
                     and json.loads(work["body_json"]).get("rule_id") == "strain.budget.endgame.7"
@@ -3783,6 +5811,7 @@ class InboxService:
                     if json.loads(work["body_json"])["rule_id"] in SUPPORTED | {
                         "strain.void.low.1.2",
                         "strain.void.low.3.1",
+                        "strain.void.high.2.1",
                         "strain.rebellion.low.4.2",
                         "strain.budget.high.1.2",
                     }:
@@ -3799,6 +5828,7 @@ class InboxService:
                     "frame_replacement_court": "Confirm replacement Court role",
                     "off_duty_strain_start": "Strain start review and required effects",
                     "strain_roll": "Saved Strain roll / event choice",
+                    "insurgent_cover_strain": "Saved Insurgent Cover Strain",
                     "strain_endgame": "Choose an unused Strain Endgame",
                     "strain_event": "Required Strain event effects",
                     "strain_endgame_effect": "Required Endgame effects",
@@ -3806,6 +5836,9 @@ class InboxService:
                     "doctor_credit": "DoctorDoctor credit sharing",
                     "observation_choice": "Your Void Observation consequences",
                     "observation_effect": "Required Observation details",
+                    "strain_void_exam": "Required medical examination",
+                    "void_spread_gain": "Area Void gain · "
+                    + str(json.loads(work["body_json"]).get("label", "Original occupant")),
                     "director_presence": "Director presence: Handler rule context",
                     "frame_off_duty_reward": "Frame Off-Duty Permission review",
                     "frame_reward_court": "Resolve actual Queen AM holder",
@@ -3885,7 +5918,9 @@ class InboxService:
                 if value == "history"
                 else x.state == "pending"
                 and (
-                    value == "pending" or bool(x.task or x.incoming or x.stale) == (value == "you")
+                    # A route can open readback for an outgoing request;
+                    # the native projection decides who actually owes an answer.
+                    value == "pending" or (x.incoming or x.stale) == (value == "you")
                 )
             )
 

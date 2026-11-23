@@ -199,6 +199,9 @@ class MissionService:
         return value
 
     def _not_off_duty(self, c: Connection) -> None:
+        from girlframe.services.m3_void_leave import require_story
+
+        require_story(load_state(c, self.store.campaign_id))
         table = t.m3["m3_off_duty"]
         if c.scalar(
             sa.select(table.c.id).where(
@@ -296,6 +299,19 @@ class MissionService:
         latest = {x["id"]: dict(x) for x in rows}
         return [x for x in latest.values() if x["state"] != "resolved"]
 
+    def _boundary(self, c: Connection) -> None:
+        """Shared campaign prerequisites for mission controls and writes."""
+        from girlframe.services.m3_gorgon_dormant import (
+            require_clear as require_gorgon_costs_clear,
+        )
+        from girlframe.services.m3_handler_retirement import require_successor
+        from girlframe.services.m3_quadrant_loss import require_aftermath_clear
+
+        state = load_state(c, self.store.campaign_id)
+        require_aftermath_clear(state)
+        require_successor(state)
+        require_gorgon_costs_clear(self.game, c)
+
     def _write(
         self,
         viewer: GuildViewer,
@@ -316,13 +332,7 @@ class MissionService:
             if authorize:
                 authorize(c)
             if kind.startswith("m3.mission_"):
-                from girlframe.services.m3_gorgon_dormant import (
-                    require_clear as require_gorgon_costs_clear,
-                )
-                from girlframe.services.m3_quadrant_loss import require_aftermath_clear
-
-                require_aftermath_clear(load_state(c, self.store.campaign_id))
-                require_gorgon_costs_clear(self.game, c)
+                self._boundary(c)
 
         try:
             return self.store._write(
@@ -333,6 +343,18 @@ class MissionService:
         except ValueError as error:
             raise WorkflowError(str(error)) from None
 
+    def offer_requirements(self, viewer: GuildViewer) -> tuple[bool, bool]:
+        from girlframe.services.campaign_difficulty import initial_mission_needed, opening
+
+        with self.store.engine.connect() as c:
+            self._authorize(c, viewer, write=False)
+            self._handler(c, viewer)
+            record = opening(c, self.store.campaign_id)
+            if record is None:
+                return False, False
+            intro = initial_mission_needed(c, self.store.campaign_id)
+            return intro, record.difficulty == "hard" and not intro
+
     def offer(
         self,
         viewer: GuildViewer,
@@ -341,20 +363,63 @@ class MissionService:
         players: tuple[int, ...],
         *,
         assassination: str | None = None,
+        capture_target: str | None = None,
+        hard_stake: str | None = None,
+        briefing_draft: str | None = None,
+        reviewed_first_briefing: str | None = None,
+        enable_reviewed_ai: bool = False,
     ) -> dict[str, Any]:
         if not objective.strip() or len(objective) > 1200:
             raise WorkflowError("Describe the mission objective in 1–1200 characters.")
+        if enable_reviewed_ai and reviewed_first_briefing is None:
+            raise WorkflowError("Enable AI through the approved first briefing.")
+        if reviewed_first_briefing and any(
+            option is not None
+            for option in (assassination, capture_target, hard_stake, briefing_draft)
+        ):
+            raise WorkflowError("Use only the reviewed objective for the first mission.")
+
+        from girlframe.services.first_mission_briefing import FirstMissionBriefing
+
+        reviewed = FirstMissionBriefing(self.store) if reviewed_first_briefing is not None else None
+
+        def authorize(c: Connection) -> None:
+            if reviewed is not None:
+                reviewed.receipt(c, viewer, reviewed_first_briefing)
+            else:
+                HandlerService(self.store).authorize(c, viewer)
 
         def operation(c: Connection) -> dict[str, Any]:
-            self._handler(c, viewer)
+            handler = (
+                reviewed.confirm_offer(
+                    c, viewer, reviewed_first_briefing, objective.strip(), players
+                )
+                if reviewed is not None
+                else self._handler(c, viewer)
+            )
             self._not_off_duty(c)
             state = load_state(c, self.store.campaign_id)
+            from girlframe.services import m3_budget_conversion as capture
+
+            capture_actor = None
+            written_objective = objective.strip()
+            if capture_target is not None:
+                self.access.authorize(c, viewer, "strain")
+                label = dict(capture.targets(state)).get(capture_target)
+                if label is None:
+                    raise WorkflowError(
+                        "Choose an actual known free Harpy for capture and conversion"
+                    )
+                capture_actor = ActorRef(kind="external_pilot", entity=capture_target)
+                written_objective = "Capture and convert " + label + ". " + written_objective
+                if len(written_objective) > 1200:
+                    raise WorkflowError("Shorten the mission plan to fit the required objective")
             if not players or len(players) > 25 or len(set(players)) != len(players):
                 raise WorkflowError("Select one to 25 distinct active Pilots.")
             setup = HandlerService(self.store)
             if any(
                 str(uid) not in state.sheets
-                or uid == viewer.user_id
+                or uid == handler
                 or not setup._member(c, uid)
                 or state.sheets[str(uid)].frame_scrapped
                 or self.game.immediate_work(c, uid)
@@ -363,10 +428,34 @@ class MissionService:
                 raise WorkflowError(
                     "Offer missions only to active campaign Pilots with canonical sheets."
                 )
+            from girlframe.services.campaign_difficulty import briefing
+            from girlframe.services.canon_briefings import CanonBriefings
+
+            introductory, extra = briefing(c, self.store.campaign_id, players, hard_stake)
+            if introductory and (assassination is not None or capture_target is not None):
+                raise WorkflowError(
+                    "Use one simple introductory objective before special missions."
+                )
+            canon = CanonBriefings(self.store) if briefing_draft else None
+            facts, terms = (
+                canon.prepare(
+                    c, viewer, briefing_draft, objective=written_objective, hard_stake=extra
+                )
+                if canon and briefing_draft
+                else ((), None)
+            )
+            from girlframe.engine.m3_handler_consequences import active_handler
+
             mission = rules.Mission(
                 id=str(uuid4()),
-                handler=viewer.user_id,
-                objective=objective.strip(),
+                handler=handler,
+                objective=written_objective,
+                capture_target=capture_actor,
+                introductory=introductory,
+                hard_stake=extra,
+                briefing_facts=tuple(fact.fact_id for fact in facts),
+                briefing_terms=terms,
+                briefing_handler=active_handler(state) if terms else None,
                 offered_to=players,
                 offered_characters={
                     str(uid): self.game.character_binding(
@@ -375,11 +464,17 @@ class MissionService:
                     for uid in players
                 },
             )
+            capture.check_dispatch(c, self.game, state, mission)
             if assassination is not None:
                 from girlframe.services.m3_budget_assassination import bind
 
                 self.access.authorize(c, viewer, "strain")
                 bind(c, self.store, state, assassination, mission)
+            canon_source: dict[str, Any] = (
+                {"briefing_draft": briefing_draft} if briefing_draft else {}
+            )
+            if reviewed_first_briefing is not None:
+                canon_source["reviewed_first_briefing"] = reviewed_first_briefing
             event = self.game.event(
                 c,
                 viewer.user_id,
@@ -388,8 +483,13 @@ class MissionService:
                 state if assassination is not None else None,
                 mission_id=mission.id,
                 revision=1,
+                **canon_source,
             )
             self._save(c, mission, event)
+            if canon is not None:
+                canon.disclose(c, viewer, key, mission, event, facts)
+            if reviewed is not None and enable_reviewed_ai:
+                reviewed.enable_ai(c, viewer, key, mission.id)
             return {"id": mission.id, "revision": mission.revision, "phase": mission.phase}
 
         return self._write(
@@ -397,19 +497,33 @@ class MissionService:
             key,
             "m3.mission_offered",
             {"objective": objective, "players": list(players)}
-            | ({"assassination": assassination} if assassination is not None else {}),
+            | ({"assassination": assassination} if assassination is not None else {})
+            | ({"capture_target": capture_target} if capture_target is not None else {})
+            | ({"hard_stake": hard_stake} if hard_stake is not None else {})
+            | ({"briefing_draft": briefing_draft} if briefing_draft is not None else {})
+            | (
+                {"reviewed_first_briefing": reviewed_first_briefing}
+                if reviewed_first_briefing
+                else {}
+            )
+            | ({"enable_reviewed_ai": True} if enable_reviewed_ai else {}),
             operation,
-            lambda c: HandlerService(self.store).authorize(c, viewer),
+            authorize,
         )
+
+    def _cancel_ready(
+        self, c: Connection, viewer: GuildViewer, mission: rules.Mission, expected: int
+    ) -> None:
+        self._handler(c, viewer)
+        rules.handler(mission, viewer.user_id, self._current_handler(c))
+        rules.revision(mission, expected)
+        if mission.phase != "offered":
+            raise WorkflowError("Only an undispatched mission offer can be cancelled")
 
     def cancel(self, viewer: GuildViewer, key: str, identity: str, expected: int) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
-            self._handler(c, viewer)
             mission = self._mission(c, identity)
-            rules.handler(mission, viewer.user_id, self._current_handler(c))
-            rules.revision(mission, expected)
-            if mission.phase != "offered":
-                raise WorkflowError("Only an undispatched mission offer can be cancelled")
+            self._cancel_ready(c, viewer, mission, expected)
             updated = rules.changed(mission, phase="cancelled")
             state = load_state(c, self.store.campaign_id)
             from girlframe.services.m3_budget_assassination import finish
@@ -440,13 +554,25 @@ class MissionService:
 
     def get(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
         with self.store.engine.connect() as c:
+            c.exec_driver_sql("BEGIN")
             self._authorize(c, viewer, write=False)
             mission = self._mission(c, identity)
             self._view(c, viewer, mission)
             # Work details remain private to their owner/subject; other invitees see a count only.
             pending = self._pending(c, identity)
+            briefing = {}
+            if mission.briefing_facts:
+                from girlframe.services.canon_briefings import CanonBriefings
+
+                canon = CanonBriefings(self.store)
+                briefing = {
+                    "briefing": canon.project(c, viewer, mission),
+                    "briefing_needs_review": canon.needs_review(c, mission),
+                }
             return {
-                "mission": mission.model_dump(mode="json"),
+                "mission": mission.model_dump(
+                    mode="json", exclude={"briefing_facts", "briefing_handler"}
+                ),
                 "pending_count": len(pending),
                 "work": [
                     {
@@ -458,7 +584,7 @@ class MissionService:
                     for x in pending
                     if str(viewer.user_id) in (x["owner_id"], x["subject_id"])
                 ],
-            }
+            } | briefing
 
     def list(self, viewer: GuildViewer) -> list[dict[str, Any]]:
         with self.store.engine.connect() as c:
@@ -505,6 +631,8 @@ class MissionService:
                 raise WorkflowError(
                     "This invitation belongs to the original Girl, not its replacement."
                 )
+            if response == "accept":
+                self._require_current_briefing(c, mission)
             if response == "accept" and (
                 state.sheets[str(viewer.user_id)].frame_scrapped
                 or self.game.immediate_work(c, viewer.user_id)
@@ -533,51 +661,79 @@ class MissionService:
             authorize,
         )
 
+    def _require_current_briefing(self, c: Connection, mission: rules.Mission) -> None:
+        if mission.briefing_facts:
+            from girlframe.services.canon_briefings import CanonBriefings
+
+            if CanonBriefings(self.store).needs_review(c, mission):
+                raise WorkflowError(
+                    "CANON_REVIEW_REQUIRED: the Handler needs to cancel and reoffer the briefing."
+                )
+
+    def _dispatch_ready(
+        self, c: Connection, viewer: GuildViewer, mission: rules.Mission, expected: int
+    ) -> rules.Mission:
+        """Shared read-only dispatch eligibility for commands and Activity controls."""
+        self._not_off_duty(c)
+        if self.game.pending_actions(c):
+            raise WorkflowError("Finish the pending scene Play before dispatching a mission.")
+        self._handler(c, viewer)
+        self._require_current_briefing(c, mission)
+        state = load_state(c, self.store.campaign_id)
+        setup = HandlerService(self.store)
+        active = frozenset(
+            int(uid)
+            for uid in state.sheets
+            if setup._member(c, int(uid))
+            and not state.sheets[uid].frame_scrapped
+            and not self.game.immediate_work(c, int(uid))
+        )
+        updated = rules.dispatch(
+            mission, viewer.user_id, self._current_handler(c), expected, active
+        )
+        invited = self._source_characters(c, mission, offered=True)
+        actual = {
+            str(uid): self.game.character_binding(c, state, uid, require_current_profile=False)
+            for uid in updated.participants
+        }
+        if any(invited[uid] != character for uid, character in actual.items()):
+            raise WorkflowError(
+                "Original accepted characters changed; cancel and reoffer the mission."
+            )
+        updated.character_ids = actual
+        from girlframe.services.m3_budget_conversion import check_dispatch
+
+        check_dispatch(c, self.game, state, updated)
+        # A Pilot cannot be dispatched into two active missions at once.
+        table = t.m3["m3_missions"]
+        for other_body in c.scalars(
+            sa.select(table.c.body_json).where(
+                table.c.campaign_id == self.store.campaign_id,
+                table.c.id != mission.id,
+                table.c.phase.in_(("active", "ending", "awaiting_consequences")),
+            )
+        ):
+            other = rules.Mission.model_validate_json(other_body)
+            if set(updated.participants) & set(other.participants):
+                raise WorkflowError("A participant already has an unfinished mission.")
+        return updated
+
     def start(self, viewer: GuildViewer, key: str, identity: str, expected: int) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
-            self._not_off_duty(c)
-            if self.game.pending_actions(c):
-                raise WorkflowError("Finish the pending scene Play before dispatching a mission.")
-            mission = self._mission(c, identity)
-            self._handler(c, viewer)
+            updated = self._dispatch_ready(c, viewer, self._mission(c, identity), expected)
             state = load_state(c, self.store.campaign_id)
-            setup = HandlerService(self.store)
-            active = frozenset(
-                int(uid)
-                for uid in state.sheets
-                if setup._member(c, int(uid))
-                and not state.sheets[uid].frame_scrapped
-                and not self.game.immediate_work(c, int(uid))
-            )
-            updated = rules.dispatch(
-                mission, viewer.user_id, self._current_handler(c), expected, active
-            )
-            invited = self._source_characters(c, mission, offered=True)
-            actual = {
-                str(uid): self.game.character_binding(c, state, uid, require_current_profile=False)
-                for uid in updated.participants
-            }
-            if any(invited[uid] != character for uid, character in actual.items()):
-                raise WorkflowError(
-                    "Original accepted characters changed; cancel and reoffer the mission."
-                )
-            updated.character_ids = actual
+            from girlframe.engine.m3_budget_anarchy import dispatch as bind_protests
+            from girlframe.engine.m3_orbital_threat import dispatch as bind_orbital_threats
+            from girlframe.engine.m3_rebel_ambush import bind as bind_ambush
             from girlframe.engine.m3_repairs import dispatch as bind_shortages
+            from girlframe.services.m3_budget_conversion import bind as bind_capture
 
             dispatch_event = str(uuid4())
             bound = bind_shortages(state, identity, dispatch_event)
-            # A Pilot cannot be dispatched into two active missions at once.
-            table = t.m3["m3_missions"]
-            for other_body in c.scalars(
-                sa.select(table.c.body_json).where(
-                    table.c.campaign_id == self.store.campaign_id,
-                    table.c.id != identity,
-                    table.c.phase.in_(("active", "ending", "awaiting_consequences")),
-                )
-            ):
-                other = rules.Mission.model_validate_json(other_body)
-                if set(updated.participants) & set(other.participants):
-                    raise WorkflowError("A participant already has an unfinished mission.")
+            bind_orbital_threats(bound, identity, dispatch_event)
+            bind_protests(bound, identity, dispatch_event)
+            bind_capture(bound, updated, dispatch_event)
+            bind_ambush(bound, updated, dispatch_event)
             event = self.game.event(
                 c,
                 viewer.user_id,
@@ -588,8 +744,14 @@ class MissionService:
                 mission_id=identity,
                 revision=updated.revision,
             )
+            binding: dict[str, int | str] = {}
+            if updated.introductory:
+                from girlframe.services.session_zero_opening import dispatch_scene
+
+                binding = dispatch_scene(c, self.store, viewer, key, updated.participants)
+                updated.intro_scene = str(binding["scene"])
             self._save(c, updated, event)
-            return {"id": identity, "revision": updated.revision, "phase": updated.phase}
+            return {"id": identity, "revision": updated.revision, "phase": updated.phase} | binding
 
         return self._write(
             viewer,
@@ -600,24 +762,49 @@ class MissionService:
             lambda c: HandlerService(self.store).authorize(c, viewer),
         )
 
+    def _end_ready(
+        self, c: Connection, viewer: GuildViewer, mission: rules.Mission, expected: int
+    ) -> None:
+        self._handler(c, viewer)
+        rules.handler(mission, viewer.user_id, self._current_handler(c))
+        if self.game.pending_actions(c):
+            raise WorkflowError("Finish the pending scene Play before ending the mission.")
+        rules.revision(mission, expected)
+        if mission.phase != "active":
+            raise WorkflowError("Only an active mission can be ended.")
+        from girlframe.services.mission_timing_history import require_closed
+
+        require_closed(c, self.store.campaign_id, mission=mission.id)
+
     def end(
-        self, viewer: GuildViewer, key: str, identity: str, expected: int, success: bool
+        self,
+        viewer: GuildViewer,
+        key: str,
+        identity: str,
+        expected: int,
+        success: bool,
+        *,
+        debrief: str | None = None,
     ) -> dict[str, Any]:
+        if debrief is not None:
+            if not isinstance(debrief, str) or len(debrief) > 1200:
+                raise WorkflowError("Use at most 1200 characters for the debrief.")
+            debrief = debrief.strip() or None
+
         def operation(c: Connection) -> dict[str, Any]:
             mission = self._mission(c, identity)
-            self._handler(c, viewer)
-            rules.handler(mission, viewer.user_id, self._current_handler(c))
-            if self.game.pending_actions(c):
-                raise WorkflowError("Finish the pending scene Play before ending the mission.")
-            rules.revision(mission, expected)
-            if mission.phase != "active":
-                raise WorkflowError("Only an active mission can be ended.")
+            self._end_ready(c, viewer, mission, expected)
             if type(success) is not bool:
                 raise WorkflowError("Record an explicit mission success or failure.")
             state = load_state(c, self.store.campaign_id)
             from girlframe.services.m3_budget_assassination import before_rewards
+            from girlframe.services.m3_budget_conversion import outcome as capture_outcome
+            from girlframe.services.m3_rebel_ambush import require_completed as require_ambush
 
             before_rewards(c, self.store, state, mission, success)
+            require_ambush(c, self.game, state, mission)
+            if success and mission.capture_target is not None:
+                capture_outcome(c, self.game, state, mission)
             from girlframe.services.m3_supply_drop import expire_mission
 
             expiry_work = expire_mission(self.game, c, mission, viewer, key)
@@ -633,6 +820,7 @@ class MissionService:
                     and not success
                 ):
                     reactions.append((int(uid), "doctor_obsolescence", 71))
+            mission = mission.model_copy(update={"debrief": debrief})
             if reactions or expiry_work:
                 updated = rules.changed(mission, phase="ending", success=success)
                 event = self.game.event(
@@ -667,7 +855,8 @@ class MissionService:
             viewer,
             key,
             "m3.mission_ended",
-            {"id": identity, "expected": expected, "success": success},
+            {"id": identity, "expected": expected, "success": success}
+            | ({"debrief": debrief} if debrief is not None else {}),
             operation,
             lambda c: HandlerService(self.store).authorize(c, viewer),
         )
@@ -691,6 +880,32 @@ class MissionService:
 
         before = GameState.model_validate_json(state.model_dump_json())
         event_id = str(uuid4())
+        from girlframe.engine.m3_budget_anarchy import deadline as protest_deadline
+        from girlframe.engine.m3_orbital_threat import settle as settle_orbital_threats
+        from girlframe.services.m3_budget_conversion import settle as settle_capture
+        from girlframe.services.m3_rebel_ambush import require_completed as settle_ambush
+
+        settle_capture(c, self.game, state, mission, success, event_id)
+        settle_ambush(c, self.game, state, mission, event_id)
+        protest_deadline(state, mission.id, event_id)
+        loss = None
+        if settle_orbital_threats(state, mission.id, event_id):
+            from girlframe.engine.m3_collateral import stage_loss
+            from girlframe.engine.m3_handler_consequences import active_handler
+            from girlframe.services.m3_medical import MedicalService
+
+            judge, appointment = MedicalService(self.store)._handler(c)
+            loss = stage_loss(
+                before,
+                state,
+                source="orbital-threat:" + mission.id,
+                event=event_id,
+                judge=judge,
+                appointment=appointment,
+                handler=active_handler(state),
+            )
+        from girlframe.engine.m3_dogrunner import owners as dogrunner_owners
+
         plan = rules.end(
             mission,
             viewer.user_id,
@@ -701,6 +916,7 @@ class MissionService:
             ace_policy=rulings.ace_bonus,
             ended_participants=self._departed(c, mission, state),
             grouped_status=marriage.status_groups(state),
+            dog_owners=dogrunner_owners(state),
         )
         changed = set()
         for grant in plan.grants:
@@ -770,6 +986,10 @@ class MissionService:
                     grant.amount,
                 )
         self._save(c, plan.mission, event)
+        if loss is not None:
+            from girlframe.services.m3_quadrant_loss import materialize_loss
+
+            materialize_loss(self.game, c, loss, event)
         synchronize_mission(c, self.store, state, plan.mission, event)
         for work, subject_id, body in staged:
             self._work(
@@ -789,20 +1009,35 @@ class MissionService:
             "rewards_committed": True,
         }
 
+    def _complete_ready(
+        self, c: Connection, viewer: GuildViewer, mission: rules.Mission, expected: int
+    ) -> None:
+        self._handler(c, viewer)
+        if self.game.pending_actions(c):
+            raise WorkflowError("Finish the pending scene Play before advancing the mission.")
+        rules.handler(mission, viewer.user_id, self._current_handler(c))
+        rules.revision(mission, expected)
+        if self._pending(c, mission.id):
+            raise WorkflowError(
+                "Required mission work is still pending; it cannot be waived or expired."
+            )
+        if mission.phase == "ending":
+            if mission.success is None:
+                raise WorkflowError("The recorded mission outcome is missing.")
+        else:
+            rules.complete(
+                mission,
+                expected,
+                resolved_consequences=frozenset(mission.consequence_ids),
+                all_other_mandatory_work_resolved=True,
+            )
+
     def complete(
         self, viewer: GuildViewer, key: str, identity: str, expected: int
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
-            self._handler(c, viewer)
-            if self.game.pending_actions(c):
-                raise WorkflowError("Finish the pending scene Play before advancing the mission.")
             mission = self._mission(c, identity)
-            rules.handler(mission, viewer.user_id, self._current_handler(c))
-            rules.revision(mission, expected)
-            if self._pending(c, identity):
-                raise WorkflowError(
-                    "Required mission work is still pending; it cannot be waived or expired."
-                )
+            self._complete_ready(c, viewer, mission, expected)
             if mission.phase == "ending":
                 if mission.success is None:
                     raise WorkflowError("The recorded mission outcome is missing.")
@@ -890,7 +1125,22 @@ class MissionService:
                 (uid, sheet.callsign)
                 for uid, sheet in state.sheets.items()
                 if setup._member(c, int(uid))
+                and int(uid) != viewer.user_id
+                and not sheet.frame_scrapped
+                and not self.game.immediate_work(c, int(uid))
             )
+
+    def capture_options(self, viewer: GuildViewer) -> tuple[tuple[str, str], ...] | None:
+        from girlframe.services.m3_budget_conversion import pending, targets
+
+        with self.store.engine.connect() as c:
+            self._authorize(c, viewer)
+            self._handler(c, viewer)
+            state = load_state(c, self.store.campaign_id)
+            if not pending(state):
+                return None
+            self.access.authorize(c, viewer, "strain")
+            return targets(state)
 
     def owned_work(self, viewer: GuildViewer) -> builtins.list[dict[str, Any]]:
         with self.store.engine.connect() as c:

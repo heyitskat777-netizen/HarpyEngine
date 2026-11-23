@@ -305,49 +305,56 @@ class OffDutyService:
         )
         return not can_pilot(state, actor) or pending(c, self.store, state, owner)
 
+    def _begin_ready(self, c: Connection, viewer: GuildViewer) -> GameState:
+        """Shared read-only prerequisites; never creates or advances a period."""
+        self.missions._handler(c, viewer)
+        state = load_state(c, self.store.campaign_id)
+        from girlframe.services.m3_gorgon_dormant import (
+            require_clear as require_gorgon_costs_clear,
+        )
+        from girlframe.services.m3_handler_retirement import require_successor
+        from girlframe.services.m3_quadrant_loss import require_aftermath_clear
+        from girlframe.services.m3_void_leave import require_story
+
+        require_aftermath_clear(state)
+        require_story(state)
+        require_successor(state)
+        require_gorgon_costs_clear(self.game, c)
+        if self.game.pending_actions(c):
+            raise WorkflowError("Finish the pending scene Play before starting Off-Duty.")
+        existing = t.m3["m3_off_duty"]
+        missions = t.m3["m3_missions"]
+        if c.scalar(
+            sa.select(existing.c.id).where(
+                existing.c.campaign_id == self.store.campaign_id, existing.c.phase != "complete"
+            )
+        ):
+            raise WorkflowError("Resume the existing Off-Duty period.")
+        if c.scalar(
+            sa.select(missions.c.id).where(
+                missions.c.campaign_id == self.store.campaign_id,
+                missions.c.phase.not_in(("complete", "cancelled")),
+            )
+        ):
+            raise WorkflowError("Finish all mission work before starting Off-Duty.")
+        setup = HandlerService(self.store)
+        if not state.order or any(
+            not setup._member(c, uid)
+            or str(uid) not in state.sheets
+            or (
+                state.sheets[str(uid)].frame_scrapped
+                and not self._frameless_off_duty(c, state, uid)
+            )
+            or self.game.immediate_work(c, uid)
+            or state.sheets[str(uid)].sedation_locked
+            for uid in state.order
+        ):
+            raise WorkflowError("Resolve the current Pilot roster, immediate work and old locks.")
+        return state
+
     def begin(self, viewer: GuildViewer, key: str) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
-            self.missions._handler(c, viewer)
-            state = load_state(c, self.store.campaign_id)
-            from girlframe.services.m3_gorgon_dormant import (
-                require_clear as require_gorgon_costs_clear,
-            )
-            from girlframe.services.m3_quadrant_loss import require_aftermath_clear
-
-            require_aftermath_clear(state)
-            require_gorgon_costs_clear(self.game, c)
-            if self.game.pending_actions(c):
-                raise WorkflowError("Finish the pending scene Play before starting Off-Duty.")
-            existing = t.m3["m3_off_duty"]
-            missions = t.m3["m3_missions"]
-            if c.scalar(
-                sa.select(existing.c.id).where(
-                    existing.c.campaign_id == self.store.campaign_id, existing.c.phase != "complete"
-                )
-            ):
-                raise WorkflowError("Resume the existing Off-Duty period.")
-            if c.scalar(
-                sa.select(missions.c.id).where(
-                    missions.c.campaign_id == self.store.campaign_id,
-                    missions.c.phase.not_in(("complete", "cancelled")),
-                )
-            ):
-                raise WorkflowError("Finish all mission work before starting Off-Duty.")
-            setup = HandlerService(self.store)
-            if not state.order or any(
-                not setup._member(c, uid)
-                or str(uid) not in state.sheets
-                or (
-                    state.sheets[str(uid)].frame_scrapped
-                    and not self._frameless_off_duty(c, state, uid)
-                )
-                or self.game.immediate_work(c, uid)
-                or state.sheets[str(uid)].sedation_locked
-                for uid in state.order
-            ):
-                raise WorkflowError(
-                    "Resolve the current Pilot roster, immediate work and old locks."
-                )
+            state = self._begin_ready(c, viewer)
             characters = {
                 str(uid): self.game.character_binding(c, state, uid, require_current_profile=False)
                 for uid in state.order
@@ -375,6 +382,11 @@ class OffDutyService:
             from girlframe.services.m3_a_bomb import expire_fallout
 
             changed |= expire_fallout(self.game, c, state, source_event)
+            from girlframe.services.m3_insurgent_cover import materialize as cover_work
+            from girlframe.services.m3_insurgent_cover import stage_start as stage_cover_start
+
+            cover = stage_cover_start(self.game, c, state, period, source_event)
+            changed |= cover is not None
             event = self.game.event(
                 c,
                 viewer.user_id,
@@ -385,6 +397,8 @@ class OffDutyService:
                 period_id=period.id,
             )
             self._save(c, period, event)
+            if cover is not None:
+                cover_work(c, self, cover, event)
             from girlframe.services.m3_debts import synchronize
 
             synchronize(c, self.store, state, event)

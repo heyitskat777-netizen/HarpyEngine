@@ -33,6 +33,14 @@ def current(state: GameState, ref: ActorRef) -> bool:
         return same_handler_body(state, ref)
     if ref.kind == "npc":
         return bool(state.world and any(x.id == ref.entity and x.alive for x in state.world.npcs))
+    if ref.kind == "external_pilot":
+        return bool(
+            state.world
+            and any(
+                x.id == ref.entity and x.alive and x.kind == "rebel" for x in state.world.pilots
+            )
+            and any(x.subject == ref and x.source_work for x in state.alpha_broken)
+        )
     return False
 
 

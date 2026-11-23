@@ -20,7 +20,7 @@ from girlframe.services.read_only_bot import GuildViewer
 ledger = ledger_fixture
 
 
-def ready(store, frame="JANUS-B"):
+def ready(store, frame="JANUS"):
     missions, game = service(store, frame=frame)
     return OffDutyService(missions), game
 

@@ -1,7 +1,7 @@
 """Original Handler's source-bound patrol event and the actual observer's private knowledge."""
 
 import json
-from typing import Any, Literal, cast
+from typing import Any
 from uuid import uuid4
 
 import sqlalchemy as sa
@@ -390,7 +390,7 @@ class PatrolHarpyService:
                 encounter=encounter.id,
                 work=work,
                 face=self.strain.dice.roll_d6(),
-                rng_source=cast(Literal["os", "test_injected"], self.strain.rng_source),
+                rng_source=self.strain.rng_source,
                 event=event,
             )
             rules.put(state, value)

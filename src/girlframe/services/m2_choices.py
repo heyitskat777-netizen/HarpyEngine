@@ -596,6 +596,14 @@ class ChoiceEngine:
 
             apply_discussion(self.game, c, state, action, request, answer)
             return
+        if kind in ("gorgon_tag_selection", "gorgon_tag_removal"):
+            from girlframe.services.m3_gorgon_tags import apply as apply_gorgon_tags
+
+            if apply_gorgon_tags(self.game, c, state, action, kind, owner, answer):
+                self.results(c, state, action)
+            else:
+                self.set_total(action)
+            return
         if kind.startswith("engage_"):
             from girlframe.services.m3_engage import apply as apply_engage
 
@@ -638,10 +646,40 @@ class ChoiceEngine:
             if not self.game.pending(c, action["id"]):
                 self.finish(c, state, action)
             return
-        if kind == "tag_window":
-            self.tag_proposal(c, state, action, owner, answer, choice=request["id"])
+        if kind == "trainer_control_freak":
+            from girlframe.services.m3_trainer_control import apply as trainer_tag
+
+            trainer_tag(self.game, c, state, action, request, answer)
+            if not self.game.pending(c, action["id"]):
+                self.finish(c, state, action)
+            return
+        from girlframe.services.m3_trainer_phrases import RESPONSE_CHOICES as TRAINER_CHOICES
+
+        if kind in TRAINER_CHOICES:
+            from girlframe.services.m3_trainer_phrases import choose as choose_phrase
+
+            choose_phrase(self.game, c, state, action, request, answer)
+            if not self.game.pending(c, action["id"]):
+                self.finish(c, state, action)
+            return
+        if kind in ("insurgent_surveillance", "insurgent_reveal_sympathy"):
+            from girlframe.services.m3_insurgent_loyalty import decide as decide_loyalty
+
+            decide_loyalty(self, c, state, action, request, answer)
+            if not self.game.pending(c, action["id"]):
+                self.finish(c, state, action)
+            return
+        from girlframe.services.m3_mistress_conditioning import CHOICE as MISTRESS_CONDITIONING
+
+        if kind in ("tag_window", MISTRESS_CONDITIONING):
+            if kind == "tag_window":
+                self.tag_proposal(c, state, action, owner, answer, choice=request["id"])
+            else:
+                from girlframe.services.m3_mistress_conditioning import apply as condition
+
+                condition(self.game, c, state, action, request, answer)
             if not any(
-                x["kind"] == "tag_window" and x["state"] == "pending"
+                x["kind"] in ("tag_window", MISTRESS_CONDITIONING) and x["state"] == "pending"
                 for x in self.game.pending(c, action["id"])
             ):
                 self.close_tag_window(c, state, action, closing_choice=request["id"])
@@ -975,8 +1013,10 @@ class ChoiceEngine:
             acting.revision += 1
             result["can_disobey"] = True
             from girlframe.services.m3_control_ritual import offer as offer_ritual
+            from girlframe.services.m3_trainer_control import offer as offer_trainer_tag
 
             offer_ritual(self.game, c, state, action)
+            offer_trainer_tag(self.game, c, state, action)
             self.game.request(c, action, state.handler, "handler_disobey")
             return
         if kind == "follow_disobey":
@@ -994,6 +1034,9 @@ class ChoiceEngine:
                 answer.flag is not None, "The Handler must record whether it discovers the refusal."
             )
             if answer.flag:
+                from girlframe.services.m3_advocate_empathy import on_discovery
+
+                on_discovery(self, c, state, action)
                 self.game.obligation(
                     state,
                     action,
@@ -1004,6 +1047,14 @@ class ChoiceEngine:
                     outcome=level,
                 )
             result["handler_knows"] = answer.flag
+            if answer.flag and result.get("can_disobey"):
+                from girlframe.services.m3_insurgent_loyalty import offer as offer_loyalty
+
+                offer_loyalty(self.game, c, state, action)
+            if not result.get("can_disobey"):
+                from girlframe.services.m3_trainer_phrases import offer_phrase
+
+                offer_phrase(self.game, c, state, action)
             if not self.game.pending(c, action["id"]):
                 self.finish(c, state, action)
             return
@@ -1163,7 +1214,9 @@ class ChoiceEngine:
             from girlframe.services.m3_gender_designation import order_no
 
             order_no(self.game, c, state, action, answer)
-            if answer.options == ("disobey",) and action["data"].get("npc_order"):
+            if answer.options == ("disobey",) and (
+                action["data"].get("npc_order") or action["data"].get("ranked_order")
+            ):
                 from girlframe.services.m3_npc_orders import (
                     _allow_refusal,
                 )
@@ -1198,9 +1251,37 @@ class ChoiceEngine:
                     c, action, actor, "order_disobey", {"order_id": action["data"]["order_id"]}
                 )
             else:
+                from girlframe.services.m3_advocate_empathy import offer_reward
+                from girlframe.services.m3_mistress_rewards import offer as offer_mistress_reward
+                from girlframe.services.m3_trainer_phrases import offer_phrase
+
+                if not (
+                    offer_phrase(self.game, c, state, action)
+                    or offer_reward(self.game, c, state, action)
+                    or offer_mistress_reward(self.game, c, state, action)
+                ):
+                    self.finish(c, state, action)
+            return
+        if kind == "advocate_empathy":
+            from girlframe.services.m3_advocate_empathy import apply_reward
+
+            apply_reward(self, c, state, action, request, answer)
+            self.finish(c, state, action)
+            return
+        if kind in ("mistress_honey_offer", "mistress_honey_reply", "mistress_honey_rejection"):
+            from girlframe.services.m3_mistress_rewards import choose as choose_mistress_reward
+
+            choose_mistress_reward(self, c, state, action, request, answer)
+            if not self.game.pending(c, action["id"]):
                 self.finish(c, state, action)
             return
-        if kind in ("escape_play", "order_disobey", "beneath_response_play"):
+        if kind in (
+            "escape_play",
+            "order_disobey",
+            "beneath_response_play",
+            "trainer_flirt_play",
+            "trainer_hunt_play",
+        ):
             raise WorkflowError(
                 "Start the required response Play from its wizard; a text answer cannot replace it."
             )
@@ -1221,6 +1302,7 @@ class ChoiceEngine:
         from girlframe.services.m3_dose_up import self_tag as drug_self_tag
         from girlframe.services.m3_kicked_puppy import self_tag as kicked_self_tag
         from girlframe.services.m3_malleable_self_tag import self_tag as malleable_self_tag
+        from girlframe.services.m3_sentinel import TERRAIN_TAG, terrain_tag
         from girlframe.services.m3_stim_sex import self_tag as stim_self_tag
 
         actor = int(action["actor_id"])
@@ -1270,6 +1352,15 @@ class ChoiceEngine:
             from girlframe.services.m3_gender_designation import propose_man_tag
 
             propose_man_tag(self.game, c, state, action, owner, answer)
+        elif len(answer.denied) == 1 and answer.denied[0].startswith(TERRAIN_TAG):
+            terrain = terrain_tag(self.game, c, state, action, owner, marker)
+            require(
+                terrain is not None
+                and answer.denied[0] == TERRAIN_TAG + terrain.event
+                and answer.number in (-1, 1)
+                and bool(answer.text.strip()),
+                "Choose the actual witnessed Corrupted terrain and explain its relevance",
+            )
         else:
             picks(
                 answer.denied,
@@ -1377,6 +1468,7 @@ class ChoiceEngine:
     ) -> None:
         from girlframe.engine.m3_tag_markers import modifier
         from girlframe.services import m3_tag_markers as markers
+        from girlframe.services.m3_sentinel import TERRAIN_TAG, mark_terrain, terrain_tag
 
         actor = int(action["actor_id"])
         sheet = state.sheets[str(actor)]
@@ -1389,6 +1481,11 @@ class ChoiceEngine:
                 except WorkflowError:
                     markers.reopen(self.game, c, action, person)
                     return
+                if answer.options == ("tag",) and answer.denied[0].startswith(TERRAIN_TAG):
+                    terrain = terrain_tag(self.game, c, state, action, person, marker)
+                    if terrain is None or TERRAIN_TAG + terrain.event != answer.denied[0]:
+                        markers.reopen(self.game, c, action, person)
+                        return
                 proposals.append((person, answer, marker))
         selected = None
         discussion = action["data"].get("tag_marker_discussion")
@@ -1461,6 +1558,12 @@ class ChoiceEngine:
                 )
                 if not self.game.pending(c, action["id"]):
                     self.results(c, state, action)
+                return
+            if answer.denied[0].startswith(TERRAIN_TAG):
+                selected_terrain = terrain_tag(self.game, c, state, action, person, marker)
+                assert selected_terrain is not None and answer.number in (-1, 1)
+                mark_terrain(state, action, selected_terrain, marker, answer.number)
+                self.results(c, state, action)
                 return
             from girlframe.services.m3_reign_terror import mark as mark_reign
 
@@ -1610,6 +1713,11 @@ class ChoiceEngine:
         action["data"]["result"].update(total=total, tier=tier(total))
 
     def results(self, c: Connection, state: GameState, action: dict[str, Any]) -> None:
+        if action["data"].get("battle") or action["data"].get("engage"):
+            from girlframe.services.m3_gorgon_tags import stage as stage_gorgon_tags
+
+            if stage_gorgon_tags(self.game, c, state, action):
+                return
         if action["data"].get("learned_keep_rider") and action["data"]["play"] == "flirt":
             from girlframe.services.m3_learned_plays import finish_beautiful_flirt
 
@@ -1831,6 +1939,12 @@ class ChoiceEngine:
         if play == "disobey_orders":
             if action["data"]["prepared"]["witnessed"]:
                 shift_status(state, actor, -1)
+            if level == "high":
+                from girlframe.services.m3_trainer_phrases import high_refusal
+
+                if high_refusal(self.game, c, state, action):
+                    self.game.request(c, action, state.handler, "handler_disobey")
+                    return
             if level == "low":
                 action["data"]["result"]["can_disobey"] = False
                 self.game.request(c, action, state.handler, "handler_disobey")
@@ -1922,6 +2036,10 @@ class ChoiceEngine:
 
         if intercept_finish(self.game, c, state, action):
             return
+        if action["data"].get("conditioning_refusal"):
+            from girlframe.services.m3_conditioning_refusal import release as release_conditioning
+
+            release_conditioning(state, action)
         action["state"] = "complete"
         self.game.queue(
             c,
@@ -2053,9 +2171,15 @@ class ChoiceEngine:
                     "beneath_response_play",
                     "beneath_defeat",
                     "required_defeat",
+                    "trainer_flirt_play",
+                    "trainer_hunt_play",
                 )
             ]
             require(len(requests) == 1, "The parent response linkage changed.")
+            if requests[0]["kind"] in ("trainer_flirt_play", "trainer_hunt_play") and not action[
+                "data"
+            ].get("receipt"):
+                return
             table = t.m2["m2_choices"]
             c.execute(
                 table.update()

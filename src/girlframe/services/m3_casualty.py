@@ -1,7 +1,7 @@
 """Actual Casualty body costs, repair, original sources and independently owned Sex effects."""
 
 import json
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict
 from uuid import uuid4
 
 import sqlalchemy as sa
@@ -40,6 +40,10 @@ SEX_KINDS = (
     "casualty_low_tag",
     "casualty_low_both",
 )
+
+
+class PartDamageMetadata(TypedDict, total=False):
+    rule_id: str
 
 
 def _access(game: GameService, c: Connection, viewer: GuildViewer, rule: str) -> None:
@@ -1015,6 +1019,8 @@ class CasualtyService:
         part: str,
         condition: rules.Condition,
         account: str,
+        *,
+        handler_play: bool = False,
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             from girlframe.engine.m3_handler_consequences import active_handler
@@ -1033,6 +1039,21 @@ class CasualtyService:
                 raise WorkflowError(
                     "Only the actual original Handler records their performed body damage"
                 )
+            metadata: PartDamageMetadata = {}
+            if handler_play:
+                from girlframe.engine.m3_handler_play_state import SOURCE_RULE
+                from girlframe.services.m3_handler_book_orders import book_rule_available
+
+                target = state.sheets.get(actor.entity)
+                if (
+                    not book_rule_available(self.game, SOURCE_RULE)
+                    or actor.kind != "pilot"
+                    or target is None
+                    or target.character_id != actor.incarnation
+                    or target.girl != "CASUALTY"
+                ):
+                    raise WorkflowError("Use this printed Handler Play on an original Casualty")
+                metadata["rule_id"] = SOURCE_RULE
             event, identity = str(uuid4()), str(uuid4())
             body = _ensure(self.game, c, state, actor, event)
             changed = rules.change_part(
@@ -1067,6 +1088,7 @@ class CasualtyService:
                 state,
                 event_id=event,
                 damage=identity,
+                **metadata,
             )
             _post(self.game, c, actor, event, viewer, key)
             return dict(id=identity, revision=load_state(c, self.store.campaign_id).revision)
@@ -1081,7 +1103,8 @@ class CasualtyService:
                 part=part,
                 condition=condition,
                 account=account,
-            ),
+            )
+            | ({"handler_play": True} if handler_play else {}),
             operation,
         )
 

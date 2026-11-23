@@ -18,7 +18,7 @@ from girlframe.services.read_only_bot import GuildViewer
 ledger = ledger_fixture
 
 
-def service(store, girl="MOCKINGBIRD", frame="JANUS-B"):
+def service(store, girl="MOCKINGBIRD", frame="JANUS"):
     game, *_ = setup_game(store, girl=girl, frame=frame)
     registry = configure_m3_fixture(store)
     return MissionService(store, registry), game
@@ -153,7 +153,7 @@ def test_rollback_after_permission_event_restores_all_mission_state(ledger, monk
 @pytest.mark.parametrize(
     "girl,frame,success,kind",
     [
-        ("PRINCESS", "JANUS-B", True, "princess_mission_end"),
+        ("PRINCESS", "JANUS", True, "princess_mission_end"),
         ("MOCKINGBIRD", "DOCTORDOCTOR MK. II", False, "doctor_obsolescence"),
     ],
 )

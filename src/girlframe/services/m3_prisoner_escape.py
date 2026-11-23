@@ -737,6 +737,7 @@ class PrisonerEscapeService:
                 id=source.id,
                 work=source.work,
                 type="attempt",
+                channel=source.cast.channel,
                 revision=state.revision,
                 prisoner=npc.name,
                 actor=source.prisoner.model_dump(mode="json"),

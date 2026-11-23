@@ -5,6 +5,7 @@ from typing import Literal, Protocol
 from pydantic import Field, JsonValue
 
 from girlframe.ai.contracts import Contract
+from girlframe.engine.m3_actor_state import ActorRef
 
 Play = Literal["keep_your_head", "check_sensors", "engage", "disobey_orders", "flirt"]
 Trait = Literal[
@@ -28,6 +29,19 @@ class TaskFrame(Contract):
     demands: tuple[Demand, ...] = Field(default=(), max_length=12)
     prerequisites: tuple[Prerequisite, ...] = Field(default=(), max_length=32)
     intent: Literal["established", "needs_clarification"] = "established"
+    intent_request: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    response_scope: Literal["self", "other", "unresolved"] | None = Field(
+        default=None,
+        exclude_if=lambda x: x is None,
+        description="Whose response determines the goal? Other requires response_target; "
+        "unresolved cannot settle a verdict.",
+    )
+    response_target: ActorRef | None = Field(default=None, exclude_if=lambda x: x is None)
+    response_request: str | None = Field(
+        default=None,
+        exclude_if=lambda x: x is None,
+        description="Actual answered controller handoff; valid only for other response scope.",
+    )
 
 
 class Evidence(Contract):

@@ -36,7 +36,7 @@ MEMORY = "SYNTHETIC_MATRIX_MEMORY: the original remembered scene remains recorde
 
 
 def prepared(store, tmp_path, monkeypatch, *, graft=False, away=False):
-    _, game = service(store, girl="ALPHA", frame="THE RED QUEEN" if graft else "JANUS-B")
+    _, game = service(store, girl="ALPHA", frame="THE RED QUEEN" if graft else "JANUS")
     approved(store, game, tmp_path, monkeypatch, extra=(rules.RULE,))
     store.policy = store.policy.model_copy(
         update=dict(

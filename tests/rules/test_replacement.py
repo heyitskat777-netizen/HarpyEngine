@@ -67,10 +67,8 @@ def test_free_replacement_uses_exact_handler_asset_count_and_preserves_girl_reso
     assert old.frame_scrapped and old.frame == "DOCTORDOCTOR MK. II"
 
 
-@pytest.mark.parametrize(
-    "current,chosen", [("JANUS", "JANUS-B"), ("JANUS-B", "JANUS"), ("THE ENFORCER", "the enforcer")]
-)
-def test_official_aliases_cannot_bypass_different_playbook(current, chosen):
+@pytest.mark.parametrize("current,chosen", [("JANUS", "janus"), ("THE ENFORCER", "the enforcer")])
+def test_same_frame_cannot_bypass_replacement(current, chosen):
     with pytest.raises(ValueError, match="different"):
         different_frame(current, chosen)
 
@@ -94,7 +92,7 @@ def test_wyvern_intrinsic_and_consume_handler_track_are_not_hidden_defaults(inpu
 def test_new_janus_core_is_distinct_unnamed_and_prince_requires_owner_fanbase(inputs):
     before, registry = inputs
     result = apply(before, registry, frame="JANUS")
-    assert result.sheets["2"].frame == "JANUS-B"
+    assert result.sheets["2"].frame == "JANUS"
     runtime = result.sheets["2"].frame_runtime
     assert runtime.core_id != runtime.id and runtime.harpy_core.tags[0] == "Drugged"
     with pytest.raises(ValueError, match="fanbase"):

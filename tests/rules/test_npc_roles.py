@@ -15,6 +15,7 @@ from test_world_service import ready
 from girlframe.database import tables as t
 from girlframe.discord_adapter.m3_npc_roles import open_invitation
 from girlframe.engine import m3_npc_roles as rules
+from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_world_state import Npc, World
 from girlframe.services.inbox import InboxService
 from girlframe.services.m3_npc_roles import NpcRoleService
@@ -32,6 +33,80 @@ def director():
         controller=2,
         cell=(0, 0),
     )
+
+
+def test_native_current_npc_owner_changes_ordinary_jobs_without_reassigning_sources(ledger):
+    from test_cast_service import change
+
+    from girlframe.discord_adapter.m2_forms import NativeForm
+    from girlframe.discord_adapter.m3_cast import open_cast
+    from girlframe.services.m3_actors import ActorService
+    from girlframe.services.m3_cast import CastService
+
+    world, game = ready(ledger)
+    original = Npc(
+        id="owned-staff",
+        name="Actual staff",
+        detail="An original person.",
+        jobs=("guard", "prisoner"),
+        cell=(0, 0),
+        controller=PLAYER.user_id,
+    )
+    roles = NpcRoleService(world)
+    invite = roles.offer(ADMIN, "invite-staff", state(game).revision, original)
+    roles.respond(PLAYER, "accept-staff", invite["id"], state(game).revision, "accept")
+    ref = ActorRef(kind="npc", entity=original.id)
+    cast = CastService(ActorService(world.missions))
+    change(cast, PLAYER, "join", ref)
+    before = state(game)
+    data = roles.jobs(PLAYER, 900, ref)
+    assert data["jobs"] == ("guard",) and data["fixed"] == ("prisoner",)
+    assert not {"director", "prisoner", "pilot_candidate"} & dict(data["options"]).keys()
+    with pytest.raises(WorkflowError, match="original joined NPC controller"):
+        roles.change_jobs(
+            OTHER, "other-jobs", 900, before.revision, ref, ("mechanic",), "Not my NPC."
+        )
+    with pytest.raises(WorkflowError, match="ordinary jobs"):
+        roles.change_jobs(
+            PLAYER, "forge-director", 900, before.revision, ref, ("director",), "Changed."
+        )
+    with pytest.raises(WorkflowError, match="STALE_STATE"):
+        roles.change_jobs(
+            PLAYER, "stale-jobs", 900, before.revision - 1, ref, ("mechanic",), "Changed."
+        )
+    ledger.safety(OTHER, "pause-jobs", ledger.status(OTHER)["revision"], pause=True)
+    with pytest.raises(WorkflowError, match="SAFETY_PAUSED"):
+        roles.change_jobs(
+            PLAYER, "paused-jobs", 900, before.revision, ref, ("mechanic",), "Changed."
+        )
+    ledger.safety(OTHER, "resume-jobs", ledger.status(OTHER)["revision"], pause=False)
+    account = "PRIVATE_JOB_CHANGE"
+
+    async def native():
+        click = current(PLAYER.user_id, 89940)
+        click.channel_id = 900
+        await click.response.defer(ephemeral=True)
+        await open_cast(click, cast)
+        menu = click.edit_original_response.call_args.kwargs["view"]
+        entry = next(x for x, _ in menu.options if x.startswith("jobs:"))
+        edit = current(PLAYER.user_id, 89941)
+        await edit.response.defer(ephemeral=True)
+        await menu.open_item(edit, entry)
+        form = edit.edit_original_response.call_args.kwargs["view"]
+        assert isinstance(form, NativeForm) and form.values["jobs"] == ("guard",)
+        form.values.update(jobs=("mechanic",), account=account)
+        await form.confirm.callback(current(PLAYER.user_id, 89942))
+        assert form.completed
+
+    asyncio.run(native())
+    saved = roles.change_jobs(PLAYER, "89942", 900, before.revision, ref, ("mechanic",), account)
+    assert saved["jobs"] == ["prisoner", "mechanic"]
+    actual = next(x for x in state(game).world.npcs if x.id == original.id)
+    prior = next(x for x in before.world.npcs if x.id == original.id)
+    assert actual.model_dump(exclude={"jobs"}) == prior.model_dump(exclude={"jobs"})
+    assert account not in str(cast.view(OTHER, 900))
+    ledger.engine.dispose()
+    assert NpcRoleService(world).jobs(PLAYER, 900, ref)["jobs"] == ("mechanic",)
 
 
 @pytest.mark.parametrize(

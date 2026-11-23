@@ -21,7 +21,7 @@ def document():
         "profile": {
             "callsign": "SYNTHETIC ☃",
             "girl_playbook": "Mockingbird",
-            "frame_playbook": "JANUS-B",
+            "frame_playbook": "JANUS",
         },
         "creation": {
             "girl_assets": [
@@ -82,7 +82,7 @@ def test_printable_snapshot_escapes_known_sections_and_resolves_names_without_id
         sheet={
             "callsign": "<svg onload=alert(1)>",
             "girl": "MOCKINGBIRD",
-            "frame": "JANUS-B",
+            "frame": "JANUS",
             "heat": 2,
             "private_notes": private,
             "identities": [{"name": "<Identity>", "marked": True}],

@@ -18,7 +18,6 @@ from girlframe.engine.shared_setup import AM_ROLES
 
 def destination(registry: Registry, selected: str) -> tuple[str, tuple[str, ...]]:
     frame = canonical_frame(selected)
-    frame = "JANUS-B" if frame == "JANUS" else frame
     if frame not in FRAME_TYPES:
         raise ValueError("Choose an official core Frame; ancillary modules remain disabled")
     native = [
@@ -214,8 +213,8 @@ def purchase(
         source_work=plan,
         frame_name=selection.name,
         frame_appearance=selection.appearance,
-        core_id="swap:" + identity + ":core" if frame == "JANUS-B" else None,
-        harpy_core=HarpyCore() if frame == "JANUS-B" else None,
+        core_id="swap:" + identity + ":core" if frame == "JANUS" else None,
+        harpy_core=HarpyCore() if frame == "JANUS" else None,
         fanbase=selection.fanbase,
         court={
             role: int(selection.court_target.entity)

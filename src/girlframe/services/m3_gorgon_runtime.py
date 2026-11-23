@@ -9,12 +9,24 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_battle as battle
+from girlframe.engine import m3_growth as growth
+from girlframe.engine import m3_hallucinations as hallucinations
+from girlframe.engine import m3_mother_sprite as mother_sprite
+from girlframe.engine import m3_parasite as parasite
+from girlframe.engine import m3_sentinel_shell as shell
 from girlframe.engine.m2 import ChoiceAnswer, GameState
 from girlframe.engine.m3_actor_state import ActorRef, SceneCast
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_collateral import Selection, Source, perform
+from girlframe.engine.m3_gorgon_play_state import Declaration
+from girlframe.engine.m3_grow_unreal import PLAY as unreal_play
 from girlframe.engine.m3_handler_consequences import active_handler
+from girlframe.engine.m3_incubus_conditioning import PLAY as incubus_play
+from girlframe.engine.m3_mother_hazard import PLAY as hazard_play
+from girlframe.engine.m3_parasite_infection import PLAY as infection_play
 from girlframe.engine.m3_world_state import Asset
+from girlframe.services import m3_gorgon_contact as contact
+from girlframe.services import m3_gorgon_frame_contact as frame_contact
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_actors import profiles
 from girlframe.services.onboarding import WorkflowError
@@ -90,6 +102,132 @@ def start(game: Any, c: Connection, state: GameState, action: dict[str, Any]) ->
     from girlframe.services.m3_gorgon_dormant import record_own_wake
 
     record_own_wake(game, c, state, action)
+    if meta["kind"] in ("incubus_inflict", "mother_mutation", "doppleganger_bond"):
+        from girlframe.services.m3_gorgon_type_tags import apply as apply_type_tag
+
+        apply_type_tag(game, c, state, action)
+        return
+    if meta["kind"] == "corrupt":
+        from girlframe.engine.m3_sentinel import corrupt
+
+        assert state.world is not None
+        cell = resolve(state, _ref(meta["actor"]), (), require_current_profile=False).cell
+        state.world = corrupt(
+            state.world, actual, cell, action["id"], action["scene_id"], _event(action)
+        )
+        action["data"]["result"]["corrupted"] = cell
+        return
+    from girlframe.engine.m3_jackdaw import EFFECTS as JACKDAW_EFFECTS
+
+    if meta["kind"] in JACKDAW_EFFECTS:
+        from girlframe.engine.m3_jackdaw import apply as jam
+        from girlframe.services.m3_jackdaw import targets
+
+        declaration = Declaration.model_validate_json(json.dumps(meta["declaration"]))
+        assert declaration.interference is not None
+        cell = resolve(state, declaration.actor, (), require_current_profile=False).cell
+        people: tuple[ActorRef, ...] = ()
+        if meta["kind"] == "jackdaw_catatonia":
+            cast = SceneCast.model_validate_json(json.dumps(meta["cast"]))
+            people = targets(
+                state, cast, profiles(c, game.store.campaign_id), declaration.interference
+            )
+            if not people:
+                raise WorkflowError("Recover the actual non-Pilots present within this range")
+        jam(
+            state,
+            declaration.actor,
+            cell,
+            declaration.interference,
+            action=action["id"],
+            scene=action["scene_id"],
+            event=_event(action),
+            victims=people,
+        )
+        action["data"]["result"]["catatonia" if people else "audible_communication_blocked"] = True
+        return
+    if meta["kind"] == hazard_play:
+        from girlframe.services.m3_mother_hazard import start as hazard
+
+        hazard(game, c, state, action)
+        return
+    if meta["kind"] == infection_play:
+        from girlframe.services.m3_parasite_infection import start as infect
+
+        infect(game, c, state, action)
+        return
+    if meta["kind"] == unreal_play:
+        from girlframe.services.m3_grow_unreal import start as grow_unreal
+
+        grow_unreal(game, c, state, action)
+        return
+    if meta["kind"] == incubus_play:
+        from girlframe.services.m3_incubus_conditioning import start as condition
+
+        condition(game, c, state, action)
+        return
+    if meta["kind"] == shell.RELEASE:
+        shell.release(
+            state, _ref(meta["actor"]), _ref(meta["target"]), action["scene_id"], _event(action)
+        )
+        action["data"]["result"]["sentinel_release"] = True
+        return
+    if meta["kind"] == shell.PLAY:
+        from girlframe.services.m3_sentinel_shell import start as withdraw
+
+        withdraw(game, c, state, action)
+        return
+    if meta["kind"] in contact.PLAYS:
+        contact.start(game, c, state, action)
+        return
+    if meta["kind"] in hallucinations.PLAYS:
+        from girlframe.services.m3_hallucinations import start as inflict
+
+        inflict(game, c, state, action)
+        return
+    if meta["kind"] in parasite.PLAYS:
+        declaration = Declaration.model_validate_json(json.dumps(meta["declaration"]))
+        if declaration.target is None:
+            parasite.detach(state, declaration.actor, _event(action))
+        else:
+            bound = profiles(c, game.store.campaign_id)
+            parasite.hitch(
+                state,
+                resolve(state, declaration.actor, bound, require_current_profile=False),
+                resolve(state, declaration.target, bound, require_current_profile=False),
+                action=action["id"],
+                scene=action["scene_id"],
+                event=_event(action),
+            )
+        action["data"]["result"]["parasite_riding"] = declaration.target is not None
+        return
+    if meta["kind"] in growth.KINDS:
+        declaration = Declaration.model_validate_json(json.dumps(meta["declaration"]))
+        assert state.world is not None
+        if declaration.adaptation is not None:
+            changed = growth.adapt(actual, declaration.adaptation, action["id"])
+            action["data"]["result"]["growth_tag"] = changed.tags[-1].id
+        else:
+            assert declaration.regrowth is not None
+            changed = growth.regrow(actual, declaration.regrowth, action["id"])
+            action["data"]["result"]["regrown_asset"] = "growth:" + action["id"]
+        state.world = growth.save(state.world, changed)
+        return
+    if meta["kind"] == "mother_sprite":
+        declaration = Declaration.model_validate_json(json.dumps(meta["declaration"]))
+        assert declaration.birth is not None
+        cell = resolve(state, declaration.actor, (), require_current_profile=False).cell
+        birth = mother_sprite.spawn(
+            state,
+            actual,
+            cell,
+            declaration.birth,
+            action=action["id"],
+            scene=action["scene_id"],
+            event=_event(action),
+        )
+        action["data"]["result"]["sprite_birth"] = birth.sprite.entity
+        return
     if meta["kind"] == "warp":
         if not actual.exposed:
             raise WorkflowError("Warp charges an actually exposed Core.")
@@ -330,7 +468,39 @@ def apply(
     meta, event = _meta(action), _event(action)
     body = json.loads(row["body_json"])
     kind = row["kind"].removeprefix("gorgon_")
-    if kind == "defend":
+    if kind.startswith("hazard_"):
+        from girlframe.services.m3_mother_hazard import apply as apply_hazard
+
+        apply_hazard(game, c, state, action, row, answer)
+        return
+    if kind.startswith("infection_"):
+        from girlframe.services.m3_parasite_infection import apply as apply_infection
+
+        apply_infection(game, c, state, action, row, answer)
+        return
+    if kind.startswith("unreal_"):
+        from girlframe.services.m3_grow_unreal import apply as apply_unreal
+
+        apply_unreal(game, c, state, action, row, answer)
+        return
+    if kind.startswith("conditioning_"):
+        from girlframe.services.m3_incubus_conditioning import apply as settle_conditioning
+
+        settle_conditioning(game, c, state, action, row, answer)
+        return
+    if kind.startswith("shell_"):
+        from girlframe.services.m3_sentinel_shell import apply as apply_shell
+
+        apply_shell(game, c, state, action, row, answer)
+        return
+    if kind.startswith("contact_"):
+        contact.apply(game, c, state, action, row, answer)
+        return
+    if kind.startswith("hallucinations_"):
+        from girlframe.services.m3_hallucinations import apply as resolve_hallucinations
+
+        resolve_hallucinations(game, c, state, action, row, answer)
+    elif kind == "defend":
         target = _ref(body["actor"])
         defensive_assets = battle.intact_assets(state, target, profiles(c, game.store.campaign_id))
         selected = _one(answer, ("play", "damage") if defensive_assets else ("play",))
@@ -665,6 +835,32 @@ def projection(
     body = json.loads(row["body_json"])
     kind = row["kind"].removeprefix("gorgon_")
     result: dict[str, Any] = dict(kind=kind, account=action["data"].get("context", ""))
+    if kind.startswith("hazard_"):
+        from girlframe.services.m3_mother_hazard import project as project_hazard
+
+        return project_hazard(game, c, state, action, row)
+    if kind.startswith("infection_"):
+        from girlframe.services.m3_parasite_infection import project as project_infection
+
+        return project_infection(game, c, state, action, row)
+    if kind.startswith("unreal_"):
+        from girlframe.services.m3_grow_unreal import project as project_unreal
+
+        return project_unreal(game, c, state, action, row)
+    if kind.startswith("conditioning_"):
+        from girlframe.services.m3_incubus_conditioning import project as project_conditioning
+
+        return project_conditioning(game, c, state, action, row)
+    if kind.startswith("shell_"):
+        from girlframe.services.m3_sentinel_shell import project as project_shell
+
+        return project_shell(game, c, state, action, row)
+    if kind.startswith("contact_"):
+        return contact.project(game, c, state, action, row)
+    if kind.startswith("hallucinations_"):
+        from girlframe.services.m3_hallucinations import project
+
+        return project(game, c, state, action, row)
     if kind == "dormant_void":
         result.update(work_id=body["work_id"], actor=body["actor"], source="actual_gorgon_dormant")
     elif kind == "defend":
@@ -780,6 +976,19 @@ def complete_response(
         .values(state="completed_by_work", revision=choices.c.revision + 1)
     )
     state = load_state(c, game.store.campaign_id)
+    if meta["kind"] == hazard_play:
+        from girlframe.services.m3_mother_hazard import complete_response as finish_hazard
+
+        finish_hazard(game, c, state, parent, child, event, viewer, key)
+        return
+    if meta["kind"] == incubus_play and source.get("conditioning_tag"):
+        from girlframe.services.m3_incubus_conditioning import complete_response as finish
+
+        finish(game, c, state, parent, child, event, viewer, key)
+        return
+    if meta.get("frame_intervention"):
+        frame_contact.finish_intervention(game, c, state, parent, child, event)
+        return
     actor_alive = _actor(state, parent).alive
     enough = child["data"].get("result", {}).get("enough")
     if enough is None:
@@ -868,6 +1077,32 @@ def synchronize(
     materialize_dormant(game, c, action, event)
     synchronize_damage(game, c, event)
     state = load_state(c, game.store.campaign_id)
+    if meta["kind"] == hazard_play:
+        from girlframe.services.m3_mother_hazard import materialize as materialize_hazard
+
+        materialize_hazard(game, c, state, action, event)
+    if meta["kind"] == infection_play:
+        from girlframe.services.m3_parasite_infection import materialize as materialize_infection
+
+        materialize_infection(game, c, state, action, event, viewer, key)
+    if meta["kind"] == unreal_play:
+        from girlframe.services.m3_grow_unreal import materialize as materialize_unreal
+
+        materialize_unreal(game, c, state, action, event)
+    if meta["kind"] == incubus_play:
+        from girlframe.services.m3_incubus_conditioning import materialize as materialize_incubus
+
+        materialize_incubus(game, c, state, action, event)
+    if meta["kind"] == shell.PLAY:
+        from girlframe.services.m3_sentinel_shell import materialize as materialize_shell
+
+        materialize_shell(game, c, state, action, event)
+    if meta["kind"] in contact.PLAYS:
+        contact.synchronize(game, c, state, action, event)
+    if meta["kind"] in hallucinations.PLAYS:
+        from girlframe.services.m3_hallucinations import materialize
+
+        materialize(game, c, state, action, event)
     if not _actor(state, action).alive:
         actions = t.m2["m2_actions"]
         active_child = c.scalar(
@@ -880,7 +1115,15 @@ def synchronize(
         if active_child is None:
             choices = t.m2["m2_choices"]
             for pending in game.pending(c, action["id"]):
-                if pending["kind"].startswith("gorgon_"):
+                if pending["kind"].startswith("gorgon_") and pending["kind"] not in (
+                    "gorgon_hallucinations_void",
+                    frame_contact.FRAME_VOID,
+                    "gorgon_shell_threshold",
+                    "gorgon_conditioning_threshold",
+                    "gorgon_unreal_threshold",
+                    "gorgon_infection_threshold",
+                    "gorgon_hazard_threshold",
+                ):
                     c.execute(
                         choices.update()
                         .where(

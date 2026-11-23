@@ -2,6 +2,7 @@
 
 from uuid import uuid4
 
+import pytest
 from test_changeling import define, ready, roll
 from test_ledger import OTHER
 from test_ledger import ledger as ledger_fixture
@@ -9,6 +10,7 @@ from test_m2_game import state
 
 from girlframe.engine import m3_changeling as rules
 from girlframe.engine.m3_actor_bonds import current_ref
+from girlframe.services.onboarding import WorkflowError
 
 ledger = ledger_fixture
 
@@ -53,3 +55,25 @@ def test_native_mid_blank_slate_overstep_lowers_speaker_status_and_gives_tag(
     assert controls.push(*payload) == result
     assert state(game).model_dump_json() == saved
     assert game.dice.calls == 1
+
+    # Even after a later Status change makes the speaker eligible again, this
+    # original session grants only one overstep, independent of speech IDs.
+    with ledger.transaction() as c:
+        later = state(game)
+        later.order = (3, 2)
+        game.event(c, 1, "later-status", "synthetic.later_status", later)
+    another = controls.speak(
+        OTHER,
+        "second-speech",
+        state(game).revision,
+        900,
+        speaker,
+        addressed,
+        "push",
+        "I repeat that insistence",
+        session=action,
+    )["id"]
+    with pytest.raises(WorkflowError):
+        controls.push(OTHER, "second-session-push", state(game).revision, another, "Again")
+    assert state(game).order == (3, 2)
+    assert len([x for x in rules.records(state(game), rules.Push) if x.session == action]) == 1

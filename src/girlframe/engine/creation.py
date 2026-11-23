@@ -10,12 +10,11 @@ from girlframe.engine.creation_details import GirlDetails
 from girlframe.engine.fanbase import Fanbase
 from girlframe.engine.frame_setup import FrameSetup, frame_setup
 from girlframe.engine.npc_bonds import NpcBond
-from girlframe.engine.playbooks import canonical_frame, canonical_girl
+from girlframe.engine.playbooks import canonical_frame, canonical_girl, normalize_frame_name
 
 
 def official_frame(label: str) -> str:
-    # Owner approved this cosmetic alias; no new mechanics are attributed to JANUS-B.
-    return "JANUS" if label == "JANUS-B" else label
+    return normalize_frame_name(label)
 
 
 class AssetChoice(BaseModel):

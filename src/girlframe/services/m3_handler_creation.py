@@ -11,10 +11,29 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_handler_creation as rules
+from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import depth
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import fingerprint, resolve
-from girlframe.engine.m3_handler_state import Agreement, Draft, NpcAgreement, SavedDraft
+from girlframe.engine.m3_handler_character import (
+    ADVANCEMENT_TRIGGERS,
+    BOOK_RULES,
+    PROFILES,
+    SHARED_ADVANCEMENT_TRIGGERS,
+    SHARED_PLAY_TRIGGERS,
+)
+from girlframe.engine.m3_handler_consequences import active_handler
+from girlframe.engine.m3_handler_play_state import BASIC
+from girlframe.engine.m3_handler_state import (
+    HANDLER_NOTE_FIELDS,
+    PERSONALITIES,
+    Agreement,
+    Draft,
+    HandlerNotes,
+    NpcAgreement,
+    Playbook,
+    SavedDraft,
+)
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
@@ -27,6 +46,7 @@ from girlframe.services.read_only_bot import GuildViewer
 KIND = "handler_creation"
 AGREEMENT = "handler_creation_agreement"
 NPC_AGREEMENT = "handler_creation_npc_agreement"
+NOTES_SAVED = "m3.handler_character_notes_saved"
 Offer = Agreement | NpcAgreement
 
 
@@ -60,14 +80,20 @@ class HandlerCreationService:
         if rulings is None or rulings.handler_creation != "owned_shared_choices_preserve_existing":
             raise WorkflowError("UNRESOLVED_RULING: record the Handler creation interpretation.")
 
-    def _appointment(self, c: Connection, viewer: GuildViewer) -> str:
+    def _appointment(
+        self, c: Connection, viewer: GuildViewer, *, before_pilots: bool = False
+    ) -> str:
         HandlerService(self.store).authorize(c, viewer)
-        return self._appointment_source(c, viewer.user_id)
+        return self._appointment_source(c, viewer.user_id, before_pilots=before_pilots)
 
-    def _appointment_source(self, c: Connection, owner: int) -> str:
+    def _appointment_source(self, c: Connection, owner: int, *, before_pilots: bool = False) -> str:
         handler = HandlerService(self.store)
+        state = load_state(c, self.store.campaign_id)
         if (
-            load_state(c, self.store.campaign_id).handler != owner
+            (
+                state.handler != owner
+                and not (before_pilots and state.handler is None and not state.sheets)
+            )
             or handler.current(c)[1].handler_id != owner
             or not handler._member(c, owner)
         ):
@@ -149,7 +175,8 @@ class HandlerCreationService:
             metadata = json.loads(source["payload_json"]) if source else {}
             if (
                 source is None
-                or source["kind"] not in ("m3.handler_draft_saved", "m3.handler_activated")
+                or source["kind"]
+                not in ("m3.handler_draft_saved", "m3.handler_activated", NOTES_SAVED)
                 or source["actor_id"] != row["owner_id"]
                 or row["owner_id"] != row["subject_id"]
                 or metadata.get("work_id") != row["id"]
@@ -200,10 +227,10 @@ class HandlerCreationService:
             )
 
         selected_npcs = set(saved.draft.surveilled)
-        if state.handler is None:
-            raise WorkflowError("Recover the actual Handler appointment before starting labels.")
         if saved.draft.sympathizer is not None:
             selected_npcs.add(saved.draft.sympathizer)
+        if state.handler is None and (complete or selected_npcs):
+            raise WorkflowError("Recover the actual Handler appointment before starting labels.")
         npcs = {x.id: x for x in state.world.npcs} if state.world else {}
         packages = {x.npc.entity: x for x in saved.draft.npc_starting}
         for identity in selected_npcs:
@@ -236,7 +263,7 @@ class HandlerCreationService:
     def _view(self, c: Connection, viewer: GuildViewer) -> dict[str, Any]:
         self.game.authorize(c, viewer, game=False)
         try:
-            appointment = self._appointment(c, viewer)
+            appointment = self._appointment(c, viewer, before_pilots=True)
         except WorkflowError:
             appointment = None
         row = self._draft_row(c, viewer.user_id, appointment)
@@ -245,10 +272,13 @@ class HandlerCreationService:
             raise WorkflowError("Only the current appointed Handler can begin creation.")
         state = load_state(c, self.store.campaign_id)
         draft = saved.draft if saved else Draft()
+        persona = state.handler_persona
+        active = persona if persona and saved and persona.id == saved.persona_id else None
+        playbook = active.playbook if active else draft.playbook
         pilots = []
         if appointment is not None:
             for uid in state.order:
-                if HandlerService(self.store)._member(c, uid):
+                if str(uid) in state.sheets and HandlerService(self.store)._member(c, uid):
                     ref = ActorRef(
                         kind="pilot",
                         entity=str(uid),
@@ -306,6 +336,17 @@ class HandlerCreationService:
             and (saved is None or saved.appointment == appointment)
             and state.handler_persona is None,
             draft=draft.model_dump(mode="json"),
+            playbook=playbook,
+            playbook_profile=PROFILES[playbook].model_dump(mode="json") if playbook else None,
+            note_fields=HANDLER_NOTE_FIELDS,
+            personalities={
+                key: {"label": item.label, "prompt": item.prompt}
+                for key, item in PERSONALITIES.items()
+            },
+            notes_editable=bool(
+                active and appointment == active.appointment and active_handler(state)
+            ),
+            rules=self._sheet_rules(c, state, playbook, bool(active and appointment)),
             missing=list(draft.missing)
             + [
                 "NPC relationship history: " + x["name"]
@@ -327,6 +368,126 @@ class HandlerCreationService:
         with self.store.engine.connect() as c:
             return self._view(c, viewer)
 
+    def _sheet_rules(
+        self, c: Connection, state: GameState, playbook: Playbook | None, active: bool
+    ) -> dict[str, Any]:
+        from girlframe.engine.m3_handler_borrowed import PLAYS as portable
+        from girlframe.services.m3_handler_book_orders import active_book
+
+        try:
+            check_access = active and Access(self.store).registry is not None
+        except WorkflowError:
+            # The private sheet can still be read when a release registry is unavailable.
+            check_access = False
+        entries = []
+        for book, definitions in BOOK_RULES.items():
+            for suffix, title, kind, trigger in (
+                *definitions,
+                (
+                    "sex-play",
+                    "Sex Play",
+                    "Private Play",
+                    "Use the playbook's consensual private-scene workflow.",
+                ),
+            ):
+                rule = f"handler-playbook.{book.lower()}.{suffix}"
+                if book != playbook and (not active or rule not in portable):
+                    continue
+                owned = (
+                    check_access
+                    and active_book(self.game, c, state, book=book, rule=rule) is not None
+                )
+                if book == playbook or owned:
+                    entries.append(
+                        dict(
+                            rule=rule,
+                            title=title,
+                            kind=kind,
+                            trigger=trigger,
+                            book=book,
+                            access="owned" if owned else "gated" if active else "draft",
+                        )
+                    )
+        return dict(
+            shared=[dict(title=label, trigger=SHARED_PLAY_TRIGGERS[key]) for key, label in BASIC],
+            playbook=entries,
+            shared_advancement_triggers=SHARED_ADVANCEMENT_TRIGGERS,
+            advancement_triggers=ADVANCEMENT_TRIGGERS.get(playbook, ()) if playbook else (),
+        )
+
+    def active_notes(self, c: Connection, state: GameState, actor: ActorRef) -> HandlerNotes | None:
+        """Read the original private sheet for the active in-scene Handler only."""
+        persona = state.handler_persona
+        if persona is None or actor != active_handler(state) or persona.owner != int(actor.entity):
+            return None
+        row = self._draft_row(c, persona.owner, persona.appointment)
+        saved = self._draft(c, row) if row is not None and row["state"] == "resolved" else None
+        return saved.draft.notes if saved and saved.persona_id == persona.id else None
+
+    def save_notes(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        expected: int,
+        persona_id: str,
+        notes: HandlerNotes | None,
+    ) -> dict[str, Any]:
+        def access(c: Connection) -> None:
+            self._policy(c, viewer)
+            appointment = self._appointment(c, viewer)
+            state = load_state(c, self.store.campaign_id)
+            persona = state.handler_persona
+            if (
+                persona is None
+                or persona.id != persona_id
+                or persona.appointment != appointment
+                or persona.owner != viewer.user_id
+                or active_handler(state) is None
+            ):
+                raise WorkflowError("STALE_HANDLER: reopen your own active Handler sheet.")
+
+        def operation(c: Connection) -> dict[str, Any]:
+            row = self._draft_row(c, viewer.user_id, self._appointment(c, viewer))
+            if (
+                row is None
+                or row["state"] != "resolved"
+                or type(expected) is not int
+                or expected != row["revision"]
+            ):
+                raise WorkflowError("STALE_HANDLER_DRAFT: reopen the current Handler sheet.")
+            previous = self._draft(c, row)
+            if previous.persona_id != persona_id:
+                raise WorkflowError("STALE_HANDLER: reopen your own active Handler sheet.")
+            if previous.draft.notes == notes:
+                return dict(revision=expected, activated=True)
+            saved = previous.model_copy(
+                update={"draft": previous.draft.model_copy(update={"notes": notes})}
+            )
+            source = self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                NOTES_SAVED,
+                work_id=row["id"],
+                body_sha256=fingerprint(saved),
+            )
+            self._save_work(c, row, source, saved.model_dump(mode="json"), state="resolved")
+            return dict(revision=expected + 1, activated=True)
+
+        return self.store._write(
+            viewer,
+            key,
+            NOTES_SAVED,
+            dict(
+                expected=expected,
+                persona_id=persona_id,
+                notes=notes.model_dump(mode="json") if notes else None,
+            ),
+            operation,
+            authorize=access,
+            auto_audit=False,
+        )
+
     def save(
         self,
         viewer: GuildViewer,
@@ -345,7 +506,7 @@ class HandlerCreationService:
                 generation is None and current_generation == "initial"
             ):
                 raise WorkflowError("STALE_HANDLER_GENERATION: reopen the new persona's creation.")
-            if self._appointment(c, viewer) != appointment:
+            if self._appointment(c, viewer, before_pilots=True) != appointment:
                 raise WorkflowError("STALE_HANDLER: reopen the original appointment.")
 
         def operation(c: Connection) -> dict[str, Any]:
@@ -758,6 +919,9 @@ class HandlerCreationService:
                     )
             saved = self._draft(c, row)
             self._actual(c, saved)
+            from girlframe.services.m3_rebel_succession import prepare_successor
+
+            succession = prepare_successor(c, self, state, viewer, saved)
             accepted: list[Agreement] = []
             npc_accepted: list[NpcAgreement] = []
             for request in self._requests(c, saved.persona_id):
@@ -776,10 +940,14 @@ class HandlerCreationService:
                     else:
                         accepted.append(offer)
             source = str(uuid4())
+            # Keep roleplay notes on the owned sheet, outside gameplay and canonical snapshots.
+            activation = saved.model_copy(
+                update={"draft": saved.draft.model_copy(update={"notes": None})}
+            )
             updated = rules.activate(
                 state,
                 viewer.user_id,
-                saved,
+                activation,
                 profiles(c, self.store.campaign_id),
                 tuple(accepted),
                 source,
@@ -789,6 +957,19 @@ class HandlerCreationService:
                 from girlframe.services.m3_battle_director import bind_legacy_context_bodies
 
                 updated = bind_legacy_context_bodies(self.game, c, updated)
+            if succession is not None:
+                from girlframe.engine.m3_handler_consequences import active_handler
+                from girlframe.engine.m3_rebel_succession import save as save_succession
+
+                save_succession(
+                    updated,
+                    succession.model_copy(
+                        update=dict(
+                            replacement=active_handler(updated),
+                            completed=source,
+                        )
+                    ),
+                )
             self.game.event(
                 c,
                 viewer.user_id,
@@ -800,6 +981,13 @@ class HandlerCreationService:
                 body_sha256=fingerprint(saved),
             )
             self._save_work(c, row, source, saved.model_dump(mode="json"), state="resolved")
+            if succession is not None:
+                from girlframe.engine.m3_rebel_succession import RULE as SUCCESSION_RULE
+                from girlframe.services.m3_budget_tags import _selection
+                from girlframe.services.m3_collateral import append
+
+                work, _ = _selection(c, self.game, succession.id, rule=SUCCESSION_RULE)
+                append(c, work, source, json.loads(work["body_json"]), "resolved")
             for request in self._requests(c, saved.persona_id):
                 if request["state"] == "pending":
                     self._save_work(
@@ -839,7 +1027,7 @@ class HandlerCreationService:
         self.game.authorize(c, viewer, game=False)
         result = []
         try:
-            appointment = self._appointment(c, viewer)
+            appointment = self._appointment(c, viewer, before_pilots=True)
         except WorkflowError:
             appointment = None
         row = self._draft_row(c, viewer.user_id, appointment)
@@ -876,11 +1064,28 @@ class HandlerCreationService:
                 .order_by(table.c.revision)
             ).mappings()
         }
+        canon = load_state(c, self.store.campaign_id)
         for request in requests.values():
             if not history and request["state"] == "resolved":
                 continue
             _, offer = self._agreement(c, viewer, request["id"])
             current = self._current_offer(c, offer)
+            if isinstance(offer, NpcAgreement):
+                assigned = (
+                    next(
+                        (
+                            npc.name + "’s controller"
+                            for npc in canon.world.npcs
+                            if npc.id == offer.relationship.npc.entity
+                        ),
+                        "NPC controller",
+                    )
+                    if canon.world
+                    else "NPC controller"
+                )
+            else:
+                pilot = canon.sheets.get(offer.bond.pilot.entity)
+                assigned = pilot.callsign if pilot else "Original Pilot"
             result.append(
                 dict(
                     id=request["id"],
@@ -891,6 +1096,7 @@ class HandlerCreationService:
                     and request["state"] == "pending"
                     and _recipient(offer) == viewer.user_id,
                     stale=not current,
+                    assignee=assigned,
                     label="NPC starting relationship"
                     if isinstance(offer, NpcAgreement)
                     else "Shared starting Bond and rank",

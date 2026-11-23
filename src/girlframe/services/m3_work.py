@@ -84,6 +84,10 @@ def related(
         raise WorkflowError("Required work needs exactly one matching campaign context.") from None
     if parent.get("campaign_id") != store.campaign_id:
         raise WorkflowError("Required work needs exactly one matching campaign context.")
+    if scope.scene_id is not None:
+        from girlframe.services.scene_safety import require_scene_unpaused
+
+        require_scene_unpaused(c, store.campaign_id, scope.scene_id)
     if not c.scalar(
         sa.select(t.events.c.id).where(
             t.events.c.campaign_id == store.campaign_id,

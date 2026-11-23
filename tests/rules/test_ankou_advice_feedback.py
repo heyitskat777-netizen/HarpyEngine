@@ -66,7 +66,6 @@ def last_advice(game, worker, gateway):
             heat=("1",),
             disposable_heat=("0",),
             piloting=("no",),
-            witnessed=("no",),
             trigger=("yes",),
             context="PRIVATE_ADVICE_SOURCE: I advise her using my last unmarked Identity",
         )

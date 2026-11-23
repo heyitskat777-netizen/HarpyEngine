@@ -178,6 +178,11 @@ def is_ace(state: GameState, owner: int) -> bool:
 
 
 def is_dog(state: GameState, owner: int) -> bool:
+    from girlframe.engine.m3_dogrunner import owners as dogrunner_owners
+
+    dogs = dogrunner_owners(state)
+    if dogs is not None:
+        return owner in dogs
     return bool(state.order) and owner in status_groups(state)[-1]
 
 

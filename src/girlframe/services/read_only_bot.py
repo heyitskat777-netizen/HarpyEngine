@@ -16,6 +16,7 @@ class GuildViewer:
     is_member: bool
     is_administrator: bool
     role_ids: frozenset[int] = frozenset()
+    activity_review: bool = False
 
 
 class CommandDenied(RuntimeError):

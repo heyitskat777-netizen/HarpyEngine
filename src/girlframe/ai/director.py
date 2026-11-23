@@ -2,10 +2,19 @@
 
 from typing import Literal, Protocol
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from girlframe.ai.contracts import Contract
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.scenes.campaign_time import Identity, Position
+from girlframe.scenes.mission_timing import Boundary, DeadlineStatus, Minute
+
+
+class KnowledgeRelation(Contract):
+    """A stated relationship between accounts, not an engine verdict about truth."""
+
+    kind: Literal["competes_with", "corrects"]
+    reference_id: str = Field(min_length=1, max_length=100)
 
 
 class KnowledgeReference(Contract):
@@ -15,9 +24,43 @@ class KnowledgeReference(Contract):
     order: int
     dependencies: tuple[str, ...] = ()
     known_by: tuple[str, ...] = ()
-    topic: Literal["general", "objective", "scope", "status"] = "general"
-    classification: Literal["reported_claim", "committed_play", "approved_outcome"]
+    reported_by: ActorRef | None = Field(default=None, exclude_if=lambda x: x is None)
+    relations: tuple[KnowledgeRelation, ...] = Field(
+        default=(), max_length=10, exclude_if=lambda x: not x
+    )
+    origin_scene: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    origin_reference: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    topic: Literal[
+        "general", "objective", "scope", "status", "briefing", "tactical", "debrief", "completion"
+    ] = "general"
+    classification: Literal[
+        "reported_claim", "committed_play", "approved_outcome", "established_world"
+    ]
     text: str = Field(max_length=1200)
+
+    @model_validator(mode="after")
+    def complete_origin(self) -> "KnowledgeReference":
+        if (self.origin_scene is None) != (self.origin_reference is None):
+            raise ValueError("Continuity requires both original scene and reference")
+        return self
+
+
+class SceneClock(Contract):
+    receipt: Identity
+    day: int
+    minute: Minute
+    deadline: Minute
+    boundary: Boundary
+    status: DeadlineStatus
+    consequence_recorded: bool
+
+
+class SceneTime(Contract):
+    anchor_receipt: Identity
+    position: Position
+    start: Position | None = None
+    end: Position | None = None
+    clock: SceneClock | None = None
 
 
 class DirectorContext(Contract):
@@ -28,6 +71,7 @@ class DirectorContext(Contract):
     actor: ActorRef | None = None
     revision: str
     references: tuple[KnowledgeReference, ...] = Field(max_length=100)
+    fictional_time: SceneTime | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class DirectorDecision(Contract):

@@ -1,4 +1,4 @@
-"""Actual Stim NPC drug physiology with source contact and explicit unsupported Orders."""
+"""Actual Stim NPC drug physiology with source contact and expiry."""
 
 from uuid import uuid4
 
@@ -26,9 +26,7 @@ from girlframe.services.m3_world import WorldService
 from girlframe.services.onboarding import WorkflowError
 
 
-def test_actual_npc_mid_drug_helpless_expiry_and_atomic_orders_fallback(
-    ledger, tmp_path, monkeypatch
-):
+def test_actual_npc_mid_drug_helpless_and_expiry(ledger, tmp_path, monkeypatch):
     game, worker, gateway, _ = ready(ledger, tmp_path, monkeypatch)
     approved(ledger, game, tmp_path, monkeypatch, extra=(rules.RULE,))
     service = SexService(game)
@@ -119,11 +117,6 @@ def test_actual_npc_mid_drug_helpless_expiry_and_atomic_orders_fallback(
     tick(worker, gateway, 3)
     pass_tags(game)
     choose(game, PLAYER, "stim_sex_drug", ("quick",), native=True)
-    before_unsupported = state(game)
-    with pytest.raises(WorkflowError, match="human adjudication"):
-        choose(game, PLAYER, "stim_sex_effects", ("orders",))
-    assert state(game) == before_unsupported
-    assert game.inspect(PLAYER, action)["state"] != "complete"
     choose(game, PLAYER, "stim_sex_effects", ("helpless",), native=True)
     final = state(game)
     drug = rules.records(final, rules.Drug)[-1]

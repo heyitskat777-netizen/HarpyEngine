@@ -15,66 +15,8 @@ from girlframe.services.m2_game import GameService
 from girlframe.services.m3_easy_target import EasyTargetService
 
 
-async def open_choice(
-    interaction: discord.Interaction, game: GameService, decision: dict[str, Any] | str
-) -> None:
-    if isinstance(decision, str):
-        decision = await asyncio.to_thread(
-            game.decision, viewer_from_interaction(interaction), decision
-        )
-    if decision["kind"] == "battle_target_damage" and decision.get("body", {}).get(
-        "easy_target_npc_hurt"
-    ):
-        from girlframe.discord_adapter.m3_battle import open_battle
-
-        await open_battle(interaction, game, decision["id"])
-        return
-    detail = decision.get("detail") or decision["easy_target"]
+def easy_target_choice_fields(detail: dict[str, Any]) -> list[Field]:
     kind = detail["kind"]
-    if kind == "easy_target_child":
-        work = detail["work"]
-        if work["urge"] == "cohort" and not any(
-            detail.get(x) for x in ("protection_cohort", "use_cohort", "hurt_cohort")
-        ):
-            await reply(
-                interaction,
-                "Actually assist the selected primary's child with your own "
-                "positive Tag modifier. This obligation closes only when it is applied.",
-            )
-            return
-        if work["urge"] == "hurt" and not detail.get("npc_hurt"):
-            from girlframe.discord_adapter.m3_battle import open_declaration
-            from girlframe.services.m3_battle import BattleService
-
-            source = EasyTargetService(game).view(viewer_from_interaction(interaction), work["id"])[
-                "source"
-            ]
-            parent = decision | dict(
-                body=dict(actor=work["actor"], attacker=source["actor"]),
-                parent=work["session"],
-                channel=detail["channel"],
-            )
-            await open_declaration(interaction, BattleService(game.store), parent=parent)
-            return
-        if not any(
-            detail.get(x)
-            for x in (
-                "npc_hurt",
-                "npc_protect",
-                "npc_use",
-                "pilot_use",
-                "handler_use",
-                "handler_protect",
-                "pilot_protect",
-                "protection_cohort",
-                "use_cohort",
-                "hurt_cohort",
-            )
-        ):
-            from girlframe.discord_adapter.m2_ui import open_play
-
-            await open_play(interaction, game, parent=decision)
-            return
     fields: list[Field] = []
     if kind == "easy_target_select":
         fields.append(
@@ -176,33 +118,102 @@ async def open_choice(
             paragraph=True,
         )
     )
+    return fields
+
+
+def easy_target_choice_answer(detail: dict[str, Any], values: dict[str, Any]) -> ChoiceAnswer:
+    kind = detail["kind"]
+    options = tuple(values.get("select", values.get("urge", values.get("performance", ()))))
+    if values.get("outcome"):
+        options = tuple(values["outcome"])
+    specific = {x: values[x][0] for x in ("primary", "play") if values.get(x)}
+    if values.get("context"):
+        specific["context"] = values["context"]
+    if (
+        kind == "easy_target_react"
+        and detail.get("npc_reactor")
+        and options in (("hurt",), ("protect",))
+    ):
+        specific.pop("play", None)
+    return ChoiceAnswer(
+        options=options,
+        text=values["account"],
+        fields=specific,
+        flag=values["yes"][0] == "yes" if values.get("yes") else None,
+    )
+
+
+async def open_choice(
+    interaction: discord.Interaction, game: GameService, decision: dict[str, Any] | str
+) -> None:
+    if isinstance(decision, str):
+        decision = await asyncio.to_thread(
+            game.decision, viewer_from_interaction(interaction), decision
+        )
+    if decision["kind"] == "battle_target_damage" and decision.get("body", {}).get(
+        "easy_target_npc_hurt"
+    ):
+        from girlframe.discord_adapter.m3_battle import open_battle
+
+        await open_battle(interaction, game, decision["id"])
+        return
+    detail = decision.get("detail") or decision["easy_target"]
+    kind = detail["kind"]
+    if kind == "easy_target_child":
+        work = detail["work"]
+        if work["urge"] == "cohort" and not any(
+            detail.get(x) for x in ("protection_cohort", "use_cohort", "hurt_cohort")
+        ):
+            await reply(
+                interaction,
+                "Actually assist the selected primary's child with your own "
+                "positive Tag modifier. This obligation closes only when it is applied.",
+            )
+            return
+        if work["urge"] == "hurt" and not detail.get("npc_hurt"):
+            from girlframe.discord_adapter.m3_battle import open_declaration
+            from girlframe.services.m3_battle import BattleService
+
+            source = EasyTargetService(game).view(viewer_from_interaction(interaction), work["id"])[
+                "source"
+            ]
+            parent = decision | dict(
+                body=dict(actor=work["actor"], attacker=source["actor"]),
+                parent=work["session"],
+                channel=detail["channel"],
+            )
+            await open_declaration(interaction, BattleService(game.store), parent=parent)
+            return
+        if not any(
+            detail.get(x)
+            for x in (
+                "npc_hurt",
+                "npc_protect",
+                "npc_use",
+                "pilot_use",
+                "handler_use",
+                "handler_protect",
+                "pilot_protect",
+                "protection_cohort",
+                "use_cohort",
+                "hurt_cohort",
+            )
+        ):
+            from girlframe.discord_adapter.m2_ui import open_play
+
+            await open_play(interaction, game, parent=decision)
+            return
+    fields = easy_target_choice_fields(detail)
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
         assert isinstance(decision, dict)
-        options = tuple(values.get("select", values.get("urge", values.get("performance", ()))))
-        if values.get("outcome"):
-            options = tuple(values["outcome"])
-        specific = {x: values[x][0] for x in ("primary", "play") if values.get(x)}
-        if values.get("context"):
-            specific["context"] = values["context"]
-        if (
-            kind == "easy_target_react"
-            and detail.get("npc_reactor")
-            and options in (("hurt",), ("protect",))
-        ):
-            specific.pop("play", None)
         await asyncio.to_thread(
             game.respond,
             viewer_from_interaction(current),
             str(current.id),
             decision["id"],
             decision["revision"],
-            ChoiceAnswer(
-                options=options,
-                text=values["account"],
-                fields=specific,
-                flag=values["yes"][0] == "yes" if values.get("yes") else None,
-            ),
+            easy_target_choice_answer(detail, values),
         )
         return "Your original person's actual Easy Target choice is saved."
 

@@ -266,7 +266,7 @@ def admit(
     state = GameState.model_validate_json(original.model_dump_json())
     sheet = frame_sheet(state, owner, frame)
     if (
-        sheet.frame not in ("JANUS", "JANUS-B")
+        sheet.frame != "JANUS"
         or sheet.frame_scrapped
         or bound(state, owner, frame) is not None
         or any(

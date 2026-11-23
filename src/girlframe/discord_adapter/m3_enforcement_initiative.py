@@ -122,6 +122,30 @@ async def open_enforcer_choice(
 
         await open_director(interaction, DirectorService(game.store), detail["work_id"])
         return
+    fields = initiative_choice_fields(data)
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        result = await asyncio.to_thread(
+            game.respond,
+            viewer_from_interaction(current),
+            str(current.id) or str(uuid4()),
+            identity,
+            data["revision"],
+            initiative_answer(kind, values),
+        )
+        return "Actual owned response saved. Play " + str(result["state"]) + "."
+
+    await NativeForm(
+        viewer.user_id,
+        "Enforcement Initiative response",
+        "The actual source scene stays held until each required effect is complete.",
+        fields,
+        submit,
+    ).present(interaction)
+
+
+def initiative_choice_fields(data: dict[str, Any]) -> list[Field]:
+    kind, detail = data["kind"], data["enforcement"]
     fields: list[Field] = []
     if kind == "enforcer_select":
         fields.append(
@@ -194,34 +218,18 @@ async def open_enforcer_choice(
             raise WorkflowError("Resume this actual owned source consequence.")
         fields.append(Field("account", labels[kind], paragraph=True))
 
-    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
-        answer = ChoiceAnswer(
-            options=tuple(values.get("options", ())),
-            text=values.get("account", ""),
-            fields={
-                k: values[k][0]
-                for k in ("item", "weapon", "inside_frame", "replace")
-                if k in values
-            },
-            flag=values.get("accept", ("no",))[0] == "yes" if kind == "enforcer_hesitate" else None,
-        )
-        result = await asyncio.to_thread(
-            game.respond,
-            viewer_from_interaction(current),
-            str(current.id) or str(uuid4()),
-            identity,
-            data["revision"],
-            answer,
-        )
-        return "Actual owned response saved. Play " + str(result["state"]) + "."
+    return fields
 
-    await NativeForm(
-        viewer.user_id,
-        "Enforcement Initiative response",
-        "The actual source scene stays held until each required effect is complete.",
-        fields,
-        submit,
-    ).present(interaction)
+
+def initiative_answer(kind: str, values: dict[str, Any]) -> ChoiceAnswer:
+    return ChoiceAnswer(
+        options=tuple(values.get("options", ())),
+        text=values.get("account", ""),
+        fields={
+            k: values[k][0] for k in ("item", "weapon", "inside_frame", "replace") if k in values
+        },
+        flag=values.get("accept", ("no",))[0] == "yes" if kind == "enforcer_hesitate" else None,
+    )
 
 
 async def open_grasp(interaction: discord.Interaction, game: GameService, identity: str) -> None:

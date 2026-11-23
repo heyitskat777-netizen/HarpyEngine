@@ -155,6 +155,14 @@ def map_cell(cell: list[int] | tuple[int, int] | None) -> str:
     return f"{cell[0]},{cell[1]}" if cell is not None else "position unknown or offstage"
 
 
+CIVIC_LABELS = {
+    "protest": "Public protest",
+    "public_response_to_protest": "Handler's public response to a protest",
+    "rebel_public_sympathy": "Public sympathy for the Rebels",
+    "public_show_of_support": "Handler's public show of support",
+}
+
+
 class MapPages(discord.ui.View):
     def __init__(self, service: WorldService, owner: int):
         super().__init__(timeout=600)
@@ -181,6 +189,15 @@ class MapPages(discord.ui.View):
             f"{clean(x['name'])} · {map_cell(x['cell'])} · known {x['gorgon_class']}"
             for x in world["gorgons"]
         ]
+        locations = {x["id"]: clean(x["name"]) for x in world["locations"]}
+        for condition in world.get("civic_conditions", []):
+            if condition["kind"] == "cult_occupation":
+                site = locations[condition["site"]]
+                lines.append(f"{site} · occupied by {clean(condition['name'])}")
+            label = CIVIC_LABELS.get(condition["kind"])
+            if label is not None:
+                city = locations.get(condition.get("city"))
+                lines.append(f"{city} · {label}" if city is not None else label)
         self.page = min(self.page, max(0, (len(lines) - 1) // 8))
         self.previous.disabled = self.page == 0
         self.next.disabled = (self.page + 1) * 8 >= len(lines)
@@ -208,17 +225,58 @@ class MapPages(discord.ui.View):
 
 
 async def open_world(interaction: discord.Interaction, service: WorldService) -> None:
+    from girlframe.services.m3_access import Access
+    from girlframe.services.m3_ancillary import AncillaryService
+    from girlframe.services.m3_expanded_status import ExpandedStatusService
+    from girlframe.services.m3_mother_sprite import SpriteEscapeService
+    from girlframe.services.m3_timeskip import RULE as TIMESKIP_RULE
+
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(service.get, viewer, private=True)
     if data["world"] is None:
         await setup_world(interaction, service, data)
         return
+    timeskip_enabled = Access(service.store).activity_specialist_enabled(TIMESKIP_RULE)
+    ancillary = AncillaryService(service.missions)
+    ancillary_options = await asyncio.to_thread(ancillary.invite_options, viewer)
+    standing = ExpandedStatusService(service.game)
+    standing_enabled = await asyncio.to_thread(standing.enabled)
+    sprite_escape = SpriteEscapeService(service.game)
+    sprite_reviews = False
+    if any(row["gorgon_class"] == "sprite" and row["alive"] for row in data["world"]["gorgons"]):
+        try:
+            sprite_reviews = bool(
+                (await asyncio.to_thread(sprite_escape.options, viewer))["options"]
+            )
+        except WorkflowError:
+            pass
 
     async def choose(current: discord.Interaction, action: str) -> None:
         fresh = await asyncio.to_thread(service.get, viewer_from_interaction(current), private=True)
         world = fresh["world"]
         if world is None:
             raise WorkflowError("Initialize the world first.")
+        if action == "ancillary_invite" and ancillary_options:
+            from girlframe.discord_adapter.m3_ancillary import open_offer
+
+            await open_offer(current, ancillary, ancillary_options)
+            return
+        if action == "expanded_status" and standing_enabled:
+            from girlframe.discord_adapter.m3_expanded_status import open_status
+
+            await open_status(current, standing)
+            return
+        if action == "sprite_escape" and sprite_reviews:
+            from girlframe.discord_adapter.m3_mother_sprite import open_review
+
+            await open_review(current, sprite_escape)
+            return
+        if action == "timeskip" and timeskip_enabled:
+            from girlframe.discord_adapter.m3_timeskip import open_timeskip_start
+            from girlframe.services.m3_timeskip import TimeskipService
+
+            await open_timeskip_start(current, TimeskipService(service.game))
+            return
         if action == "location_build":
             from girlframe.discord_adapter.m3_location_build import open_build
             from girlframe.services.m3_location_build import LocationBuildService
@@ -257,6 +315,76 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
             return
         if action == "map":
             await MapPages(service, viewer.user_id).show(current)
+            return
+        if action == "stable_portal":
+            portal = next(iter(world.get("stable_portals", ())), None)
+            if portal is None:
+                raise WorkflowError("The private map has no established laboratory portal.")
+            status = "Accessible laboratory" if portal["accessible"] else "Site unavailable"
+            await reply(
+                current,
+                "**Stable Voidspace portal**\n"
+                + clean(portal["laboratory"])
+                + " · "
+                + map_cell(portal["cell"])
+                + " · "
+                + status,
+            )
+            return
+        if action == "share_gorgon_tag":
+            from girlframe.services.m3_gorgon_tags import GorgonTagService
+
+            if current.channel_id is None:
+                raise WorkflowError("Open this control in the original Gorgon scene.")
+            channel = current.channel_id
+            tags = GorgonTagService(service.game)
+            menu = await asyncio.to_thread(tags.view, viewer_from_interaction(current), channel)
+            if not menu["gorgons"] or not menu["girls"]:
+                raise WorkflowError("Join with your actual Gorgon and its intended witnesses.")
+
+            async def show_tags(click: discord.Interaction, target: str) -> None:
+                async def submit(confirm: discord.Interaction, values: dict[str, Any]) -> str:
+                    await asyncio.to_thread(
+                        tags.disclose,
+                        viewer_from_interaction(confirm),
+                        str(confirm.id),
+                        channel,
+                        menu["revision"],
+                        target,
+                        values["tag"][0],
+                        values["audience"],
+                        values["account"],
+                    )
+                    return (
+                        "The original witnesses can use this Tag when they roll against the Gorgon."
+                    )
+
+                form = NativeForm(
+                    viewer.user_id,
+                    "Share an observed Gorgon Tag",
+                    "Choose the Girls who actually observed it in this scene.",
+                    [
+                        Field("tag", "Actual Tag", menu["gorgons"][target]["tags"]),
+                        Field(
+                            "audience",
+                            "Original witnesses",
+                            menu["girls"],
+                            1,
+                            min(len(menu["girls"]), 25),
+                        ),
+                        Field("account", "What did they observe?", paragraph=True),
+                    ],
+                    submit,
+                )
+                await reply(click, form.text(), form)
+
+            picker = Picker(
+                viewer.user_id,
+                "Choose the Gorgon whose Tag was observed.",
+                tuple((identity, data["name"]) for identity, data in menu["gorgons"].items()),
+                show_tags,
+            )
+            await picker.show(current)
             return
         if action == "gorgon_position":
             offstage = {
@@ -300,6 +428,18 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
             from girlframe.services.m3_gorgon import GorgonService
 
             await open_gorgon_attack(current, GorgonService(service))
+            return
+        if action == "erratic_tag":
+            from girlframe.discord_adapter.m3_gorgon import open_erratic_tag
+            from girlframe.services.m3_erratic_gorgon import ErraticService
+
+            await open_erratic_tag(current, ErraticService(service.game))
+            return
+        if action == "erratic_flee":
+            from girlframe.discord_adapter.m3_gorgon import open_erratic_flight
+            from girlframe.services.m3_erratic_gorgon import ErraticService
+
+            await open_erratic_flight(current, ErraticService(service.game), pursuit=False)
             return
         if action in ("gorgon_contest", "gorgon_core"):
             from girlframe.discord_adapter.m3_gorgon_combat import open_contest, open_exposure
@@ -407,17 +547,45 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
         "**World management**\nChoose an explicit action.",
         (
             ("map", "View the player map"),
+            *(
+                (("stable_portal", "View the stable laboratory portal"),)
+                if data["world"].get("stable_portals")
+                else ()
+            ),
             ("matrix_context", "Set Matrix scene location"),
             ("supply_drop", "Supply Drop — repair or temporary Frame equipment"),
             ("cute_uniforms", "Cute Uniforms — actual dressing"),
             ("girl_insurance", "Girl Insurance — acquired source and effect"),
             ("location_rebuild", "Rebuild an actual damaged or destroyed location"),
             ("location_build", "Build a new location"),
+            *((("timeskip", "Propose a Timeskip"),) if timeskip_enabled else ()),
             ("gorgon_position", "Record an actually unknown Gorgon position"),
             ("npc", "Introduce an NPC"),
             ("npc_invite", "Invite someone to play an NPC / Director"),
+            *(
+                (("ancillary_invite", "Invite an Ancillary character"),)
+                if ancillary_options
+                else ()
+            ),
             ("reveal", "Reveal a Gorgon encountered by the Cadre"),
+            *((("sprite_escape", "Review a Sprite's actual escape"),) if sprite_reviews else ()),
+            *((("expanded_status", "Review Expanded Status"),) if standing_enabled else ()),
+            *(
+                (("share_gorgon_tag", "Share an observed Gorgon Tag"),)
+                if any(x["tags"] for x in data["world"]["gorgons"])
+                else ()
+            ),
             ("gorgon_attack", "Gorgon Attack on an ordinary NPC"),
+            *(
+                (
+                    ("erratic_tag", "Erratic Gorgon Tags an NPC"),
+                    ("erratic_flee", "Erratic Gorgon flees"),
+                )
+                if any(
+                    x["gorgon_class"] == "erratic" and x["alive"] for x in data["world"]["gorgons"]
+                )
+                else ()
+            ),
             ("gorgon_contest", "Pit two Gorgons' actual Assets"),
             ("gorgon_core", "Confirm actual Gorgon Core exposure"),
         ),

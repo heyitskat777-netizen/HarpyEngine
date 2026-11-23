@@ -159,8 +159,8 @@ def test_native_enforcer_rule_retention_has_actual_paid_source_and_stops_unselec
         game.event(c, 1, str(uuid4()), "synthetic.actual_next_exchange_funds", canon)
     actor = current_ref(state(game), 2)
     source = state(game)
-    plan = swap.create(PLAYER, str(uuid4()), "JANUS-B")["id"]
-    selected = selection(source, "JANUS-B").model_copy(update=dict(retained_rule=rule))
+    plan = swap.create(PLAYER, str(uuid4()), "JANUS")["id"]
+    selected = selection(source, "JANUS").model_copy(update=dict(retained_rule=rule))
     swap.change(PLAYER, str(uuid4()), plan, 1, selection=selected)
     pay(swap, plan)
     actual = state(game)
@@ -169,7 +169,7 @@ def test_native_enforcer_rule_retention_has_actual_paid_source_and_stops_unselec
     with ledger.engine.connect() as c:
         assert owned(c, game, actual, actor, rule) == grant
     assert actual.sheets["2"].permissions == 0
-    assert actual.sheets["2"].frame == "JANUS-B"
+    assert actual.sheets["2"].frame == "JANUS"
     assert not firearms(actual, actor, acquired.frame(actual, actor))
     assert enforcer.initiative(actual, actor) == (rule == acquired.INITIATIVE)
     assert enforcer.conditioning(actual, actor) == (rule == acquired.OBEDIENCE)

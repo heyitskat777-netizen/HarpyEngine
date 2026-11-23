@@ -139,11 +139,22 @@ class CastService:
         return (cast, False) if cast else (self._legacy(c, scene), True)
 
     def view(self, viewer: GuildViewer, channel: int) -> dict[str, Any]:
+        from girlframe.engine.m3_npc_job_prompts import PROMPTS
+
         with self.store.engine.connect() as c:
             self.game.authorize(c, viewer, game=False)
             state = load_state(c, self.store.campaign_id)
             cast, legacy = self._current(c, state, channel)
             bindings = profiles(c, self.store.campaign_id)
+            from girlframe.services.m3_captured import CapturedService
+
+            capture_service: CapturedService | None = None
+            if viewer.user_id == cast.facilitator:
+                capture_service = CapturedService(self.game)
+                try:
+                    capture_service._gate(c, viewer)
+                except (ValueError, WorkflowError):
+                    capture_service = None
             visible = []
             offers = []
             known_refs = set()
@@ -194,12 +205,236 @@ class CastService:
                             for x in state.director_contexts
                         )
                     )
+                from girlframe.engine.m3_harpy_mask import active as human_mask
                 from girlframe.engine.m3_prince import presentation
                 from girlframe.services.m3_consume_support import knowledge_allowed
 
-                known = known and knowledge_allowed(state, actor.ref)
                 part = presentation(state, actor.ref, cast.id)
+                disguise = human_mask(state, actor.ref, cast.id) if actor.girl == "harpy" else None
+                if disguise and actor.alive and not actor.offstage_source:
+                    part = disguise.appearance
+                    known = known or any(x.controller == viewer.user_id for x in cast.roles)
+                known = known and knowledge_allowed(state, actor.ref)
                 if known:
+                    owned_npc = (
+                        next((x for x in state.world.npcs if x.id == actor.ref.entity), None)
+                        if state.world
+                        and actor.ref.kind == "npc"
+                        and actor.controller == role.controller == viewer.user_id
+                        else None
+                    )
+                    prompts = (
+                        {job: PROMPTS[job] for job in owned_npc.jobs if job in PROMPTS}
+                        if owned_npc
+                        else {}
+                    )
+                    harpy_actions: dict[str, bool] = {}
+                    can_escape = False
+                    if actor.rules == "girl_frame" and viewer.user_id == actor.controller:
+                        from girlframe.services.m3_escape import EscapeService
+
+                        escape_service = EscapeService(self.game)
+                        try:
+                            escape_service._gate(c, viewer)
+                            escape_service._where(c, state, channel, actor.ref)
+                            can_escape = True
+                        except (ValueError, WorkflowError):
+                            pass
+                    can_capture = False
+                    if capture_service and actor.ref.kind in ("npc", "external_pilot"):
+                        try:
+                            _, _, _, _, candidates = capture_service._source(
+                                c, state, channel, actor.ref
+                            )
+                            can_capture = bool(candidates)
+                        except (ValueError, WorkflowError):
+                            pass
+                    if (
+                        actor.ref.kind == "external_pilot"
+                        and actor.girl == "harpy"
+                        and actor.controller == role.controller == viewer.user_id
+                    ):
+                        from girlframe.engine.m3_harpy_advancements import (
+                            EAGLE,
+                            KISS,
+                            MANIC_PIXIE,
+                            MASK,
+                            NOTHING,
+                            ONLY_SHE_MATTERS,
+                            SONG_OF_LOVE_LOST,
+                            VISIONS,
+                        )
+                        from girlframe.services.m3_harpy_advancements import scene_harpy
+
+                        for tag, rule in (
+                            ("only_she_matters", ONLY_SHE_MATTERS),
+                            ("harpy_song", SONG_OF_LOVE_LOST),
+                            ("harpy_eagle", EAGLE),
+                            ("harpy_gaze", MANIC_PIXIE),
+                            ("harpy_visions", VISIONS),
+                            ("harpy_rewrite", NOTHING),
+                            ("harpy_mask", MASK),
+                            ("harpy_kiss", KISS),
+                        ):
+                            try:
+                                scene_harpy(
+                                    self.game, c, state, viewer.user_id, cast, actor.ref, rule
+                                )
+                            except (ValueError, WorkflowError):
+                                continue
+                            harpy_actions[tag] = True
+                    can_abysstech = False
+                    if (
+                        actor.rules == "ancillary"
+                        and actor.girl == "ABYSSAL ACOLYTE"
+                        and actor.controller == viewer.user_id
+                    ):
+                        from girlframe.services.m3_abysstech import AbysstechService
+
+                        abysstech = AbysstechService(self.game)
+                        try:
+                            abysstech._gate(c, viewer)
+                            original, body, tools = abysstech._acolyte(c, state, channel, actor.ref)
+                            can_abysstech = bool(
+                                tools and abysstech._girls(c, state, original, body)
+                            )
+                        except (ValueError, WorkflowError):
+                            pass
+                    if (
+                        actor.girl == "harpy"
+                        and actor.controller == role.controller == viewer.user_id
+                    ):
+                        from girlframe.services.m3_harpy_intimacy import HarpyIntimacyService
+
+                        intimacy = HarpyIntimacyService(self.game)
+                        try:
+                            intimacy._gate(c, viewer)
+                            _, _, _, intimate_people = intimacy._where(c, state, channel, actor.ref)
+                            if intimate_people:
+                                harpy_actions["harpy_intimacy"] = True
+                        except (ValueError, WorkflowError):
+                            pass
+                    can_patronage = False
+                    if actor.controller == viewer.user_id and (
+                        actor.rules == "ancillary"
+                        and actor.girl == "MERCENARY"
+                        or owned_npc is not None
+                        and "patron" in owned_npc.jobs
+                    ):
+                        from girlframe.services.m3_mercenary_patron import MercenaryPatronService
+
+                        patronage = MercenaryPatronService(self.game)
+                        try:
+                            patronage._gate(c, viewer)
+                            can_patronage = (
+                                bool(patronage.withdrawal(c, state, viewer, channel, actor.ref))
+                                if actor.ref.kind == "npc"
+                                else True
+                            )
+                        except (ValueError, WorkflowError):
+                            pass
+                    can_debt = can_debt_contact = False
+                    if actor.controller == role.controller == viewer.user_id:
+                        from girlframe.services.m3_mercenary_debt import DebtService
+
+                        try:
+                            debt = DebtService(self.game)
+                            if any(item.holder == actor.ref for item in state.held_items):
+                                _, mercenaries = debt.options(c, state, viewer, channel, actor.ref)
+                                can_debt = bool(mercenaries)
+                            if actor.rules == "ancillary" and actor.girl == "MERCENARY":
+                                can_debt_contact = bool(
+                                    debt.contact_options(c, state, viewer, channel, actor.ref)
+                                )
+                        except (ValueError, WorkflowError):
+                            pass
+                    can_recall = False
+                    if (
+                        actor.controller == role.controller == viewer.user_id
+                        and actor.rules == "ancillary"
+                        and actor.girl == "REVOLUTIONARY IDEALIST"
+                    ):
+                        from girlframe.services.m3_chronically_online import (
+                            ChronicallyOnlineService,
+                        )
+
+                        try:
+                            can_recall = bool(
+                                ChronicallyOnlineService(self.game).options(
+                                    c, state, viewer, channel, actor.ref
+                                )
+                            )
+                        except (ValueError, WorkflowError):
+                            pass
+                    can_chained_placement = False
+                    if actor.controller == role.controller == viewer.user_id and (
+                        actor.rules == "ancillary"
+                    ):
+                        from girlframe.services.m3_chained_darling import ChainedPlacementService
+
+                        try:
+                            can_chained_placement = bool(
+                                ChainedPlacementService(self.game).available(
+                                    c, state, viewer, channel, actor.ref
+                                )
+                            )
+                        except (ValueError, WorkflowError):
+                            pass
+                    can_ancillary_intimacy = False
+                    if (
+                        actor.controller == role.controller == viewer.user_id
+                        and actor.rules == "ancillary"
+                    ):
+                        from girlframe.services.m3_ancillary_intimacy import (
+                            AncillaryIntimacyService,
+                        )
+
+                        try:
+                            can_ancillary_intimacy = bool(
+                                AncillaryIntimacyService(self.game).options(
+                                    c, state, viewer, channel, actor.ref
+                                )
+                            )
+                        except (ValueError, WorkflowError):
+                            pass
+                    can_confidence = False
+                    if (
+                        actor.controller == role.controller == viewer.user_id
+                        and actor.girl == "PRODIGY"
+                    ):
+                        from girlframe.services.m3_ancillary_discipline import (
+                            AncillaryDisciplineService,
+                        )
+                        from girlframe.services.m3_prodigy_swoon import SwoonService
+
+                        try:
+                            can_confidence = bool(
+                                AncillaryDisciplineService(self.game).confidence(
+                                    c, state, viewer, actor.ref
+                                )
+                                or SwoonService(self.game).options(
+                                    c, state, viewer, channel, actor.ref
+                                )["npcs"]
+                            )
+                        except (ValueError, WorkflowError):
+                            pass
+                    can_optional_order = can_pronouns = False
+                    if actor.controller == role.controller == viewer.user_id:
+                        from girlframe.services.m3_ancillary_orders import (
+                            AncillaryOrderService,
+                            illegal,
+                        )
+
+                        if actor.girl == "REVOLUTIONARY IDEALIST":
+                            can_pronouns = illegal(c, self.game, state, actor.ref)
+                        try:
+                            can_optional_order = bool(
+                                AncillaryOrderService(self.game).options(
+                                    c, state, viewer, channel, actor.ref
+                                )
+                            )
+                        except (ValueError, WorkflowError):
+                            pass
                     known_refs.add(actor.ref)
                     visible.append(
                         {
@@ -210,6 +445,27 @@ class CastService:
                             "can_detect_act": part is None,
                             "stale": role.controller != actor.controller,
                             "own": role.controller == viewer.user_id,
+                            **({"job_prompts": prompts} if prompts else {}),
+                            **harpy_actions,
+                            **({"escape_source": True} if can_escape else {}),
+                            **({"abysstech": True} if can_abysstech else {}),
+                            **({"patronage": True} if can_patronage else {}),
+                            **({"mercenary_debt": True} if can_debt else {}),
+                            **({"debt_contact": True} if can_debt_contact else {}),
+                            **({"chronically_online": True} if can_recall else {}),
+                            **({"chained_placement": True} if can_chained_placement else {}),
+                            **({"ancillary_intimacy": True} if can_ancillary_intimacy else {}),
+                            **({"spend_prodigy_confidence": True} if can_confidence else {}),
+                            **({"ancillary_order": True} if can_optional_order else {}),
+                            **({"illegal_pronouns": True} if can_pronouns else {}),
+                            **({"capture_source": True} if can_capture else {}),
+                            **(
+                                {"director_phone": True}
+                                if owned_npc
+                                and actor.rules == "director"
+                                and viewer.user_id != state.handler
+                                else {}
+                            ),
                         }
                     )
                 if (
@@ -225,6 +481,42 @@ class CastService:
                             "label": actor.label,
                         }
                     )
+            can_form_cadre = False
+            if cast.facilitator == viewer.user_id:
+                from girlframe.services.m3_ancillary_cadre import AncillaryCadreService
+
+                try:
+                    can_form_cadre = AncillaryCadreService(self.game).available(
+                        c, state, viewer, channel
+                    )
+                except (ValueError, WorkflowError):
+                    pass
+            from girlframe.engine.m3_erratic_flight import flights
+            from girlframe.services.m3_ancillary_discipline import AncillaryDisciplineService
+            from girlframe.services.m3_erratic_gorgon import RULE as ERRATIC_RULE
+
+            can_cadre_punish = False
+            if cast.facilitator == viewer.user_id or any(
+                x.controller == viewer.user_id and x.actor.kind == "npc" for x in cast.roles
+            ):
+                try:
+                    can_cadre_punish = bool(
+                        AncillaryDisciplineService(self.game).options(c, state, viewer, channel)
+                    )
+                except (ValueError, WorkflowError):
+                    pass
+            registry = self.actors.missions.access.registry
+            erratic_pursuit = bool(
+                registry is not None
+                and any(entry.id == ERRATIC_RULE and entry.verified for entry in registry.entries)
+                and any(
+                    x.controller == viewer.user_id and x.actor.kind == "pilot" for x in cast.roles
+                )
+                and any(
+                    item.scene == cast.id and item.caught is None and item.gorgon in known_refs
+                    for item in flights(state).values()
+                )
+            )
             return {
                 "scene": cast.id,
                 "channel": channel,
@@ -234,6 +526,9 @@ class CastService:
                 "roles": visible,
                 "facilitator": cast.facilitator,
                 "own_facilitator": cast.facilitator == viewer.user_id,
+                "can_form_ancillary_cadre": can_form_cadre,
+                "can_punish_ancillary_cadre": can_cadre_punish,
+                "erratic_pursuit": erratic_pursuit,
                 "may_facilitate": state.handler == viewer.user_id,
                 "adjudicator": cast.adjudicator.model_dump(mode="json")
                 if cast.adjudicator in known_refs
@@ -272,6 +567,11 @@ class CastService:
 
                     guard(c, self.store, cast.id, ref)
                     if ref.kind == "pilot":
+                        from girlframe.services.campaign_time_history import require_reserved
+
+                        require_reserved(
+                            c, self.store.campaign_id, cast.id, actor.controller, ref.incarnation
+                        )
                         scenes = t.m2["m2_scenes"]
                         others = c.execute(
                             sa.select(scenes).where(

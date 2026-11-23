@@ -1,5 +1,8 @@
 """Private, two-party starting-Bond setup agreements with immutable revisions."""
 
+from __future__ import annotations
+
+import builtins
 import json
 from typing import Any, Literal
 from uuid import UUID, uuid4
@@ -10,6 +13,7 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine.bonds import PROMPTS, BondProposal
 from girlframe.services.handler_setup import HandlerService
+from girlframe.services.m2_state import load_state
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -17,8 +21,9 @@ Decision = Literal["accept", "decline", "withdraw"]
 
 
 class BondService:
-    def __init__(self, store: OnboardingStore):
+    def __init__(self, store: OnboardingStore, *, enrollment: bool = False):
         self.store = store
+        self.enrollment = enrollment
 
     def _authorize(self, connection: Connection, viewer: GuildViewer) -> None:
         self.store.guild_member(viewer)
@@ -147,6 +152,54 @@ class BondService:
             rows.sort(key=lambda row: row["id"], reverse=True)
             return [row | {"stale": self._stale(connection, row)} for row in rows[:20]]
 
+    def _open(self, connection: Connection, user: str) -> builtins.list[dict[str, Any]]:
+        return [
+            row
+            for row in self._latest(connection, user)
+            if row["state"] in ("pending", "accepted") and not self._stale(connection, row)
+        ]
+
+    def enrollment_options(self, viewer: GuildViewer) -> dict[str, Any]:
+        with self.store.engine.connect() as connection:
+            self._authorize(connection, viewer)
+            source = str(viewer.user_id)
+            handler = HandlerService(self.store)
+            profiles = handler._roster(connection)
+            own = profiles.get(viewer.user_id)
+            if own is None:
+                return {"slots": 0, "targets": [], "prompts": []}
+            open_bonds = self._open(connection, source)
+            slots = max(0, 2 - len(open_bonds))
+            existing = {
+                row["target_id"] if row["source_id"] == source else row["source_id"]
+                for row in open_bonds
+            }
+            state = load_state(connection, self.store.campaign_id)
+            girl = own["girl_playbook"]
+            assignment = (
+                handler.mentor_for(connection, viewer.user_id) if girl == "NEWGIRL" else None
+            )
+            targets = [
+                {"id": str(uid), "callsign": profile["callsign"], "revision": profile["revision"]}
+                for uid, profile in profiles.items()
+                if slots
+                and uid != viewer.user_id
+                and str(uid) not in state.sheets
+                and str(uid) not in existing
+                and (
+                    girl != "NEWGIRL"
+                    or (assignment is not None and uid == assignment.mentor.user_id)
+                )
+                and len(self._open(connection, str(uid))) < 2
+            ]
+            targets.sort(key=lambda entry: (entry["callsign"].casefold(), entry["id"]))
+            return {
+                "slots": slots,
+                "targets": targets,
+                "prompts": PROMPTS[girl],
+                "source_revision": own["revision"],
+            }
+
     def propose(
         self,
         viewer: GuildViewer,
@@ -178,6 +231,12 @@ class BondService:
             if proposal.prompt >= len(PROMPTS[girl]):
                 raise WorkflowError("Choose a starting prompt from your current Girl playbook.")
             source, target = str(viewer.user_id), str(proposal.target_id)
+            open_bonds = self._open(connection, source)
+            if self.enrollment:
+                if target in load_state(connection, self.store.campaign_id).sheets:
+                    raise WorkflowError("Choose a pilot who is still completing enrollment.")
+                if len(open_bonds) >= 2 or len(self._open(connection, target)) >= 2:
+                    raise WorkflowError("Both pilots need an available starting Bond slot.")
             outgoing_count = 0
             for row in self._latest(connection, str(viewer.user_id)):
                 if row["state"] in ("pending", "accepted") and not self._stale(connection, row):
@@ -190,7 +249,11 @@ class BondService:
                             "An active starting proposal exists; review or withdraw it first."
                         )
             outgoing_limit = (
-                1 if girl in ("NEWGIRL", "BONDED") else self.store.policy.owner_starting_bond_count
+                2
+                if self.enrollment
+                else 1
+                if girl in ("NEWGIRL", "BONDED")
+                else self.store.policy.owner_starting_bond_count
             )
             if outgoing_count >= outgoing_limit:
                 raise WorkflowError(
@@ -245,6 +308,13 @@ class BondService:
             if decision == "accept" and target and state == "pending":
                 if self._stale(connection, row):
                     raise WorkflowError("STALE_PROFILE: profiles changed; request a new proposal.")
+                if (
+                    self.enrollment
+                    and str(viewer.user_id) in load_state(connection, self.store.campaign_id).sheets
+                ):
+                    raise WorkflowError(
+                        "Starting Bond acceptance belongs to a pilot still in enrollment."
+                    )
                 new_state = "accepted"
             elif decision == "decline" and target and state == "pending":
                 new_state = "declined"

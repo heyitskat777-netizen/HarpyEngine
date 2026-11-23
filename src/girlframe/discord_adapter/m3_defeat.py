@@ -152,22 +152,49 @@ async def open_decision(
     *,
     reviewed_revision: int | None = None,
 ) -> None:
+    from girlframe.services.m3_soldier_expendable import OPTION, REQUEST
+
     kind = decision["kind"]
     fields = []
     level = decision["result"]["tier"]
     own = decision.get("own") or {}
+    narrative = kind == "defeat_select" and bool(decision.get("defeat", {}).get("narrative"))
+    death_available = narrative and bool(decision["defeat"].get("narrative_death_available"))
     if kind == "defeat_select":
-        allowed = DEFEAT_LOW if level == "low" else DEFEAT_MID if level == "mid" else DEFEAT_HIGH
+        allowed: tuple[str, ...] = (
+            DEFEAT_LOW if level == "low" else DEFEAT_MID if level == "mid" else DEFEAT_HIGH
+        )
+        if narrative and not death_available:
+            allowed = tuple(x for x in allowed if x != "death")
+        soldiers = decision["defeat"].get("soldiers", ())
+        outcomes = tuple((x, LABELS[x]) for x in allowed)
+        if soldiers:
+            outcomes += ((OPTION, "Ask a present Soldier to take the fatal hit"),)
         fields = [
             Field(
                 "options",
                 "Your printed consequences",
-                tuple((x, LABELS[x]) for x in allowed),
+                outcomes,
                 2 if level == "high" else 1,
                 2 if level in ("low", "high") else 1,
             ),
             Field("account", "Describe the selected actual consequences", paragraph=True),
         ]
+        if death_available and "death" in allowed:
+            fields.append(
+                Field(
+                    "confirm_death",
+                    "Only if you chose Death",
+                    (("yes", "End this character's life and use this campaign's one death"),),
+                    0,
+                    1,
+                    required=False,
+                )
+            )
+        if soldiers:
+            fields.append(
+                Field("soldier", "Original Soldier for Expendable", soldiers, 0, required=False)
+            )
         if level == "mid":
             for family in ("girl", "frame"):
                 fields.extend(
@@ -250,6 +277,20 @@ async def open_decision(
                     required=False,
                 )
             )
+    elif kind == REQUEST:
+        fields = [
+            Field(
+                "accept",
+                "Your Soldier's decision",
+                (("yes", "Take this hit and die"), ("no", "Decline the fatal hit")),
+            ),
+            Field(
+                "account",
+                "Describe the actual intervention if accepting",
+                paragraph=True,
+                required=False,
+            ),
+        ]
     elif kind == "defeat_tag_gift":
         fields = [
             Field(
@@ -309,6 +350,20 @@ async def open_decision(
             )
         ]
     instructions = "Your actual owned decision. Nothing applies until Confirm."
+    if death_available and level == "low":
+        instructions += (
+            " To use the campaign's one death, choose Death on its own and confirm it separately."
+        )
+    elif narrative and level == "low":
+        instructions += " This campaign's death has already been used. Choose how you survive."
+    if kind == REQUEST:
+        source = decision["defeat"]["soldier_request"]
+        instructions = (
+            "Your Soldier "
+            + clean(source["label"])
+            + " has been asked to take this hit.\n"
+            + clean(source["context"])[:1100]
+        )
     if kind == "defeat_accept_alternative":
         if reviewed_revision != decision["revision"]:
             view = OfferPages(game, decision["id"], interaction.user.id)
@@ -333,14 +388,26 @@ async def open_decision(
             )
         elif kind == "defeat_accept_alternative":
             answer = ChoiceAnswer(flag=values["accept"][0] == "yes")
+        elif kind == REQUEST:
+            answer = ChoiceAnswer(flag=values["accept"][0] == "yes", text=values.get("account", ""))
         else:
             extra = {}
             for key, value in values.items():
-                if key in ("options", "account") or not value:
+                if key in ("options", "account", "confirm_death") or not value:
                     continue
                 extra[key] = value[0] if isinstance(value, tuple) else value
+            options = tuple(values["options"])
             answer = ChoiceAnswer(
-                options=tuple(values["options"]), text=values.get("account", ""), fields=extra
+                options=options,
+                text=values.get("account", ""),
+                fields=extra,
+                flag=True
+                if (
+                    death_available
+                    and "death" in options
+                    and values.get("confirm_death") == ("yes",)
+                )
+                else None,
             )
         result = await asyncio.to_thread(
             game.respond,

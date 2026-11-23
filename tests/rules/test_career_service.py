@@ -75,7 +75,7 @@ def draft():
     return DraftInput(
         callsign="NEW_GIRL",
         girl_playbook="MOCKINGBIRD",
-        frame_playbook="JANUS-B",
+        frame_playbook="JANUS",
         notes="NEW_PRIVATE_CANARY",
     )
 
@@ -177,7 +177,7 @@ def test_native_owned_new_character_and_handler_status_controls(ledger):
         assert not await archive.interaction_check(current(3))
         await open_replacement(owner, svc, "original-ended-career")
         form = owner.edit_original_response.call_args.kwargs["view"]
-        form.values.update(callsign="NEW_GIRL", girl=("MOCKINGBIRD",), frame=("JANUS-B",), notes="")
+        form.values.update(callsign="NEW_GIRL", girl=("MOCKINGBIRD",), frame=("JANUS",), notes="")
         await form.confirm.callback(current(2, 20802))
         assert form.completed
         character = state(game).incarnation_bindings[-1].character

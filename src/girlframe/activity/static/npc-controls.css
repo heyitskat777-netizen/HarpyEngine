@@ -1,0 +1,94 @@
+.harpy-npc-controls {
+  --harpy-npc-border: var(--activity-border, #687184);
+  --harpy-npc-surface: var(--activity-surface, #222835);
+  --harpy-npc-text: var(--activity-text, #eef1f7);
+  --harpy-npc-accent: var(--activity-accent, #d4dcff);
+  background: var(--harpy-npc-surface);
+  color: var(--harpy-npc-text);
+  border: 1px solid var(--harpy-npc-border);
+  border-radius: .75rem;
+  padding: 1rem;
+  font: inherit;
+}
+
+.harpy-npc-controls header,
+.harpy-npc-controls .harpy-npc-actions {
+  display: flex;
+  gap: .6rem;
+  flex-wrap: wrap;
+  align-items: end;
+}
+
+.harpy-npc-controls header {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.harpy-npc-controls h2,
+.harpy-npc-controls p {
+  margin: .35rem 0;
+}
+
+.harpy-npc-controls article,
+.harpy-npc-controls form {
+  padding: .75rem 0;
+  border-block-start: 1px solid var(--harpy-npc-border);
+}
+
+.harpy-npc-controls label {
+  display: grid;
+  gap: .3rem;
+  margin-block: .25rem .55rem;
+}
+
+.harpy-npc-controls button,
+.harpy-npc-controls textarea,
+.harpy-npc-controls input,
+.harpy-npc-controls select {
+  font: inherit;
+  color: inherit;
+  background: var(--harpy-npc-surface);
+  border: 1px solid var(--harpy-npc-border);
+  border-radius: .35rem;
+  padding: .45rem .65rem;
+  max-inline-size: 100%;
+}
+
+.harpy-npc-controls textarea {
+  resize: vertical;
+}
+
+.harpy-npc-controls button {
+  cursor: pointer;
+  border-color: var(--harpy-npc-accent);
+}
+
+.harpy-npc-controls button:disabled {
+  opacity: .65;
+  cursor: wait;
+}
+
+.harpy-npc-controls :focus-visible {
+  outline: 2px solid var(--harpy-npc-accent);
+  outline-offset: 3px;
+}
+
+.harpy-npc-controls blockquote {
+  padding-inline-start: .65rem;
+  margin: .55rem 0;
+  border-inline-start: 2px solid var(--harpy-npc-accent);
+  overflow-wrap: anywhere;
+}
+
+.harpy-npc-controls [role="alert"] {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.harpy-npc-controls label {
+  min-inline-size: 0;
+}
+
+.harpy-npc-controls select {
+  field-sizing: content;
+}

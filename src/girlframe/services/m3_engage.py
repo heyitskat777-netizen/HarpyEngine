@@ -4,8 +4,10 @@ import hashlib
 import json
 from typing import TYPE_CHECKING, Any
 
+import sqlalchemy as sa
 from sqlalchemy import Connection
 
+from girlframe.database import tables as t
 from girlframe.engine import m3_engage as rules
 from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput
 from girlframe.engine.m3_actor_state import ActorRef, SceneCast
@@ -17,6 +19,50 @@ from girlframe.services.read_only_bot import GuildViewer
 
 if TYPE_CHECKING:
     from girlframe.services.m2_game import GameService
+
+
+def completed_interception(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    *,
+    defender: ActorRef,
+    opponent: ActorRef,
+    scene: str,
+    after: str | None,
+) -> str | None:
+    effect = action["data"].get("engage") or {}
+    if (
+        action["state"] != "complete"
+        or action["scene_id"] != scene
+        or action["actor_id"] != defender.entity
+        or action["data"].get("play") != "engage"
+        or not effect.get("applied")
+        or effect.get("target") != opponent.model_dump(mode="json")
+        or after is None
+    ):
+        return None
+    events = t.events
+    source = sa.select(events.c.seq).where(events.c.campaign_id == game.store.campaign_id)
+    start = c.scalar(source.where(events.c.id == after))
+    if start is None:
+        return None
+    for raw in state.facts:
+        if raw.get("kind") != "engage_maneuver":
+            continue
+        proof = rules.Maneuver.model_validate_json(raw["body"])
+        if (
+            proof.source_action == action["id"]
+            and proof.actor == defender
+            and proof.opponent == opponent
+            and proof.kind in ("pin", "drive_back")
+            and proof.scene == scene
+            and c.scalar(source.where(events.c.id == proof.source_event, events.c.seq > start))
+            is not None
+        ):
+            return proof.source_event
+    return None
 
 
 def prepare(
@@ -177,6 +223,7 @@ def apply(
     answer: ChoiceAnswer,
 ) -> None:
     from girlframe.services.m3_battle import damage_actor
+    from girlframe.services.m3_harpy_advancements import choose_sparrows
 
     extra = row["kind"] == "engage_assault_extra"
     if row["kind"] not in ("engage_maneuvers", "engage_assault_extra"):
@@ -186,6 +233,7 @@ def apply(
     actor = resolve(state, ref, profiles(c, game.store.campaign_id), require_current_profile=False)
     if int(row["actor_id"]) != actor.controller or actor.controller != int(action["actor_id"]):
         raise WorkflowError("Only the actual acting body's human chooses its maneuvers")
+    choose_sparrows(action, answer.fields.get("harpy_sparrows"))
     from girlframe.engine import m3_untouchable as untouchable
     from girlframe.services.m3_untouchable import entitlement
 
@@ -200,11 +248,28 @@ def apply(
             "fields": {
                 k: v
                 for k, v in answer.fields.items()
-                if k not in ("untouchable_tag", "wyvern_vehicle")
+                if k not in ("untouchable_tag", "wyvern_vehicle", "harpy_sparrows")
             }
         }
     )
-    casualty_extra = extra and meta.get("extra_source") == "girl.casualty.no-one-better"
+    hunt_choice = json.loads(row["body_json"]).get("trainer_hunt") if extra else None
+    if hunt_choice:
+        from girlframe.services.m3_trainer_phrases import prove_hunt
+
+        parent = game.action(c, action["parent_id"])
+        source = next((x for x in game.pending(c, parent["id"]) if x["id"] == hunt_choice), None)
+        if (
+            not meta.get("trainer_hunt_extra_started")
+            or hunt_choice != meta.get("trainer_hunt_choice")
+            or action["data"]["result"]["tier"] not in ("mid", "high")
+            or source is None
+            or prove_hunt(game, c, state, parent, source)
+            != (ref, ActorRef.model_validate(meta["target"]))
+        ):
+            raise WorkflowError("Recover the original Hunt's earned Engage option")
+    casualty_extra = (
+        extra and not hunt_choice and meta.get("extra_source") == "girl.casualty.no-one-better"
+    )
     if casualty_extra:
         from girlframe.services.m3_learned_plays import (
             consumed_no_one_better,
@@ -237,10 +302,13 @@ def apply(
         maneuver_answer,
         assault_extra=extra,
         casualty_extra=casualty_extra,
+        hunt_extra=bool(hunt_choice),
         substitute_damage=selected_tag is not None,
         wyvern_extra=wyvern,
     )
-    if meta.get("extra_selected" if extra else "applied"):
+    if meta.get(
+        "trainer_hunt_extra_done" if hunt_choice else "extra_selected" if extra else "applied"
+    ):
         raise WorkflowError("This actual source maneuver choice has already resolved")
     from girlframe.services.m3_budget_sabotage import intercept as intercept_sabotage
 
@@ -291,8 +359,12 @@ def apply(
 
     release_counter_pin(game, c, state, action, executed, event)
     if extra:
-        meta["extra_selected"] = True
-        action["data"]["result"]["extra_maneuver"] = executed
+        if hunt_choice:
+            meta["trainer_hunt_extra_done"] = True
+            action["data"]["result"]["trainer_hunt_maneuver"] = executed
+        else:
+            meta["extra_selected"] = True
+            action["data"]["result"]["extra_maneuver"] = executed
         from girlframe.services.m3_battle import results as battle_results
 
         battle_results(game, c, action, state=state)
@@ -338,6 +410,7 @@ def projection(
     )
     count = 0 if extra else {"low": 1, "mid": 2, "high": 3}[action["data"]["result"]["tier"]]
     from girlframe.engine.m2 import MANEUVERS
+    from girlframe.engine.m3_harpy_advancements import SPARROWS_CHOICES
     from girlframe.services.m3_wyvern_combat import crushing_options
 
     meta = action["data"].get("engage") or action["data"]["battle"]
@@ -354,6 +427,9 @@ def projection(
 
         learned = consumed_no_one_better(game, c, state, action)
     return dict(
+        harpy_sparrows=SPARROWS_CHOICES
+        if not extra and action["data"].get("harpy_sparrows")
+        else (),
         **(
             {"learned_rider": "No One Better: actual spent lesson, one extra Engage option"}
             if learned
@@ -445,13 +521,17 @@ def complete_damage_work(
             synchronize(game, c, action, event, viewer, key)
 
 
-def start_assault_extra(game: "GameService", c: Connection, action: dict[str, Any]) -> None:
+def start_assault_extra(
+    game: "GameService", c: Connection, action: dict[str, Any], *, hunt: bool = False
+) -> None:
     """Ask before primary Assault effects; the same used Asset may subsequently be damaged."""
     meta = action["data"]["battle"]
-    if meta.get("extra_started"):
-        raise WorkflowError("Resume the existing actual Harpy extra-maneuver choice")
-    meta["extra_started"] = True
-    game.request(c, action, int(action["actor_id"]), "engage_assault_extra")
+    flag = "trainer_hunt_extra_started" if hunt else "extra_started"
+    if meta.get(flag):
+        raise WorkflowError("Resume the existing actual extra-maneuver choice")
+    meta[flag] = True
+    body = {"trainer_hunt": meta["trainer_hunt_choice"]} if hunt else {}
+    game.request(c, action, int(action["actor_id"]), "engage_assault_extra", body)
 
 
 def ensure_assault_extra(
@@ -464,6 +544,8 @@ def ensure_assault_extra(
     key: str,
 ) -> bool:
     if action["data"]["play"] != "all_out_assault":
+        return True
+    if action["data"]["battle"].get("rebel_ambush"):
         return True
     casualty = action["data"]["battle"].get("extra_source") == "girl.casualty.no-one-better"
     body = action["data"].get("actor_basic")

@@ -16,6 +16,7 @@ from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import fingerprint, owned_refs, resolve
 from girlframe.engine.m3_girl_runtime_state import has_rule
 from girlframe.engine.m3_physical_state import CockpitAction, FrameLock, InitialPlacement, Review
+from girlframe.engine.m3_rebel_frame_theft import missing
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
@@ -125,6 +126,7 @@ class PhysicalService:
                 state, ref, profiles(c, self.store.campaign_id), require_current_profile=False
             )
             placement = next((x for x in state.placements if x.actor == ref), None)
+            stolen_frame = missing(state, ref, actor.frame_instance)
             return dict(
                 game_revision=state.revision,
                 pending_id=next(
@@ -159,7 +161,9 @@ class PhysicalService:
                         )
                     )
                 ],
+                stolen_frame=stolen_frame,
                 can_record_unknown=placement is not None
+                and not stolen_frame
                 and placement.custody is None
                 and placement.occupied_frame_owner is None
                 and not any(
@@ -200,6 +204,12 @@ class PhysicalService:
             state = load_state(c, self.store.campaign_id)
             if type(revision) is not int or state.revision != revision:
                 raise WorkflowError("STALE_COCKPIT: refresh the actual physical state.")
+            from girlframe.engine.m3_sentinel_shell import holds
+
+            if holds(state, command.actor, "trapped") or (
+                command.operation == "pilot" and holds(state, command.actor, "cockpit")
+            ):
+                raise WorkflowError("Resolve the actual Sentinel's containment before this action")
             if self.game.immediate_work(c, viewer.user_id):
                 raise WorkflowError(
                     "Resolve the actual immediate consequence before ordinary cockpit operations."
@@ -246,8 +256,15 @@ class PhysicalService:
                     pilot=command.operation == "pilot",
                 )
             from girlframe.engine import m3_void_frame_entry as entry_rules
+            from girlframe.engine.m3_berserk_frame import active as active_berserk
 
-            entry_source = bool(entry_rules.records(state, entry_rules.Selection))
+            berserk = (
+                active_berserk(updated, command.actor, actual.frame_instance)
+                if actual.frame_instance is not None
+                else None
+            )
+            activated = berserk is not None and berserk.activated == source
+            entry_source = not activated and bool(entry_rules.records(state, entry_rules.Selection))
             if entry_source:
                 from girlframe.services.m3_void_frame_entry import stage_entry, synchronize_entry
 
@@ -271,6 +288,14 @@ class PhysicalService:
                 event_id=source,
                 operation=command.operation,
             )
+            if activated:
+                from girlframe.services.m3_berserk_frame import synchronize as synchronize_berserk
+
+                assert berserk is not None
+                synchronize_berserk(c, self.game, updated, source)
+                return dict(
+                    operation="berserk", revision=updated.revision, gorgon=berserk.design.id
+                )
             void_works = []
             if command.operation != "exit" and occupied != (command.actor, actual.frame_instance):
                 sheet = updated.sheets[command.actor.entity]

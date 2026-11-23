@@ -35,7 +35,7 @@ def facts():
 
 
 def admitted(canon):
-    canon.sheets["2"].frame = "JANUS-B"
+    canon.sheets["2"].frame = "JANUS"
     owner = current_ref(canon, 2)
     instance = "initial:" + str(owner.incarnation)
     changed = rules.admit(

@@ -71,13 +71,22 @@ def authorize(
 
 
 def require_rule(
-    game: GameService, c: Connection, state: GameState, actor: ActorRef, rule: str
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    actor: ActorRef,
+    rule: str,
+    *,
+    initialize_court: bool = False,
 ) -> None:
     rules.frame(state, actor)
     registry = Access(game.store).registry
     if registry is None:
         raise WorkflowError("Recover the actual approved Red Queen source")
-    registry.require_available(rule)
+    if rule != rules.COURT or initialize_court:
+        Access(game.store, registry).require_specialist_rule(rule)
+    else:
+        registry.require_available(rule)
     if rule in rules.REQUISITIONS:
         receipts = rules.held(state, actor, rule)
         if not receipts:
@@ -490,16 +499,20 @@ def projection(
     if row["kind"] in ("red_queen_memory_category", "red_queen_memory_handler"):
         return common | dict(
             categories=[(x, x.title()) for x in ("person", "place", "day", "year")],
-            ams=[(x.id, x.role) for x in rules.ams(state, court)],
+            ams=[(x.id, x.role) for x in rules.ams(state, court)]
+            if value.total >= 8 and value.target and value.target.kind == "pilot"
+            else [],
         )
     assert value.target is not None
-    sheet = state.sheets[value.target.entity]
+    sheet = state.sheets.get(value.target.entity) if value.target.kind == "pilot" else None
+    if sheet is not None and sheet.character_id != value.target.incarnation:
+        raise WorkflowError("Recover the original pilot's current memory source")
 
     return common | dict(
         categories=json.loads(value.replies["categories"]),
         identities=[
             (x.id, x.name)
-            for x in (sheet.identities if sheet else ())
+            for x in (sheet.identities if sheet and value.total >= 8 else ())
             if not (x.protected or x.paired or x.am_limiter or x.obsession_sources)
         ],
         ams=[(x.id, x.role) for x in rules.ams(state, court)],
@@ -709,7 +722,12 @@ def apply_choice(
             raise WorkflowError("Confirm a real time range of at least one year")
         categories.append(dict(kind=answer.options[0], scope=scope))
         replies = dict(value.replies)
-        if kind == "red_queen_memory_category":
+        if (
+            kind == "red_queen_memory_category"
+            and value.total >= 8
+            and value.target
+            and value.target.kind == "pilot"
+        ):
             chosen = rules.get(state, rules.CourtAM, answer.fields.get("am", ""))
             if chosen.court != court.id:
                 raise WorkflowError("Select your actual existing Court AM for the extraction")
@@ -737,9 +755,14 @@ def apply_choice(
                 for x in answer.fields.get(f"memories{index}", "").splitlines()
                 if x.strip()
             )
-            ids = tuple(x for x in answer.fields.get(f"identities{index}", "").split(",") if x)
-            am = rules.get(state, rules.CourtAM, value.replies["am"])
-            if am.court != court.id:
+            install = value.total >= 8 and value.target and value.target.kind == "pilot"
+            ids = (
+                tuple(x for x in answer.fields.get(f"identities{index}", "").split(",") if x)
+                if install
+                else ()
+            )
+            selected_am = rules.get(state, rules.CourtAM, value.replies["am"]) if install else None
+            if selected_am is not None and selected_am.court != court.id:
                 raise WorkflowError("Install a real existing AM of this Court")
             extraction = rules.Extraction(
                 id=rules.identity("extraction", value.id, str(index)),
@@ -751,7 +774,7 @@ def apply_choice(
                 scope=category["scope"],
                 memories=memories,
                 identities=ids,
-                am=am.id,
+                am=selected_am.id if selected_am else None,
                 through_revision=state.revision,
                 low=value.total < 8,
                 event=event,
@@ -1310,7 +1333,7 @@ class RedQueenService:
     def initialize(self, viewer: GuildViewer, key: str, revision: int) -> dict[str, Any]:
         def operation(c: Connection, state: GameState, event: str) -> dict[str, Any]:
             actor = current_ref(state, viewer.user_id)
-            require_rule(self.game, c, state, actor, rules.COURT)
+            require_rule(self.game, c, state, actor, rules.COURT, initialize_court=True)
             if any(
                 x.actor == actor and x.frame == rules.frame(state, actor)
                 for x in rules.records(state, rules.Court)
@@ -1434,9 +1457,14 @@ class RedQueenService:
             actor = current_ref(state, viewer.user_id)
             original = rules.frame(state, actor)
             gate = Access(self.store)
-            gate.authorize(c, viewer, "economy")
-            assert gate.registry is not None
-            gate.registry.require_available(rule)
+            gate.authorize(
+                c,
+                viewer,
+                "plays"
+                if rule == rules.MEMORY and gate.activity_specialist_enabled(rule)
+                else "economy",
+            )
+            gate.require_specialist_rule(rule)
             if (
                 rule not in rules.REQUISITIONS
                 or rule != rules.ACCUSATION

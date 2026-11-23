@@ -363,13 +363,13 @@ def test_actual_free_package_grant_survives_paid_selected_retention_without_seco
         )
         game.event(c, ADMIN.user_id, str(uuid4()), "synthetic.existing_funds_position", canon)
     swap = FrameSwapService(game, registry)
-    identity = configured(swap, game, "JANUS-B")
-    assert selection(state(game), "JANUS-B").retained_rule == RULE
+    identity = configured(swap, game, "JANUS")
+    assert selection(state(game), "JANUS").retained_rule == RULE
     before = state(game)
     pay(swap, identity)
     actual = state(game)
     grant = actual.personal_firearms[0]
-    assert actual.sheets["2"].frame == "JANUS-B"
+    assert actual.sheets["2"].frame == "JANUS"
     assert actual.sheets["2"].permissions == before.sheets["2"].permissions - 4
     assert grant.source_work == work and grant.purchase is None
     assert grant.frame_instance != before.personal_firearms[0].frame_instance

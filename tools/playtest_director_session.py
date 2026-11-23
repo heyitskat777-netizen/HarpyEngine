@@ -9,7 +9,7 @@ from p2_trial_runtime import Trial
 
 HELP = """Synthetic personas: /as lark | kite | handler | gm
 Text submits your persona's IC scene input. /retry resumes the last operation.
-/work /choices /decision ID /status /narrations
+/work /campaign-work [PERIOD] /choices /decision ID /status /narrations
 /play JSON (native PlayInput) /choice ID JSON /answer KIND JSON /roll ACTION
 /battle-preview /battle-declare JSON (native Declaration) /grant [2,3]
 GM: /frame JSON /propose KIND SOURCE /propose-next OPERATION /load REQUEST FILE /review PROPOSAL
@@ -71,6 +71,8 @@ class Console:
             return {"help": HELP}
         elif command == "/work":
             result = trial.session.work(viewer, scene, gm=trial.role == "gm")
+        elif command == "/campaign-work":
+            result = trial.session.campaign_work(viewer, scene, period_id=argument or None)
         elif command == "/choices":
             result = trial.game.choices(viewer)
         elif command == "/decision":
@@ -91,7 +93,7 @@ class Console:
             revision = self._resolve(
                 lambda: {"revision": state(trial.game).sheets[str(viewer.user_id)].revision}
             )["revision"]
-            result = trial.game.begin(viewer, key, 900, revision, value)
+            result = trial.game.begin(viewer, key, trial.scene_channel, revision, value)
             self.state["variables"]["action"] = result["action_id"]
             trial.tick()
         elif command in ("/choice", "/answer"):
@@ -115,11 +117,15 @@ class Console:
             result = trial.game.roll(viewer, key, argument)
             trial.tick()
         elif command == "/battle-preview":
-            result = BattleService(trial.store).preview(viewer, 900)
+            result = BattleService(trial.store).preview(viewer, trial.scene_channel)
         elif command == "/battle-declare":
             revision = self._resolve(lambda: {"revision": state(trial.game).revision})["revision"]
             result = BattleService(trial.store).propose(
-                viewer, key, revision, 900, Declaration.model_validate_json(argument)
+                viewer,
+                key,
+                revision,
+                trial.scene_channel,
+                Declaration.model_validate_json(argument),
             )
             self.state["variables"]["battle"] = result["id"]
         elif command == "/grant":

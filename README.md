@@ -1,6 +1,23 @@
 # HarpyEngine — GIRL FRAME private Discord pilot
 
+The November 16 Activity source bundle is reconciled against the newer P2 engine.
+Use the [Activity integration return](integrations/activity/INTEGRATION_HANDOFF.md)
+for native mission controls, owned character reset, specialist scope, required
+consequences, the workflow matrix and exact verification evidence. Source work
+does not install policy, deploy a runtime or approve all playbooks.
+
 ## Engine-first synthetic Director trial
+
+The [model-contract revision and retest](reports/P2_MODEL_CONTRACT_REVISION.md)
+adds scoped speech classification, attributed testimony/paraphrases, native actor
+names, explicit response ownership and natural Handler drafts held for GM review.
+The default stays synthetic; external providers and Activity ports are not installed.
+The [connected follow-through](reports/P2_CONNECTED_DIRECTOR_REVIEW.md) adds actual
+controller response handoffs, competing/correcting account links and reviewed
+intervention needs for indirect requests and urgent known reports.
+The [worldbuilding workflow](reports/P2_WORLDBUILDING.md) adds reviewed native world
+developments and ordinary NPC/faction introductions. Commitments stay private until
+selected disclosures; narrative goals and complications apply no mechanical effects.
 
 The [P2 assisted player-test candidate](docs/P2_PLAYER_TEST_GUIDE.md) now supplies
 one resumable synthetic session flow, native GM/owner review, scoped retained
@@ -215,6 +232,10 @@ sharing. This also remains under the M3 development release gate.
 
 Current assignments and scoped evidence are in the [M3 current queue](docs/M3_CURRENT_QUEUE.md).
 
+The [offline campaign-time work order](docs/work_orders/ASYNC_CAMPAIGN_TIME.md)
+documents the opt-in calendar, Handler-confirmed chapter cuts and shared player
+projection for future Discord and Activity integration.
+
 The bot is currently **intentionally off** at the owner's request. See the
 [M3 completion audit and bounded plan](docs/M3_COMPLETION_AUDIT.md) for implemented
 features, unfinished systems and the next delivery units. No new completion
@@ -324,8 +345,8 @@ For the owner's private test guild, create the synthetic policy once:
 
 ```bash
 python tools/setup_discord_dev.py \
-  --application-id 1566951910601269268 \
-  --guild-id 1566954229535608913 \
+  --application-id 111111111111111111 \
+  --guild-id 222222222222222222 \
   --approve-admin-status
 python -m girlframe start --config var/discord-dev/policy.json --check
 bash tools/run_discord_dev.sh
@@ -336,11 +357,12 @@ is a synthetic **read-only engine-status fixture**, not a runnable game engine.
 Policy examples are in `config/discord-policy.example.json`. The offline `--check`
 validates policy/sandbox only, not schema, credentials or live guild access.
 
-Actual startup checks the authenticated application and guild, then synchronizes
-14 top-level commands/groups in that guild only. The currently running frozen
-pre-M3 release retains 13. Reconnect does not resync commands
-or duplicate workers. Responses are ephemeral, with mentions disabled. Only an
-explicit confirmed setup posts onboarding controls; raw rolls publish by default unless `publish:false`; approved M2 Plays post minimal scene controls and receipts. SDK DEBUG logging must stay disabled because it can
+Engine startup checks the authenticated application and guild, then removes the
+retired HarpyEngine guild slash commands by name. The Activity's command listener
+owns `/activity-campaign create` (including the role and channel binding) and
+`/activity-campaign launch`. The engine worker preserves that group, unrelated
+commands, and the game services used by the Activity. Reconnect does not repeat
+startup or duplicate workers. SDK DEBUG logging must stay disabled because it can
 include interaction credentials. HTTP/Gateway use the inherited HTTPS proxy and
 verified TLS. SIGTERM and Ctrl-C close the bot.
 
@@ -381,7 +403,12 @@ environment restoration. This work does not publish environment configuration.
 HTTP 404 / Discord 10004 at startup means the application cannot access the guild:
 check installation and guild ID. Errors omit raw provider bodies and private paths.
 
-## Commands and player flow
+## Activity commands and legacy player flow
+
+Use `/activity-campaign create` to create a campaign and bind its launch channel,
+then `/activity-campaign launch` in that channel. Gameplay, sheets, inbox and
+safety controls are in the Activity. The slash commands listed below document the
+legacy offline adapter and its native workflows.
 
 Campaign interpretations, their authority, remaining clarity questions and how to
 change them are recorded in [the rulings register](docs/CAMPAIGN_RULINGS.md).
@@ -416,6 +443,7 @@ unimplemented mechanics, player responses or an M3 release.
 | `/campaign join` | Explicit self-enrollment as a player |
 | `/campaign handler [member]` | Configured administrator; review/confirm appointment, or omit member to revoke |
 | `/campaign mentor newgirl member` | Appointed Handler; review/confirm a Mentor nomination |
+| `/session-zero` | Legacy private fallback for the group worksheet and campaign opening |
 | `/campaign status_setup` | Appointed Handler; select, review and confirm the starting rank order |
 | `/campaign creation_rules` | Appointed Handler; review and explicitly confirm starting-resource rulings or leave them unresolved |
 | `/campaign setup` | Joined member; saved starting Status, Handler and permitted Mentor information |
@@ -462,12 +490,11 @@ last saved draft. Persistent entry buttons are restored at startup; slash fallba
 remain available if the entry message is deleted.
 
 Saving queues the Girl/Frame label roles and callsign nickname. SORROW + Mockingbird
-+ JANUS-B requests **MOCKINGBIRD**, **JANUS-B** and **SORROW**. Only app-owned,
++ JANUS requests **MOCKINGBIRD**, **JANUS** and **SORROW**. Only app-owned,
 permission-free label roles are managed; unrelated roles are preserved. A blocked
 Discord update leaves the draft saved and can be retried. Discord forbids renaming
 the server owner; that test account must set its own nickname manually. Other
-hierarchy and permissions restrictions also apply. JANUS-B is an owner-requested
-server label using official JANUS rules, as confirmed by the owner. See
+hierarchy and permissions restrictions also apply. See
 [character tags](docs/CHARACTER_TAGS.md).
 
 After saving the profile, use `/character build` to select two Girl Assets and two
@@ -542,7 +569,7 @@ description text for owner review and explicit saving against the new allocation
 
 **Frame setup** in `/character build` shows verified starting facts and preserves
 the existing form. Save progress persists a schema-versioned baseline with source
-PDF pages. JANUS/JANUS-B has a separate unnamed Harpy Core with its four prescribed
+PDF pages. JANUS has a separate unnamed Harpy Core with its four prescribed
 starting Tags. DoctorDoctor has eight-box obsolescence capacity; CONSUME has three
 starvation levels; Wyvern has fixed Enormous. Red Queen records five AM roles and
 the default four-self/one-other split. Unverified starting counters remain explicitly pending; actual starting AM
@@ -709,13 +736,17 @@ python -m girlframe db rebuild --config var/discord-dev/policy.json
 python tools/seed_synthetic.py --dest var/offline-synthetic.db
 ```
 
-Backup uses SQLite's backup API, includes committed WAL data, and verifies integrity
-and foreign keys. Backups contain private data and are created mode 0600. Restore
-always creates a **new offline file**, refusing any existing destination. Stop the
+Backup uses SQLite's backup API and includes committed WAL data. It verifies integrity
+and foreign keys in a private staging file before publishing the result without
+overwriting an existing path. Use a destination filesystem that supports hard links.
+Backups contain private data and are created with owner-only permissions on POSIX.
+Restore always creates a **new offline file**, refusing any existing destination. Stop the
 bot before deliberately switching `GIRLFRAME_DATABASE_URL` to a verified restore;
 keep the old database and policy. Restored pending outbox work may retry delivery.
 Public export excludes notes, private receipts and actor/membership IDs. It is a
 view, not a full restore source. Export and seed also refuse existing destinations.
+See the [P2 recovery runbook](docs/P2_RELEASE_RECOVERY_RUNBOOK.md) for the managed
+Activity stores, restore privacy checks, and rollback rehearsal.
 
 Rebuild restores current character public/private projections from immutable
 versioned snapshots, and appends local-operator audit provenance; it neither rolls

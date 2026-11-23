@@ -1,0 +1,50 @@
+--- a/mission_lab.py
++++ b/mission_lab.py
+@@ -9,7 +9,7 @@
+ import subprocess
+ import sys
+ from contextlib import nullcontext
+-from dataclasses import dataclass, field, replace
++from dataclasses import dataclass, field
+ from hashlib import sha256
+ from http import HTTPStatus
+ from http.cookies import CookieError, SimpleCookie
+@@ -687,19 +687,10 @@
+             )
+             return runtime
+
+-        def review_viewer(self, campaign, viewer):
+-            if campaign.reviewed_director and ai_trial and viewer.user_id == ai_trial.facilitator:
+-                return replace(viewer, is_administrator=True)
+-            return viewer
+-
+         def ai_provider(self, campaign, viewer):
+             if ai_trial is None or campaign.reviewed_director is None:
+                 raise SignInError(HTTPStatus.NOT_FOUND, "AI provider controls are unavailable.")
+-            if viewer.user_id != ai_trial.facilitator:
+-                raise SignInError(HTTPStatus.FORBIDDEN, "Only the trial facilitator can check providers.")
+-            game = campaign.reviewed_director.session.game
+-            with game.store.engine.connect() as connection:
+-                game.authorize(connection, viewer, game=False)
++            campaign.reviewed_director.authorize_provider(viewer)
+             return ai_trial
+
+         def admit(self, runtime, viewer, *, legacy=False):
+@@ -889,7 +880,7 @@
+             elif (adapter := campaign.reviewed_director or (director if campaign is default else None)) and (match := DIRECTOR_ROUTE.fullmatch(path)):
+                 try:
+                     _, viewer = self.session()
+-                    value = adapter.read(self.review_viewer(campaign, viewer), match[1], match[2], match[3])
++                    value = adapter.read(viewer, match[1], match[2], match[3])
+                     self.send_json(HTTPStatus.OK, value)
+                 except SignInError as error:
+                     self.send_json(error.status, {"error": str(error)})
+@@ -1127,7 +1118,7 @@
+                     if not KEY.fullmatch(key):
+                         raise ValueError
+                     data = self.read_object(96_000 if match[2] == "opening-save" else 16384)
+-                    value = adapter.write(self.review_viewer(campaign, session[1]), key, match[1], match[2], data)
++                    value = adapter.write(session[1], key, match[1], match[2], data)
+                     self.send_json(HTTPStatus.OK, value)
+                 except (TypeError, ValueError, UnicodeError):
+                     self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Invalid scene command."})

@@ -1,0 +1,424 @@
+--- a/mission_lab.py
++++ b/mission_lab.py
+@@ -50,7 +50,8 @@
+ from campaign_registry import DEFAULT_CAMPAIGN, CampaignBinding, CampaignRegistry
+ from handler_playbook import HANDLER_PLAY_STEPS
+ from mission_desk import MissionDesk
+-from player_setup import PlayerSetup, seed_players, seed_roster
++from p2_scene import SESSION_ZERO_READS, SESSION_ZERO_WRITES, local_fixture_director, manual_campaign_setup
++from player_setup import SCENE, PlayerSetup, seed_players, seed_roster
+ from private_battlefield import PRIVATE_BATTLEFIELD_CHANNEL, PrivateBattlefield
+
+ GUILD = 200
+@@ -60,6 +61,16 @@
+ DRILL_OPPONENT = GuildViewer(3, GUILD, True, False)
+ COOKIE = "harpy_lab_session"
+ MISSION_ROUTE = re.compile(r"/api/mission-offers/([0-9a-f-]{36})/response")
++DIRECTOR_ROUTE = re.compile(
++    r"/api/director/([0-9a-f-]{36})/([a-z-]{1,35})(?:/([A-Za-z0-9:-]{1,100}))?"
++)
++SETUP_ROUTE = re.compile(
++    r"/api/campaign-opening/([a-z-]{1,35})(?:/([A-Za-z0-9:-]{1,100}))?"
++)
++SETUP_READ = {"opening", "opening-brief", "persona-setup", "persona-agreement", "fictional-time", "portrayal-sheets"} | SESSION_ZERO_READS
++SETUP_WRITE = {
++    "opening-save", "opening-launch", "persona-save", "persona-notes", "persona-activate", "persona-propose", "persona-answer", "portrayal-draft", "portrayal-confirm"
++} | SESSION_ZERO_WRITES.keys()
+ TRANSCRIPT_ROUTE = re.compile(r"/api/rooms/(relay|[0-9a-f]{16})/transcript")
+ COMMUNICATION_ROUTE = re.compile(
+     r"/api/communications/((?:pilot|handler)-[0-9a-z-]{1,80})"
+@@ -78,6 +89,7 @@
+     "mission-desk.js",
+     "battlefield-ui.js",
+     "communications-ui.js",
++    "p2-desk.js",
+     "character-sheet-ui.js",
+     "character-draft-ui.js",
+     "character-sheets/harpyengine-sheets.mjs",
+@@ -271,6 +283,11 @@
+     handler = GuildViewer(int(binding.handler_id), policy.guild_id, True, False)
+     seed_roster(store, handler)
+     service = MissionService(store, configure_m3_fixture(store))
++    # New managed campaigns use the established owner ruling for original Handler creation.
++    rulings = store.policy.owner_m3_rulings
++    store.policy = store.policy.model_copy(update={"owner_m3_rulings": rulings.model_copy(
++        update={"handler_creation": "owned_shared_choices_preserve_existing"}
++    )})
+     ledger = CampaignLedger(store)
+     organizer = GuildViewer(int(binding.handler_id), policy.guild_id, True, True)
+     status = ledger.status(organizer)
+@@ -379,7 +396,13 @@
+     bound_roster=False,
+     campaign_registry=None,
+     campaign_bot_token=None,
++    p2_fixture=False,
++    p2_shadow_readiness=False,
+ ) -> None:
++    if p2_shadow_readiness and not p2_fixture:
++        raise ValueError("Shadow readiness requires the disposable P2 fixture.")
++    if p2_fixture and (discord or bound_roster or campaign_registry):
++        raise ValueError("P2 fixture routes require a disposable offline Activity lab.")
+     if bound_roster and not discord:
+         raise ValueError("The private roster requires Discord sign-in.")
+     if discord and discord.config.tester_role_ids and not bound_roster:
+@@ -446,10 +469,34 @@
+         )
+         if prepare_test_battlefield is not None:
+             prepare_test_battlefield(battlefield)
++    director = local_fixture_director(setup.game, activity_shadow=p2_shadow_readiness) if p2_fixture else None
++    director_scene = None
++    if director:
++        with service.store.engine.connect() as connection:
++            director_scene = setup.game.scene(connection, 900)["id"]
++
++    def director_room(room):
++        if not director or room != "relay":
++            return False
++        with service.store.engine.connect() as connection:
++            observer = director.session.observer
++            state = observer._state(connection, director_scene)
++            return state.policy.mode == "shadow" and (
++                not p2_shadow_readiness or observer._consented(connection, observer._scene(connection, director_scene, allow_closed=True), state)
++            )
++
++    def campaign_opening(setup, route):
++        opening = manual_campaign_setup(setup.game, setup.handler.user_id, opening_channel=SCENE)
++        if not route.startswith("opening"):
++            return opening, ""
++        with setup.game.store.engine.connect() as connection:
++            return opening, setup.game.scene(connection, SCENE)["id"]
+     participants = {
+         secrets.token_urlsafe(32): ("Invited pilot", OFFERED),
+         secrets.token_urlsafe(32): ("Other pilot", OTHER),
+     }
++    if director:
++        participants[secrets.token_urlsafe(32)] = ("Facilitator / Handler", handler)
+     sessions: dict[str, tuple[str, GuildViewer]] = {}
+     sdk = (
+         (RUNTIME / "discord-sdk" / "embedded-app.js").read_bytes() if discord else None
+@@ -767,12 +814,38 @@
+                         "allow_dm": discord.config.allow_dm if discord else False,
+                         "battlefield": battlefield is not None,
+                         "bound_roster": bound_roster,
++                        "director_scene": director_scene if director else None,
++                        "activity_shadow": p2_shadow_readiness,
++                        "campaign_setup": catalog is not None,
+                         "campaign_switcher": catalog is not None,
+                         "tester_role_gate": bool(
+                             discord and discord.config.tester_role_ids
+                         ),
+                     },
+                 )
++            elif (catalog and campaign is not default and (match := SETUP_ROUTE.fullmatch(path))
++                  and match[1] in SETUP_READ):
++                try:
++                    _, viewer = self.session()
++                    adapter, scene = campaign_opening(setup, match[1])
++                    self.send_json(HTTPStatus.OK, adapter.read(viewer, scene, match[1], match[2]))
++                except SignInError as error:
++                    self.send_json(error.status, {"error": str(error)})
++                except WorkflowError as error:
++                    self.send_json(HTTPStatus.FORBIDDEN, {"error": str(error)})
++                except ValueError:
++                    self.send_json(HTTPStatus.NOT_FOUND, {"error": "Unknown setup view."})
++            elif director and (match := DIRECTOR_ROUTE.fullmatch(path)):
++                try:
++                    _, viewer = self.session()
++                    value = director.read(viewer, match[1], match[2], match[3])
++                    self.send_json(HTTPStatus.OK, value)
++                except SignInError as error:
++                    self.send_json(error.status, {"error": str(error)})
++                except WorkflowError as error:
++                    self.send_json(HTTPStatus.FORBIDDEN, {"error": str(error)})
++                except ValueError:
++                    self.send_json(HTTPStatus.NOT_FOUND, {"error": "Unknown scene view."})
+             elif path == "/api/presence" and bound_roster:
+                 try:
+                     _, viewer = self.session()
+@@ -874,7 +947,34 @@
+             elif match := TRANSCRIPT_ROUTE.fullmatch(path):
+                 try:
+                     _, viewer = self.session()
+-                    self.send_json(HTTPStatus.OK, setup.transcript(viewer, match[1]))
++                    if director_room(match[1]):
++                        timeline = director.timeline(viewer, director_scene)
++                        transcript = (
++                            setup.transcript(viewer, match[1]) if timeline["open"] else
++                            {"receipts": setup.scene_plays.receipts(viewer, {"900": match[1]})}
++                        )
++                        with service.store.engine.connect() as connection:
++                            from girlframe.services.m2_state import load_state
++
++                            state = load_state(connection, service.store.campaign_id)
++                        transcript["entries"] = []
++                        for entry in timeline["entries"]:
++                            actor = entry["actor"]
++                            sheet = state.sheets.get(actor["entity"])
++                            names = {npc.id: npc.name for npc in state.world.npcs} if state.world else {}
++                            label = "GM" if actor["kind"] == "gm" else "Handler" if actor["kind"] == "handler" else names.get(actor["entity"], "NPC") if actor["kind"] == "npc" else (
++                                sheet.callsign if sheet and sheet.character_id == actor["incarnation"] else "Pilot"
++                            )
++                            transcript["entries"].append({
++                                "id": entry["sequence"] * 1000 + entry["ordinal"],
++                                "callsign": label, "body": entry["text"], "created": entry["created"],
++                                "action": entry.get("action"),
++                            })
++                        transcript["director"] = {"scene": director_scene, "revision": timeline["revision"],
++                                                  "open": timeline["open"]}
++                    else:
++                        transcript = setup.transcript(viewer, match[1])
++                    self.send_json(HTTPStatus.OK, transcript)
+                 except SignInError as error:
+                     self.send_json(error.status, {"error": str(error)})
+                 except WorkflowError as error:
+@@ -936,6 +1036,33 @@
+                 campaign.battlefield,
+             )
+             handler = setup.handler
++            if (catalog and campaign is not default and (match := SETUP_ROUTE.fullmatch(path))
++                    and (match[1] in SETUP_WRITE or match[1].startswith("time-")) and match[2] is None):
++                try:
++                    key = self.headers.get("Idempotency-Key", "")
++                    if not KEY.fullmatch(key):
++                        raise ValueError
++                    data = self.read_object(96_000 if match[1] == "opening-save" else 16384)
++                    adapter, scene = campaign_opening(setup, match[1])
++                    self.send_json(HTTPStatus.OK, adapter.write(session[1], key, scene, match[1], data))
++                except (TypeError, ValueError, UnicodeError):
++                    self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Invalid setup command."})
++                except WorkflowError as error:
++                    self.send_json(HTTPStatus.CONFLICT, {"error": str(error)})
++                return
++            if director and (match := DIRECTOR_ROUTE.fullmatch(path)) and match[3] is None:
++                try:
++                    key = self.headers.get("Idempotency-Key", "")
++                    if not KEY.fullmatch(key):
++                        raise ValueError
++                    data = self.read_object(96_000 if match[2] == "opening-save" else 16384)
++                    value = director.write(session[1], key, match[1], match[2], data)
++                    self.send_json(HTTPStatus.OK, value)
++                except (TypeError, ValueError, UnicodeError):
++                    self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Invalid scene command."})
++                except WorkflowError as error:
++                    self.send_json(HTTPStatus.CONFLICT, {"error": str(error)})
++                return
+             if match := COMMUNICATION_ROUTE.fullmatch(path):
+                 try:
+                     key = self.headers.get("Idempotency-Key", "")
+@@ -1062,7 +1189,17 @@
+                         else nullcontext()
+                     )
+                     with lock:
+-                        receipt = setup.perform(session[1], key, step, data)
++                        if step == "room-post" and director_room(data.get("target")):
++                            if data.keys() != {"target", "text", "fictional_channel", "scene_revision"}:
++                                raise ValueError
++                            receipt = director.write(session[1], key, director_scene, "input", {
++                                "expected_scene_revision": data["scene_revision"],
++                                "speaker": "pilot",
++                                "text": data["text"],
++                                "fictional_channel": data["fictional_channel"],
++                            })
++                        else:
++                            receipt = setup.perform(session[1], key, step, data)
+                     self.send_json(HTTPStatus.OK, receipt)
+                 except (TypeError, ValueError, UnicodeError):
+                     self.send_json(
+@@ -1113,9 +1250,11 @@
+     with ThreadingHTTPServer(("127.0.0.1", port), Handler) as server:
+         server.origin_host = f"127.0.0.1:{server.server_port}"
+         server.origin = f"http://{server.origin_host}"
++        lab_metadata = {"director_scene": director_scene} if director else {}
+         print(
+             json.dumps(
+                 {
++                    **lab_metadata,
+                     "origin": server.origin,
+                     "pilots": {}
+                     if discord
+@@ -1173,7 +1312,11 @@
+     parser.add_argument("--port", type=int, default=8799)
+     parser.add_argument("--audit", action="store_true")
+     parser.add_argument("--stop-on-input-close", action="store_true")
++    parser.add_argument("--p2-fixture", action="store_true")
++    parser.add_argument("--p2-shadow-readiness", action="store_true")
+     args = parser.parse_args()
++    if args.p2_fixture and (args.discord or args.audit):
++        parser.error("--p2-fixture only serves a local synthetic lab.")
+     if args.allow_dm and not args.discord:
+         parser.error("--allow-dm requires --discord.")
+     if args.bound_roster and (not args.discord or args.audit):
+@@ -1204,6 +1347,8 @@
+             args.stop_on_input_close,
+             discord,
+             bound_roster=args.bound_roster,
++            p2_fixture=args.p2_fixture,
++            p2_shadow_readiness=args.p2_shadow_readiness,
+             campaign_bot_token=os.environ.pop(
+                 "GIRLFRAME_ACTIVITY_SETUP_BOT_TOKEN", None
+             )
+--- a/foundation-ui.js
++++ b/foundation-ui.js
+@@ -623,13 +623,22 @@
+       input.required = true;
+       input.rows = 2;
+       input.placeholder = "Enter a scene transmission…";
++      const mode = element("select");
++      mode.id = "director-fictional-channel";
++      mode.hidden = true;
++      mode.setAttribute("aria-label", "What can the Handler hear?");
++      for (const [value, text] of [["scene", "Narration for review"], ["comms", "Public scene speech"]]) {
++        const option = element("option", text);
++        option.value = value;
++        mode.append(option);
++      }
+       label.append(input);
+       const submit = element("button", room.joined ? "Add to scene" : "Post and join scene", "primary");
+       const status = element("p", undefined, "scene-composer-status");
+       status.setAttribute("role", "status");
+       let lastText;
+       let requestKey;
+-      form.append(label, submit, status);
++      form.append(label, mode, submit, status);
+       form.addEventListener("submit", async event => {
+         event.preventDefault();
+         const command = /^\/play(?:[ \t]+([^\r\n]+))?$/i.exec(input.value.trim());
+@@ -639,13 +648,20 @@
+           openRoomPlays(roomId, command[1]);
+           return;
+         }
+-        if (input.value !== lastText || !requestKey) {
+-          lastText = input.value;
++        const directorRevision = mode.dataset.revision;
++        const payload = {target:roomId,text:input.value};
++        if (directorRevision) {
++          payload.fictional_channel = mode.value;
++          payload.scene_revision = Number(directorRevision);
++        }
++        const intent = JSON.stringify(payload);
++        if (intent !== lastText || !requestKey) {
++          lastText = intent;
+           requestKey = crypto.randomUUID();
+         }
+         submit.disabled = true;
+         try {
+-          await send("room-post", {target:roomId,text:input.value}, requestKey);
++          await send("room-post", payload, requestKey);
+           input.value = "";
+           requestKey = undefined;
+           status.textContent = "Added to the scene.";
+@@ -671,10 +687,16 @@
+
+   async function refreshTranscript(roomId, followLatest = false) {
+     const request = ++transcriptFetch;
+-    const {entries, receipts = [], cast = []} = await readTranscript(roomId);
++    const {entries, receipts = [], cast = [], director} = await readTranscript(roomId);
+     if (request !== transcriptFetch || transcriptRoom !== roomId || view.folder !== "scenes") return;
+     const history = document.getElementById("dialogue-entries");
+-    const snapshot = JSON.stringify([entries, receipts, cast]);
++    const mode = document.getElementById("director-fictional-channel");
++    mode.hidden = !director;
++    mode.dataset.revision = director?.revision ?? "";
++    const composer = mode.closest("form");
++    composer.querySelector("textarea").maxLength = director ? 1000 : 1200;
++    composer.hidden = director?.open === false;
++    const snapshot = JSON.stringify([entries, receipts, cast, director]);
+     if (snapshot === transcriptSnapshot && !transcriptTarget) return;
+     transcriptSnapshot = snapshot;
+     sceneCast = cast;
+@@ -695,6 +717,7 @@
+       if (entry.portrait) artwork.picture(avatar, entry.portrait, {decorative:true, fallback:initials});
+       author.append(avatar, transcriptHeading(entry.callsign, entry.created * 1000));
+       row.append(author, content);
++      if (entry.action) row.append(element("p", entry.action));
+       return {date:entry.created * 1000, id:entry.id, row};
+     });
+     for (const receipt of receipts) {
+--- a/index.html
++++ b/index.html
+@@ -1244,6 +1244,10 @@
+     if (!(await restoreCampaignSwitch())) await connectDiscord(config.client_id, config.allow_dm);
+   }
+   else await refresh();
++  if (config.director_scene || config.campaign_setup) {
++    const {mountDirectorDesk} = await import("/p2-desk.js");
++    mountDirectorDesk(document.querySelector(".workbench"), config.director_scene, activityFetch, config.activity_shadow);
++  }
+ }
+ start().then(() => {
+   clearTimeout(startupTimer);
+--- a/player_setup.py
++++ b/player_setup.py
+@@ -19,7 +19,7 @@
+ from girlframe.engine.m2 import PLAY_IDS, ReleaseApproval
+ from girlframe.engine.m2_registry import REGISTRY, registry_digest
+ from girlframe.engine.npc_bonds import NPC_ROLES
+-from girlframe.engine.playbooks import FRAME_TYPES, GIRL_TYPES
++from girlframe.engine.playbooks import FRAME_TYPES, GIRL_TYPES, canonical_frame
+ from girlframe.services.bonds import BondService
+ from girlframe.services.creation import CreationService
+ from girlframe.engine.creation_review import CreationRulings
+@@ -936,6 +936,6 @@
+         options = {
+             "girl": profile["girl_playbook"] if profile else GIRL,
+-            "frame": profile["frame_playbook"] if profile else FRAME,
++            "frame": profile["frame_playbook"] if profile else canonical_frame(FRAME),
+             **(
+                 {"girls": GIRL_TYPES, "frames": FRAME_TYPES}
+                 if self.bound_roster
+--- a/mission-desk.js
++++ b/mission-desk.js
+@@ -37,13 +37,27 @@
+   });
+ }
+
+-function offerForm(pilots, send) {
++function offerForm(pilots, captureTargets, send) {
+   const form = element("form");
+   const objective = element("textarea");
+   objective.name = "objective";
+   objective.required = true;
+   objective.maxLength = 1200;
+-  field(form, "Mission objective", objective);
++  field(form, captureTargets ? "Mission plan" : "Mission objective", objective);
++  if (captureTargets) {
++    const target = element("select");
++    target.name = "capture_target";
++    target.required = true;
++    const prompt = element("option", "Select a Harpy");
++    prompt.value = "";
++    target.append(prompt);
++    for (const [id, name] of captureTargets) {
++      const option = element("option", name);
++      option.value = id;
++      target.append(option);
++    }
++    field(form, "Harpy to capture and convert", target);
++  }
+   const choices = element("fieldset");
+   choices.append(element("legend", "Invite pilots"));
+   for (const [id, callsign] of pilots) {
+@@ -60,6 +74,7 @@
+   form.append(choices);
+   submit(form, "File mission offer", send, values => ({
+     action: "offer", objective: values.get("objective"), pilots: values.getAll("pilots"),
++    ...(captureTargets ? {capture_target: values.get("capture_target")} : {}),
+   }));
+   return form;
+ }
+@@ -128,10 +143,13 @@
+       if (data.desk.can_begin_off_duty) {
+         target.append(button("Prepare Off-Duty", control => send({action: "off_duty"}, control), true));
+       }
+-      if (data.desk.pilots.length) {
++      if (data.desk.can_offer ?? data.desk.pilots.length > 0) {
+         const offer = element("details");
+-        offer.append(element("summary", "New mission offer"), offerForm(data.desk.pilots, send));
++        offer.append(element("summary", "New mission offer"),
++          offerForm(data.desk.pilots, data.desk.capture_targets, send));
+         target.append(offer);
++      } else if (data.desk.offer_blocker) {
++        target.append(element("p", data.desk.offer_blocker));
+       }
+     }
+   }

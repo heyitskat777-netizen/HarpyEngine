@@ -1,0 +1,530 @@
+[
+  {
+    "id": "pilot-princess",
+    "label": "Princess",
+    "kind": "pilot",
+    "group": "Core Girls",
+    "src": "./artwork/pilot-princess.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 1
+    }
+  },
+  {
+    "id": "pilot-mockingbird",
+    "label": "Mockingbird",
+    "kind": "pilot",
+    "group": "Core Girls",
+    "src": "./artwork/pilot-mockingbird.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 1
+    }
+  },
+  {
+    "id": "pilot-stim-blissed",
+    "label": "Stim-Blissed",
+    "kind": "pilot",
+    "group": "Core Girls",
+    "src": "./artwork/pilot-stim-blissed.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 1
+    }
+  },
+  {
+    "id": "pilot-newgirl",
+    "label": "Newgirl",
+    "kind": "pilot",
+    "group": "Core Girls",
+    "src": "./artwork/pilot-newgirl.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 1
+    }
+  },
+  {
+    "id": "pilot-casualty",
+    "label": "Casualty",
+    "kind": "pilot",
+    "group": "Core Girls",
+    "src": "./artwork/pilot-casualty.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 1
+    }
+  },
+  {
+    "id": "pilot-oldgen",
+    "label": "Oldgen",
+    "kind": "pilot",
+    "group": "Core Girls",
+    "src": "./artwork/pilot-oldgen.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 1
+    }
+  },
+  {
+    "id": "pilot-vatgrown",
+    "label": "Vatgrown",
+    "kind": "pilot",
+    "group": "Core Girls",
+    "src": "./artwork/pilot-vatgrown.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 2
+    }
+  },
+  {
+    "id": "pilot-alpha",
+    "label": "Alpha",
+    "kind": "pilot",
+    "group": "Core Girls",
+    "src": "./artwork/pilot-alpha.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 2
+    }
+  },
+  {
+    "id": "pilot-am",
+    "label": "AM",
+    "kind": "pilot",
+    "group": "Core Girls",
+    "src": "./artwork/pilot-am.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 2
+    }
+  },
+  {
+    "id": "pilot-bonded",
+    "label": "Bonded",
+    "kind": "pilot",
+    "group": "Core Girls",
+    "src": "./artwork/pilot-bonded.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 2
+    }
+  },
+  {
+    "id": "frame-the-prince",
+    "label": "The Prince",
+    "kind": "frame",
+    "group": "Core Frames",
+    "src": "./artwork/frame-the-prince.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 3
+    }
+  },
+  {
+    "id": "frame-consume",
+    "label": "CONSUME",
+    "kind": "frame",
+    "group": "Core Frames",
+    "src": "./artwork/frame-consume.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 3
+    }
+  },
+  {
+    "id": "frame-wyvern-04",
+    "label": "Wyvern_0.4",
+    "kind": "frame",
+    "group": "Core Frames",
+    "src": "./artwork/frame-wyvern-04.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 3
+    }
+  },
+  {
+    "id": "frame-janus",
+    "label": "JANUS",
+    "kind": "frame",
+    "group": "Core Frames",
+    "src": "./artwork/frame-janus.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 3
+    }
+  },
+  {
+    "id": "frame-doctordoctor-mk-ii",
+    "label": "DoctorDoctor Mk. II",
+    "kind": "frame",
+    "group": "Core Frames",
+    "src": "./artwork/frame-doctordoctor-mk-ii.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 3
+    }
+  },
+  {
+    "id": "frame-project-ankou",
+    "label": "Project Ankou",
+    "kind": "frame",
+    "group": "Core Frames",
+    "src": "./artwork/frame-project-ankou.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 3
+    }
+  },
+  {
+    "id": "frame-the-enforcer",
+    "label": "The Enforcer",
+    "kind": "frame",
+    "group": "Core Frames",
+    "src": "./artwork/frame-the-enforcer.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 4
+    }
+  },
+  {
+    "id": "frame-changeling",
+    "label": "CHANGELING",
+    "kind": "frame",
+    "group": "Core Frames",
+    "src": "./artwork/frame-changeling.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 4
+    }
+  },
+  {
+    "id": "frame-the-red-queen",
+    "label": "The Red Queen",
+    "kind": "frame",
+    "group": "Core Frames",
+    "src": "./artwork/frame-the-red-queen.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 4
+    }
+  },
+  {
+    "id": "pilot-skadi",
+    "label": "SKADI",
+    "kind": "pilot",
+    "group": "Named pilots",
+    "src": "./artwork/pilot-skadi.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 5
+    }
+  },
+  {
+    "id": "pilot-sorrow",
+    "label": "SORROW",
+    "kind": "pilot",
+    "group": "Named pilots",
+    "src": "./artwork/pilot-sorrow.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 5
+    }
+  },
+  {
+    "id": "pilot-pup",
+    "label": "PUP",
+    "kind": "pilot",
+    "group": "Named pilots",
+    "src": "./artwork/pilot-pup.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 5
+    }
+  },
+  {
+    "id": "pilot-halycon",
+    "label": "HALYCON",
+    "kind": "pilot",
+    "group": "Named pilots",
+    "src": "./artwork/pilot-halycon.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 5
+    }
+  },
+  {
+    "id": "frame-skadi-doctordoctor",
+    "label": "SKADI / DoctorDoctor",
+    "kind": "frame",
+    "group": "Named Frames",
+    "src": "./artwork/frame-skadi-doctordoctor.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 5
+    }
+  },
+  {
+    "id": "frame-halycon-ankou",
+    "label": "HALYCON / ANKOU",
+    "kind": "frame",
+    "group": "Named Frames",
+    "src": "./artwork/frame-halycon-ankou.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 5
+    }
+  },
+  {
+    "id": "frame-pup-okami",
+    "label": "PUP / ŌKAMI",
+    "kind": "frame",
+    "group": "Named Frames",
+    "src": "./artwork/frame-pup-okami.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 6
+    }
+  },
+  {
+    "id": "frame-sorrow-janus",
+    "label": "SORROW / JANUS",
+    "kind": "frame",
+    "group": "Named Frames",
+    "src": "./artwork/frame-sorrow-janus.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 6
+    }
+  },
+  {
+    "id": "frame-approximate-scale-study",
+    "label": "Named quartet approximate scale",
+    "kind": "frame",
+    "group": "Frame references",
+    "src": "./artwork/frame-approximate-scale-study.webp",
+    "source": {
+      "file": "Named_Frame_Scale_Study_Contact_Sheet.pdf",
+      "page": 1
+    }
+  },
+  {
+    "id": "scene-briefing-control-room",
+    "label": "Briefing / Control Room",
+    "kind": "scene",
+    "group": "Environments",
+    "src": "./artwork/scene-briefing-control-room.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 8
+    }
+  },
+  {
+    "id": "scene-empty-hangar",
+    "label": "Empty Hangar",
+    "kind": "scene",
+    "group": "Environments",
+    "src": "./artwork/scene-empty-hangar.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 8
+    }
+  },
+  {
+    "id": "scene-barracks-common-room",
+    "label": "Barracks Common Room",
+    "kind": "scene",
+    "group": "Environments",
+    "src": "./artwork/scene-barracks-common-room.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 8
+    }
+  },
+  {
+    "id": "scene-medical-recovery-bay",
+    "label": "Medical Recovery Bay",
+    "kind": "scene",
+    "group": "Environments",
+    "src": "./artwork/scene-medical-recovery-bay.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 8
+    }
+  },
+  {
+    "id": "scene-snowbound-transit-checkpoint",
+    "label": "Snowbound Transit Checkpoint",
+    "kind": "scene",
+    "group": "Environments",
+    "src": "./artwork/scene-snowbound-transit-checkpoint.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 9
+    }
+  },
+  {
+    "id": "scene-generic-neural-cockpit",
+    "label": "Generic Neural Cockpit",
+    "kind": "scene",
+    "group": "Environments",
+    "src": "./artwork/scene-generic-neural-cockpit.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 9
+    }
+  },
+  {
+    "id": "scene-mess-hall",
+    "label": "Mess Hall",
+    "kind": "scene",
+    "group": "Environments",
+    "src": "./artwork/scene-mess-hall.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 9
+    }
+  },
+  {
+    "id": "scene-neo-city-street",
+    "label": "Neo-City Street",
+    "kind": "scene",
+    "group": "Environments",
+    "src": "./artwork/scene-neo-city-street.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 9
+    }
+  },
+  {
+    "id": "scene-polar-ruins",
+    "label": "Polar Ruins",
+    "kind": "scene",
+    "group": "Environments",
+    "src": "./artwork/scene-polar-ruins.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 10
+    }
+  },
+  {
+    "id": "scene-power-station",
+    "label": "Power Station",
+    "kind": "scene",
+    "group": "Environments",
+    "src": "./artwork/scene-power-station.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 10
+    }
+  },
+  {
+    "id": "scene-voidspace",
+    "label": "Voidspace",
+    "kind": "scene",
+    "group": "Environments",
+    "src": "./artwork/scene-voidspace.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 10
+    }
+  },
+  {
+    "id": "scene-bellwether",
+    "label": "Bellwether",
+    "kind": "scene",
+    "group": "Gorgon concepts",
+    "src": "./artwork/scene-bellwether.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 11
+    }
+  },
+  {
+    "id": "scene-choir-reaper",
+    "label": "Choir Reaper",
+    "kind": "scene",
+    "group": "Gorgon concepts",
+    "src": "./artwork/scene-choir-reaper.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 11
+    }
+  },
+  {
+    "id": "scene-cinder-cathedral",
+    "label": "Cinder Cathedral",
+    "kind": "scene",
+    "group": "Gorgon concepts",
+    "src": "./artwork/scene-cinder-cathedral.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 11
+    }
+  },
+  {
+    "id": "scene-mourning-spindle",
+    "label": "Mourning Spindle",
+    "kind": "scene",
+    "group": "Gorgon concepts",
+    "src": "./artwork/scene-mourning-spindle.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 11
+    }
+  },
+  {
+    "id": "scene-surveyor",
+    "label": "Surveyor",
+    "kind": "scene",
+    "group": "Gorgon concepts",
+    "src": "./artwork/scene-surveyor.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 11
+    }
+  },
+  {
+    "id": "scene-the-listener",
+    "label": "The Listener",
+    "kind": "scene",
+    "group": "Gorgon concepts",
+    "src": "./artwork/scene-the-listener.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 11
+    }
+  },
+  {
+    "id": "pilot-doctor",
+    "label": "Doctor",
+    "kind": "pilot",
+    "group": "NPC role concepts",
+    "src": "./artwork/pilot-doctor.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 12
+    }
+  },
+  {
+    "id": "pilot-ex-pilot",
+    "label": "Ex-Pilot",
+    "kind": "pilot",
+    "group": "NPC role concepts",
+    "src": "./artwork/pilot-ex-pilot.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 12
+    }
+  },
+  {
+    "id": "pilot-mechanic",
+    "label": "Mechanic",
+    "kind": "pilot",
+    "group": "NPC role concepts",
+    "src": "./artwork/pilot-mechanic.webp",
+    "source": {
+      "file": "GIRLFRAME_OVA_Review_48_Assets_Compact.pdf",
+      "page": 12
+    }
+  }
+]

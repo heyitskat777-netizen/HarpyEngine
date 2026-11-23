@@ -49,8 +49,13 @@ class PunishmentService:
             "punishment_paired_identity_heat",
             "punishment_helpless",
             "punishment_frame_loss",
+            "punishment_ankou_feedback",
+            "punishment_void_threshold_check",
         ):
             raise WorkflowError("This discipline task is unavailable.")
+        if row["kind"] in ("punishment_ankou_feedback", "punishment_void_threshold_check"):
+            # Recovery proves the owning original discipline event and scope separately.
+            return dict(row)
         if row["kind"] == "punishment" and json.loads(row["body_json"]).get("return_source_work"):
             from girlframe.services.m3_debts import check_returned
 
@@ -76,6 +81,26 @@ class PunishmentService:
             from girlframe.services.m3_gender_designation import validate_punishment_work
 
             validate_punishment_work(self.game, c, load_state(c, self.store.campaign_id), dict(row))
+        if (
+            row["kind"] == "punishment"
+            and json.loads(row["body_json"]).get("reason") == "void_examination_discovery"
+        ):
+            from girlframe.services.m3_void_examination import prove_discovery
+
+            prove_discovery(c, self.store.campaign_id, dict(row))
+        if row["kind"] == "punishment" and json.loads(row["body_json"]).get("reason") == (
+            "strain_pilot_fears"
+        ):
+            from girlframe.services.m3_pilot_fears import proof as prove_collective_call
+
+            prove_collective_call(c, self.store.campaign_id, dict(row))
+        if (
+            row["kind"] == "punishment"
+            and json.loads(row["body_json"]).get("reason") == "strain_rebel_taunt"
+        ):
+            from girlframe.services.m3_rebel_taunt import prove as prove_rebel_taunt
+
+            prove_rebel_taunt(c, self.game, dict(row))
         from girlframe.services.m3_intracadre_marriage import prove_allocation
 
         prove_allocation(self.game, c, load_state(c, self.store.campaign_id), dict(row))
@@ -126,7 +151,9 @@ class PunishmentService:
             if execution and self._body(row).get("role_case"):
                 from girlframe.services.m3_role_punishments import pc_execution
 
-                pc_execution(c, self.game, row, viewer)
+                # Let the original executor recover a committed receipt. The mutation
+                # itself still requires a pending task and exact instruction.
+                pc_execution(c, self.game, row, viewer, allow_resolved=True)
             else:
                 self._actor(c, viewer, row)
 
@@ -168,7 +195,8 @@ class PunishmentService:
             raise WorkflowError(str(error)) from None
 
     def _check(self, c: Connection, row: dict[str, Any], revision: int, game_revision: int) -> None:
-        original = self._body(row).get("character")
+        body = self._body(row)
+        original = body.get("character")
         if (
             original
             and self.game.character_binding(
@@ -184,6 +212,35 @@ class PunishmentService:
             raise WorkflowError("STALE_WORK: reopen the current discipline task.")
         if load_state(c, self.store.campaign_id).revision != game_revision:
             raise WorkflowError("STALE_STATE: sheets or Status changed; review the task again.")
+        from girlframe.engine.m3_frantic_breakdown import RULE as breakdown_rule
+        from girlframe.engine.m3_handler_private_scene import DISCIPLINE_CAUSES
+
+        cause = body.get("cause")
+        if cause == breakdown_rule or cause in DISCIPLINE_CAUSES:
+            state = load_state(c, self.store.campaign_id)
+            debt = next(
+                (
+                    x
+                    for x in state.obligations
+                    if x.id == body.get("obligation_id") and x.state == "pending"
+                ),
+                None,
+            )
+            if debt is None or debt.target is None:
+                raise WorkflowError("Recover the private Play's original pending discipline")
+            if cause == breakdown_rule:
+                from girlframe.services.m3_frantic_breakdown import discipline_source
+
+                if discipline_source(self.game, c, state, debt, debt.target) != body.get(
+                    "required_severity"
+                ):
+                    raise WorkflowError(
+                        "Recover the exact original Frantic responsibility and severity"
+                    )
+            else:
+                from girlframe.services.m3_handler_private_scene import prove_discipline
+
+                prove_discipline(self.game, c, state, debt, int(row["owner_id"]))
         actions = t.m2["m2_actions"]
         from girlframe.services.m3_beneath import discipline_action, lineage
 
@@ -247,6 +304,7 @@ class PunishmentService:
             "janus_core_tag_removal",
             "defeat_post_mission",
             "role_punishment",
+            "strain_rebel_taunt",
         ):
             return [row]
         if row["off_duty_id"] is not None:
@@ -277,6 +335,8 @@ class PunishmentService:
                 "off_duty_handler",
                 "strain_event",
                 "void_observation",
+                "void_examination_discovery",
+                "strain_pilot_fears",
             ):
                 raise WorkflowError("This Off-Duty cause needs its source-specific resolver.")
             return [row]
@@ -420,8 +480,16 @@ class PunishmentService:
                     and (key != "disclosed" or proposal["kind"] == "strict_regulations")
                 ]
             if row["kind"] == "punishment" and row["state"] != "resolved":
+                from girlframe.services.m3_trainer_phrases import punishment_training
+
+                training = punishment_training(self.game, c, state, viewer.user_id, row)
+                if training is not None and training[2]:
+                    result["conditioning_phrases"] = training[2]
                 bundle = self._bundle(c, row)
                 result["causes"] = [self._body(x)["reason"] for x in bundle]
+                from girlframe.services.campaign_difficulty import difficulty
+
+                result["narrative_limit"] = difficulty(c, self.store.campaign_id) == "narrative"
                 result["required_severity"] = body.get("required_severity")
                 result["consultation"] = None
                 if body.get("consult_id"):
@@ -522,6 +590,7 @@ class PunishmentService:
         details: rules.Details,
         *,
         execution_account: str | None = None,
+        conditioning_phrase: str | None = None,
     ) -> dict[str, Any]:
         details = rules.Details.model_validate_json(details.model_dump_json())
 
@@ -530,7 +599,19 @@ class PunishmentService:
             self._check(c, row, revision, game_revision)
             if row["kind"] != "punishment":
                 raise WorkflowError("Choose the typed resolver for this required task.")
+            from girlframe.services.campaign_difficulty import require_consequence
+
+            require_consequence(c, self.store.campaign_id, details.kind)
             severity = rules.validate(details)
+            if conditioning_phrase is not None and details.kind in (
+                "passing_responsibility",
+                "lobotomization",
+                "execution",
+                "indefinite_imprisonment",
+            ):
+                raise WorkflowError(
+                    "Install a phrase during the Trainer's own Punishment of an active Girl"
+                )
             required_severity = self._body(row).get("required_severity")
             if required_severity is not None and severity != required_severity:
                 raise WorkflowError(
@@ -713,6 +794,12 @@ class PunishmentService:
                 from girlframe.services.m3_role_punishments import mark_pc_effect
 
                 mark_pc_effect(result.state, role_case, event_id, execution_account or "")
+            if conditioning_phrase is not None:
+                from girlframe.services.m3_trainer_phrases import install_during_punishment
+
+                install_during_punishment(
+                    self.game, c, result.state, viewer.user_id, row, conditioning_phrase, event_id
+                )
             if details.kind == "beating" and details.body_part is None:
                 from girlframe.engine.m3_actor_bonds import current_ref
                 from girlframe.engine.m3_appearance_matrix import record_damage
@@ -762,6 +849,29 @@ class PunishmentService:
 
                 assert details.surgery is not None
                 renamed_profile = rename_profile(c, self.store, result.state, details.surgery)
+            from girlframe.engine.m3_actor_bonds import current_ref
+            from girlframe.services.m3_ankou_feedback_sequences import start as start_feedback
+            from girlframe.services.m3_punishment_sources import void_families
+
+            feedback = False
+            for followup in result.followups:
+                if followup.kind == "ankou_feedback":
+                    start_feedback(
+                        self.game,
+                        c,
+                        result.state,
+                        current_ref(state, followup.owner),
+                        None,
+                        identity,
+                        event_id,
+                        count=1,
+                        reason="punishment",
+                    )
+                    feedback = True
+            from girlframe.engine.m3_dogrunner import after_punishment
+
+            if details.kind != "passing_responsibility":
+                after_punishment(result.state, int(row["subject_id"]))
             event = self.game.event(
                 c,
                 viewer.user_id,
@@ -809,6 +919,32 @@ class PunishmentService:
                             body=self._body(consultation) | {"approved": False, "superseded": True},
                         )
             for followup in result.followups:
+                if followup.kind == "ankou_feedback":
+                    continue
+                if followup.kind == "void_threshold_check":
+                    actor = current_ref(state, followup.owner)
+                    for family in void_families(state, result.state, actor):
+                        related(
+                            c,
+                            self.store,
+                            row,
+                            str(uuid4()),
+                            followup.owner,
+                            followup.owner,
+                            "void_threshold",
+                            dict(
+                                reason="punishment",
+                                source_work=identity,
+                                immediate=True,
+                                owner=actor.model_dump(mode="json"),
+                                character=actor.incarnation,
+                                source_action=None,
+                                source_pdf=19,
+                                details=dict(family=family),
+                            ),
+                            event,
+                        )
+                    continue
                 related(
                     c,
                     self.store,
@@ -822,6 +958,10 @@ class PunishmentService:
                     followup.model_dump(mode="json") | {"immediate": True, "source_work": identity},
                     event,
                 )
+            if feedback:
+                from girlframe.services.m3_ankou_feedback_sequences import materialize
+
+                materialize(self.game, c, event)
             if (
                 row["off_duty_id"] is not None
                 and self._body(row).get("reason") == "off_duty_handler"
@@ -875,7 +1015,12 @@ class PunishmentService:
                 "game_revision": game_revision,
                 "details": details.model_dump(mode="json"),
                 "execution_account": execution_account,
-            },
+            }
+            | (
+                {"conditioning_phrase": conditioning_phrase}
+                if conditioning_phrase is not None
+                else {}
+            ),
             operation,
             execution=True,
         )

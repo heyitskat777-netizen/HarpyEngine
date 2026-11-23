@@ -59,7 +59,7 @@ def mentor_ready(ledger):
         DraftInput(
             callsign="PLACEHOLDER",
             girl_playbook="NEWGIRL",
-            frame_playbook="JANUS-B",
+            frame_playbook="JANUS",
             notes="PRIVATE_NEWGIRL_CANARY",
         ),
     )
@@ -209,7 +209,7 @@ def test_effective_status_mentor_override_handler_and_stale_order(ledger):
         OTHER,
         "changed",
         1,
-        DraftInput(callsign="OTHER", girl_playbook="ALPHA", frame_playbook="JANUS-B"),
+        DraftInput(callsign="OTHER", girl_playbook="ALPHA", frame_playbook="JANUS"),
     )
     assert service.effective_status(PLAYER, OTHER.user_id)["higher"] is None
 
@@ -395,7 +395,7 @@ def test_setup_request_pagination_and_profile_change(ledger):
         OTHER,
         "profile",
         1,
-        DraftInput(callsign="OTHER", girl_playbook="ALPHA", frame_playbook="JANUS-B"),
+        DraftInput(callsign="OTHER", girl_playbook="ALPHA", frame_playbook="JANUS"),
     )
     assert service.get(PLAYER, row["id"])["stale"]
     with pytest.raises(WorkflowError):

@@ -1,7 +1,7 @@
 """Canonical pilot state and typed human inputs for the audited M2 subset."""
 
 from collections.abc import Sequence
-from typing import Literal
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -65,6 +65,7 @@ from girlframe.engine.m3_strain_state import State as StrainState
 from girlframe.engine.m3_supply_state import SupplyLoss
 from girlframe.engine.m3_void_state import HarpyState, VoidThreshold
 from girlframe.engine.m3_world_state import World
+from girlframe.engine.playbooks import normalize_saved_frame_json
 
 RULESET: Literal["girlframe-m2-pilot-1"] = "girlframe-m2-pilot-1"
 PLAY_IDS = ("keep_your_head", "check_sensors", "engage", "disobey_orders", "flirt")
@@ -371,6 +372,26 @@ class GameState(Model):
     enforcer_accusations: list[Accusation] = Field(default_factory=list)
     enforcer_grasps: list[Grasp] = Field(default_factory=list)
 
+    @classmethod
+    def model_validate_json(
+        cls,
+        json_data: str | bytes | bytearray,
+        *,
+        strict: bool | None = None,
+        extra: Literal["allow", "ignore", "forbid"] | None = None,
+        context: Any = None,
+        by_alias: bool | None = None,
+        by_name: bool | None = None,
+    ) -> Self:
+        return super().model_validate_json(
+            normalize_saved_frame_json(json_data),
+            strict=strict,
+            extra=extra,
+            context=context,
+            by_alias=by_alias,
+            by_name=by_name,
+        )
+
     @model_validator(mode="after")
     def distinct_original_placements(self) -> "GameState":
         if any(x.get("kind") == "am_limiter" for x in self.facts) or any(
@@ -502,17 +523,22 @@ def tier(total: int) -> Literal["low", "mid", "high"]:
 
 
 def shift_status(state: GameState, owner: int, delta: int) -> None:
+    from girlframe.engine.m3_dogrunner import after_rank_change
+    from girlframe.engine.m3_dogrunner import owners as dogrunner_owners
     from girlframe.engine.m3_intracadre_marriage import status_groups
 
     groups = list(status_groups(state))
     if owner not in state.order or delta not in (-1, 1):
         raise ValueError("Invalid Status shift")
     before = groups[-1]
+    dogs = dogrunner_owners(state)
     old = next(i for i, group in enumerate(groups) if owner in group)
     new = min(max(old - delta, 0), len(groups) - 1)
     groups[old], groups[new] = groups[new], groups[old]
     state.order = tuple(member for group in groups for member in group)
-    if before != groups[-1]:
+    if dogs is not None:
+        after_rank_change(state, dogs, before)
+    elif before != groups[-1]:
         for member in before:
             if str(member) in state.sheets:
                 from girlframe.engine.m3_learned_play_state import clear_hound_status
@@ -580,6 +606,13 @@ def mark_identity(
     identity = next((x for x in sheet.identities if x.id == entry), None)
     if identity is None or identity.marked:
         raise ValueError("Choose an unmarked Identity")
+    if state is not None and sheet.character_id is not None:
+        from girlframe.engine.m3_actor_state import ActorRef
+        from girlframe.engine.m3_parasite_infection import controls_identity
+
+        actor = ActorRef(kind="pilot", entity=str(sheet.owner), incarnation=sheet.character_id)
+        if controls_identity(state, actor, entry):
+            raise ValueError("The original Parasite controls this Identity until excision")
     if not set(sheet.obsession_sources) <= set(identity.obsession_sources):
         raise ValueError("Only an actual source-qualifying obsessed Identity can generate Heat")
     from girlframe.engine.m3_girl_runtime_state import has_rule, relation_current

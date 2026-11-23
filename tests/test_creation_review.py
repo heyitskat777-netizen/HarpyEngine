@@ -52,18 +52,18 @@ ledger = ledger_fixture
 def ready(
     store,
     girl="MOCKINGBIRD",
-    frame="JANUS-B",
+    frame="JANUS",
     *,
-    other_frame="JANUS-B",
+    other_frame="JANUS",
     other_girl="MOCKINGBIRD",
 ):
     store.policy = store.policy.model_copy(update={"owner_initial_conditions": InitialConditions()})
     seed(store)
-    if other_frame == "JANUS-B" and other_girl == "MOCKINGBIRD":
+    if other_frame == "JANUS" and other_girl == "MOCKINGBIRD":
         seed(store, OTHER)
     else:
         options = {}
-        if other_frame != "JANUS-B":
+        if other_frame != "JANUS":
             options["frame"] = other_frame
         if other_girl != "MOCKINGBIRD":
             options["girl"] = other_girl
@@ -213,9 +213,7 @@ def test_all_girl_review_branches_and_activation_gate(ledger, girl):
         service.activate(PLAYER)
 
 
-@pytest.mark.parametrize(
-    "frame", [x for x, v in CATALOG.items() if v["family"] == "frame"] + ["JANUS-B"]
-)
+@pytest.mark.parametrize("frame", [x for x, v in CATALOG.items() if v["family"] == "frame"])
 def test_all_frame_review_branches_explicit_rulings_and_extra_identities(ledger, frame):
     service, _, _ = ready(ledger, frame=frame)
     sheet = service.get(PLAYER).sheet
@@ -342,11 +340,11 @@ def test_newgirl_history_authority_stale_roster_and_missing_discussion(ledger):
     with pytest.raises(ValueError):
         PriorMission(user_id=3, character_revision=1, missions=2)
     with pytest.raises(ValueError):
-        CreationDraft(girl_playbook="MOCKINGBIRD", frame_playbook="JANUS-B", cadre_discussed=True)
+        CreationDraft(girl_playbook="MOCKINGBIRD", frame_playbook="JANUS", cadre_discussed=True)
     with pytest.raises(ValueError):
         CreationDraft(
             girl_playbook="NEWGIRL",
-            frame_playbook="JANUS-B",
+            frame_playbook="JANUS",
             prior_missions=(PriorMission(user_id=3, missions=0),) * 2,
         )
     forged = progress.draft.model_copy(

@@ -338,7 +338,7 @@ def test_actual_native_stim_self_dose_counter_keeps_sleep_parent_receipt_and_own
         ledger, girl="ALPHA", frame="THE ENFORCER", other_girl="STIM-BLISSED"
     )
     current_draft = creation.get(OTHER)
-    draft = selected("STIM-BLISSED", "JANUS-B").model_copy(
+    draft = selected("STIM-BLISSED", "JANUS").model_copy(
         update={"shared_tokens": current_draft.draft.shared_tokens}
     )
     creation.save(OTHER, "actual-alpha-counter-stim-build", current_draft.revision, 1, draft)

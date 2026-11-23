@@ -101,6 +101,80 @@ def test_native_surgery_dropdown_plan_and_actual_patient_form_have_source_owners
     asyncio.run(run())
 
 
+def test_native_surgery_blocks_the_original_girls_owned_playbook_roll(ledger):
+    from girlframe.engine.m2 import PlayInput
+    from girlframe.engine.m3_lobotomy import blocked_play
+
+    service, discipline, _, game, _, work, identity = begun(ledger)
+    original = state(game)
+    before = service.get(ADMIN, identity)
+    assert "mockingbird_person" in before["plays"] and "princess_sex" not in before["plays"]
+    with pytest.raises(WorkflowError, match="available to the original Girl"):
+        service.prepare(
+            ADMIN,
+            "unowned-roll",
+            identity,
+            original.revision,
+            Plan(
+                options=("play",),
+                room="Original setting",
+                restraints="Original patient facts",
+                tools="Original equipment",
+                forbidden_play="princess_sex",
+            ),
+        )
+    assert state(game) == original
+
+    async def own_plan():
+        handler = current(1, 51350)
+        await handler.response.defer(ephemeral=True)
+        await open_plan(handler, service, identity, ("play",))
+        form = handler.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            room="Original setting",
+            restraints="Original patient facts",
+            tools="Original equipment",
+            play=("mockingbird_person",),
+        )
+        await form.confirm.callback(current(1, 51351))
+        assert form.completed
+
+    asyncio.run(own_plan())
+    assert not state(game).sheets["3"].blocked_plays
+    assert discipline.get(ADMIN, work)["state"] == "pending"
+    service.respond(
+        OTHER,
+        "actual-owned-description",
+        identity,
+        state(game).revision,
+        {"play": "Private original response"},
+    )
+    ledger.engine.dispose()
+    closed = service.finish(ADMIN, "apply-owned-native-removal", identity)
+    assert closed == service.finish(ADMIN, "apply-owned-native-removal", identity)
+    with pytest.raises(WorkflowError):
+        service.finish(OTHER, "apply-owned-native-removal", identity)
+    after = state(game)
+    proof = blocked_play(after.sheets["3"], "mockingbird_person")
+    assert proof is not None and proof.surgery == identity
+    assert not blocked_play(after.sheets["2"], "mockingbird_person")
+    assert discipline.get(ADMIN, work)["state"] == "resolved"
+    with pytest.raises(WorkflowError, match="cannot roll that Play after actual surgery"):
+        game.begin(
+            OTHER,
+            "attempt-removed-native-roll",
+            900,
+            after.sheets["3"].revision,
+            PlayInput(
+                play="mockingbird_person",
+                context="Synthetic attempt to converse",
+                trigger_confirmed=True,
+                heat=0,
+            ),
+        )
+    assert game.dice.calls == 0 and state(game) == after
+
+
 def test_actual_name_removal_updates_profile_and_clears_discord_nickname_from_source(ledger):
     import json
 

@@ -5,6 +5,7 @@ from typing import Any, Literal
 from uuid import uuid4
 
 import sqlalchemy as sa
+from pydantic import ValidationError
 from sqlalchemy import Connection
 
 from girlframe.ai.gm_outcomes import (
@@ -15,15 +16,16 @@ from girlframe.ai.gm_outcomes import (
     OutcomePacket,
     OutcomeProposal,
     OutcomeProvider,
+    SensorAnswers,
     TableOutcome,
 )
 from girlframe.ai.gm_protocol import Evidence, TaskFrame
 from girlframe.ai.observation import Observation
 from girlframe.database import tables as t
 from girlframe.engine.m3_battle_state import Context
-from girlframe.services.director_context import DirectorContextService
+from girlframe.services.director_context import DirectorContextService, next_contribution_ordinal
 from girlframe.services.director_observation import _digest
-from girlframe.services.gm_outcome_compile import CHOICES, validate
+from girlframe.services.gm_outcome_compile import CHOICES, sensor_answer_contract, validate
 from girlframe.services.m2_state import load_state
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
@@ -32,9 +34,19 @@ SourceKind = Literal["choice", "battle", "handler_grant", "table", "completed"]
 
 
 class GMOutcomeService:
-    def __init__(self, context: DirectorContextService, provider: OutcomeProvider | None = None):
+    def __init__(
+        self,
+        context: DirectorContextService,
+        provider: OutcomeProvider | None = None,
+        *,
+        require_response_scope: bool = False,
+    ):
         self.context, self.observer = context, context.observations
         self.game, self.store, self.provider = self.observer.game, context.store, provider
+        self.require_response_scope = require_response_scope
+        from girlframe.services.director_responses import DirectorResponseService
+
+        self.responses = DirectorResponseService(self)
 
     def _scope(
         self, c: Connection, viewer: GuildViewer, scene: str, *, gm: bool = False
@@ -151,9 +163,11 @@ class GMOutcomeService:
                 "battle_facts",
             )
         elif kind == "handler_grant":
-            from girlframe.services.m3_handler_plays import _source
+            from girlframe.engine.m3_handler_plays import available_plays
+            from girlframe.services.m3_handler_plays import _authority, _source
 
             _, grant = _source(c, self.game, identity)
+            _authority(c, self.game, canon, grant)
             # Non-scene grants must be connected through their actual source action.
             action = self.game.action(c, grant.source_action) if grant.source_action else None
             campaign_targets = (
@@ -164,6 +178,12 @@ class GMOutcomeService:
                     for x in grant.target_controllers.values()
                 )
             )
+            if grant.clause.startswith("tracker:"):
+                from girlframe.services.m3_tracker_implants import prove_tracker_play
+
+                campaign_targets = campaign_targets and (
+                    prove_tracker_play(self.game, c, canon, grant).cast.id == scene
+                )
             if grant.state != "pending" or not (
                 grant.scope.scene_id == scene
                 or campaign_targets
@@ -172,7 +192,10 @@ class GMOutcomeService:
             ):
                 raise WorkflowError("STALE_HANDLER_GRANT: use its actual pending scene source.")
             data, owner, operation = (
-                {"grant": grant.model_dump(mode="json")},
+                {
+                    "grant": grant.model_dump(mode="json"),
+                    "allowed_plays": list(available_plays(canon, grant)),
+                },
                 str(grant.chooser_controller),
                 "handler_effect",
             )
@@ -192,6 +215,8 @@ class GMOutcomeService:
         if owner not in {str(x) for x in scene_row["participants"]}:
             raise WorkflowError("GM_SOURCE_OWNER_UNAVAILABLE: recover the actual scene controller.")
         data["state_revision"] = canon.revision
+        if operation == "sensors":
+            data["answer_contract"] = sensor_answer_contract(data)
         evidence = [
             Evidence(
                 id="source",
@@ -243,6 +268,46 @@ class GMOutcomeService:
                 raise WorkflowError(
                     "INVALID_GM_FRAME: use distinct demands and actual prerequisite facts."
                 )
+            if self.require_response_scope:
+                data["response_scope_required"] = True
+            if frame.response_scope == "other":
+                from girlframe.engine.m3_actors import resolve
+                from girlframe.engine.m3_cast import validate_role
+                from girlframe.services.m3_actors import profiles
+
+                if frame.response_target is None:
+                    raise WorkflowError("INVALID_RESPONSE_TARGET: bind the actual affected actor.")
+                try:
+                    target = resolve(
+                        canon,
+                        frame.response_target,
+                        profiles(c, self.store.campaign_id),
+                        require_current_profile=False,
+                    )
+                    cast = next((x for x in canon.scene_casts if x.id == scene and x.open), None)
+                    if not target.alive or target.controller not in scene_row["participants"]:
+                        raise ValueError("Unavailable target")
+                    if cast is not None:
+                        validate_role(cast, target)
+                    elif target.ref.kind == "npc":
+                        raise ValueError("Explicit NPC casting required")
+                except ValueError:
+                    raise WorkflowError(
+                        "INVALID_RESPONSE_TARGET: recover current target and casting."
+                    ) from None
+                data["response_actor"] = target.ref.model_dump(mode="json")
+                data["response_controller"] = str(target.controller)
+                data["response_authorized"] = (
+                    target.ref.kind == "npc" and str(target.controller) == owner
+                )
+            elif frame.response_target is not None or frame.response_request is not None:
+                raise WorkflowError(
+                    "INVALID_RESPONSE_TARGET: select other scope for an affected actor."
+                )
+            if frame.response_request is not None:
+                self.responses.bind(c, scene, kind, identity, owner, frame, data, evidence)
+            if frame.intent_request is not None:
+                self.responses.bind_intent(c, scene, kind, identity, frame, evidence)
         records = {}
         for name in ("m3_missions", "m3_off_duty", "m3_required_work"):
             table = t.m3[name]
@@ -256,6 +321,9 @@ class GMOutcomeService:
                     .order_by(*table.primary_key.columns)
                 ).mappings()
             ]
+        from girlframe.services.director_time import scene_time
+
+        time = scene_time(c, self.store.campaign_id, scene)
         packet = OutcomePacket(
             request_id="pending",
             scene_id=scene,
@@ -273,6 +341,7 @@ class GMOutcomeService:
                 "records": json.loads(json.dumps(records)),
                 "references": [r.model_dump(mode="json") for r in references],
                 "guard": self.observer._guard(c, scene_row, self.observer._state(c, scene)),
+                **({"fictional_time": time.model_dump(mode="json")} if time else {}),
             },
         )
         return packet.model_copy(update={"request_id": _digest(packet.model_dump(mode="json"))})
@@ -331,6 +400,58 @@ class GMOutcomeService:
         )
         if current != packet:
             raise WorkflowError("STALE_GM_OUTCOME: source, context or authority changed; reopen.")
+
+    def feedback(
+        self, viewer: GuildViewer, scene: str, request: str, raw: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Private dry-run validation; never includes raw input or applies a proposal."""
+        with self.store.engine.connect() as c:
+            self._scope(c, viewer, scene, gm=True)
+            packet = OutcomePacket.model_validate_json(
+                json.dumps(self._record(c, scene, request, "gm_outcome_request")["packet"])
+            )
+            self._current(c, packet)
+        try:
+            candidate = OutcomeProposal.model_validate_json(json.dumps(raw))
+        except ValidationError as error:
+            return {
+                "valid": False,
+                "errors": [
+                    {
+                        "code": "SCHEMA_VALIDATION",
+                        "field": ".".join(map(str, issue["loc"])),
+                        "message": "Use the exported typed field contract.",
+                    }
+                    for issue in error.errors(include_input=False)
+                ],
+            }
+        try:
+            validate(packet, candidate)
+        except ValueError as error:
+            message = str(error)
+            code = "RESPONSE_OWNERSHIP" if "RESPONSE_OWNERSHIP" in message else "INVALID_PROPOSAL"
+            field = "frame.response_scope" if code == "RESPONSE_OWNERSHIP" else "decision"
+            if not {"source", "native"} <= set(candidate.cited_evidence):
+                code, field, message = (
+                    "MISSING_CITATION",
+                    "cited_evidence",
+                    "Include source and native citations.",
+                )
+            elif isinstance(candidate.decision, SensorAnswers) and packet.operation == "sensors":
+                contract = sensor_answer_contract(packet.native)
+                code, field = "SENSOR_INPUT_CONTRACT", "decision"
+                message = (
+                    "Use answer keys "
+                    + ", ".join(contract["answers"])
+                    + " in native question order. "
+                )
+                message += (
+                    "This branch requires incomplete_information or punishment_later."
+                    if contract["consequence_required"]
+                    else "This branch requires consequence=null."
+                )
+            return {"valid": False, "errors": [{"code": code, "field": field, "message": message}]}
+        return {"valid": True, "errors": []}
 
     def propose(
         self,
@@ -517,20 +638,9 @@ class GMOutcomeService:
                             if str(x)
                             in {str(u) for u in native["action"]["data"].get("participants", [])}
                         ),
-                        "ordinal": 1
-                        + int(
-                            c.scalar(
-                                sa.select(sa.func.count())
-                                .select_from(t.director_context["shadow"])
-                                .where(
-                                    t.director_context["shadow"].c.campaign_id
-                                    == self.store.campaign_id,
-                                    t.director_context["shadow"].c.scene_id == scene,
-                                    t.director_context["shadow"].c.id.like("gm-narration:%"),
-                                )
-                            )
-                            or 0
-                        ),
+                        "ordinal": next_contribution_ordinal(c, self.store.campaign_id, scene),
+                        "after_sequence": self.context.observations._state(c, scene).sequence,
+                        "created_at": self.store.clock(),
                         "text": proposal.decision.text,
                         "effect_refs": list(proposal.decision.effect_refs),
                         "canon_effects": False,

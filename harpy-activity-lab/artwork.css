@@ -1,0 +1,37 @@
+.record-artwork {
+  margin: 0 0 .8rem;
+  display: grid;
+  justify-items: start;
+  gap: .4rem;
+}
+
+.record-artwork figure, .artwork-preview {
+  width: 100%;
+  margin: 0;
+  background: var(--panel);
+}
+
+.record-artwork figure:empty, .artwork-preview:empty { display: none; }
+
+.record-artwork img, .artwork-preview img {
+  width: 100%;
+  display: block;
+  object-fit: contain;
+  border: 1px solid var(--line);
+}
+
+.record-artwork img:not([src]), .artwork-preview img:not([src]) { visibility: hidden; }
+.record-artwork img { max-height: 20rem; }
+.record-artwork--pilot figure { width: min(100%, 14rem); }
+.record-artwork--scene figure { width: min(100%, 55rem); }
+.record-artwork--scene .scene-artwork-frame:not([hidden]) {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 9;
+  max-block-size: 20rem;
+}
+.scene-artwork-frame img { height: 100%; min-height: 0; }
+.artwork-preview img { max-height: min(45vh, 25rem); }
+
+#artwork-dialog { width: min(100% - 2rem, 40rem); }
+#artwork-dialog select { width: 100%; }

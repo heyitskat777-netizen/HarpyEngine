@@ -134,7 +134,6 @@ def test_native_interrupt_dive_real_tag_cost_owned_table_answers_and_known_paren
         gain=("0",),
         pair_share=("0",),
         piloting=("no",),
-        witnessed=("no",),
         trigger=("yes",),
         context="I commune with my own Vital Frame during the genuine interruption",
     )

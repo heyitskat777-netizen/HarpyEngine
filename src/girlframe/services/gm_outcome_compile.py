@@ -19,7 +19,7 @@ from girlframe.ai.gm_outcomes import (
     WraithOutcome,
 )
 from girlframe.ai.gm_protocol import GMPacket, GMProposal, validate_proposal
-from girlframe.engine.m2 import ChoiceAnswer, sensors_off_list
+from girlframe.engine.m2 import ChoiceAnswer, sensor_question_text, sensors_off_list
 
 CHOICES = {
     "handler_keep": "keep",
@@ -40,10 +40,32 @@ CHOICES = {
 }
 
 
+def sensor_answer_contract(native: dict[str, Any]) -> dict[str, Any]:
+    """Describe the exact existing consumer fields; no alternative mechanics."""
+    result = native["action"]["data"]["result"]
+    if native["choice"]["kind"] == "harpy_sensor_answers":
+        return {
+            "answers": {"a1": "Answer the actual native Harpy question block."},
+            "consequence_required": False,
+            "allowed_consequences": [],
+        }
+    required = result["tier"] == "high" and sensors_off_list(result["questions"], result["tier"])
+    return {
+        "answers": {
+            f"a{index}": sensor_question_text(question)
+            for index, question in enumerate(result["questions"], 1)
+        },
+        "consequence_required": required,
+        "allowed_consequences": ["incomplete_information", "punishment_later"] if required else [],
+    }
+
+
 def validate(packet: OutcomePacket, proposal: OutcomeProposal) -> ChoiceAnswer | None:
     if proposal.request_id != packet.request_id or proposal.decision.kind != packet.operation:
         raise ValueError("Wrong source request or operation")
     citations = set(proposal.cited_evidence)
+    if len(citations) != len(proposal.cited_evidence):
+        raise ValueError("Use distinct evidence citations")
     if not {"source", "native"} <= citations or not citations <= {e.id for e in packet.evidence}:
         raise ValueError("Cite the frozen source and actual native evidence")
     d = proposal.decision
@@ -51,6 +73,23 @@ def validate(packet: OutcomePacket, proposal: OutcomeProposal) -> ChoiceAnswer |
     if isinstance(d, KeepOutcome):
         if packet.frame is None:
             raise ValueError("Keep requires an explicit framed goal")
+        scope = packet.frame.response_scope
+        if d.verdict != "needs_clarification":
+            if packet.frame.intent_request is not None and "actor_intent" not in citations:
+                raise ValueError("Cite the original Pilot's actor_intent evidence")
+            if scope == "unresolved" or (native.get("response_scope_required") and scope is None):
+                raise ValueError("RESPONSE_OWNERSHIP: establish whose response determines success")
+            if scope == "other" and not native.get("response_authorized"):
+                raise ValueError(
+                    "RESPONSE_OWNERSHIP: preserve the actual target controller's response"
+                )
+            if packet.frame.response_request is not None:
+                if "target_response" not in citations:
+                    raise ValueError("Cite the actual target_response evidence")
+                if native.get("response_decision") == "decline" and d.verdict == "enough":
+                    raise ValueError(
+                        "RESPONSE_OWNERSHIP: a declined voluntary response cannot pass"
+                    )
         action = native["action"]
         result = action["data"]["result"]
         # Reuse actual trait/coverage/prerequisite validation; no alternate keyword oracle.
@@ -201,8 +240,21 @@ def validate(packet: OutcomePacket, proposal: OutcomeProposal) -> ChoiceAnswer |
     if isinstance(d, FactOutcome):
         return ChoiceAnswer(flag=d.established, text=d.account)
     if isinstance(d, HandlerOutcome):
-        if d.play not in ("escalate", "support", "contaminant_warp") or d.effect.kind != d.play:
-            raise ValueError("This adapter only consumes its finite world-authoring Handler grant")
+        brief = native["grant"].get("brief_account")
+        if brief is not None:
+            if (
+                d.play != "brief"
+                or d.effect.kind != "brief"
+                or d.effect.account != brief
+                or (d.effect.source_label is not None)
+            ):
+                raise ValueError("Use the exact reviewed Handler briefing")
+        expected = "mess" if d.effect.kind in ("status", "tag", "damage") else d.effect.kind
+        if d.play != expected or d.play not in native["allowed_plays"]:
+            raise ValueError("Use a Play actually available to this grant and its matching effect")
+        target = d.effect.target
+        if target is not None and target.model_dump(mode="json") not in native["grant"]["targets"]:
+            raise ValueError("Use an actual original target of this grant")
     if isinstance(d, TableOutcome):
         if native["action"]["data"]["play"] == "all_out_assault":
             if d.vast_advantage is None or d.answers:

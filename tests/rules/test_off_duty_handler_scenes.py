@@ -129,7 +129,7 @@ def test_free_harpy_cannot_be_used_as_prisoner_without_actual_custody_event(ledg
         name="A Harpy",
         kind="harpy",
         girl="MOCKINGBIRD",
-        frame="JANUS-B",
+        frame="JANUS",
         controller=3,
         cell=(0, 0),
         assets=(

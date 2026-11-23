@@ -9,6 +9,7 @@ from girlframe.engine.m3_handler_consequences import active_handler, same_handle
 from girlframe.engine.m3_handler_girl_void_state import ExistingAsset, HandlerGirlVoid
 from girlframe.engine.m3_item_state import HeldItem
 from girlframe.engine.m3_items import actual_asset, mechanical_assets, same_holder
+from girlframe.engine.m3_void_privacy import record_gain
 
 
 def girl_assets(state: GameState, actor: ActorRef) -> tuple[AssetState, ...]:
@@ -70,6 +71,8 @@ def require(
             corruption_event=event if all_void else None,
         )
     )
+    if all_void:
+        record_gain(changed, body, work, event)
     return changed, identity
 
 
@@ -202,6 +205,7 @@ def corrupt(
     if len(matches) != 1:
         raise ValueError("One actual held Item must own this source mechanical Asset")
     revised = selected.model_copy(update={"void": True, "description": description.strip()})
+    record_gain(state, current.body, current.work, event)
     state.held_items = [
         x.model_copy(update={"asset_json": revised.model_dump_json(), "state_event": event})
         if x.id == matches[0].id

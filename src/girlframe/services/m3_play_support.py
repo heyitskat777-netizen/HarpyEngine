@@ -9,6 +9,9 @@ from sqlalchemy import Connection
 from girlframe.engine.m2 import GameState, PlayInput
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_choices import off_duty_modifier
+from girlframe.engine.m3_dogrunner_recovery import SOURCE as dogrunner_source
+from girlframe.engine.m3_dogrunner_recovery import consume as consume_dogrunner
+from girlframe.engine.m3_dogrunner_recovery import modifiers as dogrunner_modifiers
 from girlframe.engine.m3_off_duty import Adjustment, Period, Progress, Roll, clone, ordinary_roll
 from girlframe.engine.m3_policy import RULESET
 from girlframe.engine.m3_supply import consume as consume_supply
@@ -104,22 +107,20 @@ def prepare(
     )
     approval = game.store.policy.m3_approval
     assert approval is not None
+    owner = ActorRef(
+        kind="pilot",
+        entity=str(viewer.user_id),
+        incarnation=game.character_binding(c, state, viewer.user_id, require_current_profile=False),
+    )
+    pre_modifiers = supply_modifiers(state, period.id, owner)
+    if prepared.play == "go_off_duty":
+        pre_modifiers.extend(dogrunner_modifiers(state, owner))
     return {
         "period_id": period.id,
         "status": status,
         "modifier": off_duty_modifier(status) if amount is None else amount,
         "modifier_source": "status" if amount is None else "void_assets",
-        "pre_modifiers": supply_modifiers(
-            state,
-            period.id,
-            ActorRef(
-                kind="pilot",
-                entity=str(viewer.user_id),
-                incarnation=game.character_binding(
-                    c, state, viewer.user_id, require_current_profile=False
-                ),
-            ),
-        ),
+        "pre_modifiers": pre_modifiers,
         "registry": approval.registry_sha256,
         "ruleset": RULESET,
     }
@@ -168,19 +169,23 @@ def pre_roll(
         raise WorkflowError(
             "STALE_STATUS: recover the unrolled action and confirm current Status first."
         )
+    owner = ActorRef(
+        kind="pilot",
+        entity=str(viewer.user_id),
+        incarnation=game.character_binding(c, state, viewer.user_id, require_current_profile=False),
+    )
+    expected = meta.get("pre_modifiers", [])
     consume_supply(
         state,
         period.id,
-        ActorRef(
-            kind="pilot",
-            entity=str(viewer.user_id),
-            incarnation=game.character_binding(
-                c, state, viewer.user_id, require_current_profile=False
-            ),
-        ),
-        meta.get("pre_modifiers", []),
+        owner,
+        [x for x in expected if x["source"] != dogrunner_source],
         action["id"],
     )
+    if action["data"]["play"] == "go_off_duty":
+        consume_dogrunner(
+            state, owner, [x for x in expected if x["source"] == dogrunner_source], action["id"]
+        )
     if action["data"]["play"] == "void_observation":
         from girlframe.engine.m2 import shift_status
         from girlframe.engine.m3_observation import lower_before_roll, modifier

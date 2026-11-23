@@ -13,6 +13,7 @@ from girlframe.engine.bonds import starting_kind
 from girlframe.engine.creation import CreationDraft
 from girlframe.engine.creation_details import GirlDetails, PsychStringAnchor
 from girlframe.engine.creation_review import ReviewIssue, ReviewSheet, SheetBond
+from girlframe.engine.playbooks import normalize_frame_fields
 from girlframe.services.bonds import BondService
 from girlframe.services.creation import CreationService
 from girlframe.services.creation_coordination import CoordinationService
@@ -34,13 +35,13 @@ class CreationReviewService:
     def __init__(self, store: OnboardingStore):
         self.store = store
 
-    def _latest(self, connection: Connection, viewer: GuildViewer) -> dict[str, Any] | None:
+    def _latest(self, connection: Connection, owner: int) -> dict[str, Any] | None:
         row = (
             connection.execute(
                 sa.select(t.creation_reviews)
                 .where(
                     t.creation_reviews.c.campaign_id == self.store.campaign_id,
-                    t.creation_reviews.c.user_id == str(viewer.user_id),
+                    t.creation_reviews.c.user_id == str(owner),
                 )
                 .order_by(t.creation_reviews.c.revision.desc())
                 .limit(1)
@@ -51,7 +52,12 @@ class CreationReviewService:
         return dict(row) if row else None
 
     def _current(self, connection: Connection, viewer: GuildViewer) -> CurrentReview:
-        progress = CreationService(self.store)._current(connection, viewer)
+        self.store.guild_member(viewer)
+        self.store._membership(connection, viewer)
+        return self._current_for_owner(connection, viewer.user_id)
+
+    def _current_for_owner(self, connection: Connection, owner: int) -> CurrentReview:
+        progress = CreationService(self.store)._current_for_owner(connection, owner)
         handler = HandlerService(self.store)
         setup_revision, setup = handler.current(connection)
         roster = handler._roster(connection)
@@ -59,7 +65,7 @@ class CreationReviewService:
             connection.execute(
                 sa.select(t.characters.c.public_json).where(
                     t.characters.c.campaign_id == self.store.campaign_id,
-                    t.characters.c.user_id == str(viewer.user_id),
+                    t.characters.c.user_id == str(owner),
                 )
             ).scalar_one()
         )
@@ -70,7 +76,7 @@ class CreationReviewService:
             )
         ]
         details = progress.draft.girl_details or GirlDetails()
-        coordination = CoordinationService(self.store).accepted(connection, viewer.user_id)
+        coordination = CoordinationService(self.store).accepted(connection, owner)
         roles = {x.role for x in coordination}
         girl = progress.draft.girl_playbook
         if girl == "OLDGEN" and len(details.maxims) != 2:
@@ -134,8 +140,40 @@ class CreationReviewService:
             for x in setup.status_order
         )
         status = None
-        if rank_fresh and viewer.user_id in rank_ids:
-            position = rank_ids.index(viewer.user_id)
+        status_dependencies: tuple[str, ...] = ()
+        from girlframe.engine.m3_careers import binding
+        from girlframe.services.m2_state import load_state
+
+        canonical = load_state(connection, self.store.campaign_id)
+        career = binding(canonical, owner)
+        if career and career.previous_archive and str(owner) not in canonical.sheets:
+            rank_ids = []
+            if (
+                active_handler
+                and canonical.handler == setup.handler_id
+                and career.active
+                and career.status_event
+                and career.status_position is not None
+                and 0 <= career.status_position <= len(canonical.order)
+            ):
+                rank_ids = list(canonical.order)
+                rank_ids.insert(career.status_position, owner)
+                status_dependencies = (
+                    "replacement_status:" + career.status_event,
+                    "canonical_status_order:" + ",".join(map(str, rank_ids)),
+                )
+        elif (
+            not rank_fresh
+            and active_handler
+            and canonical.handler == setup.handler_id
+            and owner in canonical.order
+        ):
+            rank_ids = list(canonical.order)
+            status_dependencies = ("canonical_status_order:" + ",".join(map(str, rank_ids)),)
+        elif not rank_fresh:
+            rank_ids = []
+        if owner in rank_ids:
+            position = rank_ids.index(owner)
             status = "Ace" if position == 0 else "Dog" if position == len(rank_ids) - 1 else "Wings"
         if status is None:
             issues.append(
@@ -148,7 +186,7 @@ class CreationReviewService:
         bonds = BondService(self.store)
         current_bonds = [
             x
-            for x in bonds._latest(connection, str(viewer.user_id))
+            for x in bonds._latest(connection, str(owner))
             if x["state"] == "accepted" and not bonds._stale(connection, x)
         ]
         chosen = [
@@ -157,13 +195,13 @@ class CreationReviewService:
             if (
                 x["id"] == progress.draft.starting_bond_id
                 if progress.draft.starting_bond_id
-                else x["source_id"] == str(viewer.user_id)
+                else x["source_id"] == str(owner)
                 and x["id"] != progress.draft.additional_starting_bond_id
             )
             and starting_kind(x["girl_playbook"]) == starting_kind(progress.draft.girl_playbook)
             and (
                 progress.draft.girl_playbook not in ("NEWGIRL", "BONDED")
-                or x["source_id"] == str(viewer.user_id)
+                or x["source_id"] == str(owner)
             )
         ]
         optional_second = (
@@ -172,7 +210,7 @@ class CreationReviewService:
         )
         required_bonds = 1 if optional_second else self.store.policy.owner_starting_bond_count
         test_bypass = any(
-            x.user_id == viewer.user_id and x.character_revision == progress.character_revision
+            x.user_id == owner and x.character_revision == progress.character_revision
             for x in setup.starting_bond_test_bypasses
         )
         if len(chosen) != 1 and not test_bypass:
@@ -189,11 +227,7 @@ class CreationReviewService:
             )
 
             def counterpart(row: dict[str, Any]) -> str:
-                return str(
-                    row["target_id"]
-                    if row["source_id"] == str(viewer.user_id)
-                    else row["source_id"]
-                )
+                return str(row["target_id"] if row["source_id"] == str(owner) else row["source_id"])
 
             if (
                 extra is None
@@ -214,7 +248,7 @@ class CreationReviewService:
                     )
                 )
         if progress.draft.girl_playbook == "NEWGIRL":
-            cadre = handler.cadre(connection, viewer.user_id)
+            cadre = handler.cadre(connection, owner)
             declared = {x.user_id: x.character_revision for x in progress.draft.prior_missions}
             if not cadre or declared != cadre:
                 issues.append(
@@ -271,7 +305,7 @@ class CreationReviewService:
             (x.value for x in progress.shared_choices if x.kind == "callsign"), profile["callsign"]
         )
         sheet = ReviewSheet(
-            owner=viewer.user_id,
+            owner=owner,
             callsign=profile["callsign"],
             activation_callsign=name,
             character_revision=progress.character_revision,
@@ -286,18 +320,16 @@ class CreationReviewService:
                     id=x["id"],
                     revision=x["revision"],
                     counterpart=int(
-                        x["target_id"] if x["source_id"] == str(viewer.user_id) else x["source_id"]
+                        x["target_id"] if x["source_id"] == str(owner) else x["source_id"]
                     ),
-                    outgoing=x["source_id"] == str(viewer.user_id),
+                    outgoing=x["source_id"] == str(owner),
                     depth=starting_kind(x["girl_playbook"]),
                     context=x["context"],
                 )
                 for x in sorted(current_bonds, key=lambda x: x["id"])
             ),
             shared=progress.shared_choices,
-            received_court=SharedSetupService(self.store).received_court(
-                connection, viewer.user_id
-            ),
+            received_court=SharedSetupService(self.store).received_court(connection, owner),
             coordination=coordination,
             initial_conditions=self.store.policy.owner_initial_conditions,
             psych_strings=(
@@ -305,9 +337,7 @@ class CreationReviewService:
                     PsychStringAnchor(
                         kind="pilot",
                         reference=str(
-                            x["target_id"]
-                            if x["source_id"] == str(viewer.user_id)
-                            else x["source_id"]
+                            x["target_id"] if x["source_id"] == str(owner) else x["source_id"]
                         ),
                         source_token=x["id"] + ":" + str(x["revision"]),
                     )
@@ -316,7 +346,7 @@ class CreationReviewService:
                 + tuple(
                     PsychStringAnchor(
                         kind="npc_role",
-                        reference=f"npc:{viewer.user_id}:{x.slot}",
+                        reference=f"npc:{owner}:{x.slot}",
                         source_token=f"creation:{progress.revision}",
                     )
                     for x in progress.draft.npc_bonds
@@ -330,17 +360,25 @@ class CreationReviewService:
             dependency_tokens=tuple(
                 f"pilot:{uid}:{data['revision']}" for uid, data in sorted(roster.items())
             )
-            + ("handler_active:" + str(active_handler),),
+            + ("handler_active:" + str(active_handler),)
+            + status_dependencies,
         )
-        fingerprint = hashlib.sha256(
-            json.dumps(sheet.model_dump(mode="json"), sort_keys=True).encode()
-        ).hexdigest()
-        saved = self._latest(connection, viewer)
+        body = sheet.model_dump(mode="json")
+        fingerprint = hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()
+        saved = self._latest(connection, owner)
+        saved_current = saved is not None and saved["dependency_hash"] == fingerprint
+        if saved is not None and not saved_current:
+            previous = json.loads(saved["body_json"])
+            saved_current = (
+                normalize_frame_fields(previous) == body
+                and hashlib.sha256(json.dumps(previous, sort_keys=True).encode()).hexdigest()
+                == saved["dependency_hash"]
+            )
         return CurrentReview(
             sheet,
             fingerprint,
             saved["revision"] if saved else 0,
-            saved is not None and saved["dependency_hash"] == fingerprint,
+            saved_current,
         )
 
     def get(self, viewer: GuildViewer) -> CurrentReview:
@@ -352,7 +390,7 @@ class CreationReviewService:
         with self.store.engine.connect() as connection:
             self.store.guild_member(viewer)
             self.store._membership(connection, viewer)
-            row = self._latest(connection, viewer)
+            row = self._latest(connection, viewer.user_id)
             return ReviewSheet.model_validate_json(row["body_json"]) if row else None
 
     def save(

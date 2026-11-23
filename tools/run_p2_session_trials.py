@@ -93,21 +93,36 @@ class SceneTrial:
         trial = self.trial
         trial.dice.faces = faces
         before = trial.dice.calls
-        identity = trial.game.begin(
-            PLAYER,
-            str(uuid4()),
-            900,
-            state(trial.game).sheets["2"].revision,
-            PlayInput(
-                play=play,
-                context=self.input_text or text,
-                trigger_confirmed=True,
-                heat=0,
-                **details,
-            ),
-        )["action_id"]
         assert self.review_id is not None
-        trial.session.bind_action(ADMIN, str(uuid4()), trial.scene, self.review_id, identity)
+        sheet_revision = state(trial.game).sheets["2"].revision
+        if play == "keep_your_head" and trial.session.conversation.handler_mode == "reviewed":
+            result = trial.session.open_declared_keep(
+                PLAYER, trial.scene, self.review_id, sheet_revision, 0
+            )
+            assert (
+                trial.session.open_declared_keep(
+                    PLAYER, trial.scene, self.review_id, sheet_revision, 0
+                )
+                == result
+            )
+        else:
+            result = trial.game.begin(
+                PLAYER,
+                str(uuid4()),
+                trial.scene_channel,
+                sheet_revision,
+                PlayInput(
+                    play=play,
+                    context=self.input_text or text,
+                    trigger_confirmed=True,
+                    heat=0,
+                    **details,
+                ),
+            )
+            trial.session.bind_action(
+                ADMIN, str(uuid4()), trial.scene, self.review_id, result["action_id"]
+            )
+        identity = result["action_id"]
         assert trial.dice.calls == before
         trial.tick()
         for owner in (PLAYER, OTHER, ADMIN):
@@ -223,7 +238,7 @@ class SceneTrial:
         )
         self.actions.append(identity)
 
-    def keep(self, spec, *, stale=False):
+    def keep(self, spec, *, stale=False, narration=None):
         from test_ledger import ADMIN, PLAYER
 
         from girlframe.ai.gm_outcomes import KeepOutcome
@@ -251,6 +266,7 @@ class SceneTrial:
         frame = TaskFrame(
             stakes=goal,
             demands=(Demand(id="goal", question="Does the chosen response meet this goal?"),),
+            response_scope="self",
         )
         decision = KeepOutcome(
             verdict="enough" if sufficient else "not_enough",
@@ -263,9 +279,12 @@ class SceneTrial:
                     private_reason="Fixture facilitator interprets the trait against this goal.",
                 ),
             ),
-            narration="The pilot maintains the stated goal."
-            if sufficient
-            else "The pilot cannot maintain the stated precision.",
+            narration=narration
+            or (
+                "The pilot maintains the stated goal."
+                if sufficient
+                else "The pilot cannot maintain the stated precision."
+            ),
         )
         self.consume("choice", row["source_id"], decision, frame=frame, stale=stale)
         self.narrate(identity, decision.narration)

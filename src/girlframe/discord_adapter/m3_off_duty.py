@@ -93,8 +93,13 @@ async def open_period(interaction: discord.Interaction, service: OffDutyService)
         actions.append(("refresh_rewards", "Refresh current Frame bonus tasks"))
     if data["phase"] == "preparing" and viewer.user_id == progress["handler"]:
         actions.append(("activate", "Finish preparation and begin Off-Duty"))
+        actions.append(("custom_strain", "Author a custom Strain event"))
     elif data["phase"] == "active":
         own = progress["own"]
+        if progress["princess_upkeep_candidates"]:
+            actions.append(("princess_upkeep", "Review current Princess standards"))
+        if progress["princess_can_order"]:
+            actions.append(("princess_order", "Give a Princess Order to an NPC"))
         if progress["sheet"] is not None and not (own and own["recovered"]):
             if own is None or own["roll"] is None:
                 actions.append(
@@ -139,6 +144,13 @@ async def open_period(interaction: discord.Interaction, service: OffDutyService)
 
     async def choose(current: discord.Interaction, identity: str) -> None:
         if identity.startswith("action:"):
+            if identity == "action:custom_strain":
+                from girlframe.discord_adapter.m3_custom_strain import open_custom
+                from girlframe.services.m3_custom_strain import CustomStrainService
+                from girlframe.services.m3_strain import StrainService
+
+                await open_custom(current, CustomStrainService(StrainService(service)), data["id"])
+                return
             if identity in ("action:observation_order", "action:observation_hiding"):
                 from girlframe.discord_adapter.m3_observation import open_order
                 from girlframe.services.m3_observation import ObservationService
@@ -196,6 +208,12 @@ async def open_period(interaction: discord.Interaction, service: OffDutyService)
             from girlframe.services.m3_strain import StrainService
 
             await open_work(current, StrainService(service), identity)
+        elif row["kind"] == "named_strain_roll":
+            from girlframe.discord_adapter.m3_named_strain import open_named_strain
+            from girlframe.services.m3_named_strain import NamedStrainService
+            from girlframe.services.m3_strain import StrainService
+
+            await open_named_strain(current, NamedStrainService(StrainService(service)), identity)
         elif row["kind"] in (
             "doctor_frame_replacement",
             "frame_replacement_package",
@@ -226,11 +244,31 @@ async def open_period(interaction: discord.Interaction, service: OffDutyService)
                 from girlframe.services.m3_handler_advancements import HandlerAdvancementService
 
                 await open_advancement(current, HandlerAdvancementService(service.store), identity)
+            elif saved["body"]["rule_id"] == "strain.void.endgame.1":
+                from girlframe.discord_adapter.m3_void_leave import open_leave
+                from girlframe.services.m3_void_leave import LeaveService
+
+                await open_leave(current, LeaveService(service.store), identity)
+            elif saved["body"]["rule_id"] == "strain.void.endgame.2":
+                from girlframe.discord_adapter.m3_void_lab_portal import open_lab
+                from girlframe.services.m3_void_lab_portal import LabPortalService
+
+                await open_lab(current, LabPortalService(service.store), identity)
+            elif saved["body"]["rule_id"] == "strain.void.endgame.3":
+                from girlframe.discord_adapter.m3_handler_retirement import open_retirement
+                from girlframe.services.m3_handler_retirement import RetirementService
+
+                await open_retirement(current, RetirementService(service.store), identity)
             elif saved["body"]["rule_id"] == "strain.void.endgame.4":
                 from girlframe.discord_adapter.m3_void_retirement import open_offer
                 from girlframe.services.m3_void_retirement import StipendService
 
                 await open_offer(current, StipendService(service.store), identity)
+            elif saved["body"]["rule_id"] == "strain.void.endgame.5":
+                from girlframe.discord_adapter.m3_void_privacy import open_concealment
+                from girlframe.services.m3_void_privacy import ConcealmentService
+
+                await open_concealment(current, ConcealmentService(service.store), identity)
             elif saved["body"]["rule_id"] == "strain.rebellion.endgame.1":
                 from girlframe.discord_adapter.m3_rebel_leader import open_leader
                 from girlframe.services.m3_rebel_leader import LeaderService

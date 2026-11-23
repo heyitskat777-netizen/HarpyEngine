@@ -13,6 +13,8 @@ from girlframe.engine import m3_world as rules
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_harpy_defeat import offstage_travel
+from girlframe.engine.m3_world_development import Development, DevelopmentDraft
+from girlframe.engine.m3_world_development import validate as validate_development
 from girlframe.engine.m3_world_state import (
     AdversaryPilot,
     Board,
@@ -74,13 +76,19 @@ def require_world_advancement(state: GameState) -> None:
 
 
 def _world_projection(state: GameState) -> dict[str, Any]:
+    from girlframe.engine.m3_void_lab_portal import projection as lab_portals
+    from girlframe.services.m3_gorgon_type_tags import NPC_PREFIX
     from girlframe.services.m3_red_queen_accusation import official_allegations
 
     assert state.world is not None
-    projected = state.world.model_dump(mode="json")
+    projected = state.world.model_dump(mode="json", exclude={"corrupted_cells"})
+    if portals := lab_portals(state):
+        projected["stable_portals"] = portals
     for row in projected["locations"]:
         row["official_allegations"] = official_allegations(state, row["kind"], row["id"])
     for row in projected["npcs"]:
+        if "tags" in row:
+            row["tags"] = [tag for tag in row["tags"] if not tag["id"].startswith(NPC_PREFIX)]
         row["official_allegations"] = official_allegations(
             state, "npc", ActorRef(kind="npc", entity=row["id"])
         )
@@ -164,7 +172,66 @@ class WorldService:
             operation,
         )
 
+    def develop(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        expected: int,
+        draft: DevelopmentDraft,
+        *,
+        source_proposal: str,
+    ) -> dict[str, Any]:
+        """Commit reviewed narrative only; no world entity or gameplay field changes."""
+        value = DevelopmentDraft.model_validate_json(draft.model_dump_json())
+        if not source_proposal.strip() or len(source_proposal) > 200:
+            raise WorkflowError("WORLD_DEVELOPMENT_SOURCE: retain the actual proposal provenance.")
+
+        def operation(c: Connection) -> dict[str, Any]:
+            state = self._state(c, expected)
+            version = validate_development(state, value, viewer.user_id)
+            event = str(uuid4())
+            record = Development(
+                **value.model_dump(),
+                id="world-development:" + str(uuid4()),
+                source_event=event,
+                source_proposal=source_proposal,
+                version=version,
+                confirmed_by=viewer.user_id,
+            )
+            state.facts.append(dict(kind="world_development", body=record.model_dump_json()))
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.world_development_recorded",
+                state,
+                event_id=event,
+                entity_id=value.subject.id,
+                development_id=record.id,
+            )
+            return {
+                "id": record.id,
+                "source_event": event,
+                "version": version,
+                "game_revision": state.revision,
+            }
+
+        return self._write(
+            viewer,
+            key,
+            "m3.world_development_recorded",
+            {
+                "expected": expected,
+                "draft": value.model_dump(mode="json"),
+                "source_proposal": source_proposal,
+            },
+            operation,
+        )
+
     def get(self, viewer: GuildViewer, *, private: bool = False) -> dict[str, Any]:
+        from girlframe.engine.m3_civic_directive import public_conditions
+        from girlframe.engine.m3_cult_occupation import public_occupations
+
         with self.store.engine.connect() as c:
             self.game.authorize(c, viewer, game=False)
             if private:
@@ -173,10 +240,12 @@ class WorldService:
             world = state.world
             if world is None:
                 return {"game_revision": state.revision, "world": None}
+            conditions = public_conditions(state) + public_occupations(state)
+            civic = {"civic_conditions": conditions} if conditions else {}
             if private:
                 return {
                     "game_revision": state.revision,
-                    "world": _world_projection(state),
+                    "world": _world_projection(state) | civic,
                     "offstage_world": [
                         x.model_dump(mode="json") for x in offstage_world_actors(state)
                     ],
@@ -185,6 +254,7 @@ class WorldService:
                 "game_revision": state.revision,
                 "world": {
                     "board": world.board.model_dump(mode="json"),
+                    **civic,
                     **(
                         {
                             "regions": [

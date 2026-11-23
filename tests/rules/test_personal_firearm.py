@@ -74,7 +74,7 @@ def buy(canon, *, kind="frame_grafting", registry=None, replace=None):
 
 
 @pytest.mark.parametrize(
-    "kind,frame,price", [("ability_unlock", "THE ENFORCER", 2), ("frame_grafting", "JANUS-B", 3)]
+    "kind,frame,price", [("ability_unlock", "THE ENFORCER", 2), ("frame_grafting", "JANUS", 3)]
 )
 def test_actual_source_price_and_frame_eligibility_install_one_girl_pistol(
     canon, kind, frame, price

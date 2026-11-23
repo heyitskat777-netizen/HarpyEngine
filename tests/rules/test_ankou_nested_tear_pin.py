@@ -211,7 +211,6 @@ def test_nested_tear_pin_feedback_preserves_actual_two_ankou_sources(ledger, tmp
             heat=("1",),
             disposable_heat=("0",),
             piloting=("no",),
-            witnessed=("no",),
             trigger=("yes",),
             context=expected.context,
         )

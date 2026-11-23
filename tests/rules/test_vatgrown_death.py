@@ -15,6 +15,7 @@ from test_vatgrown_plays import ready
 
 from girlframe.discord_adapter.m3_careers import open_replacement
 from girlframe.discord_adapter.m3_vatgrown_death import open_vatgrown_death
+from girlframe.discord_adapter.member_names import member_label
 from girlframe.discord_adapter.p1_shelving import register_shelving
 from girlframe.engine import m3_vatgrown_death as rules
 from girlframe.engine.bonds import BondProposal
@@ -279,19 +280,33 @@ def test_actual_vatgrown_death_fresh_native_activation_and_original_other_owned_
         shelving.view(OTHER, new_request["id"])
 
     async def withdraw_previous_intake():
+        def shelving_click(key):
+            click = interaction(PLAYER, key)
+            click.user.display_name = "Synthetic Pilot"
+            return click
+
         tree = MagicMock()
         register_shelving(tree, PLAYER.guild_id, game)
         group = tree.add_command.call_args.args[0]
-        inbox = interaction(PLAYER, "replacement-shelving-inbox")
+        inbox = shelving_click("replacement-shelving-inbox")
         await group.get_command("inbox").callback(inbox)
         form = inbox.edit_original_response.call_args.kwargs["view"]
         labels = dict(form.fields[0].options)
         assert set(labels) == {old_request["id"], new_request["id"]}
         assert "previous actor" in labels[old_request["id"]]
         assert "current actor" in labels[new_request["id"]]
-        visible = form.text() + "\n" + "\n".join(labels.values())
+        rendered_labels = {
+            key: label.replace(member_label(PLAYER.user_id), "Synthetic Pilot")
+            for key, label in labels.items()
+        }
+        assert all(label.startswith("Synthetic Pilot |") for label in rendered_labels.values())
+        visible = (
+            inbox.edit_original_response.call_args.kwargs["content"]
+            + "\n"
+            + "\n".join(rendered_labels.values())
+        )
         actual_options = next(child.options for child in form.children if hasattr(child, "options"))
-        assert {option.value: option.label for option in actual_options} == labels
+        assert {option.value: option.label for option in actual_options} == rendered_labels
         inbox.response.defer.assert_awaited_once_with(ephemeral=True)
         for request in (old_request, new_request):
             assert request["id"] in labels[request["id"]]
@@ -301,23 +316,23 @@ def test_actual_vatgrown_death_fresh_native_activation_and_original_other_owned_
                 if isinstance(value, str) and len(value) > 20:
                     assert value not in visible
         # Reopening reconstructs identical labels; no ephemeral UI is the authority.
-        reopened = interaction(PLAYER, "replacement-shelving-inbox-reopen")
+        reopened = shelving_click("replacement-shelving-inbox-reopen")
         await group.get_command("inbox").callback(reopened)
         saved_form = reopened.edit_original_response.call_args.kwargs["view"]
         assert dict(saved_form.fields[0].options) == labels
         saved_form.values["request"] = (old_request["id"],)
-        selected_request = interaction(PLAYER, "select-old-shelving-request")
+        selected_request = shelving_click("select-old-shelving-request")
         await saved_form.confirm.callback(selected_request)
         review_packet = selected_request.edit_original_response.call_args.kwargs
         review = review_packet["view"]
-        assert labels[old_request["id"]] in review_packet["content"]
+        assert rendered_labels[old_request["id"]] in review_packet["content"]
         assert new_request["id"] not in review_packet["content"]
         assert original.incarnation not in review_packet["content"]
         assert fresh.new_actor.incarnation not in review_packet["content"]
         assert "no player is frozen" in review_packet["content"]
         assert dict(review.fields[0].options) == {"withdraw": "Withdraw my shelving request"}
         review.values["operation"] = ("withdraw",)
-        submitted = interaction(PLAYER, "withdraw-real-previous-actor-request")
+        submitted = shelving_click("withdraw-real-previous-actor-request")
         await review.confirm.callback(submitted)
         assert review.completed
         assert old_request["id"] in submitted.edit_original_response.call_args.kwargs["content"]

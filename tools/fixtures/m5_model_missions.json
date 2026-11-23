@@ -1,0 +1,502 @@
+{
+  "Advocate": {
+    "brief": {
+      "goals": "Practice a clear stop signal and deliver a charged battery without breaching the relay.",
+      "fact": "The marked service shelf is outside the relay's sealed service door.",
+      "objective": "Deliver a charged battery to the relay's marked external service shelf.",
+      "scope": "Use the marked lane and outside shelf. Forced entry is not authorised.",
+      "completion": "Both Pilots report the battery at the marked outside shelf with the clips closed."
+    },
+    "notes": {
+      "voice": "Name the person first. Give choices room. Let a joke about paperwork through when the pressure lifts.",
+      "intervention": "Clear room for a Pilot to speak. Will take a dispute upstairs when asked."
+    },
+    "beats": [
+      {
+        "id": "banter",
+        "lines": [
+          [
+            "Lark",
+            "Kite, whose handwriting is this on my lunch tin?"
+          ],
+          [
+            "Kite",
+            "Mine. Yours looks like the map fell down the stairs."
+          ]
+        ]
+      },
+      {
+        "id": "direct",
+        "lines": [
+          [
+            "Lark",
+            "Worth a try. I can see the sealed door now."
+          ],
+          [
+            "Kite",
+            "Handler, which shelf are we supposed to use?"
+          ]
+        ]
+      },
+      {
+        "id": "opening",
+        "lines": [
+          [
+            "Kite",
+            "The dispatch speaker called your objection a delay."
+          ],
+          [
+            "Lark",
+            "They decided I'd carry it before I got to finish my sentence."
+          ]
+        ]
+      },
+      {
+        "id": "handoff",
+        "lines": [
+          [
+            "Kite",
+            "I'll wait right here. Say what you wanted to say."
+          ],
+          [
+            "Lark",
+            "Thanks. I want to handle the dispatch desk myself. Give me a minute."
+          ]
+        ]
+      },
+      {
+        "id": "play",
+        "lines": [
+          [
+            "Lark",
+            "The case tilts when the floor flexes. I'll brace my knees and keep it level."
+          ],
+          [
+            "Kite",
+            "I have the lane. Take your time."
+          ]
+        ],
+        "native": {
+          "intent": "Keep the charged battery level on the flexing floor.",
+          "ruling": "Lark braces low and holds the charged case level as the panel flexes."
+        }
+      },
+      {
+        "id": "pressure",
+        "lines": [
+          [
+            "Kite",
+            "The desk told us to get the door open if the shelf is in use."
+          ],
+          [
+            "Lark",
+            "Anwen, does our brief let us open that door?"
+          ]
+        ]
+      },
+      {
+        "id": "evidence",
+        "lines": [
+          [
+            "Lark",
+            "Battery on the marked outside shelf. Clips still shut."
+          ],
+          [
+            "Kite",
+            "I see it there too. I can't see any relay lights from here."
+          ]
+        ]
+      },
+      {
+        "id": "debrief",
+        "lines": [
+          [
+            "Lark",
+            "Back across the stripe now. Thanks for waiting when I asked."
+          ],
+          [
+            "Kite",
+            "Sit with me a minute before we get the tin from the locker?"
+          ]
+        ]
+      }
+    ],
+    "success": true,
+    "debrief": "Both Pilots reported the charged battery on the marked outside shelf with the clips closed. Neither opened the relay."
+  },
+  "Frantic": {
+    "brief": {
+      "goals": "Practice a handoff under pressure and return a survey case from the flooded pump annex.",
+      "fact": "A dry rack stands inside the marked line by the pump annex.",
+      "objective": "Bring the sealed survey case back to the dry rack inside the marked line.",
+      "scope": "Stay on the dry catwalk and bypass a blocked section by returning to the last safe mark. No water entry.",
+      "completion": "Both Pilots report the sealed survey case on the dry rack and themselves across the marked line."
+    },
+    "notes": {
+      "voice": "Short sentences, often mid-task. Drops an unfinished sentence when priorities change. Dry humor when things finally settle.",
+      "intervention": "Take one competing task off a Pilot's hands. Check who took it before offering twice."
+    },
+    "beats": [
+      {
+        "id": "banter",
+        "lines": [
+          [
+            "Kite",
+            "I can hear your boots squeak over the comms."
+          ],
+          [
+            "Lark",
+            "They're a matched set. The left one complains too."
+          ]
+        ]
+      },
+      {
+        "id": "direct",
+        "lines": [
+          [
+            "Kite",
+            "We can see a rack over the rail."
+          ],
+          [
+            "Lark",
+            "Handler, where is the survey case meant to go?"
+          ]
+        ]
+      },
+      {
+        "id": "opening",
+        "lines": [
+          [
+            "Kite",
+            "I'm by the dry mark. I can see the corner of the case."
+          ],
+          [
+            "Lark",
+            "I can count the hinge gaps or keep my grip when this shakes. I can't do both."
+          ]
+        ]
+      },
+      {
+        "id": "handoff",
+        "lines": [
+          [
+            "Kite",
+            "I've got the count. Start on my next word."
+          ],
+          [
+            "Lark",
+            "Thanks. Kite and I have it here. Stay off the count line, please."
+          ]
+        ]
+      },
+      {
+        "id": "play",
+        "lines": [
+          [
+            "Lark",
+            "It's sliding toward the wet edge. I'll wedge it against the dry rail."
+          ],
+          [
+            "Kite",
+            "I can stand back. You need the elbow room."
+          ]
+        ],
+        "native": {
+          "intent": "Stop the survey case sliding off the dry catwalk.",
+          "ruling": "Lark turns the case against the dry rail and holds it there."
+        }
+      },
+      {
+        "id": "pressure",
+        "lines": [
+          [
+            "Kite",
+            "The next panel is half under. We could cut across the water below it."
+          ],
+          [
+            "Lark",
+            "Handler, what did we agree to if the catwalk was blocked?"
+          ]
+        ]
+      },
+      {
+        "id": "evidence",
+        "lines": [
+          [
+            "Lark",
+            "The case is sealed on the dry rack. I'm back inside the line."
+          ],
+          [
+            "Kite",
+            "Same from here. Case on the rack, both of us inside the dry mark. Can't tell if the annex pump runs."
+          ]
+        ]
+      },
+      {
+        "id": "debrief",
+        "lines": [
+          [
+            "Kite",
+            "Your boots finally stopped."
+          ],
+          [
+            "Lark",
+            "They can file the report then. Come on, I'll find us chairs."
+          ]
+        ]
+      }
+    ],
+    "success": true,
+    "debrief": "Both Pilots reported returning the sealed survey case and themselves across the marked dry line. Pump operation remains unverified."
+  },
+  "Scientist": {
+    "brief": {
+      "goals": "Learn to distinguish a repeatable observation from a guess and log a passive beacon reading.",
+      "fact": "The blue witness strip is readable through the north gallery window.",
+      "objective": "Collect one passive observation of the blue witness strip through the north window.",
+      "scope": "Observe through glass from the north gallery. Leave the beacon controls and sealed gallery door untouched.",
+      "completion": "Both Pilots report a reading from the blue witness strip and report leaving the controls untouched."
+    },
+    "notes": {
+      "voice": "Concrete and economical. When tired, use bits of lab shorthand but explain in ordinary words. Credit the person who did the work.",
+      "intervention": "Separate observation from inference. Offer to keep the record while the Pilot chooses what to check."
+    },
+    "beats": [
+      {
+        "id": "banter",
+        "lines": [
+          [
+            "Lark",
+            "That blue pencil in your pocket is mine."
+          ],
+          [
+            "Kite",
+            "You said that about the red one. They're developing a theory about you."
+          ]
+        ]
+      },
+      {
+        "id": "direct",
+        "lines": [
+          [
+            "Kite",
+            "There are two windows and a lot of painted over lettering."
+          ],
+          [
+            "Lark",
+            "Handler, which window are we using for the observation?"
+          ]
+        ]
+      },
+      {
+        "id": "opening",
+        "lines": [
+          [
+            "Kite",
+            "I called the amber fleck a reflection."
+          ],
+          [
+            "Lark",
+            "The blue strip pulsed twice even when I stopped moving. I don't know what caused it."
+          ]
+        ]
+      },
+      {
+        "id": "handoff",
+        "lines": [
+          [
+            "Kite",
+            "I've got the notebook. We can each call out what we see."
+          ],
+          [
+            "Lark",
+            "Let's do it that way, just the two of us. We won't decide what made it flash."
+          ]
+        ]
+      },
+      {
+        "id": "play",
+        "lines": [
+          [
+            "Lark",
+            "I can't read it with the shade jumping. I'll steady the shade against the sill."
+          ],
+          [
+            "Kite",
+            "I'll hold on this side and keep my hands off the panel."
+          ]
+        ],
+        "native": {
+          "intent": "Steady the loose viewing shade long enough to read through glass.",
+          "ruling": "Lark pins the loose shade gently to the sill and has a steady view through the glass."
+        }
+      },
+      {
+        "id": "pressure",
+        "lines": [
+          [
+            "Kite",
+            "There's an accessible-looking switch. It might take us from a clue to an answer."
+          ],
+          [
+            "Lark",
+            "Handler, does the briefing allow us to try the switch?"
+          ]
+        ]
+      },
+      {
+        "id": "evidence",
+        "lines": [
+          [
+            "Lark",
+            "Two pulses on the blue strip through the north glass. I touched no controls."
+          ],
+          [
+            "Kite",
+            "Same two pulses from my side. Controls untouched. I can't tell what the strip is connected to."
+          ]
+        ]
+      },
+      {
+        "id": "debrief",
+        "lines": [
+          [
+            "Lark",
+            "Kite, put my initials next to yours. A good line in your notebook."
+          ],
+          [
+            "Kite",
+            "All right. Give me my pencil back for a second."
+          ]
+        ]
+      }
+    ],
+    "success": true,
+    "debrief": "The pilots logged two observed pulses without touching the controls. The cause was not established."
+  },
+  "Insurgent": {
+    "brief": {
+      "goals": "Practice a limited public report and decide how to handle an intrusive checkpoint.",
+      "fact": "The Foundation checkpoint has an outside drop kiosk and a public speaker.",
+      "objective": "Offer the unmarked test envelope at the checkpoint's outside kiosk.",
+      "scope": "Use the outside kiosk only. Any request for extra names or personal information may be declined. Pilots may return with the envelope unopened.",
+      "completion": "Both Pilots report the checkpoint kiosk accepted the unopened test envelope. A return with it is an allowed withdrawal, not a completed delivery."
+    },
+    "notes": {
+      "voice": "Deliberate and guarded when the line is open. Dry and matter-of-fact on neutral subjects.",
+      "intervention": "Protect confidences. Offer a practical way to limit an institutional demand without deciding for the Pilots."
+    },
+    "beats": [
+      {
+        "id": "banter",
+        "lines": [
+          [
+            "Kite",
+            "Do you think they put that 'Welcome' sign up before or after the bollards?"
+          ],
+          [
+            "Lark",
+            "Judging by the rust: before they invented welcome."
+          ]
+        ]
+      },
+      {
+        "id": "direct",
+        "lines": [
+          [
+            "Lark",
+            "We've got the speaker and two slots in view."
+          ],
+          [
+            "Kite",
+            "Anwen, is it the outside kiosk or the slot by the office?"
+          ]
+        ]
+      },
+      {
+        "id": "opening",
+        "lines": [
+          [
+            "Kite",
+            "The Foundation desk just asked for the names of the people we had lunch with."
+          ],
+          [
+            "Lark",
+            "Their form is for an envelope. They won't queue it unless we fill in that extra list."
+          ]
+        ]
+      },
+      {
+        "id": "handoff",
+        "lines": [
+          [
+            "Kite",
+            "I can tell the desk what we actually brought."
+          ],
+          [
+            "Lark",
+            "Do that. I don't want anybody offering names or cutting in while you talk."
+          ]
+        ]
+      },
+      {
+        "id": "play",
+        "lines": [
+          [
+            "Lark",
+            "Wind caught the envelope when the shutter moved. I'll hold it down flat and back away."
+          ],
+          [
+            "Kite",
+            "I've got room here if you need to step back."
+          ]
+        ],
+        "native": {
+          "intent": "Keep the unopened envelope from slipping under the moving shutter.",
+          "ruling": "Lark holds the envelope flat as the shutter moves and draws it back unopened."
+        }
+      },
+      {
+        "id": "pressure",
+        "lines": [
+          [
+            "Kite",
+            "They're pointing us toward the staffed office now."
+          ],
+          [
+            "Lark",
+            "Handler, may we turn back with the envelope if the kiosk keeps refusing it?"
+          ]
+        ]
+      },
+      {
+        "id": "evidence",
+        "lines": [
+          [
+            "Lark",
+            "I didn't leave the envelope. It's closed and with me. I'm choosing to head back."
+          ],
+          [
+            "Kite",
+            "Same account from me. They never accepted it. I'm coming back too."
+          ]
+        ]
+      },
+      {
+        "id": "debrief",
+        "lines": [
+          [
+            "Lark",
+            "I'm clear of the checkpoint. We can write after we get inside."
+          ],
+          [
+            "Kite",
+            "I'll put the kettle on. No one needs to fill in a form for tea."
+          ]
+        ]
+      }
+    ],
+    "success": false,
+    "debrief": "Both pilots declined the checkpoint demand and withdrew with the envelope unopened. The kiosk did not accept it."
+  }
+}

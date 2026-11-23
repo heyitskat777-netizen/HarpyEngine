@@ -4,12 +4,36 @@ import re
 
 from girlframe.ai.play_review import PlayReferral
 from girlframe.engine.m2 import PLAY_IDS
+from girlframe.engine.m3_advocate_alone import RULE as advocate_alone
 from girlframe.engine.m3_consume import PLAYS as CONSUME
-from girlframe.engine.m3_handler_play_state import BASIC, EXTRA
+from girlframe.engine.m3_frantic_breakdown import RULE as frantic_breakdown
+from girlframe.engine.m3_handler_play_state import (
+    BASIC,
+    DRESS_RULE,
+    EXTRA,
+    SOURCE_RULE,
+    SUCCESSOR_ADVICE,
+)
+from girlframe.engine.m3_handler_private_scene import RULES as private_scenes
+from girlframe.engine.m3_plays import GIRL_ROLL_RULES
 from girlframe.engine.m3_red_queen import PLAYS as RED_QUEEN
 from girlframe.engine.m3_wyvern import PLAYS as WYVERN
 from girlframe.engine.rules_registry import Registry
 from girlframe.services.m3_access import digest, load_registry
+from girlframe.services.m3_gorgon_play import RULES as GORGON_RULES
+
+HANDLER_SCENES = {
+    "handler_advocate_alone": (advocate_alone, "Get Them Alone"),
+    "handler_frantic_breakdown": (frantic_breakdown, "Break Down"),
+    "handler_casualty_parts": (SOURCE_RULE, "Damage an original Casualty part"),
+    "handler_mistress_favor": (private_scenes["Mistress"], "Mistress Sex Play"),
+    "handler_trainer_private": (private_scenes["Trainer"], "Trainer Sex Play"),
+    "handler_dogrunner_private": (private_scenes["Dogrunner"], "Dogrunner Sex Play"),
+    "handler_insurgent_private": (private_scenes["Insurgent"], "Insurgent Sex Play"),
+    "handler_scientist_private": (private_scenes["Scientist"], "Scientist Sex Play"),
+    "handler_frantic_private": (private_scenes["Frantic"], "Frantic Sex Play"),
+    "handler_advocate_private": (private_scenes["Advocate"], "Advocate Sex Play"),
+}
 
 NATIVE_RULES = {
     **{x: "play.basic." + x for x in (*PLAY_IDS, "receive_orders")},
@@ -26,35 +50,19 @@ NATIVE_RULES = {
         )
     },
     "enforcement_initiative": "frame.enforcer.enforcement-initiative",
-    "mockingbird_person": "girl.mockingbird.bad-at-being-a-person",
-    "mockingbird_sex": "girl.mockingbird.sex-play",
     "snoop": "frame.enforcer.snoop",
-    "brutalize": "girl.alpha.brutalize",
-    "alpha_sex": "girl.alpha.sex-play",
-    "am_scrutinized": "girl.am.scrutinized",
-    "am_just_code": "girl.am.just-code",
+    **GIRL_ROLL_RULES,
     "nanobot_injection": "frame.doctordoctor.nanobot-injection",
     "doctor_support": "frame.doctordoctor.here-for-support",
-    "dose_up": "girl.stim-blissed.dose-up",
-    "princess_sex": "girl.princess.sex-play",
-    "stim_sex": "girl.stim-blissed.sex-play",
-    "old_dog_new_pups": "girl.oldgen.old-dog-new-pups",
-    "oldgen_sex": "girl.oldgen.sex-play",
-    "casualty_sex": "girl.casualty.sex-play",
-    "vatgrown_sex": "girl.vatgrown.sex-play",
-    "newgirl_sex": "girl.newgirl.sex-play",
-    "easy_target": "girl.newgirl.easy-target",
-    "unassuming_doll": "girl.vatgrown.unassuming-doll",
     "prince_performer": "frame.prince.performer",
     "ankou_processor": "frame.ankou.processor-core",
     "changeling_blank_slate": "frame.changeling.blank-slate",
     "changeling_body_of_clay": "frame.changeling.body-of-clay",
-    "bonded_side": "girl.bonded.always-by-her-side",
-    "bonded_sex": "girl.bonded.sex-play",
     "living_battery": "frame.janus.living-battery",
     "pandora_birth": "frame.janus.pandora",
     **CONSUME,
     **RED_QUEEN,
+    "red_queen_transfer": "frame.red-queen.am-transfer",
     **WYVERN,
     "handler_brief": "play.handler.brief",
     "handler_punish": "handler.handler.punish-them",
@@ -66,9 +74,10 @@ NATIVE_RULES = {
     "handler_tracker_intercept": "handler-advancement.handler-advancement.tracker-implants",
     "handler_tracker_voyeur": "handler-advancement.handler-advancement.tracker-implants",
     "handler_contaminant_warp": "handler-advancement.handler-advancement.contaminant-zone",
-    "gorgon_attack": "gorgon.gorgon.attack",
-    "gorgon_collateral": "gorgon.gorgon.collateral-damage",
-    "gorgon_warp": "gorgon.gorgon.warp",
+    "handler_dress_them_down": DRESS_RULE,
+    "handler_successor_advice": SUCCESSOR_ADVICE,
+    **{key: rule for key, (rule, _) in HANDLER_SCENES.items()},
+    **{"gorgon_" + key: rule for key, rule in GORGON_RULES.items()},
 }
 
 
@@ -84,7 +93,9 @@ class PlayCatalog:
         native = [key for key, value in NATIVE_RULES.items() if value == rule.id]
         play = identity if identity in NATIVE_RULES else native[0] if len(native) == 1 else rule.id
         title = rule.title
-        if play.startswith("handler_"):
+        if play in HANDLER_SCENES:
+            title = HANDLER_SCENES[play][1]
+        elif play.startswith("handler_"):
             title = dict((*BASIC, *EXTRA))[play.removeprefix("handler_")]
             if play == "handler_off_duty":
                 title = "Handler Go Off-Duty"
@@ -128,7 +139,19 @@ class PlayCatalog:
             return ()
         if re.search(r"\b(?:not|never|don't|won't)\b", text[: declaration.start()], re.I):
             return ()
-        goal = re.search(r"\s+to\s+", text[declaration.end() :], re.I)
+        routes = self.all()
+        statement = text[declaration.end() :]
+        # A printed title can itself contain "to". Its words are part of the declaration.
+        title_end = max(
+            (
+                match.end()
+                for route in routes
+                if " to " in route.title.casefold()
+                and (match := re.match(r"\s*" + re.escape(route.title) + r"\b", statement, re.I))
+            ),
+            default=0,
+        )
+        goal = re.compile(r"\s+to\s+", re.I).search(statement, title_end)
         if goal is not None:
             text = text[: declaration.end() + goal.start()]
         # Typed IDs take precedence over similarly named source headings.
@@ -143,7 +166,7 @@ class PlayCatalog:
                     (declaration.end() + match.start(), declaration.end() + match.end(), route)
                 )
         matches: list[tuple[int, int, PlayReferral]] = []
-        for route in self.all():
+        for route in routes:
             entry = self.registry.entry(route.rule_id)
             labels = {route.play_id, route.rule_id, *entry.aliases}
             # Shared Sex Play headings need a playbook; the bare heading stays ambiguous.

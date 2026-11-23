@@ -80,6 +80,9 @@ def _physical_context(
         raise WorkflowError("Choose actual current physical movement within the mapped scene")
     bound = profiles(c, game.store.campaign_id)
     actual = resolve(state, actor, bound, require_current_profile=False)
+    from girlframe.services.m3_jackdaw import require_action
+
+    require_action(c, game.store.campaign_id, state, actual)
     if (
         actual.controller != controller
         or actual.cell is None
@@ -94,9 +97,38 @@ def _physical_context(
         x.actor == actor and x.controller == controller for x in cast.roles
     ):
         raise WorkflowError("Join this actual role in the source scene first")
+    if destination != actual.cell and actual.rules == "ancillary":
+        from girlframe.services.m3_ancillary_intimacy import require_revolutionary_departure
+
+        require_revolutionary_departure(state, actor)
     pose = next((x for x in state.placements if x.actor == actor), None)
     external_pose = next((x for x in state.external_poses if x.actor == actor), None)
     if actor.kind == "pilot":
+        from girlframe.engine.m3_sentinel_shell import holds
+        from girlframe.engine.m3_trainer_phrases import protections, require_can_leave_seat
+
+        if destination != actual.cell:
+            try:
+                require_can_leave_seat(state, actor)
+            except ValueError as error:
+                raise WorkflowError(str(error)) from None
+            protection = protections(state).get(actor)
+            if protection and protection.scene == scene["id"]:
+                from girlframe.services.m3_trainer_phrases import protected_pair
+
+                pair = protected_pair(
+                    game,
+                    c,
+                    state,
+                    actor,
+                    protection.protected,
+                    int(scene["channel_id"]),
+                    protection.scene,
+                )
+                if pair is None or destination != pair[1].cell:
+                    raise WorkflowError("The original Protect order requires staying at their side")
+        if holds(state, actor, "trapped"):
+            raise WorkflowError("The actual trapped Girl needs assistance before leaving")
         if (
             pose is None
             or pose.custody
@@ -126,7 +158,18 @@ def _physical_context(
                 "This source body needs its actual carrier or software-access adapter"
             )
     elif actor.kind == "gorgon":
-        pass
+        from girlframe.engine.m3_janus_pandora import require_can_move
+        from girlframe.engine.m3_parasite import active
+        from girlframe.engine.m3_parasite_infection import inhabits_original_body
+
+        try:
+            require_can_move(state, actor, destination)
+        except ValueError as error:
+            raise WorkflowError(str(error)) from None
+        if inhabits_original_body(state, actor):
+            raise WorkflowError("The original Parasite is folded inside its host until excision")
+        if active(state, actor) is not None:
+            raise WorkflowError("The actual Parasite must detach from its host before moving alone")
     elif actor.kind == "handler" and not frame and actual.inside_frame is not True:
         pass
     elif actor.kind == "external_pilot":
@@ -217,6 +260,44 @@ def _apply_context(state: GameState, context: dict[str, Any], event: str) -> Non
         ]
     else:
         raise WorkflowError("This actual body requires its specific movement source adapter")
+
+
+def apply_reviewed_movement(
+    game: GameService,
+    c: Connection,
+    viewer: GuildViewer,
+    state: GameState,
+    context: dict[str, Any],
+    event: str,
+    *,
+    travel: str | None = None,
+) -> None:
+    """Apply physical movement with the same travel and source hooks after authorization."""
+    from girlframe.services.m3_prisoner_escape import stage_movement as stage_escape
+    from girlframe.services.m3_vatgrown_travel import before_move, stage_movement
+
+    before_move(game, c, state, viewer, context, travel=travel)
+    before = GameState.model_validate_json(state.model_dump_json())
+    _apply_context(state, context, event)
+    stage_movement(game, c, before, state, context, travel, event)
+    stage_escape(game, c, before, state, context, event)
+    if context["actor"]["kind"] == "pilot":
+        from girlframe.services.m3_trainer_phrases import reach_heel
+
+        reach_heel(
+            game, c, state, ActorRef.model_validate(context["actor"]), context["scene"], event
+        )
+    if context["actor"]["kind"] == "gorgon":
+        from girlframe.engine.m3_mother_sprite import travel as sprite_travel
+
+        sprite_travel(
+            state,
+            ActorRef.model_validate(context["actor"]),
+            tuple(context["origin"]),
+            tuple(context["destination"]),
+            context["scene"],
+            event,
+        )
 
 
 class MovementService:
@@ -332,16 +413,16 @@ class MovementService:
                 self.game, c, viewer, state, channel, actor, destination, frame, account
             )
             assert state.world is not None
-            from girlframe.services.m3_vatgrown_travel import before_move, stage_movement
-
-            before_move(self.game, c, state, viewer, context, travel=vatgrown_travel)
-            before = GameState.model_validate_json(state.model_dump_json())
             event = str(uuid4())
-            _apply_context(state, context, event)
-            stage_movement(self.game, c, before, state, context, vatgrown_travel, event)
-            from girlframe.services.m3_prisoner_escape import stage_movement as stage_escape
-
-            stage_escape(self.game, c, before, state, context, event)
+            apply_reviewed_movement(
+                self.game,
+                c,
+                viewer,
+                state,
+                context,
+                event,
+                travel=vatgrown_travel,
+            )
             self.game.event(
                 c,
                 viewer.user_id,

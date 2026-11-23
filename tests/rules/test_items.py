@@ -240,17 +240,11 @@ def test_take_last_nonvoid_asset_opens_actual_source_void_and_printed_mockingbir
     assert game.inspect(PLAYER, identity)["state"] == "complete" and game.dice.calls == 1
 
 
-def test_actual_item_removal_mockingbird_threshold_uses_real_nested_keep_before_remaining_response(
-    ledger, tmp_path, monkeypatch
-):
-    from test_void_keep import keep as actual_keep
-
+def linked_frame_item_source(ledger, tmp_path, monkeypatch):
     from girlframe.engine import m3_physical as physical
-    from girlframe.engine.m2 import PlayInput
     from girlframe.engine.m3_actors import resolve
     from girlframe.engine.m3_physical_state import InitialPlacement
     from girlframe.services.m3_actors import profiles
-    from girlframe.services.m3_void import VoidService
 
     game, worker, gateway = ready(ledger, tmp_path, monkeypatch, (1, 1))
     with ledger.transaction() as c:
@@ -287,6 +281,18 @@ def test_actual_item_removal_mockingbird_threshold_uses_real_nested_keep_before_
             canon,
         )
     carried_asset(game, PLAYER, girl[0])
+    return game, worker, gateway, girl[0]
+
+
+def test_actual_item_removal_mockingbird_threshold_uses_real_nested_keep_before_remaining_response(
+    ledger, tmp_path, monkeypatch
+):
+    from test_void_keep import keep as actual_keep
+
+    from girlframe.engine.m2 import PlayInput
+    from girlframe.services.m3_void import VoidService
+
+    game, worker, gateway, asset = linked_frame_item_source(ledger, tmp_path, monkeypatch)
     identity = game.begin(
         PLAYER,
         str(uuid4()),
@@ -308,7 +314,7 @@ def test_actual_item_removal_mockingbird_threshold_uses_real_nested_keep_before_
         game,
         OTHER,
         "enforcer_item",
-        fields={"item": "asset:" + girl[0].id},
+        fields={"item": "asset:" + asset.id},
         text="I take the actual object from the Enforcer",
     )
     answer(game, OTHER, "enforcer_receive")

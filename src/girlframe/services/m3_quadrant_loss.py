@@ -547,6 +547,9 @@ class LossService:
                     "The actual source adjudicator records this Cadre's true institutional outcome."
                 )
             if decision == "execution":
+                from girlframe.services.campaign_difficulty import require_consequence
+
+                require_consequence(c, self.store.campaign_id, "execution")
                 if executor is None or state.world is None:
                     raise WorkflowError(
                         "Choose the actual existing Foundation agent who will perform the sentence."

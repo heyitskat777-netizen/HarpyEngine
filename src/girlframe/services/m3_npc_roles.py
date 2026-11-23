@@ -8,17 +8,117 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_npc_roles as rules
-from girlframe.engine.m3_world_state import Npc
+from girlframe.engine.m2 import GameState
+from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_world import update
+from girlframe.engine.m3_world_state import NPC_JOBS, Npc
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_world import WorldService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
+SOURCE_JOBS = frozenset({"director", "prisoner", "pilot_candidate"})
+
 
 class NpcRoleService:
     def __init__(self, world: WorldService):
         self.world, self.store, self.game = world, world.store, world.game
+
+    def _job_actor(
+        self, c: Connection, state: GameState, viewer: GuildViewer, channel: int, ref: ActorRef
+    ) -> Npc:
+        from girlframe.services.m3_battle import _cast
+
+        cast = _cast(self.game, c, state, channel)
+        npc = (
+            next((x for x in state.world.npcs if x.id == ref.entity), None) if state.world else None
+        )
+        if (
+            ref.kind != "npc"
+            or npc is None
+            or not npc.alive
+            or npc.source_kind is not None
+            or npc.controller != viewer.user_id
+            or not any(x.actor == ref and x.controller == viewer.user_id for x in cast.roles)
+        ):
+            raise WorkflowError("Only the original joined NPC controller can change its jobs")
+        return npc
+
+    def jobs(self, viewer: GuildViewer, channel: int, ref: ActorRef) -> dict[str, Any]:
+        with self.store.engine.connect() as c:
+            self.game.authorize(c, viewer, game=False)
+            state = load_state(c, self.store.campaign_id)
+            value = self._job_actor(c, state, viewer, channel, ref)
+            return dict(
+                revision=state.revision,
+                jobs=tuple(x for x in value.jobs if x not in SOURCE_JOBS),
+                fixed=tuple(x for x in value.jobs if x in SOURCE_JOBS),
+                options=tuple(
+                    (x, x.replace("_", " ").title()) for x in NPC_JOBS if x not in SOURCE_JOBS
+                ),
+            )
+
+    def change_jobs(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        channel: int,
+        expected: int,
+        ref: ActorRef,
+        jobs: tuple[str, ...],
+        account: str,
+    ) -> dict[str, Any]:
+        if (
+            len(set(jobs)) != len(jobs)
+            or not set(jobs) <= (set(NPC_JOBS) - SOURCE_JOBS)
+            or not 0 < len(account.strip()) <= 1200
+        ):
+            raise WorkflowError("Choose actual ordinary jobs and record why they change")
+
+        def operation(c: Connection) -> dict[str, Any]:
+            state = self.world._state(c, expected)
+            npc = self._job_actor(c, state, viewer, channel, ref)
+            fixed = tuple(x for x in npc.jobs if x in SOURCE_JOBS)
+            replacement = (*fixed, *jobs)
+            if not replacement or set(replacement) == set(npc.jobs):
+                raise WorkflowError("Choose a real change to this NPC's existing jobs")
+            assert state.world is not None
+            state.world = update(
+                state.world,
+                npcs=tuple(
+                    x.model_copy(update={"jobs": replacement}) if x.id == npc.id else x
+                    for x in state.world.npcs
+                ),
+            )
+            event = str(uuid4())
+            state.facts.append(
+                dict(
+                    kind="npc_jobs_changed",
+                    id=event,
+                    actor=ref.model_dump_json(),
+                    before=",".join(npc.jobs),
+                    after=",".join(replacement),
+                    account=account.strip(),
+                )
+            )
+            self.game.event(c, viewer.user_id, key, "m3.npc_jobs_changed", state, event_id=event)
+            return dict(event=event, jobs=list(replacement))
+
+        return self.world._write(
+            viewer,
+            key,
+            "m3.npc_jobs_changed",
+            dict(
+                channel=channel,
+                expected=expected,
+                npc=ref.model_dump(mode="json"),
+                jobs=jobs,
+                account=account,
+            ),
+            operation,
+            handler=False,
+        )
 
     def members(self, viewer: GuildViewer, *, transfer: bool = False) -> dict[str, Any]:
         with self.store.engine.connect() as c:

@@ -37,7 +37,7 @@ def ready(ledger, girl="MOCKINGBIRD"):
             PLAYER,
             "girl",
             1,
-            DraftInput(callsign="SYNTH", girl_playbook=girl, frame_playbook="JANUS-B"),
+            DraftInput(callsign="SYNTH", girl_playbook=girl, frame_playbook="JANUS"),
         )
     ledger.join(ADMIN, "join-handler")
     service = HandlerService(ledger)
@@ -117,7 +117,7 @@ def test_status_roster_princess_revision_and_unique_ranks(ledger):
         OTHER,
         "profile-update",
         1,
-        DraftInput(callsign="OTHER", girl_playbook="PRINCESS", frame_playbook="JANUS-B"),
+        DraftInput(callsign="OTHER", girl_playbook="PRINCESS", frame_playbook="JANUS"),
     )
     assert service.view(PLAYER)["status_stale"]
     with pytest.raises(WorkflowError, match="STALE_PROFILE"):

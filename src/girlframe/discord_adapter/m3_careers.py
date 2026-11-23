@@ -155,6 +155,8 @@ async def open_replacement(
                 "Girl playbook",
                 (("VATGROWN", "VATGROWN"),)
                 if data.get("vatgrown_death_required")
+                else (("NEWGIRL", "Newgirl"),)
+                if data.get("timeskip_newgirl_required")
                 else tuple((x, x) for x in GIRL_TYPES),
             ),
             Field("frame", "Frame playbook", tuple((x, x) for x in FRAME_TYPES)),

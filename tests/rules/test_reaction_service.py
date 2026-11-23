@@ -149,7 +149,7 @@ def test_reaction_rollback_and_concurrent_duplicate_requests(ledger, monkeypatch
 
 
 def test_princess_without_upheld_standards_has_no_invented_bonus(ledger):
-    svc, missions, game, mission = setup(ledger, girl="PRINCESS", frame="JANUS-B")
+    svc, missions, game, mission = setup(ledger, girl="PRINCESS", frame="JANUS")
     task = work(missions, mission, "princess_mission_end")
     current = svc.get(ADMIN, task["id"])
     assert len(current["standards"]) == 3
@@ -190,7 +190,7 @@ def test_princess_without_upheld_standards_has_no_invented_bonus(ledger):
 
 
 def test_princess_promotion_and_own_bonus_precede_the_final_ace_bonus(ledger):
-    svc, missions, game, mission = setup(ledger, girl="PRINCESS", frame="JANUS-B")
+    svc, missions, game, mission = setup(ledger, girl="PRINCESS", frame="JANUS")
     with ledger.transaction() as c:
         saved = state(game)
         saved.order = (3, 2)

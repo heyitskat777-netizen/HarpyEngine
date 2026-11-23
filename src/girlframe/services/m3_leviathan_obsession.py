@@ -578,6 +578,7 @@ class ObsessionService:
                 return dict(action_id=identity, receipt=action["data"]["receipt"])
             if action["state"] == "complete":
                 return dict(action_id=identity, receipt=None)
+            self.game.scene_unpaused(c, action["scene_id"])
             lock = self.game.lock(c, action["channel_id"])
             if (
                 action["state"] not in ("acquiring", "ready_to_roll")

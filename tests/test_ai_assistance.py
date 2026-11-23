@@ -175,7 +175,7 @@ def test_stale_campaign_proposal_and_sources_preserve_draft_and_allow_rejection(
         PLAYER,
         "new-profile",
         1,
-        DraftInput(callsign="NEWER_SYNTH", girl_playbook="MOCKINGBIRD", frame_playbook="JANUS-B"),
+        DraftInput(callsign="NEWER_SYNTH", girl_playbook="MOCKINGBIRD", frame_playbook="JANUS"),
     )
     view = service.get(PLAYER, receipt.proposal_id)
     assert not view.sources_current

@@ -1,6 +1,6 @@
 """Explicit synthetic reference chronology; observations never become automatic canon."""
 
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 from uuid import uuid4
 
 import sqlalchemy as sa
@@ -13,11 +13,35 @@ from girlframe.services.director_observation import DirectorObservationService, 
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
+if TYPE_CHECKING:
+    from girlframe.services.director_play_options import PlayProjection
+
+def next_contribution_ordinal(c: Connection, campaign: str, scene: str) -> int:
+    """Book actual scene deliveries and approved narration on the same timeline."""
+    table = t.director_context["shadow"]
+    return 1 + int(
+        c.scalar(
+            sa.select(sa.func.count())
+            .select_from(table)
+            .where(
+                table.c.campaign_id == campaign,
+                table.c.scene_id == scene,
+                sa.or_(
+                    table.c.id.like("gm-narration:%"),
+                    table.c.id.like("handler-delivery:%"),
+                    table.c.id.like("npc-delivery:%"),
+                ),
+            )
+        )
+        or 0
+    )
+
 
 class DirectorContextService:
     def __init__(self, observations: DirectorObservationService):
         self.observations = observations
         self.store = observations.store
+        self.native_play_projection: PlayProjection | None = None
 
     def _references(self, c: Connection, scene_id: str) -> tuple[KnowledgeReference, ...]:
         table = t.director_context["knowledge"]
@@ -40,22 +64,117 @@ class DirectorContextService:
             raise WorkflowError("CONTEXT_LIMIT: explicit reference archival is required.")
         return references
 
-    def _current(self, c: Connection, scene_id: str) -> tuple[KnowledgeReference, ...]:
-        references = self._active(c, scene_id)
-        for reference in references:
-            if reference.classification == "approved_outcome":
-                record = self._approved_outcome(c, scene_id, reference.source_id)
-                if reference.source_revision != 1 or reference.text != record["text"]:
-                    raise WorkflowError("STALE_KNOWLEDGE: retain the actual approved outcome.")
+    def _current(
+        self, c: Connection, scene_id: str, *, allow_closed: bool = False
+    ) -> tuple[KnowledgeReference, ...]:
+        scoped = self.observations._state(c, scene_id).activity_epoch is not None
+        references = []
+        visible: set[str] = set()
+        for reference in self._active(c, scene_id):
+            try:
+                self._prove_reference(c, scene_id, reference, allow_closed=allow_closed)
+            except WorkflowError:
+                if not scoped:
+                    raise
                 continue
-            source = self.observations._latest_source(c, reference.source_id)
-            if source is None or source.source_revision != reference.source_revision:
-                raise WorkflowError(
-                    "STALE_KNOWLEDGE: source correction needs explicit reconciliation."
-                )
-        return references
+            if scoped and not set(reference.dependencies) <= visible:
+                continue
+            references.append(reference)
+            visible.add(reference.id)
+        by_id = {reference.id: reference for reference in references}
+        for reference in references:
+            for relation in reference.relations:
+                target = by_id.get(relation.reference_id)
+                if (
+                    target is None
+                    or target.order >= reference.order
+                    or relation.reference_id not in reference.dependencies
+                ):
+                    raise WorkflowError("STALE_RELATION: reconcile the related account chronology.")
+        if scoped:
+            from girlframe.services.director_mission_briefing import mission_references
 
-    def _approved_outcome(self, c: Connection, scene: str, identity: str) -> dict[str, Any]:
+            terms = mission_references(self, c, scene_id, allow_closed=allow_closed)
+            if len(terms) + len(references) > 100:
+                raise WorkflowError("CONTEXT_LIMIT: explicit reference archival is required.")
+            return terms + tuple(references)
+        return tuple(references)
+
+    def _prove_reference(
+        self, c: Connection, scene_id: str, reference: KnowledgeReference, *, allow_closed: bool
+    ) -> None:
+        if reference.source_id.startswith("npc-delivery:") and reference.origin_scene is None:
+            from girlframe.services.director_npc_delivery import NpcDeliveryService
+
+            NpcDeliveryService(self).validate_reference(
+                c, scene_id, reference, allow_closed=allow_closed
+            )
+            return
+        if reference.origin_scene is not None:
+            from girlframe.services.director_continuity import validate_origin
+
+            validate_origin(self, c, reference, destination_scene=scene_id)
+            return
+        if reference.source_id.startswith("knowledge-acquired:"):
+            from girlframe.services.director_knowledge import DirectorKnowledgeService
+
+            DirectorKnowledgeService(self).validate_reference(
+                c, scene_id, reference, allow_closed=allow_closed
+            )
+            return
+        if reference.source_id.startswith("handler-delivery:"):
+            from girlframe.services.director_handler_delivery import validate_delivery_reference
+
+            validate_delivery_reference(self, c, scene_id, reference)
+            return
+        if reference.classification == "approved_outcome":
+            record = self._approved_outcome(
+                c, scene_id, reference.source_id, allow_closed=allow_closed
+            )
+            if reference.source_revision != 1 or reference.text != record["text"]:
+                raise WorkflowError("STALE_KNOWLEDGE: retain the actual approved outcome.")
+            return
+        if reference.classification == "established_world":
+            record = self._approved_world(
+                c, scene_id, reference.source_id, allow_closed=allow_closed
+            )
+            if (
+                reference.source_revision != record["revision"]
+                or reference.text != "Established world: " + record["text"]
+                or not set(reference.known_by)
+                <= {ActorRef.model_validate(actor).token for actor in record["recipients"]}
+            ):
+                raise WorkflowError("STALE_KNOWLEDGE: preserve the approved world disclosure.")
+            return
+        source = self.observations._latest_source(c, reference.source_id)
+        if source is None or source.source_revision != reference.source_revision:
+            raise WorkflowError("STALE_KNOWLEDGE: source correction needs explicit reconciliation.")
+
+    @staticmethod
+    def _actor_references(
+        references: tuple[KnowledgeReference, ...], actor: ActorRef
+    ) -> tuple[KnowledgeReference, ...]:
+        """A relationship is visible only when both actual accounts are known."""
+        known = tuple(x for x in references if actor.token in x.known_by)
+        visible = {x.id for x in known}
+        return tuple(
+            x.model_copy(
+                update={
+                    "known_by": (actor.token,),
+                    "dependencies": tuple(
+                        identity for identity in x.dependencies if identity in visible
+                    ),
+                    "relations": tuple(
+                        relation for relation in x.relations if relation.reference_id in visible
+                    ),
+                }
+            )
+            for x in known
+        )
+
+    def _approved_outcome(
+        self, c: Connection, scene: str, identity: str, *, allow_closed: bool = False
+    ) -> dict[str, Any]:
         import json
 
         from girlframe.services.gm_outcomes import GMOutcomeService
@@ -83,10 +202,40 @@ class DirectorContextService:
             or json.loads(command).get("id") != identity
         ):
             raise WorkflowError("UNPROVEN_OUTCOME: retain its actual confirmed native source.")
-        participants = sorted(str(x) for x in self.observations._scene(c, scene)["participants"])
+        if allow_closed:
+            raw = c.scalar(
+                sa.select(t.m2["m2_scenes"].c.participants_json).where(
+                    t.m2["m2_scenes"].c.campaign_id == self.store.campaign_id,
+                    t.m2["m2_scenes"].c.id == scene,
+                )
+            )
+            if raw is None:
+                raise WorkflowError("SOURCE_UNAVAILABLE: original scene is missing.")
+            participants = sorted(str(x) for x in json.loads(raw))
+        else:
+            participants = sorted(
+                str(x) for x in self.observations._scene(c, scene)["participants"]
+            )
         if record.get("audience_ids") != participants:
             raise WorkflowError("SOURCE_SCOPE_CHANGED: outcome knowledge requires audience review.")
         return record
+
+    def _approved_world(
+        self, c: Connection, scene: str, identity: str, *, allow_closed: bool = False
+    ) -> dict[str, Any]:
+        """The worldbuilding service owns native/review/disclosure proof, not prose."""
+        if identity.startswith("opening-source:"):
+            from girlframe.services.campaign_opening import CampaignOpeningService
+            from girlframe.services.director_knowledge import DirectorKnowledgeService
+
+            return CampaignOpeningService(DirectorKnowledgeService(self)).source(
+                c, scene, identity, allow_closed=allow_closed
+            )
+        from girlframe.services.director_worldbuilding import DirectorWorldbuildingService
+
+        return DirectorWorldbuildingService(self)._disclosure_source(
+            c, scene, identity, allow_closed=allow_closed
+        )
 
     def _archived(self, c: Connection, scene_id: str) -> set[str]:
         import json
@@ -104,6 +253,37 @@ class DirectorContextService:
             for identity in json.loads(raw)["reference_ids"]
         }
 
+    def _archive_snapshot(
+        self, c: Connection, viewer: GuildViewer, scene_id: str
+    ) -> tuple[str, tuple[KnowledgeReference, ...]]:
+        # Retirement must remain available when an origin was corrected or its
+        # consent withdrawn. This snapshot is never a provider prompt or readback.
+        self.observations._scope()
+        self.store.administrator(viewer)
+        self.observations.game.unpaused(c)
+        scene = self.observations._scene(c, scene_id, viewer)
+        state = self.observations._state(c, scene_id)
+        if state.policy.mode != "shadow" or not self.observations._consented(c, scene, state):
+            raise WorkflowError("OBSERVATION_DISABLED: current scene consent is required.")
+        refs = self._active(c, scene_id)
+        return _digest(
+            {
+                "guard": self.observations._guard(c, scene, state),
+                "references": [x.model_dump(mode="json") for x in refs],
+            }
+        ), refs
+
+    def archive_review(self, viewer: GuildViewer, scene_id: str) -> dict[str, Any]:
+        """Metadata-only retirement review, including references blocked by old consent."""
+        with self.store.engine.connect() as c:
+            revision, refs = self._archive_snapshot(c, viewer, scene_id)
+            return {
+                "revision": revision,
+                "references": [
+                    {"id": ref.id, "dependencies": list(ref.dependencies)} for ref in refs
+                ],
+            }
+
     def archive(
         self,
         viewer: GuildViewer,
@@ -119,26 +299,23 @@ class DirectorContextService:
         self.observations._scope()
 
         def authorize(c: Connection) -> None:
-            self._build(c, viewer, scene_id)
-            self.observations.game.unpaused(c)
+            self._archive_snapshot(c, viewer, scene_id)
 
         def operation(c: Connection) -> dict[str, str | int]:
-            current = self._build(c, viewer, scene_id)
+            revision, references = self._archive_snapshot(c, viewer, scene_id)
             selected = set(reference_ids)
-            if current.revision != expected_revision:
+            if revision != expected_revision:
                 raise WorkflowError("STALE_CONTEXT: refresh references before archival.")
             if (
                 not selected
                 or len(selected) != len(reference_ids)
-                or not selected <= {x.id for x in current.references}
+                or not selected <= {x.id for x in references}
                 or not reason.strip()
                 or len(reason) > 1200
             ):
                 raise WorkflowError("INVALID_ARCHIVE: select current references and give a reason.")
             if any(
-                selected.intersection(x.dependencies)
-                for x in current.references
-                if x.id not in selected
+                selected.intersection(x.dependencies) for x in references if x.id not in selected
             ):
                 raise WorkflowError("ACTIVE_DEPENDENCY: retain prerequisites or retire dependents.")
             identity = "reference-archive:" + str(uuid4())
@@ -191,7 +368,9 @@ class DirectorContextService:
         *,
         known_by: tuple[ActorRef, ...] = (),
         dependencies: tuple[str, ...] = (),
-        topic: Literal["general", "objective", "scope", "status"] = "general",
+        topic: Literal[
+            "general", "objective", "scope", "status", "briefing", "tactical", "debrief"
+        ] = "general",
     ) -> dict[str, str | int]:
         self.observations._scope()
 
@@ -217,18 +396,31 @@ class DirectorContextService:
                 if source_id.startswith("gm-narration:")
                 else None
             )
-            source = self.observations._latest_source(c, source_id) if approved is None else None
+            world = (
+                self._approved_world(c, scene_id, source_id)
+                if source_id.startswith("world-disclosure:")
+                else None
+            )
+            source = (
+                self.observations._latest_source(c, source_id)
+                if approved is None and world is None
+                else None
+            )
             inputs = t.director["inputs"]
-            if approved is None and (
-                source is None
-                or not c.scalar(
-                    sa.select(inputs.c.source_id)
-                    .where(
-                        inputs.c.campaign_id == self.store.campaign_id,
-                        inputs.c.scene_id == scene_id,
-                        inputs.c.source_id == source_id,
+            if (
+                approved is None
+                and world is None
+                and (
+                    source is None
+                    or not c.scalar(
+                        sa.select(inputs.c.source_id)
+                        .where(
+                            inputs.c.campaign_id == self.store.campaign_id,
+                            inputs.c.scene_id == scene_id,
+                            inputs.c.source_id == source_id,
+                        )
+                        .limit(1)
                     )
-                    .limit(1)
                 )
             ):
                 raise WorkflowError("SOURCE_UNAVAILABLE: use this scene’s actual observation.")
@@ -237,7 +429,23 @@ class DirectorContextService:
                 sorted(str(x) for x in scene["participants"])
             ):
                 raise WorkflowError("SOURCE_SCOPE_CHANGED: privacy reconciliation is required.")
-            source_revision = source.source_revision if source else 1
+            source_revision = (
+                source.source_revision if source else world["revision"] if world else 1
+            )
+            if world is not None and not set(known_by) <= {
+                ActorRef.model_validate(actor) for actor in world["recipients"]
+            }:
+                raise WorkflowError(
+                    "INVALID_RECIPIENT: retain the approved world disclosure scope."
+                )
+            if (
+                source is not None
+                and source.fictional_channel == "private"
+                and any(actor != source.actor for actor in known_by)
+            ):
+                raise WorkflowError(
+                    "UNPROVEN_DISCLOSURE: private narration is known only to its actor."
+                )
             tokens = []
             for actor in known_by:
                 if actor.kind not in ("pilot", "handler", "npc"):
@@ -279,11 +487,15 @@ class DirectorContextService:
                 topic=topic,
                 classification="approved_outcome"
                 if approved
+                else "established_world"
+                if world
                 else "reported_claim"
                 if source and source.kind == "message"
                 else "committed_play",
                 text=approved["text"]
                 if approved
+                else "Established world: " + world["text"]
+                if world
                 else ("Reported claim: " + (source.text or ""))
                 if source and source.kind == "message"
                 else "Committed native Keep Your Head outcome; use the original receipt.",
@@ -326,6 +538,8 @@ class DirectorContextService:
     def _build(
         self, c: Connection, viewer: GuildViewer, scene_id: str, *, actor: ActorRef | None = None
     ) -> DirectorContext:
+        from girlframe.services.director_time import scene_time
+
         scene = self.observations._scene(c, scene_id, viewer)
         state = self.observations._state(c, scene_id)
         if state.policy.mode != "shadow" or not self.observations._consented(c, scene, state):
@@ -360,17 +574,7 @@ class DirectorContextService:
                 _, _, actual = self.observations._authorize_input(c, viewer, scene_id, actor.kind)
             if actual != actor:
                 raise WorkflowError("ACTOR_UNAVAILABLE: use your own actual role.")
-            references = tuple(x for x in references if actor.token in x.known_by)
-            visible = {x.id for x in references}
-            references = tuple(
-                x.model_copy(
-                    update={
-                        "known_by": (actor.token,),
-                        "dependencies": tuple(d for d in x.dependencies if d in visible),
-                    }
-                )
-                for x in references
-            )
+            references = self._actor_references(references, actor)
             audience = "actor"
         return DirectorContext(
             campaign_id=self.store.campaign_id,
@@ -378,6 +582,9 @@ class DirectorContextService:
             audience=audience,
             actor=actor,
             references=references,
+            fictional_time=scene_time(c, self.store.campaign_id, scene_id)
+            if actor is None
+            else None,
             revision=_digest(
                 {
                     "guard": self.observations._guard(c, scene, state),
@@ -393,12 +600,14 @@ class DirectorContextService:
         from girlframe.engine.m3_actors import resolve
         from girlframe.engine.m3_cast import validate_role
         from girlframe.engine.m3_handler_consequences import active_handler
+        from girlframe.services.director_canon import handler_canon
         from girlframe.services.handler_setup import HandlerService
         from girlframe.services.m2_state import load_state
         from girlframe.services.m3_actors import profiles
 
         self.observations._scope()
         scene = self.observations._scene(c, scene_id, requester)
+        self.observations.game.scene_unpaused(c, scene_id)
         state = self.observations._state(c, scene_id)
         if state.policy.mode != "shadow" or not self.observations._consented(c, scene, state):
             raise WorkflowError("OBSERVATION_DISABLED: current scene consent is required.")
@@ -424,17 +633,10 @@ class DirectorContextService:
                 validate_role(cast, actual)
         except ValueError:
             raise WorkflowError("HANDLER_UNAVAILABLE: recover the actual Handler role.") from None
-        refs = tuple(x for x in self._current(c, scene_id) if actor.token in x.known_by)
-        visible = {x.id for x in refs}
-        refs = tuple(
-            x.model_copy(
-                update={
-                    "known_by": (actor.token,),
-                    "dependencies": tuple(d for d in x.dependencies if d in visible),
-                }
-            )
-            for x in refs
-        )
+        refs = self._actor_references(self._current(c, scene_id), actor)
+        if state.activity_epoch is not None:
+            local = handler_canon(self, c, scene_id, actor, actual.controller)
+            refs += local[-(100 - len(refs)) :] if len(refs) < 100 else ()
         return DirectorContext(
             campaign_id=self.store.campaign_id,
             scene_id=scene_id,

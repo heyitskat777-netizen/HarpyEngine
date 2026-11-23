@@ -389,6 +389,9 @@ class SupplyDropService:
                 label="Supply Drop — actual owned delivery",
                 phase=x.phase,
                 subject=int(x.target.entity),
+                work_id=identity("supply_drop_expiry", x.id, x.target, "context")
+                if x.phase == "expired"
+                else None,
             )
             for x in rules.uses(state)
             if x.phase == "proposed"

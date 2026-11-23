@@ -1,0 +1,40 @@
+--- a/foundation-ui.js
++++ b/foundation-ui.js
+@@ -173,6 +173,7 @@
+ ];
+
+ export function foundationUI(send, readTranscript, openDiscordInvite, showBattlefield, battlefield, renderRoomPlays, refreshPlayer, artwork, renderPilotBonds, resumeEnrollment, openSheetReset) {
++  let openPortrayal;
+   const folders = [...document.querySelectorAll("[data-folder]")];
+   const panes = [...document.querySelectorAll("[data-pane]")];
+   const back = document.getElementById("back");
+@@ -868,6 +869,9 @@
+         recordArtwork(file, "pilot", selected.id, selected.artwork, selected.own, selected.callsign);
+       }
+       readFile(file, records);
++      if (selected.own && !tactical && openPortrayal) {
++        file.append(button("Open portrayal", openPortrayal));
++      }
+       if (selected.own && !tactical) renderPilotBonds(file, player);
+       if (selected.own && !tactical && player.sheet_reset) {
+         const restart = button("Restart character", () => openSheetReset(player.sheet_reset));
+@@ -1056,6 +1060,7 @@
+   }
+
+   return {
++    setPortrayal(open) { openPortrayal = open; if (player) render(); },
+     update(record) { player = record; render(); },
+     updatePresence(members) {
+       const roster = document.getElementById("campaign-roster");
+--- a/index.html
++++ b/index.html
+@@ -1245,7 +1245,8 @@
+   }
+   else await refresh();
+   if (config.director_scene || config.campaign_setup) {
+-    const {mountDirectorDesk} = await import("/p2-desk.js");
++    const {mountDirectorDesk, openSheetPortrayal} = await import("/p2-desk.js");
++    ui.setPortrayal(() => openSheetPortrayal({activityFetch, scene:config.director_scene, kind:"pilot"}));
+     mountDirectorDesk(document.querySelector(".workbench"), config.director_scene, activityFetch, config.activity_shadow);
+   }
+ }

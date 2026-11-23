@@ -1,7 +1,14 @@
 """Finite Handler Play grants; a printed counter never changes campaign GM authority."""
 
 from girlframe.engine.m2 import GameState, TagState, shift_status
-from girlframe.engine.m3_handler_play_state import Effect, HandlerPlay, Play
+from girlframe.engine.m3_handler_play_state import (
+    BASIC,
+    DRESS_RULE,
+    SUCCESSOR_ADVICE,
+    Effect,
+    HandlerPlay,
+    Play,
+)
 from girlframe.engine.m3_void_state import HarpyTag
 from girlframe.engine.m3_world import introduce_npc
 from girlframe.engine.m3_world_state import WorldTag
@@ -18,12 +25,40 @@ def replace(state: GameState, value: HandlerPlay) -> None:
     state.handler_plays = [value if x.id == value.id else x for x in state.handler_plays]
 
 
+def available_plays(state: GameState, grant: HandlerPlay) -> tuple[str, ...]:
+    if grant.clause == DRESS_RULE:
+        return ("dress_them_down",)
+    if grant.clause == SUCCESSOR_ADVICE:
+        return ("successor_advice",)
+    if grant.brief_account is not None:
+        return ("brief",)
+    if grant.offered_play is not None:
+        return (grant.offered_play,)
+    if grant.clause.startswith("tracker:"):
+        from girlframe.engine import m3_tracker_implants as trackers
+
+        return tuple(
+            x.play for x in trackers.records(state, trackers.PlaySource) if x.id == grant.id
+        )
+    if grant.clause.startswith("contaminant-zone:"):
+        return ("contaminant_warp",)
+    if grant.nonbody_only:
+        return ("brief", "escalate", "support", "expectation")
+    return tuple(play for play, _ in BASIC)
+
+
 def select(state: GameState, identity: str, play: Play, effect: Effect, event: str) -> GameState:
     changed = GameState.model_validate_json(state.model_dump_json())
     grant = record(changed, identity)
     expected = "mess" if effect.kind in ("status", "tag", "damage") else effect.kind
     if grant.state != "pending" or play != expected or not event.strip():
         raise ValueError("Use this actual pending Handler Play and its matching effect")
+    if grant.brief_account is not None and (
+        play != "brief" or effect.account != grant.brief_account or effect.source_label is not None
+    ):
+        raise ValueError("This offer grants only the reviewed briefing and its exact wording")
+    if grant.offered_play is not None and play != grant.offered_play:
+        raise ValueError("This grant permits only its reviewed Handler Play")
     from girlframe.engine import m3_tracker_implants as trackers
 
     tracker_source = next(
@@ -39,6 +74,10 @@ def select(state: GameState, identity: str, play: Play, effect: Effect, event: s
             raise ValueError("This zone source grants only its actual warp Play")
     elif play == "contaminant_warp":
         raise ValueError("A basic Handler grant has no quarantined-zone authority")
+    if (grant.clause == DRESS_RULE) != (play == "dress_them_down"):
+        raise ValueError("Use only the original Dogrunner's Dress Them Down grant")
+    if (grant.clause == SUCCESSOR_ADVICE) != (play == "successor_advice"):
+        raise ValueError("Use only the original earned Successor advice grant")
     if grant.nonbody_only and effect.kind not in ("brief", "escalate", "support", "expectation"):
         raise ValueError(
             "The actual original ended; only the source-owned nonbody procedure remains"
@@ -68,6 +107,32 @@ def direct(state: GameState, identity: str, event: str) -> GameState:
         if sheet is None or sheet.character_id != target.incarnation:
             raise ValueError("The original target ended; replacements cannot inherit this effect")
         shift_status(changed, sheet.owner, effect.status)
+    elif effect.kind == "dress_them_down":
+        from girlframe.engine.m3_intracadre_marriage import is_dog
+
+        target = effect.target
+        assert target is not None
+        sheet = changed.sheets.get(target.entity)
+        if sheet is None or sheet.character_id != target.incarnation:
+            raise ValueError("The original target ended; replacements cannot inherit this effect")
+        was_dog = is_dog(changed, sheet.owner)
+        for _ in effect.dress_steps:
+            shift_status(changed, sheet.owner, -1)
+        became_dog = not was_dog and is_dog(changed, sheet.owner)
+        label = effect.tag.strip()
+        if became_dog != bool(label):
+            raise ValueError("Give a Tag exactly when this original Girl becomes the Dog")
+        if became_dog:
+            sheet.tags.append(
+                TagState(
+                    id=identity + ":tag",
+                    label=label,
+                    giver=grant.chooser_controller,
+                    giver_actor=grant.chooser_actor,
+                    observers=(grant.chooser_controller, sheet.owner),
+                )
+            )
+        sheet.revision += 1
     elif effect.kind == "tag":
         target = effect.target
         assert target is not None
@@ -169,7 +234,7 @@ def direct(state: GameState, identity: str, event: str) -> GameState:
                 "invented resources/custody"
             )
         changed.world = introduce_npc(changed.world, npc)
-    elif effect.kind not in ("brief", "escalate", "expectation"):
+    elif effect.kind not in ("brief", "escalate", "expectation", "successor_advice"):
         raise ValueError("This effect requires its actual specialized runtime port")
     return changed
 

@@ -277,3 +277,78 @@ def test_actual_pr_failure_cross_session_truth_shared_cap_deferred_claim_real_sp
 
     asyncio.run(history())
     assert HandlerAdvancementService(ledger).view(ADMIN, value.award)["phase"] == "spent"
+
+
+def test_performed_advocate_parade_uses_own_criterion_and_shared_session_cap(
+    ledger, tmp_path, monkeypatch
+):
+    game, ordinary, _, _ = setup(ledger, tmp_path, monkeypatch, playbook="Advocate")
+    service = HandlerPRService(ledger)
+    session = session_native(ordinary, "Actual public events Session", 49100)
+    general = plan(service, game, "first ordinary event")
+    performed(service, game, general, 49110)
+    native_action(service, general, ADMIN, 49118, result=("success",), account="Actual PR success")
+    (first,) = awards.awards(state(game))
+    assert first.ordinary_source.trigger == "public_relations"
+
+    async def parade_plan():
+        click = current(1, 49120)
+        await click.response.defer(ephemeral=True)
+        await open_pr(click, service)
+        form = click.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            occasion=("advocate_pride_parade",),
+            objective="Hold an actual turnout event",
+            context="The Quad's pride parade",
+            people=(current_ref(state(game), 2).token,),
+        )
+        sent = current(1, 49121)
+        await form.confirm.callback(sent)
+        assert form.completed, sent.followup.send.call_args
+
+    asyncio.run(parade_plan())
+    parade = next(x for x in rules.events(state(game)) if x.occasion == "advocate_pride_parade")
+    assert parade.award is None
+    with pytest.raises(WorkflowError):
+        service.resolve(
+            ADMIN, "no-parade-performed", parade.id, state(game).revision, True, "Fake."
+        )
+    native_action(
+        service, parade.id, ADMIN, 49122, operation=("host",), account="I actually lead the parade."
+    )
+    native_action(
+        service, parade.id, PLAYER, 49124, account="I actually participate in the procession."
+    )
+    native_action(
+        service, parade.id, ADMIN, 49126, operation=("submit",), account="The full procession ran."
+    )
+    native_action(
+        service,
+        parade.id,
+        ADMIN,
+        49128,
+        result=("failure",),
+        account="The actual parade went ahead and fell short of its turnout goal.",
+    )
+    view = service.menu(ADMIN, parade.id)
+    assert view["successful"] is False and view["award"] is None
+    assert view["blocked"] == "session_slot_used" and not view["claimable"]
+    ordinary.end_session(ADMIN, "end-after-parade", session, state(game).revision, "Actual end.")
+    successor = session_native(ordinary, "Actual later Session", 49140)
+    ledger.engine.dispose()
+    revision = state(game).revision
+    assert service.menu(ADMIN, parade.id)["claimable"]
+    with pytest.raises(WorkflowError, match="original Handler"):
+        service.claim(PLAYER, "wrong-parade-owner", parade.id, revision)
+    native_action(service, parade.id, ADMIN, 49142, claim=("claim",))
+    result = service.claim(ADMIN, "49143", parade.id, revision)
+    (earned,) = (x for x in awards.awards(state(game)) if x.id == result["award"])
+    assert earned.ordinary_source.trigger == "advocate_pride_parade"
+    assert earned.ordinary_source.session == successor
+    assert HandlerAdvancementService(ledger).view(ADMIN, earned.id)["phase"] == "held"
+    assert {m.trigger for m in ordinary_rules.marks(state(game))} == {
+        "public_relations",
+        "advocate_pride_parade",
+    }
+    with pytest.raises(WorkflowError, match="criterion_marked"):
+        service.claim(ADMIN, "cannot-claim-parade-again", parade.id, state(game).revision)

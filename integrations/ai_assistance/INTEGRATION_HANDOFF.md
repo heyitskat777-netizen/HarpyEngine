@@ -1,5 +1,10 @@
 # Activity integration — synthetic assistance v1
 
+For the current consolidated screen/control requirements, use the
+[Activity session UI handoff](../activity/P2_SESSION_UI_HANDOFF.md). The newer
+`DirectorSessionService.campaign_work` exposes native recipient-safe mission,
+period and required-work projections as OOC UI state, never Handler knowledge.
+
 The owner's approved [Activity-first Director design](../../docs/AI_DIRECTOR_ARCHITECTURE.md)
 and [next synthetic observation work order](../../docs/work_orders/P2_DIRECTOR_OBSERVATION.md)
 extend the future product plan. They preserve this delivered summary v1 API.
@@ -194,25 +199,36 @@ from girlframe.services.ai_assistance import AssistanceService
 
 service = AssistanceService(store)  # default: local SyntheticProvider
 context = service.context(verified_viewer, audience="player")
-requested = service.request(verified_viewer, RequestAssistance(
-    command_key="assist:request:unique-intent",
-    expected_campaign_revision=context.context.campaign_revision,
-    audience=context.context.audience,
-    context_digest=context.context_digest,
-))
-draft = service.generate(verified_viewer, requested.proposal_id, GenerateDraft(
-    command_key="assist:generate:unique-intent",
-    expected_campaign_revision=requested.campaign_revision,
-    expected_proposal_revision=requested.proposal_revision,
-))
+requested = service.request(
+    verified_viewer,
+    RequestAssistance(
+        command_key="assist:request:unique-intent",
+        expected_campaign_revision=context.context.campaign_revision,
+        audience=context.context.audience,
+        context_digest=context.context_digest,
+    ),
+)
+draft = service.generate(
+    verified_viewer,
+    requested.proposal_id,
+    GenerateDraft(
+        command_key="assist:generate:unique-intent",
+        expected_campaign_revision=requested.campaign_revision,
+        expected_proposal_revision=requested.proposal_revision,
+    ),
+)
 private_view = service.get(verified_viewer, draft.proposal_id)
 # Present private_view.record.response; wait for the owner's explicit review.
-approved = service.review(verified_viewer, draft.proposal_id, ReviewDraft(
-    command_key="assist:approve:unique-intent",
-    expected_campaign_revision=private_view.campaign_revision,
-    expected_proposal_revision=private_view.record.revision,
-    decision="approve",
-))
+approved = service.review(
+    verified_viewer,
+    draft.proposal_id,
+    ReviewDraft(
+        command_key="assist:approve:unique-intent",
+        expected_campaign_revision=private_view.campaign_revision,
+        expected_proposal_revision=private_view.record.revision,
+        decision="approve",
+    ),
+)
 reopened = AssistanceService(store).get(verified_viewer, approved.proposal_id)
 assert reopened.application == "blocked"
 ```
@@ -442,3 +458,26 @@ The backend source work does not need the Activity repository to finish its
 synthetic candidate. Connecting the real UI/authentication still needs that
 repository's concrete server adapter and ownership. No real capture, provider
 transport, Discord publication or deployment is supplied by this handoff.
+## Connected-scene continuation (November 17 engine source)
+
+See [four-part results and next-work review](../../reports/P2_CONNECTED_CAMPAIGN.md).
+These additions require later Activity ports; they are Python service contracts,
+not installed routes. The earlier packaged Activity ZIP does not contain them.
+
+| Operation / field | Required Activity behavior |
+|---|---|
+| `DirectorSessionService.work(...).decision_routes` | Display `choice_id`, native `kind`, effective `owner_id`, `route`, `operation` and `confirmation`. `typed_outcome` means an adapter family exists; `outcome_sources` remains the validated source list for opening proposals. `native_owner` uses the original native form. Keep source-delegated authors; GM visibility grants no extra confirmation authority. |
+| `decision_context(gm, scene, choice_id)` | Private, current GM review of a pending native choice, its real action/intent, references and canonical state. Never put this response in a Handler prompt, shared client state or participant transcript. It has no apply operation; consumed choices must be reopened from current work. |
+| Knowledge topics `briefing`, `tactical`, `debrief` | Facilitator assignment marks actual role-known information eligible for a Handler update. Do not automatically label arbitrary chat or private GM facts as announcements. A reported claim stays a claim. Generation still requires persisted RESPOND; WAIT renders silence. Updates are considered on the next processed input, with direct questions and scope warnings taking priority. |
+| Handler delivery state | Show actual saved replies and decision reasons, including `known_update` and `update_already_addressed`. A saved decision alone does not mean delivery. Successful replies suppress the same root update for the same Handler and roster across handoffs. Keep retries attached to the complete original command. |
+| `SceneContinuityService(context).preview(gm, source_scene)` | Read the handoff source and revision even after its native scene closes. Pilots cannot join two active native scenes. Close the preceding scene through native controls, then join/configure/consent to the destination before selection. This GM-only preview is not a general closed-scene participant transcript API. |
+| `.carry(gm, key, source_scene, target_scene, source_revision, target_revision, reference_ids)` | Explicitly select current references and all dependencies using preview's source revision and the destination context revision. Only the same roster is supported. Reopen both snapshots on stale context. The result maps old reference IDs to new ones and applies no native effects. Never enlarge known-by actors or treat handoff as new consent. |
+| Reference origins | Optional `origin_scene` / `origin_reference` fields preserve root provenance. They appear together; default-null fields are omitted from ordinary legacy references. Existing classification and actor knowledge restrictions remain authoritative. Do not convert remembered claims into confirmed facts. |
+| Closed-source withdrawal | A former participant may call existing `set_consent` with `consent=False` and the actual policy revision after closure. New grants still require an open scene. Carried context blocks if original consent is withdrawn; do not silently restore it or reuse cached generation. |
+| `DirectorContextService.archive_review(gm, scene)` | Metadata-only IDs, dependency IDs and revision remain available for retiring blocked references. Pass that revision and an explicit dependency-closed selection to existing `archive`. Do not invent stale text or bypass freshness to repair the prompt. Current destination authorization/consent is still required. History is preserved; retirement is not fictional forgetting. |
+
+Keep the native replacement flow in its real owners' forms: Pilot preferences,
+Handler package quotation and Pilot acceptance, with required follow-ups visible.
+The connected test proves replacement and a subsequent native Play; its Strain and
+Off-Duty preparation remain open. No new mission acceptance, payment, full period
+completion, autonomous provider, Discord publication or paid calls are implied.

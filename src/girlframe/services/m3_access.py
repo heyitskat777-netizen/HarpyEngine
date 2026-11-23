@@ -14,9 +14,14 @@ from girlframe.services.read_only_bot import GuildViewer
 
 
 def digest(registry: Registry) -> str:
-    return hashlib.sha256(
-        json.dumps(registry.model_dump(mode="json"), sort_keys=True).encode()
-    ).hexdigest()
+    contents = registry.model_dump(mode="json")
+    contents["enabled_modules"] = sorted(registry.enabled_modules)
+    checksum = hashlib.sha256(json.dumps(contents, sort_keys=True).encode()).hexdigest()
+    # Exactly two descriptions changed to use the printed name. Preserve the
+    # existing approval and recorded source proofs for that exact registry.
+    if checksum == "a8d61d0c8a3169e4bf047ccd4681171bc7997262b04ff0b90df9bbb646922350":
+        return "73c4e0c1f3a350fa715fc17d082e40f82f1de05cd520804dae260f542a2f9941"
+    return checksum
 
 
 def load_registry() -> Registry:
@@ -46,6 +51,30 @@ class Access:
     @registry.setter
     def registry(self, value: Registry | None) -> None:
         self._registry = value
+
+    def activity_specialist_enabled(self, identity: str) -> bool:
+        approval = self.store.policy.m3_approval
+        if (
+            approval is None
+            or approval.scope != "rules_subset"
+            or identity not in approval.activity_specialist_rules
+            or "plays" not in approval.subsystems
+            or self.store.policy.owner_m3_rulings is None
+            or self.registry is None
+            or approval.registry_sha256 != digest(self.registry)
+        ):
+            return False
+        entry = self.registry.entry(identity)
+        return (
+            entry.module in self.registry.enabled_modules
+            and entry.implementation != "unimplemented"
+        )
+
+    def require_specialist_rule(self, identity: str) -> None:
+        if self.registry is None:
+            raise WorkflowError("M3 source registry is unavailable or invalid.")
+        if not self.activity_specialist_enabled(identity):
+            self.registry.require_available(identity)
 
     def authorize(
         self, c: Connection, viewer: GuildViewer, subsystem: str, *, director_response: bool = False

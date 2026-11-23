@@ -1,5 +1,6 @@
-"""Synthetic scene observation contracts; no inference, canon or publication."""
+"""Scene observation contracts for synthetic and reviewed Activity modes."""
 
+import re
 from typing import Literal
 
 from pydantic import Field, model_validator
@@ -11,12 +12,19 @@ from girlframe.engine.m3_actor_state import ActorRef
 
 class ObservationPolicy(Contract):
     mode: Literal["off", "shadow"] = "off"
-    scope: Literal["synthetic_only"] = "synthetic_only"
-    retention_ref: Literal["synthetic-fixture-v1"] = "synthetic-fixture-v1"
+    scope: Literal["synthetic_only", "reviewed_activity_trial"] = "synthetic_only"
+    retention_ref: Literal["synthetic-fixture-v1", "reviewed-activity-trial-v1"] = (
+        "synthetic-fixture-v1"
+    )
     quiet_seconds: int = Field(default=120, ge=1, le=3600)
     batch_threshold: int = Field(default=20, ge=1, le=100)
     max_age_seconds: int = Field(default=600, ge=1, le=3600)
     min_interval_seconds: int = Field(default=120, ge=1, le=3600)
+
+
+class SceneTurn(Contract):
+    source_id: str = Field(min_length=1, max_length=100)
+    revision: int = Field(ge=1)
 
 
 class AppendSceneInput(Contract):
@@ -26,8 +34,12 @@ class AppendSceneInput(Contract):
     speaker: Literal["pilot", "handler"]
     text: str = Field(min_length=1, max_length=1000)
     classification: Literal["ic", "ooc"] = "ic"
+    fictional_channel: Literal["scene", "private", "comms", "mixed", "unclassified"] = Field(
+        default="scene", exclude_if=lambda x: x == "scene"
+    )
     source_id: str | None = Field(default=None, min_length=1, max_length=100)
     expected_source_revision: int = Field(default=0, ge=0)
+    covers_turn: SceneTurn | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def edit_revision(self) -> "AppendSceneInput":
@@ -35,6 +47,12 @@ class AppendSceneInput(Contract):
             raise ValueError("An edit requires its actual source and expected source revision")
         if self.source_id is not None and self.classification != "ic":
             raise ValueError("Classification changes require a future redaction workflow")
+        if self.covers_turn and (
+            self.classification != "ic"
+            or self.speaker != "pilot"
+            or self.fictional_channel != "comms"
+        ):
+            raise ValueError("A Pilot takes up another turn through spoken comms.")
         return self
 
 
@@ -49,11 +67,22 @@ class Observation(Contract):
     actor: ActorRef
     audience_ids: tuple[WireSnowflake, ...]
     accepted_at: float
+    cast_controllers: dict[str, int] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     text: str | None = Field(default=None, max_length=1000)
+    fictional_channel: Literal["scene", "private", "comms", "mixed", "unclassified"] = Field(
+        default="scene", exclude_if=lambda x: x == "scene"
+    )
+    covers_turn: SceneTurn | None = Field(default=None, exclude_if=lambda value: value is None)
     action_id: str | None = None
     receipt_id: str | None = None
     event_id: str | None = None
     knowledge: Literal["observed_reference_only"] = "observed_reference_only"
+
+    @property
+    def gm_addressed(self) -> bool:
+        return self.kind == "message" and bool(re.match(r"^\s*gm\s*[:,]", self.text or "", re.I))
 
 
 class SceneObservationState(Contract):
@@ -66,6 +95,10 @@ class SceneObservationState(Contract):
     reviewed_sequence: int = 0
     last_input_at: float | None = None
     last_review_at: float | None = None
+    activity_epoch: int | None = None
+    activity_audience: tuple[int, ...] = ()
+    capture_floor: int = 0
+    native_cursor: int = 0
 
 
 class InputResult(Contract):

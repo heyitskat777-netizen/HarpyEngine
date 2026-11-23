@@ -21,6 +21,7 @@ from girlframe.engine.creation import CreationDraft
 from girlframe.engine.frame_setup import frame_setup
 from girlframe.engine.m2 import GameState, PilotSheet
 from girlframe.engine.m3_actor_bonds import current_ref, depth
+from girlframe.engine.playbooks import normalize_frame_fields
 from girlframe.services.creation import CreationProgress, CreationService
 from girlframe.services.creation_review import CreationReviewService
 from girlframe.services.m2_game import GameService
@@ -91,7 +92,12 @@ class CharacterTransferService:
 
     @staticmethod
     def _profile_data(row: dict[str, Any] | None) -> dict[str, Any]:
-        return (json.loads(row["public_json"]) | json.loads(row["private_json"])) if row else {}
+        return (
+            dict(normalize_frame_fields(json.loads(row["public_json"])))
+            | json.loads(row["private_json"])
+            if row
+            else {}
+        )
 
     def preview(self, viewer: GuildViewer, raw: bytes) -> ImportPreview:
         self.authorize(viewer)

@@ -36,6 +36,124 @@ async def open_dive(
     data = await asyncio.to_thread(game.decision, viewer_from_interaction(interaction), identity)
     detail = data["dive"]
     kind = data["kind"]
+    if kind == "dive_void_drunk":
+        choices: tuple[tuple[str, str], ...] = (("pass", "Pass"),)
+        if not detail["primary"] or detail["primary_assets"] or detail["primary_npcs"]:
+            choices += (("latch", "Latch on"),)
+            choices += (("smother", "Latch on and interrupt Apometanoia if it begins"),)
+            if detail.get("shadow"):
+                choices += (("shadow", "Latch on and emerge beside her from shadow"),)
+        follower_fields = [Field("choice", "Your original decision", choices)]
+        if detail["tags"]:
+            follower_fields.append(
+                Field(
+                    "tag",
+                    "Observed Tag to mark as they resurface",
+                    tuple(detail["tags"].items()),
+                    0,
+                    1,
+                    required=False,
+                )
+            )
+        if detail["primary_assets"]:
+            follower_fields.extend(
+                (
+                    Field(
+                        "primary_asset",
+                        "Gain Void and unmark Identities",
+                        tuple(detail["primary_assets"].items()),
+                        required=False,
+                    ),
+                    Field("rewrite", "Rewrite the original Asset", paragraph=True, required=False),
+                )
+            )
+        if detail["primary_npcs"]:
+            follower_fields.append(
+                Field(
+                    "primary_kind",
+                    "Other primary choice",
+                    (("npcs", "Nearby NPCs gain Void"),),
+                    required=False,
+                )
+            )
+
+        async def void_drunk(current: discord.Interaction, values: dict[str, Any]) -> str:
+            asset = values.get("primary_asset", ())
+            primary = values.get("primary_kind", ())
+            choices = {}
+            if asset:
+                choices["primary_asset"] = asset[0]
+            if primary:
+                choices["primary_kind"] = primary[0]
+            await asyncio.to_thread(
+                game.respond,
+                viewer_from_interaction(current),
+                str(current.id),
+                identity,
+                data["revision"],
+                ChoiceAnswer(
+                    options=values["choice"],
+                    denied=values.get("tag", ()),
+                    text=values.get("rewrite", ""),
+                    fields=choices,
+                ),
+            )
+            return "Your original choice is saved."
+
+        form = NativeForm(
+            interaction.user.id,
+            "Void-Drunk",
+            "You can follow " + clean(detail["target"]) + " on the original Dive.",
+            follower_fields,
+            void_drunk,
+        )
+        await reply(interaction, form.text(), form)
+        return
+    if kind == "dive_void_drunk_npcs":
+        npcs = list(detail["npcs"].items())
+        npc_fields = [
+            Field(
+                "choice",
+                "Your decision",
+                (
+                    *((("apply", "Apply selected manifestations"),) if npcs else ()),
+                    ("reopen", "Return the follower’s choice"),
+                ),
+            )
+        ]
+        npc_fields.extend(
+            Field("npc_" + str(i), "Void: " + label, MANIFESTATIONS, required=False)
+            for i, (_, label) in enumerate(npcs)
+        )
+
+        async def npc_submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+            selected = {
+                npc: values["npc_" + str(i)][0]
+                for i, (npc, _) in enumerate(npcs)
+                if values.get("npc_" + str(i))
+            }
+            await asyncio.to_thread(
+                game.respond,
+                viewer_from_interaction(current),
+                str(current.id),
+                identity,
+                data["revision"],
+                ChoiceAnswer(
+                    options=("reopen",) if values["choice"] == ("reopen",) else (),
+                    fields=selected,
+                ),
+            )
+            return "Your original Void response is saved."
+
+        form = NativeForm(
+            interaction.user.id,
+            "Void-Drunk",
+            "Choose the actual Void manifestation for each nearby NPC in the follower’s effect.",
+            npc_fields,
+            npc_submit,
+        )
+        await reply(interaction, form.text(), form)
+        return
     if kind == "dive_call":
         from girlframe.discord_adapter.m3_mockingbird_communion import open_call
         from girlframe.services.m3_mockingbird_communion import CallService

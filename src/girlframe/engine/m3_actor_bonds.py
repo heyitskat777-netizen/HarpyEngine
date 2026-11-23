@@ -271,6 +271,10 @@ def migrate_actor(original: GameState, actor: ActorRef, source_event: str) -> Ga
             owners = key.split(":")
             if actor.entity in owners:
                 other_owner = next(x for x in owners if x != actor.entity)
+                if other_owner not in state.sheets and int(other_owner) != state.handler:
+                    # A starting Bond can exist while its other pilot is still in creation.
+                    # There is no live canonical counterpart to migrate for that edge.
+                    continue
                 pairs.append((current_ref(state, int(other_owner)), value))
     if state.world is not None:
         for npc in state.world.npcs:
@@ -333,7 +337,22 @@ def _same_body(state: GameState, first: ActorRef, second: ActorRef) -> bool:
     return same_handler_body(state, first) and same_handler_body(state, second)
 
 
-def is_helpless(state: GameState, subject: ActorRef, foe: ActorRef | None = None) -> bool:
+def is_helpless(
+    state: GameState,
+    subject: ActorRef,
+    foe: ActorRef | None = None,
+    *,
+    ignore_conditioning: bool = False,
+) -> bool:
+    if not ignore_conditioning:
+        from girlframe.engine.m3_conditioning import active_words
+
+        if active_words(state, subject, foe):
+            return True
+    from girlframe.engine.m3_chained_darling import helpless as chained_helpless
+
+    if chained_helpless(state, subject):
+        return True
     from girlframe.engine.m3_ankou import helpless as ankou_helpless
 
     if ankou_helpless(state, subject, foe):

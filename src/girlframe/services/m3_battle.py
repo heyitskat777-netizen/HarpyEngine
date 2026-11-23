@@ -351,6 +351,9 @@ def prepare(
     context = Context.model_validate_json(raw["body"])
     _context_proof(game, c, context)
     declaration = context.declaration
+    from girlframe.services.m3_erratic_gorgon import require_caught
+
+    require_caught(state, declaration.target, context.scene)
     if bonded_child is not None and (
         context.source_work is not None
         or declaration.actor.model_dump(mode="json") != bonded_child["actor"]
@@ -375,6 +378,25 @@ def prepare(
         raise WorkflowError("This source declaration has already started its one actual Play.")
     if prepared.play != declaration.play or prepared.target_actor != declaration.target:
         raise WorkflowError("Roll the actual declared Play against the original target.")
+    hunt_choice = None
+    if prepared.parent and context.source_choice:
+        source = game.action(c, prepared.parent)
+        hunt = next(
+            (
+                row
+                for row in game.pending(c, source["id"])
+                if row["id"] == context.source_choice and row["kind"] == "trainer_hunt_play"
+            ),
+            None,
+        )
+        if hunt is not None:
+            from girlframe.services.m3_trainer_phrases import prove_hunt
+
+            if declaration.play != "all_out_assault" or prove_hunt(
+                game, c, state, source, hunt
+            ) != (declaration.actor, declaration.target):
+                raise WorkflowError("Recover the original Hunt's declared All Out Assault")
+            hunt_choice = hunt["id"]
     if (
         prepared.attacking_asset != declaration.attacking_asset
         or prepared.target_asset != declaration.target_asset
@@ -468,11 +490,35 @@ def prepare(
         and not context.outside_permission
     ):
         raise WorkflowError("The Conversation must establish this actual outside-Frame attack.")
+    ambush = None
+    from girlframe.engine.m3_actor_resources import rebel_inventory
+
+    if (
+        acting.ref.kind == "external_pilot"
+        and rebel_inventory(state, acting.ref) is not None
+        and target.ref.kind in ("pilot", "handler")
+        and prepared.play == "all_out_assault"
+    ):
+        from girlframe.services.m3_rebel_ambush import context as ambush_context
+
+        ambush = ambush_context(c, game, state, acting.ref, target.ref, cast)
+    if (
+        prepared.play == "all_out_assault"
+        and declaration.target_asset is None
+        and (ambush is None or ambush.siege is None or target.rules != "handler")
+    ):
+        raise WorkflowError(
+            "Use an assetless strike only against the original Handler in its siege."
+        )
     for body, outside in (
         (acting, context.actor_outside_frame),
         (target, context.target_outside_frame),
     ):
-        if body.ref.kind == "external_pilot" and rules.category(state, body.ref) != "harpy":
+        if (
+            body.ref.kind == "external_pilot"
+            and rules.category(state, body.ref) != "harpy"
+            and (ambush is None or body.ref != ambush.attacker)
+        ):
             raise WorkflowError(
                 "UNSUPPORTED_RULE: support actual external Pilot Defeat/resources "
                 "before this battle can roll."
@@ -496,7 +542,9 @@ def prepare(
     from girlframe.services.m3_enforcer_firepower import prepare_firepower
 
     return dict(
-        firepower=prepare_firepower(game, c, state, declaration.actor, cast, prepared),
+        firepower=prepare_firepower(game, c, state, declaration.actor, cast, prepared)
+        if ambush is None
+        else None,
         actor=declaration.actor.model_dump(mode="json"),
         target=declaration.target.model_dump(mode="json"),
         attacking_asset=declaration.attacking_asset,
@@ -525,6 +573,8 @@ def prepare(
         defense=context.defense.model_dump(mode="json") if context.defense else None,
         dormant_awakened=context.dormant_awakened,
         dormant_close=context.dormant_close,
+        **({"rebel_ambush": ambush.id} if ambush is not None else {}),
+        **({"trainer_hunt_choice": hunt_choice} if hunt_choice else {}),
         occupancy={
             ref.token: False
             for ref, outside in (
@@ -672,8 +722,7 @@ def pre_roll(
                 rules.intact_assets(original, context.declaration.target, bound)
             ):
                 raise WorkflowError("Preserve the genuine initial Core Asset penalty")
-        else:
-            assert context.declaration.target_asset is not None
+        elif context.declaration.target_asset is not None:
             rules.owned_asset(
                 state, context.declaration.target, context.declaration.target_asset, bound
             )
@@ -696,6 +745,10 @@ def pre_roll(
             "SOURCE_PORT_REQUIRED: resolve this battle Asset's sabotage before dice"
         )
     if commit:
+        if meta.get("rebel_ambush"):
+            from girlframe.services.m3_rebel_ambush import claim as claim_ambush
+
+            claim_ambush(c, game, state, action)
         commit_declaration(state, action)
 
 
@@ -755,6 +808,15 @@ def results(
             meta["extra_source"] = "girl.casualty.no-one-better"
             start_assault_extra(game, c, action)
             return
+    if (
+        meta.get("trainer_hunt_choice")
+        and level in ("mid", "high")
+        and not meta.get("trainer_hunt_extra_done")
+    ):
+        from girlframe.services.m3_engage import start_assault_extra
+
+        start_assault_extra(game, c, action, hunt=True)
+        return
     if action["data"]["play"] == "go_for_the_core" and level == "high":
         state = load_state(c, game.store.campaign_id)
         _, target = _refs(action)
@@ -885,6 +947,12 @@ def projection(
     action: dict[str, Any],
     request: dict[str, Any],
 ) -> dict[str, Any]:
+    from girlframe.services.m3_trainer_protect import CHOICE as PROTECT_CHOICE
+
+    if request["kind"] == PROTECT_CHOICE:
+        from girlframe.services.m3_trainer_protect import projection as protect_projection
+
+        return protect_projection(game, c, state, action, request)
     if request["kind"] in ("battle_collateral", "battle_quadrant_loss", "battle_aggressive_damage"):
         return damage_projection(game, c, state, action, request)
     meta = action["data"]["battle"]
@@ -1003,12 +1071,18 @@ def apply(
     answer: ChoiceAnswer,
 ) -> None:
     from girlframe.engine.m3_actor_bonds import make_helpless
+    from girlframe.services.m3_trainer_protect import CHOICE as PROTECT_CHOICE
 
     meta = action["data"]["battle"]
     actor, target = _refs(action)
     kind = request["kind"]
     event = action["data"]["response_event"]
     level = action["data"]["result"]["tier"]
+    if kind == PROTECT_CHOICE:
+        from girlframe.services.m3_trainer_protect import apply as apply_protect
+
+        apply_protect(game, c, state, action, request, answer)
+        return
     if kind == "battle_assault_table":
         _strict(answer, {"flag", "text"})
         if answer.flag is None or not answer.text.strip():
@@ -1717,8 +1791,10 @@ def _apply_fatal(
                         )
                     }
                 )
+    from girlframe.engine.m3_berserk_frame import record_defeat as record_berserk_defeat
     from girlframe.engine.m3_leviathan_obsession import release_dead_sources
 
+    record_berserk_defeat(state, target, event)
     state = release_dead_sources(state, event)
     meta["fatal_event"] = event
     meta["fatal_pending"] = False
@@ -1749,8 +1825,10 @@ def _apply_fatal(
     )
     synchronize_casts(game, c, event)
     if target.kind == "gorgon":
+        from girlframe.services.m3_berserk_frame import synchronize as synchronize_berserk
         from girlframe.services.m3_gorgon_dormant import synchronize_endings as end_gorgon_costs
 
+        synchronize_berserk(c, game, state, event)
         end_gorgon_costs(game, c, event, viewer, key)
     if target.kind == "external_pilot" and rules.category(state, target) == "harpy":
         from girlframe.services.m3_harpy_rest import synchronize_endings
@@ -1780,10 +1858,11 @@ def _apply_fatal(
 
 
 def synchronize_casts(game: "GameService", c: Connection, event: str) -> None:
+    history = t.m2["m2_state_history"]
     raw = c.scalar(
-        sa.select(t.m2["m2_state_history"].c.body_json).where(
-            t.m2["m2_state_history"].c.campaign_id == game.store.campaign_id,
-            t.m2["m2_state_history"].c.event_id == event,
+        sa.select(history.c.body_json).where(
+            history.c.campaign_id == game.store.campaign_id,
+            history.c.event_id == event,
         )
     )
     source = GameState.model_validate_json(raw) if raw else None
@@ -1791,14 +1870,30 @@ def synchronize_casts(game: "GameService", c: Connection, event: str) -> None:
         x.get("kind") == "battle_actor_cast_ended" and x.get("event") == event for x in source.facts
     ):
         return
+    previous = c.scalar(
+        sa.select(history.c.body_json)
+        .where(
+            history.c.campaign_id == game.store.campaign_id,
+            history.c.revision < source.revision,
+        )
+        .order_by(history.c.revision.desc())
+        .limit(1)
+    )
+    before = (
+        {x.id: x for x in GameState.model_validate_json(previous).scene_casts} if previous else {}
+    )
     scenes = t.m2["m2_scenes"]
     for cast in source.scene_casts:
+        if before.get(cast.id) == cast:
+            continue
         people = sorted(
-            {x.controller for x in cast.roles} | ({cast.facilitator} if cast.facilitator else set())
+            {x.controller for x in cast.roles if x.actor.kind == "pilot"}
+            | ({cast.facilitator} if cast.facilitator else set())
         )
         c.execute(
             scenes.update()
             .where(scenes.c.campaign_id == game.store.campaign_id, scenes.c.id == cast.id)
+            .where(scenes.c.participants_json != json.dumps(people))
             .values(participants_json=json.dumps(people), revision=scenes.c.revision + 1)
         )
 
@@ -1976,6 +2071,32 @@ def damage_actor(
             )
             if interceptions:
                 return deferred, interceptions
+            foe = opponent or actor
+            if (
+                source_action
+                and not source_work
+                and asset_id is not None
+                and foe is not None
+                and foe != target
+                and action["data"].get("battle")
+            ):
+                from girlframe.services.m3_trainer_protect import defer as defer_protect
+
+                if defer_protect(
+                    game,
+                    c,
+                    state,
+                    action,
+                    target=target,
+                    asset=asset_id,
+                    foe=foe,
+                    chooser=chooser_controller,
+                    occurrence=occurrence,
+                    event=event,
+                    stamp=stamp,
+                    indirect=indirect,
+                ):
+                    return state, ()
     source_inside = None
     if source_action:
         source_data = game.action(c, source_action)["data"]
@@ -2234,7 +2355,7 @@ def damage_frame_at_scene(
         raise WorkflowError("Prove actual vacancy; missing or passenger facts are not permission.")
     sheet = state.sheets[target.entity]
     runtime = sheet.frame_runtime
-    if (runtime and runtime.core_id) or (runtime is None and sheet.frame in ("JANUS", "JANUS-B")):
+    if (runtime and runtime.core_id) or (runtime is None and sheet.frame == "JANUS"):
         raise WorkflowError(
             "An inhabited independent Core requires its own actual control/damage port."
         )
@@ -2431,6 +2552,7 @@ def synchronize_damage(game: "GameService", c: Connection, event: str) -> None:
         if action:
             parent = dict(campaign_id=game.store.campaign_id, scene_id=action["scene_id"])
         if action is None and fact.get("source_work"):
+            from girlframe.engine.m3_foundation_attack import attacks as foundation_attacks
             from girlframe.engine.m3_wyvern import RousedUse
             from girlframe.engine.m3_wyvern import records as wyvern_records
             from girlframe.services.m3_wyvern import prove_use
@@ -2438,7 +2560,19 @@ def synchronize_damage(game: "GameService", c: Connection, event: str) -> None:
             source_use = next(
                 (x for x in wyvern_records(state, RousedUse) if x.id == fact["source_work"]), None
             )
-            if source_use is not None:
+            foundation = next(
+                (
+                    x
+                    for x in foundation_attacks(state)
+                    if x.id == fact["source_work"]
+                    and x.strike == event
+                    and fact["id"] in x.followups
+                ),
+                None,
+            )
+            if foundation is not None and foundation.cast is not None:
+                parent = dict(campaign_id=game.store.campaign_id, scene_id=foundation.cast.id)
+            elif source_use is not None:
                 prove_use(game, c, state, source_use.id)
                 parent = dict(campaign_id=game.store.campaign_id, scene_id=source_use.cast.id)
             else:
@@ -3152,6 +3286,9 @@ class BattleService:
                     state, required_actor, bound, require_current_profile=False
                 ).controller
             actors = []
+            from girlframe.engine.m3_rebel_ambush import ambushes
+
+            openings = ambushes(state)
             for role in cast.roles:
                 if not _visible(state, role.actor, viewer.user_id):
                     continue
@@ -3177,6 +3314,18 @@ class BattleService:
                         girl=actual.girl,
                         piloting=actual.piloting,
                         heat=actual.heat,
+                        rebel_targets=tuple(
+                            x.target.token
+                            for x in openings
+                            if owned
+                            and x.attacker == role.actor
+                            and x.controller == viewer.user_id
+                            and x.opening is not None
+                            and x.action is None
+                            and x.scene == cast.id
+                            and x.channel == cast.channel
+                            and x.target is not None
+                        ),
                         gorgon_class=next(
                             (
                                 x.gorgon_class
@@ -3293,6 +3442,20 @@ class BattleService:
                         ),
                         None,
                     )
+                    if request is None and declaration.play == "all_out_assault":
+                        from girlframe.services.m3_trainer_phrases import HUNT, prove_hunt
+
+                        request = next(
+                            (
+                                x
+                                for x in self.game.pending(c, parent)
+                                if x["kind"] == HUNT
+                                and x["actor_id"] == str(viewer.user_id)
+                                and prove_hunt(self.game, c, state, source, x)
+                                == (declaration.actor, declaration.target)
+                            ),
+                            None,
+                        )
                 if source["channel_id"] != str(channel) or request is None:
                     raise WorkflowError(
                         "Declare the actual target's counter against the original attacker."
@@ -3310,6 +3473,9 @@ class BattleService:
                 for ref in (declaration.actor, declaration.target)
             ):
                 raise WorkflowError("Both actual combatants must join this source scene.")
+            from girlframe.services.m3_erratic_gorgon import require_caught
+
+            require_caught(state, declaration.target, cast.id)
             bound = profiles(c, self.store.campaign_id)
             actor = resolve(state, declaration.actor, bound, require_current_profile=False)
             target = resolve(state, declaration.target, bound, require_current_profile=False)
@@ -3352,6 +3518,12 @@ class BattleService:
                     raise WorkflowError(
                         "The opposing Asset must actually be revealed in Conversation."
                     )
+            elif declaration.play == "all_out_assault":
+                from girlframe.services.m3_rebel_ambush import context as ambush_context
+
+                siege_source = ambush_context(c, self.game, state, actor.ref, target.ref, cast)
+                if siege_source.siege is None or target.rules != "handler":
+                    raise WorkflowError("Use the original living Handler in its actual siege.")
             try:
                 core = (
                     rules.core_available(state, declaration.target, declaration.actor, bound)

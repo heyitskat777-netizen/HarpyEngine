@@ -26,6 +26,8 @@ from girlframe.ai.observation import (
 from girlframe.database import tables as t
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import resolve
+from girlframe.services.activity_dialogue import current_turn, npc_owned
+from girlframe.services.campaign_difficulty import review_facilitator
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
@@ -39,29 +41,135 @@ def _digest(value: Any) -> str:
 
 
 class DirectorObservationService:
-    def __init__(self, store: OnboardingStore, *, synthetic: bool = False):
+    def __init__(
+        self,
+        store: OnboardingStore,
+        *,
+        synthetic: bool = False,
+        activity_shadow: bool = False,
+        reviewed_activity_trial: bool = False,
+        facilitator_id: int | None = None,
+    ):
+        if (activity_shadow and not (synthetic or reviewed_activity_trial)) or (
+            reviewed_activity_trial and (synthetic or not activity_shadow)
+        ):
+            raise ValueError(
+                "Use a synthetic fixture or an explicitly configured reviewed Activity trial."
+            )
         self.store = store
         self.game = GameService(store)
         self.synthetic = synthetic
+        self.activity_shadow = activity_shadow
+        self.reviewed_activity_trial = reviewed_activity_trial
+        self.facilitator_id = facilitator_id
+
+    def facilitator(self, c: Connection) -> int | None:
+        return review_facilitator(c, self.store.campaign_id, self.facilitator_id)
+
+    def _check_activity_reviewer(self, c: Connection, viewer: GuildViewer) -> None:
+        if viewer.activity_review and (
+            not self.reviewed_activity_trial or viewer.user_id != self.facilitator(c)
+        ):
+            raise WorkflowError("Review access requires the current Activity facilitator.")
 
     def _scope(self) -> None:
-        if not self.synthetic:
-            raise WorkflowError("SYNTHETIC_ONLY: real conversation observation is not implemented.")
+        if not (self.synthetic or self.reviewed_activity_trial):
+            raise WorkflowError("SYNTHETIC_ONLY: Activity observation requires an enabled trial.")
+
+    def _activity_event(self, *, reviewed: bool = False) -> str:
+        return (
+            "director.reviewed_activity_policy"
+            if reviewed or self.reviewed_activity_trial
+            else "director.activity_policy"
+        )
+
+    def _activity_policy(self, c: Connection, *, reviewed: bool = False) -> dict[str, Any]:
+        raw = c.scalar(
+            sa.select(t.events.c.payload_json)
+            .where(
+                t.events.c.campaign_id == self.store.campaign_id,
+                t.events.c.kind == self._activity_event(reviewed=reviewed),
+            )
+            .order_by(t.events.c.seq.desc())
+            .limit(1)
+        )
+        return dict(json.loads(raw)) if raw else {"enabled": False, "revision": 0}
+
+    def activity_policy(self, viewer: GuildViewer) -> dict[str, Any]:
+        self._scope()
+        if not self.activity_shadow:
+            raise WorkflowError("ACTIVITY_SHADOW_UNAVAILABLE: use the offline readiness fixture.")
+        self.store.administrator(viewer)
+        with self.store.engine.connect() as c:
+            self.game.authorize(c, viewer, game=False)
+            self._check_activity_reviewer(c, viewer)
+            return self._activity_policy(c)
+
+    def configure_activity(
+        self, viewer: GuildViewer, key: str, revision: int, enabled: bool
+    ) -> dict[str, Any]:
+        self._scope()
+        if not self.activity_shadow or type(enabled) is not bool or type(revision) is not int:
+            raise WorkflowError("ACTIVITY_SHADOW_UNAVAILABLE: use the offline readiness fixture.")
+
+        def authorize(c: Connection) -> None:
+            self.store.administrator(viewer)
+            self.game.authorize(c, viewer, game=False)
+            self._check_activity_reviewer(c, viewer)
+
+        def operation(c: Connection) -> dict[str, Any]:
+            current = self._activity_policy(c)
+            if current["revision"] != revision:
+                raise WorkflowError("STALE_ACTIVITY_POLICY: reopen campaign observation settings.")
+            if current["enabled"] == enabled:
+                raise WorkflowError(
+                    "ACTIVITY_POLICY_UNCHANGED: the campaign already has this setting."
+                )
+            return {"enabled": enabled, "revision": revision + 1}
+
+        return self.store._write(
+            viewer,
+            key,
+            self._activity_event(),
+            {
+                "enabled": enabled,
+                "revision": revision,
+            },
+            operation,
+            authorize=authorize,
+        )
+
+    def _native_head(self, c: Connection) -> int:
+        return int(
+            c.scalar(
+                sa.select(sa.func.max(t.events.c.seq)).where(
+                    t.events.c.campaign_id == self.store.campaign_id,
+                )
+            )
+            or 0
+        )
 
     def _scene(
-        self, c: Connection, scene_id: str, viewer: GuildViewer | None = None
+        self,
+        c: Connection,
+        scene_id: str,
+        viewer: GuildViewer | None = None,
+        *,
+        allow_closed: bool = False,
+        participant_only: bool = False,
     ) -> dict[str, Any]:
         if not self.store._binding_matches(c):
             raise WorkflowError("SCENE_UNAVAILABLE: campaign binding is unavailable.")
         if viewer is not None:
             self.game.authorize(c, viewer, game=False)
+            self._check_activity_reviewer(c, viewer)
         table = t.m2["m2_scenes"]
         row = (
             c.execute(
                 sa.select(table).where(
                     table.c.campaign_id == self.store.campaign_id,
                     table.c.id == scene_id,
-                    table.c.open.is_(True),
+                    sa.true() if allow_closed else table.c.open.is_(True),
                 )
             )
             .mappings()
@@ -83,7 +191,16 @@ class DirectorObservationService:
             "participants": json.loads(row["participants_json"]),
             "binding_event": context["binding_event"],
         }
-        if viewer is not None and viewer.user_id not in scene["participants"]:
+        if (
+            viewer is not None
+            and viewer.user_id not in scene["participants"]
+            and (
+                participant_only
+                or not viewer.activity_review
+                or not self.store.policy.allow_guild_administrators
+                or viewer.user_id != review_facilitator(c, self.store.campaign_id)
+            )
+        ):
             raise WorkflowError("SCENE_UNAVAILABLE: join this scene before accessing observations.")
         return scene
 
@@ -114,7 +231,29 @@ class DirectorObservationService:
     def _consented(
         self, c: Connection, scene: dict[str, Any], state: SceneObservationState
     ) -> bool:
+        if self.reviewed_activity_trial and state.policy.scope != "reviewed_activity_trial":
+            return False
+        if self.activity_shadow or state.activity_epoch is not None:
+            current = self._activity_policy(
+                c, reviewed=state.policy.scope == "reviewed_activity_trial"
+            )
+            if (
+                not current["enabled"]
+                or state.activity_epoch != current["revision"]
+                or state.activity_audience != tuple(sorted(scene["participants"]))
+            ):
+                return False
         people = {str(x) for x in scene["participants"]}
+        required = people
+        bot = self.store.policy.application_id
+        if (
+            self.reviewed_activity_trial
+            and str(bot) in people
+            and HandlerService(self.store).current(c)[1].handler_id == bot
+            and load_state(c, self.store.campaign_id).handler == bot
+        ):
+            # The service account stays in the audience but cannot give human consent.
+            required = people - {str(bot)}
         active = set(
             c.scalars(
                 sa.select(t.members.c.user_id).where(
@@ -125,9 +264,9 @@ class DirectorObservationService:
             )
         )
         return (
-            bool(people)
+            bool(required)
             and people == active
-            and all(state.consents.get(uid) == state.policy_revision for uid in people)
+            and all(state.consents.get(uid) == state.policy_revision for uid in required)
             and state.policy_revision > 0
         )
 
@@ -135,7 +274,7 @@ class DirectorObservationService:
         self, c: Connection, viewer: GuildViewer, scene_id: str, speaker: str
     ) -> tuple[dict[str, Any], SceneObservationState, ActorRef]:
         self._scope()
-        scene = self._scene(c, scene_id, viewer)
+        scene = self._scene(c, scene_id, viewer, participant_only=True)
         state = self._state(c, scene_id)
         if state.policy.mode != "shadow" or not self._consented(c, scene, state):
             raise WorkflowError("OBSERVATION_DISABLED: current participant consent is required.")
@@ -178,8 +317,16 @@ class DirectorObservationService:
         expected_policy_revision: int,
         policy: ObservationPolicy,
     ) -> dict[str, Any]:
-        """Local synthetic configuration only; never grants another person's consent."""
+        """Configure the server's observation mode and refresh everyone's notice."""
         self._scope()
+        if self.reviewed_activity_trial:
+            policy = ObservationPolicy(
+                mode=policy.mode,
+                scope="reviewed_activity_trial",
+                retention_ref="reviewed-activity-trial-v1",
+            )
+        elif policy.scope != "synthetic_only" or policy.retention_ref != "synthetic-fixture-v1":
+            raise WorkflowError("OBSERVATION_SCOPE: use the configured server mode.")
         policy = ObservationPolicy.model_validate_json(policy.model_dump_json())
 
         def authorize(c: Connection) -> None:
@@ -190,6 +337,20 @@ class DirectorObservationService:
             state = self._state(c, scene_id)
             if state.policy_revision != expected_policy_revision:
                 raise WorkflowError("STALE_POLICY: refresh observation settings.")
+            activity = {}
+            if self.activity_shadow or state.activity_epoch is not None:
+                campaign_policy = self._activity_policy(c)
+                if not self.activity_shadow or not campaign_policy["enabled"]:
+                    raise WorkflowError(
+                        "ACTIVITY_OPT_IN_REQUIRED: enable private campaign observation first."
+                    )
+                activity = dict(
+                    activity_epoch=campaign_policy["revision"],
+                    capture_floor=state.sequence,
+                    native_cursor=self._native_head(c),
+                    reviewed_sequence=state.sequence,
+                    activity_audience=tuple(sorted(self._scene(c, scene_id)["participants"])),
+                )
             state = state.model_copy(
                 update={
                     "policy": policy,
@@ -197,6 +358,7 @@ class DirectorObservationService:
                     "consents": {},
                     "consent_generation": state.consent_generation + 1,
                     "generation": state.generation + 1,
+                    **activity,
                 }
             )
             self._save(c, scene_id, state)
@@ -227,7 +389,22 @@ class DirectorObservationService:
         self._scope()
 
         def authorize(c: Connection) -> None:
-            self._scene(c, scene_id, viewer)
+            # A former participant can always withdraw use of a closed scene's
+            # carried references. Granting new consent still requires an open scene.
+            try:
+                self._scene(
+                    c, scene_id, viewer, allow_closed=consent is False, participant_only=True
+                )
+            except WorkflowError as error:
+                if consent is not False or not str(error).startswith("SCENE_UNAVAILABLE:"):
+                    raise
+                from girlframe.services.director_closeout import report_participant
+
+                self.game.authorize(c, viewer, game=False)
+                if not self.store._binding_matches(c) or not report_participant(
+                    self.store, c, scene_id, viewer.user_id
+                ):
+                    raise
 
         def operation(c: Connection) -> dict[str, Any]:
             state = self._state(c, scene_id)
@@ -235,12 +412,35 @@ class DirectorObservationService:
                 raise WorkflowError("STALE_POLICY: review the current observation notice.")
             if type(consent) is not bool:
                 raise WorkflowError("INVALID_CONSENT: choose an explicit boolean decision.")
+            activity = {}
+            if self.activity_shadow or state.activity_epoch is not None:
+                campaign_policy = self._activity_policy(c)
+                if consent and (
+                    not campaign_policy["enabled"]
+                    or state.activity_epoch != campaign_policy["revision"]
+                    or state.activity_audience
+                    != tuple(sorted(self._scene(c, scene_id)["participants"]))
+                ):
+                    raise WorkflowError(
+                        "ACTIVITY_OPT_IN_REQUIRED: refresh the current scene notice."
+                    )
+                acknowledged = state.consents.get(str(viewer.user_id)) == state.policy_revision
+                if consent == acknowledged:
+                    return {
+                        "scene_id": scene_id,
+                        "consent": consent,
+                        "policy_revision": state.policy_revision,
+                    }
+                activity["native_cursor"] = self._native_head(c)
+                if not consent:
+                    activity.update(capture_floor=state.sequence, reviewed_sequence=state.sequence)
             state = state.model_copy(
                 update={
                     "consents": state.consents
                     | {str(viewer.user_id): state.policy_revision if consent else 0},
                     "consent_generation": state.consent_generation + 1,
                     "generation": state.generation + 1,
+                    **activity,
                 }
             )
             self._save(c, scene_id, state)
@@ -261,16 +461,18 @@ class DirectorObservationService:
 
     def _latest_source(self, c: Connection, source_id: str) -> Observation | None:
         table = t.director["inputs"]
-        body = c.scalar(
-            sa.select(table.c.body_json)
+        row = c.execute(
+            sa.select(table.c.scene_id, table.c.sequence, table.c.body_json)
             .where(
                 table.c.campaign_id == self.store.campaign_id,
                 table.c.source_id == source_id,
             )
             .order_by(table.c.source_revision.desc())
             .limit(1)
-        )
-        return Observation.model_validate_json(body) if body else None
+        ).first()
+        if not row or row.sequence <= self._state(c, row.scene_id).capture_floor:
+            return None
+        return Observation.model_validate_json(row.body_json)
 
     def _append(
         self, c: Connection, scene_id: str, state: SceneObservationState, observation: Observation
@@ -344,6 +546,13 @@ class DirectorObservationService:
                 return InputResult(
                     scene_id=scene_id, generation=state.generation, status="ignored_ooc"
                 ).model_dump(mode="json")
+            if command.source_id is None:
+                self.game.scene(c, scene["channel_id"])
+            else:
+                self.game.scene_unpaused(c, scene_id)
+            if self.activity_shadow:
+                self._catch_up_plays(c, scene, state)
+                state = self._state(c, scene_id)
             lock = self.game.lock(c, scene["channel_id"])
             if lock and lock["state"] != "released":
                 raise WorkflowError("SCENE_BUSY: finish the pending Play before adding IC input.")
@@ -357,6 +566,38 @@ class DirectorObservationService:
                 raise WorkflowError(
                     "SOURCE_SCOPE_CHANGED: sharing with new participants needs review."
                 )
+            if old and old.fictional_channel != command.fictional_channel:
+                raise WorkflowError("SOURCE_CHANNEL_CHANGED: report through a new message.")
+            cast = old.cast_controllers if old else None
+            if state.activity_epoch is not None and old is None:
+                from girlframe.services.director_context import DirectorContextService
+                from girlframe.services.director_knowledge import DirectorKnowledgeService
+
+                cast = {
+                    role.ref.token: role.controller
+                    for role in DirectorKnowledgeService(DirectorContextService(self))._actor_views(
+                        c, scene
+                    )
+                }
+            if command.covers_turn:
+                target = current_turn(c, self.store.campaign_id, scene_id, command.covers_turn)
+                if (
+                    state.activity_epoch is None
+                    or cast is None
+                    or target is None
+                    or target.sequence <= state.capture_floor
+                    or target.actor.kind != "pilot"
+                    or target.actor == actor
+                    or target.author_id == str(viewer.user_id)
+                    or target.fictional_channel != "comms"
+                    or target.gm_addressed
+                    or target.cast_controllers != cast
+                    or target.covers_turn is not None
+                    or npc_owned(c, self.store.campaign_id, scene_id, (target.source_id,))
+                ):
+                    raise WorkflowError(
+                        "PEER_TURN_UNAVAILABLE: choose a current shared Pilot turn."
+                    )
             observation = Observation(
                 sequence=state.sequence + 1,
                 generation=state.generation + 1,
@@ -367,7 +608,10 @@ class DirectorObservationService:
                 actor=actor,
                 audience_ids=audience,
                 accepted_at=float(self.store.clock()),
+                cast_controllers=cast,
                 text=command.text,
+                fictional_channel=command.fictional_channel,
+                covers_turn=command.covers_turn,
             )
             return self._append(c, scene_id, state, observation).model_dump(mode="json")
 
@@ -402,8 +646,12 @@ class DirectorObservationService:
         if state.policy.mode != "shadow" or not self._consented(c, scene, state):
             raise WorkflowError("OBSERVATION_DISABLED: current participant consent is required.")
         self.game.unpaused(c)
+        self.game.scene_unpaused(c, scene_id)
         action = self.game.action(c, action_id)
         data = action["data"]
+        supported = (
+            ("keep_your_head", "check_sensors") if self.activity_shadow else ("keep_your_head",)
+        )
         if {str(x) for x in data.get("participants", ())} != {
             str(x) for x in scene["participants"]
         }:
@@ -411,7 +659,7 @@ class DirectorObservationService:
         if (
             action["scene_id"] != scene_id
             or action["parent_id"] is not None
-            or data.get("play") != "keep_your_head"
+            or data.get("play") not in supported
             or any(
                 data.get(key)
                 for key in (
@@ -433,7 +681,7 @@ class DirectorObservationService:
             or data.get("private_audience")
         ):
             raise WorkflowError(
-                "UNSUPPORTED_PLAY_SOURCE: only ordinary native Keep Your Head is supported."
+                "UNSUPPORTED_PLAY_SOURCE: this Play needs a separately reviewed source adapter."
             )
         if action["state"] != "complete" or self.game.pending(c, action_id):
             raise WorkflowError("PLAY_PENDING: preserve the actual outstanding player choices.")
@@ -514,54 +762,118 @@ class DirectorObservationService:
     def observe_committed_play(self, scene_id: str, action_id: str) -> InputResult:
         """Trusted source adapter for native Keep Your Head only; no browser success flags."""
         with self.store.transaction() as c:
-            scene, state, action, receipt, event, actor = self._prove_committed_play(
-                c, scene_id, action_id
-            )
-            source_id = "play:" + action_id
-            old = self._latest_source(c, source_id)
-            if old:
-                return InputResult(
-                    scene_id=scene_id,
-                    source_id=old.source_id,
-                    source_revision=old.source_revision,
-                    sequence=old.sequence,
-                    generation=old.generation,
+            if self.activity_shadow or self._state(c, scene_id).activity_epoch is not None:
+                raise WorkflowError(
+                    "ACTIVITY_NATIVE_CURSOR: the private intake reads native commits in order."
                 )
-            # Only references enter the batch; private Handler answers/results do not.
-            observation = Observation(
-                sequence=state.sequence + 1,
-                generation=state.generation + 1,
-                source_id=source_id,
-                source_revision=1,
-                kind="completed_play",
-                author_id=str(action["actor_id"]),
-                actor=actor,
-                audience_ids=tuple(sorted(str(x) for x in scene["participants"])),
-                accepted_at=float(self.store.clock()),
-                action_id=action_id,
-                receipt_id=receipt["id"],
-                event_id=event["id"],
+            return self._observe_committed_play(c, scene_id, action_id)
+
+    def _observe_committed_play(self, c: Connection, scene_id: str, action_id: str) -> InputResult:
+        scene, state, action, receipt, event, actor = self._prove_committed_play(
+            c, scene_id, action_id
+        )
+        source_id = "play:" + action_id
+        old = self._latest_source(c, source_id)
+        if old:
+            return InputResult(
+                scene_id=scene_id,
+                source_id=old.source_id,
+                source_revision=old.source_revision,
+                sequence=old.sequence,
+                generation=old.generation,
             )
-            result = self._append(c, scene_id, state, observation)
-            self.store._audit(
-                c,
-                action["actor_id"],
-                "director:play:" + action_id,
-                "director.play_observed",
-                result.model_dump(mode="json"),
-                ruleset_version="p2-observation-synthetic-v1",
+        # Only references enter the batch; private Handler answers/results do not.
+        observation = Observation(
+            sequence=state.sequence + 1,
+            generation=state.generation + 1,
+            source_id=source_id,
+            source_revision=1,
+            kind="completed_play",
+            author_id=str(action["actor_id"]),
+            actor=actor,
+            audience_ids=tuple(sorted(str(x) for x in scene["participants"])),
+            accepted_at=float(self.store.clock()),
+            action_id=action_id,
+            receipt_id=receipt["id"],
+            event_id=event["id"],
+        )
+        result = self._append(c, scene_id, state, observation)
+        self.store._audit(
+            c,
+            action["actor_id"],
+            "director:play:" + action_id,
+            "director.play_observed",
+            result.model_dump(mode="json"),
+            ruleset_version="p2-observation-synthetic-v1",
+        )
+        return result
+
+    def _catch_up_plays(
+        self, c: Connection, scene: dict[str, Any], state: SceneObservationState
+    ) -> None:
+        head = self._native_head(c)
+        if head <= state.native_cursor:
+            return
+        actions, events = t.m2["m2_actions"], t.events
+        rows = c.execute(
+            sa.select(events.c.seq, actions.c.id)
+            .join_from(
+                events,
+                actions,
+                sa.and_(
+                    events.c.campaign_id == actions.c.campaign_id,
+                    events.c.id == sa.func.json_extract(actions.c.body_json, "$.response_event"),
+                ),
             )
-            return result
+            .where(
+                events.c.campaign_id == self.store.campaign_id,
+                events.c.kind == "m2.choice_resolved",
+                events.c.seq > state.native_cursor,
+                events.c.seq <= head,
+                actions.c.scene_id == scene["id"],
+                actions.c.state == "complete",
+            )
+            .order_by(events.c.seq)
+        ).all()
+        cursor = head
+        for seq, action in rows:
+            try:
+                self._observe_committed_play(c, scene["id"], action)
+            except WorkflowError as error:
+                code = str(error).split(":", 1)[0]
+                if code == "PLAY_PENDING":
+                    cursor = seq - 1
+                    break
+                if code not in {
+                    "UNSUPPORTED_PLAY_SOURCE",
+                    "SOURCE_SCOPE_CHANGED",
+                    "UNPROVEN_PLAY",
+                    "STALE_ACTOR",
+                    "STALE_CHARACTER",
+                }:
+                    raise
+        current = self._state(c, scene["id"])
+        self._save(c, scene["id"], current.model_copy(update={"native_cursor": cursor}))
 
     def _pending(
         self, scene_id: str, frontier: int, *, include_handled: bool = False
     ) -> sa.Select[Any]:
         table = t.director["inputs"]
         newer = table.alias("newer")
+        state = t.director["state"]
+        floor = (
+            sa.select(sa.func.json_extract(state.c.body_json, "$.capture_floor"))
+            .where(
+                state.c.campaign_id == table.c.campaign_id,
+                state.c.scene_id == table.c.scene_id,
+            )
+            .scalar_subquery()
+        )
         query = sa.select(table).where(
             table.c.campaign_id == self.store.campaign_id,
             table.c.scene_id == scene_id,
             table.c.sequence > frontier,
+            table.c.sequence > sa.func.coalesce(floor, 0),
             ~sa.exists(
                 sa.select(newer.c.source_id).where(
                     newer.c.campaign_id == table.c.campaign_id,
@@ -660,6 +972,20 @@ class DirectorObservationService:
             ).tuples()
         )
         lock = self.game.lock(c, scene["channel_id"])
+        # Policy sets have no order. Their JSON array order can change with the
+        # process hash seed; that must not make unchanged saved proposals stale.
+        runtime_policy = self.store.policy.model_dump(mode="json")
+        runtime_policy["status_user_ids"] = sorted(runtime_policy["status_user_ids"])
+        approval = runtime_policy.get("m3_approval")
+        if approval is not None:
+            for name in ("subsystems", "activity_specialist_rules", "native_risk_plays"):
+                if name in approval:
+                    approval[name] = sorted(approval[name])
+        from girlframe.services.activity_scene_opening import opening_head
+        from girlframe.services.director_time import scene_time
+
+        time = scene_time(c, self.store.campaign_id, scene["id"])
+        opening = opening_head(c, self.store.campaign_id, scene["id"])
         return _digest(
             {
                 "generation": state.generation,
@@ -669,16 +995,18 @@ class DirectorObservationService:
                 "members": [tuple(row) for row in members],
                 "canonical": canonical,
                 "safety": safety,
-                "runtime_policy": self.store.policy.model_dump(mode="json"),
+                "runtime_policy": runtime_policy,
                 "actions": [tuple(row) for row in action_versions],
                 "choices": [tuple(row) for row in choice_versions],
                 "required_work": [tuple(row) for row in work_versions],
                 "lock": (lock["action_id"], lock["state"]) if lock else None,
+                **({"scene_opening": opening.id} if opening else {}),
+                **({"fictional_time": time.model_dump(mode="json")} if time else {}),
             }
         )
 
     def claim_review(self, scene_id: str) -> ReviewBatch | None:
-        if not self.synthetic:
+        if not (self.synthetic or self.reviewed_activity_trial):
             return None
         with self.store.transaction() as c:
             scene = self._scene(c, scene_id)
@@ -686,6 +1014,10 @@ class DirectorObservationService:
             if state.policy.mode == "off" or not self._consented(c, scene, state):
                 return None
             self.game.unpaused(c)
+            self.game.scene_unpaused(c, scene_id)
+            if self.activity_shadow:
+                self._catch_up_plays(c, scene, state)
+                state = self._state(c, scene_id)
             now = float(self.store.clock())
             guard = self._guard(c, scene, state)
             runs = t.director["runs"]
@@ -823,6 +1155,7 @@ class DirectorObservationService:
                 raise WorkflowError("IDEMPOTENCY_CONFLICT: review completion changed.")
             return ReviewCompletion(run_id=run_id, status=row["status"], frontier=batch.frontier)
         self.game.unpaused(c)
+        self.game.scene_unpaused(c, batch.scene_id)
         if (
             row["status"] != "running"
             or row["lease_until"] <= self.store.clock()
@@ -862,7 +1195,9 @@ class DirectorObservationService:
             state = self._state(c, scene_id)
             messages, triggers, oldest = self._stats(c, scene_id, state)
             consented = self._consented(c, scene, state)
-            mode = state.policy.mode if self.synthetic else "off"
+            mode = state.policy.mode if self.synthetic or self.reviewed_activity_trial else "off"
+            if not consented and (self.activity_shadow or state.activity_epoch is not None):
+                messages, triggers = 0, 0
             phase: Any = "off"
             next_at = None
             if mode != "off":
@@ -896,6 +1231,12 @@ class DirectorObservationService:
                         active
                     ).guard_digest == self._guard(c, scene, state):
                         phase = "running"
+            if (self.activity_shadow or state.activity_epoch is not None) and not (
+                viewer.is_administrator and self.store.policy.allow_guild_administrators
+            ):
+                messages, triggers, next_at = 0, 0, None
+                if phase in {"ready", "waiting", "running"}:
+                    phase = "idle"
             return ObservationStatus(
                 scene_id=scene_id,
                 scene_revision=scene["revision"],

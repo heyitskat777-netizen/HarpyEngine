@@ -2934,6 +2934,7 @@ def projection(
         roles=roles,
         urges=rules.choices(source) + (("pass",) if source.total >= 11 else ()),
         work=value.model_dump(mode="json") if value else None,
+        newgirl=source.actor.model_dump(mode="json"),
         primaries=[
             dict(
                 id=rules.identity(source.id, x.actor),

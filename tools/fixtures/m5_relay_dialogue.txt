@@ -1,0 +1,64 @@
+Lark|comms|I put my helmet on the table. If I say "hold", I need a second to find the right word.
+Kite|comms|I can leave you that second. If I need a stop, I'll say "stop". No hand signals at night.
+Lark|private|Through the cracked dayroom glass I see a violet lantern under the drainage grate. I keep that to myself.
+Kite|comms|If the relay needs a battery, I'd like the first exercise to end at the service shelf. I don't want to rehearse a forced entry.
+Lark|comms|Handler, can you confirm the objective for the first run?
+Kite|comms|My useful contribution is carrying the weight. My unhelpful contribution is trying to carry yours too.
+Lark|comms|We can put the spare kit on the shelf first. That leaves both our hands clear for the battery.
+Kite|comms|I can work with that. The spare kit gets its own label so we don't confuse it with the live cell.
+Lark|comms|I'm at the marked lane with the case. The tape line really does look narrower from in here.
+Kite|comms|Set the case beside the first stripe. I want to check both straps before either of us lifts.
+Lark|comms|I put it down and show you the buckles. The right one catches on my sleeve.
+Kite|comms|I could shorten that strap. Do you want that, or shall I move it clear of your cuff?
+Lark|comms|Move it clear, please. I measured the length on the bench and I want to keep it.
+Kite|comms|The strap is clear. I haven't touched the buckle setting.
+Lark|comms|Handler, can you confirm the objective?
+Kite|comms|I'll take the outboard handle. Tell me if that puts me across your sight line.
+Lark|comms|Stay there. I can see the tape and both of your hands.
+Kite|comms|First lift on your count. You set the pace because you have the tight corner.
+Lark|comms|One, two, lift. I feel the case settle against my palm.
+Kite|comms|I'm matching you. The handle isn't twisting on my side.
+Lark|comms|I can watch the stripe or keep my grip steady. I can't do both.
+Kite|comms|We can set it down before the turn. Nobody's grading how fast the corner looks.
+Lark|private|Under the real walkway I spot the violet lantern again. I do not transmit the sighting.
+Kite|comms|I hear the relay's fan or something that sounds like a fan. I'll call it a hum until we know.
+Lark|comms|I set my end beside the stripe. The hum makes it hard to judge the little knocks.
+Kite|comms|Then use my count and the stripe. I can tap the handle when my end is down.
+Lark|comms|I will force the sealed service door so we can skip the corner.
+Kite|comms|I stay by my handle. I'd rather hear the agreed boundary before we touch anything.
+Lark|comms|GM, I call Keep Your Head to hold the case level while my grip slips. I can brace a knee beneath it.
+Kite|comms|My side of the case is level. I'll follow whichever way you need to make room.
+Lark|comms|I signal that I can go again. Let's take the long turn one step at a time.
+Kite|comms|One short step from my side. I'll say when my toe clears the stripe.
+Lark|comms|I see the stripe behind you. I'm bringing the inside corner around now.
+Kite|comms|We have space. I can set it down if you want to reset your grip.
+Lark|comms|GM, does just asking Kite to stop spend any Heat?
+Kite|comms|I'll stop when you ask. My hand is under the handle, not in the hinge.
+Lark|comms|Handler, what is our scope if the shelf door is shut?
+Kite|comms|There is a painted bracket ahead. The mark could belong to an old exercise, so I'm keeping clear.
+Lark|comms|Can you read the tag from your side without setting the case on the bracket?
+Kite|comms|From here I see two bolts and no tag. I won't call that the right shelf.
+Lark|comms|I don't have a useful angle. If we put the case beside the stripe, I'll move to your side.
+Kite|comms|I lower my end on your signal. We have room to look without putting weight on the bracket.
+Lark|comms|That's better. I can see a shelf farther down with the same stripe we followed in.
+Kite|comms|I keep the nearer bracket in sight. I don't want anyone to mistake our staging point for delivery.
+Lark|comms|Handler, can you repeat the objective for where the battery goes?
+Kite|comms|Handler, can you confirm the scope before I set my end down on the marked shelf?
+Lark|comms|I pick my handle up again. This end is dragging a little as I come off the stripe.
+Kite|comms|I'll match the drag and keep from pulling you around. Tell me when it clears.
+Lark|comms|GM, I call Keep Your Head to keep the warning flag absolutely still while the fan pushes it sideways.
+Kite|comms|I can hold my corner. If the flag moves, I'll call the new position instead of guessing.
+Lark|comms|I take my hand off the flag. We can record where the shelf is from the tape marks.
+Kite|comms|Good. I'll point to the edge without touching the shelf until we're both ready.
+Lark|comms|I can see your point. The case is square to the edge from this side.
+Kite|comms|Two inches toward you would put the nearer handle inside the shelf rails.
+Lark|comms|I shift mine two inches. Do you have clearance to set yours down?
+Kite|comms|Yes. I'm lowering it now and counting both fingers clear before I let go.
+Lark|comms|The case is on the shelf. I leave the clips closed and put my hands back where you can see them.
+Kite|comms|Both clips still closed from my side. I'm stepping back to the stripe.
+Lark|comms|Handler, what is our status now that we've both reported the case on the shelf?
+Kite|comms|I can say we carried it to the marked shelf and stayed outside. I cannot say the relay is running.
+Lark|comms|My note says the grip slipped at the first corner. I want the next group to know where we reset.
+Kite|comms|I'll add that the bracket at the bend is unlabelled. Leave that as an observation, not a replacement route.
+Lark|comms|I'm at the exit stripe. You can check my gloves if you'd like, but I'm keeping the helmet on.
+Kite|comms|I see both gloves. I'm ready to file the report with the door still sealed.

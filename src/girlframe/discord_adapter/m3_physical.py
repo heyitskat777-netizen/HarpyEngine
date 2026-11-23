@@ -23,6 +23,11 @@ MODES = (
 async def open_initial(interaction: discord.Interaction, service: PhysicalService) -> None:
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(service.preview, viewer)
+    if data.get("stolen_frame"):
+        await reply(
+            interaction, "Your original Frame is missing. Check your private Inbox for recovery."
+        )
+        return
     if data["pending_id"] is not None:
         await open_review(interaction, service, data["pending_id"])
         return
@@ -72,6 +77,8 @@ async def open_initial(interaction: discord.Interaction, service: PhysicalServic
                 ),
                 channel=current.channel_id,
             )
+            if result["operation"] == "berserk":
+                return "Your Frame went berserk on activation and subsumed your Girl."
             if result.get("entry_dives"):
                 return (
                     "Your actual cockpit state is saved. Resolve the required Dive Deep "

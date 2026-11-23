@@ -173,7 +173,6 @@ def test_actual_damage_and_owed_tag_feed_kicked_puppy_owned_care_flirt(
             gain=("0",),
             pair_share=("0",),
             piloting=("yes",),
-            witnessed=("no",),
             trigger=("yes",),
             context="I actually flirt with the person who gave me this Tag",
         )

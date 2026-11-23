@@ -1,6 +1,7 @@
 """Durable private human rulings bound to real pending work, never arbitrary state setters."""
 
 import json
+from collections.abc import Callable
 from typing import Any, Literal, cast
 from uuid import NAMESPACE_URL, uuid5
 
@@ -14,6 +15,8 @@ from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
+
+UNLISTED_ACTION = "activity.unlisted_action"
 
 
 def configured(game: GameService, c: Connection) -> rules.Recipient | None:
@@ -31,6 +34,19 @@ def configured(game: GameService, c: Connection) -> rules.Recipient | None:
         .first()
     )
     if body is None:
+        from girlframe.services.session_zero import SessionZeroService
+
+        zero = SessionZeroService(game.store)
+        plan = zero._latest(c)
+        bot = game.store.policy.application_id
+        if (
+            plan.plan_approved
+            and plan.facilitator in plan.members
+            and zero.handler.current(c)[1].handler_id == bot
+            and load_state(c, game.store.campaign_id).handler == bot
+            and zero._active_group(c, plan)
+        ):
+            return rules.Recipient(kind="user", id=plan.facilitator, event=plan.plan_proposal)
         return None
     value = json.loads(body["payload_json"])
     return rules.Recipient(kind=value["recipient_kind"], id=value["recipient_id"], event=body["id"])
@@ -45,7 +61,9 @@ def recipient_is(viewer: GuildViewer, recipient: rules.Recipient | None) -> bool
     )
 
 
-def pending(game: GameService, c: Connection, channel: int | None = None) -> list[rules.Request]:
+def pending(
+    game: GameService, c: Connection, channel: int | None = None, *, include_closed: bool = False
+) -> list[rules.Request]:
     table = t.m3["m3_required_work"]
     seen: set[str] = set()
     result = []
@@ -58,7 +76,9 @@ def pending(game: GameService, c: Connection, channel: int | None = None) -> lis
             continue
         seen.add(row["id"])
         value = rules.Request.model_validate_json(row["body_json"])
-        if row["state"] == "pending" and (channel is None or value.channel == channel):
+        if (include_closed or row["state"] == "pending") and (
+            channel is None or value.channel == channel
+        ):
             result.append(value)
     return result
 
@@ -67,6 +87,8 @@ def require_scene_clear(
     game: GameService, c: Connection, channel: int, action: dict[str, Any] | None = None
 ) -> None:
     for value in pending(game, c, channel):
+        if value.source_kind == "scene" and value.rule == UNLISTED_ACTION:
+            continue
         if value.status == "awaiting_owned_effect" and action is not None:
             ancestor = action
             while ancestor.get("parent_id"):
@@ -296,14 +318,21 @@ class FacilitatorService:
         reason: str,
         *,
         shared: bool = False,
+        source_guard: Callable[[Connection], None] | None = None,
     ) -> dict[str, Any]:
+        def authorize(c: Connection) -> None:
+            self.game.authorize(c, viewer, game=False)
+            if source_guard is not None:
+                source_guard(c)
+
         def operation(c: Connection) -> dict[str, Any]:
             state = load_state(c, self.store.campaign_id)
             if state.revision != revision:
                 raise WorkflowError("Reopen the current source before requesting adjudication.")
             from girlframe.services.m3_access import load_registry
 
-            known_rule = rule in {entry.id for entry in load_registry().entries}
+            unlisted = rule == UNLISTED_ACTION and source_kind == "scene"
+            known_rule = unlisted or rule in {entry.id for entry in load_registry().entries}
             if not known_rule and source_kind == "work":
                 table = t.m3["m3_required_work"]
                 actual_kind = c.scalar(
@@ -325,19 +354,34 @@ class FacilitatorService:
             scope, source_revision, actor, receipt, mandatory = self._source(
                 c, viewer, source_kind, source, channel
             )
+            name = f"{self.store.campaign_id}:{source_kind}:{source}:{rule}:{viewer.user_id}"
+            if unlisted:
+                name += ":" + reason.strip()
             identity = str(
                 uuid5(
                     NAMESPACE_URL,
-                    f"{self.store.campaign_id}:{source_kind}:{source}:{rule}:{viewer.user_id}",
+                    name,
                 )
             )
             existing = next((x for x in pending(self.game, c) if x.id == identity), None)
             if existing:
                 return dict(id=existing.id, status=existing.status)
+            last_revision = (
+                c.scalar(
+                    sa.select(t.m3["m3_required_work"].c.revision)
+                    .where(
+                        t.m3["m3_required_work"].c.campaign_id == self.store.campaign_id,
+                        t.m3["m3_required_work"].c.id == identity,
+                    )
+                    .order_by(t.m3["m3_required_work"].c.revision.desc())
+                    .limit(1)
+                )
+                or 0
+            )
             recipient = configured(self.game, c)
             value = rules.Request(
                 id=identity,
-                revision=1,
+                revision=last_revision + 1,
                 requester=viewer.user_id,
                 channel=channel,
                 rule=rule,
@@ -372,7 +416,7 @@ class FacilitatorService:
             ),
             operation,
             auto_audit=False,
-            authorize=lambda c: self.game.authorize(c, viewer, game=False),
+            authorize=authorize,
         )
 
     def view(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
@@ -415,7 +459,7 @@ class FacilitatorService:
                 delivery=jobs,
             )
 
-    def tasks(self, viewer: GuildViewer) -> list[dict[str, Any]]:
+    def tasks(self, viewer: GuildViewer, *, include_closed: bool = False) -> list[dict[str, Any]]:
         with self.store.engine.connect() as c:
             self.game.authorize(c, viewer, game=False)
             actual = configured(self.game, c)
@@ -424,17 +468,21 @@ class FacilitatorService:
                     id=x.id,
                     revision=x.revision,
                     label="Human ruling: " + x.status,
+                    status=x.status,
+                    can_rule=recipient_is(viewer, actual),
+                    own=x.requester == viewer.user_id,
                     pending=(
                         recipient_is(viewer, actual)
                         and x.status in ("awaiting_ruling", "adapter_blocked")
                         or x.requester == viewer.user_id
+                        and x.status not in ("resolved", "declined")
                         and (
                             not x.shared
                             or x.status in ("configuration_required", "awaiting_owned_effect")
                         )
                     ),
                 )
-                for x in pending(self.game, c)
+                for x in pending(self.game, c, include_closed=include_closed)
                 if x.requester == viewer.user_id or recipient_is(viewer, actual)
             ]
 

@@ -4,18 +4,33 @@ import asyncio
 from uuid import uuid4
 
 import pytest
+from test_cast_service import change as cast_change
+from test_doctor_npc_nanobot import setup as npc_setup
 from test_doctor_runtime import acquire, doctor
+from test_enforcer_requisitions import approved
+from test_inbox import request as inbox_interaction
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger
 from test_m2_game import state
 from test_mission_ui import current
 
+from girlframe.discord_adapter import onboarding
+from girlframe.discord_adapter.inbox import InboxView, RequestSelect
+from girlframe.discord_adapter.m2_forms import NativeForm
 from girlframe.discord_adapter.m3_doctor import open_doctor, open_request
 from girlframe.engine import m3_doctor as rules
 from girlframe.engine.m2 import TagState
 from girlframe.engine.m3_actor_bonds import current_ref
+from girlframe.engine.m3_mockingbird import actor_tags
 from girlframe.engine.m3_physical_state import InitialPlacement
+from girlframe.engine.m3_world_state import WorldTag
+from girlframe.services.inbox import InboxService
+from girlframe.services.m2_game import GameService
+from girlframe.services.m3_actors import ActorService
+from girlframe.services.m3_cast import CastService
+from girlframe.services.m3_doctor import DoctorService
 from girlframe.services.m3_doctor_procedures import ProcedureService
+from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_physical import PhysicalService
 from girlframe.services.onboarding import WorkflowError
 
@@ -106,5 +121,228 @@ def test_native_caller_initiates_ragged_and_owns_tag_payment(ledger, tmp_path, m
         revision = done.revision
         await payment.confirm.callback(paid)
         assert state(game).revision == revision
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize("pay_as_npc", [True, False], ids=["npc-pays", "doctor-pays"])
+def test_native_npc_call_and_owned_ragged_payment(ledger, tmp_path, monkeypatch, pay_as_npc):
+    monkeypatch.setattr(onboarding, "allow_action", lambda *a, **kw: True)
+    game, _, _, npc, _ = npc_setup(ledger, tmp_path, monkeypatch)
+    approved(ledger, game, tmp_path, monkeypatch, extra=(rules.NANO, rules.TRACK, rules.RAGGED))
+    approval = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update={
+            "m3_approval": approval.model_copy(
+                update={"subsystems": approval.subsystems | {"world"}}
+            )
+        }
+    )
+    casts = CastService(ActorService(MissionService(ledger)))
+    assert ProcedureService(game).call_menu(ADMIN, 900)["npc_doctors"] == []
+    acquire(game, rules.RAGGED)
+    with ledger.transaction() as c:
+        prepared = state(game)
+        prepared.sheets["2"].tags.append(TagState(id="doctor-ready", label="Doctor ready", giver=3))
+        prepared.world = prepared.world.model_copy(
+            update=dict(
+                npcs=tuple(
+                    patient.model_copy(
+                        update=dict(
+                            tags=(WorldTag(id="npc-ready", label="Caller ready", giver_entity="2"),)
+                        )
+                    )
+                    if patient.id == npc.entity
+                    else patient
+                    for patient in prepared.world.npcs
+                )
+            )
+        )
+        prepared.placements = [
+            x.model_copy(update=dict(girl_cell=(1, 0), frame_cell=(1, 0)))
+            if x.actor.entity == "2"
+            else x
+            for x in prepared.placements
+        ]
+        game.event(c, 1, str(uuid4()), "synthetic.actual_call_positions_and_tags", prepared)
+    before = state(game)
+    provider = current_ref(before, PLAYER.user_id)
+    procedure = ProcedureService(game)
+    payment_owner = ADMIN if pay_as_npc else PLAYER
+    payer = npc if pay_as_npc else provider
+    tag = "npc-ready" if pay_as_npc else "doctor-ready"
+    with pytest.raises(WorkflowError, match="original NPC, Doctor and call scene"):
+        procedure.propose(
+            OTHER,
+            str(uuid4()),
+            before.revision,
+            900,
+            npc,
+            "ragged",
+            "Not my NPC",
+            called_doctor=provider,
+        )
+
+    async def run():
+        interaction = current(ADMIN.user_id, 998801)
+        interaction.channel_id = 900
+        await interaction.response.defer(ephemeral=True)
+        await open_doctor(interaction, DoctorService(game))
+        form = interaction.edit_original_response.call_args.kwargs["view"]
+        assert form.fields[0].options == ((npc.token, "Pat"),)
+        form.values.update(
+            caller=(npc.token,),
+            doctor=(provider.token,),
+            account="I call the Doctor to my side",
+        )
+        submit = current(ADMIN.user_id, 998802)
+        await form.confirm.callback(submit)
+        assert form.completed, submit.edit_original_response.call_args_list
+        await form.confirm.callback(submit)
+        proposed = state(game)
+        (request,) = rules.values(proposed, "doctor_procedure", rules.Procedure)
+        assert request.counterpart == npc and request.controller == ADMIN.user_id
+        assert request.npc_call_scene
+        assert proposed.placements == before.placements
+        assert not actor_tags(proposed, npc)[0].marked
+        with pytest.raises(WorkflowError, match="Reopen your existing call"):
+            procedure.propose(
+                ADMIN,
+                str(uuid4()),
+                proposed.revision,
+                900,
+                npc,
+                "ragged",
+                "Duplicate call",
+                called_doctor=provider,
+            )
+
+        reopened_game = GameService(ledger, dice=game.dice)
+        reopened = ProcedureService(reopened_game)
+        inbox = InboxService(ledger)
+
+        async def payment_from_inbox():
+            view = InboxView(InboxService(ledger), payment_owner.user_id)
+            view.category = "plays"
+            start = inbox_interaction(payment_owner, int(uuid4()))
+            await start.response.defer(ephemeral=True)
+            await view.present(start)
+            item = next(x for x in view.page.window if x.identity == request.id)
+            assert item.task == "m3_doctor_procedure"
+            select = next(x for x in view.children if isinstance(x, RequestSelect))
+            select._values = [item.key]
+            await select.callback(inbox_interaction(payment_owner, int(uuid4())))
+            opened = inbox_interaction(payment_owner, int(uuid4()), view.primary.custom_id)
+            await view.primary.callback(opened)
+            payment = opened.edit_original_response.call_args.kwargs["view"]
+            assert isinstance(payment, NativeForm)
+            assert payment.fields[0].options == (
+                ("0", "Caller ready" if pay_as_npc else "Doctor ready"),
+            )
+            return payment
+
+        for viewer in (ADMIN, PLAYER):
+            assert any(item.identity == request.id for item in inbox.items(viewer))
+        assert not any(item.identity == request.id for item in inbox.items(OTHER))
+        outsider = InboxView(InboxService(ledger), OTHER.user_id)
+        await outsider.present(inbox_interaction(OTHER, int(uuid4())))
+        assert all(item.identity != request.id for item in outsider.page.window)
+        with pytest.raises(WorkflowError, match="actual original Doctor procedure"):
+            reopened.get(OTHER, request.id)
+        with pytest.raises(WorkflowError, match="Tag holder you control"):
+            reopened.confirm(
+                PLAYER,
+                str(uuid4()),
+                request.id,
+                proposed.revision,
+                "Someone else's NPC Tag",
+                "npc-ready",
+                payer=npc,
+            )
+        with pytest.raises(WorkflowError, match="original pending procedure"):
+            reopened.confirm(
+                payment_owner,
+                str(uuid4()),
+                request.id,
+                proposed.revision - 1,
+                "Stale Tag offer",
+                tag,
+                payer=payer,
+            )
+        old_form = await payment_from_inbox()
+        old_form.values.update(tag=("0",), account="Confirm the original arrival")
+        cast_change(casts, ADMIN, "withdraw", npc)
+        with pytest.raises(WorkflowError, match="original NPC, Doctor and call scene"):
+            reopened.confirm(
+                payment_owner,
+                str(uuid4()),
+                request.id,
+                state(game).revision,
+                "Caller has left",
+                tag,
+                payer=payer,
+            )
+        cast_change(casts, ADMIN, "join", npc)
+        stale_click = current(payment_owner.user_id, 998805)
+        await old_form.confirm.callback(stale_click)
+        assert not old_form.completed
+        assert (
+            "original pending procedure"
+            in stale_click.edit_original_response.call_args.kwargs["content"]
+        )
+        payment = await payment_from_inbox()
+        ledger.safety(OTHER, "pause-ragged", ledger.status(OTHER)["revision"], pause=True)
+        paused = state(game)
+        with pytest.raises(WorkflowError, match="paused"):
+            reopened.confirm(
+                payment_owner,
+                str(uuid4()),
+                request.id,
+                paused.revision,
+                "Wait for the safety pause",
+                tag,
+                payer=payer,
+            )
+        payment.values.update(tag=("0",), account="Wait for the safety pause")
+        paused_click = current(payment_owner.user_id, 998806)
+        await payment.confirm.callback(paused_click)
+        assert not payment.completed
+        assert "paused" in paused_click.edit_original_response.call_args.kwargs["content"]
+        assert state(game) == paused
+        ledger.safety(OTHER, "resume-ragged", ledger.status(OTHER)["revision"], pause=False)
+
+        payment = await payment_from_inbox()
+        revision = state(game).revision
+        account = "I mark my own Tag for the actual arrival"
+        payment.values.update(tag=("0",), account=account)
+        confirmed = current(payment_owner.user_id, 998804)
+        await payment.confirm.callback(confirmed)
+        assert payment.completed, confirmed.edit_original_response.call_args_list
+        done = state(game)
+        await payment.confirm.callback(confirmed)
+        assert reopened.confirm(
+            payment_owner, str(confirmed.id), request.id, revision, account, tag, payer=payer
+        ) == {"id": request.id}
+        assert state(game) == done
+        with pytest.raises(WorkflowError, match="original pending procedure"):
+            reopened.confirm(
+                payment_owner,
+                str(uuid4()),
+                request.id,
+                done.revision,
+                "Do not mark or move again",
+                tag,
+                payer=payer,
+            )
+        actual = next(x for x in done.placements if x.actor == provider)
+        assert actual.girl_cell == (0, 0) and actual.frame_cell == (1, 0)
+        assert actor_tags(done, npc)[0].marked is pay_as_npc
+        assert actor_tags(done, provider)[-1].marked is not pay_as_npc
+        assert done.sheets["2"].heat == before.sheets["2"].heat
+        assert done.sheets["2"].permissions == before.sheets["2"].permissions
+        assert done.sheets["3"] == before.sheets["3"]
+        assert game.dice.calls == 0
+        assert reopened.get(ADMIN, request.id)["procedure"]["phase"] == "complete"
+        assert not any(item.identity == request.id for item in inbox.items(PLAYER))
 
     asyncio.run(run())

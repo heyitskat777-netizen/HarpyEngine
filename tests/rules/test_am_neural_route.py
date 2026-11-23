@@ -49,7 +49,7 @@ def test_actual_continuous_route_preserves_mental_ids_parked_void_and_physical_u
 ):
     selected = test_creation_review.selected
 
-    def actual_assets(girl="MOCKINGBIRD", frame="JANUS-B"):
+    def actual_assets(girl="MOCKINGBIRD", frame="JANUS"):
         value = selected(girl, frame)
         return (
             value.model_copy(

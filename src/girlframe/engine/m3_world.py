@@ -1,11 +1,15 @@
 """Source-based world operations; fiction/choices remain explicit human inputs."""
 
+from uuid import NAMESPACE_URL, uuid5
+
 from pydantic import Field
 
 from girlframe.engine.m3_world_state import (
     AdversaryPilot,
+    Asset,
     Board,
     Cell,
+    CorePlan,
     Gorgon,
     GorgonClass,
     Location,
@@ -61,6 +65,8 @@ def create(board: Board, locations: tuple[Location, ...], secret: Gorgon) -> Wor
 
 
 def validate_initial_gorgon(gorgon: Gorgon) -> None:
+    if gorgon.mask_source:
+        raise ValueError("Only the actual NPC reveal can preserve a disguise source")
     if gorgon.destroyed_assets:
         raise ValueError("A newly introduced Gorgon cannot import destroyed Asset history")
     if len(gorgon.assets) != CLASS_ASSETS[gorgon.gorgon_class] + int(gorgon.sprite_group):
@@ -78,15 +84,65 @@ def validate_initial_gorgon(gorgon: Gorgon) -> None:
         raise ValueError("New Gorgons cannot import old combat conditions or triggered counters")
 
 
-def introduce_gorgon(world: World, gorgon: Gorgon) -> Result:
+def introduce_gorgon(world: World, gorgon: Gorgon, *, event: str | None = None) -> Result:
     validate_initial_gorgon(gorgon)
     updated = update(world, gorgons=world.gorgons + (gorgon,))
+    updated = arrive_with_sprites(updated, gorgon, event)
     followups = (
         (Followup(kind="aggressive_introduction_npc_death", entity=gorgon.id, source_pdf=165),)
         if gorgon.gorgon_class == "aggressive"
         else ()
     )
     return Result(world=updated, followups=followups)
+
+
+def arrive_with_sprites(world: World, incoming: Gorgon, event: str | None) -> World:
+    pending = tuple(x for x in world.sprite_escorts if x.arrival_event is None)
+    if not pending:
+        return world
+    if not event or not incoming.alive:
+        raise ValueError("An actual Gorgon arrival is required for the saved Sprite escorts")
+    leader = incoming
+    if incoming.gorgon_class == "sprite":
+        leader = next(x for x in world.gorgons if x.id == incoming.follows)
+        if not leader.alive:
+            raise ValueError("Recover the actual living leader of the arriving Sprite")
+    groups = []
+    receipts = [x for x in world.sprite_escorts if x.arrival_event is not None]
+    for escort in pending:
+        identity = str(uuid5(NAMESPACE_URL, "girlframe:sprite-escort:" + escort.work))
+        assets = tuple(
+            Asset(
+                id=f"{identity}:{index}",
+                name=name.strip(),
+                family="gorgon",
+                description=name.strip(),
+            )
+            for index, name in enumerate(escort.design.assets, start=1)
+        )
+        group = Gorgon(
+            id=identity,
+            name=escort.design.name.strip(),
+            gorgon_class="sprite",
+            sprite_group=True,
+            follows=leader.id,
+            types=leader.types,
+            assets=assets,
+            core_plan=CorePlan(
+                assets=tuple(x.id for x in assets[: 2 if escort.design.both_assets else 1]),
+                weakness=escort.design.weakness.strip(),
+            ),
+            cell=incoming.cell,
+            position_event=event if incoming.cell is not None else None,
+            revealed=incoming.revealed,
+        )
+        groups.append(group)
+        receipts.append(
+            escort.model_copy(
+                update={"arrival_event": event, "incoming": incoming.id, "group": group.id}
+            )
+        )
+    return update(world, gorgons=(*world.gorgons, *groups), sprite_escorts=tuple(receipts))
 
 
 def introduce_npc(world: World, npc: Npc) -> World:
@@ -151,11 +207,17 @@ def locate_gorgon(world: World, identity: str, cell: Cell, source_event: str) ->
         raise ValueError("Record only the actual missing initial Gorgon position")
     if not source_event or not world.board.contains(cell):
         raise ValueError("Record the actual source and a square on the current map")
+    awaiting = {x.group: x.incoming for x in world.sprite_escorts if x.group is not None}
+    if identity in awaiting and any(
+        x.id == awaiting[identity] and x.cell is None for x in world.gorgons
+    ):
+        raise ValueError("Record the original arriving Gorgon's landing first")
+    formation = {group for group, arriving in awaiting.items() if arriving == identity}
     return update(
         world,
         gorgons=tuple(
             x.model_copy(update={"cell": cell, "position_event": source_event})
-            if x.id == identity
+            if x.id == identity or (x.id in formation and x.alive and x.cell is None)
             else x
             for x in world.gorgons
         ),
@@ -355,6 +417,10 @@ def expose_gorgon(world: World, identity: str, account: str) -> World:
     target = next((x for x in world.gorgons if x.id == identity and x.alive), None)
     if target is None or target.exposed or not account.strip():
         raise ValueError("Review an actual living Gorgon's Core weakness")
+    if target.shell_asset is not None and any(
+        x.id == target.shell_asset and not x.damaged for x in target.assets
+    ):
+        raise ValueError("Crack the original Sentinel shell before exposing its Core")
     dealt_with = {x.id for x in target.assets if x.damaged} | {
         x.id for x in target.destroyed_assets
     }

@@ -1,0 +1,2036 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>
+  if (window.self !== window.top && new URLSearchParams(location.search).get("platform") === "mobile") {
+    document.documentElement.dataset.discordMobile = "";
+  }
+</script>
+<title>Foundation Operations · The Long Winter</title>
+<link rel="stylesheet" href="/foundation.css">
+<link rel="stylesheet" href="/artwork.css">
+<style>
+  :root { color-scheme: light dark; font: 15px/1.5 "Inter", system-ui, sans-serif; color: var(--ink); background: var(--screen); }
+  * { box-sizing: border-box; }
+  body { margin:0; }
+  [hidden] { display:none !important; }
+  :root[data-theme="dark"] { color-scheme:dark; }
+  :root[data-theme="light"] { color-scheme:light; }
+  h1 { margin:0 0 3px; font-size:26px; }
+  h2 { margin:0 0 5px; font-size:17px; }
+  p { margin:0 0 9px; overflow-wrap:anywhere; }
+  article { margin:11px 0; padding:11px; background:light-dark(#f6f8f8,#202c33); border:1px solid light-dark(#9cadb4,#536872); }
+  .actions { display:flex; flex-wrap:wrap; gap:7px; }
+  button { color:inherit; font:inherit; font-weight:650; padding:5px 10px; min-height:39px; border:1px solid var(--line); background:var(--control); border-radius:2px; }
+  button.primary { color:var(--key-ink); background:var(--key); }
+  button:disabled { opacity:.6; }
+  #status:empty { display:none; }
+  h3 { margin:10px 0 4px; font-size:15px; }
+  form { display:grid; gap:8px; margin:12px 0; padding-bottom:12px; border-bottom:1px solid #758d98; }
+  .field { display:grid; gap:2px; }
+  input, select { min-height:35px; font:inherit; color:inherit; }
+  input[type=checkbox] { min-height:0; width:20px; height:20px; }
+  form button { justify-self:start; }
+  details { padding:4px 0; }
+</style>
+<link rel="stylesheet" href="/foundation-ova.css">
+<link rel="stylesheet" href="/shift-handover.css">
+<div class="activity-header">
+<header class="masthead">
+  <span class="insignia" aria-hidden="true"></span>
+  <div class="masthead-title">
+    <span class="eyebrow">Foundation Operations</span>
+    <div class="masthead-identity"><strong id="campaign-name">The Long Winter</strong><span id="pilot">Awaiting personnel authorization</span></div>
+  </div>
+  <div class="tools">
+    <button id="handler-pilot-toggle" type="button" aria-pressed="false" hidden>Pilot mode</button>
+    <button id="assignments-toggle" type="button" aria-expanded="false" aria-controls="inbox" hidden>Assignments <span id="assignments-count" aria-live="polite"></span></button>
+    <button id="inbox-toggle" type="button" aria-label="Inbox" aria-expanded="false" aria-controls="inbox"><span class="mail-mark" aria-hidden="true"></span><span class="tool-label">Inbox</span><span id="inbox-count" aria-live="polite"></span></button>
+    <button id="theme-toggle" type="button" aria-label="Toggle light and dark mode"><span class="theme-mark" aria-hidden="true"></span><span id="theme-label">Dark mode</span></button>
+  </div>
+</header>
+<nav class="folders" aria-label="Campaign folders">
+  <button type="button" data-folder="handover" hidden>Shift Handover</button>
+  <button type="button" data-folder="profile">Pilot Profile</button>
+  <button type="button" data-folder="scenes" aria-current="page">Scenes</button>
+  <button type="button" data-folder="battlefield">Battlefield</button>
+  <button type="button" data-folder="missions">Missions</button>
+  <button type="button" data-folder="cadre">Cadre Status</button>
+  <button type="button" data-folder="frame">Frame Status</button>
+  <button type="button" data-folder="campaign-setup" hidden>Campaign Setup</button>
+</nav>
+<section id="inbox" class="inbox" aria-label="Inbox" hidden>
+  <header class="inbox-title"><h2>Foundation mail spool</h2><button type="button" id="close-inbox" aria-label="Close inbox">×</button></header>
+  <div class="inbox-body">
+    <div class="ledger-filters" role="group" aria-label="Dispatch filters">
+      <button type="button" id="dispatch-all" aria-pressed="true">All dispatches</button>
+      <button type="button" id="dispatch-decisions" aria-pressed="false">Assigned responses <span id="decision-count" aria-live="polite">0</span></button>
+    </div>
+    <ul class="records" id="mail-entries" aria-label="Mail records"></ul>
+  </div>
+</section>
+</div>
+<dialog id="mail-reader" class="activity-dialog terminal-dialog" aria-labelledby="mail-reader-title">
+  <header class="record-heading"><h2 id="mail-reader-title">Dispatch record</h2><form method="dialog"><button aria-label="Close dispatch record">×</button></form></header>
+  <div class="terminal-panel">
+    <div class="terminal-line"><span>Foundation / Mail spool</span><span class="terminal-state">AUTHORIZED RECIPIENT</span></div>
+    <div id="offers" aria-label="Mission offers"></div>
+    <div id="inbox-bonds" aria-label="Starting Bonds"></div>
+    <div id="inbox-intel" aria-label="Shared intel"></div>
+    <div id="handler-notices"></div>
+    <div id="off-duty-mail-records"></div>
+  </div>
+</dialog>
+<div class="layout">
+  <aside class="locations" aria-label="Locations">
+    <div class="ova-rail-toggles">
+      <button id="locations-toggle" type="button" aria-expanded="false" aria-controls="location-list">Locations</button>
+      <button id="roster-toggle" type="button" aria-expanded="false" aria-controls="desk-rail">Roster &amp; Comms</button>
+    </div>
+    <strong id="pilot-footer"></strong>
+    <span class="eyebrow">Locations</span>
+    <div id="location-list"></div>
+    <button id="presence-jump" type="button" aria-controls="present-pilots" hidden>Present Pilots</button>
+    <div class="notice"><div class="notice-header"><i class="insignia notice-insignia" aria-hidden="true"></i><span class="eyebrow">Foundation notice</span><button id="next-notice" type="button" aria-label="Next Foundation notice">›</button></div><p id="notice">Record all deviations before shift handover.</p></div>
+  </aside>
+  <main>
+    <div class="workbench">
+      <button id="back" class="workbench-action" type="button" hidden><span aria-hidden="true">←</span> Back</button>
+      <p id="desk-context" class="eyebrow" hidden></p>
+      <div class="local-tools">
+        <button id="refresh" class="workbench-action" type="button" aria-label="Synchronize terminal" hidden><span aria-hidden="true">↻</span> <span class="tool-label">Synchronize terminal</span></button>
+        <button id="enrollment-trigger" class="workbench-action" type="button" aria-haspopup="dialog" hidden>Create pilot</button>
+        <button id="character-files" class="workbench-action" type="button" aria-haspopup="dialog">Personnel records</button>
+        <div class="campaign-menu">
+          <div class="campaign-actions">
+            <select id="campaign-switch" aria-label="Switch campaign" hidden></select>
+            <button id="open-creation-choices" type="button" aria-haspopup="dialog" hidden>Enrollment assignments</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p id="status" role="status">Mounting campaign file…</p>
+    <div id="dm-status" class="terminal-feedback" role="status"></div>
+    <button class="primary" id="retry-activity" type="button" hidden>Reload terminal</button>
+    <button class="primary" id="open-auth" type="button" hidden>Open access terminal</button>
+    <button id="open-off-duty" type="button" aria-haspopup="dialog" hidden>Off-Duty assignments</button>
+    <dialog id="off-duty-panel" class="activity-dialog terminal-dialog" aria-labelledby="off-duty-title">
+      <header class="record-heading"><h2 id="off-duty-title" tabindex="-1">Off-Duty assignments</h2><form method="dialog"><button aria-label="Close Off-Duty">×</button></form></header>
+      <div class="terminal-panel">
+      <div class="terminal-line"><span>Foundation / Recovery ledger</span><span class="terminal-state">ASSIGNED WORK</span></div>
+      <p id="off-duty-result" role="status" hidden></p>
+      <div id="off-duty-options"></div>
+      </div>
+    </dialog>
+    <section data-pane="handover" aria-label="Shift Handover" class="record-card" hidden></section>
+    <section data-pane="scenes" aria-label="Scenes">
+      <section id="directory" aria-label="Scene directory"></section>
+      <section id="room-pane" class="record-card" aria-label="Scene room" hidden>
+        <header class="scene-room-heading">
+          <h2 id="room-name"></h2>
+          <dl id="room-record" class="record-register" aria-label="Scene record"></dl>
+          <div id="room-actions" class="actions scene-room-tools"></div>
+        </header>
+        <div id="room-artwork"></div>
+        <p id="scene-intel-status" class="terminal-feedback" role="status"></p>
+        <div id="scene-assigned-controls" class="assigned-work actions"></div>
+        <div id="scene-composer-host"></div>
+        <section id="scene-play-panel" class="transcript" aria-labelledby="scene-play-title" hidden>
+          <h3 id="scene-play-title" tabindex="-1">Scene Plays</h3>
+          <p id="scene-play-feedback" role="status" hidden></p>
+          <div id="scene-play-options"></div>
+          <div id="enter-scene-controls"></div>
+        </section>
+        <section id="room-dialogue" class="transcript" aria-label="Scene dialogue" hidden></section>
+      </section>
+      <section id="setup" aria-label="Character and scene"></section>
+    </section>
+    <section data-pane="profile" id="profile-pane" class="record-card" hidden><h2>Pilot Profile</h2><div id="profile-data"></div></section>
+    <section data-pane="battlefield" class="record-card" hidden>
+      <div class="record-heading"><h2>Battlefield</h2></div>
+      <div id="briefing-panel">
+        <div class="terminal-line"><span id="briefing-site">Hangar Deck · Facility plan</span><span class="terminal-state">Briefing only</span></div>
+        <div id="battlefield-map" role="img" aria-label="Top-down Hangar Deck briefing plan with rooms, walls, doorways, and cover"></div>
+        <ul class="map-key" aria-label="Map legend">
+          <li><span class="map-swatch terrain" data-tile="w" aria-hidden="true"></span>Walls</li>
+          <li><span class="map-swatch terrain" data-tile="d" aria-hidden="true"></span>Doorways</li>
+          <li><span class="map-swatch terrain" data-tile="c" aria-hidden="true"></span>Cover</li>
+        </ul>
+      </div>
+      <div id="tactical-panel" hidden>
+        <div class="record-heading"><h3 id="tactical-title">Relay perimeter drill</h3><div class="actions" id="tactical-toolbar" aria-label="Battlefield commands"></div></div>
+        <dl id="tactical-turn-strip" class="record-register" aria-label="Battlefield record" aria-live="polite" hidden></dl>
+        <div id="tactical-grid" role="group" aria-label="Tactical board"></div>
+        <ul id="tactical-map-key" class="map-key" aria-label="Tactical map legend" hidden>
+          <li><span class="map-swatch terrain" data-tile="w" aria-hidden="true"></span>Walls</li>
+          <li><span class="map-swatch terrain" data-tile="d" aria-hidden="true"></span>Doorways</li>
+          <li><span class="map-swatch terrain" data-tile="c" aria-hidden="true"></span>Cover</li>
+        </ul>
+        <p id="tactical-status" role="status"></p>
+        <section id="tactical-controls" aria-label="Battlefield actions"></section>
+        <section id="tactical-receipt" aria-label="Combat receipt"></section>
+      </div>
+    </section>
+    <section data-pane="missions" class="record-card" aria-labelledby="mission-title" hidden>
+      <h2 id="mission-title">Dispatch desk</h2>
+      <div class="terminal-line"><span>Foundation / Mission ledger</span><span class="terminal-state">AUTHORIZED ASSIGNMENTS</span></div>
+      <p id="mission-result" role="status"></p>
+      <div id="mission-desk"></div>
+    </section>
+    <section data-pane="cadre" class="record-card" hidden><h2>Cadre Status</h2><ul id="cadre-data" class="records"></ul></section>
+    <section data-pane="frame" class="record-card" hidden><h2>Frame Status</h2><div id="frame-data"></div></section>
+    <section data-pane="campaign-setup" class="record-card" aria-labelledby="campaign-setup-title" hidden>
+      <h2 id="campaign-setup-title">Campaign Setup</h2>
+      <div id="campaign-setup-panels"></div>
+    </section>
+    <section id="handler-desk" hidden>
+      <p>Select a character in Communications to open a private thread.</p>
+      <div id="handler-choices"></div>
+      <div id="handler-cancellations" class="actions"></div>
+      <div id="handler-specialist-forms" class="actions"></div>
+      <div id="replacement-status"></div>
+      <button id="open-handler-plays" type="button" aria-haspopup="dialog" hidden>Open Handler Plays</button>
+    </section>
+    <button id="open-punishment-work" type="button" aria-haspopup="dialog" hidden>Punishment assignments</button>
+    <dialog id="punishment-work" class="activity-dialog terminal-dialog" aria-labelledby="punishment-title">
+      <header class="record-heading"><h2 id="punishment-title">Punishment assignments</h2><form method="dialog"><button aria-label="Close Punishment assignments">×</button></form></header>
+      <div class="terminal-panel">
+      <div class="terminal-line"><span>Foundation / Discipline ledger</span><span class="terminal-state">ASSIGNED WORK</span></div>
+      <p id="punishment-feedback" role="status"></p>
+      <div id="punishment-cases"></div>
+      </div>
+    </dialog>
+  </main>
+  <aside id="desk-rail" aria-label="Pilot roster and communications" tabindex="-1">
+    <section id="present-pilots" aria-labelledby="present-pilots-title" hidden>
+      <h2 id="present-pilots-title" tabindex="-1">Present Pilots</h2>
+      <p id="presence-context" class="eyebrow"></p>
+      <ul class="records" id="present-pilot-list"></ul>
+      <p id="present-pilot-empty"></p>
+    </section>
+    <section id="scene-cast" aria-labelledby="scene-cast-title" hidden>
+      <h2 id="scene-cast-title">Scene Cast</h2>
+      <ul id="scene-cast-list" class="records"></ul>
+    </section>
+    <section id="campaign-roster" aria-labelledby="campaign-roster-title" hidden>
+      <h2 id="campaign-roster-title">Cadre register</h2>
+      <ul class="records" id="campaign-roster-list"></ul>
+    </section>
+    <section id="communications" aria-labelledby="communications-title" hidden>
+      <h2 id="communications-title">Communications</h2>
+      <p class="communications-notice">Foundation networks are monitored. The Handler may respond to transmissions.</p>
+      <ul class="records" id="communications-contacts"></ul>
+    </section>
+  </aside>
+</div>
+<dialog id="communication-dialog" class="activity-dialog terminal-dialog" aria-labelledby="communication-title">
+  <header class="record-heading"><h2 id="communication-title">Direct channel</h2><form method="dialog"><button aria-label="Close private communication">×</button></form></header>
+  <div class="terminal-panel">
+    <div class="terminal-line"><span>Foundation / Communications</span></div>
+    <div id="communication-participants" class="communication-participants" aria-label="Transmission participants"></div>
+    <p class="communications-notice">Foundation networks are monitored. The Handler may respond to transmissions.</p>
+    <ol class="records" id="communication-history" aria-label="Channel transcript"></ol>
+    <form id="communication-form">
+      <label class="field">Outgoing transmission<textarea id="communication-message" maxlength="1200" required></textarea></label>
+      <div class="actions"><button class="primary" type="submit">Transmit</button><button id="communication-refresh" type="button">Retrieve transmissions</button></div>
+    </form>
+    <p id="communication-feedback" role="status"></p>
+  </div>
+</dialog>
+<dialog id="utility-dialog" class="activity-dialog terminal-dialog" aria-labelledby="utility-title">
+  <header class="record-heading"><h2 id="utility-title"></h2><form method="dialog"><button aria-label="Close action">×</button></form></header>
+  <div class="terminal-line"><span>Foundation / Assigned work</span><span class="terminal-state">OWNER CLEARANCE</span></div>
+  <div id="utility-fields" class="terminal-panel"></div>
+  <p id="utility-feedback" class="terminal-feedback" role="status"></p>
+</dialog>
+<dialog id="mobile-locations" class="activity-dialog terminal-dialog" aria-labelledby="mobile-locations-title">
+  <header class="record-heading"><h2 id="mobile-locations-title">Locations</h2><form method="dialog"><button aria-label="Close Locations">×</button></form></header>
+  <div class="terminal-panel"></div>
+  <div class="notice mobile-foundation-notice"><div class="notice-header"><i class="insignia notice-insignia" aria-hidden="true"></i><span class="eyebrow">Foundation notice</span></div><p id="mobile-notice">Record all deviations before shift handover.</p></div>
+</dialog>
+<dialog id="mobile-roster" class="activity-dialog terminal-dialog" aria-labelledby="mobile-roster-title">
+  <header class="record-heading"><h2 id="mobile-roster-title">Pilots and Communications</h2><form method="dialog"><button aria-label="Close Pilots and Communications">×</button></form></header>
+  <div class="terminal-panel"></div>
+</dialog>
+<dialog id="enrollment-dialog" class="activity-dialog terminal-dialog" aria-labelledby="enrollment-title">
+  <header class="record-heading"><h2 id="enrollment-title">Pilot enrollment</h2><form method="dialog"><button aria-label="Close pilot enrollment">×</button></form></header>
+  <div class="terminal-panel">
+    <div class="terminal-line"><span>Foundation / Personnel intake</span><span id="enrollment-state" class="terminal-state" aria-live="polite"></span></div>
+    <div id="enrollment-identity"></div>
+    <button id="enrollment-choices-link" type="button" aria-haspopup="dialog" hidden>Enrollment assignments</button>
+    <nav class="enrollment-steps" aria-label="Enrollment steps">
+      <button type="button" data-enrollment-tab="callsign">Callsign</button>
+      <button type="button" data-enrollment-tab="dossier">Dossier</button>
+      <button type="button" data-enrollment-tab="bond">Bond</button>
+      <button type="button" data-enrollment-tab="review">Review</button>
+    </nav>
+    <p id="enrollment-feedback" role="status"></p>
+    <p id="enrollment-dm-status" class="terminal-feedback" role="status"></p>
+    <div id="enrollment-record"></div>
+  </div>
+</dialog>
+<dialog id="sheet-reset-dialog" class="activity-dialog terminal-dialog" aria-labelledby="sheet-reset-title">
+  <header class="record-heading"><h2 id="sheet-reset-title">Restart character</h2><form method="dialog"><button aria-label="Cancel restart">×</button></form></header>
+  <div class="terminal-panel">
+    <div class="terminal-line"><span>Foundation / Personnel records</span><span class="terminal-state">OWNER CONFIRMATION</span></div>
+    <p id="sheet-reset-notice"></p>
+    <form id="sheet-reset-form">
+      <label class="field">Type the current callsign<input name="callsign" autocomplete="off" required maxlength="80"></label>
+      <label><input name="confirmed" type="checkbox" required> I approve archiving this sheet and starting a new character.</label>
+      <div class="actions"><button class="primary" type="submit">Archive and restart</button></div>
+    </form>
+    <p id="sheet-reset-feedback" role="status"></p>
+  </div>
+</dialog>
+<dialog id="character-files-dialog" class="activity-dialog terminal-dialog" aria-labelledby="character-files-title">
+  <header class="record-heading"><h2 id="character-files-title">Personnel records</h2><form method="dialog"><button aria-label="Close Personnel records">×</button></form></header>
+  <div class="character-files-body terminal-panel">
+    <div class="terminal-line"><span>Foundation / Personnel archive</span></div>
+    <p id="character-files-status" role="status" hidden></p>
+    <div id="character-files-content"></div>
+  </div>
+</dialog>
+<dialog id="artwork-dialog" class="activity-dialog terminal-dialog" aria-labelledby="artwork-title">
+  <header class="record-heading"><h2 id="artwork-title">Artwork</h2><form method="dialog"><button aria-label="Close artwork picker">×</button></form></header>
+  <div class="terminal-panel">
+    <div class="terminal-line"><span>Foundation / Image archive</span><span id="artwork-state" class="terminal-state" aria-live="polite"></span></div>
+    <label class="field">Artwork selection<select></select></label>
+    <figure class="artwork-preview"></figure>
+    <p class="terminal-feedback" role="status"></p>
+    <div class="actions terminal-actions"><button type="button" class="primary" data-save-artwork>File artwork</button></div>
+  </div>
+</dialog>
+<dialog id="start-scene-dialog" class="activity-dialog terminal-dialog" aria-labelledby="start-scene-title">
+  <header class="record-heading"><h2 id="start-scene-title">Start Scene</h2><form method="dialog"><button aria-label="Close Start Scene">×</button></form></header>
+  <div id="start-scene-fields" class="terminal-panel"></div>
+</dialog>
+<dialog id="scene-access-dialog" class="activity-dialog terminal-dialog" aria-labelledby="scene-access-title">
+  <header class="record-heading"><h2 id="scene-access-title">Scene access</h2><form method="dialog"><button aria-label="Close scene access">×</button></form></header>
+  <div class="terminal-panel" id="scene-access-record"></div>
+</dialog>
+<dialog id="end-scene-dialog" class="activity-dialog terminal-dialog" aria-labelledby="end-scene-title">
+  <header class="record-heading"><h2 id="end-scene-title">End Scene</h2><form method="dialog"><button aria-label="Cancel End Scene">×</button></form></header>
+  <div id="end-scene-fields" class="terminal-panel"></div>
+</dialog>
+<dialog id="share-intel-dialog" class="activity-dialog terminal-dialog" aria-labelledby="share-intel-title">
+  <header class="record-heading"><h2 id="share-intel-title">Share Intel</h2><form method="dialog"><button aria-label="Close Share Intel">×</button></form></header>
+  <div id="share-intel-fields" class="terminal-panel"></div>
+</dialog>
+<dialog id="invite-dialog" aria-labelledby="invite-title">
+  <div class="record-heading"><h2 id="invite-title"></h2><form method="dialog"><button aria-label="Close invitation">×</button></form></div>
+  <div id="invite-content"></div>
+</dialog>
+<dialog id="auth-dialog" class="activity-dialog terminal-dialog" aria-labelledby="auth-title">
+  <header class="record-heading"><h2 id="auth-title">Foundation access terminal</h2><form method="dialog"><button aria-label="Close sign-in">×</button></form></header>
+  <div class="terminal-panel">
+    <div class="terminal-line"><span>Foundation / Access control</span><span id="auth-state" class="terminal-state" aria-live="polite">STANDBY</span></div>
+    <dl class="terminal-record"><dt>Channel</dt><dd>Personnel network</dd><dt>Clearance</dt><dd>Assigned duty group</dd></dl>
+    <p id="auth-status" class="terminal-feedback" role="status">Awaiting personnel credentials.</p>
+    <div class="actions terminal-actions"><button class="primary" id="sign-in" type="button" autofocus>Present credentials</button></div>
+  </div>
+</dialog>
+<dialog id="dm-campaign-dialog" class="activity-dialog terminal-dialog" aria-labelledby="dm-campaign-title">
+  <header class="record-heading"><h2 id="dm-campaign-title">Select duty file</h2><form method="dialog"><button aria-label="Close campaign picker">×</button></form></header>
+  <form method="dialog" class="terminal-panel dm-campaign-form">
+    <div class="terminal-line"><span>Foundation / Campaign access</span><span class="terminal-state">AUTHORIZED</span></div>
+    <label for="dm-campaign-select">Campaign</label>
+    <select id="dm-campaign-select" required autofocus></select>
+    <div class="actions terminal-actions"><button class="primary" value="open">Open campaign file</button></div>
+  </form>
+</dialog>
+<dialog id="tactical-play-dialog" class="activity-dialog terminal-dialog" aria-labelledby="tactical-play-title">
+  <header class="record-heading"><h2 id="tactical-play-title">Choose a Play</h2><form method="dialog"><button aria-label="Close Play menu">×</button></form></header>
+  <div class="terminal-panel">
+    <div class="terminal-line"><span>Foundation / Tactical operations</span><span id="tactical-play-state" class="terminal-state" aria-live="polite"></span></div>
+    <div id="tactical-play-roster"></div>
+    <div id="tactical-play-options"></div>
+  </div>
+</dialog>
+<dialog id="tactical-action-dialog" class="activity-dialog terminal-dialog" aria-labelledby="tactical-action-title">
+  <header class="record-heading"><h2 id="tactical-action-title">Battlefield Play</h2><form method="dialog"><button aria-label="Close Battlefield Play">×</button></form></header>
+  <dl id="tactical-action-record" class="record-register dialog-register" aria-label="Play record" hidden></dl>
+  <div id="tactical-action-fields" class="terminal-panel"></div>
+  <p id="tactical-action-status" role="status"></p>
+</dialog>
+<dialog id="profile-play-dialog" class="activity-dialog terminal-dialog" aria-labelledby="profile-play-title">
+  <header class="record-heading"><h2 id="profile-play-title"></h2><form method="dialog"><button aria-label="Close scene picker">×</button></form></header>
+  <div class="terminal-panel">
+    <div class="terminal-line"><span>Foundation / Scene operations</span><span id="profile-play-state" class="terminal-state" aria-live="polite"></span></div>
+    <div id="profile-play-context"></div>
+  </div>
+</dialog>
+<dialog id="scene-action-dialog" class="activity-dialog terminal-dialog" aria-labelledby="scene-action-title">
+  <header class="record-heading"><h2 id="scene-action-title">Scene Play</h2><form method="dialog"><button aria-label="Close scene Play">×</button></form></header>
+  <div class="terminal-line"><span>Foundation / Scene record</span><span class="terminal-state">ASSIGNED RESPONSE</span></div>
+  <dl id="scene-action-record" class="record-register dialog-register" aria-label="Play record" hidden></dl>
+  <div class="terminal-panel" id="scene-action-fields"></div>
+  <div class="terminal-panel" id="scene-beneath-work" hidden></div>
+  <p id="scene-action-feedback" role="status" hidden></p>
+  <div class="actions terminal-actions"><button type="button" id="scene-action-refresh">Synchronize scene file</button></div>
+</dialog>
+<dialog id="handler-plays-dialog" class="activity-dialog terminal-dialog" aria-labelledby="handler-plays-title">
+  <header class="record-heading"><h2 id="handler-plays-title">Handler Plays</h2><form method="dialog"><button aria-label="Close Handler Plays">×</button></form></header>
+  <div class="terminal-line"><span>Foundation / Command desk</span><span class="terminal-state">HANDLER CLEARANCE</span></div>
+  <section id="handler-playbook" class="terminal-panel" aria-label="Handler playbook"></section>
+  <p id="handler-play-feedback" role="status"></p>
+</dialog>
+<dialog id="creation-choices-dialog" class="activity-dialog terminal-dialog" aria-labelledby="creation-choices-title">
+  <header class="record-heading"><h2 id="creation-choices-title">Enrollment assignments</h2><form method="dialog"><button aria-label="Close enrollment assignments">×</button></form></header>
+  <div class="terminal-line"><span>Foundation / Personnel intake</span><span class="terminal-state">OWNER CLEARANCE</span></div>
+  <div id="creation-choices" class="terminal-panel"></div>
+  <p id="creation-choices-feedback" role="status"></p>
+</dialog>
+<script type="module">
+import {popupAction, popupContext, renderDraftDialog} from "/popup-ui.js";
+const status = document.getElementById("status");
+const retryActivity = document.getElementById("retry-activity");
+retryActivity.addEventListener("click", () => location.reload());
+const startupTimer = setTimeout(() => {
+  status.textContent = "Personnel terminal is mounting the campaign file.";
+  retryActivity.hidden = false;
+}, 8000);
+function startupFailed(error) {
+  clearTimeout(startupTimer);
+  status.textContent = "Personnel terminal unavailable. " + (error?.message ?? "Reload the terminal to retry.");
+  retryActivity.hidden = false;
+}
+const [{createEnrollment, renderPlayerSetup, renderScenePlays, renderOffDuty, renderHandlerPlaybook, renderHandlerSceneChoices, renderHandlerPunishments, punishmentActions, renderPilotBondSetup, renderEnrollmentChoices, startingBondStatus}, {foundationUI, playName, decisionName, focusDecision, renderRecordMetadata}, {tacticalUI}, {communicationsUI}, {artworkUI}, {mailSpool}, {renderMissions, missionStatus}] = await Promise.all([
+  import("/player-setup.js"),
+  import("/foundation-ui.js"),
+  import("/battlefield-ui.js"),
+  import("/communications-ui.js"),
+  import("/artwork-ui.js"),
+  import("/mail-spool.js"),
+  import("/mission-desk.js"),
+]).catch(error => {
+  startupFailed(error);
+  throw error;
+});
+const offers = document.getElementById("offers");
+const setup = document.getElementById("setup");
+const pilot = document.getElementById("pilot");
+const signIn = document.getElementById("sign-in");
+const auth = document.getElementById("auth-dialog");
+const authStatus = document.getElementById("auth-status");
+const authState = document.getElementById("auth-state");
+const openAuth = document.getElementById("open-auth");
+const refreshButton = document.getElementById("refresh");
+const intentKeys = new Map();
+let session = null;
+let enableAssistedTrial;
+let refreshAiSetup;
+let discordUserId;
+let savingSetup = false;
+let playPoll;
+let sceneRefresh = 0;
+let sceneRefreshApplied = 0;
+let battlefieldEnabled = false;
+let rosterEnabled = false;
+let pilotPerspective = false;
+let perspectiveOwner;
+const perspectiveToggle = document.getElementById("handler-pilot-toggle");
+function perspectiveKey() { return `foundation-perspective:${campaignId}:${discordUserId ?? "local"}`; }
+perspectiveToggle.addEventListener("click", async () => {
+  perspectiveToggle.disabled = true;
+  pilotPerspective = !pilotPerspective;
+  try {
+    localStorage.setItem(perspectiveKey(),pilotPerspective ? "pilot" : "handler");
+  } catch {}
+  try { await refresh(); } catch (error) { status.textContent = error.message; }
+  finally { perspectiveToggle.disabled = false; }
+});
+let campaignSwitcher = false;
+let campaignId = new URL(location.href).searchParams.get("campaign") ?? "default";
+const switchKey = "harpy-activity-campaign-switch";
+let displayedScenePlays;
+let displayedOffDuty;
+let displayedShowDogMail;
+let displayedHandlerPlaybook;
+let displayedPunishments;
+let displayedCreationChoices;
+let displayedIntel;
+let currentPlayer;
+let characterFiles;
+const scenePlayOptions = document.getElementById("scene-play-options");
+const handlerPlaysDialog = document.getElementById("handler-plays-dialog");
+const creationDialog = document.getElementById("creation-choices-dialog");
+const creationFields = document.getElementById("creation-choices");
+const creationFeedback = document.getElementById("creation-choices-feedback");
+const creationLinks = ["open-creation-choices","enrollment-choices-link"].map(id => document.getElementById(id));
+function openCreationChoices(id) {
+  creationFeedback.textContent = "";
+  if (!creationDialog.open) creationDialog.showModal();
+  if (id) creationFields.querySelector(`[data-setup-request="${CSS.escape(id)}"]`)?.focus();
+}
+for (const link of creationLinks) link.addEventListener("click", () => openCreationChoices());
+const handlerPlaysButton = document.getElementById("open-handler-plays");
+handlerPlaysButton.addEventListener("click", () => {
+  delete handlerPlaysDialog.dataset.suggestedPlay;
+  delete handlerPlaysDialog.dataset.suggestedRoom;
+  document.getElementById("handler-play-feedback").textContent = "";
+  if (!handlerPlaysDialog.open) handlerPlaysDialog.showModal();
+});
+function selectHandlerEffect(taskId, playId) {
+  const task = [...handlerPlaysDialog.querySelectorAll("[data-handler-task]")]
+    .find(entry => entry.dataset.handlerTask === taskId);
+  const control = task?.querySelector("select[name=play]");
+  if (!control || ![...control.options].some(option => option.value === playId)) return false;
+  control.value = playId;
+  control.dispatchEvent(new Event("change"));
+  control.scrollIntoView({block:"nearest"});
+  control.focus();
+  return true;
+}
+const offDutyOptions = document.getElementById("off-duty-options");
+const offDutyResult = document.getElementById("off-duty-result");
+document.getElementById("character-files").addEventListener("click", async event => {
+  const trigger = event.currentTarget;
+  trigger.disabled = true;
+  try {
+    characterFiles ??= (await import("/character-sheet-ui.js")).characterFiles(document.getElementById("character-files-dialog"));
+    characterFiles.open(currentPlayer, discordUserId);
+  } catch (error) {
+    status.textContent = "Personnel records could not open. " + error.message;
+  } finally {
+    trigger.disabled = false;
+  }
+});
+const readBattlefield = async () => responseData(await activityFetch("/api/battlefield"));
+const tactical = tacticalUI(
+  readBattlefield,
+  async (action, body, key) => responseData(await activityFetch("/api/battlefield/" + action, {
+    method:"POST",
+    headers:{"Content-Type":"application/json","Idempotency-Key":key},
+    body:JSON.stringify(body),
+  })),
+  (roster, title) => ui.updateTacticalRoster(roster, title),
+  id => ui.openTacticalPilot(id),
+  renderHandlerPunishments,
+);
+const artwork = artworkUI(sendRecord, async id => {
+  const response = await activityFetch("/api/artwork/" + encodeURIComponent(id));
+  if (!response.ok) await responseData(response);
+  return response;
+});
+const enrollmentDialog = document.getElementById("enrollment-dialog");
+const enrollmentFeedback = document.getElementById("enrollment-feedback");
+const enrollment = createEnrollment(enrollmentDialog, document.getElementById("enrollment-trigger"), artwork, saveSetup, refreshScene);
+const ui = foundationUI(sendRecord, readTranscript, open => {
+  document.getElementById("briefing-panel").hidden = battlefieldEnabled;
+  tactical.show(open && battlefieldEnabled && Boolean(session));
+}, {
+  async view() {
+    if (!battlefieldEnabled || !session) return null;
+    return readBattlefield();
+  },
+  open: tactical.openPlay,
+  openFrame: tactical.openFramePlay,
+  enabled: () => battlefieldEnabled,
+}, renderRoomPlays, refreshScene, artwork, (target, player) => renderPilotBondSetup(target, player, saveSetup), enrollment.open, openSheetReset, requestPlayCancellation);
+const inbox = document.getElementById("inbox");
+document.getElementById("scene-action-refresh").addEventListener("click", () => {
+  refreshScene().catch(error => {
+    const feedback = document.getElementById("scene-action-feedback");
+    feedback.textContent = error.message;
+    feedback.hidden = false;
+  });
+});
+const inboxToggle = document.getElementById("inbox-toggle");
+const assignmentsToggle = document.getElementById("assignments-toggle");
+const spool = mailSpool(inbox, document.getElementById("mail-entries"),
+  document.getElementById("mail-reader"), document.getElementById("inbox-count"),
+  document.getElementById("assignments-count"), entry => {
+    const art = entry.portrait ?? currentPlayer?.cadre?.find(pilot => pilot.callsign === entry.sender)?.artwork;
+    if (!art) return;
+    const portrait = document.createElement("span");
+    portrait.className = "dialogue-portrait";
+    portrait.setAttribute("aria-hidden", "true");
+    artwork.picture(portrait, art, {decorative:true, fallback:Array.from(entry.sender ?? "").slice(0,2).join("")});
+    return portrait;
+  });
+function openInbox(open, assigned = false) {
+  if (!open && document.getElementById("mail-reader").open) document.getElementById("mail-reader").close();
+  inbox.hidden = !open;
+  inboxToggle.setAttribute("aria-expanded", String(open && !assigned));
+  assignmentsToggle.setAttribute("aria-expanded", String(open && assigned));
+  if (open) spool.opened(assigned);
+}
+const facilitatorReviewPath = "/api/facilitator-reviews";
+const reviewStatus = {
+  configuration_required:"Awaiting facilitator assignment",
+  awaiting_ruling:"Awaiting facilitator ruling",
+  adapter_blocked:"Awaiting supported resolution",
+  awaiting_owned_effect:"Awaiting completion by the assigned owner",
+  resolved:"Review closed",
+  declined:"Review withdrawn",
+};
+
+async function refreshFacilitatorReviews() {
+  if (!campaignSwitcher || !session || !currentPlayer) return;
+  const mailbox = currentPlayer.mailbox;
+  const {reviews} = await activityFetch(facilitatorReviewPath).then(responseData);
+  if (mailbox !== currentPlayer?.mailbox) return;
+  spool.replace("facilitator-reviews", reviews.map(review => ({
+    id:"review:" + review.id + ":" + review.revision, title:"Facilitator review",
+    sender:review.own ? "You" : "Scene participant", status:reviewStatus[review.status],
+    required:review.pending, owner:review.can_rule ? "Facilitator" : "You",
+    open() {
+      openInbox(false);
+      openFacilitatorReview(review.id);
+    },
+  })));
+}
+
+function reviewElement(tag, text = "") {
+  const node = document.createElement(tag);
+  node.textContent = text;
+  return node;
+}
+
+function reviewDialog(title, opener) {
+  const dialog = reviewElement("dialog");
+  dialog.className = "activity-dialog terminal-dialog";
+  dialog.setAttribute("aria-label", title);
+  const contents = reviewElement("section");
+  const feedback = reviewElement("p", "Retrieving record…");
+  feedback.setAttribute("role", "status");
+  const close = reviewElement("button", "Close");
+  close.addEventListener("click", () => dialog.close());
+  dialog.addEventListener("close", () => {
+    dialog.remove();
+    if (opener?.isConnected) opener.focus();
+  }, {once:true});
+  dialog.append(reviewElement("h2", title), contents, feedback, close);
+  document.body.append(dialog);
+  dialog.showModal();
+  return {dialog, contents, feedback};
+}
+
+function reviewField(parent, label, control) {
+  const field = reviewElement("label", label);
+  field.append(control);
+  parent.append(field);
+  return control;
+}
+
+function reviewOptions(control, options) {
+  control.replaceChildren(...options.map(([key, name]) => new Option(name, key)));
+}
+
+function saveReview(form, label, path, values, feedback, filed) {
+  const submit = reviewElement("button", label);
+  submit.type = "submit";
+  let previous;
+  let key;
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    const body = JSON.stringify(values());
+    if (body !== previous) key = crypto.randomUUID();
+    previous = body;
+    submit.disabled = true;
+    feedback.textContent = "";
+    try {
+      const result = await activityFetch(path, {method:"POST",
+        headers:{"Content-Type":"application/json", "Idempotency-Key":key}, body}).then(responseData);
+      if (form.isConnected) filed(result);
+      refreshFacilitatorReviews().catch(() => {});
+    } catch (error) {
+      feedback.textContent = error.message;
+    } finally {
+      submit.disabled = false;
+    }
+  });
+  form.append(submit);
+}
+
+async function requestFacilitatorReview(room, opener) {
+  const {dialog, contents, feedback} = reviewDialog("Request facilitator review", opener);
+  try {
+    const view = await activityFetch(facilitatorReviewPath + "?room=" + encodeURIComponent(room)).then(responseData);
+    if (!dialog.open) return;
+    const form = reviewElement("form");
+    const source = reviewField(form, "Source record", reviewElement("select"));
+    const rule = reviewField(form, "Rule or action", reviewElement("select"));
+    const reason = reviewField(form, "Action and reason for review", reviewElement("textarea"));
+    reason.maxLength = 1200;
+    reason.required = true;
+    reviewOptions(source, view.sources);
+    const updateRules = () => reviewOptions(rule, source.value.startsWith("scene:")
+      ? [[view.unlisted_rule, "Unlisted or unsupported action"], ...view.rules] : view.rules);
+    updateRules();
+    source.addEventListener("change", updateRules);
+    saveReview(form, "File for review", facilitatorReviewPath,
+      () => ({room, source:source.value, rule:rule.value, revision:view.game_revision, reason:reason.value.trim()}),
+      feedback, ({id}) => {
+        dialog.close();
+        openFacilitatorReview(id, opener);
+      });
+    contents.append(reviewElement("p", "The facilitator receives this report in their Inbox. Player choices stay with their owners."), form);
+    feedback.textContent = "";
+  } catch (error) {
+    feedback.textContent = error.message;
+  }
+}
+
+async function openFacilitatorReview(id, opener = inboxToggle) {
+  const {dialog, contents, feedback} = reviewDialog("Facilitator review", opener);
+  const path = facilitatorReviewPath + "/" + encodeURIComponent(id);
+  try {
+    const {request, own, can_rule, revision, game_revision} = await activityFetch(path).then(responseData);
+    if (!dialog.open) return;
+    contents.append(reviewElement("p", reviewStatus[request.status]), reviewElement("p", request.reason));
+    if (request.ruling) contents.append(reviewElement("h3", "Ruling"), reviewElement("p", request.ruling));
+    feedback.textContent = "";
+    const receive = () => {
+      dialog.close();
+      openFacilitatorReview(id, opener);
+    };
+    if (can_rule && ["awaiting_ruling", "adapter_blocked"].includes(request.status)) {
+      const form = reviewElement("form");
+      const text = reviewField(form, "Ruling and reason", reviewElement("textarea"));
+      text.required = true;
+      text.maxLength = 1200;
+      const adapter = reviewField(form, "Disposition", reviewElement("select"));
+      const supported = request.source_kind === "scene" && !request.mandatory
+        ? ["fiction_only", "Fiction-only ruling"] : ["existing_source", "Continue with the original source"];
+      reviewOptions(adapter, [["blocked", "Blocked pending engine support"], supported]);
+      saveReview(form, "File ruling", path,
+        () => ({revision, game_revision, operation:"rule", text:text.value.trim(), adapter:adapter.value}),
+        feedback, receive);
+      contents.append(form);
+    }
+    if ((can_rule || own) && request.status === "awaiting_owned_effect") {
+      const form = reviewElement("form");
+      saveReview(form, "Confirm resolution", path,
+        () => ({revision, game_revision, operation:"resume", text:"", adapter:"blocked"}), feedback, receive);
+      contents.append(form);
+    }
+    if (own && request.source_kind === "scene" && !request.mandatory
+        && !["resolved", "declined"].includes(request.status)) {
+      const form = reviewElement("form");
+      saveReview(form, "Withdraw request", path,
+        () => ({revision, game_revision, operation:"decline", text:request.ruling ?? "", adapter:"blocked"}),
+        feedback, receive);
+      contents.append(form);
+    }
+  } catch (error) {
+    feedback.textContent = error.message;
+  }
+}
+
+const communications = communicationsUI(
+  (contact, options) => activityFetch("/api/communications/" + encodeURIComponent(contact), options).then(responseData),
+  contacts => {
+    spool.replace("communications", contacts.filter(contact => contact.latest_message).map(contact => ({
+      id:`communication:${contact.latest_message}`, sender:contact.label, portrait:contact.portrait, subject:"Private transmission",
+      label:"Message from " + contact.label, status:"Message filed", audience:"You and " + contact.label,
+      open() {
+        openInbox(false);
+        communications.open(contact, contact.latest_message);
+      },
+    })));
+  },
+  artwork,
+);
+
+function requestPlayCancellation(source, room) {
+  if (!source.can_request) return;
+  const handler = currentPlayer?.communications?.find(contact => contact.role === "Handler" || contact.id.startsWith("handler-"));
+  if (!handler) {
+    status.textContent = "Handler communications are unavailable. Refresh the personnel directory.";
+    return;
+  }
+  const text = `Withdrawal request · ${playName(source.play)}\nScene file · ${room.name}\nOriginal action · ${source.id}\nPlease review cancellation of this pending Play. Retain the original roll on file.`;
+  communications.open(handler,undefined,{draftKey:"cancel:" + source.id,draft:text});
+}
+inboxToggle.addEventListener("click", () => {
+  openInbox(inbox.hidden || inboxToggle.getAttribute("aria-expanded") !== "true");
+  if (!inbox.hidden && session) Promise.all([refreshScene(), refreshFacilitatorReviews()]).catch(() => {
+    status.textContent = "Synchronize terminal to refresh Inbox mail.";
+  });
+});
+assignmentsToggle.addEventListener("click", () => {
+  openInbox(inbox.hidden || assignmentsToggle.getAttribute("aria-expanded") !== "true", true);
+  if (!inbox.hidden && session) Promise.all([refreshScene(), refreshFacilitatorReviews()]).catch(() => {
+    status.textContent = "Synchronize terminal to retrieve assignments.";
+  });
+});
+document.getElementById("close-inbox").addEventListener("click", () => {
+  const opener = assignmentsToggle.getAttribute("aria-expanded") === "true" ? assignmentsToggle : inboxToggle;
+  openInbox(false);
+  opener.focus();
+});
+
+const themeToggle = document.getElementById("theme-toggle");
+let theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+try { theme = localStorage.getItem("foundation-theme") ?? theme; } catch {}
+function applyTheme() {
+  document.documentElement.dataset.theme = theme;
+  document.getElementById("theme-label").textContent = theme === "dark" ? "Dark mode" : "Light mode";
+  themeToggle.setAttribute("aria-pressed", String(theme === "dark"));
+}
+applyTheme();
+themeToggle.addEventListener("click", () => {
+  theme = theme === "dark" ? "light" : "dark";
+  applyTheme();
+  try { localStorage.setItem("foundation-theme", theme); } catch {}
+});
+
+let relayCooldownUntil = 0;
+const relayDelay = () => Math.max(0, relayCooldownUntil - Date.now());
+
+async function activityFetch(path, options = {}) {
+  const target = new URL(path, location.origin);
+  const needsRelay = /^\/api\/(?:discord\/|activity\/(?:ai-|start-fresh)|campaign-opening\/session-zero)/.test(target.pathname);
+  if (options.method === "POST" && needsRelay && relayDelay()) {
+    throw new Error(`The identity relay is rate-limiting this connection. Retry in ${Math.ceil(relayDelay() / 1000)} seconds.`);
+  }
+  const headers = new Headers(options.headers);
+  if (session) headers.set("Authorization", `Bearer ${session}`);
+  if (pilotPerspective && /^\/api\/player-setup(?:\/|\?|$)/.test(path)) target.searchParams.set("perspective","pilot");
+  if (campaignId !== "default" && !/^\/api\/(?:activity\/config|campaigns|discord\/)/.test(path)) {
+    target.searchParams.set("campaign", campaignId);
+  }
+  const retries = !options.method || path === "/api/discord/challenge" ? 2 : 0;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const response = await fetch(target, {...options, headers, cache:"no-store"});
+      if (response.status === 429) {
+        const delay = Number(response.headers.get("Retry-After"));
+        if (Number.isFinite(delay) && delay > 0) {
+          relayCooldownUntil = Math.max(relayCooldownUntil, Date.now() + delay * 1000);
+        }
+      }
+      if (attempt === retries || ![502, 503, 504].includes(response.status)) return response;
+      await response.body?.cancel();
+    } catch (error) {
+      if (attempt === retries || !(error instanceof TypeError)) throw error;
+    }
+    await new Promise(resolve => setTimeout(resolve, (attempt + 1) * 300));
+  }
+}
+
+async function responseData(response) {
+  const details = `The relay returned an invalid response (HTTP ${response.status}).`;
+  const type = response.headers.get("Content-Type") ?? "";
+  if (!/^application\/json(?:;|$)/i.test(type)) throw new Error(details);
+  const data = await response.json().catch(() => {
+    throw new Error(details);
+  });
+  if (!response.ok) {
+    if (session && data?.reauthenticate === true) {
+      session = null;
+      location.reload();
+    }
+    throw new Error(typeof data?.error === "string" ? data.error.replace(/\bDiscord\b/g,"identity relay") : details);
+  }
+  return data;
+}
+
+function formatDmReceipt({name, status, online}) {
+  if (status === "sent") return `Discord DM sent to ${name}${online ? "" : " (offline in the Activity)"}.`;
+  if (status === "queued") return `Discord DM queued for ${name}.`;
+  if (status === "skipped") return `Discord DM skipped for ${name}.`;
+  if (status === "unavailable") return `The bot could not send a Discord DM to ${name}.`;
+  return `Discord did not confirm a DM to ${name}.`;
+}
+
+const watchedDmReceipts = new Map();
+function watchDmReceipt(receipt, local) {
+  const id = receipt.dm_receipt;
+  if (!id) return;
+  const existing = watchedDmReceipts.get(id);
+  if (existing) {
+    if (local) {
+      existing.local = local;
+      local.textContent = existing.line.textContent;
+    }
+    return;
+  }
+  const target = document.getElementById("dm-status");
+  const line = document.createElement("p");
+  target.append(line);
+  if (target.children.length > 3) target.firstElementChild.remove();
+  const entry = {line, local};
+  watchedDmReceipts.set(id, entry);
+  const report = text => {
+    line.textContent = text;
+    if (entry.local?.isConnected) entry.local.textContent = text;
+  };
+  report("Checking Discord DM status…");
+  void (async () => {
+    let latest;
+    try {
+      for (let attempt = 0; attempt <= 75; attempt++) {
+        if (attempt) await new Promise(resolve => setTimeout(resolve, 2000));
+        const response = await activityFetch("/api/dm-receipts/" + encodeURIComponent(id));
+        if (response.status >= 500) continue;
+        const {recipients} = await responseData(response);
+        latest = recipients;
+        report(recipients.map(formatDmReceipt).join(" "));
+        if (recipients.every(recipient => recipient.status !== "queued")) return;
+      }
+      report(latest?.map(recipient => formatDmReceipt(recipient.status === "queued"
+        ? {...recipient, status:"unconfirmed"} : recipient)).join(" ") || "Discord DM status is unavailable.");
+    } catch {
+      report("Discord DM status is unavailable.");
+    } finally {
+      watchedDmReceipts.delete(id);
+    }
+  })();
+}
+
+async function saveSetup(step, payload) {
+  if (savingSetup) return;
+  clearTimeout(playPoll);
+  savingSetup = true;
+  const playCommand = step.startsWith("keep-") || step.startsWith("scene-");
+  const recoverable = ["keep-start","keep-choice","scene-start","scene-choice"].includes(step);
+  const submittedRoom = recoverable ? payload.room ?? "relay" : undefined;
+  const previous = displayedScenePlays ? JSON.parse(displayedScenePlays) : null;
+  const previousScene = previous?.id === submittedRoom ? previous : null;
+  const mailbox = currentPlayer?.mailbox;
+  const submittedSelection = ui.playSelection();
+  const viewingSubmission = () => ui.playSelection() === submittedSelection
+    && currentPlayer?.mailbox === mailbox;
+  const beneathCommand = step === "scene-beneath-work";
+  const followup = step === "off-duty-followup";
+  const handlerPlay = step.startsWith("handler-play-");
+  const punishment = step === "handler-punishment";
+  const creating = step === "creation-choice";
+  const enrolling = Boolean(currentPlayer?.enrollment);
+  const sceneDialog = document.getElementById("scene-action-dialog");
+  const utility = document.getElementById("utility-dialog");
+  const controls = utility.open ? utility : creating ? creationDialog
+    : playCommand ? (sceneDialog.open ? sceneDialog : scenePlayOptions) : followup ? offDutyOptions : handlerPlay
+    ? handlerPlaysDialog
+    : punishment ? document.getElementById("punishment-work")
+    : enrolling && enrollmentDialog.open ? enrollmentDialog : setup;
+  const playFeedback = document.getElementById(sceneDialog.open
+    ? "scene-action-feedback" : "scene-play-feedback");
+  if (playCommand) {
+    playFeedback.textContent = "Saving…";
+    playFeedback.hidden = false;
+  }
+  if (followup) offDutyResult.hidden = true;
+  const buttons = [...controls.querySelectorAll("button:not(:disabled)")];
+  for (const button of buttons) button.disabled = true;
+  const feedback = creating ? creationFeedback : handlerPlay ? document.getElementById("handler-play-feedback")
+    : punishment ? document.getElementById("punishment-feedback")
+    : controls === enrollmentDialog ? enrollmentFeedback
+    : controls === utility ? document.getElementById("utility-feedback") : status;
+  if (!playCommand) feedback.textContent = "Saving setup…";
+  const body = JSON.stringify(payload);
+  try {
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body));
+    const fingerprint = Array.from(new Uint8Array(digest), value => value.toString(16).padStart(2, "0")).join("");
+    const key = intentKey({id:"setup-" + step, revision:"1"}, fingerprint);
+    const receipt = await responseData(await activityFetch("/api/player-setup/" + step, {
+      method:"POST",
+      headers:{"Content-Type":"application/json","Idempotency-Key":key},
+      body,
+    }));
+    if (receipt.dm_receipt && controls === enrollmentDialog) {
+      const delivery = document.createElement("span");
+      document.getElementById("enrollment-dm-status").replaceChildren(delivery);
+      watchDmReceipt(receipt, delivery);
+    } else {
+      watchDmReceipt(receipt);
+    }
+    if (creating) {
+      await refreshScene();
+      feedback.textContent = "Enrollment choice filed.";
+    } else if (handlerPlay) {
+      await refreshScene();
+      const suggested = handlerPlaysDialog.dataset.suggestedPlay;
+      if (step === "handler-play-start" && receipt.id && suggested && handlerPlaysDialog.open) {
+        delete handlerPlaysDialog.dataset.suggestedPlay;
+        delete handlerPlaysDialog.dataset.suggestedRoom;
+        if (selectHandlerEffect(receipt.id, suggested)) {
+          feedback.textContent = "Review the effect before filing.";
+          return;
+        }
+      }
+      feedback.textContent = step === "handler-play-prepare-off-duty" ? "Off-Duty preparation filed."
+        : receipt.state === "complete" ? "Effect filed."
+        : receipt.state === "withdrawn" ? "Play withdrawn."
+        : receipt.state ? "Effect filed. Follow-up assigned." : "Handler directive filed. Select the assigned effect.";
+    } else if (punishment) {
+      await refreshScene();
+      feedback.textContent = "Punishment step filed.";
+      await refreshOffers();
+    } else if (playCommand || followup) {
+      await refreshScene();
+      if (playCommand && !viewingSubmission()) return;
+      if (step === "scene-orders" && receipt.action_id) {
+        sceneDialog.close();
+        scheduleSceneCheck();
+      }
+      const assignment = step === "scene-specialist" && /^(am_discovery_confirm|am_circuit_confirm):/.test(payload.answer.operation);
+      if (step === "scene-specialist" && receipt.action_id && !assignment) {
+        const room = currentPlayer?.directory?.rooms.find(room => room.id === payload.room);
+        const scene = room ?? (currentPlayer?.active_scene?.id === payload.room ? currentPlayer.active_scene : null);
+        openBeneathWork({root:receipt.action_id, play:payload.answer.operation, room_name:scene?.name});
+        scheduleSceneCheck();
+      }
+      if (step === "scene-specialist" && receipt.id && receipt.handler_effect) {
+        sceneDialog.close();
+        await openApprovedNativePlay({destination:"handler_effect", control:receipt.id,
+          id:"handler_" + receipt.handler_effect});
+        document.getElementById("handler-play-feedback").textContent =
+          "Review the effect before filing.";
+      }
+      status.textContent = step === "scene-orders" && receipt.action_id
+        ? payload.answer.operation.startsWith("role_") ? "Play filed for the original role."
+          : "Order filed. The original recipient has the response."
+        : "";
+      if (followup) {
+        offDutyResult.textContent = receipt.phase === "complete" ? "Off-Duty completed."
+          : payload.action === "finish_period" ? "WORLD EFFECTS FILED · Assigned work remains."
+          : "DECISION FILED";
+        offDutyResult.hidden = false;
+        if (receipt.phase === "complete") {
+          status.textContent = "Off-Duty completed.";
+          await refreshOffers();
+        }
+      }
+      if (beneathCommand) {
+        playFeedback.textContent = receipt.review_id ? "Filed with the facilitator. The original decision remains open."
+          : receipt.allowed ? "Consent recorded." : "Decision filed.";
+        playFeedback.hidden = false;
+      } else if (playCommand) {
+        playFeedback.textContent = assignment && receipt.action_id ? "Confirmed. Waiting for the original pilot’s roll." : "";
+        playFeedback.hidden = !playFeedback.textContent;
+      }
+    } else if (enrolling) {
+      enrollment.saved(step);
+      await refreshScene();
+      feedback.textContent = step === "activate" ? "" : step === "bot-enrollment" ? "Handler setup requested. Your assigned choices remain yours to answer." : "ENROLLMENT RECORD FILED";
+    } else {
+      await refresh();
+      feedback.textContent = "Record filed.";
+    }
+  } catch (error) {
+    if (playCommand) {
+      let scene = await refreshScene().catch(() => null);
+      if (!viewingSubmission()) return;
+      if (previousScene && scene?.id !== submittedRoom && currentPlayer?.mailbox === mailbox) {
+        const record = await playerSetupRequest(submittedRoom).then(responseData).catch(() => null);
+        if (!viewingSubmission()) return;
+        scene = record?.mailbox === mailbox ? record.active_scene : null;
+      }
+      if (!previousScene || scene?.id !== submittedRoom) scene = null;
+      const keep = scene?.keep;
+      const previousPlay = previousScene?.keep?.current?.id;
+      const previousOptions = previousScene?.options ?? {};
+      const started = step === "keep-start" && keep?.current && keep.current.id !== previousPlay;
+      const answered = step === "keep-choice" && keep?.current && keep.current.id === previousPlay
+        && !keep.choices.some(choice => choice.id === payload.id);
+      const beforeChoice = Object.entries(previousOptions ?? {}).find(([, option]) => option.choices.some(choice => choice.id === payload.id));
+      const currentChoice = scene?.options?.[beforeChoice?.[0]];
+      const sceneStarted = step === "scene-start" && scene?.options?.[payload.play]?.current
+        && scene.options[payload.play].current.id !== previousOptions?.[payload.play]?.current?.id;
+      const sceneAnswered = step === "scene-choice" && currentChoice?.current?.id === beforeChoice?.[1].current?.id
+        && currentChoice && !currentChoice.choices.some(choice => choice.id === payload.id);
+      if (started || answered || sceneStarted || sceneAnswered) {
+        status.textContent = "";
+        playFeedback.hidden = true;
+        return;
+      }
+    }
+    if (followup) {
+      await refreshScene().catch(() => null);
+      offDutyResult.textContent = error.message;
+      offDutyResult.hidden = false;
+    }
+    if (playCommand) {
+      playFeedback.textContent = error.message;
+      playFeedback.hidden = false;
+    } else {
+      feedback.textContent = error.message;
+    }
+  } finally {
+    savingSetup = false;
+    for (const button of buttons) button.disabled = false;
+  }
+}
+
+function intentKey(offer, choice) {
+  const storageKey = `mission-lab:${offer.id}:${offer.revision}:${choice}`;
+  let key = intentKeys.get(storageKey);
+  if (key) return key;
+  try {
+    key = sessionStorage.getItem(storageKey) ?? crypto.randomUUID();
+    sessionStorage.setItem(storageKey,key);
+  } catch {
+    key ??= crypto.randomUUID();
+  }
+  intentKeys.set(storageKey,key);
+  return key;
+}
+
+async function sendRecord(step, data, key = crypto.randomUUID(), refresh = true, dmFeedback) {
+  const result = await responseData(await activityFetch("/api/player-setup/" + step, {
+    method:"POST",
+    headers:{"Content-Type":"application/json","Idempotency-Key":key},
+    body:JSON.stringify(data),
+  }));
+  watchDmReceipt(result, dmFeedback);
+  for (const invite of result.invitations ?? []) watchDmReceipt(invite);
+  if (refresh && step !== "invite-issue" && step !== "room-post") await refreshScene();
+  return result;
+}
+
+async function readTranscript(room) {
+  return responseData(await activityFetch(`/api/rooms/${encodeURIComponent(room)}/transcript`));
+}
+
+async function refresh() {
+  refreshButton.hidden = false;
+  try {
+    await refreshScene();
+  } catch (error) {
+    const message = document.createElement("p");
+    message.textContent = "Scene and character setup unavailable. " + error.message;
+    setup.replaceChildren(message);
+  }
+  await refreshOffers();
+  await refreshFacilitatorReviews().catch(() => {});
+  restoreDmReceipts();
+}
+
+let dmReceiptsLoaded = false;
+async function restoreDmReceipts() {
+  if (dmReceiptsLoaded || !session || !rosterEnabled) return;
+  dmReceiptsLoaded = true;
+  try {
+    const {receipts} = await responseData(await activityFetch("/api/dm-receipts"));
+    for (const id of receipts) watchDmReceipt({dm_receipt:id});
+  } catch {
+    dmReceiptsLoaded = false;
+  }
+}
+
+function playerSetupRequest(room) {
+  return activityFetch("/api/player-setup" + (room ? "?scene=" + encodeURIComponent(room) : ""));
+}
+
+async function refreshScene() {
+  clearTimeout(playPoll);
+  if (perspectiveOwner !== perspectiveKey()) {
+    perspectiveOwner = perspectiveKey();
+    try { pilotPerspective = localStorage.getItem(perspectiveOwner) === "pilot"; } catch { pilotPerspective = false; }
+  }
+  const selection = ui.playSelection();
+  const perspective = perspectiveKey();
+  const pilotMode = pilotPerspective;
+  const request = ++sceneRefresh;
+  const stale = () => selection !== ui.playSelection() || perspective !== perspectiveKey()
+    || pilotMode !== pilotPerspective || request < sceneRefreshApplied;
+  const response = await playerSetupRequest(selection.room);
+  if (stale()) return null;
+  const player = await responseData(response);
+  if (stale()) return null;
+  sceneRefreshApplied = request;
+  assignmentsToggle.hidden = false;
+  perspectiveToggle.hidden = !player.handler_account;
+  perspectiveToggle.setAttribute("aria-pressed",String(player.perspective === "pilot"));
+  perspectiveToggle.textContent = player.perspective === "pilot" ? "Return to Handler desk" : "Pilot mode";
+  spool.identify(player.mailbox, player.callsign || "Handler");
+  currentPlayer = player;
+  popupContext(player.mailbox);
+  const sceneDialog = document.getElementById("scene-action-dialog");
+  if (sceneDialog.open && ((sceneDialog.dataset.role === "handler" && player.stage !== "handler")
+    || (sceneDialog.dataset.role === "pilot" && player.stage !== "active"))) sceneDialog.close();
+  updateBeneathWork();
+  renderSpecialistButtons(document.getElementById("handler-specialist-forms"), player.specialist_work ?? []);
+  if (player.stage === "handler") updateSpecialistForm();
+  renderReplacementStatus(player.career_status ?? []);
+  pilot.textContent = player.stage === "active"
+    ? `${player.callsign} | ${player.profile.status ?? "Pilot"}`
+    : player.stage === "handler" ? (player.callsign && player.callsign !== "Handler" ? player.callsign + " | Handler" : "Handler") : (player.callsign || "Pilot registration");
+  const inboxBonds = document.getElementById("inbox-bonds");
+  if (enrollment.update(player, inboxBonds)) setup.replaceChildren();
+  else renderPlayerSetup(setup, player, saveSetup, inboxBonds);
+  if (player.handler_pilot_notice) {
+    const notice = document.createElement("p");
+    notice.className = "terminal-notice";
+    notice.textContent = player.handler_pilot_notice;
+    setup.prepend(notice);
+  }
+  if (Array.isArray(player.handler_choices)) {
+    renderHandlerSceneChoices(document.getElementById("handler-choices"), player.handler_choices, saveSetup);
+  }
+  ui.renderCancellations(document.getElementById("handler-cancellations"),player.scene_cancellations ?? []);
+  const playbook = JSON.stringify(player.handler_playbook);
+  if (playbook !== displayedHandlerPlaybook) {
+    handlerPlaysButton.hidden = !player.handler_playbook;
+    if (!player.handler_playbook && handlerPlaysDialog.open) handlerPlaysDialog.close();
+    renderHandlerPlaybook(document.getElementById("handler-playbook"), player.handler_playbook, saveSetup);
+    displayedHandlerPlaybook = playbook;
+  }
+  const punishments = player.handler_punishments ?? [];
+  const punishmentView = JSON.stringify(punishments);
+  if (punishmentView !== displayedPunishments) {
+    renderHandlerPunishments(document.getElementById("punishment-cases"), punishments, saveSetup);
+    displayedPunishments = punishmentView;
+  }
+  const offDuty = JSON.stringify(player.off_duty);
+  if (displayedOffDuty !== offDuty) {
+    renderOffDuty(offDutyOptions, player.off_duty, saveSetup,
+      payload => sendRecord("off-duty-followup",payload,undefined,false));
+    displayedOffDuty = offDuty;
+  }
+  const showDogMail = player.show_dog_mail ?? [];
+  const showDogSnapshot = JSON.stringify(showDogMail);
+  if (displayedShowDogMail !== showDogSnapshot) {
+    document.getElementById("off-duty-mail-records").replaceChildren(...showDogMail.map(item => {
+      const record = document.createElement("section");
+      record.dataset.mailFile = "show-dog:" + item.id;
+      record.tabIndex = -1;
+      record.hidden = true;
+      renderRecordMetadata(record,{sender:item.sender, recipient:item.recipient});
+      for (const value of [item.text,item.detail].filter(Boolean)) {
+        const paragraph = document.createElement("p");
+        paragraph.textContent = value;
+        record.append(paragraph);
+      }
+      return record;
+    }));
+    displayedShowDogMail = showDogSnapshot;
+  }
+  const active = selection.room === player.active_scene?.id ? player.active_scene : null;
+  ui.update(player);
+  if (rosterEnabled) refreshPresence();
+  communications.update(player.communications,player.mailbox);
+  pilot.dataset.ready = "";
+  spool.replace("bonds", player.bonds.map(bond => ({
+    id:`bond:${bond.id}:${bond.revision}`, file:"bond:" + bond.id,
+    title:"Starting Bond",
+    sender:bond.incoming ? bond.counterpart ?? "Personnel intake" : player.callsign || "You",
+    recipient:bond.incoming ? undefined : bond.counterpart,
+    status:startingBondStatus(bond, player.stage === "active"),
+    required:bond.incoming && bond.state === "pending" && (!player.bond_setup || player.stage !== "active"),
+  })));
+  spool.replace("scene-invites", (player.scene_invites ?? []).map(record => ({
+    id:"scene-invite:" + record.id, sender:"Scene operations", title:"Scene invitation",
+    location:record.name, required:true,
+    open() { openInbox(false); ui.openSceneInvitation(record); },
+  })));
+  const choices = player.creation_choices;
+  const creationView = JSON.stringify(choices);
+  if (creationView !== displayedCreationChoices) {
+    const available = choices && (choices.requests.length || choices.proposals.length || choices.pairs.length || choices.mentors.length);
+    for (const link of creationLinks) link.hidden = !available;
+    renderEnrollmentChoices(creationFields, choices, saveSetup);
+    displayedCreationChoices = creationView;
+  }
+  spool.replace("creation", (choices?.requests ?? []).filter(item => item.incoming && item.state === "pending").map(item => ({
+    id:`creation:${item.id}:${item.revision}`, sender:"Personnel intake",
+    subject:"Countersign enrollment choice", required:true,
+    open() { openInbox(false); openCreationChoices(item.id); },
+  })));
+  const intel = player.intel_mail ?? [];
+  const intelView = JSON.stringify([player.mailbox, intel]);
+  if (displayedIntel !== intelView) {
+    const reader = document.getElementById("inbox-intel");
+    reader.replaceChildren(...intel.map(report => {
+      const file = document.createElement("article");
+      file.className = "record-card";
+      file.dataset.mailFile = "intel:" + report.id;
+      file.tabIndex = -1;
+      file.hidden = true;
+      const heading = document.createElement("h3");
+      heading.textContent = "Intel from " + report.callsign;
+      const date = new Date(report.created * 1000);
+      const time = document.createElement("time");
+      time.className = "eyebrow";
+      time.dateTime = date.toISOString();
+      time.textContent = date.toLocaleString(undefined, {dateStyle:"medium", timeStyle:"short"});
+      const body = document.createElement("p");
+      body.className = "intel-report-body";
+      body.textContent = report.body;
+      file.append(heading, time, body);
+      return file;
+    }));
+    spool.replace("intel", intel.map(report => ({
+      id:"intel:" + report.id, file:"intel:" + report.id, sender:report.callsign,
+      title:"Intel report",
+      status:"Received", audience:"Selected pilots", created:report.created * 1000,
+    })));
+    displayedIntel = intelView;
+  }
+  const sceneMail = (player.scene_mail ?? []).flatMap(receipt => {
+    const originalRoom = player.directory.rooms.find(room => room.id === receipt.room);
+    const label = playName(receipt.play);
+    const letter = (choice, id, subject, received) => ({
+      id, sender:"HARPYENGINE", location:originalRoom?.name,
+      subject, required:Boolean(choice), status:received, created:receipt.created,
+      owner:choice?.owner === "handler" ? "Handler" : undefined,
+      owned:choice?.owner !== "handler",
+      open() { openInbox(false); ui.openSceneReceipt(receipt.room, receipt.id, choice?.id); },
+    });
+    if (receipt.pending.length) return receipt.pending.map(choice => letter(choice,
+      `choice:${choice.id}:${choice.revision}`, `${label} · ${decisionName(choice.kind)}`));
+    if (receipt.state === "complete") return [letter(null, "receipt:" + receipt.id,
+      label + " · Receipt", receipt.archived_at != null ? "Archived" : "Filed")];
+    return [];
+  });
+  spool.replace("scene", [...sceneMail, ...(player.handler_choices ?? []).map(card => ({
+    id:`choice:${card.choice.id}:${card.choice.revision}`, sender:"Scene operations", location:card.room_name,
+    subject:`${playName(card.play)} · ${decisionName(card.choice.kind)}`, required:true,
+    open() { openInbox(false); focusDecision(document.getElementById("handler-choices"), card.choice.id); },
+  }))]);
+  const sceneWork = player.scene_beneath_work ?? [];
+  const specialty = new Map(sceneWork.filter(card => card.specialty).map(card => [card.id,card]));
+  spool.replace("beneath-work", sceneWork.filter(card => !card.specialty).map(card => ({
+    id:`${card.root}:${card.id}:${card.action ?? "filed"}`, sender:"Scene operations", location:card.room_name,
+    subject:card.instruction, required:Boolean(card.action),
+    open() { openInbox(false); openBeneathWork(card); },
+  })));
+  const notices = player.handler_notices ?? [];
+  const moveNames = {support:"Introduce the Support", punish:"Punishment", mess:"Status, Tags or Assets",
+    brief:"Brief", escalate:"Escalate", expectation:"Expectation", off_duty:"Go Off-Duty"};
+  document.getElementById("handler-notices").replaceChildren(...notices.map(notice => {
+    const card = document.createElement("article");
+    card.className = "record-card";
+    card.dataset.mailFile = "handler-notice:" + notice.id;
+    card.tabIndex = -1;
+    for (const [tag, value] of [["h3", moveNames[notice.play] ?? "Handler Play"],
+      ["p", notice.employee?.name], ["p", notice.account], ["p", notice.detail],
+      ["p", notice.stakes], ["p", notice.tag]]) {
+      if (!value) continue;
+      const item = document.createElement(tag);
+      item.textContent = value;
+      card.append(item);
+    }
+    return card;
+  }));
+  spool.replace("handler-work", [
+    ...punishments.filter(card => card.action).map(card => ({
+      id:`punishment:${card.id}:${card.action}`, sender:"Handler operations", location:specialty.get(card.id)?.room_name,
+      subject:punishmentActions[card.action] ?? card.instruction, required:true,
+      open() {
+        openInbox(false);
+        const source = specialty.get(card.id);
+        if (source) openBeneathWork(source);
+        else ui.openPunishmentCase(card.id);
+      },
+    })),
+    ...notices.map(notice => ({
+      id:`handler-notice:${notice.id}:${notice.state}`, file:"handler-notice:" + notice.id,
+      title:"Handler notice",
+      sender:"Handler operations",
+      status:notice.state === "complete" ? "Filed" : "Follow-up pending",
+    })),
+  ]);
+  const closing = player.off_duty?.closing;
+  const reviewMail = [];
+  for (const card of closing?.strain?.cards ?? []) {
+    if (card.action) reviewMail.push({
+      id:`strain:${card.id}:${card.action}:${card.revision}`,
+      subject:card.label,
+      work:card.id,
+    });
+  }
+  if (closing?.attendance && !closing.attendance.confirmed) {
+    reviewMail.push({id:`off-duty-handler-scene:${player.off_duty.period}`, subject:"Confirm your Handler scene attendance"});
+  }
+  if (closing?.handler && closing.status_ready) {
+    reviewMail.push({
+      id:`off-duty-review:${player.off_duty.period}:${closing.finish ? "finish" : "status"}:${player.off_duty.game_revision}`,
+      subject:closing.finish ? "Review world effects and end Off-Duty" : "Review Cadre Status",
+    });
+  }
+  spool.replace("handler-off-duty", reviewMail.map(letter => ({
+    ...letter, sender:"Off-Duty", required:true,
+    open() {
+      openInbox(false);
+      ui.openOffDuty();
+      if (letter.work) [...document.querySelectorAll("[data-strain-work]")]
+        .find(node => node.dataset.strainWork === letter.work)?.focus();
+    },
+  })));
+  spool.replace("show-dog", [
+    ...showDogMail.map(item => ({
+      id:"show-dog:" + item.id, file:"show-dog:" + item.id,
+      title:item.title, sender:item.sender, recipient:item.recipient, status:"Filed",
+    })),
+    ...(player.off_duty?.work ?? []).filter(work => work.kind === "show_dog").map(work => ({
+      id:"show-dog-work:" + work.id + ":" + work.revision,
+      title:work.label, sender:"Off-Duty", required:true,
+      open() { openInbox(false); openOffDutyWork(work.id); },
+    })),
+  ]);
+  spool.replace("specialist-assignments", (player.specialist_assignments ?? []).map(work => ({
+    id:"specialist:" + work.decision + ":" + work.id,
+    title:work.instruction, location:work.room_name, sender:"Scene operations", required:true,
+    open() {
+      openInbox(false);
+      openApprovedNativePlay({
+        destination:player.stage === "handler" ? "handler_scene_specialist" : "scene_specialist",
+        id:work.id, control:work.id, room:work.room,
+      }).catch(error => { status.textContent = error.message; });
+    },
+  })));
+  const waitingInPopup = sceneDialog.open && sceneDialog.dataset.role === "work" && active?.locked
+    && !sceneWork.some(card => card.root === sceneDialog.dataset.root);
+  if (active?.locked) scheduleSceneCheck(1500);
+  else if (waitingInPopup || punishments.some(card => card.waiting) || active?.keep?.waiting
+    || Object.values(active?.options ?? {}).some(option => option.waiting)) scheduleSceneCheck();
+  return active;
+}
+
+function scheduleSceneCheck(delay = 700) {
+  clearTimeout(playPoll);
+  const selection = ui.playSelection();
+  playPoll = setTimeout(() => {
+    if (selection !== ui.playSelection()) return;
+    if (relayDelay()) return scheduleSceneCheck(relayDelay());
+    refreshScene().catch(() => {
+      if (selection !== ui.playSelection()) return;
+      if (relayDelay()) scheduleSceneCheck(relayDelay());
+      else status.textContent = "Synchronize terminal to recover the current Play.";
+    });
+  }, Math.max(delay, relayDelay()));
+}
+
+let presencePending = false;
+async function refreshPresence() {
+  const mailbox = currentPlayer?.mailbox;
+  if (!mailbox || document.visibilityState !== "visible" || presencePending || relayDelay()) return;
+  presencePending = true;
+  try {
+    const updates = await responseData(await activityFetch("/api/presence"));
+    if (updates.mailbox !== mailbox || currentPlayer?.mailbox !== mailbox) return;
+    if (rosterEnabled) ui.updatePresence(updates.members);
+    communications.update(updates.communications, mailbox);
+  } catch {
+    // Preserve the last presence and unread state during a temporary relay outage.
+  } finally {
+    presencePending = false;
+  }
+}
+document.addEventListener("visibilitychange", refreshPresence);
+setInterval(refreshPresence, 30000);
+
+function renderRoomPlays(scene) {
+  const playView = JSON.stringify(scene);
+  if (playView === displayedScenePlays) return;
+  renderScenePlays(scenePlayOptions, scene, (step, payload) => saveSetup(step, {...payload, room:scene.id}),
+    battlefieldEnabled ? id => ui.openBattlefieldPlay(id) : undefined);
+  renderSpecialistButtons(scenePlayOptions, scene?.specialist_work ?? []);
+  if (scene?.id && campaignSwitcher) {
+    const request = reviewElement("button", "Request facilitator review");
+    request.type = "button";
+    request.addEventListener("click", () => requestFacilitatorReview(scene.id, request));
+    scenePlayOptions.append(request);
+  }
+  if (document.getElementById("scene-action-dialog").dataset.role === "specialist") updateSpecialistForm();
+  displayedScenePlays = playView;
+}
+
+function openSheetReset(sheet) {
+  const dialog = document.getElementById("sheet-reset-dialog");
+  const form = document.getElementById("sheet-reset-form");
+  const feedback = document.getElementById("sheet-reset-feedback");
+  const submit = form.querySelector("button[type=submit]");
+  const key = crypto.randomUUID();
+  document.getElementById("sheet-reset-notice").textContent = sheet.callsign +
+    " will leave active duty. Prior receipts will remain in the archive. Your new character starts with a fresh sheet.";
+  feedback.textContent = "";
+  form.reset();
+  form.onsubmit = async event => {
+    event.preventDefault();
+    const callsign = form.elements.namedItem("callsign").value.trim();
+    if (callsign !== sheet.callsign) { feedback.textContent = "Type the current callsign exactly."; return; }
+    submit.disabled = true;
+    try {
+      await sendRecord("purge-sheet",{character:sheet.character, revision:sheet.revision, callsign, confirmed:form.elements.namedItem("confirmed").checked},key);
+      dialog.close();
+      enrollment.open();
+    } catch (error) {
+      feedback.textContent = error.message;
+    } finally {
+      submit.disabled = false;
+    }
+  };
+  dialog.showModal();
+}
+
+function renderReplacementStatus(records) {
+  const target = document.getElementById("replacement-status");
+  target.replaceChildren();
+  for (const record of records) {
+    const form = document.createElement("form");
+    form.className = "record-card";
+    const label = document.createElement("label");
+    label.textContent = "Assign replacement Status · " + record.callsign;
+    const ranks = document.createElement("select");
+    for (let i = 0; i <= record.maximum; i++) ranks.add(new Option("Cadre position " + (i + 1), String(i)));
+    label.append(ranks);
+    const submit = document.createElement("button");
+    submit.textContent = "Assign Status";
+    form.append(label,submit);
+    form.addEventListener("submit",event => {
+      event.preventDefault();
+      saveSetup("career-status",{owner:record.owner, character:record.character, revision:record.game_revision, position:Number(ranks.value)});
+    });
+    target.append(popupAction("Assign replacement Status · " + record.callsign,form,"replacement-status:" + record.character));
+  }
+}
+
+function renderSpecialistButtons(target, cards) {
+  target.querySelector(".specialist-actions")?.remove();
+  if (!cards.length) return;
+  const buttons = document.createElement("div");
+  buttons.className = "actions specialist-actions";
+  for (const card of cards) {
+    const trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.dataset.specialistControl = card.id;
+    trigger.dataset.specialistRoom = card.room;
+    trigger.textContent = card.instruction + (target.id === "handler-specialist-forms" ? " · " + card.room_name : "");
+    trigger.setAttribute("aria-haspopup", "dialog");
+    trigger.addEventListener("click", () => {
+      const dialog = document.getElementById("scene-action-dialog");
+      if (dialog.dataset.role !== "specialist" || dialog.dataset.specialist !== card.id || dialog.dataset.room !== card.room) {
+        delete document.getElementById("scene-action-fields").dataset.specialistView;
+      }
+      Object.assign(dialog.dataset,{role:"specialist",root:"",room:card.room,specialist:card.id,
+        specialistOperation:trigger.dataset.suggestedOperation ?? ""});
+      delete trigger.dataset.suggestedOperation;
+      document.getElementById("scene-action-feedback").hidden = true;
+      updateBeneathWork();
+      updateSpecialistForm();
+      if (!dialog.open) dialog.showModal();
+    });
+    buttons.append(trigger);
+  }
+  target.append(buttons);
+}
+
+async function openApprovedNativePlay(play) {
+  if (play.destination === "battlefield") {
+    await ui.openBattlefieldPlay(play.control);
+  } else if (play.destination === "battlefield_frame") {
+    await ui.openBattlefieldFramePlay(play.control);
+  } else if (play.destination === "off_duty_work") {
+    openOffDutyWork(play.control);
+  } else if (play.destination === "off_duty_signature") {
+    const form = offDutyOptions.querySelector("[data-handler-scene-form]");
+    const kind = play.id === "head_to_the_lab" ? "scientist_lab" : "trainer_conditioning";
+    const sceneType = form?.querySelector('[name="kind"]');
+    const participants = form?.querySelector('[name="participants"]');
+    if (offDutyOptions.dataset.period !== play.control ||
+        !sceneType || ![...sceneType.options].some(option => option.value === kind) ||
+        !participants || ![...participants.options].some(option => option.value === play.target)) {
+      throw new Error("The original Off-Duty assignment changed. Refresh the desk.");
+    }
+    ui.openOffDuty();
+    sceneType.value = kind;
+    for (const option of participants.options) option.selected = option.value === play.target;
+    sceneType.dispatchEvent(new Event("change"));
+    sceneType.focus();
+  } else if (play.destination === "handler" || play.destination === "handler_effect") {
+    if (handlerPlaysButton.hidden) throw new Error("Open the Handler desk for this Play.");
+    handlerPlaysButton.click();
+    if (play.destination === "handler_effect") {
+      const identity = play.id.split(":", 1)[0].replace(/^handler_/, "");
+      if (!selectHandlerEffect(play.control, identity)) {
+        throw new Error("This Handler record has changed. Refresh the desk.");
+      }
+    } else {
+      handlerPlaysDialog.dataset.suggestedPlay = play.control;
+      handlerPlaysDialog.dataset.suggestedRoom = play.room ?? "";
+      document.getElementById("handler-play-feedback").textContent =
+        play.label + " · Select the affected pilots to prepare this effect.";
+      handlerPlaysDialog.querySelector("[data-handler-start] input")?.focus();
+    }
+  } else if (["scene_specialist", "handler_scene_specialist"].includes(play.destination)) {
+    if (play.destination === "scene_specialist") await ui.openRoomPlays(play.room);
+    const source = play.destination === "scene_specialist" ? scenePlayOptions
+      : document.getElementById("handler-specialist-forms");
+    const trigger = [...source.querySelectorAll("[data-specialist-control]")]
+      .find(button => button.dataset.specialistControl === play.control
+        && button.dataset.specialistRoom === play.room);
+    if (!trigger) throw new Error("This specialist record changed. Refresh scene work.");
+    trigger.dataset.suggestedOperation = play.id;
+    trigger.click();
+  } else {
+    await ui.openRoomPlays(play.room, play.control, true);
+  }
+}
+
+function openOffDutyWork(id) {
+  const record = [...offDutyOptions.querySelectorAll("[data-off-duty-work]")]
+    .find(item => item.dataset.offDutyWork === id);
+  if (!record) throw new Error("The assigned Off-Duty decision has changed.");
+  ui.openOffDuty();
+  record.focus();
+}
+
+function updateSpecialistForm() {
+  const dialog = document.getElementById("scene-action-dialog");
+  if (dialog.dataset.role !== "specialist") return;
+  const active = currentPlayer?.active_scene ?? currentPlayer?.scene;
+  const cards = currentPlayer?.specialist_work ?? active?.specialist_work ?? [];
+  const card = cards.find(item => item.id === dialog.dataset.specialist && item.room === dialog.dataset.room);
+  const fields = document.getElementById("scene-action-fields");
+  const operation = dialog.dataset.specialistOperation;
+  const snapshot = JSON.stringify([dialog.dataset.room,card,operation]);
+  if (fields.dataset.specialistView === snapshot) return;
+  fields.dataset.specialistView = snapshot;
+  if (!card) {
+    renderRecordMetadata(document.getElementById("scene-action-record"), {state:"No decision assigned"});
+    fields.textContent = "No specialist work is available in this scene.";
+    return;
+  }
+  renderRecordMetadata(document.getElementById("scene-action-record"), {
+    location:card.room_name ?? active?.name, state:card.waiting ? "Awaiting response" : "Action required",
+    owner:card.waiting ? undefined : currentPlayer.callsign,
+  });
+  document.getElementById("scene-action-title").textContent = card.instruction;
+  const route = card.action === "scene_orders" ? "scene-orders" : "scene-specialist";
+  renderDraftDialog(fields,JSON.stringify(["specialist",card.room,card.id,card.revision,
+    card.work_revision,card.cast_revision,card.game_revision]),() =>
+    renderHandlerPunishments(fields,[card],(step,payload) => saveSetup(step,{...payload,room:card.room}),route,operation));
+}
+
+function openBeneathWork(card) {
+  const dialog = document.getElementById("scene-action-dialog");
+  const fields = document.getElementById("scene-action-fields");
+  const heading = document.createElement("h3");
+  document.getElementById("scene-action-title").textContent = playName(card.play ?? "put_someone_beneath_you");
+  heading.textContent = card.room_name;
+  fields.replaceChildren(heading);
+  delete fields.dataset.specialistView;
+  document.getElementById("scene-action-feedback").hidden = true;
+  dialog.dataset.role = "work";
+  dialog.dataset.root = card.root;
+  dialog.dataset.location = card.room_name ?? "";
+  updateBeneathWork();
+  if (!dialog.open) dialog.showModal();
+  [...dialog.querySelectorAll("[data-punishment-case]")]
+    .find(record => record.dataset.punishmentCase === card.id)?.focus();
+}
+
+function updateBeneathWork() {
+  const dialog = document.getElementById("scene-action-dialog");
+  const target = document.getElementById("scene-beneath-work");
+  const cards = (currentPlayer?.scene_beneath_work ?? []).filter(card => card.root === dialog.dataset.root);
+  if (dialog.dataset.role === "work") {
+    const assigned = cards.some(card => card.action);
+    renderRecordMetadata(document.getElementById("scene-action-record"), {
+      location:dialog.dataset.location, state:assigned ? "Action required" : "No decision assigned",
+      owner:assigned ? currentPlayer?.callsign : undefined,
+    });
+  }
+  const snapshot = JSON.stringify([dialog.dataset.root,cards]);
+  target.hidden = !cards.length && dialog.dataset.role !== "work";
+  if (target.dataset.view === snapshot) return;
+  target.dataset.view = snapshot;
+  renderHandlerPunishments(target,cards,(step,payload) => saveSetup(step,{...payload,root:dialog.dataset.root}),"scene-beneath-work");
+  if (!cards.length && dialog.dataset.role === "work") target.textContent = "No further work is assigned to you here.";
+}
+
+document.getElementById("scene-action-dialog").addEventListener("beneath-source",updateBeneathWork);
+
+function openMissionAssignment(followup, mission) {
+  if (!followup) return ui.openMissionWork();
+  if (followup.kind === "defeat") return ui.openAssignedDefeat(followup.id);
+  const card = currentPlayer?.handler_punishments?.find(item =>
+    item.id === followup.id || item.mission_work === followup.id);
+  if (card) ui.openPunishmentCase(card.id);
+  else {
+    if (mission) ui.openMissionRecord(mission);
+    document.getElementById("mission-result").textContent =
+      "This assignment is not cleared. Review its source record and pending work.";
+  }
+}
+
+async function refreshOffers() {
+  const data = await responseData(await activityFetch("/api/mission-offers"));
+  renderOffers(data);
+  renderMissions(document.getElementById("mission-desk"), data, {
+    send: sendMission,
+    respond: saveMissionResponse,
+    responding: id => pendingMissionResponses.has(id),
+    openOffDuty: ui.openOffDuty,
+    openWork:openMissionAssignment,
+  });
+  spool.replace("mission-work", data.offers.flatMap(mission => [
+    ...(mission.reactions ?? []).map(reaction => ({
+      id:`mission-work:${reaction.id}:${reaction.revision}`, sender:"Dispatch desk",
+      subject:reaction.callsign + " · " + (reaction.kind === "doctor_obsolescence" ? "Planned Obsolescence" : "Standards review"), required:true,
+      open() { openInbox(false); ui.openMissionRecord(mission.id,reaction.id); },
+    })),
+    ...(mission.followups ?? []).map(work => ({
+      id:`mission-work:${work.id}:${mission.revision}`, sender:"Dispatch desk", subject:work.label, required:true,
+      open() { openInbox(false); openMissionAssignment(work,mission.id); },
+    })),
+  ]));
+  return data;
+}
+
+let savingMission = false;
+let pendingMission;
+async function sendMission(payload, control) {
+  if (savingMission) return;
+  savingMission = true;
+  const result = control.closest("dialog")?.querySelector('[role="status"]') ?? document.getElementById("mission-result");
+  control.disabled = true;
+  result.textContent = "Filing mission record…";
+  try {
+    const body = JSON.stringify(payload);
+    const intent = JSON.stringify([campaignId, currentPlayer?.mailbox, body]);
+    const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(intent));
+    const signature = "mission-desk:" + Array.from(new Uint8Array(hash),
+      byte => byte.toString(16).padStart(2, "0")).join("");
+    if (pendingMission?.signature !== signature) {
+      let key = crypto.randomUUID();
+      try {
+        key = sessionStorage.getItem(signature) ?? key;
+        sessionStorage.setItem(signature, key);
+      } catch {}
+      pendingMission = {signature, key};
+    }
+    const receipt = await responseData(await activityFetch("/api/mission-desk", {
+      method:"POST",
+      headers:{"Content-Type":"application/json","Idempotency-Key":pendingMission.key},
+      body,
+    }));
+    watchDmReceipt(receipt);
+    await refreshOffers();
+    await refreshScene();
+    try { sessionStorage.removeItem(signature); } catch {}
+    pendingMission = null;
+    result.textContent = receipt.phase === "complete" ? "DEBRIEF CLOSED" : "MISSION RECORD FILED";
+    document.getElementById("mission-result").textContent = result.textContent;
+    if (payload.action === "off_duty") ui.openOffDuty();
+    return true;
+  } catch (error) {
+    result.textContent = error.message;
+  } finally {
+    savingMission = false;
+    control.disabled = false;
+  }
+}
+
+const pendingMissionResponses = new Set();
+
+function setMissionResponsePending(id, pending) {
+  if (pending) pendingMissionResponses.add(id);
+  else pendingMissionResponses.delete(id);
+  for (const control of document.querySelectorAll(`[data-mission-response="${CSS.escape(id)}"]`)) {
+    control.disabled = pending;
+  }
+}
+
+async function saveMissionResponse(offer, choice, result = document.getElementById("mission-result")) {
+  if (pendingMissionResponses.has(offer.id)) return;
+  setMissionResponsePending(offer.id, true);
+  const report = message => {
+    result.textContent = message;
+    const current = offers.querySelector(`[data-mail-file="mission:${CSS.escape(offer.id)}"] [data-response-status]`);
+    if (current) current.textContent = message;
+  };
+  report("FILING RESPONSE…");
+  let filed = false;
+  try {
+    await responseData(await activityFetch(`/api/mission-offers/${offer.id}/response`, {
+      method:"POST",
+      headers:{"Content-Type":"application/json","Idempotency-Key":intentKey(offer,choice)},
+      body:JSON.stringify({expected_revision:offer.revision,response:choice}),
+    }));
+    filed = true;
+    await refreshOffers();
+    report("RESPONSE FILED");
+  } catch (error) {
+    if (filed) {
+      report("RESPONSE FILED · Refresh dispatch records.");
+      return;
+    }
+    const current = await refreshOffers().catch(() => null);
+    if (current?.offers.some(row => row.id === offer.id && row.response === choice)) { report("RESPONSE FILED"); return; }
+    report(error instanceof TypeError ? "RELAY INTERRUPTED · Retry the same response." : error.message);
+  } finally {
+    setMissionResponsePending(offer.id, false);
+  }
+}
+
+function renderOffers(data) {
+  offers.replaceChildren();
+  status.textContent = "";
+  for (const offer of data.offers) {
+    const card = document.createElement("article");
+    card.dataset.mailFile = "mission:" + offer.id;
+    card.tabIndex = -1;
+    const objective = document.createElement("p");
+    objective.textContent = offer.objective;
+    card.append(objective);
+    const phase = document.createElement("p");
+    phase.className = "eyebrow";
+    phase.textContent = missionStatus(offer);
+    card.append(phase);
+    if (offer.debrief) {
+      const debrief = document.createElement("p");
+      debrief.textContent = offer.debrief;
+      card.append(debrief);
+    }
+    const responseStatus = document.createElement("p");
+    responseStatus.setAttribute("role","status");
+    responseStatus.dataset.responseStatus = "";
+    card.append(responseStatus);
+    if (offer.response) {
+      const result = document.createElement("p");
+      result.textContent = offer.response === "accept" ? "RESPONSE FILED · Accepted" : "RESPONSE FILED · Declined";
+      card.append(result);
+    }
+    if (offer.needs_response) {
+      const actions = document.createElement("div");
+      actions.className = "actions";
+      for (const choice of ["accept", "decline"]) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.classList.toggle("primary", choice === "accept");
+        button.textContent = choice === "accept" ? "Accept mission" : "Decline mission";
+        button.dataset.missionResponse = offer.id;
+        button.disabled = pendingMissionResponses.has(offer.id);
+        button.addEventListener("click", () => saveMissionResponse(offer, choice, responseStatus));
+        actions.append(button);
+      }
+      card.append(actions);
+    }
+    const open = document.createElement("button");
+    open.type = "button";
+    open.textContent = "Open mission file";
+    open.addEventListener("click",() => { openInbox(false); ui.openMissionRecord(offer.id); });
+    card.append(open);
+    offers.append(card);
+  }
+  spool.replace("missions", data.offers.map(offer => ({
+    id:`mission:${offer.id}:${offer.revision}`, file:"mission:" + offer.id, sender:"Dispatch desk",
+    title:"Mission dispatch", required:offer.needs_response,
+    created:offer.filed_at, timeStyle:"medium",
+    status:offer.response === "decline" ? "Declined" : missionStatus(offer),
+  })));
+}
+
+refreshButton.addEventListener("click", async () => {
+  if (savingSetup) return;
+  refreshButton.disabled = true;
+  try {
+    await refresh();
+    await tactical.reload();
+  } catch (error) {
+    status.textContent = error.message;
+  } finally {
+    refreshButton.disabled = false;
+  }
+});
+
+function campaignUrl(id) {
+  const next = new URL(location.href);
+  next.searchParams.set("campaign", id);
+  return next;
+}
+
+function campaignOption(item) {
+  const label = item.id === "default" ? item.name + " (test roster)" : item.name;
+  return new Option(label, item.id);
+}
+
+function chooseDmCampaign(campaigns) {
+  const dialog = document.getElementById("dm-campaign-dialog");
+  const picker = document.getElementById("dm-campaign-select");
+  picker.replaceChildren(new Option("Select campaign file", ""), ...campaigns.map(campaignOption));
+  dialog.returnValue = "";
+  return new Promise(resolve => {
+    dialog.addEventListener("close", () => {
+      resolve(dialog.returnValue === "open" ? picker.value : null);
+    }, {once:true});
+    dialog.showModal();
+  });
+}
+
+async function selectAvailableCampaign(expectedUser, channelId, inDm = false) {
+  if (!campaignSwitcher) return;
+  const channel = channelId ? "?channel=" + encodeURIComponent(channelId) : "";
+  const {campaigns, discord_user_id:owner, preferred} = await responseData(await activityFetch("/api/campaigns" + channel));
+  if (owner !== expectedUser) throw new Error("Present credentials again to verify this campaign assignment.");
+  const explicit = new URL(location.href).searchParams.has("campaign");
+  let initial = explicit ? campaignId : preferred ?? campaignId;
+  if (inDm && !explicit) {
+    const bound = campaigns.filter(item => item.id !== "default");
+    if (bound.length === 1) initial = bound[0].id;
+    if (bound.length > 1) {
+      initial = await chooseDmCampaign(campaigns);
+      if (!initial) throw new Error("Present credentials again to select a duty file.");
+    }
+  }
+  const selected = campaigns.find(item => item.id === initial) ?? campaigns[0];
+  if (!selected) throw new Error("Your duty group has no clearance for these campaign files.");
+  campaignId = selected.id;
+  history.replaceState(null, "", campaignUrl(campaignId));
+  document.getElementById("campaign-name").textContent = selected.name;
+  const switcher = document.getElementById("campaign-switch");
+  switcher.replaceChildren(...campaigns.map(campaignOption));
+  switcher.value = campaignId;
+  switcher.hidden = campaigns.length < 2;
+}
+
+function switchCampaign(next) {
+  if (next === campaignId) return;
+  // Transfer only the short-lived Activity handle. The new document consumes it once.
+  try {
+    sessionStorage.setItem(switchKey, JSON.stringify({session, discordUserId, next, expires:Date.now() + 30000}));
+  } catch {}
+  location.replace(campaignUrl(next));
+}
+
+document.getElementById("campaign-switch").addEventListener("change", event => {
+  switchCampaign(event.target.value);
+});
+
+async function restoreCampaignSwitch() {
+  if (!campaignSwitcher) return false;
+  let transfer;
+  try {
+    const saved = sessionStorage.getItem(switchKey);
+    sessionStorage.removeItem(switchKey);
+    transfer = JSON.parse(saved);
+  } catch { return false; }
+  if (!transfer || transfer.next !== campaignId || transfer.expires <= Date.now()) return false;
+  session = transfer.session;
+  discordUserId = transfer.discordUserId;
+  try {
+    await selectAvailableCampaign(discordUserId);
+  } catch {
+    session = null;
+    discordUserId = undefined;
+    return false;
+  }
+  refreshButton.hidden = false;
+  await refresh();
+  return true;
+}
+
+async function connectDiscord(clientId, allowDm) {
+  if (window.top === window.self) {
+    status.textContent = "Open this terminal from your assigned duty station.";
+    return;
+  }
+  const {DiscordSDK} = await import("/discord-sdk.js");
+  const sdk = new DiscordSDK(clientId);
+  openAuth.hidden = false;
+  openAuth.addEventListener("click", () => auth.showModal());
+  auth.showModal();
+  signIn.addEventListener("click", async () => {
+    signIn.disabled = true;
+    authState.textContent = "VERIFYING";
+    authStatus.textContent = "Establishing personnel relay…";
+    let step = "Network handshake";
+    try {
+      await sdk.ready();
+      const guildId = sdk.guildId ?? null;
+      if (guildId === null && !allowDm) throw new Error("Open this terminal from your assigned duty station.");
+      step = "Credential challenge";
+      const challenge = await responseData(await activityFetch("/api/discord/challenge", {method:"POST"}));
+      step = "Credential presentation";
+      authStatus.textContent = "Awaiting identity countersignature…";
+      const {code} = await sdk.commands.authorize({
+        client_id: clientId, response_type:"code", state:challenge.nonce, prompt:"none",
+        scope:["identify","guilds.members.read"],
+      });
+      step = "Credential exchange";
+      const authorized = await responseData(await activityFetch("/api/discord/session", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({code, nonce:challenge.nonce, guild_id:guildId}),
+      }));
+      step = "Personnel verification";
+      const authenticated = await sdk.commands.authenticate({access_token:authorized.access_token});
+      if (typeof authorized.discord_user_id !== "string" ||
+          !/^[1-9][0-9]{0,19}$/.test(authorized.discord_user_id) ||
+          authenticated?.user?.id !== authorized.discord_user_id) {
+        throw new Error("Credential principal changed. Reopen the terminal.");
+      }
+      session = authorized.session;
+      discordUserId = authorized.discord_user_id;
+      try {
+        step = "Campaign selection";
+        await selectAvailableCampaign(discordUserId, sdk.channelId, guildId === null);
+      } catch (error) {
+        session = null;
+        discordUserId = undefined;
+        throw error;
+      }
+      authState.textContent = "CREDENTIALS VERIFIED";
+      enableAssistedTrial?.();
+      auth.close();
+      openAuth.hidden = true;
+      authStatus.textContent = "";
+      refreshButton.hidden = false;
+      step = "Mission offers";
+      await refresh();
+    } catch (error) {
+      const message = error instanceof Error ? `${step}: ${error.message.replace(/\bDiscord\b/g,"identity relay")}` : `${step} failed.`;
+      if (session) status.textContent = message;
+      else {
+        authState.textContent = "RETRY";
+        authStatus.textContent = message;
+        if (!auth.open) auth.showModal();
+      }
+    } finally {
+      signIn.disabled = false;
+    }
+  });
+  status.textContent = "Present personnel credentials to verify duty clearance.";
+}
+
+async function start() {
+  const config = await responseData(await activityFetch("/api/activity/config"));
+  if (config.director_trial) {
+    const { mountDirectorTrial } = await import("/director-trial.js");
+    if (!config.bound_roster) document.getElementById("campaign-name").textContent = "Foundation training";
+    enableAssistedTrial = () => {
+      mountDirectorTrial(async (data, key) => responseData(await activityFetch("/api/director-trial", data ? {
+        method:"POST", headers:{"Content-Type":"application/json", "Idempotency-Key":key},
+        body:JSON.stringify(data),
+      } : {})));
+      enableAssistedTrial = undefined;
+    };
+    if (!config.client_id) enableAssistedTrial();
+  }
+  battlefieldEnabled = Boolean(config.battlefield);
+  rosterEnabled = Boolean(config.bound_roster);
+  campaignSwitcher = Boolean(config.campaign_switcher);
+  if (config.director_scene || config.campaign_setup) {
+    const {mountDirectorDesk, mountActivityAISetup, mountActivityAITrial, mountStartFresh, openSheetPortrayal} = await import("/p2-desk.js");
+    const workbench = document.querySelector(".workbench");
+    ui.setPortrayal(() => openSheetPortrayal({activityFetch, scene:config.director_scene, kind:"pilot"}));
+    if (config.director_scene) mountDirectorDesk(workbench, config.director_scene, activityFetch, config.activity_shadow);
+    if (config.campaign_setup) {
+      const pane = document.getElementById("campaign-setup-panels");
+      const showSetup = mountDirectorDesk(pane, null, activityFetch);
+      const openReview = config.reviewed_ai_trial ? mountActivityAITrial(pane, activityFetch, openApprovedNativePlay) : null;
+      if (campaignSwitcher) refreshAiSetup = mountActivityAISetup(pane, activityFetch, openReview);
+      const refreshStartFresh = campaignSwitcher ? mountStartFresh(pane, activityFetch, switchCampaign) : null;
+      ui.setCampaignSetup(() => {
+        showSetup();
+        refreshAiSetup?.(true);
+        refreshStartFresh?.();
+      });
+    }
+  }
+  if (config.client_id) {
+    if (!(await restoreCampaignSwitch())) await connectDiscord(config.client_id, config.allow_dm);
+  } else await refresh();
+}
+start().then(() => {
+  clearTimeout(startupTimer);
+  retryActivity.hidden = true;
+}).catch(startupFailed);
+</script>
+</html>

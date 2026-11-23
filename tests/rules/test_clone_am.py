@@ -36,7 +36,7 @@ CANARY = "SYNTHETIC_ORIGINAL_PRIVATE_NOTES_DO_NOT_COPY"
 
 
 def prepared(store, tmp_path, monkeypatch, *, graft=False):
-    _, game = service(store, girl="ALPHA", frame="JANUS-B" if graft else "THE RED QUEEN")
+    _, game = service(store, girl="ALPHA", frame="JANUS" if graft else "THE RED QUEEN")
     approved(store, game, tmp_path, monkeypatch, extra=(rules.RULE,))
     approval = store.policy.m3_approval
     store.policy = store.policy.model_copy(

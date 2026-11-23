@@ -130,9 +130,16 @@ class Travel(Model):
     response_event: str | None = None
     review: str = Field(default="", max_length=1200)
     return_of: str | None = None
+    continuation_of: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    navigation_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def actual_route(self) -> "Travel":
+        if (self.continuation_of is None) != (self.navigation_source is None) or (
+            self.continuation_of is not None
+            and (self.return_of is not None or self.destination is not None or self.rift is None)
+        ):
+            raise ValueError("Proceed further only through an exact discovered Voidspace route")
         if sum(x is not None for x in (self.rift, self.escape_effect, self.off_duty_action)) != 1:
             raise ValueError(
                 "A route belongs to exactly one actual Rift, printed escape or Harpy hide"

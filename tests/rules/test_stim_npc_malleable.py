@@ -1,4 +1,4 @@
-"""Actual Stim NPC drug physiology with source contact and explicit unsupported Orders."""
+"""Actual Stim NPC drug physiology with source contact and lasting Tag provenance."""
 
 from uuid import uuid4
 
@@ -126,10 +126,6 @@ def test_genuine_stim_npc_drug_birth_and_historical_protection_after_expiry(
     tick(worker, gateway, 3)
     pass_tags(game)
     choose(game, PLAYER, "stim_sex_drug", ("quick",), native=True)
-    before_unsupported = state(game)
-    with pytest.raises(WorkflowError, match="human adjudication"):
-        choose(game, PLAYER, "stim_sex_effects", ("orders",))
-    assert state(game) == before_unsupported
     assert game.inspect(PLAYER, action)["state"] != "complete"
     choose(game, PLAYER, "stim_sex_effects", ("helpless",), native=True)
     final = state(game)

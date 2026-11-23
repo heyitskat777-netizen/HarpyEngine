@@ -16,7 +16,7 @@ from girlframe.services.m3_battle import BattleService, pre_roll, prepare
 from girlframe.services.onboarding import WorkflowError
 
 
-def prepared(store, *, girl=None):
+def prepared(store, *, girl=None, other_cell=(0, 0)):
     if girl is None:
         game, worker, gateway = ready(store)
     else:
@@ -38,13 +38,17 @@ def prepared(store, *, girl=None):
     with store.transaction() as c:
         canon = state(game)
         canon.world = initial()
-        canon = place(place(canon, 2), 3)
+        canon = place(place(canon, 2), 3, cell=other_cell)
         game.event(c, 1, "actual-battle-positions", "synthetic.state", canon)
     svc = BattleService(store)
     data = svc.preview(PLAYER, 900)
+    return game, worker, gateway, svc, data, assault_declaration(data)
+
+
+def assault_declaration(data):
     actor = next(x for x in data["actors"] if x["ref"]["entity"] == "2")
     target = next(x for x in data["actors"] if x["ref"]["entity"] == "3")
-    declaration = Declaration.model_validate_json(
+    return Declaration.model_validate_json(
         __import__("json").dumps(
             dict(
                 play="all_out_assault",
@@ -58,7 +62,6 @@ def prepared(store, *, girl=None):
             )
         )
     )
-    return game, worker, gateway, svc, data, declaration
 
 
 def confirm(svc, game, data, declaration):

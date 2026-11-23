@@ -44,7 +44,7 @@ def ready(store, tmp_path, monkeypatch):
         str(uuid4()),
         draft.revision,
         store.draft(OTHER)["revision"],
-        selected("OLDGEN", "JANUS-B").model_copy(
+        selected("OLDGEN", "JANUS").model_copy(
             update={
                 "shared_tokens": draft.draft.shared_tokens,
                 "girl_details": GirlDetails(maxims=(0, 1)),

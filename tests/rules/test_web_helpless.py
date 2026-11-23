@@ -3,6 +3,8 @@
 from uuid import uuid4
 
 import pytest
+from test_battle_pipeline import table
+from test_battle_service import assault_declaration, confirm
 from test_cast_service import change as cast_change
 from test_changeling import ready
 from test_enforcer_requisitions import approved
@@ -25,6 +27,7 @@ from girlframe.engine.m3_actor_bonds import (
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_world_state import Npc
 from girlframe.services.m3_actors import ActorService
+from girlframe.services.m3_battle import BattleService
 from girlframe.services.m3_cast import CastService
 from girlframe.services.m3_changeling import prove_fingers, prove_node
 from girlframe.services.m3_changeling_body import validate_access
@@ -342,3 +345,62 @@ def test_actual_whip_helpless_allows_paid_web_implant_and_owned_question(
     assert next(x for x in completed.world.npcs if x.id == npc.entity).alive
     assert completed.sheets["2"].permissions == permissions - 4
     assert game.dice.calls == 1
+
+
+@pytest.mark.parametrize("give", [True, False], ids=["give", "decline"])
+def test_paid_web_assault_can_give_one_string_or_decline_without_repeating_the_roll(
+    ledger, tmp_path, monkeypatch, give
+):
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch)
+    starting_permissions = state(game).sheets["2"].permissions
+    controls.purchase(PLAYER, str(uuid4()), state(game).revision, rules.WEB, "Actual Web purchase")
+    battle = BattleService(ledger)
+    battle.game = game
+    data = battle.preview(PLAYER, 900)
+    declaration = assault_declaration(data)
+    context = confirm(battle, game, data, declaration)
+    game.dice.faces = (4, 4)
+    action = game.begin(
+        PLAYER,
+        "web-assault-roll",
+        900,
+        state(game).sheets["2"].revision,
+        PlayInput(
+            play="all_out_assault",
+            target_actor=declaration.target,
+            attacking_asset=declaration.attacking_asset,
+            target_asset=declaration.target_asset,
+            battle_context=context,
+            heat=0,
+            piloting=True,
+            trigger_confirmed=True,
+            context=declaration.account,
+        ),
+    )["action_id"]
+    finish_roll(game, worker, gateway, action)
+    table(game)
+    tick(worker, gateway, 5)
+    saved = state(game)
+    (offer,) = rules.records(saved, rules.AssaultGift)
+    assert offer.action == action and offer.subject.actor == declaration.target
+    assert not rules.records(saved, rules.String)
+    assert saved.sheets["2"].permissions == starting_permissions - 2
+    with pytest.raises(WorkflowError):
+        controls.assault_gift(OTHER, "wrong-web-giver", saved.revision, offer.id, give)
+    with pytest.raises(WorkflowError):
+        controls.assault_gift(PLAYER, "stale-web-gift", saved.revision - 1, offer.id, give)
+    assert state(game) == saved
+    args = (PLAYER, "actual-web-gift", saved.revision, offer.id, give)
+    actual = controls.assault_gift(*args)
+    assert controls.assault_gift(*args) == actual
+    done = state(game)
+    with pytest.raises(WorkflowError):
+        controls.assault_gift(PLAYER, "different-web-gift", done.revision, offer.id, not give)
+    nodes = rules.records(done, rules.String)
+    assert len(nodes) == int(give) and game.dice.calls == 1
+    if give:
+        (node,) = nodes
+        assert node.origin == "assault" and node.source == offer.id
+        with ledger.engine.connect() as connection:
+            assert prove_node(game, connection, done, node.id) == node
+    assert state(game) == done

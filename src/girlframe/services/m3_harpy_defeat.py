@@ -1537,6 +1537,7 @@ class HarpyDefeatService:
                 return dict(action_id=identity, receipt=action["data"]["receipt"])
             if action["state"] not in ("acquiring", "ready_to_roll"):
                 raise WorkflowError("Resume the actual saved Harpy Defeat state.")
+            self.game.scene_unpaused(c, action["scene_id"])
             lock = self.game.lock(c, action["channel_id"])
             root = action
             while root["parent_id"]:
@@ -2993,6 +2994,7 @@ class HarpyDefeatService:
         rift: str | None = None,
         escape_effect: str | None = None,
         return_of: str | None = None,
+        discovery: str | None = None,
         destination: tuple[int, int] | None = None,
         account: str,
         navigation: str,
@@ -3015,7 +3017,10 @@ class HarpyDefeatService:
                 raise WorkflowError(
                     "Only the actual original body's controller proposes its route."
                 )
-            if not account.strip() or not navigation.strip() or rules.fight_required(canon, actor):
+            if (
+                not account.strip() or not (navigation.strip() or discovery)
+                or rules.fight_required(canon, actor)
+            ):
                 raise WorkflowError(
                     "Record actual navigation; a source-required fight must continue until "
                     "Helpless."
@@ -3033,7 +3038,22 @@ class HarpyDefeatService:
             prior = rules.offstage_travel(canon, actor)
             gm, appointment = MedicalService(self.store)._handler(c)
             adjudicator = None
-            if return_of is not None:
+            continuation = None
+            route_account = navigation.strip()
+            if discovery is not None:
+                from girlframe.services.m3_voidspace_invasion import navigation as found_route
+
+                if (
+                    prior is None or return_of is not None or destination is not None
+                    or rift is not None or escape_effect is not None
+                ):
+                    raise WorkflowError("Choose the original offstage journey and discovered route")
+                self._travel_proof(c, prior)
+                route_account = found_route(self.game, c, canon, discovery, prior)
+                continuation = prior.id
+                chosen_rift = prior.rift
+                travels_frame, instance = prior.travels_frame, prior.frame_instance
+            elif return_of is not None:
                 if prior is None or prior.id != return_of:
                     raise WorkflowError(
                         "Return only this exact original body's actual offstage journey."
@@ -3117,11 +3137,13 @@ class HarpyDefeatService:
                 travels_frame=travels_frame,
                 destination=destination,
                 account=account.strip(),
-                navigation=navigation.strip(),
+                navigation=route_account,
                 judge=gm,
                 adjudicator=adjudicator,
                 appointment=appointment,
                 return_of=return_of,
+                continuation_of=continuation,
+                navigation_source=discovery,
             )
             canon.harpy_travels.append(value)
             self.game.event(
@@ -3148,7 +3170,7 @@ class HarpyDefeatService:
                 account=account,
                 navigation=navigation,
                 expected=expected,
-            ),
+            ) | (dict(discovery=discovery) if discovery is not None else {}),
             operation,
             authorize=access,
             auto_audit=False,
@@ -3202,6 +3224,7 @@ class HarpyDefeatService:
                     allow
                     and value.rift is not None
                     and value.return_of is None
+                    and value.continuation_of is None
                     and not any(x.id == value.rift and x.open for x in canon.void_rifts)
                 ):
                     raise WorkflowError("This source Rift closed before the actual crossing.")
@@ -3210,6 +3233,17 @@ class HarpyDefeatService:
                     for x in canon.escort_journeys
                 ):
                     raise WorkflowError("The actual escorted journey conflicts with this route.")
+                if value.continuation_of is not None:
+                    from girlframe.services.m3_voidspace_invasion import navigation as found_route
+
+                    previous = rules.offstage_travel(canon, value.actor)
+                    if (
+                        previous is None or previous.id != value.continuation_of
+                        or value.navigation_source is None
+                        or found_route(self.game, c, canon, value.navigation_source, previous)
+                        != value.navigation
+                    ):
+                        raise WorkflowError("Recover the original discovered onward route")
             event = str(uuid4())
             stage = (
                 "rejected"
@@ -3228,6 +3262,12 @@ class HarpyDefeatService:
                         x.model_copy(update={"state": "returned", "response_event": event})
                         if x.id == value.return_of
                         else x
+                        for x in canon.harpy_travels
+                    ]
+                if value.continuation_of:
+                    canon.harpy_travels = [
+                        x.model_copy(update=dict(state="ended", ended_event=event))
+                        if x.id == value.continuation_of else x
                         for x in canon.harpy_travels
                     ]
                 if value.actor.kind == "pilot":

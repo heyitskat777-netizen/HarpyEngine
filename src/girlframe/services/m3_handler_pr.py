@@ -21,6 +21,7 @@ from girlframe.services.m3_handler_advancements import (
     _appointment_at,
     _history,
 )
+from girlframe.services.m3_handler_book_orders import active_book
 from girlframe.services.m3_handler_ordinary import HandlerOrdinaryService, _session
 from girlframe.services.m3_medical import MedicalService
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
@@ -45,9 +46,8 @@ def source(game: GameService, c: Connection, state: GameState, identity: str) ->
     value = next((x for x in rules.events(state) if x.id == identity), None)
     if value is None:
         raise WorkflowError("Recover the actual original public-relations event")
-    plan = next(
-        (x for x in rules.events(_history(c, game, value.plan_event)) if x.id == identity), None
-    )
+    planned = _history(c, game, value.plan_event)
+    plan = next((x for x in rules.events(planned) if x.id == identity), None)
     _audit(game, c, value.plan_event, "m3.handler_pr_planned", value.host.entity)
     if plan is None or any(
         getattr(plan, k) != getattr(value, k)
@@ -60,10 +60,17 @@ def source(game: GameService, c: Connection, state: GameState, identity: str) ->
             "objective",
             "context",
             "people",
+            "occasion",
         )
     ):
         raise WorkflowError("Preserve the original host, objective, Cadre and planning Session")
-    session = _session(game, c, _history(c, game, value.plan_event), value.planned_session)
+    if value.occasion == "advocate_pride_parade" and (
+        planned.handler_persona is None
+        or planned.handler_persona.playbook != "Advocate"
+        or active_handler(planned) != value.host
+    ):
+        raise WorkflowError("Recover the original Advocate who planned this parade")
+    session = _session(game, c, planned, value.planned_session)
     if (
         session.end_event
         or session.facilitator != int(value.host.entity)
@@ -125,14 +132,20 @@ def source(game: GameService, c: Connection, state: GameState, identity: str) ->
 
 
 def _slot(
-    game: GameService, c: Connection, state: GameState, host: ActorRef
+    game: GameService, c: Connection, state: GameState, value: rules.Event
 ) -> tuple[ordinary.Session | None, str | None]:
+    host = value.host
     if not same_handler_body(state, host):
         return None, "original_host_unavailable"
+    if (
+        value.occasion == "advocate_pride_parade"
+        and active_book(game, c, state, book="Advocate", rule=rules.ADVOCATE_RULE) is None
+    ):
+        return None, "original_advocate_unavailable"
     if game.pending_actions(c):
         return None, "finish_pending_play"
     marks = [x for x in ordinary.marks(state) if same_handler_body(state, x.handler)]
-    if any(x.trigger == "public_relations" for x in marks):
+    if any(x.trigger == value.occasion for x in marks):
         return None, "criterion_marked"
     session = next(
         (
@@ -157,13 +170,14 @@ def _award(
     ordinary.put(
         state,
         ordinary.Mark(
-            id="pr-mark:" + value.host.token,
+            id=("pr-mark:" if value.occasion == "public_relations" else "pride-mark:")
+            + value.host.token,
             handler=value.host,
             session=session.id,
             review=value.id,
             award=identity,
             event=event,
-            trigger="public_relations",
+            trigger=value.occasion,
         ),
     )
     advancement.grant(
@@ -178,7 +192,7 @@ def _award(
             award_event=event,
             account=value.public_result or "",
             ordinary_source=ordinary.AwardSource(
-                session=session.id, review=value.id, trigger="public_relations"
+                session=session.id, review=value.id, trigger=value.occasion
             ),
         ),
     )
@@ -193,7 +207,7 @@ def prove_award(
     declared = award.ordinary_source
     if (
         declared is None
-        or declared.trigger != "public_relations"
+        or declared.trigger not in ("public_relations", "advocate_pride_parade")
         or award.rule != ordinary.RULE
         or award.source_work is not None
     ):
@@ -228,7 +242,8 @@ def prove_award(
                 "account",
             )
         )
-        or value.successful is not True
+        or not value.qualifies
+        or value.occasion != declared.trigger
         or (value.award, value.award_event, value.award_session)
         != (award.id, award.award_event, declared.session)
         or value.host != award.handler
@@ -244,7 +259,7 @@ def prove_award(
     marks = [x for x in ordinary.marks(birth) if x.handler == value.host]
     if (
         len([x for x in marks if x.session == declared.session]) != 1
-        or len([x for x in marks if x.trigger == "public_relations"]) != 1
+        or len([x for x in marks if x.trigger == value.occasion]) != 1
         or not any(
             x.award == award.id and x.review == value.id and x.event == award.award_event
             for x in marks
@@ -278,6 +293,8 @@ class HandlerPRService:
         objective: str,
         context: str,
         people: tuple[ActorRef, ...],
+        *,
+        occasion: rules.Occasion = "public_relations",
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             self.game.unpaused(c)
@@ -304,6 +321,12 @@ class HandlerPRService:
                     "Plan actual Foundation PR with an original Handler, real Session and Cadre"
                 )
             HandlerAdvancementService(self.store)._current(c, state, host, session.appointment)
+            if (
+                occasion == "advocate_pride_parade"
+                and active_book(self.game, c, state, book="Advocate", rule=rules.ADVOCATE_RULE)
+                is None
+            ):
+                raise WorkflowError("Only the original Advocate can plan this printed advancement")
             event = str(uuid4())
             value = rules.Event(
                 id="pr-event:" + event,
@@ -314,6 +337,7 @@ class HandlerPRService:
                 objective=objective.strip(),
                 context=context.strip(),
                 people=people,
+                occasion=occasion,
             )
             rules.put(state, value)
             self.game.event(
@@ -336,7 +360,8 @@ class HandlerPRService:
                 objective=objective,
                 context=context,
                 people=[x.model_dump(mode="json") for x in people],
-            ),
+            )
+            | ({"occasion": occasion} if occasion != "public_relations" else {}),
             operation,
         )
 
@@ -490,11 +515,11 @@ class HandlerPRService:
                 )
             )
             if (
-                successful
+                value.qualifies
                 and same_handler_body(state, value.host)
                 and appointment == value.appointment
             ):
-                session, blocked = _slot(self.game, c, state, value.host)
+                session, blocked = _slot(self.game, c, state, value)
                 if session is not None:
                     value = _award(state, value, session, event)
                 else:
@@ -529,11 +554,11 @@ class HandlerPRService:
             state = load_state(c, self.store.campaign_id)
             value = source(self.game, c, state, identity)
             self._host(c, state, viewer, value)
-            session, blocked = _slot(self.game, c, state, value.host)
+            session, blocked = _slot(self.game, c, state, value)
             if (
                 state.revision != revision
                 or value.phase != "complete"
-                or value.successful is not True
+                or not value.qualifies
                 or value.award is not None
                 or session is None
             ):
@@ -572,11 +597,12 @@ class HandlerPRService:
                 participant = any(x.entity == str(viewer.user_id) for x in value.people)
                 if not (own or participant or viewer.user_id == human):
                     raise WorkflowError("This PR history belongs to its actual participants and GM")
-                session, blocked = _slot(self.game, c, state, value.host) if own else (None, None)
+                session, blocked = _slot(self.game, c, state, value) if own else (None, None)
                 return dict(
                     id=identity,
                     revision=state.revision,
                     phase=value.phase,
+                    occasion=value.occasion,
                     host=own,
                     participant=participant,
                     judge=viewer.user_id == human,
@@ -591,7 +617,7 @@ class HandlerPRService:
                     public_result=value.public_result,
                     award=value.award,
                     claimable=own
-                    and value.successful is True
+                    and value.qualifies
                     and value.award is None
                     and session is not None,
                     blocked=blocked,
@@ -599,6 +625,10 @@ class HandlerPRService:
             return dict(
                 revision=state.revision,
                 host=human == viewer.user_id,
+                pride_parade=active_book(
+                    self.game, c, state, book="Advocate", rule=rules.ADVOCATE_RULE
+                )
+                is not None,
                 people=[
                     dict(
                         actor=current_ref(state, uid).model_dump(mode="json"),
@@ -620,7 +650,12 @@ class HandlerPRService:
             dict(
                 id=x.id,
                 revision=state.revision,
-                label="Public fundraiser/photoshoot — " + x.phase,
+                label=(
+                    "Pride parade — "
+                    if x.occasion == "advocate_pride_parade"
+                    else "Public fundraiser/photoshoot — "
+                )
+                + x.phase,
                 phase=x.phase,
                 pending=x.phase == "result" and viewer.user_id == human,
             )

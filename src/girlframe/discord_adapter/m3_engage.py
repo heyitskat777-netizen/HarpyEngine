@@ -11,9 +11,7 @@ from girlframe.engine.m2 import MANEUVERS, ChoiceAnswer
 from girlframe.services.m2_game import GameService
 
 
-async def open_engage(interaction: discord.Interaction, game: GameService, identity: str) -> None:
-    data = await asyncio.to_thread(game.decision, viewer_from_interaction(interaction), identity)
-    detail = data["engage"]
+def engage_fields(detail: dict[str, Any]) -> list[Field]:
     assets = tuple((asset["id"], asset["label"]) for asset in detail["assets"])
     maneuvers = tuple(detail.get("maneuvers", MANEUVERS))
     fields = [
@@ -43,6 +41,16 @@ async def open_engage(interaction: discord.Interaction, game: GameService, ident
         ),
     ]
     vehicles = detail.get("wyvern_vehicles", [])
+    if detail.get("harpy_sparrows"):
+        fields.append(
+            Field(
+                "harpy_sparrows",
+                "Choose an extra Sparrows effect",
+                detail["harpy_sparrows"],
+                0,
+                required=False,
+            )
+        )
     if vehicles:
         fields.append(
             Field(
@@ -75,28 +83,40 @@ async def open_engage(interaction: discord.Interaction, game: GameService, ident
                 )
             )
 
+    return fields
+
+
+def engage_answer(values: dict[str, Any]) -> ChoiceAnswer:
+    choices = tuple(values.get("maneuvers", ()))
+    selected_fields = {
+        kind: values["asset_" + kind][0] for kind in choices if values.get("asset_" + kind)
+    }
+    if "crush_small" in choices and values.get("wyvern_vehicle"):
+        selected_fields["wyvern_vehicle"] = values["wyvern_vehicle"][0]
+    if values.get("untouchable_tag"):
+        selected_fields["untouchable_tag"] = values["untouchable_tag"][0]
+    if values.get("harpy_sparrows"):
+        selected_fields["harpy_sparrows"] = values["harpy_sparrows"][0]
+    return ChoiceAnswer(
+        options=choices,
+        fields=selected_fields,
+        denied=tuple(values.get("denied", ())),
+        text=values.get("text", ""),
+    )
+
+
+async def open_engage(interaction: discord.Interaction, game: GameService, identity: str) -> None:
+    data = await asyncio.to_thread(game.decision, viewer_from_interaction(interaction), identity)
+    detail = data["engage"]
+
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
-        choices = tuple(values.get("maneuvers", ()))
-        selected_fields = {
-            kind: values["asset_" + kind][0] for kind in choices if values.get("asset_" + kind)
-        }
-        if "crush_small" in choices and values.get("wyvern_vehicle"):
-            selected_fields["wyvern_vehicle"] = values["wyvern_vehicle"][0]
-        if values.get("untouchable_tag"):
-            selected_fields["untouchable_tag"] = values["untouchable_tag"][0]
-        answer = ChoiceAnswer(
-            options=choices,
-            fields=selected_fields,
-            denied=tuple(values.get("denied", ())),
-            text=values.get("text", ""),
-        )
         result = await asyncio.to_thread(
             game.respond,
             viewer_from_interaction(current),
             str(current.id),
             identity,
             data["revision"],
-            answer,
+            engage_answer(values),
         )
         return "Your actual battlefield response is saved. Play: " + str(result["state"]) + "."
 
@@ -106,6 +126,6 @@ async def open_engage(interaction: discord.Interaction, game: GameService, ident
         "Select an actual owned Asset for every selected maneuver. "
         "Describe circumstances; these choices do not invent movement between map cells."
         + ("\n" + detail["learned_rider"] if detail.get("learned_rider") else ""),
-        fields,
+        engage_fields(detail),
         submit,
     ).present(interaction)

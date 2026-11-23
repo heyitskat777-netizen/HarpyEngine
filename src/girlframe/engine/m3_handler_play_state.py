@@ -1,6 +1,6 @@
 """Owned Handler Plays: fictional effects and source-limited human authority."""
 
-from typing import Literal
+from typing import Final, Literal
 
 from pydantic import Field, model_validator
 
@@ -22,7 +22,38 @@ EXTRA = (
     ("tracker_intercept", "Intercept them"),
     ("tracker_voyeur", "Play voyeur to a private moment"),
     ("contaminant_warp", "Warp the quarantined area"),
+    ("dress_them_down", "Dress Them Down"),
+    ("successor_advice", "Give advice on how to lead"),
 )
+DRESS_RULE: Final = "handler-playbook.dogrunner.dress-them-down"
+SUCCESSOR_ADVICE = "handler-advancement.handler-advancement.successor"
+SOURCE_RULE = "source.extra-handler-plays-by-girl-and-frame"
+DRESS_STEPS = (
+    ("competency", "Insult their competency"),
+    ("appearance", "Insult their appearance"),
+    ("identity", "Dismiss them for an inherent trait"),
+    ("dog", "Call them a dog, mutt or stray"),
+    ("physical", "Strike, grab or restrain them"),
+    ("delegate", "Have another participant choose a step"),
+    ("demeaning", "Order them to do something demeaning or risk Punishment"),
+    ("dismissal", "End with an order to get out of your sight"),
+    ("punishment", "End by deciding they deserve a proper Punishment"),
+)
+DRESS_ENDINGS = frozenset(("dismissal", "punishment"))
+DRESS_ORDERS = frozenset(("dismissal", "demeaning"))
+DressStep = Literal[
+    "competency",
+    "appearance",
+    "identity",
+    "dog",
+    "physical",
+    "delegate",
+    "demeaning",
+    "dismissal",
+    "punishment",
+]
+DressContact = Literal["strike", "grab", "restrain"]
+DRESS_CONTACTS = (("strike", "Strike"), ("grab", "Grab"), ("restrain", "Restrain"))
 Play = Literal[
     "brief",
     "punish",
@@ -34,6 +65,8 @@ Play = Literal[
     "tracker_intercept",
     "tracker_voyeur",
     "contaminant_warp",
+    "dress_them_down",
+    "successor_advice",
 ]
 
 
@@ -51,6 +84,8 @@ class Effect(Model):
         "tracker_intercept",
         "tracker_voyeur",
         "contaminant_warp",
+        "dress_them_down",
+        "successor_advice",
     ]
     account: str = Field(min_length=1, max_length=1200)
     detail: str = Field(default="", max_length=1200)
@@ -70,6 +105,22 @@ class Effect(Model):
         default=None, min_length=1, max_length=100, exclude_if=lambda x: x is None
     )
     cell: Cell | None = Field(default=None, exclude_if=lambda x: x is None)
+    dress_steps: tuple[DressStep, ...] = Field(default=(), max_length=3, exclude_if=lambda x: not x)
+    dress_contact: DressContact | None = Field(default=None, exclude_if=lambda x: x is None)
+    dress_delegate: ActorRef | None = Field(default=None, exclude_if=lambda x: x is None)
+    dress_dismissal: str = Field(default="", max_length=1200, exclude_if=lambda x: not x)
+
+    @property
+    def opens_punishment(self) -> bool:
+        return self.kind == "punish" or self.dress_steps[-1:] == ("punishment",)
+
+    @property
+    def dress_order(self) -> DressStep | None:
+        return next((step for step in self.dress_steps if step in DRESS_ORDERS), None)
+
+    @property
+    def dress_needs_performance(self) -> bool:
+        return bool({"physical", "delegate"}.intersection(self.dress_steps))
 
     @model_validator(mode="after")
     def actual_effect(self) -> "Effect":
@@ -88,6 +139,16 @@ class Effect(Model):
             "tracker_intercept": {"target"},
             "tracker_voyeur": {"target", "detail"},
             "contaminant_warp": {"zone", "cell", "detail"},
+            "dress_them_down": {
+                "target",
+                "tag",
+                "dress_steps",
+                "detail",
+                "dress_contact",
+                "dress_delegate",
+                "dress_dismissal",
+            },
+            "successor_advice": set(),
         }[self.kind] | {"kind", "account", "source_label"}
         baseline = Effect.model_construct(kind=self.kind, account=self.account)
         if any(
@@ -130,6 +191,30 @@ class Effect(Model):
             or not self.detail.strip()
         ):
             raise ValueError("Warp a real owned zone with an actual located feature")
+        if self.kind == "dress_them_down" and (
+            self.target is None
+            or self.target.kind != "pilot"
+            or not self.dress_steps
+            or len(set(self.dress_steps)) != len(self.dress_steps)
+        ):
+            raise ValueError("Choose one to three distinct options and an actual original Girl")
+        endings = DRESS_ENDINGS.intersection(self.dress_steps)
+        if len(endings) > 1 or (endings and self.dress_steps[-1] not in endings):
+            raise ValueError("Choose only one ending and put it last in the dressing down")
+        if self.kind == "dress_them_down":
+            if (self.dress_contact is not None) != ("physical" in self.dress_steps):
+                raise ValueError("Choose the physical action only for that Dress Them Down step")
+            if (self.dress_delegate is not None) != ("delegate" in self.dress_steps):
+                raise ValueError(
+                    "Choose an actual separate participant only for the delegated step"
+                )
+            if bool(self.dress_order) != bool(self.detail.strip()):
+                raise ValueError("Supply the direct Order text for the chosen Order step")
+            two_orders = DRESS_ORDERS.issubset(self.dress_steps)
+            if two_orders != bool(self.dress_dismissal.strip()):
+                raise ValueError(
+                    "Provide separate dismissal text only when both direct Orders are chosen"
+                )
         return self
 
 
@@ -148,6 +233,10 @@ class HandlerPlay(Model):
     targets: tuple[ActorRef, ...] = Field(min_length=1)
     target_controllers: dict[str, Snowflake] = Field(default_factory=dict)
     scope: WorkScope
+    offered_play: Play | None = Field(default=None, exclude_if=lambda x: x is None)
+    brief_account: str | None = Field(
+        default=None, min_length=1, max_length=1200, exclude_if=lambda x: x is None
+    )
     final_original: bool = False
     nonbody_only: bool = False
     state: Literal["pending", "awaiting_effect", "complete", "withdrawn", "declined"] = "pending"
@@ -161,6 +250,35 @@ class HandlerPlay(Model):
 
     @model_validator(mode="after")
     def actual_authority(self) -> "HandlerPlay":
+        if self.clause in (DRESS_RULE, SUCCESSOR_ADVICE) and (
+            self.source != "ordinary"
+            or self.scope.scene_id is None
+            or self.chooser_actor is None
+            or self.chooser_actor.kind != "handler"
+            or len(self.targets) != 1
+            or self.targets[0].kind != "pilot"
+        ):
+            raise ValueError("This Play belongs to the original Handler and Girl in scene")
+        if self.offered_play is not None and (
+            self.source != "ordinary"
+            or self.clause != "director_offer"
+            or self.scope.scene_id is None
+            or self.offered_play not in dict(BASIC)
+        ):
+            raise ValueError("A reviewed offer binds one ordinary Play in its original scene")
+        if self.clause == "director_offer" and self.offered_play is None:
+            raise ValueError("Recover the reviewed ordinary Play")
+        if self.brief_account is not None and (
+            self.source != "ordinary"
+            or self.clause != "director_brief"
+            or self.scope.scene_id is None
+            or len(self.targets) != 1
+            or self.targets[0].kind != "pilot"
+            or not self.brief_account.strip()
+        ):
+            raise ValueError("A reviewed briefing has one actual scene Pilot and approved wording")
+        if self.clause == "director_brief" and self.brief_account is None:
+            raise ValueError("Retain the exact approved briefing")
         if self.nonbody_only and (
             self.source != "required"
             or self.clause != "all_out_assault.low"

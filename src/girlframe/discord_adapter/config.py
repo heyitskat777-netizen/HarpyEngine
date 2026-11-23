@@ -9,6 +9,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, SecretStr, field_validator
 
+from girlframe.ai.briefing import BriefingPolicy
 from girlframe.engine.creation_details import InitialConditions
 from girlframe.engine.creation_review import CreationRulings
 from girlframe.engine.identity import Snowflake
@@ -35,7 +36,10 @@ class BotPolicy(BaseModel):
     m2_approval: ReleaseApproval | None = None
     m3_approval: M3Approval | None = None
     owner_m3_rulings: M3Rulings | None = None
+    canon_facilitator_id: Snowflake | None = None
     owner_table_outcomes: Literal["gm_discretion"] | None = None
+    ai_mission_briefing: BriefingPolicy | None = None
+    ai_npc_reactions: BriefingPolicy | None = None
 
     @field_validator("owner_creation_rulings")
     @classmethod

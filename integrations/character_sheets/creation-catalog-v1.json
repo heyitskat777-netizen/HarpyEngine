@@ -11,7 +11,7 @@
     "Brain"
   ],
   "campaign_defaults_require_engine": true,
-  "catalog_sha256": "b7febcc7eff0a59d6ec117888e84849cc380ae8fa682ba00295a4309058cad01",
+  "catalog_sha256": "0ac188e1aefdde8f0657b511ad5cd9dfef83a6eca92e66e406e61598dfe243a0",
   "fanbase": {
     "demographics": [
       "Young boys",
@@ -34,15 +34,12 @@
     ]
   },
   "format": "harpyengine.creation-catalog",
-  "frame_rules_aliases": {
-    "JANUS-B": "JANUS"
-  },
+  "frame_rules_aliases": {},
   "frame_types": {
     "CHANGELING": "CHANGELING",
     "CONSUME": "CONSUME",
     "DOCTORDOCTOR MK. II": "DoctorDoctor Mk. II",
     "JANUS": "JANUS",
-    "JANUS-B": "JANUS-B (server variant)",
     "PROJECT ANKOU": "Project Ankou",
     "THE ENFORCER": "The Enforcer",
     "THE PRINCE": "The Prince",

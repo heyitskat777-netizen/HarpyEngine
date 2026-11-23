@@ -7,7 +7,7 @@ from girlframe.engine.m2 import AssetState, GameState, IdentityState, PilotSheet
 from girlframe.engine.m3_actor_state import ActorRef, Model, ProfileBinding
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_core import Followup
-from girlframe.engine.m3_dive_state import Effect
+from girlframe.engine.m3_dive_state import Effect, NpcVoid
 from girlframe.engine.m3_janus_storage import GainSource
 from girlframe.engine.m3_physical import lock_cockpit
 from girlframe.engine.m3_void_state import HarpyAsset, HarpyIdentity
@@ -67,6 +67,41 @@ def nearby_directors(
         )
         if state.world
         else ()
+    )
+
+
+def mark_npc_void(
+    state: GameState,
+    manifestations: tuple[NpcVoid, ...],
+    event: str,
+    handler: ActorRef | None,
+    controller: int,
+) -> None:
+    if state.world is None:
+        return
+    labels = {item.npc: item.manifestation for item in manifestations}
+    state.world = state.world.model_copy(
+        update=dict(
+            npcs=tuple(
+                npc.model_copy(
+                    update=dict(
+                        tags=(
+                            *npc.tags,
+                            WorldTag(
+                                id=str(uuid5(NAMESPACE_URL, event + ":" + npc.id)),
+                                label="Void of the " + labels[npc.id],
+                                giver_entity=handler.model_dump_json()
+                                if handler
+                                else "gm:" + str(controller) + ":" + event,
+                            ),
+                        )
+                    )
+                )
+                if npc.id in labels
+                else npc
+                for npc in state.world.npcs
+            )
+        )
     )
 
 
@@ -303,31 +338,7 @@ def apply(
             raise ValueError(
                 "The actual source Handler or Director chooses NPC Void manifestations"
             )
-        manifestations = {x.npc: x.manifestation for x in effect.npcs}
-        if state.world is not None:
-            state.world = state.world.model_copy(
-                update={
-                    "npcs": tuple(
-                        npc.model_copy(
-                            update={
-                                "tags": npc.tags
-                                + (
-                                    WorldTag(
-                                        id=str(uuid5(NAMESPACE_URL, event + ":" + npc.id)),
-                                        label="Void of the " + manifestations[npc.id],
-                                        giver_entity=handler.model_dump_json()
-                                        if handler
-                                        else "gm:" + str(controller) + ":" + event,
-                                    ),
-                                )
-                            }
-                        )
-                        if npc.id in manifestations
-                        else npc
-                        for npc in state.world.npcs
-                    )
-                }
-            )
+        mark_npc_void(state, effect.npcs, event, handler, controller)
     else:
         if actor.kind == "external_pilot":
             from girlframe.engine.m3_harpy_physical import lock

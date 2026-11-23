@@ -151,7 +151,7 @@ def specifications(
         )
         if sheet is None or sheet.frame_scrapped or character != period.character_ids.get(str(uid)):
             continue
-        frame = rules.official(sheet.frame)
+        frame = sheet.frame
         if frame not in rules.PAGES:
             raise WorkflowError("Resolve the unsupported current Frame before Off-Duty rewards.")
         doctor_recorded = frame == "DOCTORDOCTOR MK. II" and uid in period.credit_recorded

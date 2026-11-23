@@ -1,0 +1,86 @@
+--- a/mission_lab.py
++++ b/mission_lab.py
+@@ -39,6 +39,7 @@
+ from girlframe.database.connection import create_database_engine
+ from girlframe.discord_adapter.config import BotPolicy
+ from girlframe.engine.rules_registry import Registry
++from girlframe.services.campaign_difficulty import review_facilitator
+ from girlframe.services.ledger import CampaignLedger
+ from girlframe.services.m3_access import load_registry
+ from girlframe.services.m3_missions import MissionService
+@@ -658,12 +659,13 @@
+             path = urlsplit(self.path).path
+             scene_route = DIRECTOR_ROUTE.fullmatch(path)
+             private_review = {"timeline", "activity-review", "handler-draft", "handler-need", "gm-work", "handler-native-work", "handler-hunt"}
+-            trial_access = ai_trial and selected == ai_trial.campaign and (
++            trial_access = ai_trial and selected == UUID(ai_trial.campaign).hex and (
+                 path in ("/api/activity/review-scenes", "/api/activity/ai-provider")
+                 or (scene_route and (self.command == "POST" or scene_route[2] in private_review))
+             )
+             identity = discord.resolve(
+-                self.headers.get("Authorization", ""), fresh=bool(trial_access)
++                self.headers.get("Authorization", ""),
++                fresh=bool(trial_access) or path == "/api/activity/ai-setup",
+             )
+             if selected == DEFAULT_CAMPAIGN:
+                 self.selected_session = self.session()
+@@ -686,6 +688,26 @@
+                 viewer,
+             )
+             return runtime
++
++        def ai_setup(self, campaign, viewer):
++            if campaign is default:
++                raise SignInError(HTTPStatus.NOT_FOUND, "AI setup requires a managed campaign.")
++            game = campaign.setup.game
++            campaign_id = game.store.campaign_id
++            configured = ai_trial is not None and campaign.reviewed_director is not None
++            with game.store.engine.connect() as connection:
++                game.authorize(connection, viewer, game=False)
++                facilitator = review_facilitator(
++                    connection, campaign_id, ai_trial.facilitator if configured else None
++                )
++                if viewer.user_id != (facilitator or campaign.setup.handler.user_id):
++                    raise WorkflowError("AI setup is private to the campaign facilitator.")
++            return {
++                "campaign_id": campaign_id,
++                "configured": configured,
++                "provider": self.ai_provider(campaign, viewer).status()
++                if configured and facilitator is not None else None,
++            }
+
+         def ai_provider(self, campaign, viewer):
+             if ai_trial is None or campaign.reviewed_director is None:
+@@ -862,6 +884,14 @@
+                     self.send_json(HTTPStatus.FORBIDDEN, {"error": str(error)})
+                 except ValueError:
+                     self.send_json(HTTPStatus.NOT_FOUND, {"error": "Unknown setup view."})
++            elif path == "/api/activity/ai-setup":
++                try:
++                    _, viewer = self.session()
++                    self.send_json(HTTPStatus.OK, self.ai_setup(campaign, viewer))
++                except SignInError as error:
++                    self.send_json(error.status, {"error": str(error)})
++                except WorkflowError:
++                    self.send_json(HTTPStatus.FORBIDDEN, {"error": "AI setup is unavailable."})
+             elif path == "/api/activity/ai-provider":
+                 try:
+                     _, viewer = self.session()
+--- a/index.html
++++ b/index.html
+@@ -1245,10 +1245,12 @@
+   }
+   else await refresh();
+   if (config.director_scene || config.campaign_setup) {
+-    const {mountDirectorDesk, mountActivityAITrial, openSheetPortrayal} = await import("/p2-desk.js");
++    const {mountDirectorDesk, mountActivityAISetup, mountActivityAITrial, openSheetPortrayal} = await import("/p2-desk.js");
++    const workbench = document.querySelector(".workbench");
+     ui.setPortrayal(() => openSheetPortrayal({activityFetch, scene:config.director_scene, kind:"pilot"}));
+-    mountDirectorDesk(document.querySelector(".workbench"), config.director_scene, activityFetch, config.activity_shadow);
+-    if (config.reviewed_ai_trial) mountActivityAITrial(document.querySelector(".workbench"), activityFetch);
++    mountDirectorDesk(workbench, config.director_scene, activityFetch, config.activity_shadow);
++    if (config.reviewed_ai_trial) mountActivityAITrial(workbench, activityFetch);
++    if (campaignSwitcher && campaignId !== "default") mountActivityAISetup(workbench, activityFetch);
+   }
+ }
+ start().then(() => {

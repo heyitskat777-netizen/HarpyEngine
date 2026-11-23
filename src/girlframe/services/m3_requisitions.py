@@ -14,8 +14,9 @@ from girlframe.engine.creation_catalog import CATALOG
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, ActorView
 from girlframe.engine.m3_actors import resolve
-from girlframe.engine.m3_assets import frame_capacity
+from girlframe.engine.m3_assets import can_replace_at_limit, counts_toward_limit, frame_capacity
 from girlframe.engine.m3_intracadre_marriage import available
+from girlframe.engine.m3_janus_storage import ids as stored_ids
 from girlframe.engine.m3_requisition_state import Installation, Receipt
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
@@ -146,11 +147,28 @@ class RequisitionService:
             self.game.authorize(c, viewer, game=False)
             state = load_state(c, self.store.campaign_id)
             actor = self._actor(c, state, viewer)
+            sheet = state.sheets[actor.ref.entity]
+            stored = stored_ids(state, actor.ref)
+            count = sum(
+                counts_toward_limit(sheet, item) for item in sheet.assets if item.family == "frame"
+            )
+            capacity = frame_capacity(sheet, state)
             return {
                 "actor": actor.ref.model_dump(mode="json"),
                 "source_sha256": actor.source_sha256,
                 "frame_instance": actor.frame_instance,
-                "frame_capacity": frame_capacity(state.sheets[actor.ref.entity], state),
+                "frame_capacity": capacity,
+                "asset_installment_price": 1,
+                "asset_count": count,
+                "replacement_options": [
+                    (item.id, item.name)
+                    for item in sheet.assets
+                    if item.family == "frame"
+                    and item.id not in stored
+                    and can_replace_at_limit(sheet, item)
+                ]
+                if count == capacity
+                else [],
                 "permissions": available(state, actor.ref),
                 "frame_assets": [
                     x.model_dump(mode="json") for x in actor.assets if x.family == "frame"
@@ -167,6 +185,13 @@ class RequisitionService:
                     for index, name in enumerate(book["assets"])
                 ],
             }
+
+    def activity_offer(self, viewer: GuildViewer) -> dict[str, Any]:
+        with self.store.engine.connect() as c:
+            Access(self.store).authorize(c, viewer, "economy")
+            self.game.unpaused(c)
+            self._safe(c, load_state(c, self.store.campaign_id), viewer.user_id)
+        return self.view(viewer)
 
     def _safe(self, c: Connection, state: GameState, owner: int) -> None:
         locks = t.m2["m2_locks"]

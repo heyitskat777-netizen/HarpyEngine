@@ -116,6 +116,10 @@ def prepare_keep(
         raise WorkflowError(
             "Surgery removed this optional Keep Your Head roll; no ability is restored."
         )
+    from girlframe.engine.m3_harpy_visions import blocked as visions_blocked
+
+    if visions_blocked(state, state.sheets[actor.entity], "keep_your_head"):
+        raise WorkflowError("This Girl’s Play requires Foundation reconditioning.")
     updated, value = prepare_threshold(c, game, prepared.source_work, state)
     if _child(c, game, value.id) is not None:
         raise WorkflowError("Resume the actual saved resistance Play; do not roll a second one.")
@@ -141,8 +145,37 @@ def prepare_keep(
     scene = game.scene(c, channel)
     if viewer.user_id not in scene["participants"] or updated.handler not in scene["participants"]:
         raise WorkflowError("The original Girl and actual Handler must join this bound scene.")
+    if body.get("reason") == "harpy_gaze":
+        from girlframe.services.m3_harpy_gaze import void_audience
+
+        meta["private_audience"] = void_audience(game, c, updated, body)
+    if body.get("reason") == "npc_scientist_void":
+        from girlframe.services.m3_npc_care import void_audience as experiment_audience
+
+        meta["private_audience"] = experiment_audience(game, c, updated, body)
+    if body.get("reason") == "harpy_voidspace_carry":
+        from girlframe.services.m3_harpy_voidspace import audience as passage_audience
+
+        meta["private_audience"] = passage_audience(game, c, updated, body)
+    if body.get("reason") == "voidspace_invasion_gain":
+        from girlframe.services.m3_voidspace_invasion import audience as invasion_audience
+
+        meta["private_audience"] = invasion_audience(game, c, updated, body)
     if prepared.parent:
         parent = game.action(c, prepared.parent)
+        if body.get("reason") in (
+            "gorgon_frame_contact_consequence",
+            "incubus_conditioning",
+            "parasite_infection",
+            "mother_memetic_hazard",
+        ):
+            from girlframe.services.m3_gorgon_play import GorgonPlayService
+
+            original = GorgonPlayService(game).source(c, parent)
+            audience = original.get("private_audience", ())
+            if not {viewer.user_id, updated.handler} <= set(audience):
+                raise WorkflowError("Recover the actual private audience for this resistance")
+            meta["private_audience"] = audience
         if parent["channel_id"] != str(channel) or not any(
             x["kind"]
             in (
@@ -154,6 +187,13 @@ def prepare_keep(
                 "mockingbird_void_threshold",
                 "mockingbird_sex_void_threshold",
                 "janus_void_threshold",
+                "gorgon_hallucinations_void",
+                "gorgon_contact_frame_void",
+                "gorgon_shell_threshold",
+                "gorgon_conditioning_threshold",
+                "gorgon_unreal_threshold",
+                "gorgon_infection_threshold",
+                "gorgon_hazard_threshold",
             )
             and x["actor_id"] == actor.entity
             and json.loads(x["body_json"]).get("work_id") == row["id"]
@@ -195,8 +235,50 @@ def authorize_keep(
         )
     ):
         raise WorkflowError("Recover the exact pending source of this resistance.")
+    if body.get("reason") in (
+        "gorgon_frame_contact_consequence",
+        "incubus_conditioning",
+        "parasite_infection",
+        "mother_memetic_hazard",
+    ):
+        from girlframe.services.m3_gorgon_play import GorgonPlayService
+
+        parent = game.action(c, body["source_action"])
+        official = GorgonPlayService(game).source(c, parent).get("private_audience")
+        if not official or any(
+            action["data"].get(key) != official for key in ("private_audience", "participants")
+        ):
+            raise WorkflowError("Recover the original contact's private resistance audience")
+    if body.get("reason") == "harpy_gaze":
+        from girlframe.services.m3_harpy_gaze import void_audience
+
+        audience = void_audience(game, c, state, body)
+        if any(action["data"].get(k) != audience for k in ("private_audience", "participants")):
+            raise WorkflowError("Recover the original gaze’s private Void resistance audience")
+    if body.get("reason") == "npc_scientist_void":
+        from girlframe.services.m3_npc_care import void_audience as experiment_audience
+
+        audience = experiment_audience(game, c, state, body)
+        if any(action["data"].get(k) != audience for k in ("private_audience", "participants")):
+            raise WorkflowError("Recover the original experiment’s private Void resistance")
+    if body.get("reason") == "harpy_voidspace_carry":
+        from girlframe.services.m3_harpy_voidspace import audience as passage_audience
+
+        audience = passage_audience(game, c, state, body)
+        if any(action["data"].get(k) != audience for k in ("private_audience", "participants")):
+            raise WorkflowError("Recover the original Harpy passage’s private Void resistance")
+    if body.get("reason") == "voidspace_invasion_gain":
+        from girlframe.services.m3_voidspace_invasion import audience as invasion_audience
+
+        audience = invasion_audience(game, c, state, body)
+        if any(action["data"].get(k) != audience for k in ("private_audience", "participants")):
+            raise WorkflowError("Recover the original Cadre member’s private Void resistance")
     if blocked_play(state.sheets[action["actor_id"]], "keep_your_head") is not None:
         raise WorkflowError("The actual original Girl no longer has this optional rolled ability.")
+    from girlframe.engine.m3_harpy_visions import blocked as visions_blocked
+
+    if visions_blocked(state, state.sheets[action["actor_id"]], "keep_your_head"):
+        raise WorkflowError("This Girl’s Play requires Foundation reconditioning.")
 
 
 def _ended_handler_cast(

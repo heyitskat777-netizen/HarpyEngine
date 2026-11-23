@@ -35,9 +35,7 @@ def ready(store, tmp_path, monkeypatch):
         store, girl="ALPHA", frame="THE ENFORCER", other_girl="ALPHA"
     )
     own = creation.get(OTHER)
-    draft = selected("ALPHA", "JANUS-B").model_copy(
-        update={"shared_tokens": own.draft.shared_tokens}
-    )
+    draft = selected("ALPHA", "JANUS").model_copy(update={"shared_tokens": own.draft.shared_tokens})
     creation.save(OTHER, str(uuid4()), own.revision, store.draft(OTHER)["revision"], draft)
     incoming = next(x for x in review.get(OTHER).sheet.bonds if not x.outgoing)
     own = creation.get(OTHER)
@@ -133,7 +131,8 @@ def begin_counter(game, worker, gateway, parent, choice, faces):
         await opened.response.defer(ephemeral=True)
         await open_alpha_choice(opened, game, choice["id"])
         form = opened.edit_original_response.call_args.kwargs["view"]
-        assert form.values["gain"] == ("0",)
+        assert "gain" not in form.values
+        assert "gain" not in {field.key for field in form.fields}
         assert "brutalize" in dict(next(x for x in form.fields if x.key == "play").options)
         assert not await form.interaction_check(interaction(2))
         form.values.update(play=("brutalize",), heat=("1",), context=prepared.context)

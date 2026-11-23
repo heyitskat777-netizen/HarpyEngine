@@ -83,7 +83,7 @@ def make_plan(store, key="plan"):
 
 def draft(name="Synthetic A", notes="PRIVATE_CANARY"):
     return DraftInput(
-        callsign=name, girl_playbook="MOCKINGBIRD", frame_playbook="JANUS-B", notes=notes
+        callsign=name, girl_playbook="MOCKINGBIRD", frame_playbook="JANUS", notes=notes
     )
 
 
@@ -258,6 +258,7 @@ def test_staff_overwrites_and_persistent_controls_are_explicit(store):
         assert overrides[guild.me].view_channel is True
         assert entry.is_persistent()
         assert {item.custom_id for item in entry.children} == {
+            "harpyengine:start:v1",
             "harpyengine:join:v1",
             "harpyengine:draft:v1",
             "harpyengine:sheet:v1",
@@ -273,6 +274,7 @@ def test_bot_registers_setup_join_character_sheet_when_store_enabled(store):
             cmds = bot.tree.get_commands(guild=discord.Object(id=200))
             assert {cmd.name for cmd in cmds} == {
                 "help",
+                "start",
                 "campaign_status",
                 "health",
                 "server",
@@ -288,6 +290,7 @@ def test_bot_registers_setup_join_character_sheet_when_store_enabled(store):
                 "mission",
                 "facilitator",
                 "shelving",
+                "session-zero",
             }
             assert not bot.tree.get_commands()
 

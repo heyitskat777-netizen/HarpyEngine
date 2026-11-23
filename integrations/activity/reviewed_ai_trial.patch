@@ -1,0 +1,146 @@
+--- a/mission_lab.py
++++ b/mission_lab.py
+@@ -9,7 +9,7 @@
+ import subprocess
+ import sys
+ from contextlib import nullcontext
+-from dataclasses import dataclass, field
++from dataclasses import dataclass, field, replace
+ from hashlib import sha256
+ from http import HTTPStatus
+ from http.cookies import CookieError, SimpleCookie
+@@ -50,7 +50,8 @@
+ from campaign_registry import DEFAULT_CAMPAIGN, CampaignBinding, CampaignRegistry
+ from handler_playbook import HANDLER_PLAY_STEPS
+ from mission_desk import MissionDesk
+-from p2_scene import SESSION_ZERO_READS, SESSION_ZERO_WRITES, local_fixture_director, manual_campaign_setup
++from activity_ai_trial import ActivityAITrial
++from p2_scene import P2Scene, SESSION_ZERO_READS, SESSION_ZERO_WRITES, local_fixture_director, manual_campaign_setup
+ from player_setup import SCENE, PlayerSetup, seed_players, seed_roster
+ from private_battlefield import PRIVATE_BATTLEFIELD_CHANNEL, PrivateBattlefield
+
+@@ -251,6 +252,7 @@
+     env.pop("GIRLFRAME_ENGINE_SANDBOX", None)
+     env.pop("GIRLFRAME_ACTIVITY_SETUP_BOT_TOKEN", None)
+     env.pop("GIRLFRAME_ACTIVITY_DISCORD_CLIENT_SECRET", None)
++    env.pop("OPENAI_API_KEY", None)
+     subprocess.run(
+         [
+             sys.executable,
+@@ -313,6 +315,7 @@
+     enrollment_lock: Lock = field(default_factory=Lock)
+     presence_lock: Lock = field(default_factory=Lock)
+     presence: dict[str, float] = field(default_factory=dict)
++    reviewed_director: P2Scene | None = None
+
+
+ # Reviewed for the private Activity against official printed pp. 79–81 and 86–89.
+@@ -508,6 +511,7 @@
+         if bound_roster
+         else None
+     )
++    ai_trial = ActivityAITrial.from_environment() if discord and catalog else None
+     runtime_lock = Lock()
+     runtimes = {}
+     workers = []
+@@ -545,6 +549,8 @@
+                 )
+                 arena = PrivateBattlefield(managed, players)
+                 runtime = ActivityCampaign(managed, players, arena)
++                if ai_trial and ai_trial.campaign == managed.store.campaign_id:
++                    runtime.reviewed_director = ai_trial.adapter(players.game, opening_channel=SCENE)
+                 workers.append(players.scene_plays.start_worker())
+                 runtimes[binding.id] = runtime
+                 return runtime
+@@ -644,7 +650,16 @@
+                 if selected != DEFAULT_CAMPAIGN:
+                     raise SignInError(HTTPStatus.FORBIDDEN, "Campaign unavailable.")
+                 return default
+-            identity = discord.resolve(self.headers.get("Authorization", ""))
++            path = urlsplit(self.path).path
++            scene_route = DIRECTOR_ROUTE.fullmatch(path)
++            private_review = {"timeline", "activity-review", "handler-draft", "handler-need", "gm-work", "handler-native-work", "handler-hunt"}
++            trial_access = ai_trial and selected == ai_trial.campaign and (
++                path == "/api/activity/review-scenes"
++                or (scene_route and (self.command == "POST" or scene_route[2] in private_review))
++            )
++            identity = discord.resolve(
++                self.headers.get("Authorization", ""), fresh=bool(trial_access)
++            )
+             if selected == DEFAULT_CAMPAIGN:
+                 self.selected_session = self.session()
+                 if identity.role == "role_tester":
+@@ -666,6 +681,11 @@
+                 viewer,
+             )
+             return runtime
++
++        def review_viewer(self, campaign, viewer):
++            if campaign.reviewed_director and ai_trial and viewer.user_id == ai_trial.facilitator:
++                return replace(viewer, is_administrator=True)
++            return viewer
+
+         def admit(self, runtime, viewer, *, legacy=False):
+             store = runtime.service.store
+@@ -816,6 +836,7 @@
+                         "bound_roster": bound_roster,
+                         "director_scene": director_scene if director else None,
+                         "activity_shadow": p2_shadow_readiness,
++                        "reviewed_ai_trial": ai_trial is not None,
+                         "campaign_setup": catalog is not None,
+                         "campaign_switcher": catalog is not None,
+                         "tester_role_gate": bool(
+@@ -835,10 +856,17 @@
+                     self.send_json(HTTPStatus.FORBIDDEN, {"error": str(error)})
+                 except ValueError:
+                     self.send_json(HTTPStatus.NOT_FOUND, {"error": "Unknown setup view."})
+-            elif director and (match := DIRECTOR_ROUTE.fullmatch(path)):
++            elif path == "/api/activity/review-scenes":
+                 try:
+                     _, viewer = self.session()
+-                    value = director.read(viewer, match[1], match[2], match[3])
++                    adapter = campaign.reviewed_director
++                    self.send_json(HTTPStatus.OK, adapter.trial_scenes(viewer) if adapter else {"scenes": []})
++                except (SignInError, WorkflowError):
++                    self.send_json(HTTPStatus.FORBIDDEN, {"error": "Scene discovery is unavailable."})
++            elif (adapter := campaign.reviewed_director or (director if campaign is default else None)) and (match := DIRECTOR_ROUTE.fullmatch(path)):
++                try:
++                    _, viewer = self.session()
++                    value = adapter.read(self.review_viewer(campaign, viewer), match[1], match[2], match[3])
+                     self.send_json(HTTPStatus.OK, value)
+                 except SignInError as error:
+                     self.send_json(error.status, {"error": str(error)})
+@@ -1050,13 +1078,17 @@
+                 except WorkflowError as error:
+                     self.send_json(HTTPStatus.CONFLICT, {"error": str(error)})
+                 return
+-            if director and (match := DIRECTOR_ROUTE.fullmatch(path)) and match[3] is None:
++            adapter = campaign.reviewed_director or (director if campaign is default else None)
++            if (match := DIRECTOR_ROUTE.fullmatch(path)) and match[3] is None:
++                if adapter is None:
++                    self.send_json(HTTPStatus.NOT_FOUND, {"error": "Scene work is unavailable."})
++                    return
+                 try:
+                     key = self.headers.get("Idempotency-Key", "")
+                     if not KEY.fullmatch(key):
+                         raise ValueError
+                     data = self.read_object(96_000 if match[2] == "opening-save" else 16384)
+-                    value = director.write(session[1], key, match[1], match[2], data)
++                    value = adapter.write(self.review_viewer(campaign, session[1]), key, match[1], match[2], data)
+                     self.send_json(HTTPStatus.OK, value)
+                 except (TypeError, ValueError, UnicodeError):
+                     self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Invalid scene command."})
+--- a/index.html
++++ b/index.html
+@@ -1245,9 +1245,10 @@
+   }
+   else await refresh();
+   if (config.director_scene || config.campaign_setup) {
+-    const {mountDirectorDesk, openSheetPortrayal} = await import("/p2-desk.js");
++    const {mountDirectorDesk, mountActivityAITrial, openSheetPortrayal} = await import("/p2-desk.js");
+     ui.setPortrayal(() => openSheetPortrayal({activityFetch, scene:config.director_scene, kind:"pilot"}));
+     mountDirectorDesk(document.querySelector(".workbench"), config.director_scene, activityFetch, config.activity_shadow);
++    if (config.reviewed_ai_trial) mountActivityAITrial(document.querySelector(".workbench"), activityFetch);
+   }
+ }
+ start().then(() => {

@@ -124,7 +124,57 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
         return Field("flag", label, YES)
 
     fields = []
-    if kind == "tag_window":
+    if kind == "gorgon_tag_selection":
+        available = decision["gorgon_tags"]
+        maximum = min(len(available), 25)
+        fields = [
+            entities(
+                "options", "Relevant Gorgon Tags adding +1 each", available, 0, maximum, False
+            ),
+            entities(
+                "denied", "Relevant Gorgon Tags subtracting 1 each", available, 0, maximum, False
+            ),
+            text("text", "Why do the selected Tags apply?", False),
+        ]
+    elif kind == "gorgon_tag_removal":
+        fields = [
+            entities(
+                "options",
+                "Remove one Gorgon Tag or keep them all",
+                decision["gorgon_tags"],
+                0,
+                1,
+                False,
+            )
+        ]
+    elif kind == "advocate_empathy":
+        from girlframe.services.m3_advocate_empathy import REWARDS
+
+        fields = [
+            menu("options", "Choose an Advocate response or pass", REWARDS),
+            text("text", "Your actual apology or compliment", False),
+            text("fields.tag", "Matching Tag for a compliment", False),
+        ]
+    elif kind == "mistress_conditioning":
+        fields = [
+            menu(
+                "options", "Apply the −2 Insidious Conditioning modifier or pass", ("apply", "pass")
+            )
+        ]
+    elif kind == "mistress_honey_offer":
+        from girlframe.services.m3_mistress_rewards import REWARDS as HONEY_REWARDS
+
+        fields = [
+            menu("options", "Offer one or two rewards, or pass", (*HONEY_REWARDS, "pass"), 1, 2),
+            text("fields.praise", "Praise or sympathy", False),
+            text("fields.pet_name", "Pet name", False),
+            text("fields.tag", "Optional Tag that matches the pet name", False),
+        ]
+    elif kind == "mistress_honey_reply":
+        fields = [flags("Accept this reward?")]
+    elif kind == "mistress_honey_rejection":
+        fields = [menu("options", "Respond to the rejection", ("smile", "punish"))]
+    elif kind == "tag_window":
         partner_tags = decision.get("gender_man_tags", ())
         options: tuple[str, ...] = (
             ("pass", "tag", "gender_man") if partner_tags else ("pass", "tag")
@@ -183,6 +233,39 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
             flags("Develop my Control Ritual?"),
             text("text", "Describe my Control Ritual (up to 120 characters)", False),
         ]
+    elif kind == "trainer_control_freak":
+        fields = [
+            menu("options", "Give the Trainer a Tag or pass", ("give_tag", "pass")),
+            text("text", "Tag label (up to 120 characters)", False),
+        ]
+    elif kind == "trainer_speak_answer":
+        fields = [text("text", "Your own answer to Speak")]
+    elif kind == "trainer_sit":
+        fields = [text("text", "Describe your character sitting")]
+    elif kind == "trainer_heel_response":
+        fields = [text("text", "Describe your response to Heel")]
+    elif kind == "trainer_protect_response":
+        fields = [text("text", "Describe taking position beside the original person")]
+    elif kind == "trainer_speak_heard":
+        fields = [Field("flag", "Confirm you heard this answer", (("yes", "I heard it"),))]
+    elif kind == "trainer_rough_offer":
+        fields = [
+            Field("flag", "Private scene invitation", (("yes", "Send invitation"), ("no", "Pass")))
+        ]
+    elif kind == "trainer_rough_reply":
+        fields = [Field("flag", "Your consent", (("yes", "Accept"), ("no", "Decline")))]
+    elif kind == "trainer_rough_heard":
+        fields = [Field("flag", "Your counterpart's reply", (("yes", "I read the reply"),))]
+    elif kind == "insurgent_surveillance":
+        fields = [
+            flags("Did the observed act demonstrate a lapse in Foundation loyalty?"),
+            text("text", "What you actually witnessed (if yes)", False),
+        ]
+    elif kind == "insurgent_reveal_sympathy":
+        fields = [
+            flags("Do you make your sympathies known to this original Handler?"),
+            text("text", "What you actually tell the Handler (if yes)", False),
+        ]
     elif kind == "tag_resolution" and decision.get("cute_uniform_tag"):
         fields = [
             menu("options", "Your uniform response", ("reject", "embrace", "embrace_asset")),
@@ -217,6 +300,23 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
         ]
     elif kind == "gender_animal_tag":
         fields = [text("text", "Give the non-Animal partner an ordinary Tag")]
+    elif kind == "tag_resolution" and "revolutionary_replacement" in decision:
+        fields = [
+            menu(
+                "options", "Choose what the Revolutionary does with that Tag", ("embrace", "reject")
+            )
+        ]
+        if decision["revolutionary_replacement"]:
+            fields.append(
+                entities(
+                    "denied",
+                    "Original Identity to replace if embracing",
+                    decision["revolutionary_replacement"],
+                    0,
+                    1,
+                    False,
+                )
+            )
     elif kind == "tag_resolution":
         fields = [
             menu("options", "Resolve the repeated marked Tag", ("embrace", "reject")),
@@ -232,7 +332,7 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
     elif kind == "paired_tag":
         fields = [menu("options", "Make this the Paired Identity?", ("yes", "no"))]
     elif kind == "actor_keep":
-        harpy_mode = bool(own and own.get("harpy"))
+        harpy_mode = bool(own and own.get("harpy") and not decision.get("harpy_mask"))
         traits = tuple("beautiful" if x == "sexy" else x for x in TRAITS) if harpy_mode else TRAITS
         automatic = set(keep_automatic(own, learned_rule=decision.get("learned_keep_rule")))
         retained = set(own.get("retained_plays", ())) if own else set()
@@ -254,6 +354,26 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
             fields = [menu("options", "Choose one positive trait", traits)]
         else:
             fields = [text("text", "Take a Tag: write its label")]
+        if decision.get("harpy_sparrows"):
+            fields.append(
+                Field(
+                    "fields.harpy_sparrows",
+                    "Choose an extra Sparrows effect",
+                    decision["harpy_sparrows"],
+                    0,
+                    required=False,
+                )
+            )
+        if decision.get("harpy_mask"):
+            fields.append(
+                Field(
+                    "fields.seems_human",
+                    "A Human Mask",
+                    (("yes", "I seem perfectly human"),),
+                    0,
+                    required=False,
+                )
+            )
         if decision.get("cute_uniforms"):
             fields.append(
                 Field(
@@ -275,6 +395,35 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
                 fields.append(
                     Field("fields." + key, label, (("yes", "Yes"),), minimum=0, required=False)
                 )
+        if decision.get("soldier_surgery") and own is not None:
+            fields.append(
+                Field(
+                    "fields.soldier_do_not_think",
+                    "Also choose a Soldier trait",
+                    (("yes", "I don't think about it"),),
+                    0,
+                    required=False,
+                )
+            )
+            if level == "high":
+                identities = own["identities"]
+                replacements = (
+                    (("embrace", "Embrace into an empty slot"),)
+                    if len(identities) < 2
+                    else tuple(
+                        (x["id"], "Replace " + x["name"]) for x in identities if not x["protected"]
+                    )
+                )
+                if replacements:
+                    fields.append(
+                        Field(
+                            "fields.soldier_embrace",
+                            "Immediately embrace your new Tag",
+                            replacements,
+                            0,
+                            required=False,
+                        )
+                    )
     elif kind == "handler_keep":
         fields = [flags("Is it enough?"), text("text", "Explain the outcome")]
     elif kind == "harpy_sensor_answers":
@@ -406,7 +555,11 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
                         "disobey",
                         *(("consume_follow",) if decision.get("consume_order_tags") else ()),
                     )
-                    if x != "disobey" or decision.get("am_can_refuse", True)
+                    if x != "disobey"
+                    or (
+                        decision.get("am_can_refuse", True)
+                        and decision.get("order_can_refuse", True)
+                    )
                 ),
             )
         ]
@@ -462,6 +615,18 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
         ]
     elif kind == "actor_tag_agreement":
         fields = [flags("Do you agree to this saved Tag proposal?")]
+    elif kind == "prodigy_confidence_roll":
+        fields = [
+            Field(
+                "options",
+                "Keep the saved result or spend a notch for an 8–10",
+                (("pass", "Keep the saved result"),)
+                + tuple(
+                    (notch, f"Spend confidence notch {index}")
+                    for index, notch in enumerate(decision[kind], start=1)
+                ),
+            )
+        ]
     if decision.get("actor_basic") and kind == "tag_window":
         fields.append(
             Field(
@@ -950,8 +1115,19 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
             interaction, PunishmentService(game.store), decision["body"]["work_id"]
         )
         return
-    if decision["kind"] in ("escape_play", "order_disobey", "beneath_response_play"):
+    if decision["kind"] in (
+        "escape_play",
+        "order_disobey",
+        "beneath_response_play",
+        "trainer_flirt_play",
+    ):
         await open_play(interaction, game, parent=decision)
+        return
+    if decision["kind"] == "trainer_hunt_play":
+        from girlframe.discord_adapter.m3_battle import open_declaration
+        from girlframe.services.m3_battle import BattleService
+
+        await open_declaration(interaction, BattleService(game.store), parent=decision)
         return
     fields = choice_fields(decision)
     if not fields:
@@ -991,6 +1167,19 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         "Choose only your own response. Nothing is submitted until Confirm. "
         "Safety pause remains available."
     )
+    if decision["kind"] == "mistress_honey_reply":
+        from girlframe.services.m3_mistress_rewards import LABELS
+
+        reward = decision["body"]
+        instructions += "\n" + LABELS[reward["reward"]]
+        if reward.get("account"):
+            instructions += "\n" + clean(reward["account"])
+        if reward.get("tag"):
+            instructions += "\nMatching Tag " + clean(reward["tag"])
+    if decision.get("conditioning_text"):
+        instructions += "\n" + clean(decision["conditioning_text"])
+    if decision["kind"] == "prodigy_confidence_roll":
+        instructions += f"\nSaved total after Tags: {decision['body']['original_total']}."
     if decision["kind"] == "tag_window" and decision.get("gender_man_tags"):
         instructions += (
             "\nThe partner-Tag option uses this roll's one Tag proposal "
@@ -1026,7 +1215,9 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
             "\nTag proposals and their relevance are shared with all scene participants. "
             "Pass without selecting a role or modifier."
         )
-        if decision["kind"] == "tag_resolution":
+        if decision["kind"] == "tag_resolution" and "revolutionary_replacement" in decision:
+            instructions += " The original marker chooses. The Revolutionary owns any later action."
+        elif decision["kind"] == "tag_resolution":
             instructions += (
                 " Embracing replaces this copy's sole Identity. "
                 if decision.get("copy_identity_cap") == 1
@@ -1080,6 +1271,8 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         )
     if decision.get("npc_order_issuer"):
         instructions += "\nActual NPC issuer: " + clean(decision["npc_order_issuer"])
+    if decision.get("heard_order_voice"):
+        instructions += "\nYou hear " + clean(decision["heard_order_voice"]) + " give the order."
     if decision.get("order_text"):
         instructions += "\nDirect order: " + clean(decision["order_text"])
     if decision.get("context") and decision["kind"] != "harpy_sensor_answers":
@@ -1113,6 +1306,24 @@ async def open_play(
                 viewer_from_interaction(interaction)
             )
         )
+        extra_roles = [x for x in roles["actors"] if x["rules"] == "ancillary"]
+        if extra_roles:
+            from girlframe.engine.m3_ancillary import RULE, STARTERS
+            from girlframe.services.m3_access import load_registry
+
+            try:
+                registry = await threaded(load_registry)
+            except WorkflowError:
+                registry = None
+            extra_roles = [
+                x
+                for x in extra_roles
+                if registry is not None
+                and "ancillary" in registry.enabled_modules
+                and registry.entry(RULE).verified
+                and x["girl"] in STARTERS
+                and registry.entry(STARTERS[x["girl"]].rule).verified
+            ]
         actual = [
             x
             for x in roles["actors"]
@@ -1120,6 +1331,7 @@ async def open_play(
             or x.get("girl") == "harpy"
             and x.get("heat") is not None
         ]
+        actual.extend(extra_roles)
         if parent is not None:
             if parent["kind"] not in (
                 "battle_counter_play",
@@ -1216,6 +1428,8 @@ async def open_play(
             "unassuming_doll",
         )
     )
+    if parent and parent["kind"] in ("harpy_gaze_keep", "harpy_private_keep"):
+        plays = ("keep_your_head",)
     if parent and parent["kind"] == "am_code_prepare":
         plays = ("am_just_code",)
     if parent and parent["kind"] == "am_prepare":
@@ -1374,16 +1588,24 @@ async def open_play(
                 )
 
         sleeping_doll_targets = {x["id"]: x for x in await threaded(actual_doll_observers)}
+    gentle_target = (
+        parent["body"]["target"] if parent and parent["kind"] == "trainer_flirt_play" else None
+    )
+    social_targets = tuple(
+        (str(x), scene["labels"][str(x)]) for x in scene["pilots"] if x != viewer.user_id
+    ) + tuple(
+        (key, ("Harpy: " if key.startswith("harpy:") else "NPC: ") + row["label"])
+        for key, row in npc_flirt_targets.items()
+    )
+    if gentle_target is not None:
+        plays = ("flirt",)
+        social_targets = ((str(gentle_target), scene["labels"][str(gentle_target)]),)
     fields = [
         menu("play", "Choose a Play", plays),
         Field(
             "target",
             "Target for Flirt or Put Someone Beneath You",
-            tuple((str(x), scene["labels"][str(x)]) for x in scene["pilots"] if x != viewer.user_id)
-            + tuple(
-                (key, ("Harpy: " if key.startswith("harpy:") else "NPC: ") + row["label"])
-                for key, row in npc_flirt_targets.items()
-            ),
+            social_targets,
             0,
             1,
             required=False,
@@ -1732,7 +1954,9 @@ async def open_play(
             gain=int(one(values, "gain") or "0"),
             pair_share=int(one(values, "pair_share") or "0"),
             disposable_heat=cast(Literal[0, 3, 4], int(one(values, "disposable_heat") or "0")),
-            target=(parent["body"].get("target") if play == "flirt" else None)
+            target=gentle_target
+            if gentle_target is not None
+            else (parent["body"].get("target") if play == "flirt" else None)
             if parent and parent["kind"] == "bonded_rejection_child"
             else int(parent["body"]["target"]["entity"])
             if parent
@@ -1758,6 +1982,8 @@ async def open_play(
             or (
                 parent["detail"]["danger"]
                 if parent and parent["kind"] == "wyvern_child"
+                else parent["body"]["source_work"]
+                if parent and parent["kind"] in ("harpy_gaze_keep", "harpy_private_keep")
                 else parent["body"]["source_work"]
                 if parent and parent["kind"] in ("wyvern_replacement", "wyvern_pin_response")
                 else parent["body"]["work"]
@@ -2131,6 +2357,12 @@ class StatePages(discord.ui.View):
                 "Official " + part + " pronouns: " + value
                 for part, value in sheet["official_pronouns"].items()
             )
+        if sheet.get("princess_optional_pronouns"):
+            lines.append(
+                "While you are the Ace this Off-Duty, you may use "
+                + sheet["princess_optional_pronouns"]
+                + "."
+            )
         if sheet.get("consume_runtime"):
             lines.append("Hunger: " + sheet["consume_runtime"]["hunger"])
             if sheet["consume_runtime"].get("appearance"):
@@ -2161,7 +2393,14 @@ class StatePages(discord.ui.View):
             "Official allegation: " + x["allegation"] for x in sheet.get("official_allegations", ())
         ]
         if await threaded(lambda: self.game.helpless_status(viewer_from_interaction(interaction))):
-            lines.append("Helpless: recover through /character recover after a moment alone.")
+            if await threaded(
+                lambda: self.game.helpless_status(
+                    viewer_from_interaction(interaction), ordinary_recovery=True
+                )
+            ):
+                lines.append("Helpless: recover through /character recover after a moment alone.")
+            else:
+                lines.append("Helpless from Conditioning until the original trainer is disobeyed.")
         obligations = await threaded(
             lambda: self.game.own_obligations(viewer_from_interaction(interaction))
         )
@@ -2743,6 +2982,15 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         purpose=[
             app_commands.Choice(name="Ordinary order", value="ordinary"),
             app_commands.Choice(name="Dose Up (typed cocktail order)", value="dose_up"),
+            app_commands.Choice(name="Conditioning Phrase (Speak)", value="trainer_speak"),
+            app_commands.Choice(name="Conditioning Phrase (Sit)", value="trainer_sit"),
+            app_commands.Choice(name="Conditioning Phrase (Heel)", value="trainer_heel"),
+            app_commands.Choice(name="Conditioning Phrase (Hunt)", value="trainer_hunt"),
+            app_commands.Choice(name="Conditioning Phrase (Protect)", value="trainer_protect"),
+            app_commands.Choice(name="Conditioning Phrase (Play Gentle)", value="trainer_gentle"),
+            app_commands.Choice(name="Conditioning Phrase (Play Rough)", value="trainer_rough"),
+            app_commands.Choice(name="Grant leave after Sit", value="trainer_leave"),
+            app_commands.Choice(name="Echoes of Old Command", value="harpy_echoes"),
         ]
     )
     async def order(
@@ -2751,23 +2999,112 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         instruction: str,
         as_npc: bool = False,
         purpose: app_commands.Choice[str] | None = None,
+        phrase_target: discord.Member | None = None,
     ) -> None:
         typed_dose = purpose is not None and purpose.value == "dose_up"
-        if as_npc and typed_dose:
+        use = purpose.value if purpose is not None else "ordinary"
+        phrase = {
+            "trainer_speak": "speak",
+            "trainer_sit": "sit",
+            "trainer_heel": "heel",
+            "trainer_hunt": "hunt",
+            "trainer_protect": "protect",
+            "trainer_gentle": "play_gentle",
+            "trainer_rough": "play_rough",
+        }.get(use)
+        echoes = purpose is not None and purpose.value == "harpy_echoes"
+        if as_npc and (typed_dose or phrase or use == "trainer_leave"):
             await reply(
                 interaction,
-                "UNSUPPORTED_RULE: typed Dose Up Orders currently use original native issuers.",
+                "This typed order requires an original native issuer.",
             )
             return
-        if as_npc:
+        if use == "trainer_leave":
+            from girlframe.services.m3_trainer_phrases import grant_leave
+
+            def release_sit() -> str:
+                grant_leave(
+                    game,
+                    viewer_from_interaction(interaction),
+                    str(interaction.id),
+                    interaction.channel_id or 0,
+                    member.id,
+                )
+                return "Leave granted on the original Sit order."
+
+            await private_operation(interaction, release_sit)
+            return
+        if as_npc or echoes:
             from girlframe.discord_adapter.m3_npc_orders import open_order
             from girlframe.services.m3_npc_orders import NpcOrderService
 
             await interaction.response.defer(ephemeral=True)
             try:
-                await open_order(interaction, NpcOrderService(game), member.id, instruction)
+                await open_order(
+                    interaction,
+                    NpcOrderService(game),
+                    member.id,
+                    instruction,
+                    origin_kind="harpy_echoes" if echoes else "broken",
+                )
             except WorkflowError as error:
                 await reply(interaction, str(error))
+            return
+        if phrase in ("hunt", "protect"):
+            from girlframe.services.m3_battle import BattleService
+
+            channel = interaction.channel_id or 0
+            await interaction.response.defer(ephemeral=True)
+            try:
+                preview = await threaded(
+                    lambda: BattleService(game.store).preview(
+                        viewer_from_interaction(interaction), channel
+                    )
+                )
+            except WorkflowError as error:
+                await reply(interaction, str(error))
+                return
+            hunt = phrase == "hunt"
+            target_kinds = (
+                ("pilot", "gorgon", "external_pilot")
+                if hunt
+                else ("pilot", "npc", "handler", "external_pilot")
+            )
+            targets = tuple(
+                (actor["token"], actor["name"])
+                for actor in preview["actors"]
+                if actor["ref"]["kind"] in target_kinds
+                and not (
+                    actor["ref"]["kind"] == "pilot" and actor["ref"]["entity"] == str(member.id)
+                )
+                and (not hunt or actor["assets"])
+            )
+            if not targets:
+                await reply(interaction, "Join a visible target for this Conditioning Phrase.")
+                return
+
+            async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+                await threaded(
+                    lambda: game.issue_order(
+                        viewer_from_interaction(current),
+                        str(current.id),
+                        channel,
+                        member.id,
+                        instruction,
+                        conditioning_phrase=phrase,
+                        phrase_actor=values["target"][0],
+                    )
+                )
+                return f"{phrase.title()} order recorded for the original Girl."
+
+            form = NativeForm(
+                interaction.user.id,
+                f"Issue {phrase.title()}",
+                "Choose the original scene actor.",
+                [Field("target", "Actual actor", targets)],
+                submit,
+            )
+            await reply(interaction, form.text(), form)
             return
         await private_operation(
             interaction,
@@ -2780,6 +3117,8 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
                     member.id,
                     instruction,
                     dose_up=typed_dose,
+                    conditioning_phrase=phrase,
+                    phrase_target=phrase_target.id if phrase_target is not None else None,
                 )["action_id"]
                 + "`."
             ),
@@ -2905,7 +3244,9 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         try:
             game.gate()
             if not await threaded(
-                lambda: game.helpless_status(viewer_from_interaction(interaction))
+                lambda: game.helpless_status(
+                    viewer_from_interaction(interaction), ordinary_recovery=True
+                )
             ):
                 raise WorkflowError("No current Helpless condition needs recovery.")
             sheet = await threaded(lambda: game.sheet(viewer_from_interaction(interaction)))

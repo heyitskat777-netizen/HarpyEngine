@@ -692,38 +692,11 @@ class TrackerService:
 
             _ordinary_scene_idle(c, self.game)
             state = load_state(c, self.store.campaign_id)
-            source, item = prove_installation(self.game, c, state, tracker)
-            current(self.game, c, state, source.id)
-            cast = _cast(self.game, c, state, channel)
-            cell = location(self.game, c, state, item)
-            if (
-                state.revision != revision
-                or viewer.user_id != int(source.handler.entity)
-                or not rules.attached(state, tracker)
-                or cell is None
-                or not any(
-                    x.actor == item.actor and x.controller == int(item.actor.entity)
-                    for x in cast.roles
-                )
-                or physical_cell(state, source.handler, profiles(c, self.store.campaign_id)) != cell
-            ):
-                raise WorkflowError(
-                    "SOURCE_TRACKER_CONTACT_REQUIRED: establish actual Handler "
-                    "co-presence and original target scene"
-                )
-            if play == "tracker_voyeur":
-                observed = prove_moment(self.game, c, state, moment or "")
-                if (
-                    observed.actor != item.actor
-                    or observed.vessel != item.vessel
-                    or observed.cast != cast
-                    or observed.cell != cell
-                ):
-                    raise WorkflowError(
-                        "Use the same original body's actual current private fictional moment"
-                    )
-            elif play != "tracker_intercept" or moment is not None:
-                raise WorkflowError("Choose one actually granted tracker Play")
+            if state.revision != revision:
+                raise WorkflowError("Reopen the original current tracker source")
+            source, item, cast, cell = self._play_source(
+                c, state, viewer, tracker, play, channel, moment
+            )
             event, identity = str(uuid4()), str(uuid4())
             state.handler_plays.append(
                 HandlerPlay(
@@ -770,6 +743,72 @@ class TrackerService:
             dict(revision=revision, tracker=tracker, play=play, channel=channel, moment=moment),
             operation,
         )
+
+    def _play_source(self, c, state, viewer, tracker, play, channel, moment):
+        source, item = prove_installation(self.game, c, state, tracker)
+        current(self.game, c, state, source.id)
+        cast = _cast(self.game, c, state, channel)
+        cell = location(self.game, c, state, item)
+        if (
+            viewer.user_id != int(source.handler.entity)
+            or not rules.attached(state, tracker)
+            or cell is None
+            or not any(
+                x.actor == item.actor and x.controller == int(item.actor.entity)
+                for x in cast.roles
+            )
+            or physical_cell(state, source.handler, profiles(c, self.store.campaign_id)) != cell
+        ):
+            raise WorkflowError(
+                "SOURCE_TRACKER_CONTACT_REQUIRED: establish actual Handler "
+                "co-presence and original target scene"
+            )
+        if play == "tracker_voyeur":
+            observed = prove_moment(self.game, c, state, moment or "")
+            if (
+                observed.actor != item.actor
+                or observed.vessel != item.vessel
+                or observed.cast != cast
+                or observed.cell != cell
+            ):
+                raise WorkflowError(
+                    "Use the same original body's actual current private fictional moment"
+                )
+        elif play != "tracker_intercept" or moment is not None:
+            raise WorkflowError("Choose one actually granted tracker Play")
+        return source, item, cast, cell
+
+    def play_options(self, viewer: GuildViewer, channel: int) -> dict[str, Any]:
+        from girlframe.services.m3_handler_plays import _ordinary_scene_idle
+
+        with self.store.engine.connect() as c:
+            self._access(c, viewer)
+            _ordinary_scene_idle(c, self.game)
+            state = load_state(c, self.store.campaign_id)
+            rows = []
+            for acquisition in rules.acquisitions(state):
+                if acquisition.handler.entity != str(viewer.user_id):
+                    continue
+                for implant in acquisition.implants:
+                    try:
+                        _, item, cast, cell = self._play_source(
+                            c, state, viewer, implant.id, "tracker_intercept", channel, None
+                        )
+                    except (ValueError, WorkflowError):
+                        continue
+                    label = state.sheets[item.actor.entity].callsign
+                    rows.append(dict(play="tracker_intercept", tracker=item.id, moment=None, label=label))
+                    for moment in rules.records(state, rules.Moment):
+                        if (
+                            moment.actor == item.actor and moment.vessel == item.vessel
+                            and moment.cast == cast and moment.cell == cell
+                        ):
+                            prove_moment(self.game, c, state, moment.id)
+                            rows.append(dict(
+                                play="tracker_voyeur", tracker=item.id, moment=moment.id,
+                                label=label,
+                            ))
+            return dict(revision=state.revision, sources=rows)
 
     def remove(
         self,

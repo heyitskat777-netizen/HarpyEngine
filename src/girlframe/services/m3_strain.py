@@ -5,7 +5,7 @@ no generic resolver for the resulting event/endgame work or period start gate.
 """
 
 import json
-from typing import Any
+from typing import Any, Literal
 from uuid import uuid4
 
 import sqlalchemy as sa
@@ -13,6 +13,7 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_strain as rules
+from girlframe.engine import m3_void_rift as rift_rules
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_missions import Mission
@@ -32,7 +33,9 @@ class StrainService:
         self.periods, self.store, self.game = periods, periods.store, periods.game
         self.missions = periods.missions
         self.dice = dice if dice is not None else OsD6()
-        self.rng_source = "test_injected" if dice is not None else "os"
+        self.rng_source: Literal["os", "test_injected"] = (
+            "test_injected" if dice is not None else "os"
+        )
 
     def _authorize(self, c: Connection, viewer: GuildViewer) -> None:
         self.missions.access.authorize(c, viewer, "strain")
@@ -90,6 +93,7 @@ class StrainService:
             "off_duty_strain_start",
             "strain_roll",
             "strain_endgame",
+            "strain_endgame_effect",
         ):
             raise WorkflowError("Unknown Strain work.")
         return dict(row)
@@ -153,6 +157,42 @@ class StrainService:
             },
             event,
         )
+
+    def save_unrolled_levels(
+        self, c: Connection, requests: tuple[Request, ...], event: str
+    ) -> None:
+        for request in requests:
+            row = self._row(c, request.id)
+            saved = json.loads(row["body_json"])
+            if row["state"] != "pending" or saved.get("stage") != "die" or request.kind != "roll":
+                raise WorkflowError("Reopen the actual unrolled Strain request")
+            self._save(c, row, event, saved | {"severity": request.severity})
+
+    def _rift_work(
+        self,
+        c: Connection,
+        root: dict[str, Any],
+        owner: int,
+        arrivals: tuple[tuple[str, rift_rules.Arrival], ...],
+        event: str,
+    ) -> None:
+        for rift, arrival in arrivals:
+            related(
+                c,
+                self.store,
+                root,
+                arrival.work,
+                owner,
+                owner,
+                "strain_event",
+                dict(
+                    rule_id=rift_rules.RULE,
+                    source_pdf=rift_rules.PAGE,
+                    source_work=rift,
+                    trigger_roll=arrival.roll,
+                ),
+                event,
+            )
 
     def prepare(
         self,
@@ -313,6 +353,20 @@ class StrainService:
             )
             for request in state.strain.requests:
                 self._request(c, root, request, event)
+            from girlframe.engine.m3_named_strain import tables as named_tables
+
+            for table in named_tables(state):
+                related(
+                    c,
+                    self.store,
+                    root,
+                    period_id + ":named-strain:" + table.id,
+                    viewer.user_id,
+                    viewer.user_id,
+                    "named_strain_roll",
+                    dict(track=table.id, stage="die", source_pdf=192),
+                    event,
+                )
             for sheet in scrapped:
                 related(
                     c,
@@ -377,12 +431,18 @@ class StrainService:
                 raise WorkflowError("This die is already saved; resume its column choice.")
             state.strain = rules.roll(state.strain, identity, self.dice.roll_d6())
             saved = next(x for x in state.strain.events if x.id == identity)
+            event_id = str(uuid4())
+            from girlframe.engine.m3_rebel_funding import bind_roll
+
+            bind_roll(state, saved, event_id)
+            arrivals = rift_rules.upcoming(state, saved.id, saved.period_id, event_id)
             event = self.game.event(
                 c,
                 viewer.user_id,
                 key,
                 "m3.strain_die_saved",
                 state,
+                event_id=event_id,
                 work_id=identity,
                 rng_source=self.rng_source,
             )
@@ -393,6 +453,7 @@ class StrainService:
                 json.loads(row["body_json"])
                 | {"stage": "column", "face": saved.face, "rng_source": self.rng_source},
             )
+            self._rift_work(c, row, viewer.user_id, arrivals, event)
             return {
                 "id": identity,
                 "revision": revision + 1,
@@ -429,6 +490,9 @@ class StrainService:
                 raise WorkflowError("Initialize Strain before choosing an event.")
             old_requests = {x.id for x in state.strain.requests}
             cascade = False
+            event_id = str(uuid4())
+            rift_duration = None
+            custom_applied = False
             if endgame:
                 request = next((x for x in state.strain.requests if x.id == identity), None)
                 if request and request.track == "rebellion":
@@ -448,7 +512,30 @@ class StrainService:
             else:
                 if faction is not None:
                     raise WorkflowError("An ordinary event does not select an Endgame group")
-                state.strain = rules.choose(state.strain, identity, option)
+                from girlframe.engine import m3_custom_strain as custom
+
+                original_roll = next((x for x in state.strain.events if x.id == identity), None)
+                history = custom.occurrences(state)
+                slot = (
+                    custom.replacement(state, original_roll, 1 if option == 1 else 2)
+                    if original_roll is not None and type(option) is int and option in (1, 2)
+                    else None
+                )
+                state.strain = rules.choose(
+                    state.strain,
+                    identity,
+                    option,
+                    use_printed=slot is None,
+                    replaced_rolls=frozenset(
+                        x.source_work for x in history if x.replaces and x.source_work is not None
+                    ),
+                    extra_events=sum(
+                        original_roll is not None
+                        and x.track == original_roll.track
+                        and not x.replaces
+                        for x in history
+                    ),
+                )
                 selected = next(x for x in state.strain.events if x.id == identity)
                 selected_rule = selected.rule_id
                 assert selected_rule is not None
@@ -457,26 +544,75 @@ class StrainService:
                     rules.PAGES[(selected.track, selected.severity)],
                 )
                 cascade = selected.severity == "high" and selected.face == 6 and option == 2
+                if slot is not None:
+                    from girlframe.engine.m3_rebel_funding import influences
+
+                    if any(x.id == identity for x in influences(state)):
+                        raise WorkflowError(
+                            "The funded roll needs a printed event with its original participants"
+                        )
+                    from girlframe.engine.m3_handler_consequences import active_handler
+                    from girlframe.services.m3_custom_strain import prove_slot
+
+                    self.missions.access.authorize(c, viewer, "world")
+                    prove_slot(c, self, slot)
+                    author = active_handler(state)
+                    if author is None:
+                        raise WorkflowError("Recover the actual Handler applying this custom event")
+                    custom.apply(
+                        state,
+                        custom.Occurrence(
+                            id=event_id,
+                            mode="replace_slot",
+                            actor=author,
+                            controller=viewer.user_id,
+                            period=selected.period_id,
+                            track=selected.track,
+                            source_work=identity,
+                            replaces=slot.id,
+                            target_controller=slot.target_controller,
+                            design=slot.design,
+                        ),
+                    )
+                    if any(x.replaces == slot.id for x in history):
+                        state.strain = rules.copy(
+                            state.strain, repeated=state.strain.repeated | {selected.track}
+                        )
+                    rule_id, source_pdf, cascade, custom_applied = (
+                        custom.RULE,
+                        custom.PAGE,
+                        False,
+                        True,
+                    )
+                if rule_id == rift_rules.RULE:
+                    rift_duration = self.dice.roll_d6()
+                    rift_rules.open_rift(state, selected, event_id, rift_duration, self.rng_source)
             event = self.game.event(
                 c,
                 viewer.user_id,
                 key,
                 "m3.strain_option_saved",
                 state,
+                event_id=event_id,
                 work_id=identity,
                 rule_id=rule_id,
             )
+            effect_body = {"rule_id": rule_id, "source_pdf": source_pdf, "source_work": identity}
+            roll_body = {"rule_id": rule_id, "source_pdf": source_pdf}
+            if rift_duration is not None:
+                roll_body |= {"rift_duration": rift_duration, "rift_rng_source": self.rng_source}
+                effect_body |= roll_body
             self._save(
                 c,
                 row,
                 event,
-                json.loads(row["body_json"]) | {"rule_id": rule_id, "source_pdf": source_pdf},
+                json.loads(row["body_json"]) | roll_body,
                 resolved=True,
             )
             for request in state.strain.requests:
                 if request.id not in old_requests:
                     self._request(c, row, request, event)
-            if not cascade:
+            if not cascade and not custom_applied:
                 related(
                     c,
                     self.store,
@@ -485,7 +621,7 @@ class StrainService:
                     viewer.user_id,
                     viewer.user_id,
                     "strain_endgame_effect" if endgame else "strain_event",
-                    {"rule_id": rule_id, "source_pdf": source_pdf, "source_work": identity},
+                    effect_body,
                     event,
                 )
             return {
@@ -493,7 +629,7 @@ class StrainService:
                 "state": "resolved",
                 "game_revision": state.revision,
                 "rule_id": rule_id,
-                "effects_pending": True,
+                "effects_pending": not custom_applied,
             }
 
         return self.missions._write(
@@ -599,10 +735,25 @@ class StrainService:
                             + " + ".join(sources),
                         )
                     )
+            custom_columns = {}
+            pressure_side = None
+            if row["kind"] == "strain_roll" and state.strain is not None:
+                from girlframe.engine.m3_custom_strain import replacement
+                from girlframe.engine.m3_rebel_funding import influences
+
+                pressure_side = next((x.side for x in influences(state) if x.id == identity), None)
+
+                saved_roll = next((x for x in state.strain.events if x.id == identity), None)
+                if saved_roll is not None and saved_roll.column is None and pressure_side is None:
+                    for column in (1, 2):
+                        if slot := replacement(state, saved_roll, column):
+                            custom_columns[str(column)] = slot.design.title
             return {
                 "budget_death_exemptions": exemptions,
                 **{k: row[k] for k in ("id", "revision", "kind", "state", "off_duty_id")},
                 "body": json.loads(row["body_json"]),
+                **({"custom_columns": custom_columns} if custom_columns else {}),
+                **({"pressure_side": pressure_side} if pressure_side == "foundation" else {}),
                 "game_revision": state.revision,
                 "period_revision": period.revision,
                 "canonical_facts": {

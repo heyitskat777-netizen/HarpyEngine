@@ -32,8 +32,8 @@ All engine imports below use the Python namespace `girlframe`.
 
 Omitted/null notes preserve existing notes; an empty string explicitly clears
 them. Imported creation choices replace the editable fields shown in the preview.
-Keep the Frame's selected server label (`JANUS-B`) in profile; use the catalog's
-`frame_rules_aliases` only to look up official JANUS rule metadata.
+Use the printed Frame name in the profile and catalog. The importer can
+reopen older JANUS drafts under the printed name.
 
 Never add account/campaign ownership, revisions, source fingerprints/tokens,
 starting-Bond IDs, accepted agreements, permissions, Heat, Status, damage or
@@ -105,6 +105,7 @@ For the bundled discord.py controls, provide a guild-scoped `character` group
 
 ```python
 from girlframe.discord_adapter.character_transfer import register_character_transfer
+
 register_character_transfer(tree, guild_id, transfer)
 # Synchronize using your application's normal guild-command startup path.
 ```

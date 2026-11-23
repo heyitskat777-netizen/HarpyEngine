@@ -1,1 +1,1 @@
-"""Bounded synthetic reference summaries; no external model transport or effects."""
+"""Bounded model proposal contracts and provider adapters."""

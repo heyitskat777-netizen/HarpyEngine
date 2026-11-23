@@ -103,7 +103,7 @@ def respond(svc, identity, action="allow", *, viewer=ADMIN, key=None, data=None,
 
 
 def admitted_cockpit(store, tmp_path, monkeypatch):
-    svc, game, identity = locked(store, frame="JANUS-B")
+    svc, game, identity = locked(store, frame="JANUS")
     approved(store, game, tmp_path, monkeypatch, extra=(cores.CORE,))
     service = JanusService(game)
     setup = service.request(PLAYER, "actual-cockpit-core-request", OTHER.user_id)["id"]
@@ -486,7 +486,7 @@ def test_current_guest_needs_own_frame_consent_and_voice_selects_actual_occupant
 
 
 def test_original_janus_without_admitted_core_cannot_use_handler_frame_voice(ledger):
-    svc, game, identity = locked(ledger, frame="JANUS-B")
+    svc, game, identity = locked(ledger, frame="JANUS")
     before = state(game)
     assert not svc.frame(ADMIN, identity)["can_voice"]
     with pytest.raises(WorkflowError, match="CORE_SETUP_REQUIRED"):

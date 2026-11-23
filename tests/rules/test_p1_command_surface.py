@@ -1,12 +1,12 @@
 """Actual offline SDK registration, including the shared P1 native source entry points."""
 
 import asyncio
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import discord
 from test_ledger import ledger as ledger
 
-from girlframe.discord_adapter.bot import ReadOnlyDiscordBot
+from girlframe.discord_adapter.bot import RETIRED_GUILD_COMMANDS, ReadOnlyDiscordBot
 from girlframe.services.read_only_bot import ReadOnlyBotService
 
 
@@ -17,6 +17,7 @@ def test_actual_bot_registers_complete_bounded_private_command_surface(ledger):
         ) as bot:
             guild = discord.Object(id=ledger.policy.guild_id)
             commands = bot.tree.get_commands(guild=guild)
+            assert {command.name for command in commands} <= RETIRED_GUILD_COMMANDS
             campaign = bot.tree.get_command("campaign", guild=guild)
             girl = bot.tree.get_command("girl", guild=guild)
             assert campaign.get_command("mentor").parameters
@@ -40,5 +41,48 @@ def test_actual_bot_registers_complete_bounded_private_command_surface(ledger):
                     assert len(command.commands) <= 25
                 command.to_dict(bot.tree)
             assert not bot.intents.message_content and not bot.intents.members
+
+    asyncio.run(run())
+
+
+def test_activity_worker_removes_only_retired_guild_slash_commands(ledger, monkeypatch):
+    async def run():
+        async with ReadOnlyDiscordBot(
+            ledger.policy,
+            ReadOnlyBotService(ledger.policy, MagicMock()),
+            None,
+            ledger,
+            activity_only=True,
+        ) as bot:
+            guild = discord.Object(id=ledger.policy.guild_id)
+            assert bot.tree.get_commands(guild=guild) == []
+            assert bot.tree.get_commands() == []
+            assert bot.game is not None
+            monkeypatch.setattr(
+                bot,
+                "application_info",
+                AsyncMock(
+                    return_value=MagicMock(
+                        id=ledger.policy.application_id,
+                    )
+                ),
+            )
+            monkeypatch.setattr(bot, "fetch_guild", AsyncMock())
+            legacy = MagicMock(name="legacy", type=discord.AppCommandType.chat_input)
+            legacy.name, legacy.delete = "play", AsyncMock()
+            activity = MagicMock(type=discord.AppCommandType.chat_input)
+            activity.name, activity.delete = "activity-campaign", AsyncMock()
+            unrelated = MagicMock(type=discord.AppCommandType.user)
+            unrelated.name, unrelated.delete = "play", AsyncMock()
+            fetch = AsyncMock(return_value=[legacy, activity, unrelated])
+            sync = AsyncMock()
+            monkeypatch.setattr(bot.tree, "fetch_commands", fetch)
+            monkeypatch.setattr(bot.tree, "sync", sync)
+            await bot.setup_hook()
+            fetch.assert_awaited_once_with(guild=guild)
+            legacy.delete.assert_awaited_once()
+            activity.delete.assert_not_awaited()
+            unrelated.delete.assert_not_awaited()
+            sync.assert_not_awaited()
 
     asyncio.run(run())

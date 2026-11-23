@@ -196,7 +196,7 @@ def test_transport_requires_actual_existing_custody_and_does_not_imply_conversio
         kind="harpy",
         cell=(1, 1),
         girl="MOCKINGBIRD",
-        frame="JANUS-B",
+        frame="JANUS",
         assets=(),
         controller=1,
     )

@@ -23,6 +23,8 @@ from girlframe.engine.m3_actor_bonds import current_ref, depth, is_helpless
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_physical_state import CockpitAction
 from girlframe.engine.m3_world_state import Npc
+from girlframe.services.inbox import InboxService
+from girlframe.services.m2_game import GameService
 from girlframe.services.m3_consume import ConsumeService
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_physical import PhysicalService
@@ -273,6 +275,48 @@ def test_actual_eat_printed_branches_costs_custody_escape_bond_and_true_kill(
         assert rules.forgotten(state(game), target)
         assert rules.hunger(state(game), actor) == "Quiet"
     assert game.inspect(PLAYER, action)["state"] == "complete"
+
+
+def test_drive_keeps_original_kill_when_owner_declines_erasure_after_reopen(
+    ledger, tmp_path, monkeypatch
+):
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch)
+    before = state(game).sheets["2"].permissions
+    acquire(controls, rules.DRIVE)
+    assert state(game).sheets["2"].permissions == before - 2
+    target = npc_target(game)
+    cockpit(game, "pilot")
+    action = roll(game, worker, gateway, target=target, faces=(6, 6))
+    assert not any(x["kind"] == "consume_erase" for x in game.choices(PLAYER))
+    choose(game, PLAYER, "consume_eat", "kill")
+    receipt = game.inspect(PLAYER, action)["receipt"]
+
+    reopened = GameService(ledger, dice=game.dice)
+    pending = next(x for x in reopened.choices(PLAYER) if x["kind"] == "consume_erase")
+    inbox = InboxService(ledger)
+    assert any(x.identity == pending["id"] for x in inbox.items(PLAYER))
+    assert not any(x.identity == pending["id"] for x in inbox.items(OTHER))
+    saved = state(reopened)
+    assert not next(x for x in saved.world.npcs if x.id == target.entity).alive
+    answer = ChoiceAnswer(options=("remember",), text="Leave the original person in memory")
+    with pytest.raises(WorkflowError):
+        reopened.respond(OTHER, "wrong-owner-erasure", pending["id"], pending["revision"], answer)
+    with pytest.raises(WorkflowError):
+        reopened.respond(PLAYER, "stale-erasure", pending["id"], pending["revision"] - 1, answer)
+    assert state(reopened) == saved
+    args = (PLAYER, "keep-memory", pending["id"], pending["revision"], answer)
+    result = reopened.respond(*args)
+    assert reopened.respond(*args) == result
+    with pytest.raises(WorkflowError):
+        reopened.respond(PLAYER, "duplicate-erasure", pending["id"], pending["revision"], answer)
+    actual = state(reopened)
+    assert not next(x for x in actual.world.npcs if x.id == target.entity).alive
+    assert not rules.forgotten(actual, target)
+    assert not rules.records(actual, rules.Erasure)
+    assert rules.hunger(actual, current_ref(actual, PLAYER.user_id)) == "Quiet"
+    assert reopened.inspect(PLAYER, action)["state"] == "complete"
+    assert reopened.inspect(PLAYER, action)["receipt"] == receipt
+    assert game.dice.calls == 1
 
 
 def test_real_repeated_link_reaches_ravenous_without_repeated_heat_then_food_roll_uses_four(

@@ -1,6 +1,6 @@
 """Original Handler persona and source-bound, human-authored starting choices."""
 
-from typing import Literal
+from typing import Literal, NamedTuple
 
 from pydantic import Field, model_validator
 
@@ -19,6 +19,49 @@ PLAYBOOKS: tuple[Playbook, ...] = (
     "Trainer",
     "Advocate",
 )
+HandlerPersonality = Literal["dry", "warm", "methodical", "restless", "guarded", "plainspoken"]
+
+
+class Personality(NamedTuple):
+    label: str
+    prompt: str
+    affinities: tuple[Playbook, ...]
+
+
+PERSONALITIES: dict[HandlerPersonality, Personality] = {
+    "dry": Personality(
+        "Dry",
+        "Make one understated observation. Let humor ease the pressure after giving her a choice.",
+        ("Scientist", "Frantic"),
+    ),
+    "warm": Personality(
+        "Warm",
+        "Notice one personal detail and offer something specific she can comfortably decline.",
+        ("Mistress", "Advocate"),
+    ),
+    "methodical": Personality(
+        "Methodical",
+        "Name what you observed and one useful next step. Give her time to try it or answer.",
+        ("Scientist", "Trainer"),
+    ),
+    "restless": Personality(
+        "Restless",
+        "Make a short, concrete offer early. Ask who owns the job before you take it on.",
+        ("Frantic", "Dogrunner"),
+    ),
+    "guarded": Personality(
+        "Guarded",
+        "Commit to one thing. Keep sensitive matters for an agreed private exchange.",
+        ("Insurgent", "Advocate"),
+    ),
+    "plainspoken": Personality(
+        "Plainspoken",
+        "Name the difficult part and your own stake in it. Leave a clear choice with the Girl.",
+        ("Dogrunner", "Advocate"),
+    ),
+}
+
+
 GearKind = Literal["stash", "bedroom", "title", "studio", "outfits", "weapon", "pet"]
 GEAR = (
     ("stash", "Recreational stash"),
@@ -43,6 +86,38 @@ HISTORY_LABELS: dict[str, tuple[str, ...]] = {
     "Advocate": ("Unwanted attention", "Personal recruitment request", "Prior online friendship"),
 }
 TRAINER_PHRASES = {0: ("sit", "heel"), 1: ("hunt",), 2: ("speak", "play_gentle")}
+HANDLER_NOTE_FIELDS = (
+    ("voice", "Personal voice"),
+    ("priority", "What do you protect first?"),
+    ("intervention", "When do you step in or wait?"),
+    ("repair", "How do you repair trust after a mistake?"),
+    ("concern", "Current concern"),
+    ("obligation", "An obligation outside the current mission"),
+    ("promise", "Your view of a relationship or promise"),
+    ("personal_habit", "A small habit you fall back on Off-Duty"),
+    ("relationship_tension", "What feels awkward to ask of someone?"),
+    ("off_duty_cue", "Off-Duty cue (a word or short phrase)"),
+)
+
+
+class HandlerNotes(Model):
+    """The Handler's own roleplay prompts, separate from established facts."""
+
+    personality: HandlerPersonality | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    voice: str = Field(default="", max_length=400, exclude_if=lambda value: not value)
+    priority: str = Field(default="", max_length=400, exclude_if=lambda value: not value)
+    intervention: str = Field(default="", max_length=400, exclude_if=lambda value: not value)
+    repair: str = Field(default="", max_length=400, exclude_if=lambda value: not value)
+    concern: str = Field(default="", max_length=400, exclude_if=lambda value: not value)
+    obligation: str = Field(default="", max_length=400, exclude_if=lambda value: not value)
+    promise: str = Field(default="", max_length=400, exclude_if=lambda value: not value)
+    personal_habit: str = Field(default="", max_length=400, exclude_if=lambda value: not value)
+    relationship_tension: str = Field(
+        default="", max_length=400, exclude_if=lambda value: not value
+    )
+    off_duty_cue: str = Field(default="", max_length=80, exclude_if=lambda value: not value)
 
 
 class GearDetail(Model):
@@ -87,6 +162,7 @@ class Draft(Model):
     surveilled: tuple[str, ...] = Field(default=(), max_length=2)
     sympathizer: str | None = None
     npc_starting: tuple[NpcStarting, ...] = Field(default=(), max_length=3)
+    notes: HandlerNotes | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def distinct_choices(self) -> "Draft":
@@ -171,6 +247,16 @@ class Conditioning(Model):
     source_event: str
 
 
+class BookChange(Model):
+    id: str
+    award: str
+    event: str
+    playbook: Playbook
+    retained: str
+    native_rule: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    retained_advancement: bool = Field(default=False, exclude_if=lambda value: not value)
+
+
 class HandlerPersona(Model):
     id: str = Field(min_length=1)
     owner: Snowflake
@@ -179,3 +265,8 @@ class HandlerPersona(Model):
     source_event: str = Field(min_length=1)
     conditioning: tuple[Conditioning, ...] = ()
     sticky_dogs: tuple[ActorRef, ...] = ()
+    book_change: BookChange | None = Field(default=None, exclude_if=lambda value: value is None)
+
+    @property
+    def playbook(self) -> Playbook | None:
+        return self.book_change.playbook if self.book_change else self.draft.playbook

@@ -306,6 +306,7 @@ class OperationService:
         def operation(c: Connection) -> dict[str, Any]:
             self.game.unpaused(c)
             action = self.game.action(c, identity)
+            self.game.scene_unpaused(c, action["scene_id"])
             state, value = source(c, self.game, action["data"].get("virus_purge", ""))
             held(self.game, c, value)
             _authority(c, self.game, state, value)

@@ -120,6 +120,19 @@ def frame_position(
     converted = converted_frame_owner(state, owner, instance)
     if converted is not None and converted != owner:
         return frame_position(state, converted, instance, fallback=fallback)
+    if owner.kind == "pilot":
+        from girlframe.engine.m3_berserk_frame import active as active_berserk
+
+        berserk = active_berserk(state, owner, instance)
+        if berserk is not None and state.world is not None:
+            if any(
+                x.state == "offstage"
+                and x.actor.kind == "gorgon"
+                and x.actor.entity == berserk.design.id
+                for x in state.harpy_travels
+            ):
+                return None
+            return next((x.cell for x in state.world.gorgons if x.id == berserk.design.id), None)
     if owner.kind == "gorgon" and any(
         x.state == "offstage" and x.actor == owner for x in state.harpy_travels
     ):
@@ -370,6 +383,19 @@ def resolve(
                     ).hexdigest()
                 }
             )
+    from girlframe.engine.m3_harpy_eagle import held as held_by_harpy
+
+    enclosed_cockpit = held_by_harpy(state, ref) if ref.kind == "pilot" else None
+    if enclosed_cockpit is not None:
+        actual = actual.model_copy(
+            update=dict(
+                cell=None, inside_frame=True, piloting=False,
+                occupied_frame_instance=enclosed_cockpit.frame,
+                offstage_source=enclosed_cockpit.event,
+                custody="harpy:" + enclosed_cockpit.harpy.entity,
+            )
+        )
+
     from girlframe.engine.m3_consume import InternalCustody
     from girlframe.engine.m3_consume import records as consumption_records
 
@@ -598,7 +624,10 @@ def _resolve(
         None,
     )
     handler_cell = None
-    if ref.kind == "handler" and journey is None and handler_position is not None:
+    from girlframe.engine.m3_void_leave import away as handler_leave
+
+    away = handler_leave(state, ref) if ref.kind == "handler" else None
+    if ref.kind == "handler" and journey is None and handler_position is not None and away is None:
         recorded = json.loads(handler_position["cell"])
         if recorded is not None:
             if (
@@ -625,7 +654,7 @@ def _resolve(
             alive=janus.alive,
             rules="external_pilot",
             girl="harpy",
-            frame="JANUS-B" if janus.attached or janus.linked else None,
+            frame="JANUS" if janus.attached or janus.linked else None,
             frame_instance=janus.frame_instance if janus.attached or janus.linked else None,
             heat=janus.heat,
             assets=resource_view,
@@ -681,8 +710,17 @@ def _resolve(
         )
         placement = next((x for x in state.placements if x.actor == ref), None)
         same_frame = placement is not None and placement.frame_instance == frame_instance
+        from girlframe.engine.m3_berserk_frame import threats as berserk_threats
         from girlframe.engine.m3_handler_conversion import frame_shutdown
 
+        berserk_subsumed = bool(
+            placement is not None
+            and placement.subsumed
+            and any(
+                x.activated and x.owner == ref and x.frame == placement.frame_instance
+                for x in berserk_threats(state)
+            )
+        )
         shutdown = frame_shutdown(state, ref, frame_instance)
         cell = placement.girl_cell if placement else None
         occupied_instance = None
@@ -754,12 +792,15 @@ def _resolve(
                 placement.mode == "piloting"
                 and placement.occupied_frame_owner is None
                 and not placement.incapacitated
+                and not berserk_subsumed
                 and not sheet.frame_scrapped
                 and not shutdown
             )
             if placement and same_frame
             else None,
             occupied_frame_instance=occupied_instance,
+            subsumed=True if berserk_subsumed else None,
+            vitals_active=False if berserk_subsumed else None,
             custody="supervised_visit:" + journey.id
             if journey is not None
             else (placement.custody.kind + ":" + placement.custody.entity)
@@ -813,6 +854,7 @@ def _resolve(
                 alive=True,
                 rules="handler_girl",
                 cell=None if passengers else handler_cell,
+                offstage_source=away.departed if away else None,
                 custody="supervised_visit:" + journey.id if journey is not None else None,
                 heat=state.handler_heat,
                 identities=identities(context.identities),
@@ -866,6 +908,7 @@ def _resolve(
             alive=True,
             rules="handler",
             cell=handler_cell,
+            offstage_source=away.departed if away else None,
             custody="supervised_visit:" + journey.id if journey is not None else None,
             heat=None,
             source_sha256=hashlib.sha256(
@@ -996,6 +1039,32 @@ def _resolve(
         pilot = next((x for x in world.pilots if x.id == ref.entity), None)
         if pilot is None or (require_alive and not pilot.alive):
             raise ValueError("Choose a living actual external Pilot")
+        if ref.entity.startswith("ancillary:"):
+            from girlframe.engine.m3_ancillary import find
+
+            auxiliary = find(state, ref)
+            if (
+                auxiliary is None
+                or auxiliary.controller != pilot.controller
+                or auxiliary.draft.book != pilot.girl
+            ):
+                raise ValueError("Recover the actual original Ancillary character")
+            return ActorView(
+                ref=ref,
+                controller=pilot.controller,
+                label=pilot.name,
+                alive=pilot.alive,
+                rules="ancillary",
+                girl=pilot.girl,
+                heat=auxiliary.heat,
+                identities=identities(auxiliary.identities),
+                assets=assets(pilot.assets),
+                cell=None if journey else pilot.cell,
+                custody=pilot.custody,
+                source_sha256=hashlib.sha256(
+                    (fingerprint(pilot) + fingerprint(auxiliary)).encode()
+                ).hexdigest(),
+            )
         native = next((x for x in state.native_harpies if x.id == ref.entity), None)
         if native is not None:
             from girlframe.engine.m3_harpy_defeat import harpy as actual_harpy

@@ -9,24 +9,64 @@ from pydantic import ValidationError
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
+from girlframe.engine import m3_gorgon_frame_contact as frame_contact
+from girlframe.engine import m3_grow_unreal as unreal
+from girlframe.engine import m3_growth as growth
+from girlframe.engine import m3_hallucinations as hallucinations
+from girlframe.engine import m3_incubus_conditioning as incubus
+from girlframe.engine import m3_jackdaw as jackdaw
+from girlframe.engine import m3_mother_hazard as hazard
+from girlframe.engine import m3_mother_sprite as mother_sprite
+from girlframe.engine import m3_parasite as parasite
+from girlframe.engine import m3_parasite_infection as infection
+from girlframe.engine import m3_sentinel_shell as shell
 from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput
-from girlframe.engine.m3_actor_state import ActorRef, SceneCast
+from girlframe.engine.m3_actor_state import ActorRef, ActorView, SceneCast
 from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_gorgon_play_state import Declaration
+from girlframe.engine.m3_gorgon_type_tags import RULES as TYPE_TAG_RULES
+from girlframe.engine.m3_gorgon_type_tags import TYPES as TAG_TYPES
+from girlframe.engine.m3_gorgon_type_tags import present as tag_target_present
 from girlframe.engine.m3_handler_consequences import active_handler
+from girlframe.engine.m3_sentinel import RULE as corrupt_rule
+from girlframe.engine.m3_sentinel import already_corrupted
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
+from girlframe.services.m3_gorgon_contact import PLAY as contact_play
+from girlframe.services.m3_gorgon_contact import PLAYS as contact_plays
+from girlframe.services.m3_gorgon_contact import RULE as contact_rule
+from girlframe.services.m3_gorgon_contact import eligible as contact_eligible
 from girlframe.services.m3_medical import MedicalService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
-RULES = {
+RULES: dict[str, str] = {
     "attack": "gorgon.gorgon.attack",
+    contact_play: contact_rule,
+    frame_contact.PLAY: frame_contact.RULE,
     "collateral": "gorgon.gorgon.collateral-damage",
     "warp": "gorgon.gorgon.warp",
+    "corrupt": corrupt_rule,
+    shell.PLAY: shell.RULE,
+    incubus.PLAY: incubus.RULE,
+    hazard.PLAY: hazard.RULE,
+    shell.RELEASE: shell.RULE,
+    unreal.PLAY: unreal.RULE,
+    infection.PLAY: infection.RULE,
+    "growth_adapt": growth.RULE,
+    "growth_regrow": growth.RULE,
+    "mother_sprite": mother_sprite.RULE,
+    "jackdaw_jam": jackdaw.RULE,
+    "jackdaw_catatonia": jackdaw.RULE,
+    **dict.fromkeys(hallucinations.PLAYS, hallucinations.RULE),
+    **dict.fromkeys(parasite.PLAYS, parasite.RULE),
+    **{str(kind): rule for kind, rule in TYPE_TAG_RULES.items()},
 }
+
+
+PRIVATE_PLAYS = (*contact_plays, incubus.PLAY, infection.PLAY, hazard.PLAY)
 
 
 class GorgonPlayService:
@@ -44,7 +84,9 @@ class GorgonPlayService:
             assert approval is not None
             if action["data"]["gorgon_play"]["registry"] != approval.registry_sha256:
                 raise WorkflowError("M3_POLICY_CHANGED: recover the original Gorgon Play approval")
-            if viewer.user_id not in action["data"]["participants"]:
+            if viewer.user_id not in (
+                action["data"].get("private_audience") or action["data"]["participants"]
+            ):
                 raise WorkflowError("Only an original source-table human owns this response")
             gm, appointment = MedicalService(self.store)._handler(c)
             meta = action["data"]["gorgon_play"]
@@ -54,6 +96,8 @@ class GorgonPlayService:
 
     def preview(self, viewer: GuildViewer, channel: int) -> dict[str, Any]:
         from girlframe.services.m3_battle import _cast, _visible
+        from girlframe.services.m3_hallucinations import daily_case, next_day
+        from girlframe.services.m3_hallucinations import eligible as isolated
 
         with self.store.engine.connect() as c:
             self.authorize(c, viewer)
@@ -61,24 +105,212 @@ class GorgonPlayService:
             cast = _cast(self.game, c, state, channel)
             bound = profiles(c, self.store.campaign_id)
             rows = []
+            visible: dict[str, ActorView] = {}
+            can_corrupt = False
+            can_grow: dict[str, list[str]] = {}
+            can_birth: list[str] = []
+            can_jam: list[str] = []
             for role in cast.roles:
                 actual = resolve(state, role.actor, bound, require_current_profile=False)
                 if not _visible(state, role.actor, viewer.user_id):
                     continue
+                visible[role.actor.token] = actual
+                owned = actual.controller == viewer.user_id and not (
+                    role.actor.kind == "gorgon"
+                    and infection.inhabits_original_body(state, role.actor)
+                )
+                if (
+                    owned
+                    and role.actor.kind == "gorgon"
+                    and actual.cell is not None
+                    and state.world
+                ):
+                    body = next(x for x in state.world.gorgons if x.id == role.actor.entity)
+                    if body.alive and "jackdaw" in body.types and not actual.offstage_source:
+                        can_jam.append(role.actor.token)
+                    if body.alive and "growth" in body.types and not actual.offstage_source:
+                        can_grow[role.actor.token] = [
+                            k
+                            for k, available in (
+                                ("growth_adapt", not body.exposed and bool(body.assets)),
+                                ("growth_regrow", any(x.damaged for x in body.assets)),
+                            )
+                            if available
+                        ]
+                    if (
+                        body.alive
+                        and "mother" in body.types
+                        and not actual.offstage_source
+                        and any(not x.damaged for x in body.assets)
+                    ):
+                        can_birth.append(role.actor.token)
+                if (
+                    owned
+                    and role.actor.kind == "gorgon"
+                    and actual.cell is not None
+                    and not actual.offstage_source
+                    and state.world is not None
+                    and not already_corrupted(state.world, actual.cell)
+                    and any(
+                        x.id == role.actor.entity and "sentinel" in x.types
+                        for x in state.world.gorgons
+                    )
+                ):
+                    can_corrupt = True
                 rows.append(
                     dict(
                         ref=role.actor.model_dump(mode="json"),
                         token=role.actor.token,
                         label=actual.label,
                         source_sha256=actual.source_sha256,
-                        owned=actual.controller == viewer.user_id,
-                        assets=[asset.model_dump(mode="json") for asset in actual.assets],
+                        owned=owned,
+                        assets=[asset.model_dump(mode="json") for asset in actual.assets]
+                        if owned and role.actor.kind == "gorgon"
+                        else [],
                     )
                 )
+            typed_targets: dict[str, dict[str, list[str]]] = {}
+            parasite_choices: dict[str, dict[str, list[str]]] = {}
+            exposure_days: dict[str, dict[str, int]] = {}
+            conditioning_tags: dict[str, dict[str, list[tuple[str, str]]]] = {}
+            shed_assets: dict[str, tuple[str, ...]] = {}
+            hazard_tags: dict[str, dict[str, list[tuple[str, str]]]] = {}
+            if state.world is not None:
+                for actor in state.world.gorgons:
+                    token = ActorRef(kind="gorgon", entity=actor.id).token
+                    caster = visible.get(token)
+                    if (
+                        caster is None
+                        or caster.controller != viewer.user_id
+                        or infection.inhabits_original_body(state, caster.ref)
+                    ):
+                        continue
+                    if actor.alive and "parasite" in actor.types and not caster.offstage_source:
+                        if parasite.active(state, caster.ref):
+                            parasite_choices[token] = {"parasite_detach": []}
+                        else:
+                            hosts = [
+                                host.ref.token
+                                for host in visible.values()
+                                if parasite.present(state, caster, host)
+                            ]
+                            if hosts:
+                                parasite_choices[token] = {"parasite_hitch": hosts}
+                    options: dict[str, list[str]] = {
+                        kind: [
+                            target.ref.token
+                            for target in visible.values()
+                            if target.ref != caster.ref and tag_target_present(kind, caster, target)
+                        ]
+                        for kind, gorgon_type in TAG_TYPES.items()
+                        if gorgon_type in actor.types
+                        and (kind != "doppleganger_bond" or actor.revealed)
+                    }
+                    if "jackdaw" in actor.types:
+                        options["jackdaw_hallucinations"] = [
+                            girl.ref.token
+                            for girl in visible.values()
+                            if isolated(c, self.store.campaign_id, state, caster.ref, girl, cast.id)
+                        ]
+                        days = {
+                            girl.ref.token: next_day(state, case)
+                            for girl in visible.values()
+                            if (
+                                case := daily_case(
+                                    c, self.store.campaign_id, state, caster.ref, girl, cast.id
+                                )
+                            )
+                            is not None
+                        }
+                        exposure_days[token] = days
+                        options["jackdaw_hallucinations_day"] = list(days)
+                    options[contact_play] = [
+                        girl.ref.token
+                        for girl in visible.values()
+                        if contact_eligible(state, caster, girl)
+                    ]
+                    options[frame_contact.PLAY] = [
+                        girl.ref.token
+                        for girl in visible.values()
+                        if contact_eligible(state, caster, girl, in_frame=True)
+                    ]
+                    if (
+                        actor.alive
+                        and "sentinel" in actor.types
+                        and not shell.shell_intact(actor)
+                        and not any(x.source == caster.ref for x in shell.active(state))
+                    ):
+                        options[shell.PLAY] = [
+                            target.token
+                            for target in shell.nearest(caster, tuple(visible.values()))
+                        ]
+                    options[shell.RELEASE] = [
+                        x.girl.token
+                        for x in shell.active(state)
+                        if x.source == caster.ref and x.scene == cast.id and x.girl.token in visible
+                    ]
+                    if actor.alive and "incubus" in actor.types:
+                        known = {
+                            girl.ref.token: [(x.id, x.label) for x in tags]
+                            for girl in visible.values()
+                            if (tags := incubus.available(state, caster, girl))
+                        }
+                        conditioning_tags[token] = known
+                        options[incubus.PLAY] = list(known)
+                    if actor.alive and "mother" in actor.types:
+                        exposures = {
+                            girl.ref.token: [(x.id, x.label) for x in tags]
+                            for girl in visible.values()
+                            if (tags := hazard.available(state, caster, girl))
+                        }
+                        hazard_tags[token] = exposures
+                        options[hazard.PLAY] = list(exposures)
+                    if actor.alive and "growth" in actor.types and unreal.available_assets(actor):
+                        shed_assets[token] = unreal.available_assets(actor)
+                        options[unreal.PLAY] = [
+                            girl.ref.token
+                            for girl in visible.values()
+                            if unreal.original_target(caster, girl)
+                        ]
+                    if actor.alive and "parasite" in actor.types:
+                        # Do not use other bodies' actual corruption to discover targets.
+                        options[infection.PLAY] = [
+                            girl.ref.token
+                            for girl in visible.values()
+                            if infection.reachable(state, caster, girl)
+                        ]
+                    typed_targets[token] = {
+                        kind: targets for kind, targets in options.items() if targets
+                    }
             access = Access(self.store)
             assert access.registry is not None
             plays = []
             for kind, identity in RULES.items():
+                if kind == "corrupt" and not can_corrupt:
+                    continue
+                if (
+                    kind in TAG_TYPES
+                    or kind in hallucinations.PLAYS
+                    or kind in contact_plays
+                    or kind
+                    in (
+                        shell.PLAY,
+                        shell.RELEASE,
+                        incubus.PLAY,
+                        unreal.PLAY,
+                        infection.PLAY,
+                        hazard.PLAY,
+                    )
+                ) and not any(kind in x for x in typed_targets.values()):
+                    continue
+                if kind in parasite.PLAYS and not any(kind in x for x in parasite_choices.values()):
+                    continue
+                if kind in growth.KINDS and not any(kind in x for x in can_grow.values()):
+                    continue
+                if kind == "mother_sprite" and not can_birth:
+                    continue
+                if kind in jackdaw.EFFECTS and not can_jam:
+                    continue
                 try:
                     access.registry.require_available(identity)
                 except ValueError:
@@ -90,6 +322,15 @@ class GorgonPlayService:
                 cast_revision=cast.revision,
                 actors=rows,
                 plays=plays,
+                typed_targets=typed_targets,
+                growth=can_grow,
+                sprite_birth=can_birth,
+                jam=can_jam,
+                parasite=parasite_choices,
+                exposure_days=exposure_days,
+                conditioning_tags=conditioning_tags,
+                hazard_tags=hazard_tags,
+                shed_assets=shed_assets,
             )
 
     def begin(
@@ -98,7 +339,9 @@ class GorgonPlayService:
         declaration = Declaration.model_validate_json(declaration.model_dump_json())
 
         def operation(c: Connection) -> dict[str, Any]:
-            from girlframe.services.m3_battle import _cast, _scene_judge
+            from girlframe.services.m3_battle import _cast, _scene_judge, _visible
+            from girlframe.services.m3_hallucinations import daily_case, next_day
+            from girlframe.services.m3_hallucinations import eligible as isolated
             from girlframe.services.m3_scene_requisitions import guard
 
             self.game.unpaused(c)
@@ -127,6 +370,45 @@ class GorgonPlayService:
                 item for item in state.world.gorgons if item.id == declaration.actor.entity
             )
             from girlframe.engine.m3_janus_pandora import require_can_harm, vicious
+
+            if infection.inhabits_original_body(state, actual.ref):
+                raise WorkflowError(
+                    "The original Parasite is folded inside its host until excision"
+                )
+            if declaration.kind in parasite.PLAYS:
+                riding = parasite.active(state, actual.ref) is not None
+                if (
+                    not gorgon.alive
+                    or "parasite" not in gorgon.types
+                    or riding != (declaration.kind == "parasite_detach")
+                ):
+                    raise WorkflowError(
+                        "Use the original Parasite with the matching current host state"
+                    )
+            if declaration.kind == "corrupt" and (
+                "sentinel" not in gorgon.types
+                or actual.cell is None
+                or already_corrupted(state.world, actual.cell)
+            ):
+                raise WorkflowError("Use the actual Sentinel standing in a clear map square")
+            if declaration.kind in growth.KINDS:
+                if actual.cell is None:
+                    raise WorkflowError("Use the actual original Growth's established map square")
+                if declaration.adaptation is not None:
+                    growth.adapt(gorgon, declaration.adaptation, "preview")
+                if declaration.regrowth is not None:
+                    growth.regrow(gorgon, declaration.regrowth, "preview")
+            if declaration.birth is not None:
+                if actual.cell is None:
+                    raise WorkflowError("Use this actual Mother's established map square")
+                mother_sprite.check(gorgon, declaration.birth)
+            if declaration.interference is not None:
+                jackdaw.check(state, declaration.actor, actual.cell, declaration.interference)
+                if declaration.kind == "jackdaw_catatonia":
+                    from girlframe.services.m3_jackdaw import targets
+
+                    if not targets(state, cast, bound, declaration.interference):
+                        raise WorkflowError("An actual non-Pilot must be present within this range")
 
             if (
                 gorgon.gorgon_class == "benevolent"
@@ -157,6 +439,80 @@ class GorgonPlayService:
                     raise WorkflowError(
                         "Use the actual present original target and source resources"
                     )
+                if declaration.kind == "jackdaw_hallucinations" and not isolated(
+                    c, self.store.campaign_id, state, actual.ref, target, cast.id
+                ):
+                    raise WorkflowError("The actual Girl must be Isolated by this original Jackdaw")
+                if declaration.day is not None:
+                    case = daily_case(c, self.store.campaign_id, state, actual.ref, target, cast.id)
+                    if case is None or declaration.day != next_day(state, case):
+                        raise WorkflowError(
+                            "Use the next fictional day with the original Girl still in range"
+                        )
+                if declaration.kind == unreal.PLAY and (
+                    "growth" not in gorgon.types
+                    or declaration.shed not in unreal.available_assets(gorgon)
+                    or not unreal.original_target(actual, target)
+                ):
+                    raise WorkflowError("Use an actual Growth Asset and an actual reachable Girl")
+                if declaration.kind == infection.PLAY and (
+                    "parasite" not in gorgon.types or not infection.reachable(state, actual, target)
+                ):
+                    raise WorkflowError("Use the actual local Parasite and original Girl")
+                if declaration.kind == hazard.PLAY and not any(
+                    x.id == declaration.tag for x in hazard.available(state, actual, target)
+                ):
+                    raise WorkflowError("Choose one actual unmarked Tag known to this Mother")
+                if declaration.kind == incubus.PLAY and not any(
+                    x.id == declaration.tag for x in incubus.available(state, actual, target)
+                ):
+                    raise WorkflowError("Choose one actual unmarked Tag this Incubus gave the Girl")
+                if declaration.kind == shell.PLAY:
+                    present = tuple(
+                        resolve(state, role.actor, bound, require_current_profile=False)
+                        for role in cast.roles
+                        if role.actor.kind == "pilot"
+                    )
+                    if (
+                        "sentinel" not in gorgon.types
+                        or any(x.source == actual.ref for x in shell.active(state))
+                        or shell.shell_intact(gorgon)
+                        or target.ref not in shell.nearest(actual, present)
+                    ):
+                        raise WorkflowError(
+                            "Choose the closest original Girl to this actual Sentinel"
+                        )
+                if declaration.kind == shell.RELEASE and not any(
+                    x.source == actual.ref and x.girl == target.ref and x.scene == cast.id
+                    for x in shell.active(state)
+                ):
+                    raise WorkflowError(
+                        "Choose the actual Sentinel's original captive in this scene"
+                    )
+                if declaration.kind in contact_plays and not contact_eligible(
+                    state, actual, target, in_frame=declaration.kind == frame_contact.PLAY
+                ):
+                    raise WorkflowError("Use the free original Girl in the actual cockpit context")
+                if declaration.kind == "parasite_hitch" and (
+                    not _visible(state, target.ref, viewer.user_id)
+                    or not parasite.present(state, actual, target)
+                ):
+                    raise WorkflowError("Choose an actual living ordinary NPC in your square")
+                if declaration.kind in (
+                    "incubus_inflict",
+                    "mother_mutation",
+                    "doppleganger_bond",
+                ) and (
+                    TAG_TYPES[declaration.kind] not in gorgon.types
+                    or not tag_target_present(declaration.kind, actual, target)
+                    or declaration.kind == "doppleganger_bond"
+                    and not gorgon.revealed
+                ):
+                    raise WorkflowError(
+                        "Use a real body in this revealed type's actual local reach"
+                    )
+            if declaration.kind == "attack" and target_view is not None:
+                target = target_view
                 if target.ref.kind == "external_pilot":
                     from girlframe.engine.m3_harpy_defeat import harpy
 
@@ -214,9 +570,14 @@ class GorgonPlayService:
             approval = self.store.policy.m3_approval
             assert approval is not None
             reach_required = (
-                actual.cell is None or target_view is not None and target_view.cell != actual.cell
+                actual.cell is None
+                or target_view is not None
+                and target_view.cell != actual.cell
+                and declaration.kind not in hallucinations.PLAYS
+                or declaration.interference is not None
+                and len(declaration.interference.cells) > 1
             )
-            meta = dict(
+            meta: dict[str, Any] = dict(
                 declaration=declaration.model_dump(mode="json"),
                 actor=declaration.actor.model_dump(mode="json"),
                 target=declaration.target.model_dump(mode="json") if declaration.target else None,
@@ -269,6 +630,9 @@ class GorgonPlayService:
                     cast_sha256=meta["cast_sha256"],
                 ),
             )
+            if declaration.kind in PRIVATE_PLAYS and target_view is not None:
+                audience = sorted({viewer.user_id, target_view.controller, gm})
+                meta["private_audience"] = data["private_audience"] = audience
             state.facts.append(
                 dict(
                     kind="gorgon_play_intent",
@@ -397,6 +761,7 @@ class GorgonPlayService:
             "source_event",
             "capability_required",
             "reach_required",
+            "private_audience",
         )
         if (
             not isinstance(original, dict)
@@ -419,6 +784,7 @@ class GorgonPlayService:
             or int(action["channel_id"]) != source_cast.channel
             or action["actor_id"] != str(original["controller"])
             or action["data"]["participants"] != source_table
+            or action["data"].get("private_audience") != original.get("private_audience")
             or action["data"]["character_ids"]
             != {
                 role.actor.entity: role.actor.incarnation
@@ -658,8 +1024,26 @@ def prepare_response(
 ) -> dict[str, Any] | None:
     if prepared.parent is None:
         return None
+    # Damage Defeat is a separate source-owned child, validated against the
+    # original held Battle work by the Defeat adapter.
+    if prepared.play == "defeat" and prepared.source_work is not None:
+        return None
     parent = game.action(c, prepared.parent)
-    if not parent["data"].get("gorgon_play"):
+    source = parent["data"].get("gorgon_play")
+    if not source or (
+        source["kind"]
+        in (
+            *hallucinations.PLAYS,
+            frame_contact.PLAY,
+            shell.PLAY,
+            incubus.PLAY,
+            unreal.PLAY,
+            infection.PLAY,
+            hazard.PLAY,
+        )
+        and prepared.play == "keep_your_head"
+        and prepared.source_work is not None
+    ):
         return None
     from girlframe.services.m3_battle import _cast
 
@@ -673,12 +1057,22 @@ def prepare_response(
     if int(parent["channel_id"]) != channel:
         raise WorkflowError("Respond in this Gorgon Play's actual original scene")
     cast = _cast(game, c, state, channel)
+    if source.get("frame_intervention") and prepared.play not in (
+        "engage",
+        "all_out_assault",
+        "go_for_the_core",
+    ):
+        raise WorkflowError("The immediate intervention needs its actual combat Play")
     return dict(
         choice=row["id"],
         actor=actor.model_dump(mode="json"),
         attacker=parent["data"]["gorgon_play"]["actor"],
         cast=cast.model_dump(mode="json"),
         cast_sha256=fingerprint(cast),
+        private_audience=source.get("private_audience")
+        if source.get("frame_intervention") or source["kind"] in (incubus.PLAY, hazard.PLAY)
+        else None,
+        conditioning_tag=json.loads(row["body_json"]).get("conditioning_tag"),
         table=sorted(
             {role.controller for role in cast.roles}
             | ({cast.facilitator} if cast.facilitator else set())
@@ -759,6 +1153,18 @@ def validate_child(
     row = _response(game, c, parent, actor)
     if prepared.parent != parent["id"]:
         raise WorkflowError("Use this exact held source parent for the response")
+    if parent["data"]["gorgon_play"]["kind"] == hazard.PLAY:
+        from girlframe.services.m3_mother_hazard import SUPPORTED_PLAY
+
+        case = hazard.get(load_state(c, game.store.campaign_id), parent["id"])
+        if (
+            case is None
+            or case.completed
+            or case.girl != actor
+            or case.requested_play != prepared.play
+            or prepared.play != SUPPORTED_PLAY
+        ):
+            raise WorkflowError("Use the actual original Mother's selected supported Play")
     if prepared.play in (
         "engage",
         "all_out_assault",

@@ -1038,7 +1038,7 @@ def parked_strike_options(
         ):
             continue
         runtime = sheet.frame_runtime
-        if runtime and runtime.core_id or runtime is None and sheet.frame in ("JANUS", "JANUS-B"):
+        if runtime and runtime.core_id or runtime is None and sheet.frame == "JANUS":
             continue
         for asset in sheet.assets:
             if asset.family == "frame" and not asset.damaged:

@@ -1,0 +1,516 @@
+{
+  "body_parts": [
+    "Legs",
+    "Hands",
+    "Eyes",
+    "Ears",
+    "Head",
+    "Face",
+    "Vital Organs",
+    "Link",
+    "Brain"
+  ],
+  "campaign_defaults_require_engine": true,
+  "catalog_sha256": "a691aa5b366711ad5848f744a3276024489e5743ec3eb964e454aedca4a41798",
+  "fanbase": {
+    "demographics": [
+      "Young boys",
+      "Young girls",
+      "Older men",
+      "Online shippers",
+      "The anti-political"
+    ],
+    "qualities": [
+      "Sexy",
+      "A queer icon",
+      "A model pilot",
+      "Dangerous",
+      "Relatable",
+      "A leader",
+      "Intelligent",
+      "Kind",
+      "Girly",
+      "Masculine"
+    ]
+  },
+  "format": "harpyengine.creation-catalog",
+  "frame_rules_aliases": {},
+  "frame_types": {
+    "CHANGELING": "CHANGELING",
+    "CONSUME": "CONSUME",
+    "DOCTORDOCTOR MK. II": "DoctorDoctor Mk. II",
+    "JANUS": "JANUS",
+    "PROJECT ANKOU": "Project Ankou",
+    "THE ENFORCER": "The Enforcer",
+    "THE PRINCE": "The Prince",
+    "THE RED QUEEN": "The Red Queen",
+    "WYVERN 0.4": "Wyvern 0.4"
+  },
+  "girl_types": {
+    "ALPHA": "Alpha",
+    "AM": "AM (Artificial Mind)",
+    "BONDED": "Bonded",
+    "CASUALTY": "Casualty",
+    "MOCKINGBIRD": "Mockingbird",
+    "NEWGIRL": "Newgirl",
+    "OLDGEN": "Oldgen",
+    "PRINCESS": "Princess",
+    "STIM-BLISSED": "Stim-Blissed",
+    "VATGROWN": "Vatgrown"
+  },
+  "investor_desires": [
+    "A display piece",
+    "A daughter",
+    "A weapon",
+    "A pet",
+    "A punching bag",
+    "A sexual plaything",
+    "A reminder",
+    "A triumph",
+    "An opportunity",
+    "A tormentor",
+    "A pair of eyes"
+  ],
+  "maxims": [
+    "Strong use the weak",
+    "Give thanks for the meal",
+    "Piloting feels best",
+    "Foundation grinds everyone down",
+    "Survival comes first",
+    "Nothing awaits retirement",
+    "Grudges are fuel",
+    "Respect your engineer",
+    "Beauty in blood",
+    "Don't attach to doomed dogs"
+  ],
+  "npc_roles": {
+    "ALPHA": [
+      "Guard with taser",
+      "School acquaintance now officer",
+      "Terrified civilian",
+      "Victim of injury"
+    ],
+    "AM": [
+      "Design commissioner",
+      "Cheerful techie",
+      "Blank record",
+      "Dormant copy"
+    ],
+    "BONDED": [
+      "Relationship critic",
+      "Experimental therapist",
+      "Avoided older man",
+      "Other girl"
+    ],
+    "CASUALTY": [
+      "Stray cat",
+      "Physiotherapist",
+      "Civilian contact",
+      "Prisoner"
+    ],
+    "MOCKINGBIRD": [
+      "Lunch lady",
+      "Surgeon",
+      "Silent guard",
+      "Vent dweller"
+    ],
+    "NEWGIRL": [
+      "Pilot sister",
+      "Junior engineer",
+      "Recruiting agent",
+      "Town girl"
+    ],
+    "OLDGEN": [
+      "Retired Handler",
+      "Hospitalized former pilot",
+      "Familiar Mockingbird",
+      "Director"
+    ],
+    "PRINCESS": [
+      "Doe-eyed captain",
+      "Corrupt politician",
+      "Glamorous celebrity",
+      "Cute junior Handler"
+    ],
+    "STIM-BLISSED": [
+      "Fried ex-pilot",
+      "Janitor",
+      "Checkup nurse",
+      "Supply corps leader"
+    ],
+    "VATGROWN": [
+      "Head scientist",
+      "Medical team",
+      "Older vat-sibling",
+      "Wealthy patron"
+    ]
+  },
+  "playbooks": {
+    "ALPHA": {
+      "assets": [
+        "FURY Link",
+        "Subdermal Plating",
+        "Experimental Steroids",
+        "Retractable Canines",
+        "Fear Excision Surgery"
+      ],
+      "book_pdf_page": 51,
+      "book_printed_page": 49,
+      "family": "girl",
+      "identities": [
+        "Dangerous",
+        "Malfunctioning",
+        "Leashed",
+        "Bloodlust"
+      ],
+      "sheet_pdf_page": 13
+    },
+    "AM": {
+      "assets": [
+        "Wireless Router",
+        "Doll-Joints",
+        "Perfect Affect",
+        "Soft Skin",
+        "Mechanical Grip"
+      ],
+      "book_pdf_page": 54,
+      "book_printed_page": 52,
+      "family": "girl",
+      "identities": [
+        "Tool",
+        "Obedient",
+        "Programmed",
+        "Wired"
+      ],
+      "sheet_pdf_page": 14
+    },
+    "BONDED": {
+      "assets": [
+        "Radio Implant",
+        "Passivity Injections",
+        "Magnetic Bands",
+        "Redsight Contacts",
+        "Iron Grip"
+      ],
+      "book_pdf_page": 57,
+      "book_printed_page": 55,
+      "family": "girl",
+      "identities": [
+        "Obsessed",
+        "Malfunctioning",
+        "Hers",
+        "Wired"
+      ],
+      "sheet_pdf_page": 15
+    },
+    "CASUALTY": {
+      "assets": [
+        "Brain Full of Tech",
+        "Blank-Eye Contacts",
+        "Death Instinct Implant",
+        "Integrated Weapons",
+        "Body Plating"
+      ],
+      "book_pdf_page": 43,
+      "book_printed_page": 41,
+      "family": "girl",
+      "identities": [
+        "The Best",
+        "Broken",
+        "Programmed",
+        "Wired"
+      ],
+      "sheet_pdf_page": 10
+    },
+    "CHANGELING": {
+      "assets": [
+        "Psychic Spikes",
+        "Pulse Wave Generator",
+        "Mind-Field Sensors",
+        "The Maskmaker",
+        "Cephalopodic Limbs",
+        "Screaming",
+        "Implosion Initiative",
+        "Dreamgun",
+        "Compartmentalization AM"
+      ],
+      "book_pdf_page": 81,
+      "book_printed_page": 79,
+      "family": "frame",
+      "identities": [],
+      "sheet_pdf_page": 24
+    },
+    "CONSUME": {
+      "assets": [
+        "Grabby",
+        "Corruptor Tendrils",
+        "Keratin Spikes",
+        "Autonomous",
+        "Normality Gun",
+        "Feral Claws",
+        "Neuroshards",
+        "Voidstep Core",
+        "Cage Plating"
+      ],
+      "book_pdf_page": 65,
+      "book_printed_page": 63,
+      "family": "frame",
+      "identities": [],
+      "sheet_pdf_page": 19
+    },
+    "DOCTORDOCTOR MK. II": {
+      "assets": [
+        "Small",
+        "Rail-Bayonet",
+        "Scrabbling Claws",
+        "Standard Beam Shotgun",
+        "Mesh Wings",
+        "Agility Thrusters",
+        "Brainwave Sensors",
+        "Adaptive Camouflage",
+        "Prey AM (Artificial Mind)"
+      ],
+      "book_pdf_page": 71,
+      "book_printed_page": 69,
+      "family": "frame",
+      "identities": [],
+      "sheet_pdf_page": 21
+    },
+    "JANUS": {
+      "assets": [
+        "Leviathan Rapier",
+        "Enhanced Nerve Processors",
+        "Gorgon Pheromones",
+        "Inverter Blade",
+        "Guntail",
+        "Metaphysiological Catnip",
+        "Omniscience Chip",
+        "Burrower Drones",
+        "Cannon of the Unreformed"
+      ],
+      "book_pdf_page": 68,
+      "book_printed_page": 66,
+      "family": "frame",
+      "identities": [],
+      "sheet_pdf_page": 20
+    },
+    "MOCKINGBIRD": {
+      "assets": [
+        "Adaptive Restraints",
+        "Synesthesia",
+        "Umbilical Biolink",
+        "Unsettled Impulses",
+        "Vestigial Limbs"
+      ],
+      "book_pdf_page": 34,
+      "book_printed_page": 32,
+      "family": "girl",
+      "identities": [
+        "Dangerous",
+        "Malfunctioning",
+        "Corrected",
+        "Shadow of a Dream"
+      ],
+      "sheet_pdf_page": 7
+    },
+    "NEWGIRL": {
+      "assets": [
+        "Experimental Link Port",
+        "Healthy Body",
+        "Stash of ‘Goodies’",
+        "Hand-Me-Down Pilot Suit",
+        "Unusual Insight"
+      ],
+      "book_pdf_page": 40,
+      "book_printed_page": 38,
+      "family": "girl",
+      "identities": [
+        "Dangerous",
+        "Malfunctioning",
+        "Programmed",
+        "Wired"
+      ],
+      "sheet_pdf_page": 9
+    },
+    "OLDGEN": {
+      "assets": [
+        "Titanium Bone Replacements",
+        "Drug-Enhanced Muscles",
+        "Lastgen Link",
+        "Organ Reconstructions",
+        "A Lifetime of Concussions"
+      ],
+      "book_pdf_page": 45,
+      "book_printed_page": 43,
+      "family": "girl",
+      "identities": [
+        "Veteran",
+        "Rusting",
+        "Programmed",
+        "Wired"
+      ],
+      "sheet_pdf_page": 11
+    },
+    "PRINCESS": {
+      "assets": [
+        "Gun (legal)",
+        "Hidden Exoskeleton",
+        "Military Jacket",
+        "Old Dogtags",
+        "Some Actual Cash"
+      ],
+      "book_pdf_page": 31,
+      "book_printed_page": 29,
+      "family": "girl",
+      "identities": [
+        "Pretty",
+        "Malfunctioning",
+        "Programmed",
+        "Perfect"
+      ],
+      "sheet_pdf_page": 6
+    },
+    "PROJECT ANKOU": {
+      "assets": [
+        "Antimatter Gun",
+        "Rejection Mines",
+        "Plague Blade",
+        "Black Katana",
+        "Firmament Cloak",
+        "Triple-Jointed",
+        "The Hecatomb",
+        "Omni-Directional Propulsion",
+        "Isolation AM"
+      ],
+      "book_pdf_page": 84,
+      "book_printed_page": 82,
+      "family": "frame",
+      "identities": [],
+      "sheet_pdf_page": 25
+    },
+    "STIM-BLISSED": {
+      "assets": [
+        "Blocker Inset",
+        "Autonomous Neurolink",
+        "Implanted Survival Instinct",
+        "Hidden Needle",
+        "Chemically Fried Nerves"
+      ],
+      "book_pdf_page": 37,
+      "book_printed_page": 35,
+      "family": "girl",
+      "identities": [
+        "Dangerous",
+        "Blissful",
+        "Dependent",
+        "Wired"
+      ],
+      "sheet_pdf_page": 8
+    },
+    "THE ENFORCER": {
+      "assets": [
+        "Insectile Legs",
+        "Cloak Film",
+        "Vindication Rifle",
+        "Blackplate",
+        "Incendiary Knife",
+        "Nanobot Mace",
+        "Hacking Module",
+        "Shard Missiles",
+        "Shotgun Arm"
+      ],
+      "book_pdf_page": 78,
+      "book_printed_page": 76,
+      "family": "frame",
+      "identities": [],
+      "sheet_pdf_page": 23
+    },
+    "THE PRINCE": {
+      "assets": [
+        "Champion’s Spear",
+        "Symbol of Hope",
+        "Billion-Dollar Gun",
+        "Apocalypse Lance",
+        "Bastion Drones",
+        "Emperor Plating",
+        "Satellite Targeting System",
+        "Relic Swordgun",
+        "Onboard AM (Artificial Mind)"
+      ],
+      "book_pdf_page": 61,
+      "book_printed_page": 59,
+      "family": "frame",
+      "identities": [],
+      "sheet_pdf_page": 18
+    },
+    "THE RED QUEEN": {
+      "assets": [
+        "Nanomachine Swarm",
+        "Parasite Bullets",
+        "Regal Ornamentation",
+        "The Crown",
+        "Deicide Blade",
+        "The L1ttle S1ster",
+        "Starlight Ichor",
+        "Shatter Cloak",
+        "QUIET SEA"
+      ],
+      "book_pdf_page": 88,
+      "book_printed_page": 86,
+      "family": "frame",
+      "identities": [],
+      "sheet_pdf_page": 26
+    },
+    "VATGROWN": {
+      "assets": [
+        "Oversized Bomber Jacket",
+        "Sensation Filters",
+        "Growth Inhibitors",
+        "Designed Pretty",
+        "Precise Motions"
+      ],
+      "book_pdf_page": 48,
+      "book_printed_page": 46,
+      "family": "girl",
+      "identities": [
+        "Dangerous",
+        "Experiment",
+        "Programmed",
+        "Docile"
+      ],
+      "sheet_pdf_page": 12
+    },
+    "WYVERN 0.4": {
+      "assets": [
+        "Secondary Gunners",
+        "Nuclear Claws",
+        "Shadow Generator",
+        "Missile Bay",
+        "‘The Plate’",
+        "Adaptive Quadrupedality",
+        "Star Core",
+        "The Wolfjaw",
+        "Gravity Well"
+      ],
+      "book_pdf_page": 74,
+      "book_printed_page": 72,
+      "family": "frame",
+      "identities": [],
+      "sheet_pdf_page": 22
+    }
+  },
+  "rules_status": "RULES_SUBSET",
+  "schema_version": 1,
+  "standards": [
+    "Report Cadre conduct",
+    "Use official pronouns",
+    "Kindness and obedience to staff",
+    "Attend to Handler's daily needs",
+    "No weakness before underlings",
+    "Impeccable grooming",
+    "Protect the family name",
+    "Encourage aptitude testing",
+    "No Cadre romance",
+    "Custom standard"
+  ]
+}

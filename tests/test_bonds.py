@@ -30,7 +30,7 @@ def ready(ledger, girl="MOCKINGBIRD"):
             PLAYER,
             "girl",
             1,
-            DraftInput(callsign="SYNTH", girl_playbook=girl, frame_playbook="JANUS-B"),
+            DraftInput(callsign="SYNTH", girl_playbook=girl, frame_playbook="JANUS"),
         )
     return BondService(ledger)
 
@@ -100,6 +100,84 @@ def test_two_party_decisions_replay_history_and_privacy(ledger):
     assert ledger.draft(PLAYER)["status"] == "draft_rules_unverified"
 
 
+def test_enrollment_two_distinct_starting_bonds(ledger):
+    from girlframe.services.creation_review import CreationReviewService
+
+    ready(ledger)
+    third = GuildViewer(6, PLAYER.guild_id, True, False)
+    fourth = GuildViewer(7, PLAYER.guild_id, True, False)
+    seed(ledger, third, callsign="THIRD")
+    seed(ledger, fourth, callsign="FOURTH")
+    service = BondService(ledger, enrollment=True)
+
+    def offer(viewer, target, key):
+        prepared = service.prepare(viewer, target.user_id)
+        return service.propose(
+            viewer,
+            key,
+            prepared["source_revision"],
+            prepared["target_revision"],
+            BondProposal(target_id=target.user_id, prompt=0),
+        )
+
+    first = offer(PLAYER, OTHER, "first-starting-bond")
+    assert {item["id"] for item in service.enrollment_options(PLAYER)["targets"]} == {
+        str(third.user_id),
+        str(fourth.user_id),
+    }
+    with pytest.raises(WorkflowError, match="active starting proposal"):
+        offer(PLAYER, OTHER, "duplicate-pair")
+    second = offer(PLAYER, third, "second-starting-bond")
+    with pytest.raises(WorkflowError, match="available starting Bond slot"):
+        offer(PLAYER, fourth, "third-starting-bond")
+    with pytest.raises(WorkflowError, match="not available"):
+        service.decide(PLAYER, "proxy-accept", second["id"], 1, "accept")
+    assert service.decide(OTHER, "accept-first", first["id"], 1, "accept")["state"] == "accepted"
+    assert service.decide(third, "accept-second", second["id"], 1, "accept")["state"] == "accepted"
+    assert {row["id"] for row in service.list(PLAYER) if row["state"] == "accepted"} == {
+        first["id"],
+        second["id"],
+    }
+    assert service.enrollment_options(PLAYER)["slots"] == 0
+    review = CreationReviewService(ledger)
+    current = review.get(PLAYER)
+    assert "starting_bond" in {issue.code for issue in current.sheet.issues}
+    review.select_bond(
+        PLAYER,
+        "select-primary",
+        current.sheet.creation_revision,
+        current.sheet.character_revision,
+        current.sheet.creation,
+        first["id"],
+    )
+    updated = review.get(PLAYER).sheet
+    assert "starting_bond" not in {issue.code for issue in updated.issues}
+    assert {row.id for row in updated.bonds} == {first["id"], second["id"]}
+
+
+def test_enrollment_finished_targets_are_ineligible(ledger):
+    from test_m2_game import setup_game
+
+    setup_game(ledger)
+    third = GuildViewer(6, PLAYER.guild_id, True, False)
+    fourth = GuildViewer(7, PLAYER.guild_id, True, False)
+    seed(ledger, third, callsign="THIRD")
+    seed(ledger, fourth, callsign="FOURTH")
+    service = BondService(ledger, enrollment=True)
+    assert [entry["id"] for entry in service.enrollment_options(third)["targets"]] == [
+        str(fourth.user_id)
+    ]
+    prepared = service.prepare(third, PLAYER.user_id)
+    with pytest.raises(WorkflowError, match="still completing enrollment"):
+        service.propose(
+            third,
+            "finished-target",
+            prepared["source_revision"],
+            prepared["target_revision"],
+            BondProposal(target_id=PLAYER.user_id, prompt=0),
+        )
+
+
 def test_profile_staleness_revocation_and_isolation(ledger):
     service = ready(ledger)
     result = propose(service)
@@ -107,7 +185,7 @@ def test_profile_staleness_revocation_and_isolation(ledger):
         OTHER,
         "edit",
         1,
-        DraftInput(callsign="UPDATED", girl_playbook="ALPHA", frame_playbook="JANUS-B"),
+        DraftInput(callsign="UPDATED", girl_playbook="ALPHA", frame_playbook="JANUS"),
     )
     assert service.get(OTHER, result["id"])["stale"]
     with pytest.raises(WorkflowError, match="STALE_PROFILE"):

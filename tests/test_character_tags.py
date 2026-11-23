@@ -113,7 +113,7 @@ def save_sorrow(store):
         DraftInput(
             callsign="SORROW",
             girl_playbook="MOCKINGBIRD",
-            frame_playbook="JANUS-B",
+            frame_playbook="JANUS",
             notes="PRIVATE_CANARY",
         ),
     )
@@ -130,7 +130,7 @@ def test_dropdowns_and_details_modal_have_no_free_text_playbook_fields(store):
         assert {option.value for option in selects[1].options} == set(FRAME_TYPES)
         assert all(len(item.options) <= 25 for item in selects)
         assert view.continue_button.disabled
-        modal = DraftModal(store, PLAYER.user_id, None, "MOCKINGBIRD", "JANUS-B")
+        modal = DraftModal(store, PLAYER.user_id, None, "MOCKINGBIRD", "JANUS")
         assert len(modal.children) == 2 and modal.callsign.max_length == 32
 
     asyncio.run(run())
@@ -150,7 +150,7 @@ def test_dropdown_rejects_forged_choices_and_other_owner(store, monkeypatch):
         await view.choose("girl", "ADMINISTRATOR", request)
         assert view.girl is None
         await view.choose("girl", "MOCKINGBIRD", request)
-        await view.choose("frame", "JANUS-B", request)
+        await view.choose("frame", "JANUS", request)
         assert not view.continue_button.disabled
         monkeypatch.setattr(
             "girlframe.discord_adapter.onboarding.viewer_from_interaction", lambda i: ADMIN
@@ -169,7 +169,7 @@ def test_backend_rejects_unknown_role_labels_and_oversize_nicknames(changes):
     values = {
         "callsign": "SORROW",
         "girl_playbook": "MOCKINGBIRD",
-        "frame_playbook": "JANUS-B",
+        "frame_playbook": "JANUS",
     } | changes
     with pytest.raises(ValidationError):
         DraftInput.model_validate(values)
@@ -183,14 +183,14 @@ def test_sorrow_sync_creates_safe_roles_and_nickname_preserves_unrelated_roles(s
     sync = CharacterTagSynchronizer(store)
     message = asyncio.run(sync.sync(PLAYER, DiscordCharacterTagGateway(guild)))
     assert "synchronized" in message and guild.member.nick == "SORROW"
-    assert {request["name"] for request in guild.created} == {"MOCKINGBIRD", "JANUS-B"}
+    assert {request["name"] for request in guild.created} == {"MOCKINGBIRD", "JANUS"}
     assert 91 in {role.id for role in guild.member.roles}
     assert 90 not in {
         role.id for role in guild.member.roles
     }  # Unowned same-name admin role ignored.
     assert {role.name for role in guild.member.roles if role.id >= 20 and role.id < 90} == {
         "MOCKINGBIRD",
-        "JANUS-B",
+        "JANUS",
     }
     assert store.sync_job(PLAYER)["state"] == "complete"
     asyncio.run(sync.sync(PLAYER, DiscordCharacterTagGateway(guild)))
@@ -206,14 +206,14 @@ def test_edit_replaces_only_owned_labels(store):
         PLAYER,
         "edit",
         1,
-        DraftInput(callsign="SORROW", girl_playbook="OLDGEN", frame_playbook="JANUS"),
+        DraftInput(callsign="SORROW", girl_playbook="OLDGEN", frame_playbook="THE ENFORCER"),
     )
     asyncio.run(sync.sync(PLAYER, DiscordCharacterTagGateway(guild)))
     assert {role.name for role in guild.member.roles} == {
         "everyone",
         "Community",
         "OLDGEN",
-        "JANUS",
+        "THE ENFORCER",
     }
     assert len(guild.member.removed) == 2
 
@@ -274,7 +274,7 @@ def test_changed_managed_role_permissions_are_not_granted(store):
     sync = CharacterTagSynchronizer(store)
     asyncio.run(sync.sync(PLAYER, DiscordCharacterTagGateway(guild)))
     next(
-        role for role in guild.roles.values() if role.name == "JANUS-B"
+        role for role in guild.roles.values() if role.name == "JANUS"
     ).permissions = discord.Permissions(administrator=True)
     store.queue_sync(PLAYER, "retry")
     message = asyncio.run(sync.sync(PLAYER, DiscordCharacterTagGateway(guild)))
@@ -314,7 +314,7 @@ def test_renamed_owned_role_is_not_silently_assigned(store):
     guild = Guild()
     sync = CharacterTagSynchronizer(store)
     asyncio.run(sync.sync(PLAYER, DiscordCharacterTagGateway(guild)))
-    next(role for role in guild.roles.values() if role.name == "JANUS-B").name = "Repurposed"
+    next(role for role in guild.roles.values() if role.name == "JANUS").name = "Repurposed"
     store.queue_sync(PLAYER, "retry")
     message = asyncio.run(sync.sync(PLAYER, DiscordCharacterTagGateway(guild)))
     assert "renamed" in message and len(guild.member.added) == 2

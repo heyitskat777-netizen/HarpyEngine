@@ -73,11 +73,6 @@ def test_native_disposable_dose_counter_preserves_real_removal(
         await opened.response.defer(ephemeral=True)
         await open_alpha_choice(opened, game, request["id"])
         form = opened.edit_original_response.call_args.kwargs["view"]
-        disposal = next(x for x in form.fields if x.key == "disposable_heat")
-        assert {x[0] for x in disposal.options} == {"0", "3", "4"}
-        heat = next(x for x in form.fields if x.key == "heat")
-        assert str(before.heat + 7) in {x[0] for x in heat.options}
-        assert not await form.interaction_check(current(PLAYER.user_id, 99600))
         form.values.update(
             play=(dose.PLAY,),
             identity=(identity,),
@@ -86,6 +81,12 @@ def test_native_disposable_dose_counter_preserves_real_removal(
             heat=(str(spent),),
             context="PRIVATE_DISPOSABLE_COUNTER: self-Dose with actual Identity removal",
         )
+        form.controls()
+        disposal = next(x for x in form.fields if x.key == "disposable_heat")
+        assert {x[0] for x in disposal.options} == {"0", "3", "4"}
+        heat = next(x for x in form.fields if x.key == "heat")
+        assert {x[0] for x in heat.options} == {str(spent)}
+        assert not await form.interaction_check(current(PLAYER.user_id, 99600))
         invalid = dict(form.values, play=("keep_your_head",))
         with pytest.raises(WorkflowError, match="own self-Dose counter"):
             await form.submit_action(current(OTHER.user_id, 99599), invalid)

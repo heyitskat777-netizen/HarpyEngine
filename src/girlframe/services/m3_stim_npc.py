@@ -132,12 +132,13 @@ def order_authority(
     *,
     effect_id: str | None = None,
     session_id: str | None = None,
+    require_active: bool = True,
 ) -> rules.Effect | None:
-    """An actual reciprocal/low NPC choice supplies temporary relative authority only."""
+    """The original giver may order the original drugged counterpart."""
     from girlframe.services.m3_actors import profiles
     from girlframe.services.m3_stim_sex import _drug, prove_effect
 
-    if issuer.kind != "npc" or target.kind != "pilot":
+    if {issuer.kind, target.kind} != {"npc", "pilot"}:
         return None
     # An opened source must not select an unrelated newer authority first.
     source_drugs = (
@@ -158,19 +159,23 @@ def order_authority(
             continue
         proved = prove_effect(game, c, state, effect.id)
         drug = _drug(game, c, state, proved.drug)
-        if not rules.active(state, drug):
+        if require_active and not rules.active(state, drug):
             continue
         source = rules.get(state, drug.session)
         bound = profiles(c, game.store.campaign_id)
-        own, recipient = resolve(state, issuer, bound), resolve(state, target, bound)
+        pilot, npc = resolve(state, source.actor, bound), resolve(state, source.target, bound)
         if (
             source.phase != "complete"
-            or source.target != issuer
-            or source.actor != target
-            or own.controller != source.counterpart
-            or own.vessel_id != source.target_vessel
-            or recipient.controller != source.caster
-            or recipient.vessel_id != drug.vessel
+            or {source.actor, source.target} != {issuer, target}
+            or not pilot.alive
+            or not npc.alive
+            or pilot.rules != "girl_frame"
+            or npc.rules != "npc"
+            or pilot.controller != source.caster
+            or npc.controller != source.counterpart
+            or pilot.vessel_id != source.actor_vessel
+            or npc.vessel_id != source.target_vessel
+            or drug.vessel != (npc.vessel_id if target.kind == "npc" else pilot.vessel_id)
         ):
             raise WorkflowError("Preserve the exact original NPC, drugged Pilot and source bodies")
         return proved

@@ -61,8 +61,7 @@ async def open_declaration(
         and (
             x["ref"]["kind"] == "pilot"
             or x["ref"]["kind"] == "external_pilot"
-            and x["girl"] == "harpy"
-            and x["heat"] is not None
+            and (x["girl"] == "harpy" and x["heat"] is not None or x.get("rebel_targets"))
         )
     ]
     targets = [x for x in data["actors"] if x["ref"]["kind"] != "pilot" or not x["owned"]]
@@ -83,6 +82,10 @@ async def open_declaration(
         actor = next(x for x in own if x["token"] == values["actor"][0])
         target = next(x for x in targets if x["token"] == values["target"][0])
         play = values["play"][0]
+        rebel = actor.get("rebel_targets", ())
+        if rebel and (play != "all_out_assault" or target["token"] not in rebel):
+            return "Use the original Rebel's actual opened Assault target."
+        body_assault = target["rules"] == "handler" and target["token"] in rebel
 
         async def declare(next_interaction: discord.Interaction, details: dict[str, Any]) -> str:
             proposal = Declaration(
@@ -90,7 +93,7 @@ async def open_declaration(
                 actor=ActorRef.model_validate(actor["ref"]),
                 target=ActorRef.model_validate(target["ref"]),
                 attacking_asset=details["asset"][0],
-                target_asset=details["target_asset"][0] if play == "all_out_assault" else None,
+                target_asset=(details.get("target_asset") or (None,))[0],
                 actor_sha256=actor["sha256"],
                 target_sha256=target["sha256"],
                 account=details["account"],
@@ -133,15 +136,16 @@ async def open_declaration(
             )
         ]
         if play == "all_out_assault":
-            if not target["assets"]:
+            if not target["assets"] and not body_assault:
                 return "All Out Assault needs an actual opposing Asset; this actor has none."
-            fields.append(
-                Field(
-                    "target_asset",
-                    "Actual opposing Asset",
-                    tuple((x["id"], x["name"]) for x in target["assets"]),
+            if target["assets"]:
+                fields.append(
+                    Field(
+                        "target_asset",
+                        "Actual opposing Asset",
+                        tuple((x["id"], x["name"]) for x in target["assets"]),
+                    )
                 )
-            )
         fields.append(Field("account", "Describe your opening and decisive action", paragraph=True))
         form = NativeForm(
             current.user.id,
@@ -163,7 +167,8 @@ async def open_declaration(
                 "play",
                 "Choose your Play",
                 (("all_out_assault", "Required All Out Assault"),)
-                if parent and parent["kind"] in ("red_queen_child", "princess_sex_child")
+                if parent
+                and parent["kind"] in ("red_queen_child", "princess_sex_child", "trainer_hunt_play")
                 else (
                     ("all_out_assault", "All Out Assault"),
                     ("go_for_the_core", "Go For the Core"),
@@ -580,6 +585,33 @@ async def open_battle(interaction: discord.Interaction, game: GameService, ident
         )
         await reply(interaction, form.text(), form)
         return
+    fields = battle_fields(kind, detail)
+    if fields is None:
+        await reply(interaction, "Resume this actual source child Play through its saved controls.")
+        return
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        await asyncio.to_thread(
+            game.respond,
+            viewer_from_interaction(current),
+            str(current.id),
+            identity,
+            data["revision"],
+            battle_answer(kind, values),
+        )
+        return "Actual owned battle choice saved; required effects keep this scene held."
+
+    form = NativeForm(
+        interaction.user.id,
+        "Battle: your actual choice",
+        "Only the printed source owner may answer. " + detail.get("learned_rider", ""),
+        fields,
+        submit,
+    )
+    await reply(interaction, form.text(), form)
+
+
+def battle_fields(kind: str, detail: dict[str, Any]) -> list[Field] | None:
     if kind == "battle_assault_table":
         fields = [
             Field(
@@ -609,49 +641,41 @@ async def open_battle(interaction: discord.Interaction, game: GameService, ident
                 maximum=detail["maximum"],
             )
         ]
-    elif kind in ("battle_low_damage", "battle_actor_damage", "battle_target_damage"):
+    elif kind in (
+        "battle_low_damage",
+        "battle_actor_damage",
+        "battle_target_damage",
+        "battle_trainer_protect",
+    ):
         fields = [
             Field(
                 "asset",
-                "Actual undamaged Asset",
+                "Your Asset taking the intercepted blow"
+                if kind == "battle_trainer_protect"
+                else "Actual undamaged Asset",
                 tuple((x["id"], x["name"]) for x in detail["assets"]),
             )
         ]
     else:
-        await reply(interaction, "Resume this actual source child Play through its saved controls.")
-        return
+        return None
+    return fields
 
-    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
-        if kind == "battle_assault_table":
-            answer = ChoiceAnswer(flag=values["decision"][0] == "yes", text=values["account"])
-        elif kind == "battle_handler":
-            answer = ChoiceAnswer(options=values["options"], text=values.get("account", ""))
-        elif kind == "battle_counter":
-            answer = (
-                ChoiceAnswer(flag=False)
-                if values["options"] == ("pass",)
-                else ChoiceAnswer(options=values["options"])
-            )
-        else:
-            answer = ChoiceAnswer(fields={"asset": values["asset"][0]})
-        await asyncio.to_thread(
-            game.respond,
-            viewer_from_interaction(current),
-            str(current.id),
-            identity,
-            data["revision"],
-            answer,
+
+def battle_answer(kind: str, values: dict[str, Any]) -> ChoiceAnswer:
+    if kind == "battle_assault_table":
+        return ChoiceAnswer(flag=values["decision"][0] == "yes", text=values["account"])
+    if kind == "battle_handler":
+        return ChoiceAnswer(options=values["options"], text=values.get("account", ""))
+    if kind == "battle_counter":
+        return (
+            ChoiceAnswer(flag=False)
+            if values["options"] == ("pass",)
+            else ChoiceAnswer(options=values["options"])
         )
-        return "Actual owned battle choice saved; required effects keep this scene held."
-
-    form = NativeForm(
-        interaction.user.id,
-        "Battle: your actual choice",
-        "Only the printed source owner may answer. " + detail.get("learned_rider", ""),
-        fields,
-        submit,
-    )
-    await reply(interaction, form.text(), form)
+    if kind in ("battle_low_damage", "battle_actor_damage", "battle_target_damage",
+                "battle_trainer_protect"):
+        return ChoiceAnswer(fields={"asset": values["asset"][0]})
+    raise ValueError("Open the original assigned battle form.")
 
 
 async def open_npc_damage(

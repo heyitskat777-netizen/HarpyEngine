@@ -201,7 +201,7 @@ class Extraction(Model):
     scope: str
     memories: tuple[str, ...]
     identities: tuple[str, ...]
-    am: str
+    am: str | None
     through_revision: int
     low: bool
     event: str
@@ -713,6 +713,10 @@ def extract_many(state: GameState, values: tuple[Extraction, ...]) -> None:
     ):
         raise ValueError("SOURCE_IDENTITY_ADAPTER_REQUIRED: preserve protected original slots")
     if selected:
+        if first.am is None or first.low:
+            raise ValueError(
+                "Only a mid or high extraction installs an AM in a linked Identity slot"
+            )
         am = get(state, CourtAM, first.am)
         if am.bearer != first.target:
             assign(state, am, first.target, first.session, first.event, first.event)

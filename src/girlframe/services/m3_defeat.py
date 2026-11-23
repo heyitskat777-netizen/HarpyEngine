@@ -14,6 +14,7 @@ from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_defeat_state import Alternative, Decision, NewVoidAsset
 from girlframe.engine.m3_intracadre_marriage import available
+from girlframe.services.campaign_difficulty import difficulty, narrative_death_available
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
@@ -178,7 +179,23 @@ def projection(
     request: dict[str, Any],
 ) -> dict[str, Any]:
     sheet = state.sheets[action["actor_id"]]
-    data: dict[str, Any] = dict(offer=action["data"].get("defeat_offer"))
+    narrative = difficulty(c, game.store.campaign_id) == "narrative"
+    data: dict[str, Any] = dict(
+        offer=action["data"].get("defeat_offer"),
+        narrative=narrative,
+        narrative_death_available=narrative
+        and narrative_death_available(c, game.store.campaign_id, state),
+    )
+    from girlframe.services import m3_soldier_expendable as expendable
+
+    if request["kind"] == "defeat_select":
+        data["soldiers"] = tuple(
+            (actor.ref.token, actor.label)
+            for actor, _ in expendable.candidates(game, c, state, action)
+        )
+    if request["kind"] == expendable.REQUEST:
+        source = action["data"].get("soldier_expendable") or {}
+        data["soldier_request"] = dict(label=source.get("label"), context=source.get("context"))
     if request["kind"] == "defeat_alternative":
         data.update(
             assets=[
@@ -347,10 +364,17 @@ def apply(
     request: dict[str, Any],
     answer: ChoiceAnswer,
 ) -> None:
+    from girlframe.services import m3_soldier_expendable as expendable
     from girlframe.services.m2_choices import ChoiceEngine
 
     actor = ActorRef.model_validate_json(json.dumps(action["data"]["defeat"]["actor"]))
     kind = request["kind"]
+    if kind == expendable.REQUEST:
+        expendable.answer_request(game, c, state, action, request, answer)
+        return
+    if kind == "defeat_select" and expendable.OPTION in answer.options:
+        expendable.ask(game, c, state, action, answer)
+        return
     if kind == "defeat_tag_gift":
         if (
             answer.options not in (("give",), ("decline",))
@@ -436,6 +460,22 @@ def apply(
         chosen = Decision.model_validate_json(json.dumps(action["data"]["defeat_selected"]))
         offer = Alternative.model_validate_json(json.dumps(action["data"]["defeat_offer"]))
     elif kind == "defeat_select":
+        campaign = game.store.campaign_id
+        if "death" in answer.options and difficulty(c, campaign) == "narrative":
+            if not narrative_death_available(c, campaign, state):
+                raise WorkflowError(
+                    "NARRATIVE_LIMIT: this campaign has already recorded its one death."
+                )
+            if answer.options != ("death",):
+                raise WorkflowError(
+                    "NARRATIVE_LIMIT: confirm Death on its own or choose other consequences."
+                )
+            if answer.flag is not True:
+                raise WorkflowError(
+                    "NARRATIVE_LIMIT: explicitly confirm this character's death or choose survival."
+                )
+            # The original answer remains in the action and carries its exact consent.
+            answer = answer.model_copy(update={"flag": None})
         chosen = decision(game, c, state, answer)
         for ref in (chosen.rescuer, chosen.tag_giver):
             if ref is not None and int(ref.entity) not in action["data"]["participants"]:

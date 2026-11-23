@@ -136,7 +136,6 @@ def episode(ledger, tmp_path, monkeypatch, *, recipe="keep_your_head"):
             heat=("0",),
             disposable_heat=("0",),
             piloting=("no",),
-            witnessed=("no",),
             trigger=("yes",),
             context=expected.context,
         )

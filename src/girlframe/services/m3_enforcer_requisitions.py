@@ -194,7 +194,9 @@ class EnforcerRequisitionService(RequisitionService):
             ]
             return data
 
-    def acquisition_view(self, viewer: GuildViewer, kind: rules.Kind) -> dict[str, Any]:
+    def acquisition_view(
+        self, viewer: GuildViewer, kind: rules.Kind | None = None
+    ) -> dict[str, Any]:
         data = self.view(viewer)
         with self.store.engine.connect() as c:
             Access(self.store, self.registry).authorize(c, viewer, "economy")
@@ -203,6 +205,8 @@ class EnforcerRequisitionService(RequisitionService):
             state = load_state(c, self.store.campaign_id)
             actor = ActorRef.model_validate(data["actor"])
             own = state.sheets[actor.entity].frame == "THE ENFORCER"
+            if kind is None:
+                kind = "ability_unlock" if own else "frame_grafting"
             if (
                 kind not in ("ability_unlock", "frame_grafting")
                 or (kind == "ability_unlock") != own

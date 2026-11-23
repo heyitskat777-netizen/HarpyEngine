@@ -62,6 +62,8 @@ def last_counter(game, worker, gateway, identity, *, mark_attacker=False):
         await opened.response.defer(ephemeral=True)
         await open_alpha_choice(opened, game, request["id"])
         form = opened.edit_original_response.call_args.kwargs["view"]
+        form.values["play"] = ("put_someone_beneath_you",)
+        form.controls()
         assert "identity" in {x.key for x in form.fields}
         identity_field = next(x for x in form.fields if x.key == "identity")
         assert "Beneath" in identity_field.label
@@ -342,7 +344,6 @@ def episode(
                     heat=("0",),
                     disposable_heat=("0",),
                     piloting=("no",),
-                    witnessed=("no",),
                     trigger=("yes",),
                     context=expected.context,
                 )

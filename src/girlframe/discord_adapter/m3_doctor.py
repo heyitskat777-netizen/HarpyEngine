@@ -29,7 +29,7 @@ async def open_doctor(interaction: discord.Interaction, service: DoctorService) 
         interaction.channel_id,
     )
     if not calls["native"]:
-        await open_call(interaction, service, calls)
+        await open_call(interaction, service, calls, npc=bool(calls["npc_callers"]))
         return
     data = await asyncio.to_thread(
         service.menu, viewer_from_interaction(interaction), interaction.channel_id
@@ -37,6 +37,8 @@ async def open_doctor(interaction: discord.Interaction, service: DoctorService) 
     options = [("roll", "Nanobot Injection / Here for Support")]
     if calls["doctors"]:
         options.append(("call", "Call another Doctor — Running Ragged"))
+    if calls["npc_doctors"]:
+        options.append(("npc_call", "Call a Doctor as your NPC — Running Ragged"))
     if data["acquisitions"]:
         options.append(("buy", "Acquire a native Requisition (2 Permissions; unmark one box)"))
     for rule, kind in (
@@ -52,6 +54,8 @@ async def open_doctor(interaction: discord.Interaction, service: DoctorService) 
     async def choose(current: discord.Interaction, kind: str) -> None:
         if kind == "call":
             await open_call(current, service, calls)
+        elif kind == "npc_call":
+            await open_call(current, service, calls, npc=True)
         elif kind == "roll":
             await open_roll(current, service)
         else:
@@ -66,16 +70,26 @@ async def open_doctor(interaction: discord.Interaction, service: DoctorService) 
 
 
 async def open_call(
-    interaction: discord.Interaction, service: DoctorService, data: dict[str, Any]
+    interaction: discord.Interaction,
+    service: DoctorService,
+    data: dict[str, Any],
+    *,
+    npc: bool = False,
 ) -> None:
     """The caller declares their own call, then either participant pays their Tag."""
     from girlframe.services.m3_doctor_procedures import ProcedureService
 
-    if not data["doctors"]:
+    doctors = data["npc_doctors"] if npc else data["doctors"]
+    if not doctors:
         raise WorkflowError("No other joined Doctor has actual Running Ragged")
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
-        doctor = next(x for x in data["doctors"] if x["token"] == values["doctor"][0])
+        doctor = next(x for x in doctors if x["token"] == values["doctor"][0])
+        caller = (
+            next(x["ref"] for x in data["npc_callers"] if x["token"] == values["caller"][0])
+            if npc
+            else data["caller"]
+        )
         assert interaction.channel_id is not None
         result = await asyncio.to_thread(
             ProcedureService(service.game).propose,
@@ -83,7 +97,7 @@ async def open_call(
             str(current.id),
             data["revision"],
             interaction.channel_id,
-            ActorRef.model_validate(data["caller"]),
+            ActorRef.model_validate(caller),
             "ragged",
             values["account"],
             called_doctor=ActorRef.model_validate(doctor["ref"]),
@@ -93,16 +107,24 @@ async def open_call(
             + str(result["id"])
         )
 
+    fields = [
+        Field("doctor", "Doctor to call", tuple((x["token"], x["label"]) for x in doctors)),
+        Field("account", "Describe your actual call", paragraph=True),
+    ]
+    if npc:
+        fields.insert(
+            0,
+            Field(
+                "caller",
+                "Your NPC making the call",
+                tuple((x["token"], x["label"]) for x in data["npc_callers"]),
+            ),
+        )
     await NativeForm(
         interaction.user.id,
         "Call a Doctor — Running Ragged",
         "Declare your actual call. Arrival requires either participant's own unmarked Tag.",
-        [
-            Field(
-                "doctor", "Doctor to call", tuple((x["token"], x["label"]) for x in data["doctors"])
-            ),
-            Field("account", "Describe your actual call", paragraph=True),
-        ],
+        fields,
         submit,
     ).present(interaction)
 
@@ -215,6 +237,31 @@ async def open_choice(
             raise WorkflowError("Recover the actual required Handler grant first")
         await open_play(interaction, HandlerPlayService(service.store), grant)
         return
+    fields = doctor_choice_fields(data)
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        answer = doctor_choice_answer(data["kind"], values)
+        await asyncio.to_thread(
+            service.game.respond,
+            viewer_from_interaction(current),
+            str(current.id),
+            identity,
+            data["revision"],
+            answer,
+        )
+        return "Actual Doctor response saved. Continue the original pending choices."
+
+    await NativeForm(
+        interaction.user.id,
+        "DoctorDoctor — your owned response",
+        "Select actual existing resources; no locked Identity is unmarked.",
+        fields,
+        submit,
+    ).present(interaction)
+
+
+def doctor_choice_fields(data: dict[str, Any]) -> list[Field]:
+    detail = data["doctor"]
     if data["kind"] == "doctor_support_response":
         options: tuple[tuple[str, str], ...] = (("protect", "Protect the actual Doctor"),)
         if data["body"].get("may_refuse"):
@@ -298,52 +345,38 @@ async def open_choice(
             fields = [
                 Field("none", "No eligible sheet details", (("none", "No eligible changes exist"),))
             ]
+    return fields
 
-    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
-        if data["kind"] == "doctor_support_response":
-            answer = ChoiceAnswer(
-                options=tuple(values["decision"]), fields={"bond": values["bond"][0]}
-            )
-        elif data["kind"] == "doctor_support_refused":
-            answer = ChoiceAnswer(
-                options=tuple(values["decision"]),
-                text=values.get("tag", "") if values["decision"] == ("tag",) else "",
-            )
-        elif data["kind"] == "doctor_nanobot_benefits":
-            answer = ChoiceAnswer(
-                options=tuple(values["choices"]),
-                fields={"effect": values["effect"][0]} if values.get("effect") else {},
-            )
-        elif detail.get("npc") and values.get("confirm"):
-            answer = ChoiceAnswer(options=tuple(values["confirm"]))
-        else:
-            chosen = replacements(values)
-            answer = ChoiceAnswer(
-                options=tuple(values.get("assets", ())),
-                fields=({"identity": values["identity"][0]} if values.get("identity") else {})
-                | (
-                    {"modular": json.dumps([x.model_dump(mode="json") for x in chosen])}
-                    if chosen
-                    else {}
-                ),
-            )
-        await asyncio.to_thread(
-            service.game.respond,
-            viewer_from_interaction(current),
-            str(current.id),
-            identity,
-            data["revision"],
-            answer,
+
+def doctor_choice_answer(kind: str, values: dict[str, Any]) -> ChoiceAnswer:
+    if kind == "doctor_support_response":
+        answer = ChoiceAnswer(
+            options=tuple(values["decision"]), fields={"bond": values["bond"][0]}
         )
-        return "Actual Doctor response saved. Continue the original pending choices."
-
-    await NativeForm(
-        interaction.user.id,
-        "DoctorDoctor — your owned response",
-        "Select actual existing resources; no locked Identity is unmarked.",
-        fields,
-        submit,
-    ).present(interaction)
+    elif kind == "doctor_support_refused":
+        answer = ChoiceAnswer(
+            options=tuple(values["decision"]),
+            text=values.get("tag", "") if values["decision"] == ("tag",) else "",
+        )
+    elif kind == "doctor_nanobot_benefits":
+        answer = ChoiceAnswer(
+            options=tuple(values["choices"]),
+            fields={"effect": values["effect"][0]} if values.get("effect") else {},
+        )
+    elif values.get("confirm"):
+        answer = ChoiceAnswer(options=tuple(values["confirm"]))
+    else:
+        chosen = replacements(values)
+        answer = ChoiceAnswer(
+            options=tuple(values.get("assets", ())),
+            fields=({"identity": values["identity"][0]} if values.get("identity") else {})
+            | (
+                {"modular": json.dumps([x.model_dump(mode="json") for x in chosen])}
+                if chosen
+                else {}
+            ),
+        )
+    return answer
 
 
 async def open_procedure(
@@ -514,13 +547,19 @@ async def open_request(
         await reply(interaction, "Waiting for the original source-owned response.")
         return
     fields = [Field("account", "Confirm the actual tearing / call and arrival", paragraph=True)]
+    npc_call = bool(data["procedure"].get("npc_call_scene"))
     if data["procedure"]["kind"] == "ragged":
         if not data["tags"]:
             raise WorkflowError("An actual participant must mark their own unmarked Tag")
         fields.insert(
             0,
             Field(
-                "tag", "Your actual Tag to mark", tuple((x["id"], x["label"]) for x in data["tags"])
+                "tag",
+                "Your actual Tag to mark",
+                tuple(
+                    (str(index) if npc_call else x["id"], x["label"])
+                    for index, x in enumerate(data["tags"])
+                ),
             ),
         )
 
@@ -535,6 +574,12 @@ async def open_request(
                 values["account"],
             )
             return "Actual protection has ended."
+        tag = values["tag"][0] if values.get("tag") else None
+        payer = None
+        if npc_call and tag is not None:
+            selected = data["tags"][int(tag)]
+            tag = selected["id"]
+            payer = ActorRef.model_validate(selected["payer"])
         await asyncio.to_thread(
             source.confirm,
             viewer_from_interaction(current),
@@ -542,7 +587,8 @@ async def open_request(
             identity,
             data["revision"],
             values["account"],
-            values["tag"][0] if values.get("tag") else None,
+            tag,
+            payer=payer,
         )
         return "Actual source action completed."
 

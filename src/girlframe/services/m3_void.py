@@ -96,6 +96,34 @@ def source(
         )
         proof = GameState.model_validate_json(raw) if raw else None
         sheet = proof.sheets.get(actor.entity) if proof else None
+        if body.get("reason") == "mother_memetic_hazard_rebirth":
+            from girlframe.services.m3_mother_hazard import prove_rebirth as prove_hazard_rebirth
+
+            if proof is None or sheet is None or sheet.character_id != actor.incarnation:
+                raise ValueError()
+            prove_hazard_rebirth(game, c, proof, first, body, actor)
+            return current, body, actor
+        if body.get("reason") == "incubus_conditioning_rebirth":
+            from girlframe.services.m3_incubus_conditioning import prove_rebirth
+
+            if proof is None or sheet is None or sheet.character_id != actor.incarnation:
+                raise ValueError()
+            prove_rebirth(game, c, proof, first, body, actor)
+            return current, body, actor
+        if body.get("reason") == "gorgon_frame_contact_rebirth":
+            from girlframe.services.m3_gorgon_frame_contact import prove_frame_rebirth
+
+            if proof is None or sheet is None or sheet.character_id != actor.incarnation:
+                raise ValueError()
+            prove_frame_rebirth(game, c, proof, first, body, actor)
+            return current, body, actor
+        if body.get("reason") == "harpy_intimacy_rebirth":
+            from girlframe.services.m3_harpy_intimacy import prove_void as prove_intimacy_rebirth
+
+            if proof is None or sheet is None or sheet.character_id != actor.incarnation:
+                raise ValueError()
+            prove_intimacy_rebirth(game, c, proof, first, body, actor)
+            return current, body, actor
         from girlframe.engine.m3_janus_storage import effective_assets, for_family
 
         assets = [x for x in effective_assets(proof, actor) if x.family == family] if proof else []
@@ -115,6 +143,23 @@ def source(
 
             for point in for_family(proof, actor, family):
                 prove_stored_point(game, c, proof, point)
+        if body.get("reason") == "punishment":
+            from girlframe.services.m3_punishment_sources import prove, void_families
+
+            parent, before, after = prove(
+                game,
+                c,
+                body["source_work"],
+                first["event_id"],
+                actor,
+                ("frame_disassembly", "compliance_surgery", "link_surgery_reversal"),
+            )
+            if family not in void_families(before, after, actor) or any(
+                first[key] != parent[key]
+                for key in ("scene_id", "off_duty_id", "mission_id", "campaign_context")
+            ):
+                raise ValueError()
+            return current, body, actor
         if body.get("reason") in (
             "supply_drop_expiry",
             "budget_removal",
@@ -147,10 +192,103 @@ def source(
 
             prove_temptation(game, c, first, body, actor)
             return current, body, actor
+        if body.get("reason") == "mother_memetic_hazard":
+            from girlframe.services.m3_mother_hazard import prove_void as prove_hazard_void
+
+            assert proof is not None
+            prove_hazard_void(game, c, proof, first, body, actor)
+            return current, body, actor
+        if body.get("reason") == "parasite_infection":
+            from girlframe.services.m3_parasite_infection import prove_void as prove_infection_void
+
+            assert proof is not None
+            prove_infection_void(game, c, proof, first, body, actor)
+            return current, body, actor
+        if body.get("reason") == "growth_unreal":
+            from girlframe.services.m3_grow_unreal import prove_void as prove_growth_void
+
+            assert proof is not None
+            prove_growth_void(game, c, proof, first, body, actor)
+            return current, body, actor
+        if body.get("reason") == "incubus_conditioning":
+            from girlframe.services.m3_incubus_conditioning import prove_void as prove_incubus_void
+
+            assert proof is not None
+            prove_incubus_void(game, c, proof, first, body, actor)
+            return current, body, actor
+        if body.get("reason") == "sentinel_shell":
+            from girlframe.services.m3_sentinel_shell import prove_void as prove_shell_void
+
+            assert proof is not None
+            prove_shell_void(game, c, proof, first, body, actor)
+            return current, body, actor
+        if body.get("reason") == "gorgon_frame_contact_consequence":
+            from girlframe.services.m3_gorgon_frame_contact import prove_frame_void
+
+            assert proof is not None
+            prove_frame_void(game, c, proof, first, body, actor)
+            return current, body, actor
+        if body.get("reason") == "jackdaw_hallucinations":
+            from girlframe.services.m3_hallucinations import prove_threshold as prove_hallucinations
+
+            assert proof is not None
+            prove_hallucinations(game, c, proof, first, body, actor)
+            return current, body, actor
+        if body.get("reason") == "harpy_intimacy":
+            from girlframe.services.m3_harpy_intimacy import prove_void as prove_intimacy_void
+
+            assert proof is not None
+            prove_intimacy_void(game, c, proof, first, body, actor)
+            return current, body, actor
+        if body.get("reason") == "harpy_gaze":
+            from girlframe.services.m3_harpy_gaze import prove_void as prove_gaze_void
+
+            assert proof is not None
+            prove_gaze_void(game, c, proof, first, body, actor)
+            return current, body, actor
+        if body.get("reason") == "npc_scientist_void":
+            from girlframe.services.m3_npc_care import prove_void as prove_npc_experiment
+
+            assert proof is not None
+            prove_npc_experiment(game, c, proof, first, body, actor)
+            return current, body, actor
+        if body.get("reason") == "harpy_voidspace_carry":
+            from girlframe.services.m3_harpy_voidspace import prove_void as prove_harpy_passage
+
+            assert proof is not None
+            prove_harpy_passage(game, c, proof, first, body, actor)
+            return current, body, actor
+        if body.get("reason") == "voidspace_invasion_gain":
+            from girlframe.services.m3_voidspace_invasion import prove_void as prove_invasion
+
+            assert proof is not None
+            prove_invasion(game, c, proof, first, body, actor)
+            return current, body, actor
+        if body.get("reason") == "scientist_private_void":
+            from girlframe.services.m3_scientist_private_scene import (
+                prove_threshold as prove_scientist_threshold,
+            )
+
+            prove_scientist_threshold(game, c, first, body, actor)
+            return current, body, actor
         if body.get("reason") == "budget_cleanup":
             from girlframe.services.m3_budget_cleanup import prove_void_source as prove_cleanup
 
             prove_cleanup(game, c, first, body, actor)
+            return current, body, actor
+        if body.get("reason") == "strain_void_signal":
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_off_duty import OffDutyService
+            from girlframe.services.m3_strain import StrainService
+            from girlframe.services.m3_void_signal import SignalService, prove_threshold
+
+            signal = SignalService(StrainService(OffDutyService(MissionService(game.store))))
+            prove_threshold(c, signal, first, body, actor)
+            return current, body, actor
+        if body.get("reason") == "void_spread":
+            from girlframe.services.m3_void_spread import prove_threshold as prove_spread_threshold
+
+            prove_spread_threshold(c, game.store, first, body, actor)
             return current, body, actor
         if body.get("reason") == "janus_storage_replug":
             from girlframe.services.m3_janus_storage import prove_replug
@@ -345,6 +483,8 @@ def prepare_threshold(
             row["id"],
             source_action=body["source_action"],
         )
+    if existing.forced_by is not None:
+        return state, existing
     latest = {
         x["id"]: dict(x)
         for x in c.execute(
@@ -479,6 +619,10 @@ def complete(
             from girlframe.services.m3_janus_storage import complete_replug
 
             complete_replug(game, c, identity, event, viewer, key)
+        elif body.get("reason") in ("harpy_intimacy", "harpy_intimacy_rebirth"):
+            from girlframe.services.m3_harpy_intimacy import settle as settle_intimacy
+
+            settle_intimacy(game, c, body, event, viewer, key)
         elif body.get("reason") == "call_guest":
             from girlframe.services.m3_mockingbird_communion import complete_call_guest_void
 
@@ -499,14 +643,22 @@ def complete(
             from girlframe.services.m3_battle_dormant import complete_void
 
             complete_void(game, c, identity, event, viewer, key)
+        elif body.get("reason") == "punishment":
+            from girlframe.services.m3_role_punishments import synchronize
+
+            synchronize(game, c, None, event)
         elif body.get("reason") in (
             "supply_drop_expiry",
             "budget_removal",
             "doctor_wings",
             "doctor_wings_return",
+            "scientist_private_void",
+            "npc_scientist_void",
+            "harpy_gaze",
+            "harpy_voidspace_carry",
+            "voidspace_invasion_gain",
         ):
-            # These actual loss sources have no synthetic parent Play; source-scoped
-            # required work was resolved above by the real owned Void outcome.
+            # These sources have no parent Play to resume after the owned outcome.
             continue
         elif body.get("reason") in ("ankou_feedback_sequence", "ankou_processor_unlink"):
             from girlframe.services.m3_ankou import synchronize_events as sync_ankou_effects
@@ -520,6 +672,41 @@ def complete(
             from girlframe.services.m3_consume import resume_pending
 
             resume_pending(game, c, event)
+        elif body.get("reason") in ("mother_memetic_hazard", "mother_memetic_hazard_rebirth"):
+            from girlframe.services.m3_mother_hazard import complete_void as complete_hazard_void
+
+            complete_hazard_void(game, c, identity, body["source_action"], event, viewer, key)
+        elif body.get("reason") == "parasite_infection":
+            from girlframe.services.m3_parasite_infection import (
+                complete_void as complete_infection_void,
+            )
+
+            complete_infection_void(game, c, identity, body["source_action"], event, viewer, key)
+        elif body.get("reason") == "growth_unreal":
+            from girlframe.services.m3_grow_unreal import complete_void as complete_growth_void
+
+            complete_growth_void(game, c, identity, body["source_action"], event, viewer, key)
+        elif body.get("reason") in ("incubus_conditioning", "incubus_conditioning_rebirth"):
+            from girlframe.services.m3_incubus_conditioning import complete_void as complete_incubus
+
+            complete_incubus(game, c, identity, body["source_action"], event, viewer, key)
+        elif body.get("reason") == "sentinel_shell":
+            from girlframe.services.m3_sentinel_shell import complete_void as complete_shell_void
+
+            complete_shell_void(game, c, identity, body["source_action"], event, viewer, key)
+        elif body.get("reason") in (
+            "gorgon_frame_contact_consequence",
+            "gorgon_frame_contact_rebirth",
+        ):
+            from girlframe.services.m3_gorgon_frame_contact import complete_frame_void
+
+            complete_frame_void(game, c, identity, body["source_action"], event, viewer, key)
+        elif body.get("reason") == "jackdaw_hallucinations":
+            from girlframe.services.m3_hallucinations import (
+                complete_void as complete_hallucinations,
+            )
+
+            complete_hallucinations(game, c, identity, body["source_action"], event, viewer, key)
         elif body.get("reason") == "harpy_bond_void":
             from girlframe.services.m3_harpy_bond_void import complete_void as complete_temptation
 
@@ -528,6 +715,19 @@ def complete(
             from girlframe.services.m3_budget_cleanup import complete_void as complete_cleanup
 
             complete_cleanup(game, c, identity, event, viewer, key)
+        elif body.get("reason") == "strain_void_signal":
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_off_duty import OffDutyService
+            from girlframe.services.m3_strain import StrainService
+            from girlframe.services.m3_void_signal import SignalService
+            from girlframe.services.m3_void_signal import complete as complete_signal
+
+            signal = SignalService(StrainService(OffDutyService(MissionService(game.store))))
+            complete_signal(c, signal, body["signal"], event)
+        elif body.get("reason") == "void_spread":
+            from girlframe.services.m3_void_spread import complete_threshold as complete_spread
+
+            complete_spread(c, game.store, body["source_work"], event)
         elif body.get("reason") == "am_body_adjustment":
             from girlframe.services.m3_am_body_consequences import complete_void_continuation
 
@@ -611,6 +811,45 @@ class VoidService:
             handler = True
         except WorkflowError:
             pass
+        if handler and body.get("reason") in (
+            "gorgon_frame_contact_consequence",
+            "gorgon_frame_contact_rebirth",
+            "incubus_conditioning",
+            "incubus_conditioning_rebirth",
+            "parasite_infection",
+            "mother_memetic_hazard",
+            "mother_memetic_hazard_rebirth",
+        ):
+            parent = self.game.action(c, body["source_action"])
+            handler = viewer.user_id in parent["data"].get("private_audience", ())
+        if handler and body.get("reason") in ("harpy_intimacy", "harpy_intimacy_rebirth"):
+            from girlframe.services.m3_harpy_intimacy import void_audience as intimacy_audience
+
+            handler = viewer.user_id in intimacy_audience(self.game, c, state, body)
+        if handler and body.get("reason") == "harpy_gaze":
+            from girlframe.services.m3_harpy_gaze import void_audience
+
+            handler = viewer.user_id in void_audience(self.game, c, state, body)
+        if handler and body.get("reason") == "npc_scientist_void":
+            from girlframe.services.m3_npc_care import void_audience as experiment_audience
+
+            handler = viewer.user_id in experiment_audience(self.game, c, state, body)
+        if handler and body.get("reason") == "harpy_voidspace_carry":
+            from girlframe.services.m3_harpy_voidspace import audience as passage_audience
+
+            handler = viewer.user_id in passage_audience(self.game, c, state, body)
+        if handler and body.get("reason") == "voidspace_invasion_gain":
+            from girlframe.services.m3_voidspace_invasion import audience as invasion_audience
+
+            handler = viewer.user_id in invasion_audience(self.game, c, state, body)
+        if handler and body.get("reason") == "scientist_private_void":
+            from girlframe.engine.m3_handler_consequences import active_handler
+            from girlframe.engine.m3_handler_private_scene import records as private_scenes
+
+            handler = any(
+                x.id == body["case"] and x.handler == active_handler(state)
+                for x in private_scenes(state)
+            )
         guardian = value.guardian or (
             ActorRef.model_validate_json(json.dumps(pending["guardian"]))
             if pending.get("guardian")
@@ -867,6 +1106,10 @@ class VoidService:
                 "confirm_approach",
             ):
                 self._handler(c, viewer)
+                if not view["handler"]:
+                    raise WorkflowError(
+                        "Only the actual authorized Handler owns this factual choice."
+                    )
             elif operation in ("accept_protection", "release_protection"):
                 if not view["guardian_owned"]:
                     raise WorkflowError(

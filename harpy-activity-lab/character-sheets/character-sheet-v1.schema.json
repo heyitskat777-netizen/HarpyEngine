@@ -1,0 +1,88 @@
+{
+  "$id": "urn:harpyengine:character-sheet-v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A display snapshot. This format is never accepted by the draft importer.",
+  "properties": {
+    "audience": {
+      "enum": [
+        "owner",
+        "public"
+      ],
+      "title": "Audience",
+      "type": "string"
+    },
+    "character_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Character Id"
+    },
+    "display_name": {
+      "default": "",
+      "title": "Display Name",
+      "type": "string"
+    },
+    "engine_version": {
+      "title": "Engine Version",
+      "type": "string"
+    },
+    "format": {
+      "const": "harpyengine.character-sheet",
+      "default": "harpyengine.character-sheet",
+      "title": "Format",
+      "type": "string"
+    },
+    "members": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Members",
+      "type": "object"
+    },
+    "owner_id": {
+      "pattern": "^[1-9][0-9]{0,19}$",
+      "title": "Owner Id",
+      "type": "string"
+    },
+    "revision": {
+      "minimum": 0,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "rules_status": {
+      "const": "RULES_SUBSET",
+      "default": "RULES_SUBSET",
+      "title": "Rules Status",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "sheet": {
+      "additionalProperties": true,
+      "title": "Sheet",
+      "type": "object"
+    }
+  },
+  "required": [
+    "audience",
+    "engine_version",
+    "format",
+    "owner_id",
+    "revision",
+    "schema_version",
+    "sheet"
+  ],
+  "title": "CharacterSheetDocument",
+  "type": "object"
+}

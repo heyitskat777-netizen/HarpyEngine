@@ -12,6 +12,7 @@ from girlframe.engine.bonds import starting_kind
 from girlframe.engine.creation import CreationDraft
 from girlframe.engine.frame_setup import frame_setup
 from girlframe.engine.pair_assets import PairChoice
+from girlframe.engine.playbooks import normalize_frame_fields
 from girlframe.engine.shared_setup import AcceptedSetup
 from girlframe.services.bonds import BondService
 from girlframe.services.handler_setup import HandlerService
@@ -38,11 +39,14 @@ class CreationService:
     def _current(self, connection: Connection, viewer: GuildViewer) -> CreationProgress:
         self.store.guild_member(viewer)
         self.store._membership(connection, viewer)
+        return self._current_for_owner(connection, viewer.user_id)
+
+    def _current_for_owner(self, connection: Connection, owner: int) -> CreationProgress:
         character = (
             connection.execute(
                 sa.select(t.characters).where(
                     t.characters.c.campaign_id == self.store.campaign_id,
-                    t.characters.c.user_id == str(viewer.user_id),
+                    t.characters.c.user_id == str(owner),
                 )
             )
             .mappings()
@@ -50,26 +54,26 @@ class CreationService:
         )
         if character is None:
             raise WorkflowError("Save a character draft with /character create first.")
-        profile = json.loads(character["public_json"])
+        profile = normalize_frame_fields(json.loads(character["public_json"]))
         empty = CreationDraft(
             girl_playbook=profile["girl_playbook"],
             frame_playbook=profile["frame_playbook"],
             frame_setup=frame_setup(profile["frame_playbook"]),
         )
         pair = (
-            PairService(self.store).for_owner(connection, viewer)
+            PairService(self.store)._for_owner(connection, owner)
             if empty.girl_playbook == "BONDED"
             else None
         )
         empty = empty.model_copy(update={"pair_source_token": pair.token if pair else None})
-        shared = SharedSetupService(self.store).accepted_for(connection, viewer.user_id)
+        shared = SharedSetupService(self.store).accepted_for(connection, owner)
         empty = empty.model_copy(update={"shared_tokens": tuple(x.token for x in shared)})
         row = (
             connection.execute(
                 sa.select(t.creation_drafts)
                 .where(
                     t.creation_drafts.c.campaign_id == self.store.campaign_id,
-                    t.creation_drafts.c.user_id == str(viewer.user_id),
+                    t.creation_drafts.c.user_id == str(owner),
                 )
                 .order_by(t.creation_drafts.c.revision.desc())
                 .limit(1)

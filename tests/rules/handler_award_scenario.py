@@ -14,8 +14,8 @@ from girlframe.engine.m3_world_state import Location
 from girlframe.services.m3_handler_pr import HandlerPRService
 
 
-def ordinary_pr_award(store, tmp_path, monkeypatch):
-    game, ordinary, worker, gateway = setup(store, tmp_path, monkeypatch)
+def ordinary_pr_award(store, tmp_path, monkeypatch, *, playbook="Scientist"):
+    game, ordinary, worker, gateway = setup(store, tmp_path, monkeypatch, playbook=playbook)
     approved(store, game, tmp_path, monkeypatch, extra=(ordinary_rules.RULE,))
     store.policy = store.policy.model_copy(
         update={

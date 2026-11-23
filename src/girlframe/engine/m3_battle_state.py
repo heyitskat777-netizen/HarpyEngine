@@ -32,7 +32,12 @@ class Declaration(Model):
     def actual_combatants(self) -> "Declaration":
         if self.actor == self.target or not self.account.strip():
             raise ValueError("Declare two distinct actual combatants and the actual opening")
-        if (self.play == "all_out_assault") != (self.target_asset is not None):
+        body_assault = (
+            self.play == "all_out_assault"
+            and self.actor.kind == "external_pilot"
+            and self.target.kind == "handler"
+        )
+        if not body_assault and (self.play == "all_out_assault") != (self.target_asset is not None):
             raise ValueError(
                 "All Out Assault names its actual opposing Asset; Core names its vitals"
             )

@@ -9,7 +9,7 @@ from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
-from girlframe.engine.m3_handler_advancements import PermissionGrant
+from girlframe.engine.m3_handler_advancements import TIMESKIP_RULE, PermissionGrant
 from girlframe.services.m3_handler_advancements import HandlerAdvancementService
 from girlframe.services.onboarding import WorkflowError
 
@@ -122,16 +122,18 @@ async def open_advancement(
         )
         return
     if data.get("acquired_rule"):
+        label = {
+            "cute-uniforms": "Cute Uniforms",
+            "girl-insurance": "Girl Insurance",
+            "successor": "Successor",
+            "last-resort": "Last / Resort",
+            "take-a-play": "a borrowed Handler Play",
+            "swap-playbook": "a Handler playbook change",
+        }.get(data["acquired_rule"].rsplit(".", 1)[-1], "Supply Drop")
         await reply(
             interaction,
             "This advancement acquired "
-            + (
-                "Cute Uniforms"
-                if data["acquired_rule"].endswith("cute-uniforms")
-                else "Girl Insurance"
-                if data["acquired_rule"].endswith("girl-insurance")
-                else "Supply Drop"
-            )
+            + label
             + ". Its original acquisition source is saved; open the acquired rule to use it.",
         )
         return
@@ -149,14 +151,17 @@ async def open_advancement(
         ]
         ordinary_source = data.get("ordinary_source")
         content = "**Handler advancement spent**\n" + (
-            (
-                "Ordinary public-relations accomplishment"
-                if ordinary_source["trigger"] == "public_relations"
-                else "Ordinary capture and conversion accomplishment"
-                if ordinary_source["trigger"] == "capture_convert"
-                else "Ordinary starting-Identity accomplishment"
-            )
+            {
+                "public_relations": "Ordinary public-relations accomplishment",
+                "capture_convert": "Ordinary capture and conversion accomplishment",
+                "identities_useful": "Ordinary starting-Identity accomplishment",
+                "dogrunner_all_dogs": "Dogrunner Cadre accomplishment",
+                "advocate_pride_parade": "Advocate pride parade",
+                "scientist_dissection": "Scientist dissection",
+            }[ordinary_source["trigger"]]
             if ordinary_source
+            else "Original Timeskip advancement"
+            if data["rule"] == TIMESKIP_RULE
             else "Void Endgame " + data["rule"].rsplit(".", 1)[1]
         )
         if interaction.response.is_done():
@@ -527,6 +532,32 @@ class AcquireMore(discord.ui.Button[NativeForm]):
             return
 
         async def choose(current: discord.Interaction, values: dict[str, Any]) -> None:
+            if values["advancement"][0] == "successor":
+                from girlframe.discord_adapter.m3_successor import open_purchase
+                from girlframe.services.m3_successor import SuccessorService
+
+                await open_purchase(current, SuccessorService(self.service.store), self.identity)
+                return
+            if values["advancement"][0] == "last_resort":
+                from girlframe.discord_adapter.m3_last_resort import open_purchase as reserve_frame
+                from girlframe.services.m3_last_resort import LastResortService
+
+                await reserve_frame(current, LastResortService(self.service.store), self.identity)
+                return
+            if values["advancement"][0] == "borrow":
+                from girlframe.discord_adapter.m3_handler_borrowed import open_borrow
+                from girlframe.services.m3_handler_borrowed import BorrowedHandlerService
+
+                await open_borrow(
+                    current, BorrowedHandlerService(self.service.store), self.identity
+                )
+                return
+            if values["advancement"][0] == "swap":
+                from girlframe.discord_adapter.m3_handler_book_swap import open_swap
+                from girlframe.services.m3_handler_book_swap import HandlerBookSwapService
+
+                await open_swap(current, HandlerBookSwapService(self.service.store), self.identity)
+                return
             if values["advancement"][0] == "opportunity":
                 from girlframe.discord_adapter.m3_promotional_opportunity import open_opportunity
                 from girlframe.services.m3_promotional_opportunity import (
@@ -562,6 +593,10 @@ class AcquireMore(discord.ui.Button[NativeForm]):
                         ("gender", "Gender Designation Request"),
                         ("marriage", "Intracadre Marriage"),
                         ("opportunity", "Promotional Opportunity"),
+                        ("successor", "Successor"),
+                        ("last_resort", "Last / Resort"),
+                        ("borrow", "Take a Play from a different book"),
+                        ("swap", "Swap Handler playbook"),
                     ),
                 )
             ],

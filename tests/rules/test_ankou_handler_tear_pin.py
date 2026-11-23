@@ -217,7 +217,6 @@ def test_handler_tear_feedback_high_pin_continues_owned_keep(ledger, tmp_path, m
             heat=("0",),
             disposable_heat=("0",),
             piloting=("no",),
-            witnessed=("no",),
             trigger=("yes",),
             context=expected.context,
         )

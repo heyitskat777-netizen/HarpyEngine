@@ -77,7 +77,16 @@ class ItemTransfer(Model):
     prior_event: str | None = None
     source_work: str | None = None
     source_kind: (
-        Literal["enforcement_initiative", "npc_damage", "enforcer_snoop", "alpha_sex"] | None
+        Literal[
+            "enforcement_initiative",
+            "npc_damage",
+            "enforcer_snoop",
+            "alpha_sex",
+            "npc_job_handover",
+            "mercenary_pocket_money",
+            "mercenary_recompense",
+        ]
+        | None
     ) = None
     removed_asset: str | None = None
     received_asset: str | None = None

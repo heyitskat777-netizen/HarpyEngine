@@ -9,7 +9,7 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_frame_control as rules
 from girlframe.engine.m2 import GameState
-from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_actor_state import ActorRef, SceneCast
 from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_frame_control_state import NeuralConnection
 from girlframe.engine.m3_janus import find as find_core
@@ -27,6 +27,23 @@ if TYPE_CHECKING:
 def _copy(target: GameState, source: GameState) -> None:
     for name in GameState.model_fields:
         setattr(target, name, getattr(source, name))
+
+
+def known_battery(
+    state: GameState, cast: SceneCast, caster: ActorRef, battery: ActorRef, human: int
+) -> bool:
+    from girlframe.services.m3_battle import _visible
+    from girlframe.services.m3_consume_support import knowledge_allowed
+
+    if not knowledge_allowed(state, battery):
+        return False
+    core = find_core(state, battery)
+    if core is not None and core.frame_owner == caster and core.attached:
+        return True
+    return any(role.actor == battery for role in cast.roles) and (
+        _visible(state, battery, human)
+        or (core is not None and (core.revealed or core.controller == human))
+    )
 
 
 def _put(state: GameState, value: NeuralConnection) -> None:
@@ -744,12 +761,17 @@ class FrameControlService:
             actual = next(
                 (x for x in actors if x.ref == caster and x.controller == viewer.user_id), None
             )
+            if actual is None or (
+                not force_source and not known_battery(state, cast, caster, battery, viewer.user_id)
+            ):
+                raise WorkflowError(
+                    "Choose a known original battery with actual access in this scene"
+                )
             target = resolve(
                 state, battery, profiles(c, self.store.campaign_id), require_current_profile=False
             )
             if (
-                actual is None
-                or caster == battery
+                caster == battery
                 or not actual.alive
                 or not target.alive
                 or not actual.frame_instance
@@ -1004,6 +1026,7 @@ class FrameControlService:
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             from girlframe.engine import m3_physical
+            from girlframe.engine.m3_berserk_frame import active as active_berserk
             from girlframe.engine.m3_harpy_defeat import harpy, update
 
             self.game.unpaused(c)
@@ -1075,6 +1098,12 @@ class FrameControlService:
                 raise WorkflowError(
                     "Only the original Pilot or Harpy can resume ordinary owned Frame control"
                 )
+            berserk = (
+                active_berserk(state, actor, actual.frame_instance)
+                if actor.kind == "pilot"
+                else None
+            )
+            activated = berserk is not None and berserk.activated == event
             self.game.event(
                 c,
                 viewer.user_id,
@@ -1084,6 +1113,11 @@ class FrameControlService:
                 event_id=event,
                 original_actor=actor.model_dump(mode="json"),
             )
+            if activated:
+                from girlframe.services.m3_berserk_frame import synchronize as synchronize_berserk
+
+                synchronize_berserk(c, self.game, state, event)
+                return dict(actor=actor.model_dump(mode="json"), state="berserk")
             return dict(actor=actor.model_dump(mode="json"), state="relinked")
 
         return self._write(

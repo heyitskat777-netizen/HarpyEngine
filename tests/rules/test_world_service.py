@@ -31,7 +31,7 @@ def transfer_npc(world, controller, recipient, npc_id):
     )
 
 
-def ready(store, frame="JANUS-B"):
+def ready(store, frame="JANUS"):
     missions, game = service(store, frame=frame)
     approval = store.policy.m3_approval
     store.policy = store.policy.model_copy(

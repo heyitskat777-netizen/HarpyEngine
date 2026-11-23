@@ -179,6 +179,10 @@ def test_four_random_girls_session(ledger, tmp_path, monkeypatch):
         }
     )
     for viewer in viewers:
+        approved_review = review.get(viewer)
+        review.save(
+            viewer, str(uuid4()), approved_review.saved_revision, approved_review.fingerprint
+        )
         game.activate(viewer, str(uuid4()), review.get(viewer).fingerprint)
     record(
         "fixture_activation",

@@ -47,7 +47,7 @@ def exact_setup(ledger, tmp_path, monkeypatch):
     TRACE.clear()
     # Deliberately distinct roster, not a claim of random or exhaustive coverage.
     girls = ["AM", "CASUALTY", "NEWGIRL", "MOCKINGBIRD"]
-    frames = ["PROJECT ANKOU", "DOCTORDOCTOR MK. II", "CHANGELING", "JANUS-B"]
+    frames = ["PROJECT ANKOU", "DOCTORDOCTOR MK. II", "CHANGELING", "JANUS"]
     viewers = [GuildViewer(i, 200, True, False) for i in range(2, 6)]
     record(
         "deliberate_distinct_selection",
@@ -176,6 +176,10 @@ def exact_setup(ledger, tmp_path, monkeypatch):
         }
     )
     for viewer in viewers:
+        current = review.get(viewer)
+        assert current.sheet.ready_for_rules_review
+        if not current.saved_current:
+            review.save(viewer, str(uuid4()), current.saved_revision, current.fingerprint)
         game.activate(viewer, str(uuid4()), review.get(viewer).fingerprint)
     record(
         "fixture_activation",

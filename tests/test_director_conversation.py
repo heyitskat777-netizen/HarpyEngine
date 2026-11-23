@@ -108,7 +108,7 @@ def test_pilot_only_script_gets_discrete_scoped_engine_replies(routed):
             ("handler", "Handler, before you go, what is our goal?", "answer"),
             ("handler", "Handler, remind me of the boundaries.", "answer"),
             ("handler", "Handler, who left that sealed envelope?", "clarification"),
-            ("gm", "GM, does asking a question spend Heat?", "requires_engine_workflow"),
+            ("gm", "GM, does asking a question spend Heat?", "answer"),
             ("handler", "Handler, are we committed just by talking here?", "answer"),
             ("handler", "Handler, is there an access code for the relay door?", "clarification"),
             ("handler", "Handler, give me the objective once more.", "answer"),

@@ -3,7 +3,9 @@
 import json
 import os
 import sqlite3
+from contextlib import closing
 from pathlib import Path
+from tempfile import mkstemp
 from typing import Any
 
 from sqlalchemy.engine import make_url
@@ -18,34 +20,52 @@ def database_path(settings: Settings) -> Path:
     return Path(database).resolve()
 
 
-def _verify(connection: sqlite3.Connection) -> None:
+def _verify_integrity(connection: sqlite3.Connection) -> None:
     if connection.execute("PRAGMA integrity_check").fetchall() != [("ok",)]:
         raise ValueError("Database integrity check failed")
     if connection.execute("PRAGMA foreign_key_check").fetchall():
         raise ValueError("Database foreign key check failed")
+
+
+def _verify(connection: sqlite3.Connection) -> None:
+    _verify_integrity(connection)
     if not connection.execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='alembic_version'"
     ).fetchone():
         raise ValueError("Not a migrated application database")
 
 
-def copy_database(source: Path, destination: Path) -> None:
+def copy_database(
+    source: Path, destination: Path, *, require_migration_marker: bool = True
+) -> None:
     """WAL-consistent online backup, also used to restore to a NEW offline path."""
     source = source.resolve(strict=True)
     if not source.is_file() or source == destination.resolve():
         raise ValueError("Source must be a separate database file")
     destination.parent.mkdir(parents=True, exist_ok=True)
-    # Exclusive creation rejects existing files and symlinks, including the active DB.
-    descriptor = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    if destination.exists() or destination.is_symlink():
+        raise FileExistsError("Database copy requires a new destination")
+    descriptor, temporary_name = mkstemp(
+        prefix=".harpy-db-", suffix=".pending", dir=destination.parent
+    )
     os.close(descriptor)
+    staged = Path(temporary_name)
     try:
-        with sqlite3.connect(source.as_uri() + "?mode=ro", uri=True) as src:
-            with sqlite3.connect(destination) as dst:
-                src.backup(dst)
+        with (
+            closing(sqlite3.connect(source.as_uri() + "?mode=ro", uri=True)) as src,
+            closing(sqlite3.connect(staged)) as dst,
+        ):
+            src.backup(dst)
+            if require_migration_marker:
                 _verify(dst)
-    except BaseException:
-        destination.unlink(missing_ok=True)
-        raise
+            else:
+                _verify_integrity(dst)
+        with staged.open("r+b") as completed:
+            os.fsync(completed.fileno())
+        # Publish only the verified copy, without a window that can replace a winner.
+        os.link(staged, destination)
+    finally:
+        staged.unlink(missing_ok=True)
 
 
 def write_export(destination: Path, content: dict[str, Any]) -> None:

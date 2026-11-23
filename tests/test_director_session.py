@@ -33,6 +33,62 @@ def command(observer, scene, key, text):
     )
 
 
+def test_reviewed_session_classifies_speech_before_need_and_retries_without_regeneration(routed):
+    from test_director_handler_needs import NaturalHandler, NeedGM, objective
+
+    from girlframe.ai.knowledge import Disclosure, KnowledgeProposal
+
+    observer, context, scene, game, dice = routed
+    speech = "Could someone lay out the inspection objective for me, please."
+
+    class SpeechGM:
+        calls = 0
+
+        def propose(self, packet):
+            self.calls += 1
+            handler = next(x for x in packet.recipients if x.kind == "handler")
+            return KnowledgeProposal(
+                request_id=packet.request_id,
+                disclosures=(Disclosure(quote=speech, recipients=(handler,)),),
+            )
+
+    ref = objective(context, scene)
+    handler, knowledge, need = NaturalHandler(ref), SpeechGM(), NeedGM("indirect_request", ref)
+    conversation = DirectorConversationService(context, handler=handler, handler_mode="reviewed")
+    service = DirectorSessionService(
+        context,
+        conversation=conversation,
+        knowledge_provider=knowledge,
+        knowledge_gm=ADMIN,
+        need_provider=need,
+        need_gm=ADMIN,
+    )
+    before = state(game).model_dump_json()
+    cmd = command(
+        observer, scene, "reviewed-pipeline", f'PRIVATE_PIPELINE_OBSERVATION. I say "{speech}"'
+    )
+    cmd = cmd.model_copy(update={"fictional_channel": "mixed"})
+    result = service.submit(PLAYER, scene, cmd)
+    draft = result["conversation"]["handler"]
+    assert draft["reply"] is None
+    assert handler.requests[0].question == speech
+    assert need.requests[0].request.question == speech
+    assert "PRIVATE_PIPELINE_OBSERVATION" not in handler.requests[0].model_dump_json()
+    assert "PRIVATE_PIPELINE_OBSERVATION" not in need.requests[0].model_dump_json()
+    conversation.review_handler(
+        ADMIN,
+        "approve-pipeline",
+        scene,
+        draft["id"],
+        "approve",
+        "The reply uses only the available objective.",
+    )
+    retried = service.submit(PLAYER, scene, cmd)
+    assert retried["conversation"]["handler"]["reply"]["text"]
+    assert knowledge.calls == 1 and len(need.requests) == 1 and len(handler.requests) == 1
+    assert state(game).model_dump_json() == before and dice.calls == 0
+
+
 def test_input_and_gm_success_resume_after_handler_failure_without_duplicate_work(routed):
     observer, context, scene, game, _ = routed
     gm = GMProbe()
@@ -119,6 +175,10 @@ def test_session_work_discovers_actual_keep_and_completion_and_orders_safe_readb
     work = service.work(ADMIN, scene, gm=True)
     source = next(x for x in work["outcome_sources"] if x["operation"] == "keep")
     assert source["owner_id"] == "1" and source["frame_required"]
+    route = next(x for x in work["decision_routes"] if x["choice_id"] == source["source_id"])
+    assert route["route"] == "typed_outcome" and route["owner_id"] == "1"
+    packet_review = service.decision_context(ADMIN, scene, source["source_id"])
+    assert packet_review["action"]["id"] == native and packet_review["operation"] == "keep"
     assert not service.work(PLAYER, scene)["outcome_sources"]
     frame = TaskFrame(
         stakes="Keep the needle on its mark",

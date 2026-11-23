@@ -65,7 +65,6 @@ def last_brutalize(game, worker, gateway):
             heat=("2",),
             disposable_heat=("0",),
             piloting=("no",),
-            witnessed=("no",),
             trigger=("yes",),
             context="PRIVATE_ALPHA_SOURCE: I tear into her using my last unmarked Identity",
         )

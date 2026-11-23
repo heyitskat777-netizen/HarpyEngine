@@ -16,6 +16,8 @@ from girlframe.engine.m3_choices import OFF_DUTY, off_duty_modifier
 from girlframe.engine.m3_core import Recovery, RepairSelection, recover_off_duty
 from girlframe.engine.m3_modular import Replacement
 from girlframe.engine.m3_observation_state import Observation
+from girlframe.engine.m3_scientist_lab import LabAnswer, LabProposal
+from girlframe.engine.m3_trainer_phrases import Phrase
 from girlframe.engine.rolls import Face
 
 
@@ -64,6 +66,11 @@ class Scene(Model):
     summary: str = Field(min_length=1, max_length=1200)
     character_ids: dict[str, str] = Field(default_factory=dict)
     roles: tuple["ActorRef", ...] = Field(default=(), exclude_if=lambda value: not value)
+    conditioning_phrase: Phrase | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    lab: LabProposal | None = Field(default=None, exclude_if=lambda value: value is None)
+    lab_answer: LabAnswer | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def distinct(self) -> "Scene":
@@ -73,6 +80,9 @@ class Scene(Model):
             or not set(self.acknowledgements) <= set(self.participants)
             or not self.summary.strip()
             or not set(self.character_ids) <= {str(uid) for uid in self.participants}
+            or (self.kind == "trainer_conditioning") != (self.conditioning_phrase is not None)
+            or (self.kind == "scientist_lab") != (self.lab is not None)
+            or (self.lab_answer is not None and self.lab is None)
         ):
             raise ValueError("A scene needs distinct participants and their own acknowledgements")
         return self
@@ -162,12 +172,14 @@ def handler_scene(
     summary: str,
     *,
     extra_participants: frozenset[int] = frozenset(),
+    conditioning_phrase: Phrase | None = None,
+    lab: LabProposal | None = None,
 ) -> Period:
     current(period, expected)
     if (
         actor != period.handler
         or period.handler_scene is not None
-        or kind not in HANDLER_SCENES
+        or kind not in (*HANDLER_SCENES, "trainer_conditioning", "scientist_lab")
         or actor not in participants
         or not set(participants) <= set(period.pilots) | {actor} | extra_participants
         or not (set(participants) & set(period.pilots))
@@ -176,7 +188,13 @@ def handler_scene(
             "The current Handler sets one printed scene with at least one current Girl"
         )
     result = clone(period)
-    result.handler_scene = Scene(kind=kind, participants=participants, summary=summary)
+    result.handler_scene = Scene(
+        kind=kind,
+        participants=participants,
+        summary=summary,
+        conditioning_phrase=conditioning_phrase,
+        lab=lab,
+    )
     result.revision += 1
     return result
 

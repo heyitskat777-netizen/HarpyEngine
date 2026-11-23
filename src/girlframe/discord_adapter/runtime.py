@@ -51,7 +51,7 @@ async def _connect(
     token: SecretStr,
     store: OnboardingStore,
 ) -> None:
-    async with ReadOnlyDiscordBot(policy, service, proxy, store) as bot:
+    async with ReadOnlyDiscordBot(policy, service, proxy, store, activity_only=True) as bot:
         loop = asyncio.get_running_loop()
         installed_signal = False
         try:

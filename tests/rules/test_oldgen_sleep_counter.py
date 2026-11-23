@@ -40,7 +40,7 @@ def ready(store, tmp_path, monkeypatch):
         store, girl="ALPHA", frame="THE ENFORCER", other_girl="OLDGEN"
     )
     own = creation.get(OTHER)
-    draft = selected("OLDGEN", "JANUS-B").model_copy(
+    draft = selected("OLDGEN", "JANUS").model_copy(
         update={
             "shared_tokens": own.draft.shared_tokens,
             "girl_details": GirlDetails(maxims=(0, 1)),
@@ -172,7 +172,6 @@ def test_native_oldgen_sleep_counter_real_advice_listening_owned_wake_and_privat
             gain=("0",),
             pair_share=("0",),
             piloting=("no",),
-            witnessed=("no",),
             context=prepared.context,
             trigger=("yes",),
         )

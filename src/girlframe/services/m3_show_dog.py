@@ -640,6 +640,8 @@ class ShowDogService:
                 )
             return dict(
                 id=identity,
+                period=value.period,
+                source_action=value.source_action,
                 revision=row["revision"],
                 game_revision=state.revision,
                 actor=value.actor.model_dump(mode="json"),

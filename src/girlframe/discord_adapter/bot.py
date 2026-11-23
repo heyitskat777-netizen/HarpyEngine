@@ -1,4 +1,4 @@
-"""Guild-scoped Gateway bot. No mutating game commands or passive message ingestion."""
+"""Guild-scoped Gateway workers and the legacy slash adapters used by offline tests."""
 
 import asyncio
 import logging
@@ -19,6 +19,31 @@ from girlframe.services.read_only_bot import (
     GuildViewer,
     ReadOnlyBotService,
     ReadOnlyCommand,
+)
+
+RETIRED_GUILD_COMMANDS = frozenset(
+    (
+        "battle",
+        "campaign",
+        "campaign_status",
+        "character",
+        "choice",
+        "facilitator",
+        "frame_core",
+        "girl",
+        "health",
+        "help",
+        "ledger",
+        "mission",
+        "play",
+        "roll",
+        "safety",
+        "server",
+        "sheet",
+        "shelving",
+        "session-zero",
+        "start",
+    )
 )
 
 
@@ -96,6 +121,9 @@ class ReadOnlyCommandTree(app_commands.CommandTree[discord.Client]):
     async def on_error(
         self, interaction: discord.Interaction[discord.Client], error: app_commands.AppCommandError
     ) -> None:
+        if isinstance(error, app_commands.CommandNotFound):
+            # The Activity listener can own commands on the same Discord application.
+            return
         # SDK exceptions may contain paths, interaction tokens or raw payloads.
         try:
             message = (
@@ -115,6 +143,8 @@ class ReadOnlyDiscordBot(discord.Client):
         service: ReadOnlyBotService,
         proxy: str | None,
         store: OnboardingStore | None = None,
+        *,
+        activity_only: bool = False,
     ) -> None:
         intents = discord.Intents.none()
         intents.guilds = True
@@ -132,6 +162,7 @@ class ReadOnlyDiscordBot(discord.Client):
         self.policy = policy
         self.service = service
         self.store = store
+        self.activity_only = activity_only
         self.ledger = CampaignLedger(store) if store else None
         self.tag_sync = CharacterTagSynchronizer(store) if store else None
         self._tag_worker: asyncio.Task[None] | None = None
@@ -141,6 +172,8 @@ class ReadOnlyDiscordBot(discord.Client):
 
         self.game = GameService(store) if store else None
         self.tree = ReadOnlyCommandTree(self, fallback_to_global=False)
+        if activity_only:
+            return
         guild = discord.Object(id=policy.guild_id)
         commands: tuple[tuple[ReadOnlyCommand, str], ...] = (
             ("help", "Show read-only bot usage"),
@@ -182,6 +215,11 @@ class ReadOnlyDiscordBot(discord.Client):
             from girlframe.services.handler_setup import HandlerService
 
             register_handler_setup(self.tree, policy.guild_id, HandlerService(store))
+            from girlframe.discord_adapter.session_zero import register_session_zero
+            from girlframe.services.session_zero import SessionZeroService
+
+            register_session_zero(self.tree, policy.guild_id, SessionZeroService(store))
+
             from girlframe.discord_adapter.pair_assets import register_pair_assets
             from girlframe.services.pair_assets import PairService
 
@@ -278,7 +316,7 @@ class ReadOnlyDiscordBot(discord.Client):
         info = await self.application_info()
         if info.id != self.policy.application_id:
             raise RuntimeError("Configured application does not match bot credentials")
-        if self.store is not None:
+        if self.store is not None and not self.activity_only:
             from girlframe.discord_adapter.onboarding import NewPlayerView
 
             self.add_view(NewPlayerView(self.store, self.tag_sync))
@@ -287,7 +325,20 @@ class ReadOnlyDiscordBot(discord.Client):
             assert self.game is not None
             self.add_view(SceneControls(self.game))
         await self.fetch_guild(self.policy.guild_id)
-        await self.tree.sync(guild=discord.Object(id=self.policy.guild_id))
+        guild = discord.Object(id=self.policy.guild_id)
+        if self.activity_only:
+            # Avoid bulk sync: the Activity owns its create, channel binding and launch group.
+            for command in await self.tree.fetch_commands(guild=guild):
+                if (
+                    command.type == discord.AppCommandType.chat_input
+                    and command.name in RETIRED_GUILD_COMMANDS
+                ):
+                    try:
+                        await command.delete()
+                    except discord.NotFound:
+                        continue
+        else:
+            await self.tree.sync(guild=guild)
 
     async def _publish_presence(self, phase: presence.Phase) -> None:
         activity, status = presence.activity(phase), presence.status(phase)

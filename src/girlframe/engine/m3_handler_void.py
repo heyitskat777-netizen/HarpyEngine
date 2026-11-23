@@ -7,10 +7,17 @@ from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_handler_consequences import active_handler, same_handler_body
 from girlframe.engine.m3_handler_void_state import HandlerVoid
+from girlframe.engine.m3_void_privacy import Witness, record_gain
 
 
 def require(
-    state: GameState, actor: ActorRef, *, work: str, source_event: str, appointment: str
+    state: GameState,
+    actor: ActorRef,
+    *,
+    work: str,
+    source_event: str,
+    appointment: str,
+    witnesses: tuple[Witness, ...] = (),
 ) -> tuple[GameState, str]:
     body = active_handler(state)
     controller = None
@@ -54,6 +61,7 @@ def require(
             appointment=appointment,
         )
     )
+    record_gain(changed, body, work, source_event, witnesses)
     return changed, identity
 
 

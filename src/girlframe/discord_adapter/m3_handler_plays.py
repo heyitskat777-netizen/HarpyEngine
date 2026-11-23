@@ -1,7 +1,7 @@
 """Native, resumable basic Handler Plays and source-limited final counters."""
 
 import asyncio
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import discord
 
@@ -10,10 +10,22 @@ from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.m3_punishments import Picker
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_actor_state import ActorRef
-from girlframe.engine.m3_handler_play_state import BASIC, EXTRA, Effect, Play
+from girlframe.engine.m3_handler_play_state import (
+    BASIC,
+    DRESS_CONTACTS,
+    DRESS_ENDINGS,
+    DRESS_STEPS,
+    EXTRA,
+    Effect,
+    Play,
+)
+from girlframe.engine.m3_handler_private_scene import Book
 from girlframe.engine.m3_world_state import Npc
 from girlframe.services.m3_handler_plays import HandlerPlayService
 from girlframe.services.onboarding import WorkflowError
+
+if TYPE_CHECKING:
+    from girlframe.services.m3_dogrunner_dress import DressPerformanceService
 
 
 async def open_handler_plays(interaction: discord.Interaction, service: HandlerPlayService) -> None:
@@ -23,6 +35,33 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
         ("new", "Make a basic Handler Play"),
         ("off_duty", "Go Off-Duty / actual period and scenes"),
     ]
+    if data.get("dress_them_down") and interaction.channel_id is not None:
+        options.append(("dress", "Dress Them Down in this scene"))
+    if data.get("trainer_npc_order") and interaction.channel_id is not None:
+        options.append(("trainer_npc_order", "Trainer: order an NPC in this scene"))
+    if data.get("successor") and interaction.channel_id is not None:
+        options.append(("advice", "Give advice on how to lead in this scene"))
+    if data.get("frantic_breakdown") and interaction.channel_id is not None:
+        options.append(("frantic_breakdown", "Break Down in this scene"))
+    if data.get("advocate_alone") and interaction.channel_id is not None:
+        options.append(("advocate_alone", "Get Them Alone in this scene"))
+    if data.get("casualty_parts"):
+        options.append(("casualty_parts", "Casualty: damage an original part"))
+    private_books: dict[str, Book] = {
+        "mistress_favor": "Mistress",
+        "trainer_private": "Trainer",
+        "dogrunner_private": "Dogrunner",
+        "insurgent_private": "Insurgent",
+        "scientist_private": "Scientist",
+        "frantic_private": "Frantic",
+        "advocate_private": "Advocate",
+    }
+    if interaction.channel_id is not None:
+        options.extend(
+            (key, f"{book}: offer a private scene")
+            for key, book in private_books.items()
+            if data.get(key)
+        )
     options.extend(
         ("warp:" + x["id"], "Warp area: " + x["label"]) for x in data.get("warp_zones", [])
     )
@@ -38,15 +77,65 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
                 identity[5:],
             )
             await open_play(current, service, result["id"])
+        elif identity == "trainer_npc_order":
+            from girlframe.discord_adapter.m3_succubus import open_npc_order
+            from girlframe.services.m3_succubus import SuccubusService
+
+            await open_npc_order(current, SuccubusService(service.game), trainer=True)
+        elif identity == "frantic_breakdown":
+            from girlframe.discord_adapter.m3_frantic_breakdown import open_start
+            from girlframe.services.m3_frantic_breakdown import FranticBreakdownService
+
+            assert interaction.channel_id is not None
+            await open_start(
+                current,
+                FranticBreakdownService(service.store, service.game),
+                data["game_revision"],
+                interaction.channel_id,
+            )
+        elif identity == "advocate_alone":
+            from girlframe.discord_adapter.m3_advocate_alone import open_question
+            from girlframe.services.m3_advocate_alone import AdvocateAloneService
+
+            assert interaction.channel_id is not None
+            await open_question(
+                current,
+                AdvocateAloneService(service.store, service.game),
+                data["game_revision"],
+                interaction.channel_id,
+            )
+        elif identity == "casualty_parts":
+            from girlframe.discord_adapter.m3_casualty import open_part_damage
+            from girlframe.services.m3_casualty import CasualtyService
+
+            casualty = CasualtyService(service.game)
+            menu = await asyncio.to_thread(
+                casualty.menu, viewer_from_interaction(current), int(interaction.channel_id or 0)
+            )
+            await open_part_damage(current, casualty, menu, handler_play=True)
+        elif identity in private_books:
+            from girlframe.discord_adapter.m3_handler_private_scene import open_invite
+            from girlframe.services.m3_handler_private_scene import HandlerPrivateSceneService
+
+            assert interaction.channel_id is not None
+            await open_invite(
+                current,
+                HandlerPrivateSceneService(service.store, service.game),
+                data["game_revision"],
+                interaction.channel_id,
+                playbook=private_books[identity],
+            )
         elif identity == "off_duty":
             from girlframe.discord_adapter.m3_off_duty import open_period
             from girlframe.services.m3_missions import MissionService
             from girlframe.services.m3_off_duty import OffDutyService
 
             await open_period(current, OffDutyService(MissionService(service.store)))
-        elif identity != "new":
+        elif identity not in ("new", "dress", "advice"):
             await open_play(current, service, identity)
         else:
+            dress_scene = interaction.channel_id if identity == "dress" else None
+            advice_scene = interaction.channel_id if identity == "advice" else None
 
             async def submit(actual: discord.Interaction, values: dict[str, Any]) -> str:
                 result = await asyncio.to_thread(
@@ -55,6 +144,8 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
                     str(actual.id),
                     data["game_revision"],
                     tuple(ActorRef.model_validate(targets[x]["ref"]) for x in values["targets"]),
+                    dress_scene=dress_scene,
+                    advice_scene=advice_scene,
                 )
                 return (
                     "Owned Handler Play saved. Reopen your Inbox or Handler Plays to "
@@ -67,14 +158,18 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
                 )
             form = NativeForm(
                 viewer_from_interaction(current).user_id,
-                "Handler Play — affected characters",
+                "Dress Them Down"
+                if dress_scene
+                else "Give advice on how to lead"
+                if advice_scene
+                else "Handler Play — affected characters",
                 "Choose the actual originals affected. No player reply or consent is generated.",
                 [
                     Field(
                         "targets",
                         "Who is affected?",
                         tuple((key, x["label"]) for key, x in targets.items()),
-                        maximum=len(targets),
+                        maximum=1 if dress_scene or advice_scene else len(targets),
                     )
                 ],
                 submit,
@@ -127,7 +222,32 @@ async def open_play(
         await reply(interaction, form.text(), form)
         return
     if grant["state"] != "pending":
-        if grant["state"] == "awaiting_effect":
+        if data.get("dress_final_pending"):
+            from girlframe.discord_adapter.ledger import clean
+
+            async def dismiss(current: discord.Interaction, values: dict[str, Any]) -> str:
+                await asyncio.to_thread(
+                    service.finish_dress_order,
+                    viewer_from_interaction(current),
+                    str(current.id),
+                    identity,
+                    data["game_revision"],
+                )
+                return "The original dismissal Order is recorded."
+
+            form = NativeForm(
+                viewer_from_interaction(interaction).user_id,
+                "Finish Dress Them Down",
+                clean(grant["effect"]["dress_dismissal"]),
+                [
+                    Field(
+                        "choice", "Confirm the saved dismissal", (("send", "Issue the dismissal"),)
+                    )
+                ],
+                dismiss,
+            )
+            await reply(interaction, form.text(), form)
+        elif grant["state"] == "awaiting_effect":
             await reply(
                 interaction,
                 "This Handler Play is waiting for its actual effect and owned "
@@ -261,7 +381,15 @@ async def effect_form(
 ) -> None:
     targets = {x["token"]: x for x in data["targets"]}
     fields = [Field("account", "Information / consequence to communicate", paragraph=True)]
-    if kind in ("status", "tag", "damage", "punish", "tracker_intercept", "tracker_voyeur"):
+    if kind in (
+        "status",
+        "tag",
+        "damage",
+        "punish",
+        "tracker_intercept",
+        "tracker_voyeur",
+        "dress_them_down",
+    ):
         fields.insert(
             0,
             Field(
@@ -293,6 +421,37 @@ async def effect_form(
                 (("1", "Raise one position"), ("-1", "Lower one position")),
             )
         )
+    elif kind == "dress_them_down":
+        fields.extend(
+            [
+                Field("dress_steps", "Choose one to three printed steps", DRESS_STEPS, maximum=3),
+                Field(
+                    "dress_contact",
+                    "Physical action, if chosen",
+                    DRESS_CONTACTS,
+                    minimum=0,
+                    required=False,
+                ),
+                Field("tag", "Tag only if they become the Dog", required=False),
+                Field("detail", "Direct Order text, if chosen", paragraph=True, required=False),
+                Field(
+                    "dress_dismissal",
+                    "Final dismissal text if two Orders were chosen",
+                    paragraph=True,
+                    required=False,
+                ),
+            ]
+        )
+        if data["executors"]:
+            fields.append(
+                Field(
+                    "dress_delegate",
+                    "Other participant, if delegated",
+                    tuple((x["token"], x["label"]) for x in data["executors"]),
+                    minimum=0,
+                    required=False,
+                )
+            )
     elif kind == "tag":
         fields.append(Field("tag", "New Tag"))
     elif kind == "damage":
@@ -386,6 +545,22 @@ async def effect_form(
             effect_data["detail"] = data["observed_moment"]
         elif kind == "status":
             effect_data["status"] = int(values["status"][0])
+        elif kind == "dress_them_down":
+            steps = values["dress_steps"]
+            # Discord selects return option order, so put the printed ending last.
+            effect_data.update(
+                dress_steps=tuple(x for x in steps if x not in DRESS_ENDINGS)
+                + tuple(x for x in steps if x in DRESS_ENDINGS),
+                tag=values.get("tag", ""),
+                detail=values.get("detail", ""),
+                dress_contact=(values.get("dress_contact") or (None,))[0],
+                dress_dismissal=values.get("dress_dismissal", ""),
+            )
+            if values.get("dress_delegate"):
+                delegate = next(
+                    x for x in data["executors"] if x["token"] == values["dress_delegate"][0]
+                )
+                effect_data["dress_delegate"] = ActorRef.model_validate(delegate["ref"])
         elif kind == "tag":
             effect_data["tag"] = values["tag"]
         elif kind == "damage":
@@ -448,6 +623,54 @@ async def effect_form(
         submit,
         values={"source_label": ("none",), "opponent": ("none",)},
     )
+    await reply(interaction, form.text(), form)
+
+
+async def open_dress_performance(
+    interaction: discord.Interaction, service: "DressPerformanceService", identity: str
+) -> None:
+    from girlframe.discord_adapter.ledger import clean
+    from girlframe.engine.m3_dogrunner_dress import DELEGATE_OPTIONS
+
+    viewer = viewer_from_interaction(interaction)
+    data = await asyncio.to_thread(service.get, viewer, identity)
+    phase = data["phase"]
+    if phase == "ready":
+        instructions = "Apply the recorded steps and their printed Status effects."
+        fields = [
+            Field("step", "Complete the saved Play", (("finish", "Apply the recorded steps"),))
+        ]
+    else:
+        instructions = (
+            "Choose and portray your step involving " + clean(data["target"]) + "."
+            if phase == "delegate"
+            else "Confirm only what took place in the scene. Physical actions selected\n"
+            + ", ".join(dict(DRESS_CONTACTS)[key] for key in data["contacts"])
+        )
+        options = (
+            DELEGATE_OPTIONS if phase == "delegate" else (("performed", "Confirm it took place"),)
+        )
+        fields = [
+            Field("step", "Your choice", (*options, ("decline", "Decline the performance"))),
+            Field("account", "What took place, if confirmed", paragraph=True, required=False),
+        ]
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        identity_args = (
+            viewer_from_interaction(current),
+            str(current.id),
+            identity,
+            data["revision"],
+        )
+        if phase == "ready":
+            await asyncio.to_thread(service.finish, *identity_args)
+        else:
+            await asyncio.to_thread(
+                service.respond, *identity_args, values["step"][0], values.get("account", "")
+            )
+        return "Your Dress Them Down choice was recorded."
+
+    form = NativeForm(viewer.user_id, "Dress Them Down", instructions, fields, submit)
     await reply(interaction, form.text(), form)
 
 

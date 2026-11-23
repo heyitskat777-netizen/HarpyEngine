@@ -101,9 +101,7 @@ async def open_membership(
     ).present(interaction)
 
 
-async def open_choice(
-    interaction: discord.Interaction, game: GameService, decision: dict[str, Any]
-) -> None:
+def performance_choice_fields(decision: dict[str, Any]) -> list[Field]:
     detail = decision.get("prince", decision.get("detail", {}))
     if "detail" in detail:
         detail = detail["detail"]
@@ -133,7 +131,20 @@ async def open_choice(
             required=False,
         )
     )
+    return fields
 
+
+def performance_choice_answer(values: dict[str, Any]) -> ChoiceAnswer:
+    return ChoiceAnswer(
+        options=tuple(values.get("option", ())),
+        denied=tuple(values.get("tags", ())),
+        text=values.get("account", ""),
+    )
+
+
+async def open_choice(
+    interaction: discord.Interaction, game: GameService, decision: dict[str, Any]
+) -> None:
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
         await asyncio.to_thread(
             game.respond,
@@ -141,11 +152,7 @@ async def open_choice(
             str(current.id),
             decision["id"],
             decision["revision"],
-            ChoiceAnswer(
-                options=tuple(values.get("option", ())),
-                denied=tuple(values.get("tags", ())),
-                text=values.get("account", ""),
-            ),
+            performance_choice_answer(values),
         )
         return "Your actual owned Prince response is saved. Resume any remaining source work."
 
@@ -153,7 +160,7 @@ async def open_choice(
         interaction.user.id,
         "Prince: actual source choice",
         "Each original person owns their response. Private Tags and intentions stay private.",
-        fields,
+        performance_choice_fields(decision),
         submit,
     ).present(interaction)
 

@@ -13,6 +13,7 @@ from girlframe.engine.m2 import ChoiceAnswer, PlayInput
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_casualty import CasualtyService
+from girlframe.services.onboarding import WorkflowError
 
 
 async def open_choice(
@@ -166,6 +167,59 @@ async def open_learned_casualty(
         propose,
     )
     await reply(interaction, form.text(), form)
+
+
+async def open_part_damage(
+    interaction: discord.Interaction,
+    service: CasualtyService,
+    menu: dict[str, Any],
+    *,
+    handler_play: bool = False,
+) -> None:
+    targets = {
+        ActorRef.model_validate(value["ref"]).token: value for value in menu["damage_targets"]
+    }
+    if not targets:
+        raise WorkflowError("Recover the original Handler and an actual Casualty")
+
+    async def submit(response: discord.Interaction, values: dict[str, Any]) -> str:
+        await asyncio.to_thread(
+            service.damage_part,
+            viewer_from_interaction(response),
+            str(response.id),
+            menu["revision"],
+            ActorRef.model_validate(targets[values["actor"][0]]["ref"]),
+            values["part"][0],
+            values["condition"][0],
+            values["account"],
+            handler_play=handler_play,
+        )
+        return "The original part's condition has changed. Existing mandatory work is preserved."
+
+    await NativeForm(
+        interaction.user.id,
+        "Damage an original Casualty part",
+        "Record the actual part and the damage that happened.",
+        [
+            Field(
+                "actor",
+                "Actual original Casualty",
+                tuple((key, x["label"]) for key, x in targets.items()),
+            ),
+            Field("part", "Actual original part", tuple((x, rules.LABELS[x]) for x in rules.PARTS)),
+            Field(
+                "condition",
+                "Actual performed degree",
+                (
+                    ("broken", "Broken"),
+                    ("destroyed", "Actually destroyed"),
+                    ("removed", "Actually removed"),
+                ),
+            ),
+            Field("account", "Your actual performed source account", paragraph=True),
+        ],
+        submit,
+    ).present(interaction)
 
 
 async def open_casualty(
@@ -357,7 +411,10 @@ async def open_casualty(
             await asyncio.to_thread(service.body, viewer_from_interaction(current), str(current.id))
             await open_casualty(current, service)
             return None
-        if kind not in ("barely", "repair", "payment", "helpless", "sex", "find", "damage"):
+        if kind == "damage":
+            await open_part_damage(current, service, menu)
+            return None
+        if kind not in ("barely", "repair", "payment", "helpless", "sex", "find"):
             await open_casualty(current, service, kind)
             return None
         fields: list[Field] = []
@@ -414,33 +471,6 @@ async def open_casualty(
                     "found",
                     "Your actual role and encountered body",
                     tuple((x["id"], x["label"]) for x in menu["find_targets"]),
-                )
-            )
-        if kind == "damage":
-            fields.extend(
-                (
-                    Field(
-                        "actor",
-                        "Actual original Casualty",
-                        tuple(
-                            (ActorRef.model_validate(x["ref"]).token, x["label"])
-                            for x in menu["damage_targets"]
-                        ),
-                    ),
-                    Field(
-                        "part",
-                        "Actual original part",
-                        tuple((x, rules.LABELS[x]) for x in rules.PARTS),
-                    ),
-                    Field(
-                        "condition",
-                        "Actual performed degree",
-                        (
-                            ("broken", "Broken"),
-                            ("destroyed", "Actually destroyed"),
-                            ("removed", "Actually removed"),
-                        ),
-                    ),
                 )
             )
         if kind != "repair":
@@ -506,22 +536,6 @@ async def open_casualty(
                     menu["revision"],
                     ActorRef.model_validate(source["finder"]),
                     channel,
-                    answer["account"],
-                )
-            else:
-                actor = next(
-                    x["ref"]
-                    for x in menu["damage_targets"]
-                    if ActorRef.model_validate(x["ref"]).token == answer["actor"][0]
-                )
-                await asyncio.to_thread(
-                    service.damage_part,
-                    human,
-                    key,
-                    menu["revision"],
-                    ActorRef.model_validate(actor),
-                    answer["part"][0],
-                    answer["condition"][0],
                     answer["account"],
                 )
             return (

@@ -67,7 +67,7 @@ async def open_stim(
     viewer = viewer_from_interaction(interaction)
     channel = int(interaction.channel_id or 0)
     if identity is not None:
-        value = await asyncio.to_thread(service.view, viewer, identity)
+        value = await asyncio.to_thread(service.view, viewer, identity, order_channel=channel)
         if value.get("lesson_cancelled"):
             await reply(
                 interaction,
@@ -203,6 +203,36 @@ async def open_stim(
             ", ".join(x["kind"] + (": " + x["tag"] if x["tag"] else "") for x in value["effects"])
             or "none"
         )
+        if value.get("pilot_order_cast"):
+
+            async def issue_to_npc(current: discord.Interaction, values: dict[str, Any]) -> str:
+                from girlframe.services.m3_succubus import SuccubusService
+
+                result = await asyncio.to_thread(
+                    SuccubusService(service.game).issue_npc,
+                    viewer_from_interaction(current),
+                    str(current.id),
+                    channel,
+                    value["revision"],
+                    ActorRef.model_validate(value["target"]),
+                    value["pilot_order_cast"],
+                    values["instruction"],
+                    stim_effect=value["pilot_order_effect"],
+                )
+                return "Order saved. The original NPC controller owns the reply. " + str(
+                    result["action_id"]
+                )
+
+            form = NativeForm(
+                viewer.user_id,
+                "Stim — Order to the drugged NPC",
+                "This effect grants authority until the drug expires. "
+                "The NPC controller chooses how to respond. Drugs: " + drugs,
+                [Field("instruction", "Your direct Order", paragraph=True)],
+                issue_to_npc,
+            )
+            await reply(interaction, form.text(), form)
+            return
         if value.get("npc_order_effect"):
 
             async def issue(current: discord.Interaction, values: dict[str, Any]) -> str:
@@ -242,7 +272,12 @@ async def open_stim(
             + drugs
             + ". Actual effects: "
             + effects
-            + ".",
+            + "."
+            + (
+                " Reopen in a scene joined by you and the original NPC to issue an Order."
+                if value.get("pilot_order_effect")
+                else ""
+            ),
         )
         return
     data = await asyncio.to_thread(service.menu, viewer, channel)

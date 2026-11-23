@@ -71,8 +71,12 @@ class HandlerAdvancementService:
             c, viewer, "strain" if rule in rules.RULES else "playbooks", director_response=True
         )
         gate.authorize(c, viewer, "economy", director_response=True)
-        assert gate.registry is not None
-        gate.registry.require_available(rule)
+        if rule == rules.TIMESKIP_RULE:
+            gate.authorize(c, viewer, "world", director_response=True)
+            gate.require_specialist_rule(rule)
+        else:
+            assert gate.registry is not None
+            gate.registry.require_available(rule)
 
     def _spent(self, c: Connection, value: rules.Award, handler: ActorRef) -> None:
         identity = value.id
@@ -234,6 +238,21 @@ class HandlerAdvancementService:
                     from girlframe.engine.m3_secretary import acquisitions as secretary_acquisitions
 
                     receipts = secretary_acquisitions(spent)
+                elif value.acquired_rule == "handler-advancement.handler-advancement.successor":
+                    from girlframe.engine.m3_successor import acquisitions as successor_acquisitions
+
+                    receipts = successor_acquisitions(spent)
+                elif value.acquired_rule == "handler-advancement.handler-advancement.last-resort":
+                    from girlframe.engine.m3_last_resort import acquisitions as resort_acquisitions
+
+                    receipts = resort_acquisitions(spent)
+                elif value.acquired_rule == "handler-advancement.handler-advancement.take-a-play":
+                    from girlframe.engine.m3_handler_borrowed import acquisitions as borrowed_plays
+
+                    receipts = borrowed_plays(spent)
+                elif value.acquired_rule == "handler-advancement.handler-advancement.swap-playbook":
+                    persona = spent.handler_persona
+                    receipts = (persona.book_change,) if persona and persona.book_change else ()
                 else:
                     from girlframe.engine.m3_supply_drop import (
                         acquisitions as drop_acquisitions,
@@ -268,6 +287,20 @@ class HandlerAdvancementService:
             prove_award(self.game, c, current, ordinary)
             self._spent(c, ordinary, ordinary.handler)
             return None, current, ordinary.handler, ordinary.appointment, ordinary
+        timeskip = next(
+            (
+                x
+                for x in rules.awards(current)
+                if x.id == identity and x.rule == rules.TIMESKIP_RULE
+            ),
+            None,
+        )
+        if timeskip is not None:
+            from girlframe.services.m3_timeskip_rewards import prove_timeskip_award
+
+            prove_timeskip_award(self.game, c, current, timeskip)
+            self._spent(c, timeskip, timeskip.handler)
+            return None, current, timeskip.handler, timeskip.appointment, timeskip
         row = _work(c, self.store, identity)
         rule = json.loads(row["body_json"]).get("rule_id")
         if rule not in rules.RULES:

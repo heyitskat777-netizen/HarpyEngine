@@ -94,7 +94,6 @@ def episode(ledger, tmp_path, monkeypatch, given, *, recipe="keep_your_head"):
             heat=("1",),
             disposable_heat=("0",),
             piloting=("no",),
-            witnessed=("no",),
             trigger=("yes",),
             context="PRIVATE_NESTED_PIN: lean on my new last Identity to endure",
         )

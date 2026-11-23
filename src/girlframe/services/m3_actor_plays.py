@@ -12,13 +12,14 @@ from girlframe.database import tables as t
 from girlframe.engine import m3_actor_plays as rules
 from girlframe.engine import m3_cast
 from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput, tier
-from girlframe.engine.m3_actor_resources import Commitment, Committed, commit
+from girlframe.engine.m3_actor_resources import Commitment, Committed, commit, rebel_inventory
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, SceneCast
 from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_policy import RULESET
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_actors import profiles
+from girlframe.services.m3_rebel_ambush import scoped as scoped_ambush
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -65,7 +66,13 @@ class ActorPlayService:
         from girlframe.engine.m3_janus import can_act
 
         can_act(state, actor)
+        if self._ancillary_ready(state, actor):
+            if play not in ("keep_your_head", "actor_reject_tag"):
+                raise WorkflowError("This Ancillary Play needs its own approved rule port")
+            return
         if actor.kind != "external_pilot":
+            return
+        if play == "all_out_assault" and rebel_inventory(state, actor) is not None:
             return
         from girlframe.engine.m3_actor_bonds import is_helpless
         from girlframe.engine.m3_harpy_defeat import harpy
@@ -79,6 +86,50 @@ class ActorPlayService:
             and is_helpless(state, actor)
         ):
             raise WorkflowError("This actual Harpy cannot make the defensive Keep Your Head Play.")
+
+    def _ancillary_ready(self, state: GameState, ref: ActorRef) -> bool:
+        from girlframe.engine.m3_ancillary import RULE, STARTERS, find
+        from girlframe.services.m3_access import Access
+
+        role = find(state, ref)
+        if role is None:
+            return False
+        registry = Access(self.store).registry
+        assert registry is not None
+        for rule in (RULE, STARTERS[role.draft.book].rule):
+            try:
+                registry.require_available(rule)
+            except ValueError as error:
+                raise WorkflowError(str(error)) from None
+        return True
+
+    def _easily_broken(self, state: GameState, actor: ActorRef) -> bool:
+        from girlframe.engine.m3_ancillary import find
+        from girlframe.services.m3_access import Access
+
+        original = find(state, actor)
+        if original is None or original.draft.book != "REVOLUTIONARY IDEALIST":
+            return False
+        try:
+            Access(self.store).require_specialist_rule("ancillary.revolutionary-idealist.easily-broken")
+        except (WorkflowError, ValueError):
+            return False
+        return True
+
+    def _soldier_surgery(self, state: GameState, actor: ActorRef) -> bool:
+        from girlframe.engine.m3_ancillary import SOLDIER_SIMPLIFICATION, find
+        from girlframe.services.m3_access import Access
+
+        role = find(state, actor)
+        if role is None or role.draft.book != "SOLDIER":
+            return False
+        registry = Access(self.store).registry
+        assert registry is not None
+        try:
+            registry.require_available(SOLDIER_SIMPLIFICATION)
+        except ValueError:
+            return False
+        return True
 
     def saved(self, viewer: GuildViewer) -> list[dict[str, Any]]:
         with self.store.engine.connect() as c:
@@ -227,12 +278,16 @@ class ActorPlayService:
             actor = next(
                 (x for x in actors if x.ref == ref and x.controller == viewer.user_id), None
             )
+            ambush = scoped_ambush(state, ref, channel)
             if actor is None or not (
-                actor.rules in ("handler_girl", "clone_am")
+                actor.rules in ("handler_girl", "clone_am", "ancillary")
                 or actor.ref.kind == "external_pilot"
                 and actor.girl == "harpy"
+                or ambush
             ):
-                raise WorkflowError("Select your actual Handler Girl-rules role or Harpy body.")
+                raise WorkflowError("Select your actual supported role or original ambush actor.")
+            if actor.rules == "ancillary":
+                self._ancillary_ready(state, ref)
             judge = self._judge(c, state, cast, ref)
             from girlframe.engine.m3_enforcer_requisitions import PAVLOV, SNOOP
             from girlframe.engine.m3_harpy_defeat import harpy
@@ -266,9 +321,9 @@ class ActorPlayService:
                     for x in actors
                     if x.ref != ref and _visible(state, x.ref, viewer.user_id)
                 ],
-                "pavlov": owned(c, self.game, state, ref, PAVLOV) is not None,
+                "pavlov": not ambush and owned(c, self.game, state, ref, PAVLOV) is not None,
                 "snoop_targets": snoop_targets(self.game, c, state, ref)
-                if owned(c, self.game, state, ref, SNOOP) is not None
+                if not ambush and owned(c, self.game, state, ref, SNOOP) is not None
                 else [],
                 "enforcement_targets": initiative["targets"] if initiative["available"] else [],
                 "forbidden_plays": [x.play for x in harpy(state, ref).blocked_plays]
@@ -380,15 +435,24 @@ class ActorPlayService:
                 actor is None
                 or actor.controller != viewer.user_id
                 or not (
-                    actor.rules in ("handler_girl", "clone_am")
+                    actor.rules in ("handler_girl", "clone_am", "ancillary")
                     or actor.ref.kind == "external_pilot"
                     and actor.girl == "harpy"
+                    or prepared.play == "all_out_assault"
+                    and scoped_ambush(state, ref, channel)
                 )
                 or actor.source_sha256 != expected
                 or judge.ref != adjudicator
                 or cast.revision != cast_revision
             ):
                 raise ValueError("STALE_ACTOR: confirm your actual resources and Director first")
+            if prepared.heat:
+                from girlframe.engine.m3_sentinel_shell import holds
+
+                if holds(state, ref, "trapped"):
+                    raise WorkflowError("This original Girl cannot spend Heat until she is freed")
+            if actor.rules == "ancillary":
+                self._eligible_play(state, ref, rejection=rejection is not None, play=prepared.play)
             from girlframe.services.m3_wyvern_combat import require_free
             from girlframe.services.m3_wyvern_support import require_play_target
 
@@ -451,11 +515,13 @@ class ActorPlayService:
             if battle_play:
                 from girlframe.services.m3_battle import prepare
 
-                if actor.girl != "harpy":
-                    raise ValueError("Use the actual Harpy's own combat role and resources")
+                if actor.girl != "harpy" and not (
+                    prepared.play == "all_out_assault" and scoped_ambush(state, ref, channel)
+                ):
+                    raise ValueError("Use the actual supported combat role and its own resources")
                 battle = prepare(self.game, c, viewer, state, self.game.scene(c, channel), prepared)
                 if battle["actor"] != ref.model_dump(mode="json"):
-                    raise ValueError("The declared combatant must be this exact Harpy body")
+                    raise ValueError("The declared combatant must use this exact original body")
             if prepared.play == "engage":
                 from girlframe.services.m3_engage import prepare as prepare_engage
 
@@ -545,7 +611,10 @@ class ActorPlayService:
                 pair_share=prepared.pair_share,
             )
             if required_adjudication is None:
-                self._eligible_play(state, ref, rejection=rejection is not None, play=prepared.play)
+                if actor.rules != "ancillary":
+                    self._eligible_play(
+                        state, ref, rejection=rejection is not None, play=prepared.play
+                    )
             elif actor.ref.kind == "external_pilot":
                 from girlframe.engine.m3_harpy_defeat import harpy
 
@@ -574,7 +643,7 @@ class ActorPlayService:
                     raise ValueError(
                         "Choose your actual owed Tag rejection without spending resources"
                     )
-                if ref.kind == "external_pilot":
+                if actor.ref.kind == "external_pilot" and actor.rules != "ancillary":
                     from girlframe.services.m3_tag_permissions import PermissionService
 
                     PermissionService(self.store).authorize_rejection(
@@ -608,6 +677,19 @@ class ActorPlayService:
                 "result": {},
                 "choices": {},
             }
+            if actor.girl == "harpy" and prepared.play in ("keep_your_head", "engage"):
+                from girlframe.engine.m3_harpy_advancements import SPARROWS
+                from girlframe.services.m3_harpy_advancements import advancement_source
+
+                source = advancement_source(self.game, c, state, ref, viewer.user_id, SPARROWS)
+                if source is not None:
+                    data["harpy_sparrows"] = source
+            if actor.girl == "harpy" and prepared.play == "keep_your_head":
+                from girlframe.services.m3_harpy_mask import active as active_human_mask
+
+                mask = active_human_mask(self.game, c, state, ref, channel, cast.id)
+                if mask:
+                    data["harpy_mask"] = mask.event
             from girlframe.engine.m3_handler_consequences import active_handler
 
             handler = active_handler(state)
@@ -808,9 +890,11 @@ class ActorPlayService:
             or actor is None
             or actor.controller != int(action["actor_id"])
             or not (
-                actor.rules in ("handler_girl", "clone_am")
+                actor.rules in ("handler_girl", "clone_am", "ancillary")
                 or actor.ref.kind == "external_pilot"
                 and actor.girl == "harpy"
+                or bool(action["data"].get("battle", {}).get("rebel_ambush"))
+                and scoped_ambush(state, ref, int(action["channel_id"]))
             )
             or judge.ref
             != (ActorRef.model_validate(meta["adjudicator"]) if meta["adjudicator"] else None)
@@ -818,6 +902,8 @@ class ActorPlayService:
             or judge.appointment != meta.get("adjudicator_appointment")
         ):
             raise ValueError("STALE_CAST: explicitly recover the saved actual roles and responses")
+        if actor.rules == "ancillary":
+            self._ancillary_ready(state, ref)
         return actor
 
     def roll(
@@ -888,7 +974,7 @@ class ActorPlayService:
             item = next(x for x in state.obligations if x.id == meta["rejection"])
             if item.state != "pending":
                 raise ValueError("This rejection has already resolved")
-            if actor.ref.kind == "external_pilot":
+            if actor.ref.kind == "external_pilot" and actor.rules != "ancillary":
                 from girlframe.services.m3_tag_permissions import PermissionService
 
                 PermissionService(self.store).authorize_rejection(
@@ -1061,14 +1147,31 @@ class ActorPlayService:
     def results(
         self, c: Connection, action: dict[str, Any], *, state: GameState | None = None
     ) -> None:
+        from girlframe.services.m3_ancillary_discipline import ROLL_CHOICE, roll_notches
+
         total = action["data"]["receipt"]["pre_total"] + sum(
             x["amount"] for x in action["data"]["modifiers"]
         )
+        state = state or load_state(c, self.store.campaign_id)
+        actor = ActorRef.model_validate(action["data"]["actor_basic"]["ref"])
+        owner = int(action["actor_id"])
+        confidence = action["data"].get(ROLL_CHOICE)
+        if (
+            confidence is None
+            and action["data"]["play"] == "keep_your_head"
+            and tier(total) != "mid"
+            and roll_notches(self.game, state, actor, owner)
+        ):
+            action["state"] = "awaiting_choices"
+            self.game.request(c, action, owner, ROLL_CHOICE, dict(original_total=total))
+            return
+        elif confidence and confidence.get("notch"):
+            action["data"]["result"]["before_earned_confidence"] = total
+            total = 9
         action["data"]["result"].update(total=total, tier=tier(total))
         action["state"] = "awaiting_choices"
         from girlframe.services.m3_mockingbird import intercept_results
 
-        state = state or load_state(c, self.store.campaign_id)
         if intercept_results(self.game, c, state, action):
             return
         if action["data"].get("harpy_beneath"):
@@ -1105,7 +1208,9 @@ class ActorPlayService:
 
             rest_results(self.game, c, state, action)
         elif action["data"].get("battle"):
-            if action["data"]["play"] == "all_out_assault":
+            if action["data"]["play"] == "all_out_assault" and not action["data"]["battle"].get(
+                "rebel_ambush"
+            ):
                 from girlframe.services.m3_engage import start_assault_extra
 
                 start_assault_extra(self.game, c, action)
@@ -1144,33 +1249,59 @@ class ActorPlayService:
             self.game.request(c, action, selected["controller"], "tag_window")
             return
         # Revalidate the actual proposal and Bond immediately before applying it.
-        amount = rules.proposal(
-            state,
-            ref,
-            ActorRef.model_validate(selected["ref"]) if selected["ref"] else None,
-            selected["controller"],
-            profiles(c, self.store.campaign_id),
-            selected["tag"],
-            action["scene_id"],
-            selected["direction"],
-            selected["account"],
-            ooc_controller=selected["controller"]
-            if saved_marker is not None and saved_marker["actor"] is None
-            else None,
-        )
-        repeated = rules.mark(state, ref, selected["tag"], action["scene_id"])
+        from girlframe.services import m3_ancillary_traits as traits
+
+        proposer = ActorRef.model_validate(selected["ref"]) if selected["ref"] else None
+        trait = traits.approved(self.game, state, ref)
+        if trait is not None and selected["tag"] == trait.identifier(ref):
+            target = self.validate(c, state, action)
+            amount = traits.amount(
+                self.game,
+                c,
+                state,
+                action,
+                target,
+                trait,
+                proposer,
+                selected["controller"],
+                selected["direction"],
+                selected["account"],
+            )
+            traits.mark(state, action, ref, trait)
+            repeated = False
+            source = trait.key
+        else:
+            source = "girl_tag"
+            amount = rules.proposal(
+                state,
+                ref,
+                proposer,
+                selected["controller"],
+                profiles(c, self.store.campaign_id),
+                selected["tag"],
+                action["scene_id"],
+                selected["direction"],
+                selected["account"],
+                ooc_controller=selected["controller"]
+                if saved_marker is not None and saved_marker["actor"] is None
+                else None,
+            )
+            repeated = rules.mark(state, ref, selected["tag"], action["scene_id"])
         action["data"]["modifiers"].append(
             {
-                "source": "girl_tag",
+                "source": source,
                 "amount": amount,
                 "tag": selected["tag"],
                 "actor_ref": selected["ref"],
             }
         )
         if repeated:
-            self.game.request(
-                c, action, int(action["actor_id"]), "tag_resolution", {"tag": selected["tag"]}
-            )
+            body = {"tag": selected["tag"]}
+            chooser = int(action["actor_id"])
+            if self._easily_broken(state, ref) and saved_marker is not None:
+                chooser = selected["controller"]
+                body["original_marker"] = saved_marker
+            self.game.request(c, action, chooser, "tag_resolution", body)
         else:
             self.results(c, action, state=state)
 
@@ -1184,6 +1315,8 @@ class ActorPlayService:
         *,
         viewer: GuildViewer | None = None,
     ) -> None:
+        from girlframe.services.m3_ancillary_discipline import ROLL_CHOICE, spend_roll_notch
+
         actor = self.validate(c, state, action)
         owner, kind = int(row["actor_id"]), row["kind"]
         body, meta = json.loads(row["body_json"]), action["data"]["actor_basic"]
@@ -1289,18 +1422,35 @@ class ActorPlayService:
                     or answer.member
                 ):
                     raise ValueError("Choose one of your actual cast roles for this proposal")
-                rules.proposal(
-                    state,
-                    actor.ref,
-                    marker.actor,
-                    owner,
-                    profiles(c, self.store.campaign_id),
-                    answer.denied[0],
-                    action["scene_id"],
-                    answer.number or 0,
-                    answer.text,
-                    ooc_controller=marker.controller if marker.actor is None else None,
-                )
+                from girlframe.services import m3_ancillary_traits as traits
+
+                trait = traits.approved(self.game, state, actor.ref)
+                if trait is not None and answer.denied[0] == trait.identifier(actor.ref):
+                    traits.amount(
+                        self.game,
+                        c,
+                        state,
+                        action,
+                        actor,
+                        trait,
+                        marker.actor,
+                        owner,
+                        answer.number,
+                        answer.text,
+                    )
+                else:
+                    rules.proposal(
+                        state,
+                        actor.ref,
+                        marker.actor,
+                        owner,
+                        profiles(c, self.store.campaign_id),
+                        answer.denied[0],
+                        action["scene_id"],
+                        answer.number or 0,
+                        answer.text,
+                        ooc_controller=marker.controller if marker.actor is None else None,
+                    )
                 action["data"].setdefault("tag_proposals", []).append(
                     dict(
                         id=row["id"],
@@ -1351,15 +1501,39 @@ class ActorPlayService:
                     )
                 else:
                     self.game.request(c, action, judge, "actor_tag_selection")
-        elif kind == "tag_resolution" and owner == actor.controller:
+        elif kind == "tag_resolution":
+            marker_source = body.get("original_marker")
+            if marker_source is None:
+                if owner != actor.controller:
+                    raise WorkflowError("Only the original Tag bearer owns this resolution.")
+            else:
+                from girlframe.services.m3_tag_markers import current as current_markers
+
+                if not self._easily_broken(state, actor.ref) or not any(
+                    x.model_dump(mode="json") == marker_source
+                    for x in current_markers(self.game, c, state, action, owner)
+                ):
+                    raise WorkflowError("Recover the actual original marker for this Tag.")
             tag = next(x for x in rules.tags(state, actor.ref) if x.id == body["tag"])
+            if marker_source is not None and (
+                answer.fields or answer.text or answer.number is not None or answer.flag is not None
+                or answer.member is not None
+                or not set(answer.denied) <= {
+                    x.id for x in actor.identities if not x.protected and not x.paired
+                }
+            ):
+                raise WorkflowError("Choose only the original marker's allowed Tag resolution.")
             if answer.options == ("embrace",):
                 rules.embrace(state, actor.ref, tag.id, answer.denied)
                 from girlframe.engine.m3_harpy_flirt import clear_tag_debt
 
                 clear_tag_debt(state, actor.ref, tag.id)
+                if marker_source is not None:
+                    from girlframe.services.m3_revolutionary_identity import note_loss
+
+                    note_loss(self.game, c, state, actor.ref, action["data"]["response_event"])
             elif answer.options == ("reject",) and not answer.denied:
-                if actor.ref.kind == "external_pilot":
+                if actor.ref.kind == "external_pilot" and actor.rules != "ancillary":
                     from girlframe.services.m3_tag_permissions import PermissionService
 
                     if viewer is None or viewer.user_id != owner:
@@ -1396,25 +1570,92 @@ class ActorPlayService:
                 raise ValueError("The actual adjudicator answers every question honestly")
             action["data"]["result"].update(answers=answer.text, honest_attested=True)
             self.finish(c, state, action)
+        elif kind == ROLL_CHOICE and owner == actor.controller:
+            if (
+                action["data"].get(ROLL_CHOICE) is not None
+                or action["data"]["play"] != "keep_your_head"
+                or len(answer.options) != 1
+                or answer.denied or answer.text or answer.fields or answer.number is not None
+                or answer.flag is not None or answer.member is not None
+            ):
+                raise WorkflowError("Pass or spend one original notch on this saved roll.")
+            choice = answer.options[0]
+            event = action["data"]["response_event"]
+            if choice != "pass":
+                spend_roll_notch(self.game, state, actor.ref, owner, choice, action["id"], event)
+            action["data"][ROLL_CHOICE] = dict(
+                notch=None if choice == "pass" else choice,
+                event=event,
+            )
+            self.results(c, action, state=state)
         elif kind == "actor_keep" and owner == actor.controller:
             from girlframe.services.m3_enforcer_requisitions import keep_extras
+            from girlframe.services.m3_harpy_advancements import choose_sparrows
 
             extra = keep_extras(self.game, c, state, action, answer)
+            mask_event = action["data"].get("harpy_mask")
+            seems_human = answer.fields.get("seems_human")
+            if mask_event or seems_human is not None:
+                from girlframe.services.m3_harpy_mask import active as active_human_mask
+
+                mask = active_human_mask(
+                    self.game, c, state, actor.ref, int(action["channel_id"]), action["scene_id"]
+                )
+                if (
+                    mask is None
+                    or mask.event != mask_event
+                    or seems_human not in (None, "yes")
+                ):
+                    raise WorkflowError("Use the actual original Human Mask for this choice")
+                if seems_human == "yes":
+                    extra.add("seems_human")
+            choose_sparrows(action, answer.fields.get("harpy_sparrows"))
+            discipline = answer.fields.get("soldier_do_not_think")
+            embrace_selection = answer.fields.get("soldier_embrace")
+            level = action["data"]["result"]["tier"]
+            if discipline is not None or embrace_selection is not None:
+                if (
+                    not self._soldier_surgery(state, actor.ref)
+                    or discipline not in (None, "yes")
+                    or (embrace_selection is not None and level != "high")
+                ):
+                    raise WorkflowError("Choose only actual owned Soldier Simplification effects.")
+                if discipline == "yes":
+                    extra.add("do_not_think_about_it")
             ordinary = answer.model_copy(
                 update={
                     "fields": {
-                        k: v for k, v in answer.fields.items() if not k.startswith("pavlov_")
+                        k: v
+                        for k, v in answer.fields.items()
+                        if not k.startswith("pavlov_")
+                        and k
+                        not in (
+                            "soldier_do_not_think",
+                            "soldier_embrace",
+                            "harpy_sparrows",
+                            "seems_human",
+                        )
                     }
                 }
             )
             result = (
                 rules.harpy_keep(state, actor.ref, action["data"]["result"]["tier"], ordinary)
-                if actor.girl == "harpy"
+                if actor.girl == "harpy" and not mask_event
                 else rules.keep(action["data"]["result"]["tier"], ordinary)
             )
             result["positive"] = sorted(set(result["positive"]) | extra)
-            if action["data"]["result"]["tier"] == "high":
+            if level == "high":
                 rules.add_tag(state, actor.ref, answer.text, tuple(action["data"]["participants"]))
+                if embrace_selection is not None:
+                    fresh = rules.tags(state, actor.ref)[-1]
+                    rules.embrace(
+                        state,
+                        actor.ref,
+                        fresh.id,
+                        () if embrace_selection == "embrace" else (embrace_selection,),
+                        soldier_setter=actor.ref,
+                    )
+                    result["immediately_embraced"] = [fresh.id]
             action["data"]["result"].update(result)
             self.game.request(c, action, judge, "handler_keep")
         elif kind == "handler_keep" and owner == judge:
@@ -1429,14 +1670,41 @@ class ActorPlayService:
         self, c: Connection, viewer: GuildViewer, action: dict[str, Any], row: dict[str, Any]
     ) -> dict[str, Any]:
         from girlframe.engine.m3_harpy_defeat import harpy
+        from girlframe.services.m3_ancillary_discipline import ROLL_CHOICE, roll_notches
         from girlframe.services.m3_tag_markers import current as current_markers
 
         state = load_state(c, self.store.campaign_id)
         actor = self.validate(c, state, action)
         cast, actual = self.actors(c, state, int(action["channel_id"]), fresh=False)
+        from girlframe.services import m3_ancillary_traits as traits
+
         own = actor.controller == viewer.user_id
         selected = action["data"].get("tag_candidate")
         proposals = action["data"].get("tag_proposals", [])
+        tag_labels = {x.id: x.label for x in rules.tags(state, actor.ref)}
+        displayed = [
+            x.model_dump(mode="json")
+            for x in rules.tags(state, actor.ref)
+            if own or viewer.user_id in x.observers
+        ]
+        markers = (
+            current_markers(self.game, c, state, action, viewer.user_id)
+            if (row["kind"] == "tag_window")
+            else ()
+        )
+        if trait := traits.observed(self.game, state, actor):
+            local_roles = {marker.actor for marker in markers}
+            trait_id = trait.identifier(actor.ref)
+            tag_labels[trait_id] = trait.label
+            if (
+                not own
+                and traits.available(state, actor.ref, action["scene_id"], trait)
+                and actor.cell is not None
+                and any(x.ref in local_roles and x.cell == actor.cell for x in actual)
+            ):
+                displayed.append(
+                    dict(id=trait_id, label=trait.label, marked=False, scene_used=None)
+                )
         result = dict(row) | {
             "actor_basic": True,
             "body": json.loads(row["body_json"]),
@@ -1456,23 +1724,12 @@ class ActorPlayService:
             }
             if own
             else None,
-            "tags": [
-                x.model_dump(mode="json")
-                for x in rules.tags(state, actor.ref)
-                if own or viewer.user_id in x.observers
-            ],
-            "roles": [
-                {"token": marker.token, "label": marker.label}
-                for marker in current_markers(self.game, c, state, action, viewer.user_id)
-            ]
-            if row["kind"] == "tag_window"
-            else [],
+            "tags": displayed,
+            "roles": [{"token": marker.token, "label": marker.label} for marker in markers],
             "proposals": [
                 {
                     "id": x["id"],
-                    "label": next(
-                        t.label for t in rules.tags(state, actor.ref) if t.id == x["tag"]
-                    ),
+                    "label": tag_labels.get(x["tag"], "Unavailable Tag"),
                     "direction": x["direction"],
                     "account": x["account"],
                 }
@@ -1486,6 +1743,8 @@ class ActorPlayService:
             "channel": int(action["channel_id"]),
             "context": action["data"]["prepared"]["context"],
         }
+        if row["kind"] == ROLL_CHOICE and own:
+            result[ROLL_CHOICE] = roll_notches(self.game, state, actor.ref, viewer.user_id)
         if action["data"].get("harpy_beneath") and row["kind"].startswith("harpy_beneath_"):
             from girlframe.services.m3_harpy_beneath import projection as harpy_beneath_projection
 
@@ -1512,8 +1771,21 @@ class ActorPlayService:
             from girlframe.services.m3_battle import damage_projection
 
             result["battle"] = damage_projection(self.game, c, state, action, row)
+        if row["kind"] == "tag_resolution" and result["body"].get("original_marker"):
+            result["revolutionary_replacement"] = [
+                item.model_dump(mode="json") for item in actor.identities
+                if not item.protected and not item.paired
+            ] if len(actor.identities) >= 4 else []
         if row["kind"] == "tag_resolution" and actor.ref.kind == "clone_am":
             result["copy_identity_cap"] = 1
+        if row["kind"] == "actor_keep" and own and self._soldier_surgery(state, actor.ref):
+            result["soldier_surgery"] = True
+        if row["kind"] == "actor_keep" and own and action["data"].get("harpy_sparrows"):
+            from girlframe.engine.m3_harpy_advancements import SPARROWS_CHOICES
+
+            result["harpy_sparrows"] = SPARROWS_CHOICES
+        if row["kind"] == "actor_keep" and own and action["data"].get("harpy_mask"):
+            result["harpy_mask"] = True
         if action["data"].get("dive") and row["kind"].startswith("dive_"):
             from girlframe.services.m3_dive import projection
 
@@ -1550,7 +1822,11 @@ class ActorPlayService:
             from girlframe.services.m3_battle import damage_projection
 
             result["battle"] = damage_projection(self.game, c, state, action, row)
-        if row["kind"] == "tag_resolution" and actor.ref.kind == "external_pilot":
+        if (
+            row["kind"] == "tag_resolution"
+            and actor.ref.kind == "external_pilot"
+            and actor.rules != "ancillary"
+        ):
             from girlframe.engine.m3_tag_permissions import can_reject
 
             result["rejection_blocked"] = not can_reject(state, actor.ref, result["body"]["tag"])

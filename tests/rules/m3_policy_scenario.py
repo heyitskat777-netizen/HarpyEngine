@@ -10,7 +10,7 @@ from girlframe.services.onboarding import OnboardingStore
 
 def configure_m3_fixture(store: OnboardingStore) -> Registry:
     registry = Registry.model_validate_json(
-        (Path(__file__).resolve().parents[2] / "rules/registry.json").read_text()
+        (Path(__file__).resolve().parents[2] / "rules/registry.json").read_bytes()
     )
     store.policy = store.policy.model_copy(
         update={

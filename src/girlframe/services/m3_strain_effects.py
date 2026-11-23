@@ -11,8 +11,37 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_strain_effects as rules
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_benevolent_contact import RULE as BENEVOLENT_CONTACT
+from girlframe.engine.m3_berserk_frame import RULE as BERSERK_FRAME
+from girlframe.engine.m3_budget_hearing import RULE as BUDGET_HEARING
+from girlframe.engine.m3_bunk_harpy import RULE as BUNK_HARPY
+from girlframe.engine.m3_cadre_leak import RULE as CADRE_LEAK
+from girlframe.engine.m3_civic_directive import RULES as CIVIC_DIRECTIVES
 from girlframe.engine.m3_contraband_state import ContrabandFind
+from girlframe.engine.m3_doppelganger_reveal import reveals as disguise_reveals
+from girlframe.engine.m3_foundation_attack import RULE as FOUNDATION_ATTACK
+from girlframe.engine.m3_harpy_raid import RULE as HARPY_RAID
+from girlframe.engine.m3_npc_interest import RULE as NPC_INTEREST
+from girlframe.engine.m3_pilot_fears import APPEARANCE as PUBLIC_APPEARANCE
+from girlframe.engine.m3_pilot_fears import RULE as PILOT_FEARS
+from girlframe.engine.m3_rebel_ambush import HUNT_RULE as REBEL_HUNT
+from girlframe.engine.m3_rebel_ambush import RULE as REBEL_AMBUSH
+from girlframe.engine.m3_rebel_ambush import SIEGE_RULE as REBEL_SIEGE
+from girlframe.engine.m3_rebel_base_capture import RULE as REBEL_BASE_CAPTURE
+from girlframe.engine.m3_rebel_bond_attack import RULE as REBEL_BOND_ATTACK
+from girlframe.engine.m3_rebel_escape_offer import RULE as REBEL_ESCAPE_OFFER
+from girlframe.engine.m3_rebel_frame_theft import RULE as REBEL_FRAME_THEFT
+from girlframe.engine.m3_rebel_strafe import RULE as REBEL_STRAFE
+from girlframe.engine.m3_rebel_taunt import RULE as REBEL_TAUNT
+from girlframe.engine.m3_rebel_voice import RULE as REBEL_VOICE
 from girlframe.engine.m3_supply_state import SupplyLoss
+from girlframe.engine.m3_void_revelation import RULE as VOID_REVELATION
+from girlframe.engine.m3_void_revelation import Revelation, revelations
+from girlframe.engine.m3_void_rift import RULE as VOID_RIFT
+from girlframe.engine.m3_void_signal import RULE as VOID_SIGNAL
+from girlframe.engine.m3_void_spread import RULE as VOID_SPREAD
+from girlframe.engine.m3_void_spread import Spread, select
+from girlframe.engine.m3_world_state import Cell
 from girlframe.engine.rolls import IndexSource, OsIndex
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_strain import StrainService
@@ -53,6 +82,28 @@ class EffectService:
                 raise WorkflowError("This effect belongs to its assigned Handler.")
             body = json.loads(row["body_json"])
             state = load_state(c, self.store.campaign_id)
+            captured_base = None
+            from girlframe.engine.m3_rebel_alignment import PORTED_EFFECTS
+            from girlframe.services.m3_rebel_funding import for_row as funding_for_row
+
+            involvement = funding_for_row(state, row)
+            unported_foundation = (
+                involvement is not None
+                and involvement.side == "foundation"
+                and body["rule_id"] not in PORTED_EFFECTS
+            )
+            if body["rule_id"] == REBEL_BASE_CAPTURE:
+                from girlframe.engine.m3_handler_consequences import same_handler_body
+                from girlframe.engine.m3_rebel_base_capture import captures
+
+                actual = next((x for x in captures(state) if x.id == identity), None)
+                if actual is not None and same_handler_body(state, actual.handler):
+                    captured_base = dict(
+                        base=actual.base,
+                        frame=actual.frame.frame_instance,
+                        freed=len(actual.released),
+                        dead=len(actual.killed),
+                    )
             supply = next((x for x in state.supply_losses if x.id == identity), None)
             label = "Original character"
             if supply is not None:
@@ -68,8 +119,67 @@ class EffectService:
             return {
                 **{k: row[k] for k in ("id", "revision", "state", "off_duty_id")},
                 "rule_id": body["rule_id"],
-                "supported": body["rule_id"] in rules.SUPPORTED,
+                "supported": (body["rule_id"] in rules.SUPPORTED or body["rule_id"] == VOID_SPREAD)
+                and not unported_foundation,
                 "game_revision": state.revision,
+                **(
+                    {"pending_insurgent": involvement.id}
+                    if involvement is not None
+                    and not involvement.participation
+                    and not unported_foundation
+                    and row["state"] == "pending"
+                    else {}
+                ),
+                **({"foundation_attention": True} if unported_foundation else {}),
+                **({"captured_base": captured_base} if captured_base is not None else {}),
+                **(
+                    {
+                        "spread": body.get("spread"),
+                        "spread_started": bool(body.get("spread_started")),
+                    }
+                    if body["rule_id"] == VOID_SPREAD
+                    else {}
+                ),
+                **(
+                    {
+                        "rift_duration": body.get("rift_duration"),
+                        "trigger_roll": body.get("trigger_roll"),
+                    }
+                    if body["rule_id"] == VOID_RIFT
+                    else {}
+                ),
+                "awaiting_rebel_offer": bool(body.get("offer_requested"))
+                and row["state"] == "pending",
+                "awaiting_civic_directive": bool(body.get("directive_requested"))
+                and row["state"] == "pending",
+                "awaiting_void_signal": bool(body.get("signal_requested"))
+                and row["state"] == "pending",
+                "awaiting_pilot_fears": bool(body.get("fear_requested"))
+                and row["state"] == "pending",
+                "awaiting_harpy_raid": bool(body.get("raid_requested"))
+                and row["state"] == "pending",
+                "awaiting_cadre_leak": bool(body.get("leak_requested"))
+                and row["state"] == "pending",
+                "awaiting_npc_interest": bool(body.get("interest_requested"))
+                and row["state"] == "pending",
+                "awaiting_rebel_strafe": bool(body.get("strafe_requested"))
+                and row["state"] == "pending",
+                "awaiting_rebel_taunt": bool(body.get("taunt_requested"))
+                and row["state"] == "pending",
+                "awaiting_rebel_voice": bool(body.get("voice_requested"))
+                and row["state"] == "pending",
+                "awaiting_budget_hearing": bool(body.get("hearing_requested"))
+                and row["state"] == "pending",
+                "awaiting_bunk_harpy": bool(body.get("bunk_requested"))
+                and row["state"] == "pending",
+                "awaiting_rebel_bond": bool(body.get("bond_attack_requested"))
+                and row["state"] == "pending",
+                "awaiting_rebel_siege": bool(body.get("siege_requested"))
+                and row["state"] == "pending",
+                "awaiting_foundation_attack": bool(body.get("foundation_attack_requested"))
+                and row["state"] == "pending",
+                "awaiting_frame_theft": bool(body.get("theft_requested"))
+                and row["state"] == "pending",
                 "supply_outcome": {
                     "recipient": label,
                     "resource": supply.resource,
@@ -79,6 +189,100 @@ class EffectService:
                 if supply is not None
                 else None,
             }
+
+    def revelation(self, viewer: GuildViewer, identity: str) -> dict[str, str]:
+        with self.store.engine.connect() as c:
+            self.game.authorize(c, viewer, game=False)
+            value = next(
+                (x for x in revelations(load_state(c, self.store.campaign_id)) if x.id == identity),
+                None,
+            )
+            if value is None or (
+                value.handler != viewer.user_id
+                and not any(role.controller == viewer.user_id for role in value.recipients)
+            ):
+                raise WorkflowError("This revelation belongs to its actual original audience")
+            return dict(play=value.play, account=value.account)
+
+    def disguise_revelation(self, viewer: GuildViewer, identity: str) -> dict[str, str]:
+        with self.store.engine.connect() as c:
+            self.game.authorize(c, viewer, game=False)
+            value = next(
+                (
+                    x
+                    for x in disguise_reveals(load_state(c, self.store.campaign_id))
+                    if x.id == identity
+                    and any(r.entity == str(viewer.user_id) for r in x.recipients)
+                ),
+                None,
+            )
+            if value is None:
+                raise WorkflowError("Only the original audience receives this mask revelation")
+            return dict(
+                name=value.mask.name, gorgon_class=value.gorgon_class, account=value.account
+            )
+
+    def prepare_spread(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        identity: str,
+        revision: int,
+        game_revision: int,
+        *,
+        cells: tuple[Cell, ...] | None = None,
+    ) -> dict[str, Any]:
+        def authorize(c: Connection) -> None:
+            self.strain._authorize(c, viewer)
+            self.strain.missions.access.authorize(c, viewer, "world")
+            self.game.unpaused(c)
+
+        def operation(c: Connection) -> dict[str, Any]:
+            row = self._row(c, identity)
+            self.strain._check(c, viewer, row, revision)
+            state = self.strain._state(c, game_revision)
+            body = json.loads(row["body_json"])
+            if body["rule_id"] != VOID_SPREAD or state.world is None:
+                raise WorkflowError("Open the saved High Void spread on the actual map")
+            event_id = str(uuid4())
+            if cells is None:
+                if "spread" in body:
+                    raise WorkflowError("The 2d6 are already saved for this effect")
+                spread = Spread(
+                    faces=(self.strain.dice.roll_d6(), self.strain.dice.roll_d6()),
+                    rng_source=self.strain.rng_source,
+                    roll_event=event_id,
+                )
+            else:
+                if "spread" not in body:
+                    raise WorkflowError("Save the actual 2d6 before choosing squares")
+                spread = select(
+                    state.world.board,
+                    Spread.model_validate_json(json.dumps(body["spread"])),
+                    cells,
+                    event_id,
+                )
+            event = self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.void_spread_rolled" if cells is None else "m3.void_spread_scoped",
+                state if cells is not None else None,
+                event_id=event_id,
+                work_id=identity,
+            )
+            saved = spread.model_dump(mode="json")
+            self.strain._save(c, row, event, body | {"spread": saved})
+            return dict(id=identity, revision=revision + 1, state="pending", spread=saved)
+
+        return self.strain.missions._write(
+            viewer,
+            key,
+            "m3.void_spread_preparation",
+            dict(id=identity, revision=revision, game_revision=game_revision, cells=cells),
+            operation,
+            authorize,
+        )
 
     def apply(
         self,
@@ -104,6 +308,10 @@ class EffectService:
             row = self._row(c, identity)
             self.strain._check(c, viewer, row, revision)
             state = self.strain._state(c, game_revision)
+            if json.loads(row["body_json"]).get("director_call"):
+                from girlframe.services.m3_director_strain import prove_trigger
+
+                prove_trigger(c, self.strain, state, row)
             from girlframe.engine.m3_promotional_opportunity import in_responsibility
 
             if state.world is not None and state.world.regions:
@@ -114,12 +322,141 @@ class EffectService:
                 raise WorkflowError(
                     "The selected effect does not match this actual saved Strain event."
                 )
+            from girlframe.services.m3_rebel_funding import require_participation
+
+            require_participation(c, self.strain, state, row)
+            if choice.rule_id in (REBEL_AMBUSH, REBEL_HUNT) and choice.target:
+                from girlframe.engine.m3_rebel_ambush import attacker
+                from girlframe.services.handler_setup import HandlerService
+
+                controller = attacker(state, ActorRef(kind="external_pilot", entity=choice.target))
+                members = HandlerService(self.store)
+                if not members._member(c, controller):
+                    raise WorkflowError("Recover the actual joined Rebel controller")
+                if choice.rule_id == REBEL_HUNT and choice.victim in state.sheets:
+                    assert choice.victim is not None
+                    period = self.strain.periods._get(c, row["off_duty_id"])
+                    if (
+                        period.character_ids.get(choice.victim)
+                        != current_ref(state, int(choice.victim)).incarnation
+                        or choice.victim in period.ended_characters
+                        or not members._member(c, int(choice.victim))
+                    ):
+                        raise WorkflowError(
+                            "Choose an actual original Girl from this preparing period"
+                        )
+            base_capture = choice.rule_id == REBEL_BASE_CAPTURE
+            needs_bond_attack = choice.rule_id == REBEL_BOND_ATTACK
+            if needs_bond_attack and choice.target:
+                from girlframe.engine.m3_rebel_bond_attack import actor as assailant
+                from girlframe.services.handler_setup import HandlerService
+
+                if not HandlerService(self.store)._member(
+                    c, assailant(state, choice.target).controller
+                ):
+                    raise WorkflowError("Recover the original NPC's joined controller")
+            if base_capture and choice.target and choice.victim:
+                from girlframe.engine.m2 import GameState
+                from girlframe.engine.m3_rebel_base_capture import frames, occupants, rebel
+                from girlframe.engine.m3_rebel_base_capture import site as overrun_site
+                from girlframe.services.handler_setup import HandlerService
+                from girlframe.services.m3_prisoner_escape import _custody
+
+                captured_base = overrun_site(state, choice.target)
+                controller = rebel(state, choice.victim, captured_base).controller
+                if not HandlerService(self.store)._member(c, controller):
+                    raise WorkflowError("Recover the actual joined Rebel controlling the takeover")
+                parked = next(
+                    (
+                        x
+                        for x in frames(state, captured_base)
+                        if x.frame_instance == choice.captured_frame
+                    ),
+                    None,
+                )
+                if parked is None:
+                    raise WorkflowError("Recover the original unoccupied Frame at the overrun base")
+                archive = c.scalar(
+                    sa.select(t.m2["m2_state_history"].c.body_json).where(
+                        t.m2["m2_state_history"].c.campaign_id == self.store.campaign_id,
+                        t.m2["m2_state_history"].c.event_id == parked.source_event,
+                    )
+                )
+                if (
+                    archive is None
+                    or parked not in GameState.model_validate_json(archive).parked_frames
+                ):
+                    raise WorkflowError("Recover the actual custody source of this parked Frame")
+                for prisoner in occupants(state, captured_base)[0]:
+                    _custody(self.game, c, state, ActorRef(kind="npc", entity=prisoner.id))
+            if choice.rule_id == VOID_RIFT:
+                from girlframe.engine.m3_void_rift import pending as pending_arrival
+
+                rift, arrival = pending_arrival(state, identity)
+                body = json.loads(row["body_json"])
+                if (
+                    row["event_id"] != arrival.source
+                    or body.get("source_work") != rift.id
+                    or body.get("trigger_roll", rift.id) != arrival.roll
+                ):
+                    raise WorkflowError(
+                        "Recover the actual saved roll that triggered this rift arrival"
+                    )
             event_id = str(uuid4())
             supply = None
             contraband = None
             public_appointment = None
             cleanup_index = None
             cleanup_rng = None
+            revelation = None
+            contact = None
+            if choice.rule_id == BENEVOLENT_CONTACT:
+                from girlframe.services.m3_benevolent_contact import ContactService
+
+                if (
+                    not choice.target
+                    or not choice.victim
+                    or choice.contact_play is None
+                    or choice.contact_channel is None
+                ):
+                    raise WorkflowError(
+                        "Choose the actual Benevolent Gorgon, Girl and printed Play"
+                    )
+                contact = ContactService(self.strain).performed(
+                    c,
+                    state,
+                    viewer,
+                    identity=identity,
+                    event=event_id,
+                    grant=identity,
+                    play=choice.contact_play,
+                    gorgon=ActorRef(kind="gorgon", entity=choice.target),
+                    girl=choice.victim,
+                    channel=choice.contact_channel,
+                    account=choice.account,
+                )
+            if choice.rule_id == VOID_REVELATION:
+                from girlframe.services.m3_actors import ActorService
+                from girlframe.services.m3_cast import CastService
+
+                if choice.revelation_channel is None or choice.revelation_play is None:
+                    raise WorkflowError("Choose a printed revelation in an actual joined scene")
+                cast, _ = CastService(ActorService(self.strain.missions))._current(
+                    c, state, choice.revelation_channel
+                )
+                audience = tuple(role for role in cast.roles if role.actor.kind == "pilot")
+                if cast.facilitator != viewer.user_id or not audience:
+                    raise WorkflowError("Join as facilitator with an actual original audience")
+                revelation = Revelation(
+                    id=identity,
+                    event=event_id,
+                    scene=cast.id,
+                    cast_revision=cast.revision,
+                    handler=viewer.user_id,
+                    play=choice.revelation_play,
+                    recipients=audience,
+                    account=choice.account.strip(),
+                )
             if choice.rule_id == "strain.budget.high.6.1":
                 from girlframe.services.m3_medical import MedicalService
 
@@ -317,10 +654,14 @@ class EffectService:
                     rng_source=self.selection_source,
                     resource=choice.missing_resource,
                 )
+            aggressive_arrival = choice.rule_id == "strain.void.low.4.1" or (
+                choice.rule_id == VOID_RIFT
+                and choice.gorgon is not None
+                and choice.gorgon.gorgon_class == "aggressive"
+            )
             if (
-                choice.rule_id in {"strain.void.low.4.1", "strain.void.low.5.1"}
-                and choice.victim is not None
-            ):
+                aggressive_arrival or choice.rule_id == "strain.void.low.5.1"
+            ) and choice.victim is not None:
                 from girlframe.services.m3_world import require_onstage
 
                 require_onstage(state, ActorRef(kind="npc", entity=choice.victim))
@@ -331,7 +672,7 @@ class EffectService:
                     raise WorkflowError(
                         "Choose the present original NPC at the introduction's actual location."
                     )
-            if choice.rule_id == "strain.void.low.4.1":
+            if aggressive_arrival or base_capture:
                 from girlframe.services.m3_battle_director import bind_legacy_context_bodies
 
                 state = bind_legacy_context_bodies(self.game, c, state)
@@ -351,6 +692,215 @@ class EffectService:
                 tag_setter_appointment=public_appointment,
                 cleanup_index=cleanup_index,
                 cleanup_rng=cleanup_rng,
+                revelation=revelation,
+                contact=contact,
+            )
+            needs_offer = choice.rule_id == REBEL_ESCAPE_OFFER
+            needs_siege = choice.rule_id == REBEL_SIEGE
+            if needs_siege:
+                from girlframe.services.m3_rebel_ambush import stage_siege
+
+                assert choice.target
+                stage_siege(
+                    c,
+                    self.strain,
+                    updated,
+                    row,
+                    event_id,
+                    choice.target,
+                    choice.account.strip(),
+                    recruits=choice.siege_recruits,
+                    faction=choice.faction,
+                    victim=choice.victim or "ace",
+                )
+            needs_foundation_attack = choice.rule_id == FOUNDATION_ATTACK
+            if needs_foundation_attack:
+                from girlframe.services.m3_foundation_attack import stage as stage_foundation_attack
+
+                assert choice.target and choice.victim
+                stage_foundation_attack(
+                    c,
+                    self.strain,
+                    updated,
+                    row,
+                    event_id,
+                    choice.target,
+                    choice.victim,
+                    person=choice.foundation_person,
+                )
+            needs_theft = choice.rule_id == REBEL_FRAME_THEFT
+            if needs_theft:
+                from girlframe.services.m3_rebel_frame_theft import stage as stage_theft
+
+                assert choice.target and choice.victim
+                stage_theft(
+                    c,
+                    self.strain,
+                    updated,
+                    row,
+                    event_id,
+                    choice.target,
+                    choice.victim,
+                    choice.account.strip(),
+                    self.selector,
+                    self.selection_source,
+                )
+            if needs_offer:
+                from girlframe.services.m3_rebel_escape_offer import stage
+
+                stage(c, self.strain, updated, row, choice.target, event_id)
+            needs_directive = choice.rule_id in CIVIC_DIRECTIVES
+            if needs_directive:
+                from girlframe.engine.m3_civic_directive import director
+                from girlframe.services.handler_setup import HandlerService
+
+                if not HandlerService(self.store)._member(
+                    c, director(updated, choice.target).controller
+                ):
+                    raise WorkflowError("Recover the fictional Director's campaign controller")
+            needs_signal = choice.rule_id == VOID_SIGNAL
+            if needs_signal:
+                from girlframe.services.m3_void_signal import stage as stage_void_signal
+
+                stage_void_signal(
+                    updated,
+                    self.strain,
+                    c,
+                    row,
+                    choice.target,
+                    event_id,
+                    self.selector,
+                    self.selection_source,
+                )
+            needs_fear = choice.rule_id in (PILOT_FEARS, PUBLIC_APPEARANCE)
+            if needs_fear:
+                from girlframe.services.m3_pilot_fears import stage as stage_pilot_fears
+
+                stage_pilot_fears(
+                    c,
+                    self.strain,
+                    updated,
+                    row,
+                    choice.target,
+                    event_id,
+                    appearance=choice.account.strip()
+                    if choice.rule_id == PUBLIC_APPEARANCE
+                    else None,
+                )
+            needs_raid = choice.rule_id == HARPY_RAID
+            if needs_raid:
+                from girlframe.services.m3_harpy_raid import stage as stage_harpy_raid
+
+                assert choice.target and choice.raid_base and choice.victim
+                stage_harpy_raid(
+                    c,
+                    self.strain,
+                    updated,
+                    row,
+                    event_id,
+                    choice.target,
+                    choice.raid_base,
+                    int(choice.victim),
+                    new=choice.new_raid_harpy,
+                )
+            needs_leak = choice.rule_id == CADRE_LEAK
+            if needs_leak:
+                from girlframe.services.m3_cadre_leak import stage as stage_cadre_leak
+
+                assert choice.target and choice.leak_report
+                stage_cadre_leak(
+                    c,
+                    self.strain,
+                    updated,
+                    identity,
+                    event_id,
+                    choice.target,
+                    choice.leak_parties,
+                    choice.leak_report.strip(),
+                )
+            needs_interest = choice.rule_id == NPC_INTEREST
+            if needs_interest:
+                from girlframe.services.m3_npc_interest import stage as stage_interest
+
+                assert choice.target and choice.victim and choice.interest_timing
+                stage_interest(
+                    c,
+                    self.strain,
+                    updated,
+                    row,
+                    event_id,
+                    choice.target,
+                    int(choice.victim),
+                    choice.interest_timing,
+                    choice.account.strip(),
+                    choice.interest_manifestation,
+                )
+            needs_strafe = choice.rule_id == REBEL_STRAFE
+            if needs_strafe:
+                from girlframe.services.m3_rebel_strafe import stage as stage_strafe
+
+                stage_strafe(
+                    c,
+                    self.strain,
+                    updated,
+                    row,
+                    event_id,
+                    choice.victim,
+                    choice.target,
+                    choice.account.strip(),
+                )
+            needs_taunt = choice.rule_id == REBEL_TAUNT
+            if needs_taunt:
+                from girlframe.services.m3_rebel_taunt import stage as stage_taunt
+
+                stage_taunt(
+                    c, self.strain, updated, row, event_id, choice.target, choice.account.strip()
+                )
+            needs_voice = choice.rule_id == REBEL_VOICE
+            if needs_voice:
+                from girlframe.services.m3_rebel_voice import stage as stage_voice
+
+                stage_voice(c, self.strain, updated, row, event_id, choice.target)
+            needs_hearing = choice.rule_id == BUDGET_HEARING
+            if needs_hearing:
+                from girlframe.services.m3_budget_hearing import stage as stage_hearing
+
+                assert choice.target and choice.victim
+                stage_hearing(
+                    c, self.strain, updated, row, event_id, choice.target, int(choice.victim)
+                )
+            needs_bunk = choice.rule_id == BUNK_HARPY
+            if needs_bunk:
+                from girlframe.services.m3_bunk_harpy import stage as stage_bunk
+
+                assert choice.target
+                stage_bunk(
+                    c,
+                    self.strain,
+                    updated,
+                    row,
+                    event_id,
+                    choice.target,
+                    self.selector,
+                    self.selection_source,
+                )
+            pending = (
+                needs_offer
+                or needs_directive
+                or needs_signal
+                or needs_fear
+                or needs_raid
+                or needs_leak
+                or needs_interest
+                or needs_strafe
+                or needs_taunt
+                or needs_voice
+                or needs_hearing
+                or needs_bunk
+                or needs_bond_attack
+                or needs_theft
+                or needs_siege
+                or needs_foundation_attack
             )
             scientific_period, scientific_events = None, []
             if choice.rule_id == "strain.budget.low.3.1":
@@ -387,7 +937,15 @@ class EffectService:
                 work_id=identity,
                 rule_id=choice.rule_id,
             )
-            if choice.rule_id == "strain.void.low.4.1":
+            if choice.rule_id == BERSERK_FRAME:
+                from girlframe.services.m3_berserk_frame import schedule as schedule_berserk
+
+                schedule_berserk(c, self.game, updated, event)
+            if choice.rule_id == rules.VOID_EXAMINATION:
+                from girlframe.services.m3_void_examination import schedule
+
+                schedule(c, self.strain.periods, row, updated, event)
+            if aggressive_arrival or base_capture:
                 from girlframe.services.m3_battle import synchronize_casts
                 from girlframe.services.m3_battle_director import create_replacements
                 from girlframe.services.m3_handler_void import synchronize_endings
@@ -556,10 +1114,31 @@ class EffectService:
                 c,
                 row,
                 event,
-                json.loads(row["body_json"]) | {"choice": choice.model_dump(mode="json")},
-                resolved=True,
+                json.loads(row["body_json"])
+                | {"choice": choice.model_dump(mode="json")}
+                | ({"offer_requested": event} if needs_offer else {})
+                | ({"directive_requested": event} if needs_directive else {})
+                | ({"signal_requested": event} if needs_signal else {})
+                | ({"fear_requested": event} if needs_fear else {})
+                | ({"raid_requested": event} if needs_raid else {})
+                | ({"leak_requested": event} if needs_leak else {})
+                | ({"interest_requested": event} if needs_interest else {})
+                | ({"strafe_requested": event} if needs_strafe else {})
+                | ({"taunt_requested": event} if needs_taunt else {})
+                | ({"voice_requested": event} if needs_voice else {})
+                | ({"hearing_requested": event} if needs_hearing else {})
+                | ({"bunk_requested": event} if needs_bunk else {})
+                | ({"bond_attack_requested": event} if needs_bond_attack else {})
+                | ({"theft_requested": event} if needs_theft else {})
+                | ({"siege_requested": event} if needs_siege else {})
+                | ({"foundation_attack_requested": event} if needs_foundation_attack else {}),
+                resolved=not pending,
             )
-            return {"id": identity, "state": "resolved", "game_revision": updated.revision}
+            return {
+                "id": identity,
+                "state": "pending" if pending else "resolved",
+                "game_revision": updated.revision,
+            }
 
         try:
             return self.strain.missions._write(

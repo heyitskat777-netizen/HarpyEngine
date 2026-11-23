@@ -75,7 +75,7 @@ def ready(store, tmp_path, monkeypatch, *, casualties=False):
         import test_ledger
         import test_m2_game
 
-        # The existing initializer separately builds the second player's draft with JANUS-B.
+        # The existing initializer separately builds the second player's draft with JANUS.
         # Parameterize that genuine creation call too, within this one initial factory invocation.
         original_draft = test_m2_game.selected
         original_profile = test_ledger.DraftInput

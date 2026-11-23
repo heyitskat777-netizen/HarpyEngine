@@ -70,7 +70,6 @@ def test_native_kicked_puppy_flirt_no_heat_self_gift_tag_and_owned_care_answer(
             gain=("0",),
             pair_share=("0",),
             piloting=("no",),
-            witnessed=("no",),
             trigger=("yes",),
             context="I actually flirt with the person who gave me this Tag",
         )

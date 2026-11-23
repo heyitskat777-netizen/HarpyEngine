@@ -42,7 +42,7 @@ def ready(ledger):
         DraftInput(
             callsign="SYNTH",
             girl_playbook="BONDED",
-            frame_playbook="JANUS-B",
+            frame_playbook="JANUS",
             notes="PRIVATE_OWNER_NOTES",
         ),
     )
@@ -56,17 +56,15 @@ def choose(service, identity, key="choose", expected=0, names=NAMES):
     return service.choose(OTHER, key, identity, 2, expected, PairNames(names=names))
 
 
-@pytest.mark.parametrize(
-    "frame", [k for k, v in CATALOG.items() if v["family"] == "frame"] + ["JANUS-B"]
-)
+@pytest.mark.parametrize("frame", [k for k, v in CATALOG.items() if v["family"] == "frame"])
 def test_verified_frame_baselines_and_roundtrip(frame):
     data = selected(frame=frame)
     assert CreationDraft.model_validate_json(data.model_dump_json()) == data
     baseline = data.frame_setup
     assert baseline.schema_version == 1
-    assert baseline.frame == ("JANUS" if frame == "JANUS-B" else frame)
+    assert baseline.frame == frame
     assert not hasattr(baseline, "heat")
-    if frame in ("JANUS", "JANUS-B"):
+    if frame == "JANUS":
         assert baseline.harpy_core.tags == (
             "Drugged",
             "Restrained",
@@ -231,7 +229,7 @@ def test_pair_concurrency_rollback_immutability_isolation_and_backup(ledger, mon
         OTHER,
         "changed-profile",
         1,
-        DraftInput(callsign="OTHER", girl_playbook="ALPHA", frame_playbook="JANUS-B"),
+        DraftInput(callsign="OTHER", girl_playbook="ALPHA", frame_playbook="JANUS"),
     )
     with pytest.raises(WorkflowError):
         service.prepare(OTHER, identity)

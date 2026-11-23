@@ -14,6 +14,7 @@ from girlframe.services.m3_janus_requisitions import JanusRequisitionService
 def test_actual_pandora_low_birth_creates_dormant_child_at_original_birthplace(
     ledger, tmp_path, monkeypatch
 ):
+    from test_cast_service import change
     from test_ledger import ADMIN
     from test_m2_game import Gateway, answer, pass_tags, tick
     from test_off_duty_cycle import activate, prepared
@@ -23,7 +24,10 @@ def test_actual_pandora_low_birth_creates_dormant_child_at_original_birthplace(
     from girlframe.engine.m3_actors import owned_refs
     from girlframe.engine.m3_janus_pandora import ChildProposal, pregnancies
     from girlframe.engine.m3_janus_requisitions import PANDORA
-    from girlframe.services.m3_actors import profiles
+    from girlframe.services.m3_actors import ActorService, profiles
+    from girlframe.services.m3_cast import CastService
+    from girlframe.services.m3_movement import MovementService
+    from girlframe.services.onboarding import WorkflowError
 
     cycle, game, period = prepared(ledger)
     approved(ledger, game, tmp_path, monkeypatch, extra=(PANDORA,))
@@ -70,7 +74,8 @@ def test_actual_pandora_low_birth_creates_dormant_child_at_original_birthplace(
             context="Birth the actual child from this original Inseminated Frame",
         ),
     )["action_id"]
-    tick(GameWorker(game), Gateway(), 3)
+    worker, gateway = GameWorker(game), Gateway()
+    tick(worker, gateway, 3)
     if game.inspect(PLAYER, action)["state"] != "tag_window":
         game.roll(PLAYER, str(uuid4()), action)
     pass_tags(game)
@@ -95,16 +100,23 @@ def test_actual_pandora_low_birth_creates_dormant_child_at_original_birthplace(
     with ledger.engine.connect() as c:
         assert child not in owned_refs(actual, 2, profiles(c, ledger.campaign_id))
 
-    from girlframe.engine.m3_janus_pandora import require_can_move
-
     birthplace = pregnancies(actual)[-1].birth_cell
     assert birthplace is not None
-    before = actual.model_dump_json()
-    require_can_move(actual, child, birthplace)
+    tick(worker, gateway, 4)
+    change(CastService(ActorService(MissionService(ledger))), ADMIN, "join", child)
+    before = state(game)
     other_cell = (birthplace[0] + 1, birthplace[1])
-    with pytest.raises(ValueError, match="stays at its original birthplace"):
-        require_can_move(actual, child, other_cell)
-    assert actual.model_dump_json() == before
+    with pytest.raises(WorkflowError, match="stays at its original birthplace"):
+        MovementService(game).move(
+            ADMIN,
+            "move-original-newborn",
+            before.revision,
+            900,
+            child,
+            other_cell,
+            account="The facilitator tries to move this original newborn.",
+        )
+    assert state(game) == before
     assert pregnancies(actual)[-1].tier == "low"
     assert pregnancies(actual)[-1].phase == "born"
     from girlframe.services.m3_janus_pandora import menu

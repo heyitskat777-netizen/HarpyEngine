@@ -1,0 +1,19 @@
+# Ordinary NPC and Pilot Running Ragged
+tests/rules/test_doctor_caller_native.py
+tests/rules/test_doctor_runtime.py::test_running_ragged_caller_marks_own_tag_and_actual_doctor_arrives
+
+# Native Girl regressions and Ancillary release gates
+tests/rules/test_princess_beautiful.py
+tests/rules/test_standards.py::test_native_keep_rider_adds_trait_alongside_the_ordinary_choices
+tests/rules/test_registry.py::test_ancillary_module_disabled_and_not_executable_by_toggling_a_flag
+
+# Stim authority in both directions and related NPC consumers
+tests/rules/test_stim_npc_orders.py
+tests/rules/test_stim_npc.py
+tests/rules/test_stim_sex.py
+tests/rules/test_succubus.py
+tests/rules/test_npc_broken_orders.py
+
+# Shared roll event and completed Fight/Fawn provenance
+tests/rules/test_battle_service.py
+tests/rules/test_ankou_fight_fawn.py

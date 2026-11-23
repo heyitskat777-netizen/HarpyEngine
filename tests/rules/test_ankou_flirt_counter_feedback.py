@@ -54,6 +54,8 @@ def last_counter(game, worker, gateway, identity):
         await opened.response.defer(ephemeral=True)
         await open_alpha_choice(opened, game, request["id"])
         form = opened.edit_original_response.call_args.kwargs["view"]
+        form.values["play"] = ("flirt",)
+        form.controls()
         assert "identity" in {x.key for x in form.fields}
         identity_field = next(x for x in form.fields if x.key == "identity")
         assert "Flirt" in identity_field.label

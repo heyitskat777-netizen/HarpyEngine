@@ -132,7 +132,7 @@ async def open_choice(
                 (("1+", "At least one year"), ("not_year", "Another category")),
             ),
         ]
-        if kind == "red_queen_memory_category":
+        if kind == "red_queen_memory_category" and data["ams"]:
             fields.append(
                 Field(
                     "am", "Your existing Court AM to install", tuple(tuple(x) for x in data["ams"])

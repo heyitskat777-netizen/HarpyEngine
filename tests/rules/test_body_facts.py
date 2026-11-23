@@ -121,7 +121,7 @@ def test_non_changeling_body_owner_native_history_then_genuine_bond_deepen(
     ledger, tmp_path, monkeypatch
 ):
     game, bodies, _, _ = ready(ledger, tmp_path, monkeypatch)
-    assert state(game).sheets["3"].frame == "JANUS-B"
+    assert state(game).sheets["3"].frame == "JANUS"
     own = bodies.menu(OTHER, 900)
     assert next(row for row in own["actors"] if row["actor"]["kind"] == "pilot")["joined"]
     private = "My actual original brain.\n  PRIVATE_BODY_EVIDENCE @everyone"

@@ -51,7 +51,7 @@ def ready(store, tmp_path, monkeypatch):
     )
     coordinated.decide(OTHER, str(uuid4()), request["id"], 1, "accept")
     own = creation.get(OTHER)
-    actual = selected("VATGROWN", "JANUS-B")
+    actual = selected("VATGROWN", "JANUS")
     draft = actual.model_copy(
         update={
             "shared_tokens": own.draft.shared_tokens,

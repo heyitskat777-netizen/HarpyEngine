@@ -26,7 +26,7 @@ class HandlerArchive(Model):
     account: str = Field(min_length=1, max_length=1200)
     appointment: str = Field(min_length=1)
     links_json: str
-    ending: Literal["death", "fired", "retired", "imprisoned"] = "death"
+    ending: Literal["death", "fired", "retired", "imprisoned", "demoted"] = "death"
     alive: bool = False
     custody: Literal["free", "foundation_prison"] = "free"
     position: Cell | None = None
@@ -45,7 +45,7 @@ class HandlerArchive(Model):
 class HandlerDeparture(Model):
     id: str = Field(min_length=1)
     actor: ActorRef
-    reason: Literal["fired", "retired", "imprisoned"]
+    reason: Literal["fired", "retired", "imprisoned", "demoted"]
     source_work: str = Field(min_length=1)
     source_event: str = Field(min_length=1)
     appointment: str = Field(min_length=1)
@@ -108,10 +108,28 @@ class HandlerFatalSource(Model):
     id: str = Field(min_length=1)
     actor: ActorRef
     source_event: str = Field(min_length=1)
-    source_action: str = Field(min_length=1)
+    source_action: str | None = Field(default=None, min_length=1, exclude_if=lambda x: x is None)
+    source_work: str | None = Field(default=None, min_length=1, exclude_if=lambda x: x is None)
     source_choice: str | None = None
     clause: Literal[
-        "go_for_the_core.high", "go_for_the_core.mid", "go_for_the_core.low", "consume_eat.kill"
+        "go_for_the_core.high",
+        "go_for_the_core.mid",
+        "go_for_the_core.low",
+        "consume_eat.kill",
+        "strain.budget.endgame.1.execution",
+        "strain.rebellion.endgame.7.execution",
     ]
     appointment: str = Field(min_length=1)
     account: str = Field(min_length=1, max_length=1200)
+
+    @model_validator(mode="after")
+    def actual_source(self) -> "HandlerFatalSource":
+        execution = self.clause in (
+            "strain.budget.endgame.1.execution",
+            "strain.rebellion.endgame.7.execution",
+        )
+        if (execution and (not self.source_work or self.source_action or self.source_choice)) or (
+            not execution and (not self.source_action or self.source_work)
+        ):
+            raise ValueError("Preserve the exact printed work or action ending this original body")
+        return self

@@ -46,7 +46,7 @@ def ready(store, tmp_path, monkeypatch):
     monkeypatch.setattr(
         counter,
         "selected",
-        lambda girl, frame: selected(girl, "PROJECT ANKOU" if frame == "JANUS-B" else frame),
+        lambda girl, frame: selected(girl, "PROJECT ANKOU" if frame == "JANUS" else frame),
     )
     game, worker, gateway = counter.ready(store, tmp_path, monkeypatch)
     approved(
@@ -110,6 +110,8 @@ def last_counter(game, worker, gateway, identity):
         await opened.response.defer(ephemeral=True)
         await open_alpha_choice(opened, game, request["id"])
         form = opened.edit_original_response.call_args.kwargs["view"]
+        form.values["play"] = (advice.PLAY,)
+        form.controls()
         assert "identity" in {x.key for x in form.fields}
         assert not await form.interaction_check(current(PLAYER.user_id, 99380))
         form.values.update(

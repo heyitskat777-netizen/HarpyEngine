@@ -2,12 +2,13 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from girlframe.engine.fanbase import Fanbase
 from girlframe.engine.frame_setup import HarpyCore
 from girlframe.engine.identity import Snowflake
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.playbooks import normalize_frame_name
 
 
 class Model(BaseModel):
@@ -23,6 +24,11 @@ class Preferences(Model):
         Literal["The Queen", "The Consort", "The Knight", "The Doll", "The Traitor"] | None
     ) = None
     court_target: Snowflake | None = None
+
+    @field_validator("frame")
+    @classmethod
+    def printed_frame(cls, value: str) -> str:
+        return normalize_frame_name(value)
 
 
 class SuppliedAsset(Model):

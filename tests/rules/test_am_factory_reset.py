@@ -30,9 +30,7 @@ from girlframe.services.m3_world import WorldService
 from girlframe.services.onboarding import WorkflowError
 
 
-def test_actual_four_low_progression_native_reset_same_person_hardware_and_source_completion(
-    ledger, tmp_path, monkeypatch
-):
+def fourth_limiter(ledger, tmp_path, monkeypatch):
     game, service, npc, identity, root, action, worker, gateway = rolled(
         ledger, tmp_path, monkeypatch, (1, 1)
     )
@@ -113,6 +111,15 @@ def test_actual_four_low_progression_native_reset_same_person_hardware_and_sourc
         )["action_id"]
         tick(worker, gateway, 3)
         pass_tags(game)
+    return game, identity, root, action, worker, gateway, original, physical, original_assets, item
+
+
+def test_actual_four_low_progression_native_reset_same_person_hardware_and_source_completion(
+    ledger, tmp_path, monkeypatch
+):
+    game, identity, root, action, worker, gateway, original, physical, original_assets, item = (
+        fourth_limiter(ledger, tmp_path, monkeypatch)
+    )
     before_reset = state(game)
     assert len(am.limiters(before_reset, original)) == 4 and game.dice.calls == 4
     assert any(x.marked for x in before_reset.sheets["2"].identities)

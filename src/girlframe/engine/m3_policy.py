@@ -69,6 +69,16 @@ class Approval(BaseModel):
     subsystems: frozenset[
         Literal["missions", "discipline", "economy", "plays", "strain", "world", "playbooks"]
     ]
+    activity_specialist_rules: frozenset[
+        Literal[
+            "frame.changeling.blank-slate",
+            "frame.changeling.psych-strings",
+            "frame.changeling.body-of-clay",
+            "frame.red-queen.queens-court",
+            "frame.red-queen.memory-extraction",
+            "frame.red-queen.am-transfer",
+        ]
+    ] = Field(default=frozenset(), exclude_if=lambda value: not value)
     native_risk_plays: frozenset[
         Literal[
             "keep_your_head",

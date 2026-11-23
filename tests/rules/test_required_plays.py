@@ -472,7 +472,6 @@ def test_actual_ankou_nomination_native_own_advice_and_real_listening_complete_s
         gain=("0",),
         pair_share=("0",),
         piloting=("no",),
-        witnessed=("no",),
         trigger=("yes",),
         context="I give the original partner actual advice as nominated",
     )

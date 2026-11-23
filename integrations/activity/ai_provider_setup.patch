@@ -1,0 +1,123 @@
+--- a/mission_lab.py
++++ b/mission_lab.py
+@@ -511,7 +511,12 @@
+         if bound_roster
+         else None
+     )
+-    ai_trial = ActivityAITrial.from_environment() if discord and catalog else None
++    ai_trial = None
++    if discord and catalog:
++        try:
++            ai_trial = ActivityAITrial.from_environment()
++        except ValueError:
++            print("Reviewed AI is disabled. Check the Activity AI environment settings.", file=sys.stderr)
+     runtime_lock = Lock()
+     runtimes = {}
+     workers = []
+@@ -654,7 +659,7 @@
+             scene_route = DIRECTOR_ROUTE.fullmatch(path)
+             private_review = {"timeline", "activity-review", "handler-draft", "handler-need", "gm-work", "handler-native-work", "handler-hunt"}
+             trial_access = ai_trial and selected == ai_trial.campaign and (
+-                path == "/api/activity/review-scenes"
++                path in ("/api/activity/review-scenes", "/api/activity/ai-provider")
+                 or (scene_route and (self.command == "POST" or scene_route[2] in private_review))
+             )
+             identity = discord.resolve(
+@@ -686,6 +691,16 @@
+             if campaign.reviewed_director and ai_trial and viewer.user_id == ai_trial.facilitator:
+                 return replace(viewer, is_administrator=True)
+             return viewer
++
++        def ai_provider(self, campaign, viewer):
++            if ai_trial is None or campaign.reviewed_director is None:
++                raise SignInError(HTTPStatus.NOT_FOUND, "AI provider controls are unavailable.")
++            if viewer.user_id != ai_trial.facilitator:
++                raise SignInError(HTTPStatus.FORBIDDEN, "Only the trial facilitator can check providers.")
++            game = campaign.reviewed_director.session.game
++            with game.store.engine.connect() as connection:
++                game.authorize(connection, viewer, game=False)
++            return ai_trial
+
+         def admit(self, runtime, viewer, *, legacy=False):
+             store = runtime.service.store
+@@ -856,6 +871,14 @@
+                     self.send_json(HTTPStatus.FORBIDDEN, {"error": str(error)})
+                 except ValueError:
+                     self.send_json(HTTPStatus.NOT_FOUND, {"error": "Unknown setup view."})
++            elif path == "/api/activity/ai-provider":
++                try:
++                    _, viewer = self.session()
++                    self.send_json(HTTPStatus.OK, self.ai_provider(campaign, viewer).status())
++                except SignInError as error:
++                    self.send_json(error.status, {"error": str(error)})
++                except WorkflowError:
++                    self.send_json(HTTPStatus.FORBIDDEN, {"error": "AI provider controls are unavailable."})
+             elif path == "/api/activity/review-scenes":
+                 try:
+                     _, viewer = self.session()
+@@ -1078,6 +1101,22 @@
+                 except WorkflowError as error:
+                     self.send_json(HTTPStatus.CONFLICT, {"error": str(error)})
+                 return
++            if path == "/api/activity/ai-provider":
++                try:
++                    provider = self.ai_provider(campaign, session[1])
++                    key = self.headers.get("Idempotency-Key", "")
++                    data = self.read_object(1024, {"role"})
++                    if not KEY.fullmatch(key) or not isinstance(data["role"], str):
++                        raise ValueError
++                    outcome = provider.check(data["role"], key)
++                    self.send_json(HTTPStatus.OK, {"result": outcome, **provider.status()})
++                except SignInError as error:
++                    self.send_json(error.status, {"error": str(error)})
++                except WorkflowError:
++                    self.send_json(HTTPStatus.FORBIDDEN, {"error": "AI provider controls are unavailable."})
++                except (TypeError, ValueError, UnicodeError):
++                    self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Select an enabled role and a new check key."})
++                return
+             adapter = campaign.reviewed_director or (director if campaign is default else None)
+             if (match := DIRECTOR_ROUTE.fullmatch(path)) and match[3] is None:
+                 if adapter is None:
+--- a/discord_test_host.py
++++ b/discord_test_host.py
+@@ -225,6 +225,7 @@
+     parser.add_argument("--bound-roster", action="store_true")
+     parser.add_argument("--tester-roles", action="store_true")
+     parser.add_argument("--managed-campaigns", action="store_true")
++    parser.add_argument("--ai-provider-stub", action="store_true")
+     parser.add_argument("--tactical-tier", choices=TACTICAL_DICE)
+     parser.add_argument("--scene-tier", choices=TACTICAL_DICE)
+     parser.add_argument("--core-test-heat", action="store_true")
+@@ -239,6 +240,32 @@
+         parser.error("--tester-roles requires --bound-roster.")
+     if args.managed_campaigns and not args.bound_roster:
+         parser.error("--managed-campaigns requires --bound-roster.")
++    if args.ai_provider_stub:
++        import json
++        from urllib.error import HTTPError
++
++        import activity_ai_trial
++        from girlframe.ai.model_transport import OpenAIResponses
++
++        def fixture_post(request, _timeout):
++            assert request.full_url == "https://api.openai.com/v1/responses"
++            assert request.headers["Authorization"] == "Bearer offline-test-token"
++            body = json.loads(request.data)
++            assert body["store"] is False
++            assert json.loads(body["input"][1]["content"])["packet"] == {}
++            if body["model"] == "offline-denied":
++                raise HTTPError(request.full_url, 403, "PRIVATE_PROVIDER_ERROR", {}, None)
++            return json.dumps({
++                "status": "completed",
++                "output": [{"type": "message", "role": "assistant",
++                            "content": [{"type": "output_text", "text": '{"status":"ok"}'}]}],
++                "usage": {"input_tokens": 64, "output_tokens": 7},
++            }).encode()
++
++        def fixture_client(**config):
++            return OpenAIResponses(**config, post=fixture_post)
++
++        activity_ai_trial.OpenAIResponses = fixture_client
+     missions = open_campaign(
+         args.campaign, roster=CONFIG if args.bound_roster else None
+     )

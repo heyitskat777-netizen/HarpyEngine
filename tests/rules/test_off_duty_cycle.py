@@ -6,7 +6,7 @@ import pytest
 import sqlalchemy as sa
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger_fixture
-from test_m2_game import Dice, Gateway, pass_tags, state, tick
+from test_m2_game import Dice, Gateway, answer, state, tick
 from test_strain_effect_service import pending, selected
 from test_world import gorgon
 
@@ -23,8 +23,8 @@ from girlframe.services.onboarding import WorkflowError
 ledger = ledger_fixture
 
 
-def prepared(store):
-    effects, game, identity, first = pending(store)
+def prepared(store, *, before_period=None):
+    effects, game, identity, first = pending(store, before_period=before_period)
     policy = store.policy
     store.policy = policy.model_copy(
         update={
@@ -83,7 +83,16 @@ def activate(cycle, game, identity):
     return call(cycle, game, ADMIN, identity, "activate")
 
 
-def roll_for(cycle, game, identity, actor, faces=(4, 5), *, review_reward=True):
+def roll_for(
+    cycle,
+    game,
+    identity,
+    actor,
+    faces=(4, 5),
+    *,
+    review_reward=True,
+    reviewers=(PLAYER, OTHER, ADMIN),
+):
     game.dice = Dice(faces)
     action = game.begin(
         actor,
@@ -100,7 +109,8 @@ def roll_for(cycle, game, identity, actor, faces=(4, 5), *, review_reward=True):
     )["action_id"]
     worker, gateway = GameWorker(game), Gateway()
     tick(worker, gateway)
-    pass_tags(game)
+    for reviewer in reviewers:
+        answer(game, reviewer, "tag_window", options=("pass",))
     tick(worker, gateway, 8)
     if review_reward:
         from girlframe.engine.m3_frame_rewards import Claim
