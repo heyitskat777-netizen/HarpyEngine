@@ -4,6 +4,33 @@ import json
 from dataclasses import asdict
 
 import sqlalchemy as sa
+from battery_play import BATTERY, BATTERY_CHOICES, battery_choice, ready_batteries
+from battlefield_frame_work import (
+    INTERCEPT,
+    ROUSE,
+    ROUSE_COST,
+    BattlefieldFrameWork,
+    available_heat,
+)
+from consume_regrowth import KIND as PARTAKE
+from defeat_play import DEFEAT, DEFEAT_CHOICES, defeat_choice
+from native_scene_forms import (
+    RISK_CHOICE,
+    TAG_DECISIONS,
+    risk_choice_card,
+    tag_choice_card,
+)
+from play_catalog import (
+    DISOBEY_ORDERS,
+    RECEIVE_ORDERS,
+    character_plays,
+    frame_upgrades,
+    play_category,
+)
+from pydantic import ValidationError
+from rulebook_text import FLIRT_QUESTION_TEXT, printed_fields, sensor_question_text
+from scene_plays import TestSceneGateway, completed_flirt, start_game_worker
+
 from girlframe.database import tables
 from girlframe.discord_adapter.m2_ui import choice_fields
 from girlframe.engine import m3_battle as battle_rules
@@ -40,33 +67,6 @@ from girlframe.services.m3_physical import PhysicalService
 from girlframe.services.m3_punishments import PunishmentService
 from girlframe.services.m3_world import WorldService
 from girlframe.services.onboarding import WorkflowError
-from pydantic import ValidationError
-
-from battery_play import BATTERY, BATTERY_CHOICES, battery_choice, ready_batteries
-from battlefield_frame_work import (
-    INTERCEPT,
-    ROUSE,
-    ROUSE_COST,
-    BattlefieldFrameWork,
-    available_heat,
-)
-from consume_regrowth import KIND as PARTAKE
-from defeat_play import DEFEAT, DEFEAT_CHOICES, defeat_choice
-from native_scene_forms import (
-    RISK_CHOICE,
-    TAG_DECISIONS,
-    risk_choice_card,
-    tag_choice_card,
-)
-from play_catalog import (
-    DISOBEY_ORDERS,
-    RECEIVE_ORDERS,
-    character_plays,
-    frame_upgrades,
-    play_category,
-)
-from rulebook_text import FLIRT_QUESTION_TEXT, printed_fields, sensor_question_text
-from scene_plays import TestSceneGateway, completed_flirt, start_game_worker
 
 CHANNEL = 900
 ENGAGE = next(item for item in REGISTRY["plays"] if item["play_id"] == "engage")
@@ -209,12 +209,8 @@ class Battlefield:
             with self.store.engine.connect() as connection:
                 self.game.authorize(connection, viewer, game=False)
             return
-        if viewer != self.owner and not (
-            self.shared and viewer == self.roles["opponent"]
-        ):
-            raise WorkflowError(
-                "This tactical drill belongs to its configured test pilot."
-            )
+        if viewer != self.owner and not (self.shared and viewer == self.roles["opponent"]):
+            raise WorkflowError("This tactical drill belongs to its configured test pilot.")
 
     def recent_actions(self, connection, viewer, state):
         table = tables.m2["m2_actions"]
@@ -225,8 +221,7 @@ class Battlefield:
                 visible,
                 sa.and_(
                     play.in_((FLIRT, BENEATH)),
-                    sa.func.json_extract(table.c.body_json, "$.prepared.target")
-                    == viewer.user_id,
+                    sa.func.json_extract(table.c.body_json, "$.prepared.target") == viewer.user_id,
                 ),
                 sa.and_(
                     play == FOLLOW_THROUGH,
@@ -234,8 +229,7 @@ class Battlefield:
                         [
                             item.id
                             for item in state.obligations
-                            if item.kind == FOLLOW_THROUGH
-                            and item.target == viewer.user_id
+                            if item.kind == FOLLOW_THROUGH and item.target == viewer.user_id
                         ]
                     ),
                 ),
@@ -273,12 +267,8 @@ class Battlefield:
             else:
                 moves = {"revision": state.revision}
                 combat = {"revision": state.revision, "actors": []}
-            if {world["game_revision"], moves["revision"], combat["revision"]} != {
-                state.revision
-            }:
-                raise BattlefieldChanged(
-                    "The drill changed while loading. Please retry."
-                )
+            if {world["game_revision"], moves["revision"], combat["revision"]} != {state.revision}:
+                raise BattlefieldChanged("The drill changed while loading. Please retry.")
             scene = self.game.scene(connection, self.channel)
             lock = self.game.lock(connection, self.channel)
             busy = bool(lock and lock["state"] != "released")
@@ -288,9 +278,7 @@ class Battlefield:
                     "id": row["token"],
                     "label": row["name"],
                     "controlled": row["owned"],
-                    "cell": resolve(
-                        state, ActorRef.model_validate(row["ref"]), bound
-                    ).cell,
+                    "cell": resolve(state, ActorRef.model_validate(row["ref"]), bound).cell,
                     "asset_count": len(row["assets"]),
                 }
                 for row in combat["actors"]
@@ -302,9 +290,7 @@ class Battlefield:
                     entity=str(viewer.user_id),
                     incarnation=sheet.character_id,
                 )
-                actions = self.actions(
-                    connection, viewer, state, scene, pilot_ref, moves, combat
-                )
+                actions = self.actions(connection, viewer, state, scene, pilot_ref, moves, combat)
             declarations = (
                 self.declarations(viewer, state, bound, combat) if sheet and not busy else {}
             )
@@ -316,10 +302,7 @@ class Battlefield:
             )
             if busy and self.shared:
                 held = self.game.action(connection, lock["action_id"])
-                if (
-                    viewer.user_id in held["data"]["participants"]
-                    and held["id"] not in recent
-                ):
+                if viewer.user_id in held["data"]["participants"] and held["id"] not in recent:
                     recent.insert(0, held["id"])
             latest = self.game.action(connection, recent[0]) if recent else None
             latest_play = latest["data"]["play"] if latest else None
@@ -338,9 +321,7 @@ class Battlefield:
             roster = []
             for row in combat["actors"]:
                 ref = ActorRef.model_validate(row["ref"])
-                roster_sheet = (
-                    state.sheets.get(ref.entity) if ref.kind == "pilot" else None
-                )
+                roster_sheet = state.sheets.get(ref.entity) if ref.kind == "pilot" else None
                 if roster_sheet and roster_sheet.character_id == ref.incarnation:
                     public = public_sheet(roster_sheet, state)
                     profile = None
@@ -389,11 +370,7 @@ class Battlefield:
                     )
         identity = recent[0] if recent else None
         play = self.game.inspect(viewer, identity) if identity else None
-        if (
-            latest_play == FOLLOW_THROUGH
-            and latest["state"] == "complete"
-            and self.shared
-        ):
+        if latest_play == FOLLOW_THROUGH and latest["state"] == "complete" and self.shared:
             item = next(
                 (
                     row
@@ -405,8 +382,7 @@ class Battlefield:
             )
             if item:
                 play["result"] = {
-                    key: latest["data"]["result"][key]
-                    for key in ("confirmed", "response")
+                    key: latest["data"]["result"][key] for key in ("confirmed", "response")
                 }
         child = self.game.inspect(viewer, child_id) if child_id else None
         history = []
@@ -419,12 +395,8 @@ class Battlefield:
                     past_child = self.last_child(connection, action_id)
                 if past_child:
                     previous["beneath_response"] = self.game.inspect(viewer, past_child)
-            if previous["play"] == RECEIVE_ORDERS and previous["result"].get(
-                "response_play"
-            ):
-                previous["refusal"] = self.game.inspect(
-                    viewer, previous["result"]["response_play"]
-                )
+            if previous["play"] == RECEIVE_ORDERS and previous["result"].get("response_play"):
+                previous["refusal"] = self.game.inspect(viewer, previous["result"]["response_play"])
             history.append(previous)
         choices = (
             self.choices(
@@ -477,9 +449,7 @@ class Battlefield:
             "declarations": declarations,
             "core_exposure_targets": exposure,
             "play": play,
-            "wyvern_response": child
-            if latest and latest["data"].get("wyvern_deflected")
-            else None,
+            "wyvern_response": child if latest and latest["data"].get("wyvern_deflected") else None,
             "history": history,
             "impacts": impacts,
             "choices": choices,
@@ -490,8 +460,7 @@ class Battlefield:
             "counter": child if latest_play == CORE else None,
             "refusal": child if latest_play == RECEIVE_ORDERS else None,
             "order_text": latest["data"].get("order_text")
-            if latest_play == RECEIVE_ORDERS
-            and latest["actor_id"] == str(viewer.user_id)
+            if latest_play == RECEIVE_ORDERS and latest["actor_id"] == str(viewer.user_id)
             else None,
             "can_issue_order": bool(sheet and not busy and not self.shared),
             "flirt_escape": child if latest_play == FLIRT else None,
@@ -605,9 +574,7 @@ class Battlefield:
                     "range": {"kind": "scene", "label": "Ask about the current scene."},
                 }
             )
-        prohibited = {
-            item.play for item in state.sheets[str(viewer.user_id)].blocked_plays
-        }
+        prohibited = {item.play for item in state.sheets[str(viewer.user_id)].blocked_plays}
         if self.shared:
             targets = self.pilot_targets(connection, viewer, state, scene)
             if targets:
@@ -618,7 +585,10 @@ class Battlefield:
                         "trigger": PLAYS[FLIRT]["trigger"],
                         "range": {
                             "kind": "scene",
-                            "label": "Ask another active pilot in the scene. Its player answers from its own Activity.",
+                            "label": (
+                                "Ask another active pilot in the scene. "
+                                "Its player answers from its own Activity."
+                            ),
                         },
                         "targets": targets,
                     }
@@ -652,7 +622,9 @@ class Battlefield:
                         "trigger": "Describe the confrontation",
                         "range": {
                             "kind": "social",
-                            "label": "Challenge another pilot. The roll determines who chooses effects.",
+                            "label": (
+                                "Challenge another pilot. The roll determines who chooses effects."
+                            ),
                         },
                         "targets": eligible,
                     }
@@ -707,7 +679,9 @@ class Battlefield:
                         "trigger": "Describe your use of the reviewed neural link",
                         "range": {
                             "kind": "connection",
-                            "label": "Use an actual connected battery. HarpyEngine counts its Tags.",
+                            "label": (
+                                "Use an actual connected battery. HarpyEngine counts its Tags."
+                            ),
                         },
                         "targets": targets,
                     }
@@ -722,18 +696,12 @@ class Battlefield:
             if owner == viewer.user_id or not self.private and owner not in humans:
                 continue
             try:
-                self.game.pilot_cast(
-                    connection, state, scene, owners=(viewer.user_id, owner)
-                )
+                self.game.pilot_cast(connection, state, scene, owners=(viewer.user_id, owner))
             except WorkflowError:
                 continue
             sheet = state.sheets[str(owner)]
-            ref = ActorRef(
-                kind="pilot", entity=str(owner), incarnation=sheet.character_id
-            )
-            targets.append(
-                {"id": ref.token, "label": joined["labels"][str(owner)], "owner": owner}
-            )
+            ref = ActorRef(kind="pilot", entity=str(owner), incarnation=sheet.character_id)
+            targets.append({"id": ref.token, "label": joined["labels"][str(owner)], "owner": owner})
         return targets
 
     @staticmethod
@@ -754,9 +722,14 @@ class Battlefield:
 
     @staticmethod
     def declared_options(state, bound, battle, play, *, actor_token=None):
-        acting = next((item for item in battle["actors"] if item["owned"] and (
-            actor_token is None or item["token"] == actor_token
-        )), None)
+        acting = next(
+            (
+                item
+                for item in battle["actors"]
+                if item["owned"] and (actor_token is None or item["token"] == actor_token)
+            ),
+            None,
+        )
         if acting is None:
             return None
         origin_ref = ActorRef.model_validate(acting["ref"])
@@ -817,7 +790,9 @@ class Battlefield:
                     "kind": "adjudicated",
                     "label": "Strike an exposed Core. The Handler confirms opening and reach."
                     if play == CORE
-                    else "The appointed Handler must confirm the opening and reach before the roll.",
+                    else (
+                        "The appointed Handler must confirm the opening and reach before the roll."
+                    ),
                 },
                 "attacking_assets": weapons,
                 "targets": targets,
@@ -826,9 +801,7 @@ class Battlefield:
 
     def declarations(self, viewer, state, bound, battle):
         used = {
-            fact.get("context")
-            for fact in state.facts
-            if fact.get("kind") == "battle_context_used"
+            fact.get("context") for fact in state.facts if fact.get("kind") == "battle_context_used"
         }
         resources = {actor["token"]: actor for actor in battle["actors"]}
         available = {}
@@ -852,10 +825,8 @@ class Battlefield:
             if (
                 actor["sha256"] != draft.actor_sha256
                 or target["sha256"] != draft.target_sha256
-                or resolve(state, draft.actor, bound).position_sha256
-                != value.actor_position
-                or resolve(state, draft.target, bound).position_sha256
-                != value.target_position
+                or resolve(state, draft.actor, bound).position_sha256 != value.actor_position
+                or resolve(state, draft.target, bound).position_sha256 != value.target_position
             ):
                 continue
             available[draft.play] = {
@@ -956,11 +927,7 @@ class Battlefield:
 
     def choice_roles(self, viewer, actor_id):
         if self.private:
-            role = (
-                "handler"
-                if viewer.user_id == self.roles["handler"].user_id
-                else "pilot"
-            )
+            role = "handler" if viewer.user_id == self.roles["handler"].user_id else "pilot"
             return {role: viewer}
         if not self.shared:
             return self.roles
@@ -1011,9 +978,7 @@ class Battlefield:
                             "damage",
                         )
                     }
-                    option["fields"]["wyvern_vehicles"] = decision.get(
-                        "wyvern_vehicles", []
-                    )
+                    option["fields"]["wyvern_vehicles"] = decision.get("wyvern_vehicles", [])
                     if decision.get("learned_rider"):
                         option["prompt"] = decision["learned_rider"]
                 elif kind in (
@@ -1040,9 +1005,9 @@ class Battlefield:
                         for item in (decision["own"] or {}).get("blocked_plays", ())
                     ):
                         decision["am_can_refuse"] = False
-                    option["schema"] = printed_fields([
-                        asdict(field) for field in choice_fields(decision)
-                    ],kind)
+                    option["schema"] = printed_fields(
+                        [asdict(field) for field in choice_fields(decision)], kind
+                    )
                     if kind == "actor_disobey":
                         for field in option["schema"]:
                             if field["key"] == "member":
@@ -1058,9 +1023,7 @@ class Battlefield:
                     if kind == "followthrough_confirm":
                         option["prompt"] = decision["context"]
                     if kind in ("target_flirt", "actor_flirt_answer"):
-                        answer_key = (
-                            "question" if kind == "target_flirt" else "return_question"
-                        )
+                        answer_key = "question" if kind == "target_flirt" else "return_question"
                         question = decision["result"].get(answer_key)
                         option["prompt"] = (
                             (
@@ -1078,18 +1041,12 @@ class Battlefield:
                 elif kind in BATTERY_CHOICES:
                     option.update(battery_choice(self.game, viewer, choice["id"], kind))
                 elif kind in DEFEAT_CHOICES:
-                    option.update(
-                        defeat_choice(self.game.decision(viewer, choice["id"]))
-                    )
+                    option.update(defeat_choice(self.game.decision(viewer, choice["id"])))
                 elif kind in ("escape_play", "beneath_response_play", "beneath_defeat"):
-                    option["fields"] = {
-                        "sheet_revision": self.game.sheet(viewer)["revision"]
-                    }
+                    option["fields"] = {"sheet_revision": self.game.sheet(viewer)["revision"]}
                 elif kind == "beneath_punishment":
                     decision = self.game.decision(viewer, choice["id"])
-                    work = PunishmentService(self.store).get(
-                        viewer, decision["body"]["work_id"]
-                    )
+                    work = PunishmentService(self.store).get(viewer, decision["body"]["work_id"])
                     if (
                         work["owner_id"] == str(viewer.user_id)
                         and work["kind"] == "punishment"
@@ -1102,8 +1059,7 @@ class Battlefield:
                             "options": [
                                 (key, KINDS[key][0])
                                 for key in BENEATH_PUNISHMENTS
-                                if work.get("required_severity")
-                                in (None, KINDS[key][1])
+                                if work.get("required_severity") in (None, KINDS[key][1])
                             ],
                         }
                 elif kind == "handler_brief":
@@ -1112,9 +1068,7 @@ class Battlefield:
                     if grant:
                         option["fields"] = self.handler_fields(viewer, grant)
                     else:
-                        option["schema"] = [
-                            asdict(field) for field in choice_fields(decision)
-                        ]
+                        option["schema"] = [asdict(field) for field in choice_fields(decision)]
                 elif kind.startswith("battle_"):
                     decision = self.game.decision(viewer, choice["id"])["battle"]
                     option["fields"] = {
@@ -1123,24 +1077,16 @@ class Battlefield:
                         if key in decision
                     }
                     if kind == "battle_handler_play":
-                        option["fields"] = self.handler_fields(
-                            viewer, decision["grant_id"]
-                        )
+                        option["fields"] = self.handler_fields(viewer, decision["grant_id"])
                     elif kind == "battle_collateral":
-                        detail = CollateralService(self.store).get(
-                            viewer, decision["work_id"]
-                        )
+                        detail = CollateralService(self.store).get(viewer, decision["work_id"])
                         option["fields"] = {
                             "revision": detail["revision"],
                             "game_revision": detail["game_revision"],
                         }
                     elif kind == "battle_counter_play":
-                        option["fields"]["plays"] = [
-                            {"id": KEEP, "label": PLAY_LABELS[KEEP]}
-                        ]
-                        option["fields"]["sheet_revision"] = self.game.sheet(viewer)[
-                            "revision"
-                        ]
+                        option["fields"]["plays"] = [{"id": KEEP, "label": PLAY_LABELS[KEEP]}]
+                        option["fields"]["sheet_revision"] = self.game.sheet(viewer)["revision"]
                 result.append(option)
         return result
 
@@ -1148,13 +1094,9 @@ class Battlefield:
         self.authorize(viewer)
         if command == "frame-work":
             try:
-                return BattlefieldFrameWork(self.game, self.channel).perform(
-                    viewer, key, body
-                )
+                return BattlefieldFrameWork(self.game, self.channel).perform(viewer, key, body)
             except (KeyError, TypeError, AttributeError) as error:
-                raise ValueError(
-                    "Use the fields from the current Frame decision."
-                ) from error
+                raise ValueError("Use the fields from the current Frame decision.") from error
         if command == "fulfill":
             if (
                 body.keys() != {"id", "account"}
@@ -1164,16 +1106,21 @@ class Battlefield:
                 raise ValueError
             with self.store.engine.connect() as connection:
                 state = load_state(connection, self.store.campaign_id)
-                obligation = next((
-                    item for item in state.obligations
-                    if item.id == body["id"] and item.kind == FOLLOW_THROUGH
-                    and item.owner == viewer.user_id
-                ), None)
-                if obligation is None or not completed_flirt(self.game, connection, obligation.action):
+                obligation = next(
+                    (
+                        item
+                        for item in state.obligations
+                        if item.id == body["id"]
+                        and item.kind == FOLLOW_THROUGH
+                        and item.owner == viewer.user_id
+                    ),
+                    None,
+                )
+                if obligation is None or not completed_flirt(
+                    self.game, connection, obligation.action
+                ):
                     raise WorkflowError("A completed original Flirt is required.")
-            return self.game.fulfill(
-                viewer, key, self.channel, body["id"], body["account"]
-            )
+            return self.game.fulfill(viewer, key, self.channel, body["id"], body["account"])
         if command == FLIRT:
             return self.start_flirt(viewer, key, body)
         if command == BENEATH:
@@ -1200,9 +1147,7 @@ class Battlefield:
             )
         if command == "issue-order":
             if self.shared:
-                raise WorkflowError(
-                    "Synthetic orders are only available in the one-pilot drill."
-                )
+                raise WorkflowError("Synthetic orders are only available in the one-pilot drill.")
             if body.keys() != {"text"} or not isinstance(body["text"], str):
                 raise ValueError
             return self.game.issue_order(
@@ -1250,9 +1195,7 @@ class Battlefield:
                 not actor["owned"] and ActorRef.model_validate(actor["ref"]) == target
                 for actor in preview["actors"]
             ):
-                raise WorkflowError(
-                    "Select an opposing actor shown on the battlefield."
-                )
+                raise WorkflowError("Select an opposing actor shown on the battlefield.")
             prepared = PlayInput(
                 play=ENGAGE["play_id"],
                 target_actor=target,
@@ -1260,9 +1203,7 @@ class Battlefield:
                 trigger_confirmed=True,
                 heat=0,
             )
-            return self.game.begin(
-                viewer, key, self.channel, body["sheet_revision"], prepared
-            )
+            return self.game.begin(viewer, key, self.channel, body["sheet_revision"], prepared)
         if command == "choice" and body.keys() == {"role", "id", "revision", "answer"}:
             return self.respond(viewer, key, body)
         if command in (SENSORS, KEEP) and body.keys() == {
@@ -1294,9 +1235,7 @@ class Battlefield:
             placement = PhysicalService(self.store).preview(opponent)
             ref = ActorRef.model_validate(placement["actor"])
             if ref.token != body["target"]:
-                raise WorkflowError(
-                    "Only the drill opponent can expose its own Core here."
-                )
+                raise WorkflowError("Only the drill opponent can expose its own Core here.")
             return self.combat.expose(
                 opponent,
                 key,
@@ -1316,9 +1255,7 @@ class Battlefield:
 
     def start_flirt(self, viewer, key, body):
         if not self.shared:
-            raise WorkflowError(
-                "Flirt requires a second signed-in pilot in the shared drill."
-            )
+            raise WorkflowError("Flirt requires a second signed-in pilot in the shared drill.")
         if body.keys() != {"target", "account", "sheet_revision", "confirmed"} or (
             type(body["target"]) is not int
             or type(body["sheet_revision"]) is not int
@@ -1370,13 +1307,9 @@ class Battlefield:
             ):
                 raise WorkflowError("Choose another eligible pilot from this scene.")
             sheet = state.sheets[str(viewer.user_id)]
-            ref = ActorRef(
-                kind="pilot", entity=str(viewer.user_id), incarnation=sheet.character_id
-            )
+            ref = ActorRef(kind="pilot", entity=str(viewer.user_id), incarnation=sheet.character_id)
             piloting = bool(
-                resolve(
-                    state, ref, profiles(connection, self.store.campaign_id)
-                ).piloting
+                resolve(state, ref, profiles(connection, self.store.campaign_id)).piloting
             )
         return self.game.begin(
             viewer,
@@ -1437,9 +1370,7 @@ class Battlefield:
                 or source["channel_id"] != str(self.channel)
                 or source["data"]["play"] != RECEIVE_ORDERS
             ):
-                raise WorkflowError(
-                    "Use your own direct order in this Battlefield scene."
-                )
+                raise WorkflowError("Use your own direct order in this Battlefield scene.")
         return self.game.begin(
             viewer,
             key,
@@ -1478,9 +1409,7 @@ class Battlefield:
             None,
         )
         if not actor or not target:
-            raise WorkflowError(
-                "Select an eligible opposing actor from the Battlefield."
-            )
+            raise WorkflowError("Select an eligible opposing actor from the Battlefield.")
         # Keep the resource proof from the original request available to exact retries.
         with self.store.engine.connect() as connection:
             history = tables.m2["m2_state_history"]
@@ -1520,15 +1449,14 @@ class Battlefield:
         if (
             not expected <= body.keys() <= expected | optional
             or not isinstance(body["id"], str)
-            or "heat" in body and (type(body["heat"]) is not int or body["heat"] < 0)
+            or "heat" in body
+            and (type(body["heat"]) is not int or body["heat"] < 0)
         ):
             raise ValueError
         saved = self.combat.context(viewer, body["id"])
         context = Context.model_validate(saved["context"])
         declaration = context.declaration
-        authority = (
-            context.adjudicator if self.private and stage == "review" else context.owner
-        )
+        authority = context.adjudicator if self.private and stage == "review" else context.owner
         if (
             saved["channel"] != self.channel
             or authority != viewer.user_id
@@ -1577,11 +1505,7 @@ class Battlefield:
 
     def respond(self, viewer, key, body):
         role, identity, revision = body["role"], body["id"], body["revision"]
-        if (
-            role not in self.roles
-            or not isinstance(identity, str)
-            or type(revision) is not int
-        ):
+        if role not in self.roles or not isinstance(identity, str) or type(revision) is not int:
             raise ValueError
         table = tables.m2["m2_choices"]
         with self.store.engine.connect() as connection:
@@ -1597,9 +1521,7 @@ class Battlefield:
                 raise WorkflowError("This choice belongs to another participant.")
             action = self.game.action(connection, row.action_id)
             source = (
-                self.game.action(connection, action["parent_id"])
-                if action["parent_id"]
-                else action
+                self.game.action(connection, action["parent_id"]) if action["parent_id"] else action
             )
             principal = self.choice_roles(viewer, source["actor_id"]).get(role)
             if principal is None or row.actor_id != str(principal.user_id):
@@ -1619,9 +1541,7 @@ class Battlefield:
                     (
                         CORE,
                         KEEP,
-                        row.actor_id
-                        if self.private
-                        else str(self.roles["opponent"].user_id),
+                        row.actor_id if self.private else str(self.roles["opponent"].user_id),
                     ),
                     (RECEIVE_ORDERS, DISOBEY_ORDERS, str(viewer.user_id)),
                     (
@@ -1644,14 +1564,23 @@ class Battlefield:
         if row.kind == "battle_defeat":
             answer = body["answer"]
             if (
-                not self.shared or principal != viewer
-                or not isinstance(answer, dict) or answer.keys() != {"account"}
-                or not isinstance(answer["account"], str) or not answer["account"].strip()
+                not self.shared
+                or principal != viewer
+                or not isinstance(answer, dict)
+                or answer.keys() != {"account"}
+                or not isinstance(answer["account"], str)
+                or not answer["account"].strip()
             ):
-                raise WorkflowError("Begin Defeat from your actual assigned Battlefield consequence.")
+                raise WorkflowError(
+                    "Begin Defeat from your actual assigned Battlefield consequence."
+                )
             return begin_defeat_work(
-                self.game, viewer, key, json.loads(row.body_json)["work_id"],
-                self.channel, answer["account"],
+                self.game,
+                viewer,
+                key,
+                json.loads(row.body_json)["work_id"],
+                self.channel,
+                answer["account"],
             )
         if row.kind == "beneath_defeat":
             answer = body["answer"]
@@ -1664,9 +1593,7 @@ class Battlefield:
                 or not isinstance(answer["account"], str)
                 or type(answer["sheet_revision"]) is not int
             ):
-                raise WorkflowError(
-                    "Begin Defeat from its assigned last-Asset consequence."
-                )
+                raise WorkflowError("Begin Defeat from its assigned last-Asset consequence.")
             return self.game.begin(
                 principal,
                 key,
@@ -1687,11 +1614,7 @@ class Battlefield:
                 not isinstance(answer, dict)
                 or answer.keys() != {"play", "account", "sheet_revision"}
                 or answer["play"] != KEEP
-                or (
-                    principal != viewer
-                    if self.shared
-                    else principal != self.roles["opponent"]
-                )
+                or (principal != viewer if self.shared else principal != self.roles["opponent"])
                 or (
                     row.kind == "escape_play"
                     and (not self.shared or source["data"]["play"] != FLIRT)
@@ -1701,9 +1624,7 @@ class Battlefield:
                     and (not self.shared or source["data"]["play"] != BENEATH)
                 )
             ):
-                raise WorkflowError(
-                    "Choose a Play from the drill opponent's actual counter."
-                )
+                raise WorkflowError("Choose a Play from the drill opponent's actual counter.")
             return self.game.begin(
                 principal,
                 key,
@@ -1724,9 +1645,7 @@ class Battlefield:
                 or answer.keys() != {"kind", "tag", "revision", "game_revision"}
                 or answer["kind"] not in BENEATH_PUNISHMENTS
             ):
-                raise WorkflowError(
-                    "Choose a supported Punishment for this assigned work."
-                )
+                raise WorkflowError("Choose a supported Punishment for this assigned work.")
             return PunishmentService(self.store).apply(
                 principal,
                 key,
@@ -1736,23 +1655,18 @@ class Battlefield:
                 PunishmentDetails(kind=answer["kind"], tag=answer["tag"]),
             )
         grant = (
-            json.loads(row.body_json).get("handler_grant")
-            if row.kind == "handler_brief"
-            else None
+            json.loads(row.body_json).get("handler_grant") if row.kind == "handler_brief" else None
         )
         if row.kind == "battle_handler_play" or grant:
             answer = body["answer"]
             if (
                 not isinstance(answer, dict)
                 or not {"play", "account", "game_revision"} <= answer.keys()
-                or answer.keys()
-                - {"play", "account", "game_revision", "detail", "stakes"}
+                or answer.keys() - {"play", "account", "game_revision", "detail", "stakes"}
                 or not isinstance(answer["play"], str)
                 or answer["play"] not in HANDLER_FORMS
             ):
-                raise WorkflowError(
-                    "Choose an available effect from the current Handler Play."
-                )
+                raise WorkflowError("Choose an available effect from the current Handler Play.")
             with self.store.engine.connect() as connection:
                 request = connection.execute(
                     sa.select(table.c.body_json).where(
@@ -1803,8 +1717,7 @@ class Battlefield:
             row.kind in TAG_DECISIONS | {RISK_CHOICE}
             or principal == viewer
             and row.kind in ("engage_maneuvers", "engage_assault_extra")
-            or row.kind
-            in ("battle_assault_table", "battle_low_damage", "battle_actor_damage")
+            or row.kind in ("battle_assault_table", "battle_low_damage", "battle_actor_damage")
             or row.kind
             in (
                 "battle_handler",

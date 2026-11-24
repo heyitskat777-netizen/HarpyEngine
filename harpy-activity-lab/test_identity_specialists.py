@@ -10,26 +10,26 @@ import mission_lab
 import pytest
 import test_changeling
 import test_red_queen
-from girlframe.engine import m3_changeling, m3_red_queen
-from girlframe.engine.m3_actor_bonds import change, current_ref
-from girlframe.services.m2_game import GameService
-from girlframe.services.m3_access import Access
-from girlframe.services.onboarding import WorkflowError
+from ai_native_plays import ActivityNativePlays
 from m3_policy_scenario import configure_m3_fixture
+from owned_followups import OwnedFollowups
+from scene_beneath_work import SceneBeneathWork
+from specialist_scene import BLANK, CLAY, CONSULT, MEMORY, PANOPTICON, TRANSFER, SpecialistScene
 from test_changeling import ready as changeling_ready
 from test_enforcer_requisitions import approved as synthetic_approval
+from test_final_handler_workflows import bundled_registry  # noqa: F401
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger_fixture
 from test_m2_game import state, tick
 from test_red_queen import am, buy, initialize
 from test_red_queen import ready as queen_ready
-
-from owned_followups import OwnedFollowups
-from ai_native_plays import ActivityNativePlays
-from scene_beneath_work import SceneBeneathWork
-from specialist_scene import BLANK, CLAY, CONSULT, MEMORY, PANOPTICON, TRANSFER, SpecialistScene
-from test_final_handler_workflows import bundled_registry  # noqa: F401
 from test_scene_beneath_followups import adapter
+
+from girlframe.engine import m3_changeling, m3_red_queen
+from girlframe.engine.m3_actor_bonds import change, current_ref
+from girlframe.services.m2_game import GameService
+from girlframe.services.m3_access import Access
+from girlframe.services.onboarding import WorkflowError
 
 ledger = ledger_fixture
 ROOM = ("relay", "Relay")
@@ -59,15 +59,20 @@ def room_map():
 
 
 def suggestions(game, viewer):
-    projection = ActivityNativePlays(SimpleNamespace(
-        game=game, handler=ADMIN, scene_plays=adapter(game),
-        play_registry=Access(game.store).registry, handler_rooms=room_map,
-    ), None)
+    projection = ActivityNativePlays(
+        SimpleNamespace(
+            game=game,
+            handler=ADMIN,
+            scene_plays=adapter(game),
+            play_registry=Access(game.store).registry,
+            handler_rooms=room_map,
+        ),
+        None,
+    )
     with game.store.engine.connect() as c:
         return {
-            row["id"]: row for row in projection(
-                c, game.scene(c, 900), current_ref(state(game), viewer.user_id)
-            )
+            row["id"]: row
+            for row in projection(c, game.scene(c, 900), current_ref(state(game), viewer.user_id))
         }
 
 
@@ -93,9 +98,7 @@ def press(scene, viewer, item, values, *, key=None):
 
 
 def option(item, name):
-    return next(spec for spec in item[1]["fields"] if spec["key"] == name)["options"][
-        0
-    ][0]
+    return next(spec for spec in item[1]["fields"] if spec["key"] == name)["options"][0][0]
 
 
 def scoped(game, viewer, op):
@@ -126,9 +129,7 @@ def rolled(game, worker, gateway, action):
         if any(row["kind"] == "tag_window" for row in rows):
             respond(scoped(game, viewer, "tag_window"), viewer, "tag_window", {})
     if any(row["kind"] == "mockingbird_risk" for row in game.choices(PLAYER)):
-        respond(
-            scoped(game, PLAYER, "mockingbird_risk"), PLAYER, "mockingbird_risk", {}
-        )
+        respond(scoped(game, PLAYER, "mockingbird_risk"), PLAYER, "mockingbird_risk", {})
     return game.inspect(PLAYER, action)["receipt"]
 
 
@@ -145,43 +146,68 @@ def test_consult_and_panopticon_only_offer_owned_approved_sources(ledger, tmp_pa
     assert suggestions(game, PLAYER)[CONSULT]["control"] == consult[0]["id"]
     assert PANOPTICON not in suggestions(game, PLAYER)
     game.dice.faces = (3, 4)
-    result = press(native, PLAYER, consult, {"heat": "1", "account": "Consult from the original cockpit."})
+    result = press(
+        native, PLAYER, consult, {"heat": "1", "account": "Consult from the original cockpit."}
+    )
     rolled(game, worker, gateway, result["action_id"])
     assigned = scoped(game, PLAYER, CONSULT)
     with pytest.raises(WorkflowError):
         respond(assigned, OTHER, CONSULT, {"options": queen.id, "text": "Wrong owner."})
-    respond(assigned, PLAYER, CONSULT, {"options": queen.id, "text": "Keep relay equipment intact."})
+    respond(
+        assigned, PLAYER, CONSULT, {"options": queen.id, "text": "Keep relay equipment intact."}
+    )
     assert game.inspect(PLAYER, result["action_id"])["state"] == "complete"
     tick(worker, gateway, 5)
     game.leave_scene(OTHER, "observer-target-outside", 900)
 
     observer, target = (current_ref(state(game), viewer.user_id) for viewer in (PLAYER, OTHER))
     form = popup(native, PLAYER, "distant")
-    source = press(native, PLAYER, form, {
-        "target": target.model_dump_json(), "account": "I can see the pilot across the compound."
-    })
+    source = press(
+        native,
+        PLAYER,
+        form,
+        {"target": target.model_dump_json(), "account": "I can see the pilot across the compound."},
+    )
     ready = popup(native, PLAYER, PANOPTICON)
     assert suggestions(game, PLAYER)[PANOPTICON]["control"] == ready[0]["id"]
     assert PANOPTICON not in suggestions(game, OTHER)
     original = option(ready, "observation")
     assert json.loads(original) == {"id": source["id"], "target": target.model_dump(mode="json")}
     game.dice.faces = (2, 3)
-    play = press(native, PLAYER, ready, {"heat": "0", "account": "Observe the target.",
-                                        "observation": original})
+    play = press(
+        native,
+        PLAYER,
+        ready,
+        {"heat": "0", "account": "Observe the target.", "observation": original},
+    )
     rolled(game, worker, gateway, play["action_id"])
-    respond(scoped(game, PLAYER, "red_queen_questions"), PLAYER, "red_queen_questions", {"options": "where"})
+    respond(
+        scoped(game, PLAYER, "red_queen_questions"),
+        PLAYER,
+        "red_queen_questions",
+        {"options": "where"},
+    )
     ledger.engine.dispose()
     reopened = GameService(ledger, dice=game.dice)
     target_response = scoped(reopened, OTHER, "red_queen_answers")
     assert target_response[1]["root"] == play["action_id"]
-    question = next(op for op in target_response[1]["operations"] if op["id"] == "red_queen_answers")
+    question = next(
+        op for op in target_response[1]["operations"] if op["id"] == "red_queen_answers"
+    )
     assert question["fields"][0]["label"] == m3_red_queen.QUESTIONS["where"]
     with pytest.raises(WorkflowError):
         respond(target_response, ADMIN, "red_queen_answers", {"answer:where": "Wrong owner."})
     respond(target_response, OTHER, "red_queen_answers", {"answer:where": "At the relay station."})
-    respond(scoped(reopened, OTHER, "red_queen_reciprocal"), OTHER, "red_queen_reciprocal", {"options": "ashamed"})
+    respond(
+        scoped(reopened, OTHER, "red_queen_reciprocal"),
+        OTHER,
+        "red_queen_reciprocal",
+        {"options": "ashamed"},
+    )
     answer = scoped(reopened, PLAYER, "red_queen_reciprocal_answer")
-    respond(answer, PLAYER, "red_queen_reciprocal_answer", {"answer:ashamed": "I left the watch early."})
+    respond(
+        answer, PLAYER, "red_queen_reciprocal_answer", {"answer:ashamed": "I left the watch early."}
+    )
     assert reopened.inspect(PLAYER, play["action_id"])["state"] == "complete"
     assert reopened.inspect(PLAYER, play["action_id"])["receipt"]["faces"] == [2, 3]
     assert game.dice.calls == 2
@@ -252,9 +278,7 @@ def test_blank_slate_reopens_for_original_owner_to_adopt_a_disclosed_identity(
 def test_memory_extraction_collects_each_owner_and_preserves_original_roll(
     ledger, tmp_path, monkeypatch, high
 ):
-    game, worker, gateway, service = queen_ready(
-        ledger, tmp_path, monkeypatch, inside=False
-    )
+    game, worker, gateway, service = queen_ready(ledger, tmp_path, monkeypatch, inside=False)
     initialize(service)
     buy(service, m3_red_queen.MEMORY)
     scene = SpecialistScene(game, 900)
@@ -319,14 +343,10 @@ def test_memory_extraction_collects_each_owner_and_preserves_original_roll(
         if x.session == action
     ]
     assert len(losses) == (2 if high else 1) and len(losses[0].memories) == 2
-    assert (
-        identity not in {x.id for x in state(reopened).sheets["3"].identities}
-    ) == high
+    assert (identity not in {x.id for x in state(reopened).sheets["3"].identities}) == high
     assert (losses[0].am is not None) == high
     if not high:
-        assert am(game, "The Consort").bearer == current_ref(
-            state(game), PLAYER.user_id
-        )
+        assert am(game, "The Consort").bearer == current_ref(state(game), PLAYER.user_id)
         with ledger.transaction() as c:
             changes = state(reopened)
             identities = changes.sheets["3"].identities
@@ -359,9 +379,7 @@ def test_memory_extraction_collects_each_owner_and_preserves_original_roll(
         with pytest.raises(WorkflowError):
             respond(restore, PLAYER, "restore", values)
         respond(restore, OTHER, "restore", values)
-        recovered = m3_red_queen.get(
-            state(reopened), m3_red_queen.Extraction, losses[0].id
-        )
+        recovered = m3_red_queen.get(state(reopened), m3_red_queen.Extraction, losses[0].id)
         assert recovered.restored_source == "new-reminder"
     assert reopened.inspect(PLAYER, action)["receipt"] == original
 
@@ -449,9 +467,7 @@ def test_transfer_uses_a_proven_completed_source_once(ledger, tmp_path, monkeypa
     assert TRANSFER not in suggestions(reopened, owner)
 
 
-def test_mid_clay_uses_disclosed_appearance_and_handler_taste(
-    ledger, tmp_path, monkeypatch
-):
+def test_mid_clay_uses_disclosed_appearance_and_handler_taste(ledger, tmp_path, monkeypatch):
     game, worker, gateway, _ = changeling_ready(ledger, tmp_path, monkeypatch)
     scene = SpecialistScene(game, 900)
     entry = popup(scene, OTHER, "appearance")
@@ -482,9 +498,7 @@ def test_mid_clay_uses_disclosed_appearance_and_handler_taste(
     )["action_id"]
     original = rolled(game, worker, gateway, action)
     scope = scoped(game, PLAYER, "changeling_clay_owner")
-    choice = next(
-        x for x in scope[1]["operations"] if x["id"] == "changeling_clay_owner"
-    )
+    choice = next(x for x in scope[1]["operations"] if x["id"] == "changeling_clay_owner")
     copy = next(f for f in choice["fields"] if f["key"] == "copy")["options"][0][0]
     request = {"copy": copy, "account": "Copy the disclosed appearance."}
     with pytest.raises(WorkflowError):

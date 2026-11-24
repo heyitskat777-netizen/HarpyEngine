@@ -2,6 +2,10 @@
 
 import json
 
+from native_scene_forms import NATIVE_OPERATIONS
+from native_scene_rolls import NativeSceneRolls
+from play_continuations import ACCOUNT, field, operation
+
 from girlframe.engine import m3_changeling, m3_red_queen
 from girlframe.engine.m2 import PlayInput
 from girlframe.engine.m3_actor_state import ActorRef
@@ -18,18 +22,16 @@ from girlframe.services.m3_changeling import (
 from girlframe.services.m3_enforcement_initiative import _cast
 from girlframe.services.m3_red_queen import (
     RedQueenService,
-    prepare as prepare_queen,
     prove_context,
     transfer_options,
+)
+from girlframe.services.m3_red_queen import (
+    prepare as prepare_queen,
 )
 from girlframe.services.m3_red_queen import (
     require_rule as require_queen,
 )
 from girlframe.services.onboarding import WorkflowError
-
-from native_scene_forms import NATIVE_OPERATIONS
-from native_scene_rolls import NativeSceneRolls
-from play_continuations import ACCOUNT, field, operation
 
 BLANK = "changeling_blank_slate"
 CLAY = "changeling_body_of_clay"
@@ -85,9 +87,7 @@ class SpecialistScene:
                 bound = profiles(c, self.game.store.campaign_id)
                 actors = []
                 for role in cast.roles:
-                    actor = resolve(
-                        state, role.actor, bound, require_current_profile=False
-                    )
+                    actor = resolve(state, role.actor, bound, require_current_profile=False)
                     if actor.alive:
                         actors.append(
                             {
@@ -103,8 +103,7 @@ class SpecialistScene:
                 frames = {
                     actor["ref"]: state.sheets[actor["ref"].entity].frame
                     for actor in actors
-                    if actor["ref"].kind == "pilot"
-                    and actor["ref"].entity in state.sheets
+                    if actor["ref"].kind == "pilot" and actor["ref"].entity in state.sheets
                 }
                 changelings = []
                 queens = []
@@ -112,9 +111,7 @@ class SpecialistScene:
                     ref = actor["ref"]
                     try:
                         if frames.get(ref) == m3_changeling.FRAME:
-                            require_changeling(
-                                self.game, c, state, ref, m3_changeling.BLANK
-                            )
+                            require_changeling(self.game, c, state, ref, m3_changeling.BLANK)
                             changelings.append(actor)
                         if frames.get(ref) == m3_red_queen.FRAME:
                             require_queen(
@@ -138,25 +135,17 @@ class SpecialistScene:
 
         cards = []
         if changelings:
-            cards += self.changeling_cards(
-                viewer, state, sheet, actors, mine, changelings
-            )
+            cards += self.changeling_cards(viewer, state, sheet, actors, mine, changelings)
         if queens:
-            cards += self.queen_cards(
-                viewer, state, sheet, actors, mine, queens, courts
-            )
-        if (
-            not cards
-            and sheet
-            and sheet.frame in (m3_changeling.FRAME, m3_red_queen.FRAME)
-        ):
-            notice = self.card(
-                state, "specialist-review", sheet.frame + " · Specialist work", []
-            )
+            cards += self.queen_cards(viewer, state, sheet, actors, mine, queens, courts)
+        if not cards and sheet and sheet.frame in (m3_changeling.FRAME, m3_red_queen.FRAME):
+            notice = self.card(state, "specialist-review", sheet.frame + " · Specialist work", [])
             cards.append(
                 notice
                 | {
-                    "scene": "Join an applicable scene and establish the required source in HarpyEngine."
+                    "scene": (
+                        "Join an applicable scene and establish the required source in HarpyEngine."
+                    )
                 }
             )
         return native + [card | {"room": room[0], "room_name": room[1]} for card in cards]
@@ -211,18 +200,14 @@ class SpecialistScene:
             encoded = speaker["ref"].model_dump_json()
             if speaker["ref"].kind in ("pilot", "handler"):
                 forms.append(
-                    operation(
-                        "body:" + encoded, "Record original body · " + label, [ACCOUNT]
-                    )
+                    operation("body:" + encoded, "Record original body · " + label, [ACCOUNT])
                 )
             appearances = [
                 x
                 for x in menu["appearances"]
                 if x["actor"] == speaker["ref"].model_dump(mode="json")
             ]
-            if appearances and (
-                targets := cast_labels([x for x in changelings if x in other])
-            ):
+            if appearances and (targets := cast_labels([x for x in changelings if x in other])):
                 forms.append(
                     operation(
                         "show-appearance",
@@ -260,9 +245,7 @@ class SpecialistScene:
                     )
                 )
             conversation = cast_labels(
-                other
-                if speaker in changelings
-                else [x for x in changelings if x in other]
+                other if speaker in changelings else [x for x in changelings if x in other]
             )
             if conversation:
                 forms.append(
@@ -276,9 +259,7 @@ class SpecialistScene:
                     )
                 )
         forms += self.overstep_forms(viewer, state, mine, actors)
-        speeches = [
-            x for x in menu["conversations"] if self.speech_in_scene(state, x["id"])
-        ]
+        speeches = [x for x in menu["conversations"] if self.speech_in_scene(state, x["id"])]
         if speeches:
             fields = [
                 (
@@ -293,11 +274,7 @@ class SpecialistScene:
                     operation(
                         "disclose",
                         "Disclose one of your Identities",
-                        [
-                            field(
-                                "disclosure", "Identity and conversation entry", fields
-                            )
-                        ],
+                        [field("disclosure", "Identity and conversation entry", fields)],
                     )
                 )
         if owns_frame and sheet:
@@ -306,8 +283,7 @@ class SpecialistScene:
             definitions = [
                 (x["id"], x["label"])
                 for x in menu["definitions"]
-                if x["actor"]["kind"] == "pilot"
-                and x["actor"]["entity"] == str(viewer.user_id)
+                if x["actor"]["kind"] == "pilot" and x["actor"]["entity"] == str(viewer.user_id)
             ]
             if BLANK in ready - blocked and definitions:
                 forms.append(
@@ -325,11 +301,7 @@ class SpecialistScene:
             elif any(x["id"] == m3_changeling.CLAY for x in menu["requisitions"]):
                 forms.append(operation("buy-clay", "Acquire Body of Clay", [ACCOUNT]))
         return (
-            [
-                self.card(
-                    state, "changeling", "CHANGELING · Identity effects", forms, sheet
-                )
-            ]
+            [self.card(state, "changeling", "CHANGELING · Identity effects", forms, sheet)]
             if forms
             else []
         )
@@ -366,8 +338,7 @@ class SpecialistScene:
                     forms.append(
                         operation(
                             "overstep-tag:" + statement.id,
-                            "Give a Tag and lower your Status · "
-                            + present[source.actor],
+                            "Give a Tag and lower your Status · " + present[source.actor],
                             [field("tag", "Your Tag")],
                         )
                     )
@@ -414,11 +385,7 @@ class SpecialistScene:
         if own and sheet:
             forms += self.queen_owner_forms(viewer, state, own, sheet, courts)
         return (
-            [
-                self.card(
-                    state, "red-queen", "Red Queen · Court operations", forms, sheet
-                )
-            ]
+            [self.card(state, "red-queen", "Red Queen · Court operations", forms, sheet)]
             if forms
             else []
         )
@@ -428,9 +395,7 @@ class SpecialistScene:
         menu = self.queen.menu(viewer, self.channel)
         if menu["can_initialize"]:
             return [operation("initialize", "Initialize the approved Court", [])]
-        allowed = next(
-            (x for x in menu["requisitions"] if x["id"] == m3_red_queen.MEMORY), None
-        )
+        allowed = next((x for x in menu["requisitions"] if x["id"] == m3_red_queen.MEMORY), None)
         actor = own["ref"]
         with self.game.store.engine.connect() as c:
             access = Access(self.game.store)
@@ -452,9 +417,7 @@ class SpecialistScene:
                 memory_ready = True
             if memory_ready and allowed and not allowed["held"]:
                 forms.append(
-                    operation(
-                        "buy", "Acquire Memory Extraction (2 Permissions)", [ACCOUNT]
-                    )
+                    operation("buy", "Acquire Memory Extraction (2 Permissions)", [ACCOUNT])
                 )
             if (
                 memory_ready
@@ -510,11 +473,7 @@ class SpecialistScene:
                 require_queen(self.game, c, state, actor, m3_red_queen.TRANSFER)
             except (ValueError, WorkflowError):
                 return forms
-            ams = [
-                (x.id, x.role)
-                for x in m3_red_queen.ams(state, court)
-                if x.bearer == actor
-            ]
+            ams = [(x.id, x.role) for x in m3_red_queen.ams(state, court) if x.bearer == actor]
             sources = []
             if ams:
                 for target in menu["targets"]:
@@ -551,10 +510,21 @@ class SpecialistScene:
 
     def queen_ready(self, connection, viewer, state, play, target=None, source=None):
         try:
-            prepare_queen(self.game, connection, viewer, state, PlayInput(
-                play=play, target_actor=target, source_work=source,
-                heat=0, context="Eligibility preview", trigger_confirmed=True,
-            ), self.channel)
+            prepare_queen(
+                self.game,
+                connection,
+                viewer,
+                state,
+                PlayInput(
+                    play=play,
+                    target_actor=target,
+                    source_work=source,
+                    heat=0,
+                    context="Eligibility preview",
+                    trigger_confirmed=True,
+                ),
+                self.channel,
+            )
         except (ValueError, WorkflowError):
             return False
         return True
@@ -572,32 +542,51 @@ class SpecialistScene:
                 continue
             target = ActorRef.model_validate(context["target"])
             if self.queen_ready(connection, viewer, state, PANOPTICON, target, context["id"]):
-                observed.append((
-                    json.dumps({"id": context["id"], "target": context["target"]}),
-                    labels.get(target.token, "Original observed person"),
-                ))
+                observed.append(
+                    (
+                        json.dumps({"id": context["id"], "target": context["target"]}),
+                        labels.get(target.token, "Original observed person"),
+                    )
+                )
         forms = []
         if other:
-            forms.append(operation("distant:" + actor.model_dump_json(), "Record distant observation", [
-                field("target", "Person actually observed", [
-                    (ActorRef.model_validate(row["ref"]).model_dump_json(), row["label"]) for row in other
-                ]),
-                ACCOUNT,
-            ]))
+            forms.append(
+                operation(
+                    "distant:" + actor.model_dump_json(),
+                    "Record distant observation",
+                    [
+                        field(
+                            "target",
+                            "Person actually observed",
+                            [
+                                (
+                                    ActorRef.model_validate(row["ref"]).model_dump_json(),
+                                    row["label"],
+                                )
+                                for row in other
+                            ],
+                        ),
+                        ACCOUNT,
+                    ],
+                )
+            )
         if observed:
-            forms.append(operation(PANOPTICON, "Start One-Girl Panopticon", [
-                field("observation", "Original distant observation", observed), *self.costs(sheet),
-            ]))
+            forms.append(
+                operation(
+                    PANOPTICON,
+                    "Start One-Girl Panopticon",
+                    [
+                        field("observation", "Original distant observation", observed),
+                        *self.costs(sheet),
+                    ],
+                )
+            )
         return forms
 
     def perform(self, viewer, key, data):
         revision = data["revision"]
         op, values = (data["answer"][k] for k in ("operation", "values"))
-        if (
-            type(revision) is not int
-            or not isinstance(values, dict)
-            or not isinstance(op, str)
-        ):
+        if type(revision) is not int or not isinstance(values, dict) or not isinstance(op, str):
             raise ValueError("Reopen the assigned specialty form.")
         if op.partition(":")[0] in NATIVE_OPERATIONS:
             return self.native.perform(viewer, key, op, revision, values)
@@ -680,13 +669,9 @@ class SpecialistScene:
         if op == "initialize":
             return self.queen.initialize(viewer, key, revision)
         if op == "buy":
-            return self.queen.buy(
-                viewer, key, revision, m3_red_queen.MEMORY, values["account"]
-            )
+            return self.queen.buy(viewer, key, revision, m3_red_queen.MEMORY, values["account"])
         if op == "buy-panopticon":
-            return self.queen.buy(
-                viewer, key, revision, m3_red_queen.PANOPTICON, values["account"]
-            )
+            return self.queen.buy(viewer, key, revision, m3_red_queen.PANOPTICON, values["account"])
         if op == "buy-clay":
             return self.changeling.purchase(
                 viewer, key, revision, m3_changeling.CLAY, values["account"]
@@ -705,8 +690,10 @@ class SpecialistScene:
         if op not in PLAYS or type(data.get("game_revision")) is not int:
             raise WorkflowError("Choose an available specialist Play.")
         selected = (
-            json.loads(values["memory"]) if op == MEMORY
-            else json.loads(values["observation"]) if op == PANOPTICON
+            json.loads(values["memory"])
+            if op == MEMORY
+            else json.loads(values["observation"])
+            if op == PANOPTICON
             else None
         )
         return self.game.begin(
@@ -722,9 +709,7 @@ class SpecialistScene:
                 identity=values.get("identity"),
                 gain=int(values.get("gain", 0)),
                 pair_share=int(values.get("pair_share", 0)),
-                target_actor=ActorRef.model_validate(selected["target"])
-                if selected
-                else None,
+                target_actor=ActorRef.model_validate(selected["target"]) if selected else None,
                 source_work=selected["id"] if selected else values.get("source"),
             ),
         )

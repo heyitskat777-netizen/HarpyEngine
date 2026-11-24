@@ -5,6 +5,11 @@ from dataclasses import asdict, replace
 from typing import Any, cast
 
 import sqlalchemy as sa
+from alternate_battle import AlternateBattle
+from alternate_work import WORK as ALTERNATE_WORK
+from alternate_work import AlternateWork
+from gorgon_followups import fields_for_gorgon, normalize_choice
+from harpy_followups import dive_form
 from sqlalchemy import Connection
 
 from girlframe.ai.activity_batch import (
@@ -54,8 +59,8 @@ from girlframe.services.activity_session_zero import WRITES as SESSION_ZERO_WRIT
 from girlframe.services.activity_session_zero import SessionZeroDesk
 from girlframe.services.activity_shadow import ActivityShadowReview
 from girlframe.services.activity_timing import ActivityTiming, _snowflake
-from girlframe.services.campaign_difficulty import review_facilitator
 from girlframe.services.ai_mission_briefings import DraftMissionBriefingService
+from girlframe.services.campaign_difficulty import review_facilitator
 from girlframe.services.campaign_opening import CampaignOpeningService, OpeningDraft
 from girlframe.services.director_context import DirectorContextService
 from girlframe.services.director_conversation import DirectorConversationService
@@ -74,11 +79,6 @@ from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 from girlframe.services.session_zero import SessionZeroService
 from girlframe.services.sheet_portrayal import SheetPortrayalService
-
-from alternate_battle import AlternateBattle
-from alternate_work import WORK as ALTERNATE_WORK, AlternateWork
-from gorgon_followups import fields_for_gorgon, normalize_choice
-from harpy_followups import dive_form
 
 REVIEW_READS = frozenset(
     {
@@ -243,7 +243,11 @@ def activity_facilitator(connection, store, fallback=None):
         return opened
     service = SessionZeroService(store)
     plan = service._latest(connection)
-    if plan.plan_approved and plan.facilitator in plan.members and service._active_group(connection, plan):
+    if (
+        plan.plan_approved
+        and plan.facilitator in plan.members
+        and service._active_group(connection, plan)
+    ):
         return plan.facilitator
     return fallback if plan.plan_proposal is None else None
 
@@ -274,7 +278,9 @@ class P2Scene:
             managed_setup=opening_channel is not None,
         )
         self.session_zero = SessionZeroDesk(
-            SessionZeroService(session.store, group_owner=facilitator_id, setup_organizer=setup_organizer),
+            SessionZeroService(
+                session.store, group_owner=facilitator_id, setup_organizer=setup_organizer
+            ),
             opening_channel,
         )
         self.portrayal = SheetPortrayalService(session.dossiers)
@@ -578,7 +584,11 @@ class P2Scene:
                 viewer = self._review_viewer(c, viewer)
         if route in SESSION_ZERO_READS and identity is None:
             state = self.session_zero.read(viewer, route)
-            if route == "session-zero" and state.get("can_edit_plan") and "pilot_generator" not in state:
+            if (
+                route == "session-zero"
+                and state.get("can_edit_plan")
+                and "pilot_generator" not in state
+            ):
                 state["pilot_generator"] = {
                     "callsigns": PILOT_CALLSIGNS,
                     "portrayals": tuple(item.model_dump(mode="json") for item in PILOT_PORTRAYALS),
@@ -709,7 +719,10 @@ class P2Scene:
             return {
                 "options": [
                     item
-                    | {"model_configured": self._initiative_model(item["actor"]["kind"]) is not None}
+                    | {
+                        "model_configured": self._initiative_model(item["actor"]["kind"])
+                        is not None
+                    }
                     for item in options
                 ],
             }
@@ -881,7 +894,11 @@ class P2Scene:
         if self.session.observer.reviewed_activity_trial and route in REVIEW_WRITES:
             with self.session.store.engine.connect() as c:
                 viewer = self._review_viewer(c, viewer)
-        if self.session.observer.reviewed_activity_trial and route in MODEL_WRITES and not self.ai_enabled():
+        if (
+            self.session.observer.reviewed_activity_trial
+            and route in MODEL_WRITES
+            and not self.ai_enabled()
+        ):
             raise WorkflowError("AI assistance is off for this campaign.")
         if route in SESSION_ZERO_WRITES:
             return self.session_zero.write(viewer, key, route, data)
@@ -981,7 +998,9 @@ class P2Scene:
                 key,
                 ActorRef.model_validate(data["actor"]),
                 data["version"],
-                character_setup=CharacterSetup.model_validate_json(json.dumps(data["character_setup"])),
+                character_setup=CharacterSetup.model_validate_json(
+                    json.dumps(data["character_setup"])
+                ),
             )
         if route == "portrayal-draft" and data.keys() == {"actor", "version", "portrayal"}:
             if type(data["version"]) is not int:
@@ -1057,7 +1076,8 @@ class P2Scene:
                 ),
             )
         if route == "pilot-dossier-propose" and data.keys() in (
-            {"actor", "origin"}, {"actor", "origin", "version"}
+            {"actor", "origin"},
+            {"actor", "origin", "version"},
         ):
             version = data.get("version", 0)
             if type(version) is not int:
@@ -1377,22 +1397,32 @@ class P2Scene:
         ):
             return self.session.reactions.open_initiative(viewer, key, scene, data["option"])
         if (
-            route == "scene-alternate-control" and scene
+            route == "scene-alternate-control"
+            and scene
             and data.keys() == {"actor", "enabled", "revision"}
             and type(data["enabled"]) is bool
             and (data["revision"] is None or isinstance(data["revision"], str))
         ):
             return self.session.reactions.initiative.control_alternate(
-                viewer, key, scene, ActorRef.model_validate(data["actor"]),
-                data["enabled"], data["revision"],
+                viewer,
+                key,
+                scene,
+                ActorRef.model_validate(data["actor"]),
+                data["enabled"],
+                data["revision"],
             )
         if (
-            route == "scene-alternate-start" and scene
+            route == "scene-alternate-start"
+            and scene
             and data.keys() == {"proposal", "choices"}
-            and isinstance(data["proposal"], str) and isinstance(data["choices"], dict)
+            and isinstance(data["proposal"], str)
+            and isinstance(data["choices"], dict)
         ):
             return self.session.reactions.start_alternate_play(
-                viewer, scene, data["proposal"], data["choices"],
+                viewer,
+                scene,
+                data["proposal"],
+                data["choices"],
             )
         if route == "scene-alternate-refer" and scene and data.keys() == {"actor"}:
             return self.session.reactions.initiative.refer_alternate(

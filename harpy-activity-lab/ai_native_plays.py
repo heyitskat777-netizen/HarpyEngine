@@ -2,23 +2,6 @@
 
 import hashlib
 
-from girlframe.engine import m3_disposable_psyche, m3_show_dog, m3_tracker_implants
-from girlframe.engine.m3_actors import resolve
-from girlframe.engine.m3_handler_consequences import same_handler_body
-from girlframe.services.director_play_catalog import PlayCatalog
-from girlframe.services.m2_state import load_state
-from girlframe.services.m3_access import Access
-from girlframe.services.m3_actors import profiles
-from girlframe.services.m3_erratic_gorgon import ErraticService
-from girlframe.services.m3_gorgon_forms import declarations as gorgon_declarations
-from girlframe.services.m3_gorgon_play import GorgonPlayService
-from girlframe.services.m3_handler_plays import _ordinary_scene_idle
-from girlframe.services.m3_npc_handover import LABELS, NpcHandoverService
-from girlframe.services.m3_npc_intelligence import IntelligenceService
-from girlframe.services.native_form_fields import Field, form_fields
-from girlframe.services.onboarding import WorkflowError
-from girlframe.services.read_only_bot import GuildViewer
-
 from am_scene_controls import PLAYS as AM_PLAYS
 from handler_playbook import RULES as BASIC_HANDLER_RULES
 from harpy_play_options import harpy_plays
@@ -36,6 +19,23 @@ from specialist_scene import (
     TRANSFER,
     SpecialistScene,
 )
+
+from girlframe.engine import m3_disposable_psyche, m3_show_dog, m3_tracker_implants
+from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_handler_consequences import same_handler_body
+from girlframe.services.director_play_catalog import PlayCatalog
+from girlframe.services.m2_state import load_state
+from girlframe.services.m3_access import Access
+from girlframe.services.m3_actors import profiles
+from girlframe.services.m3_erratic_gorgon import ErraticService
+from girlframe.services.m3_gorgon_forms import declarations as gorgon_declarations
+from girlframe.services.m3_gorgon_play import GorgonPlayService
+from girlframe.services.m3_handler_plays import _ordinary_scene_idle
+from girlframe.services.m3_npc_handover import LABELS, NpcHandoverService
+from girlframe.services.m3_npc_intelligence import IntelligenceService
+from girlframe.services.native_form_fields import Field, form_fields
+from girlframe.services.onboarding import WorkflowError
+from girlframe.services.read_only_bot import GuildViewer
 
 FRAME_STARTS = {
     "janus_start": "living_battery",
@@ -99,9 +99,7 @@ class ActivityNativePlays:
             # A missing board, cast, edition, or native prerequisite yields no selection.
             return ()
 
-    def option(
-        self, identity, label, destination, *, trigger="", control=None, room=""
-    ):
+    def option(self, identity, label, destination, *, trigger="", control=None, room=""):
         return {
             "id": identity,
             "label": label,
@@ -335,11 +333,7 @@ class ActivityNativePlays:
         }
         for card in view.get("frame_work", ()):
             identity = FRAME_STARTS.get(card["action"])
-            if (
-                identity in inventory
-                and identity not in playable
-                and card["operations"]
-            ):
+            if identity in inventory and identity not in playable and card["operations"]:
                 item = inventory[identity]
                 playable[identity] = self.option(
                     identity,
@@ -370,11 +364,7 @@ class ActivityNativePlays:
             adapter.off_duty_status(viewer),
         )
         cards = SpecialistScene(self.game, channel).view(viewer, room)
-        forms = {
-            operation["id"]: card["id"]
-            for card in cards
-            for operation in card["operations"]
-        }
+        forms = {operation["id"]: card["id"] for card in cards for operation in card["operations"]}
         blocked = {entry.play for entry in sheet.blocked_plays}
         if locked:
             orders = {
@@ -402,14 +392,11 @@ class ActivityNativePlays:
             viewer,
             character,
             False,
-            blocked="keep_your_head"
-            in adapter.start_reasons(viewer, state, native["pilots"]),
+            blocked="keep_your_head" in adapter.start_reasons(viewer, state, native["pilots"]),
         )
         # This is the same sheet filter as the Play rail, including learned and grafted rules.
         result = []
-        for play in character_plays(
-            self.setup.play_registry, sheet, owns_sheet=True, state=state
-        ):
+        for play in character_plays(self.setup.play_registry, sheet, owns_sheet=True, state=state):
             identity = play["id"]
             if play["blocked"]:
                 continue
@@ -457,9 +444,12 @@ class ActivityNativePlays:
                 continue
             rule = self.setup.play_registry.entry(referral.rule_id)
             yield self.option(
-                identity, referral.title, "scene_specialist",
+                identity,
+                referral.title,
+                "scene_specialist",
                 trigger=rule.contract.trigger if rule.contract else "",
-                control=control, room=room,
+                control=control,
+                room=room,
             )
 
     def off_duty_options(self, viewer, scene, state, room):
@@ -473,17 +463,25 @@ class ActivityNativePlays:
         psyche = PsycheControls(self.game)
         cards = (
             (m3_show_dog.RULE, shows.cards(viewer, state, current["id"])),
-            (m3_disposable_psyche.RULE, (
-                card for card in psyche.cards(viewer, state, current["id"])
-                if card["phase"] == "pending" and card["tags"]
-            )),
+            (
+                m3_disposable_psyche.RULE,
+                (
+                    card
+                    for card in psyche.cards(viewer, state, current["id"])
+                    if card["phase"] == "pending" and card["tags"]
+                ),
+            ),
         )
         with self.game.store.engine.connect() as c:
             for rule, source_cards in cards:
                 for card in source_cards:
                     if self.game.action(c, card["source_action"])["scene_id"] == scene["id"]:
                         yield self.option(
-                            rule, card["label"], "off_duty_work", control=card["id"], room=room,
+                            rule,
+                            card["label"],
+                            "off_duty_work",
+                            control=card["id"],
+                            room=room,
                         )
 
     def handler_plays(self, connection, scene, state, viewer):
@@ -541,11 +539,13 @@ class ActivityNativePlays:
                 identity = card["id"]
                 if identity in HANDLER_SCENE_PLAYS:
                     options[identity] = self.option(
-                        identity, self.catalog.get(identity).title, "handler_scene_specialist", room=room[0]
+                        identity,
+                        self.catalog.get(identity).title,
+                        "handler_scene_specialist",
+                        room=room[0],
                     )
         if not any(
-            int(target["ref"]["entity"]) in scene["participants"]
-            for target in book["targets"]
+            int(target["ref"]["entity"]) in scene["participants"] for target in book["targets"]
         ):
             return tuple(options.values())
         for row in book["plays"]:
@@ -557,7 +557,11 @@ class ActivityNativePlays:
             if identity == "off_duty" and not book["off_duty_phase"]:
                 continue
             options[identity] = self.option(
-                "handler_" + identity, row["label"], "handler", control=identity, room=room[0] if room else "",
+                "handler_" + identity,
+                row["label"],
+                "handler",
+                control=identity,
+                room=room[0] if room else "",
             )
         if room is not None:
             for row in book["plays"]:

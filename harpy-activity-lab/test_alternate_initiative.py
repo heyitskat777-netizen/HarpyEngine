@@ -519,7 +519,8 @@ def test_alternate_comms_uses_approved_voice_and_survives_reopen(ledger, kind, v
     contribution = "NARRATION" if narrated else "DIALOGUE"
     reply = (
         "The Gorgon lowers its head toward the relay. A thin rattle runs through its plates."
-        if narrated else "The relay was silent before your signal reached me."
+        if narrated
+        else "The relay was silent before your signal reached me."
     )
 
     class ReplyModel:
@@ -565,14 +566,23 @@ def test_alternate_comms_uses_approved_voice_and_survives_reopen(ledger, kind, v
     revision = 1
     if speaks:
         direction = dict(
-            actor=actor_data, version=revision, character_setup={"gorgon_speech": True},
+            actor=actor_data,
+            version=revision,
+            character_setup={"gorgon_speech": True},
         )
         with pytest.raises(WorkflowError, match="controlled by another"):
             app.write(excluded, "take-voice", scene, "portrayal-draft", direction)
         approved = app.write(owner, "speech", scene, "portrayal-draft", direction)["id"]
-        app.write(owner, "speech-approve", scene, "portrayal-confirm", {
-            "actor": actor_data, "id": approved,
-        })
+        app.write(
+            owner,
+            "speech-approve",
+            scene,
+            "portrayal-confirm",
+            {
+                "actor": actor_data,
+                "id": approved,
+            },
+        )
         revision += 1
     app.write(
         owner,

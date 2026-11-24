@@ -172,7 +172,8 @@ ROUNDS = (
     (
         "gorgon",
         "I called it an alarm. I should have asked what you heard.",
-        "The Gorgon stills its head. One forelimb withdraws from the threshold, slow enough to follow.",
+        "The Gorgon stills its head. "
+        "One forelimb withdraws from the threshold, slow enough to follow.",
         "Leave room for a genuine question.",
         "Patient and precise. Drops its guard on an apology.",
     ),

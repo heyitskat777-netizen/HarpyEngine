@@ -52,11 +52,7 @@ class SceneOrders:
                 ranked = self.npcs.ranked_preview(viewer, self.channel)
             except (ValueError, WorkflowError):
                 ranked = None
-            if (
-                ranked
-                and ranked["revision"] == cast["game_revision"]
-                and ranked["targets"]
-            ):
+            if ranked and ranked["revision"] == cast["game_revision"] and ranked["targets"]:
                 targets = [
                     (json.dumps({"issuer": ranked["issuer"], "target": uid}), label)
                     for uid, label in ranked["targets"]
@@ -65,11 +61,7 @@ class SceneOrders:
                     operation(
                         "ranked",
                         "Issue a ranked order as "
-                        + (
-                            "Handler"
-                            if ranked["issuer"]["kind"] == "handler"
-                            else "your pilot"
-                        ),
+                        + ("Handler" if ranked["issuer"]["kind"] == "handler" else "your pilot"),
                         [field("target", "Original pilot", targets), INSTRUCTION],
                     )
                 )
@@ -184,10 +176,7 @@ class SceneOrders:
                     ],
                 )
             )
-        if (
-            role["girl"] == "harpy"
-            and "check_sensors" not in preview["forbidden_plays"]
-        ):
+        if role["girl"] == "harpy" and "check_sensors" not in preview["forbidden_plays"]:
             forms.append(
                 operation(
                     "role_sensors",
@@ -226,9 +215,7 @@ class SceneOrders:
                             "condition": issuer["condition"],
                         }
                     )
-                    options.append(
-                        (token, f"{issuer['label']} → {role['label']} · {label}")
-                    )
+                    options.append((token, f"{issuer['label']} → {role['label']} · {label}"))
         return options
 
     def perform(self, viewer, key, data):
@@ -244,9 +231,7 @@ class SceneOrders:
                 self.channel,
                 ActorRef.model_validate(ref["actor"]),
                 ref["source"],
-                ActorRef.model_validate(ref["adjudicator"])
-                if ref["adjudicator"]
-                else None,
+                ActorRef.model_validate(ref["adjudicator"]) if ref["adjudicator"] else None,
                 cast_revision,
                 PlayInput(
                     play="keep_your_head" if action == "role_keep" else "check_sensors",
@@ -259,9 +244,7 @@ class SceneOrders:
             ref = ActorRef.model_validate_json(values["actor"])
             if ref.kind not in ("npc", "handler", "clone_am", "external_pilot", "gorgon"):
                 raise WorkflowError("Choose an original controlled role.")
-            return self.cast.change(
-                viewer, key, self.channel, revision, cast_revision, action, ref
-            )
+            return self.cast.change(viewer, key, self.channel, revision, cast_revision, action, ref)
         if action == "direct" and values.keys() == {"target", "instruction"}:
             return self.game.issue_order(
                 viewer,

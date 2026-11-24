@@ -1,5 +1,8 @@
 """Loopback-only Activity development harness for the pinned HarpyEngine source."""
 
+# ruff: noqa: E402
+# The pinned engine path must be selected before importing any engine-consuming modules.
+
 import argparse
 import json
 import logging
@@ -38,8 +41,31 @@ sys.path[:0] = [
 ]
 
 import sqlalchemy as sa
+from activity_ai_trial import ActivityAITrial
+from activity_artwork import ARTWORK, CATALOG, artwork_bytes
 from alembic import command
 from alembic.config import Config
+from battlefield import Battlefield, BattlefieldChanged, seed_battlefield
+from campaign_registry import (
+    DEFAULT_CAMPAIGN,
+    SNOWFLAKE,
+    CampaignBinding,
+    CampaignBindingError,
+    CampaignRegistry,
+)
+from handler_playbook import HANDLER_PLAY_STEPS
+from mission_desk import MissionDesk
+from p2_scene import (
+    SESSION_ZERO_READS,
+    SESSION_ZERO_WRITES,
+    P2Scene,
+    activity_facilitator,
+    local_fixture_director,
+    manual_campaign_setup,
+)
+from player_setup import SCENE, PlayerSetup, seed_players, seed_roster
+from private_battlefield import PRIVATE_BATTLEFIELD_CHANNEL, PrivateBattlefield
+
 from girlframe.config import Settings
 from girlframe.database import tables
 from girlframe.database.connection import create_database_engine
@@ -49,18 +75,8 @@ from girlframe.services.ledger import CampaignLedger
 from girlframe.services.m3_access import digest, load_registry
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
-from girlframe.services.p1_facilitator import FacilitatorService, UNLISTED_ACTION
+from girlframe.services.p1_facilitator import UNLISTED_ACTION, FacilitatorService
 from girlframe.services.read_only_bot import GuildViewer
-
-from activity_artwork import ARTWORK, CATALOG, artwork_bytes
-from battlefield import Battlefield, BattlefieldChanged, seed_battlefield
-from campaign_registry import DEFAULT_CAMPAIGN, SNOWFLAKE, CampaignBinding, CampaignBindingError, CampaignRegistry
-from handler_playbook import HANDLER_PLAY_STEPS
-from mission_desk import MissionDesk
-from activity_ai_trial import ActivityAITrial
-from p2_scene import P2Scene, SESSION_ZERO_READS, SESSION_ZERO_WRITES, activity_facilitator, local_fixture_director, manual_campaign_setup
-from player_setup import SCENE, PlayerSetup, seed_players, seed_roster
-from private_battlefield import PRIVATE_BATTLEFIELD_CHANNEL, PrivateBattlefield
 
 GUILD = 200
 HANDLER = GuildViewer(1, GUILD, True, True)
@@ -74,17 +90,28 @@ DM_RECEIPT_ROUTE = re.compile(r"/api/dm-receipts/([0-9a-f]{32})")
 DIRECTOR_ROUTE = re.compile(
     r"/api/director/([0-9a-f-]{36})/([a-z-]{1,35})(?:/([A-Za-z0-9:-]{1,100}))?"
 )
-SETUP_ROUTE = re.compile(
-    r"/api/campaign-opening/([a-z-]{1,35})(?:/([A-Za-z0-9:-]{1,100}))?"
-)
-SETUP_READ = {"opening", "opening-brief", "persona-setup", "persona-agreement", "fictional-time", "portrayal-sheets"} | SESSION_ZERO_READS
+SETUP_ROUTE = re.compile(r"/api/campaign-opening/([a-z-]{1,35})(?:/([A-Za-z0-9:-]{1,100}))?")
+SETUP_READ = {
+    "opening",
+    "opening-brief",
+    "persona-setup",
+    "persona-agreement",
+    "fictional-time",
+    "portrayal-sheets",
+} | SESSION_ZERO_READS
 SETUP_WRITE = {
-    "opening-save", "opening-launch", "persona-save", "persona-notes", "persona-activate", "persona-propose", "persona-answer", "portrayal-draft", "portrayal-confirm"
+    "opening-save",
+    "opening-launch",
+    "persona-save",
+    "persona-notes",
+    "persona-activate",
+    "persona-propose",
+    "persona-answer",
+    "portrayal-draft",
+    "portrayal-confirm",
 } | SESSION_ZERO_WRITES.keys()
 TRANSCRIPT_ROUTE = re.compile(r"/api/rooms/(relay|[0-9a-f]{16})/transcript")
-COMMUNICATION_ROUTE = re.compile(
-    r"/api/communications/((?:pilot|handler)-[0-9a-z-]{1,80})"
-)
+COMMUNICATION_ROUTE = re.compile(r"/api/communications/((?:pilot|handler)-[0-9a-z-]{1,80})")
 BATTLEFIELD_ROUTE = re.compile(
     r"/api/battlefield/(open|join|place|review-placement|create-enemy|add-enemy|start-turns|end-turn|close-turns|move|engage|check_sensors|keep_your_head|flirt|put_someone_beneath_you|living_battery|disobey_orders|issue-order|choice|fulfill|core-expose|frame-work|(?:assault|core)-(?:declare|review|roll))"
 )
@@ -167,9 +194,7 @@ def open_campaign(
     roster_file = sandbox / "discord-roster.json"
     viewers = roster_viewers(roster) if roster else None
     membership = (
-        {role: str(viewer.user_id) for role, viewer in viewers.items()}
-        if viewers
-        else None
+        {role: str(viewer.user_id) for role, viewer in viewers.items()} if viewers else None
     )
     guild_id = int(roster.guild_id) if roster else GUILD
     application_id = int(roster.client_id) if roster else 100
@@ -179,9 +204,7 @@ def open_campaign(
         (roster_file.exists() != bool(roster))
         or (roster and json.loads(roster_file.read_bytes()) != membership)
     ):
-        raise RuntimeError(
-            "This private campaign is bound to a different Discord roster."
-        )
+        raise RuntimeError("This private campaign is bound to a different Discord roster.")
     url = f"sqlite:///{database.as_posix()}"
     engine = create_database_engine(Settings(database_url=url))
     if policy_file.exists():
@@ -252,17 +275,15 @@ def restore_windows_fixture_approval(policy, registry, registry_bytes):
         return policy
     # Older Windows fixtures fingerprinted the same bundled bytes as CP1252.
     # Recheck that exact source, then keep the filed subsystem scope.
-    return policy.model_copy(update={
-        "m3_approval": approval.model_copy(update={"registry_sha256": canonical}),
-    })
+    return policy.model_copy(
+        update={
+            "m3_approval": approval.model_copy(update={"registry_sha256": canonical}),
+        }
+    )
 
 
-def open_managed_campaign(
-    binding: CampaignBinding, *, initialize=True
-) -> MissionService:
-    sandbox = (
-        RUNTIME / "playtest-campaigns" / ("activity-" + UUID(binding.id).hex)
-    ).resolve()
+def open_managed_campaign(binding: CampaignBinding, *, initialize=True) -> MissionService:
+    sandbox = (RUNTIME / "playtest-campaigns" / ("activity-" + UUID(binding.id).hex)).resolve()
     if initialize:
         sandbox.mkdir(parents=True, exist_ok=True)
     database = sandbox / "missions.sqlite3"
@@ -334,9 +355,13 @@ def open_managed_campaign(
     service = MissionService(store, configure_m3_fixture(store))
     # New managed campaigns use the established owner ruling for original Handler creation.
     rulings = store.policy.owner_m3_rulings
-    store.policy = store.policy.model_copy(update={"owner_m3_rulings": rulings.model_copy(
-        update={"handler_creation": "owned_shared_choices_preserve_existing"}
-    )})
+    store.policy = store.policy.model_copy(
+        update={
+            "owner_m3_rulings": rulings.model_copy(
+                update={"handler_creation": "owned_shared_choices_preserve_existing"}
+            )
+        }
+    )
     ledger = CampaignLedger(store)
     organizer = GuildViewer(int(binding.handler_id), policy.guild_id, True, True)
     status = ledger.status(organizer)
@@ -439,22 +464,16 @@ def audit(service: MissionService) -> dict:
         ).all()
         receipts = dict(
             connection.execute(
-                sa.select(
-                    tables.commands.c.interaction_key, tables.commands.c.outcome_json
-                ).where(
+                sa.select(tables.commands.c.interaction_key, tables.commands.c.outcome_json).where(
                     tables.commands.c.campaign_id == service.store.campaign_id,
-                    tables.commands.c.interaction_key.in_(
-                        [key for _, key in response_events]
-                    ),
+                    tables.commands.c.interaction_key.in_([key for _, key in response_events]),
                 )
             ).all()
         )
     return {
         "offers": offers,
         "responses": service.get(OFFERED, offers[0]["id"])["mission"]["responses"],
-        "response_events": [
-            {"actor": actor, "key": key} for actor, key in response_events
-        ],
+        "response_events": [{"actor": actor, "key": key} for actor, key in response_events],
         "stored_receipts": {key: json.loads(value) for key, value in receipts.items()},
     }
 
@@ -482,8 +501,16 @@ def serve(
         from director_trial import discord_trial_binding
 
         binding = discord_trial_binding(discord.config) if discord else None
-        if director.discord_binding != binding or bound_roster or campaign_registry or campaign_bot_token or campaign_roles_only:
-            raise ValueError("The assisted trial requires its original isolated campaign and roster.")
+        if (
+            director.discord_binding != binding
+            or bound_roster
+            or campaign_registry
+            or campaign_bot_token
+            or campaign_roles_only
+        ):
+            raise ValueError(
+                "The assisted trial requires its original isolated campaign and roster."
+            )
     if rehearsal_origin is not None:
         target = urlsplit(rehearsal_origin)
         if (
@@ -494,7 +521,10 @@ def serve(
             or target.username is not None
             or rehearsal_origin != f"https://{target.netloc}"
         ):
-            raise ValueError("A direct Activity origin requires an isolated Discord rehearsal and an HTTPS origin.")
+            raise ValueError(
+                "A direct Activity origin requires an isolated Discord rehearsal "
+                "and an HTTPS origin."
+            )
     if p2_shadow_readiness and not p2_fixture:
         raise ValueError("Shadow readiness requires the disposable P2 fixture.")
     if p2_fixture and (discord or bound_roster or campaign_registry):
@@ -513,27 +543,31 @@ def serve(
         actual_handler = GuildViewer(int(appointed), service.store.policy.guild_id, True, False)
         viewers = dict.fromkeys(("invited", "other", "handler"), actual_handler)
     else:
-        viewers = director.viewers if director else (
-            roster_viewers(discord.config)
-            if bound_roster
-            else {
-                "invited": OFFERED,
-                "other": OTHER,
-                "handler": HANDLER,
-            }
+        viewers = (
+            director.viewers
+            if director
+            else (
+                roster_viewers(discord.config)
+                if bound_roster
+                else {
+                    "invited": OFFERED,
+                    "other": OTHER,
+                    "handler": HANDLER,
+                }
+            )
         )
     first, second, handler = (viewers[role] for role in ("invited", "other", "handler"))
     if bound_roster:
         enable_private_subsystems(service)
     elif director and (approval := service.store.policy.m3_approval):
         service.store.policy = service.store.policy.model_copy(
-            update={"m3_approval": approval.model_copy(
-                update={"subsystems": approval.subsystems | {"world"}}
-            )}
+            update={
+                "m3_approval": approval.model_copy(
+                    update={"subsystems": approval.subsystems | {"world"}}
+                )
+            }
         )
-    setup = PlayerSetup(
-        service.store, handler, first, second, bound_roster=bound_roster
-    )
+    setup = PlayerSetup(service.store, handler, first, second, bound_roster=bound_roster)
     setup.enable_activity_records()
     battlefield = None
     discord_log = logging.getLogger("harpy_activity.discord")
@@ -586,7 +620,11 @@ def serve(
         )
         if prepare_test_battlefield is not None:
             prepare_test_battlefield(battlefield)
-    fixture_director = local_fixture_director(setup.game, activity_shadow=p2_shadow_readiness) if p2_fixture else None
+    fixture_director = (
+        local_fixture_director(setup.game, activity_shadow=p2_shadow_readiness)
+        if p2_fixture
+        else None
+    )
     director_scene = None
     if fixture_director:
         with service.store.engine.connect() as connection:
@@ -599,13 +637,20 @@ def serve(
             observer = fixture_director.session.observer
             state = observer._state(connection, director_scene)
             return state.policy.mode == "shadow" and (
-                not p2_shadow_readiness or observer._consented(connection, observer._scene(connection, director_scene, allow_closed=True), state)
+                not p2_shadow_readiness
+                or observer._consented(
+                    connection,
+                    observer._scene(connection, director_scene, allow_closed=True),
+                    state,
+                )
             )
 
     def campaign_opening(campaign, route):
         setup = campaign.setup
         opening = manual_campaign_setup(
-            setup.game, setup.handler.user_id, opening_channel=SCENE,
+            setup.game,
+            setup.handler.user_id,
+            opening_channel=SCENE,
             setup_organizer=bot_setup_organizer(campaign),
         )
         if not route.startswith("opening"):
@@ -624,6 +669,7 @@ def serve(
         with store.engine.connect() as connection:
             models = ai_trial.model_selection(connection)["models"]
         return bool(models["handler"] and models["director"])
+
     participants = {
         secrets.token_urlsafe(32): (label, viewers[role])
         for role, label in (("invited", "Invited pilot"), ("other", "Other pilot"))
@@ -631,9 +677,7 @@ def serve(
     if director:
         participants[secrets.token_urlsafe(32)] = ("GM and Handler", handler)
     sessions: dict[str, tuple[str, GuildViewer]] = {}
-    sdk = (
-        (RUNTIME / "discord-sdk" / "embedded-app.js").read_bytes() if discord else None
-    )
+    sdk = (RUNTIME / "discord-sdk" / "embedded-app.js").read_bytes() if discord else None
     asset_version, assets = activity_assets(sdk)
     default = ActivityCampaign(service, setup, battlefield)
     if bound_roster:
@@ -643,11 +687,11 @@ def serve(
 
         default.training = campaign_training(service, handler)
     catalog = campaign_registry or (
-        CampaignRegistry(RUNTIME / "activity-campaigns.sqlite3")
-        if bound_roster
-        else None
+        CampaignRegistry(RUNTIME / "activity-campaigns.sqlite3") if bound_roster else None
     )
-    owner_setup_grant = load_owner_setup_preview(RUNTIME / "activity-owner-setup-preview.json") if catalog else None
+    owner_setup_grant = (
+        load_owner_setup_preview(RUNTIME / "activity-owner-setup-preview.json") if catalog else None
+    )
     inbox_notices = None
     if inbox_dms and bound_roster and catalog and campaign_bot_token:
         from campaign_inbox import InboxNotices
@@ -659,7 +703,10 @@ def serve(
         try:
             ai_trial = ActivityAITrial.from_environment()
         except ValueError:
-            print("Reviewed AI is disabled. Check the Activity AI environment settings.", file=sys.stderr)
+            print(
+                "Reviewed AI is disabled. Check the Activity AI environment settings.",
+                file=sys.stderr,
+            )
     runtime_lock = Lock()
     runtimes = {}
     if campaign_roles_only and catalog:
@@ -668,7 +715,10 @@ def serve(
                 default.managed = True
                 if ai_trial and ai_trial.campaign == service.store.campaign_id:
                     default.reviewed_director = ai_trial.adapter(
-                        setup.game, opening_channel=SCENE, setup=setup, battlefield=default.battlefield
+                        setup.game,
+                        opening_channel=SCENE,
+                        setup=setup,
+                        battlefield=default.battlefield,
                     )
                 runtimes[binding.id] = default
     workers = []
@@ -678,9 +728,7 @@ def serve(
 
     def bindings():
         return (
-            catalog.bindings(discord.config.client_id, discord.config.guild_id)
-            if catalog
-            else []
+            catalog.bindings(discord.config.client_id, discord.config.guild_id) if catalog else []
         )
 
     def bot_setup_organizer(campaign):
@@ -688,9 +736,13 @@ def serve(
             return None
         origin, owner = owner_setup_grant
         campaign_id = catalog.latest(origin)
-        if (UUID(campaign.service.store.campaign_id).hex == campaign_id
+        if (
+            UUID(campaign.service.store.campaign_id).hex == campaign_id
             and str(campaign.setup.handler.user_id) == discord.config.client_id
-            and catalog.owns_bot_managed_campaign(campaign_id, discord.config.client_id, discord.config.guild_id, owner)):
+            and catalog.owns_bot_managed_campaign(
+                campaign_id, discord.config.client_id, discord.config.guild_id, owner
+            )
+        ):
             return int(owner)
         return None
 
@@ -704,9 +756,11 @@ def serve(
         for campaign in active:
             store = campaign.service.store
             with store.engine.connect() as connection:
-                version = connection.scalar(sa.select(sa.func.max(tables.events.c.seq)).where(
-                    tables.events.c.campaign_id == store.campaign_id
-                ))
+                version = connection.scalar(
+                    sa.select(sa.func.max(tables.events.c.seq)).where(
+                        tables.events.c.campaign_id == store.campaign_id
+                    )
+                )
             if store.campaign_id in scanned and scanned[store.campaign_id] == version:
                 continue
             items = []
@@ -716,7 +770,8 @@ def serve(
                     continue
                 owner = GuildViewer(int(member["id"]), store.policy.guild_id, True, False)
                 items.extend(
-                    (kind, identity, member["id"]) for kind, identity in pending_interactions(
+                    (kind, identity, member["id"])
+                    for kind, identity in pending_interactions(
                         campaign.setup, campaign.service, campaign.battlefield, owner
                     )
                 )
@@ -758,23 +813,17 @@ def serve(
     def managed_runtime(binding):
         with runtime_lock:
             if shutting_down:
-                raise SignInError(
-                    HTTPStatus.SERVICE_UNAVAILABLE, "The Activity is restarting."
-                )
+                raise SignInError(HTTPStatus.SERVICE_UNAVAILABLE, "The Activity is restarting.")
             if binding.id in runtimes:
                 return runtimes[binding.id]
             try:
                 managed = open_managed_campaign(binding, initialize=False)
                 enable_private_subsystems(managed)
-                gm = GuildViewer(
-                    int(binding.handler_id), int(binding.guild_id), True, False
-                )
+                gm = GuildViewer(int(binding.handler_id), int(binding.guild_id), True, False)
                 # In role-bound mode admission is dynamic. Only the configured Handler is pre-bound.
                 players = PlayerSetup(managed.store, gm, gm, gm, bound_roster=True)
                 players.enable_activity_records()
-                players.enable_scene_plays(
-                    extra_channels=(PRIVATE_BATTLEFIELD_CHANNEL,)
-                )
+                players.enable_scene_plays(extra_channels=(PRIVATE_BATTLEFIELD_CHANNEL,))
                 players.bot_enrollment.reconcile()
                 arena = PrivateBattlefield(managed, players)
                 runtime = ActivityCampaign(managed, players, arena, managed=True)
@@ -814,9 +863,15 @@ def serve(
                 import_campaign(archive, Path(temporary) / "verified-restore")
 
         replacement = catalog.replace_campaign(
-            binding.id, application_id=binding.application_id, guild_id=binding.guild_id,
-            owner_id=owner, confirmation=data["confirmation"], name=data["name"],
-            key=key, checkpoint=checkpoint, provision=provision_managed_campaign,
+            binding.id,
+            application_id=binding.application_id,
+            guild_id=binding.guild_id,
+            owner_id=owner,
+            confirmation=data["confirmation"],
+            name=data["name"],
+            key=key,
+            checkpoint=checkpoint,
+            provision=provision_managed_campaign,
         )
         campaign.retired = True
         if campaign.worker:
@@ -835,13 +890,9 @@ def serve(
                 family = (
                     "mission"
                     if route.startswith("/api/mission-offers")
-                    else (
-                        "scene" if route.startswith("/api/player-setup") else "sign-in"
-                    )
+                    else ("scene" if route.startswith("/api/player-setup") else "sign-in")
                 )
-                discord_log.warning(
-                    "Activity %s %s returned HTTP %s", self.command, family, status
-                )
+                discord_log.warning("Activity %s %s returned HTTP %s", self.command, family, status)
             self.send_response(status)
             self.send_header("Content-Type", media)
             self.send_header("Content-Length", str(len(body)))
@@ -879,16 +930,21 @@ def serve(
             if not rows:
                 return None
             names = {
-                member["id"]: member["name"]
-                for member in campaign.setup.campaign_members(viewer)
+                member["id"]: member["name"] for member in campaign.setup.campaign_members(viewer)
             }
             now = monotonic()
             with campaign.presence_lock:
-                return {"recipients": [
-                    {"name": names.get(recipient, "Pilot"), "status": outcome,
-                     "online": now - campaign.presence.get(recipient, now - PRESENCE_SECONDS) < PRESENCE_SECONDS}
-                    for recipient, outcome in rows
-                ]}
+                return {
+                    "recipients": [
+                        {
+                            "name": names.get(recipient, "Pilot"),
+                            "status": outcome,
+                            "online": now - campaign.presence.get(recipient, now - PRESENCE_SECONDS)
+                            < PRESENCE_SECONDS,
+                        }
+                        for recipient, outcome in rows
+                    ]
+                }
 
         def session(self):
             if getattr(self, "selected_session", None):
@@ -896,8 +952,13 @@ def serve(
             if discord:
                 identity = discord.resolve(self.headers.get("Authorization", ""))
                 role = identity.role
-                if director and director.discord_binding["accounts"].get(role) != identity.discord_id:
-                    raise SignInError(HTTPStatus.FORBIDDEN, "This account has no seat in the P2 trial.")
+                if (
+                    director
+                    and director.discord_binding["accounts"].get(role) != identity.discord_id
+                ):
+                    raise SignInError(
+                        HTTPStatus.FORBIDDEN, "This account has no seat in the P2 trial."
+                    )
                 if discord.campaign_roles_only:
                     raise SignInError(
                         HTTPStatus.CONFLICT, "Select a campaign before opening its records."
@@ -916,9 +977,7 @@ def serve(
                     )
                 viewer = viewers[role]
                 if bound_roster and str(viewer.user_id) != identity.discord_id:
-                    raise SignInError(
-                        HTTPStatus.FORBIDDEN, "Activity roster access was denied."
-                    )
+                    raise SignInError(HTTPStatus.FORBIDDEN, "Activity roster access was denied.")
                 return {
                     "invited": "Pilot" if bound_roster else "Invited pilot",
                     "other": "Pilot" if bound_roster else "Other pilot",
@@ -931,15 +990,11 @@ def serve(
             token = cookie.get(COOKIE)
             identity = sessions.get(token.value) if token else None
             if not identity:
-                raise SignInError(
-                    HTTPStatus.UNAUTHORIZED, "Open a test pilot launch link."
-                )
+                raise SignInError(HTTPStatus.UNAUTHORIZED, "Open a test pilot launch link.")
             return identity
 
         def campaign_context(self, query):
-            keys = parse_qs(query, keep_blank_values=True).get(
-                "campaign", [DEFAULT_CAMPAIGN]
-            )
+            keys = parse_qs(query, keep_blank_values=True).get("campaign", [DEFAULT_CAMPAIGN])
             if len(keys) != 1:
                 raise SignInError(HTTPStatus.BAD_REQUEST, "Specify one campaign.")
             selected = keys[0]
@@ -959,19 +1014,46 @@ def serve(
             path = urlsplit(self.path).path
             scene_route = DIRECTOR_ROUTE.fullmatch(path)
             private_review = {
-                "timeline", "activity-review", "handler-draft", "handler-need", "gm-work",
-                "handler-native-work", "handler-hunt", "scene-initiative-review",
-                "npc-owner-review", "scene-alternate-actors", "scene-alternate-handovers",
+                "timeline",
+                "activity-review",
+                "handler-draft",
+                "handler-need",
+                "gm-work",
+                "handler-native-work",
+                "handler-hunt",
+                "scene-initiative-review",
+                "npc-owner-review",
+                "scene-alternate-actors",
+                "scene-alternate-handovers",
                 "scene-alternate-choices",
                 "scene-alternate-battles",
             }
-            trial_access = ai_trial and selected == UUID(ai_trial.campaign).hex and (
-                path in ("/api/activity/review-scenes", "/api/activity/ai-provider")
-                or (scene_route and (self.command == "POST" or scene_route[2] in private_review))
+            trial_access = (
+                ai_trial
+                and selected == UUID(ai_trial.campaign).hex
+                and (
+                    path in ("/api/activity/review-scenes", "/api/activity/ai-provider")
+                    or (
+                        scene_route and (self.command == "POST" or scene_route[2] in private_review)
+                    )
+                )
             )
-            session_zero = (path.startswith(SESSION_ZERO_PATH) and owner_setup_grant is not None
-                            and selected == catalog.latest(owner_setup_grant[0]))
-            if trial_access or path in ("/api/activity/ai-setup", "/api/activity/ai-settings", "/api/activity/ai-models") or session_zero or FACILITATOR_ROUTE.fullmatch(path):
+            session_zero = (
+                path.startswith(SESSION_ZERO_PATH)
+                and owner_setup_grant is not None
+                and selected == catalog.latest(owner_setup_grant[0])
+            )
+            if (
+                trial_access
+                or path
+                in (
+                    "/api/activity/ai-setup",
+                    "/api/activity/ai-settings",
+                    "/api/activity/ai-models",
+                )
+                or session_zero
+                or FACILITATOR_ROUTE.fullmatch(path)
+            ):
                 identity = discord.resolve(self.headers.get("Authorization", ""), fresh=True)
             if selected == DEFAULT_CAMPAIGN:
                 self.selected_session = self.session()
@@ -985,14 +1067,14 @@ def serve(
                     "Your Discord role does not grant access to this campaign.",
                 )
             runtime = managed_runtime(binding)
-            viewer = GuildViewer(
-                int(identity.discord_id), int(binding.guild_id), True, False
-            )
+            viewer = GuildViewer(int(identity.discord_id), int(binding.guild_id), True, False)
             if runtime.resetting:
                 raise SignInError(HTTPStatus.CONFLICT, "This campaign is being archived.")
             with runtime.work_lock:
                 if runtime.retired:
-                    raise SignInError(HTTPStatus.GONE, "This campaign was archived. Reopen the Activity.")
+                    raise SignInError(
+                        HTTPStatus.GONE, "This campaign was archived. Reopen the Activity."
+                    )
                 if runtime.resetting:
                     raise SignInError(HTTPStatus.CONFLICT, "This campaign is being archived.")
                 self.admit(runtime, viewer)
@@ -1017,11 +1099,18 @@ def serve(
             if binding is None or data["confirmation"] != binding.name:
                 raise ValueError("Type the exact current campaign name.")
             identity = discord.resolve(self.headers.get("Authorization", ""), force=True)
-            if identity.discord_id != str(viewer.user_id) or binding.role_id not in identity.role_ids:
+            if (
+                identity.discord_id != str(viewer.user_id)
+                or binding.role_id not in identity.role_ids
+            ):
                 raise SignInError(HTTPStatus.FORBIDDEN, "The campaign role is required.")
             job_id = uuid4().hex
-            job = {"owner": identity.discord_id, "role": binding.role_id, "state": "pending",
-                   "expires": monotonic() + 600}
+            job = {
+                "owner": identity.discord_id,
+                "role": binding.role_id,
+                "state": "pending",
+                "expires": monotonic() + 600,
+            }
             with reset_jobs_lock:
                 for previous, report in tuple(reset_jobs.items()):
                     if report["state"] != "pending" and report["expires"] <= monotonic():
@@ -1032,13 +1121,21 @@ def serve(
             def run():
                 with campaign.work_lock:
                     try:
-                        next_id = replace_campaign(campaign, binding, identity.discord_id, data, key)
+                        next_id = replace_campaign(
+                            campaign, binding, identity.discord_id, data, key
+                        )
                         outcome = {"state": "complete", "campaign_id": next_id}
                     except CampaignBindingError as error:
                         outcome = {"state": "failed", "error": str(error)}
                     except Exception:
                         discord_log.exception("Private campaign reset failed.")
-                        outcome = {"state": "failed", "error": "Campaign reset could not complete. Reopen the Activity to check the current campaign."}
+                        outcome = {
+                            "state": "failed",
+                            "error": (
+                                "Campaign reset could not complete. "
+                                "Reopen the Activity to check the current campaign."
+                            ),
+                        }
                     finally:
                         campaign.resetting = False
                     with reset_jobs_lock:
@@ -1059,9 +1156,15 @@ def serve(
             identity = discord.resolve(self.headers.get("Authorization", ""))
             with reset_jobs_lock:
                 job = reset_jobs.get(job_id)
-                if (job is None or job["owner"] != identity.discord_id
-                    or job["role"] not in identity.role_ids or job["expires"] <= monotonic()):
-                    raise SignInError(HTTPStatus.NOT_FOUND, "Campaign reset progress is unavailable.")
+                if (
+                    job is None
+                    or job["owner"] != identity.discord_id
+                    or job["role"] not in identity.role_ids
+                    or job["expires"] <= monotonic()
+                ):
+                    raise SignInError(
+                        HTTPStatus.NOT_FOUND, "Campaign reset progress is unavailable."
+                    )
                 return {key: job[key] for key in ("state", "campaign_id", "error") if key in job}
 
         def session_zero_preview(self, campaign, viewer, adapter):
@@ -1073,9 +1176,14 @@ def serve(
                     "owner_preview": True,
                     "group_configured": bool(zero.members),
                     "plan_status": (
-                        "approved" if zero.plan_approved else "pending" if zero.plan_proposal else "not_filed"
+                        "approved"
+                        if zero.plan_approved
+                        else "pending"
+                        if zero.plan_proposal
+                        else "not_filed"
                     ),
-                    "facilitator_appointed": activity_facilitator(connection, game.store) is not None,
+                    "facilitator_appointed": activity_facilitator(connection, game.store)
+                    is not None,
                 }
 
         def ai_setup(self, campaign, viewer):
@@ -1095,14 +1203,25 @@ def serve(
                         desk, _ = campaign_opening(campaign, "session-zero")
                         zero = desk.session_zero.service._latest(connection)
                         if desk.session_zero.service._organizes_bot_setup(connection, viewer, zero):
-                            preview = {"campaign_id": campaign_id, "setup_preview": True, "configured": configured}
+                            preview = {
+                                "campaign_id": campaign_id,
+                                "setup_preview": True,
+                                "configured": configured,
+                            }
                             if model_selection is not None:
                                 preview["handler_model"] = model_selection["models"]["handler"]
-                                preview["ai_on"] = (facilitator is not None and
-                                    campaign.reviewed_director.session.observer._activity_policy(connection)["enabled"])
+                                observer = campaign.reviewed_director.session.observer
+                                preview["ai_on"] = (
+                                    facilitator is not None
+                                    and observer._activity_policy(connection)["enabled"]
+                                )
                             return preview
                     raise WorkflowError("AI setup is private to the campaign facilitator.")
-            policy = campaign.reviewed_director.read(viewer, "", "activity-policy") if configured and facilitator is not None else None
+            policy = (
+                campaign.reviewed_director.read(viewer, "", "activity-policy")
+                if configured and facilitator is not None
+                else None
+            )
             return {
                 "campaign_id": campaign_id,
                 "configured": configured,
@@ -1117,7 +1236,9 @@ def serve(
             try:
                 campaign.reviewed_director.authorize_provider(viewer)
             except WorkflowError:
-                raise SignInError(HTTPStatus.FORBIDDEN, "AI provider controls are private to the facilitator.") from None
+                raise SignInError(
+                    HTTPStatus.FORBIDDEN, "AI provider controls are private to the facilitator."
+                ) from None
             return ai_trial
 
         def admit(self, runtime, viewer, *, legacy=False):
@@ -1131,9 +1252,7 @@ def serve(
                         )
                     )
                 if member is False:
-                    raise SignInError(
-                        HTTPStatus.FORBIDDEN, "Campaign membership is inactive."
-                    )
+                    raise SignInError(HTTPStatus.FORBIDDEN, "Campaign membership is inactive.")
                 if member:
                     return
                 if legacy:
@@ -1144,15 +1263,9 @@ def serve(
         def list_campaigns(self, query):
             identity = discord.resolve(self.headers.get("Authorization", ""))
             channel = parse_qs(query).get("channel", [None])[0]
-            permitted = [
-                item for item in bindings() if item.role_id in identity.role_ids
-            ]
+            permitted = [item for item in bindings() if item.role_id in identity.role_ids]
             preferred = next(
-                (
-                    item.id
-                    for item in permitted
-                    if channel and item.channel_id == channel
-                ),
+                (item.id for item in permitted if channel and item.channel_id == channel),
                 None,
             )
             available = [{"id": item.id, "name": item.name} for item in permitted]
@@ -1169,15 +1282,10 @@ def serve(
 
         def read_object(self, limit: int, keys: set[str] | None = None) -> dict:
             size = int(self.headers.get("Content-Length", "0"))
-            if (
-                self.headers.get_content_type() != "application/json"
-                or not 0 < size <= limit
-            ):
+            if self.headers.get_content_type() != "application/json" or not 0 < size <= limit:
                 raise ValueError
             value = json.loads(self.rfile.read(size))
-            if not isinstance(value, dict) or (
-                keys is not None and value.keys() != keys
-            ):
+            if not isinstance(value, dict) or (keys is not None and value.keys() != keys):
                 raise ValueError
             return value
 
@@ -1197,8 +1305,7 @@ def serve(
                 ) or (
                     guild_id is not None
                     and (
-                        not isinstance(guild_id, str)
-                        or not re.fullmatch(r"[0-9]{17,20}", guild_id)
+                        not isinstance(guild_id, str) or not re.fullmatch(r"[0-9]{17,20}", guild_id)
                     )
                 ):
                     raise ValueError
@@ -1215,7 +1322,8 @@ def serve(
 
         def send_access_error(self, error):
             reauthenticate = discord is not None and error.status in (
-                HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN
+                HTTPStatus.UNAUTHORIZED,
+                HTTPStatus.FORBIDDEN,
             )
             payload = {"error": str(error)}
             if reauthenticate:
@@ -1224,7 +1332,8 @@ def serve(
                 self.send_json(error.status, payload)
             else:
                 self.send_payload(
-                    error.status, json.dumps(payload).encode("utf-8"),
+                    error.status,
+                    json.dumps(payload).encode("utf-8"),
                     Retry_After=str(error.retry_after),
                 )
 
@@ -1251,10 +1360,15 @@ def serve(
             except WorkflowError as error:
                 self.send_json(HTTPStatus.FORBIDDEN, {"error": str(error)})
                 return
-            protected = campaign.managed and path.startswith("/api/") and path != "/api/activity/config"
+            protected = (
+                campaign.managed and path.startswith("/api/") and path != "/api/activity/config"
+            )
             with campaign.work_lock if protected else nullcontext():
                 if protected and campaign.retired:
-                    self.send_json(HTTPStatus.GONE, {"error": "This campaign was archived. Reopen the Activity."})
+                    self.send_json(
+                        HTTPStatus.GONE,
+                        {"error": "This campaign was archived. Reopen the Activity."},
+                    )
                     return
                 self.get_activity(request, campaign)
 
@@ -1297,9 +1411,12 @@ def serve(
                         "reviewed_ai_trial": ai_trial is not None,
                         "campaign_setup": catalog is not None,
                         "campaign_switcher": catalog is not None,
-                        "director_trial": director is not None or bool(discord and discord.campaign_roles_only),
+                        "director_trial": director is not None
+                        or bool(discord and discord.campaign_roles_only),
                         "tester_role_gate": bool(
-                            discord and not discord.campaign_roles_only and discord.config.tester_role_ids
+                            discord
+                            and not discord.campaign_roles_only
+                            and discord.config.tester_role_ids
                         ),
                         "campaign_role_gate": bool(discord and discord.campaign_roles_only),
                     },
@@ -1316,9 +1433,11 @@ def serve(
                 try:
                     _, viewer = self.session()
                     if path == "/api/dm-receipts":
-                        receipts = inbox_notices.recent_receipts(
-                            service.store.campaign_id, viewer.user_id
-                        ) if inbox_notices else []
+                        receipts = (
+                            inbox_notices.recent_receipts(service.store.campaign_id, viewer.user_id)
+                            if inbox_notices
+                            else []
+                        )
                         self.send_json(HTTPStatus.OK, {"receipts": receipts})
                         return
                     receipt = self.read_dm_receipt(campaign, viewer, match[1])
@@ -1326,7 +1445,10 @@ def serve(
                     self.send_access_error(error)
                     return
                 except (WorkflowError, sa.exc.SQLAlchemyError, sqlite3.Error, OSError):
-                    self.send_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "DM status is temporarily unavailable."})
+                    self.send_json(
+                        HTTPStatus.SERVICE_UNAVAILABLE,
+                        {"error": "DM status is temporarily unavailable."},
+                    )
                     return
                 if receipt is None:
                     self.send_json(HTTPStatus.NOT_FOUND, {"error": "DM receipt unavailable."})
@@ -1349,26 +1471,35 @@ def serve(
                     self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Invalid review or scene."})
                 except WorkflowError as error:
                     self.send_json(HTTPStatus.FORBIDDEN, {"error": str(error)})
-            elif (campaign.managed and (match := SETUP_ROUTE.fullmatch(path))
-                  and match[1] in SETUP_READ):
+            elif (
+                campaign.managed
+                and (match := SETUP_ROUTE.fullmatch(path))
+                and match[1] in SETUP_READ
+            ):
                 try:
                     _, viewer = self.session()
                     adapter, scene = campaign_opening(campaign, match[1])
                     try:
                         record = adapter.read(viewer, scene, match[1], match[2])
                     except WorkflowError:
-                        if path != SESSION_ZERO_PATH or not self.may_preview_setup(campaign, viewer):
+                        if path != SESSION_ZERO_PATH or not self.may_preview_setup(
+                            campaign, viewer
+                        ):
                             raise
                         record = self.session_zero_preview(campaign, viewer, adapter)
                     if match[1] == "session-zero" and record.get("bot_managed"):
                         visible = set(record["members"]) | set(record.get("group_options", ()))
                         record["member_names"] = {
-                            person["id"]: person["name"] for person in setup.campaign_members(viewer)
+                            person["id"]: person["name"]
+                            for person in setup.campaign_members(viewer)
                             if person["id"] in visible
                         }
                         if first := record.get("first_briefing"):
                             first["paired_ai_ready"] = paired_ai_ready(campaign)
-                            first["ai_on"] = bool(campaign.reviewed_director and campaign.reviewed_director.ai_enabled())
+                            first["ai_on"] = bool(
+                                campaign.reviewed_director
+                                and campaign.reviewed_director.ai_enabled()
+                            )
                     self.send_json(HTTPStatus.OK, record)
                 except SignInError as error:
                     self.send_json(error.status, {"error": str(error)})
@@ -1399,15 +1530,24 @@ def serve(
                 except SignInError as error:
                     self.send_json(error.status, {"error": str(error)})
                 except WorkflowError:
-                    self.send_json(HTTPStatus.FORBIDDEN, {"error": "AI provider controls are unavailable."})
+                    self.send_json(
+                        HTTPStatus.FORBIDDEN, {"error": "AI provider controls are unavailable."}
+                    )
             elif path == "/api/activity/review-scenes":
                 try:
                     _, viewer = self.session()
                     adapter = campaign.reviewed_director
-                    self.send_json(HTTPStatus.OK, adapter.trial_scenes(viewer) if adapter else {"scenes": []})
+                    self.send_json(
+                        HTTPStatus.OK, adapter.trial_scenes(viewer) if adapter else {"scenes": []}
+                    )
                 except (SignInError, WorkflowError):
-                    self.send_json(HTTPStatus.FORBIDDEN, {"error": "Scene discovery is unavailable."})
-            elif (adapter := campaign.reviewed_director or (fixture_director if campaign is default else None)) and (match := DIRECTOR_ROUTE.fullmatch(path)):
+                    self.send_json(
+                        HTTPStatus.FORBIDDEN, {"error": "Scene discovery is unavailable."}
+                    )
+            elif (
+                adapter := campaign.reviewed_director
+                or (fixture_director if campaign is default else None)
+            ) and (match := DIRECTOR_ROUTE.fullmatch(path)):
                 try:
                     _, viewer = self.session()
                     value = adapter.read(viewer, match[1], match[2], match[3])
@@ -1445,9 +1585,8 @@ def serve(
                             "mailbox": f"{service.store.campaign_id}:{viewer.user_id}",
                             "communications": contacts,
                             "members": [
-                                person | {"online": person["id"] in online}
-                                for person in people
-                            ]
+                                person | {"online": person["id"] in online} for person in people
+                            ],
                         },
                     )
                 except SignInError as error:
@@ -1482,29 +1621,30 @@ def serve(
                     if art_id == "catalog":
                         self.send_json(HTTPStatus.OK, CATALOG)
                     elif art_id in ARTWORK:
-                        self.send_payload(
-                            HTTPStatus.OK, artwork_bytes(art_id), "image/webp"
-                        )
+                        self.send_payload(HTTPStatus.OK, artwork_bytes(art_id), "image/webp")
                     else:
-                        self.send_json(
-                            HTTPStatus.NOT_FOUND, {"error": "Artwork unavailable."}
-                        )
+                        self.send_json(HTTPStatus.NOT_FOUND, {"error": "Artwork unavailable."})
                 except SignInError as error:
                     self.send_json(error.status, {"error": str(error)})
             elif path == "/api/player-setup":
                 try:
                     _, viewer = self.session()
                     query = parse_qs(request.query, keep_blank_values=True)
-                    pilot_mode = bound_roster and viewer == handler and query.get("perspective") == ["pilot"]
+                    pilot_mode = (
+                        bound_roster and viewer == handler and query.get("perspective") == ["pilot"]
+                    )
                     scene = query.get("scene")
                     if scene is not None and (
                         len(scene) != 1 or not re.fullmatch(r"relay|[0-9a-f]{16}", scene[0])
                     ):
                         raise SignInError(HTTPStatus.BAD_REQUEST, "Select one scene.")
-                    record = setup.view(viewer, pilot_mode=pilot_mode, scene_id=scene[0] if scene else None)
+                    record = setup.view(
+                        viewer, pilot_mode=pilot_mode, scene_id=scene[0] if scene else None
+                    )
                     if record["stage"] == "active" and setup.records:
                         joined = [
-                            room["id"] for room in record["directory"]["rooms"]
+                            room["id"]
+                            for room in record["directory"]["rooms"]
                             if room["joined"] and room.get("archived_at") is None
                         ]
                         record["handover_dialogue"] = setup.records.handover_dialogue(
@@ -1515,15 +1655,28 @@ def serve(
                     if bound_roster and "communications" not in record:
                         with setup.store.engine.connect() as connection:
                             from girlframe.services.m2_state import load_state
+
                             state = load_state(connection, setup.store.campaign_id)
                         record["communications"] = setup.communication_view(viewer, state)
                     self.send_json(
                         HTTPStatus.OK,
                         record
-                        | {"mailbox": f"{setup.store.campaign_id}:{viewer.user_id}",
-                           "handler_account":bound_roster and viewer == handler,
-                           "perspective":"pilot" if pilot_mode else "handler" if viewer == handler else "pilot",
-                           "handler_pilot_notice":("The current engine excludes the Handler account from Pilot activation and Status ranks. You can prepare your own draft here; playing it requires native dual-role support.") if pilot_mode and record["stage"] != "active" else None},
+                        | {
+                            "mailbox": f"{setup.store.campaign_id}:{viewer.user_id}",
+                            "handler_account": bound_roster and viewer == handler,
+                            "perspective": "pilot"
+                            if pilot_mode
+                            else "handler"
+                            if viewer == handler
+                            else "pilot",
+                            "handler_pilot_notice": (
+                                "The current engine excludes the Handler account from Pilot "
+                                "activation and Status ranks. You can prepare your own draft here; "
+                                "playing it requires native dual-role support."
+                            )
+                            if pilot_mode and record["stage"] != "active"
+                            else None,
+                        },
                     )
                 except SignInError as error:
                     self.send_json(error.status, {"error": str(error)})
@@ -1541,17 +1694,13 @@ def serve(
                     self.send_json(
                         HTTPStatus.OK,
                         battlefield.view(
-                            DRILL_OPPONENT
-                            if not native and viewer == OTHER
-                            else viewer
+                            DRILL_OPPONENT if not native and viewer == OTHER else viewer
                         ),
                     )
                 except SignInError as error:
                     self.send_json(error.status, {"error": str(error)})
                 except BattlefieldChanged as error:
-                    self.send_json(
-                        HTTPStatus.SERVICE_UNAVAILABLE, {"error": str(error)}
-                    )
+                    self.send_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": str(error)})
                 except WorkflowError as error:
                     self.send_json(HTTPStatus.CONFLICT, {"error": str(error)})
             elif match := TRANSCRIPT_ROUTE.fullmatch(path):
@@ -1560,8 +1709,9 @@ def serve(
                     if director_room(match[1]):
                         timeline = fixture_director.timeline(viewer, director_scene)
                         transcript = (
-                            setup.transcript(viewer, match[1]) if timeline["open"] else
-                            {"receipts": setup.scene_plays.receipts(viewer, {"900": match[1]})}
+                            setup.transcript(viewer, match[1])
+                            if timeline["open"]
+                            else {"receipts": setup.scene_plays.receipts(viewer, {"900": match[1]})}
                         )
                         with service.store.engine.connect() as connection:
                             from girlframe.services.m2_state import load_state
@@ -1571,17 +1721,38 @@ def serve(
                         for entry in timeline["entries"]:
                             actor = entry["actor"]
                             sheet = state.sheets.get(actor["entity"])
-                            names = {npc.id: npc.name for npc in state.world.npcs} if state.world else {}
-                            label = "GM" if actor["kind"] == "gm" else "Handler" if actor["kind"] == "handler" else names.get(actor["entity"], "NPC") if actor["kind"] == "npc" else (
-                                sheet.callsign if sheet and sheet.character_id == actor["incarnation"] else "Pilot"
+                            names = (
+                                {npc.id: npc.name for npc in state.world.npcs}
+                                if state.world
+                                else {}
                             )
-                            transcript["entries"].append({
-                                "id": entry["sequence"] * 1000 + entry["ordinal"],
-                                "callsign": label, "body": entry["text"], "created": entry["created"],
-                                "action": entry.get("action"),
-                            })
-                        transcript["director"] = {"scene": director_scene, "revision": timeline["revision"],
-                                                  "open": timeline["open"]}
+                            label = (
+                                "GM"
+                                if actor["kind"] == "gm"
+                                else "Handler"
+                                if actor["kind"] == "handler"
+                                else names.get(actor["entity"], "NPC")
+                                if actor["kind"] == "npc"
+                                else (
+                                    sheet.callsign
+                                    if sheet and sheet.character_id == actor["incarnation"]
+                                    else "Pilot"
+                                )
+                            )
+                            transcript["entries"].append(
+                                {
+                                    "id": entry["sequence"] * 1000 + entry["ordinal"],
+                                    "callsign": label,
+                                    "body": entry["text"],
+                                    "created": entry["created"],
+                                    "action": entry.get("action"),
+                                }
+                            )
+                        transcript["director"] = {
+                            "scene": director_scene,
+                            "revision": timeline["revision"],
+                            "open": timeline["open"],
+                        }
                     else:
                         transcript = setup.transcript(viewer, match[1])
                     self.send_json(HTTPStatus.OK, transcript)
@@ -1602,9 +1773,7 @@ def serve(
                     label, viewer = self.session()
                     self.send_json(
                         HTTPStatus.OK,
-                        MissionDesk(service).view(
-                            viewer, label, lifecycle=bound_roster
-                        ),
+                        MissionDesk(service).view(viewer, label, lifecycle=bound_roster),
                     )
                 except SignInError as error:
                     self.send_json(error.status, {"error": str(error)})
@@ -1620,12 +1789,12 @@ def serve(
             approved = origin == expected_origin or (
                 rehearsal_origin is not None and origin == rehearsal_origin
             )
-            if (not discord and self.headers.get("Host") != self.server.origin_host) or not approved:
+            if (
+                not discord and self.headers.get("Host") != self.server.origin_host
+            ) or not approved:
                 self.send_json(
                     HTTPStatus.FORBIDDEN,
-                    {
-                        "error": "Only the configured Activity origin may submit changes."
-                    },
+                    {"error": "Only the configured Activity origin may submit changes."},
                 )
                 return
             request_path = urlsplit(self.path)
@@ -1644,7 +1813,10 @@ def serve(
                 return
             with campaign.work_lock if campaign.managed else nullcontext():
                 if campaign.retired:
-                    self.send_json(HTTPStatus.GONE, {"error": "This campaign was archived. Reopen the Activity."})
+                    self.send_json(
+                        HTTPStatus.GONE,
+                        {"error": "This campaign was archived. Reopen the Activity."},
+                    )
                     return
                 self.post_activity(request_path, campaign, session)
 
@@ -1665,8 +1837,22 @@ def serve(
                     self.send_json(HTTPStatus.CONFLICT, {"error": str(error)})
                 except (TypeError, ValueError) as error:
                     self.send_json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
-                except (OSError, RuntimeError, WorkflowError, sqlite3.Error, sa.exc.SQLAlchemyError):
-                    self.send_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "Campaign reset could not complete. Reopen the Activity to check the current campaign."})
+                except (
+                    OSError,
+                    RuntimeError,
+                    WorkflowError,
+                    sqlite3.Error,
+                    sa.exc.SQLAlchemyError,
+                ):
+                    self.send_json(
+                        HTTPStatus.SERVICE_UNAVAILABLE,
+                        {
+                            "error": (
+                                "Campaign reset could not complete. "
+                                "Reopen the Activity to check the current campaign."
+                            )
+                        },
+                    )
                 return
             if path == "/api/director-trial" and (director or campaign.training):
                 try:
@@ -1674,9 +1860,15 @@ def serve(
                     if not KEY.fullmatch(key):
                         raise ValueError
                     data = self.read_object(32768)
-                    self.send_json(HTTPStatus.OK, (director or campaign.training).perform(session[1], key, data))
+                    self.send_json(
+                        HTTPStatus.OK,
+                        (director or campaign.training).perform(session[1], key, data),
+                    )
                 except (TypeError, ValueError, UnicodeError):
-                    self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Review the trial form and its required fields."})
+                    self.send_json(
+                        HTTPStatus.BAD_REQUEST,
+                        {"error": "Review the trial form and its required fields."},
+                    )
                 except WorkflowError as error:
                     self.send_json(HTTPStatus.CONFLICT, {"error": str(error)})
                 return
@@ -1688,41 +1880,89 @@ def serve(
                     viewer = session[1]
                     reviews = FacilitatorService(setup.game)
                     if match[1] is None:
-                        data = self.read_object(8192, {"room", "source", "rule", "revision", "reason"})
-                        if (type(data["revision"]) is not int or any(
-                            not isinstance(data[field], str) for field in ("room", "source", "rule", "reason")
-                        ) or not 1 <= len(data["reason"].strip()) <= 1200):
+                        data = self.read_object(
+                            8192, {"room", "source", "rule", "revision", "reason"}
+                        )
+                        if (
+                            type(data["revision"]) is not int
+                            or any(
+                                not isinstance(data[field], str)
+                                for field in ("room", "source", "rule", "reason")
+                            )
+                            or not 1 <= len(data["reason"].strip()) <= 1200
+                        ):
                             raise ValueError
                         room_plays = setup.room_plays(viewer, data["room"])
                         kind, _, source = data["source"].partition(":")
-                        result = reviews.request(viewer, key, room_plays.channel, kind, source,
-                                                 data["rule"], data["revision"], data["reason"].strip(), shared=True)
+                        result = reviews.request(
+                            viewer,
+                            key,
+                            room_plays.channel,
+                            kind,
+                            source,
+                            data["rule"],
+                            data["revision"],
+                            data["reason"].strip(),
+                            shared=True,
+                        )
                     else:
-                        data = self.read_object(8192, {"revision", "game_revision", "operation", "text", "adapter"})
-                        if (any(type(data[field]) is not int for field in ("revision", "game_revision"))
-                            or any(not isinstance(data[field], str) for field in ("operation", "text", "adapter"))
-                            or len(data["text"]) > 1200):
+                        data = self.read_object(
+                            8192, {"revision", "game_revision", "operation", "text", "adapter"}
+                        )
+                        if (
+                            any(
+                                type(data[field]) is not int
+                                for field in ("revision", "game_revision")
+                            )
+                            or any(
+                                not isinstance(data[field], str)
+                                for field in ("operation", "text", "adapter")
+                            )
+                            or len(data["text"]) > 1200
+                        ):
                             raise ValueError
-                        result = reviews.change(viewer, key, str(UUID(match[1])), data["revision"],
-                                                data["game_revision"], data["operation"], data["text"],
-                                                adapter=data["adapter"])
+                        result = reviews.change(
+                            viewer,
+                            key,
+                            str(UUID(match[1])),
+                            data["revision"],
+                            data["game_revision"],
+                            data["operation"],
+                            data["text"],
+                            adapter=data["adapter"],
+                        )
                     self.send_json(HTTPStatus.OK, result)
                 except (TypeError, ValueError, UnicodeError):
-                    self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Use the current facilitator review form."})
+                    self.send_json(
+                        HTTPStatus.BAD_REQUEST,
+                        {"error": "Use the current facilitator review form."},
+                    )
                 except WorkflowError as error:
                     self.send_json(HTTPStatus.CONFLICT, {"error": str(error)})
                 return
-            if (campaign.managed and (match := SETUP_ROUTE.fullmatch(path))
-                    and (match[1] in SETUP_WRITE or match[1].startswith("time-")) and match[2] is None):
+            if (
+                campaign.managed
+                and (match := SETUP_ROUTE.fullmatch(path))
+                and (match[1] in SETUP_WRITE or match[1].startswith("time-"))
+                and match[2] is None
+            ):
                 try:
                     key = self.headers.get("Idempotency-Key", "")
                     if not KEY.fullmatch(key):
                         raise ValueError
                     data = self.read_object(96_000 if match[1] == "opening-save" else 16384)
-                    if match[1] == "session-zero-briefing-offer" and data.get("enable_ai") is True and not paired_ai_ready(campaign):
-                        raise WorkflowError("Configure both the Handler and Director models before enabling them.")
+                    if (
+                        match[1] == "session-zero-briefing-offer"
+                        and data.get("enable_ai") is True
+                        and not paired_ai_ready(campaign)
+                    ):
+                        raise WorkflowError(
+                            "Configure both the Handler and Director models before enabling them."
+                        )
                     adapter, scene = campaign_opening(campaign, match[1])
-                    self.send_json(HTTPStatus.OK, adapter.write(session[1], key, scene, match[1], data))
+                    self.send_json(
+                        HTTPStatus.OK, adapter.write(session[1], key, scene, match[1], data)
+                    )
                 except (TypeError, ValueError, UnicodeError):
                     self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Invalid setup command."})
                 except WorkflowError as error:
@@ -1738,21 +1978,32 @@ def serve(
                         data = self.read_object(1024, {"models", "revision"})
                         provider.save_models(campaign.reviewed_director, session[1], key, data)
                         campaign.reviewed_director = provider.adapter(
-                            setup.game, opening_channel=SCENE, setup=setup, battlefield=campaign.battlefield
+                            setup.game,
+                            opening_channel=SCENE,
+                            setup=setup,
+                            battlefield=campaign.battlefield,
                         )
                     else:
                         data = self.read_object(1024, {"enabled", "revision"})
-                        if (type(data["enabled"]) is not bool or type(data["revision"]) is not int
-                                or data["revision"] < 0):
+                        if (
+                            type(data["enabled"]) is not bool
+                            or type(data["revision"]) is not int
+                            or data["revision"] < 0
+                        ):
                             raise ValueError
-                        campaign.reviewed_director.write(session[1], key, "", "activity-policy-save", data)
+                        campaign.reviewed_director.write(
+                            session[1], key, "", "activity-policy-save", data
+                        )
                     self.send_json(HTTPStatus.OK, self.ai_setup(campaign, session[1]))
                 except SignInError as error:
                     self.send_access_error(error)
                 except WorkflowError as error:
                     self.send_json(HTTPStatus.CONFLICT, {"error": str(error)})
                 except (TypeError, ValueError, UnicodeError):
-                    self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Use the saved revision and valid model IDs."})
+                    self.send_json(
+                        HTTPStatus.BAD_REQUEST,
+                        {"error": "Use the saved revision and valid model IDs."},
+                    )
                 return
             if path == "/api/activity/ai-provider":
                 try:
@@ -1762,18 +2013,28 @@ def serve(
                     if not KEY.fullmatch(key) or not isinstance(data["role"], str):
                         raise ValueError
                     if not campaign.reviewed_director.ai_enabled():
-                        self.send_json(HTTPStatus.CONFLICT, {"error": "Enable AI assistance before checking the connection."})
+                        self.send_json(
+                            HTTPStatus.CONFLICT,
+                            {"error": "Enable AI assistance before checking the connection."},
+                        )
                         return
                     outcome = provider.check(data["role"], key)
                     self.send_json(HTTPStatus.OK, {"result": outcome, **provider.status()})
                 except SignInError as error:
                     self.send_json(error.status, {"error": str(error)})
                 except WorkflowError:
-                    self.send_json(HTTPStatus.FORBIDDEN, {"error": "AI provider controls are unavailable."})
+                    self.send_json(
+                        HTTPStatus.FORBIDDEN, {"error": "AI provider controls are unavailable."}
+                    )
                 except (TypeError, ValueError, UnicodeError):
-                    self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Select an enabled role and a new check key."})
+                    self.send_json(
+                        HTTPStatus.BAD_REQUEST,
+                        {"error": "Select an enabled role and a new check key."},
+                    )
                 return
-            adapter = campaign.reviewed_director or (fixture_director if campaign is default else None)
+            adapter = campaign.reviewed_director or (
+                fixture_director if campaign is default else None
+            )
             if (match := DIRECTOR_ROUTE.fullmatch(path)) and match[3] is None:
                 if adapter is None:
                     self.send_json(HTTPStatus.NOT_FOUND, {"error": "Scene work is unavailable."})
@@ -1801,9 +2062,7 @@ def serve(
                     )
                     self.send_json(HTTPStatus.OK, receipt)
                 except (TypeError, ValueError, UnicodeError):
-                    self.send_json(
-                        HTTPStatus.BAD_REQUEST, {"error": "Invalid message."}
-                    )
+                    self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Invalid message."})
                 except WorkflowError as error:
                     self.send_json(HTTPStatus.CONFLICT, {"error": str(error)})
                 return
@@ -1818,9 +2077,7 @@ def serve(
                         receipt = self.queue_notice("mission", service, session[1], receipt)
                     self.send_json(HTTPStatus.OK, receipt)
                 except (TypeError, ValueError, UnicodeError):
-                    self.send_json(
-                        HTTPStatus.BAD_REQUEST, {"error": "Invalid mission fields."}
-                    )
+                    self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Invalid mission fields."})
                 except WorkflowError as error:
                     self.send_json(HTTPStatus.CONFLICT, {"error": str(error)})
                 return
@@ -1844,23 +2101,21 @@ def serve(
                 handler_steps.update(
                     ("/api/player-setup/keep-choice", "/api/player-setup/scene-choice")
                 )
-                handler_plays = {
-                    "/api/player-setup/" + step for step in HANDLER_PLAY_STEPS
-                }
+                handler_plays = {"/api/player-setup/" + step for step in HANDLER_PLAY_STEPS}
                 if path in handler_plays and session[1] != handler:
                     self.send_json(
                         HTTPStatus.FORBIDDEN,
                         {"error": "This operation is reserved for the Handler."},
                     )
                     return
-                handler_steps.update(
-                    handler_plays | {"/api/player-setup/handler-punishment"}
-                )
+                handler_steps.update(handler_plays | {"/api/player-setup/handler-punishment"})
             battle = BATTLEFIELD_ROUTE.fullmatch(path) if battlefield else None
             native = isinstance(battlefield, PrivateBattlefield)
             if (
                 session[1] == handler
-                and not (bound_roster and parse_qs(request_path.query).get("perspective") == ["pilot"])
+                and not (
+                    bound_roster and parse_qs(request_path.query).get("perspective") == ["pilot"]
+                )
                 and path not in handler_steps
                 and not (native and battle)
             ):
@@ -1875,18 +2130,14 @@ def serve(
                     if not KEY.fullmatch(command_key):
                         raise ValueError
                     value = battlefield.perform(
-                        DRILL_OPPONENT
-                        if not native and session[1] == OTHER
-                        else session[1],
+                        DRILL_OPPONENT if not native and session[1] == OTHER else session[1],
                         command_key,
                         battle[1],
                         self.read_object(8192),
                     )
                     self.send_json(HTTPStatus.OK, value)
                 except (TypeError, ValueError):
-                    self.send_json(
-                        HTTPStatus.BAD_REQUEST, {"error": "Invalid battlefield fields."}
-                    )
+                    self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Invalid battlefield fields."})
                 except WorkflowError as error:
                     self.send_json(HTTPStatus.CONFLICT, {"error": str(error)})
                 return
@@ -1930,23 +2181,42 @@ def serve(
                         else nullcontext()
                     )
                     with lock:
-                        if bound_roster and step in ("review","activate"):
+                        if bound_roster and step in ("review", "activate"):
                             setup.bot_enrollment.reconcile(owner=session[1].user_id)
                         if step == "room-post" and director_room(data.get("target")):
-                            if data.keys() != {"target", "text", "fictional_channel", "scene_revision"}:
+                            if data.keys() != {
+                                "target",
+                                "text",
+                                "fictional_channel",
+                                "scene_revision",
+                            }:
                                 raise ValueError
-                            receipt = fixture_director.write(session[1], key, director_scene, "input", {
-                                "expected_scene_revision": data["scene_revision"],
-                                "speaker": "pilot",
-                                "text": data["text"],
-                                "fictional_channel": data["fictional_channel"],
-                            })
+                            receipt = fixture_director.write(
+                                session[1],
+                                key,
+                                director_scene,
+                                "input",
+                                {
+                                    "expected_scene_revision": data["scene_revision"],
+                                    "speaker": "pilot",
+                                    "text": data["text"],
+                                    "fictional_channel": data["fictional_channel"],
+                                },
+                            )
                         else:
                             receipt = setup.perform(session[1], key, step, data)
-                        if bound_roster and step in ("profile","build","creation-choice","select-bond","bond-decision"):
+                        if bound_roster and step in (
+                            "profile",
+                            "build",
+                            "creation-choice",
+                            "select-bond",
+                            "bond-decision",
+                        ):
                             setup.bot_enrollment.reconcile(owner=session[1].user_id)
                     if step in ("bond", "scene-invite"):
-                        receipt = self.queue_notice(step.replace("-", "_"), setup, session[1], receipt)
+                        receipt = self.queue_notice(
+                            step.replace("-", "_"), setup, session[1], receipt
+                        )
                     if step == "room-create" and receipt.get("invitations"):
                         receipt["invitations"] = [
                             self.queue_notice("scene_invite", setup, session[1], invite)
@@ -1954,9 +2224,7 @@ def serve(
                         ]
                     self.send_json(HTTPStatus.OK, receipt)
                 except (TypeError, ValueError, UnicodeError):
-                    self.send_json(
-                        HTTPStatus.BAD_REQUEST, {"error": "Invalid setup fields."}
-                    )
+                    self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Invalid setup fields."})
                 except WorkflowError as error:
                     self.send_json(HTTPStatus.CONFLICT, {"error": str(error)})
                 return
@@ -1978,9 +2246,7 @@ def serve(
                 ):
                     raise ValueError
             except (ValueError, UnicodeError):
-                self.send_json(
-                    HTTPStatus.BAD_REQUEST, {"error": "Invalid mission response."}
-                )
+                self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Invalid mission response."})
                 return
 
             try:
@@ -1988,9 +2254,7 @@ def serve(
             except WorkflowError as error:
                 reason = str(error)
                 if "visible only" in reason or reason == "Unknown mission.":
-                    self.send_json(
-                        HTTPStatus.NOT_FOUND, {"error": "Mission offer unavailable."}
-                    )
+                    self.send_json(HTTPStatus.NOT_FOUND, {"error": "Mission offer unavailable."})
                 else:
                     self.send_json(
                         HTTPStatus.CONFLICT,
@@ -2014,9 +2278,7 @@ def serve(
                         label: f"{server.origin}/launch/{key}"
                         for key, (label, _) in participants.items()
                     },
-                    "discord_activity_origin": discord.config.origin
-                    if discord
-                    else None,
+                    "discord_activity_origin": discord.config.origin if discord else None,
                 }
             ),
             flush=True,
@@ -2029,7 +2291,9 @@ def serve(
 
             Thread(target=stop_after_eof, daemon=True).start()
         if setup.scene_plays:
-            default.worker = setup.scene_plays.start_worker(work_lock=default.work_lock if default.managed else None)
+            default.worker = setup.scene_plays.start_worker(
+                work_lock=default.work_lock if default.managed else None
+            )
             workers.append(default.worker)
         if battlefield and not isinstance(battlefield, PrivateBattlefield):
             workers.append(battlefield.start_worker())
@@ -2038,8 +2302,12 @@ def serve(
             from campaign_bot import serve_commands
 
             commands = serve_commands(
-                discord.config, catalog, campaign_bot_token, provision_managed_campaign,
-                inbox_notices=inbox_notices, notice_pending=notice_pending,
+                discord.config,
+                catalog,
+                campaign_bot_token,
+                provision_managed_campaign,
+                inbox_notices=inbox_notices,
+                notice_pending=notice_pending,
                 scan_interactions=scan_interactions,
             )
         try:
@@ -2048,7 +2316,7 @@ def serve(
         finally:
             with runtime_lock:
                 shutting_down = True
-            for stopped, thread in workers:
+            for stopped, _ in workers:
                 stopped.set()
             for _, thread in workers:
                 thread.join(timeout=5)
@@ -2086,7 +2354,9 @@ if __name__ == "__main__":
         from director_trial import fork_discord_rehearsal, open_trial
 
         try:
-            config = DiscordConfig.load(os.environ, allow_dm=args.allow_dm) if args.discord else None
+            config = (
+                DiscordConfig.load(os.environ, allow_dm=args.allow_dm) if args.discord else None
+            )
             trial_name = args.p2_trial
             if args.fork_discord_rehearsal:
                 trial_name = fork_discord_rehearsal(RUNTIME / "p2-discord-trials", config)
@@ -2114,9 +2384,7 @@ if __name__ == "__main__":
     discord = None
     if args.discord:
         if not campaign.startswith("discord-"):
-            parser.error(
-                "Discord tests require a separate campaign name beginning with discord-."
-            )
+            parser.error("Discord tests require a separate campaign name beginning with discord-.")
         if not args.audit:
             try:
                 discord = DiscordSessions(
@@ -2134,7 +2402,10 @@ if __name__ == "__main__":
         campaign_registry = CampaignRegistry(RUNTIME / "activity-campaigns.sqlite3")
         registered = campaign_registry.bindings(discord.config.client_id, discord.config.guild_id)
         if not registered:
-            parser.error("Use the bot's /activity-campaign create command to bind this campaign to a Discord role.")
+            parser.error(
+                "Use the bot's /activity-campaign create command "
+                "to bind this campaign to a Discord role."
+            )
     service = (
         open_managed_campaign(registered[0], initialize=False)
         if registered
@@ -2154,9 +2425,7 @@ if __name__ == "__main__":
             inbox_dms=args.inbox_dms,
             p2_fixture=args.p2_fixture,
             p2_shadow_readiness=args.p2_shadow_readiness,
-            campaign_bot_token=os.environ.pop(
-                "GIRLFRAME_ACTIVITY_SETUP_BOT_TOKEN", None
-            )
+            campaign_bot_token=os.environ.pop("GIRLFRAME_ACTIVITY_SETUP_BOT_TOKEN", None)
             if args.bound_roster
             else None,
         )
