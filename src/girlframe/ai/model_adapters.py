@@ -582,6 +582,13 @@ class SceneInitiativeDraft(Contract):
     play_id: str | None = Field(default=None, max_length=120)
 
 
+class SceneReplyDraft(Contract):
+    kind: Literal["WAIT", "DIALOGUE"]
+    text: str = Field(default="", max_length=1600)
+    cited_references: tuple[str, ...] = Field(default=(), max_length=20)
+    rationale: str = Field(min_length=1, max_length=1200)
+
+
 class ModelReactions:
     def __init__(self, client: OpenAIResponses):
         self.client = client
@@ -608,13 +615,24 @@ class ModelReactions:
             "Waiting or declining may fit. Speak only for the actor in this request. "
             "The actual controller reviews the proposal and owns its decisions. "
         )
-        if packet.get("activity_alternate"):
+        if packet.get("activity_alternate") or packet.get("activity_alternate_dialogue"):
             instructions += (
                 "Use identity only to ground this character's own role and instincts. "
                 "Their approved drive, fear and situation determine what they do. "
                 "Keep rules terms and resources out of in-character lines. "
                 "Leave anyone else's actions, feelings and decisions open. "
             )
+        if packet.get("activity_alternate_dialogue"):
+            reply = self.client.generate(
+                instructions
+                + "Reply only to the heard comms in role.question, using this character's "
+                "voice and stakes in the moment. Address what the speaker actually said. "
+                "Give one in-character reply without a speaker tag or wait if the actor "
+                "would stay silent. Leave any other actor's answer open. Do not select a Play.",
+                {"role": role},
+                SceneReplyDraft,
+            )
+            return ReactionProposal(request_id=packet["request_id"], **reply.model_dump())
         if initiative:
             draft = self.client.generate(
                 instructions

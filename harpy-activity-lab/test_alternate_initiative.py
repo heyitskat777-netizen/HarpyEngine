@@ -6,7 +6,7 @@ import pytest
 from ai_native_plays import ActivityNativePlays
 from p2_scene import local_fixture_director
 from private_battlefield import TURN_FACT, PrivateBattlefield
-from test_activity_shadow_readiness import configure, consent, opt
+from test_activity_shadow_readiness import configure, consent, opt, submission
 from test_cast_service import change
 from test_gorgon_runtime import gorgon_source
 from test_harpy_beneath import prepared as harpy_prepared
@@ -502,6 +502,233 @@ def test_alternate_personality_is_owned_approved_and_used_by_the_facilitator(
     assert role["dossier"]["profile"]["character_setup"]["drive"] == drive
     assert role["initiative"]["agenda"]["plan"]["stake"] == drive
     assert "Unapproved private revision" not in str(role)
+
+
+@pytest.mark.parametrize(
+    ("kind", "voice"),
+    (("external_pilot", "Abrupt and familiar with the rig."), ("gorgon", "Patient and exact.")),
+)
+def test_alternate_comms_uses_approved_voice_and_survives_reopen(ledger, kind, voice):
+    game, _, _, owner, actor, speaker, _ = native_case(ledger, kind)
+    excluded = next(viewer for viewer in (ADMIN, PLAYER, OTHER) if viewer not in (owner, speaker))
+    calls = []
+    reply = "The relay was silent before your signal reached me."
+
+    class ReplyModel:
+        def generate(self, instructions, packet, response):
+            calls.append(packet["role"])
+            assert "Reply only to the heard comms" in instructions
+            return response(kind="DIALOGUE", text=reply, rationale="PRIVATE_DRAFT_REASON")
+
+    model = ReplyModel()
+
+    def open_activity():
+        reopened = activity(game, model)
+        if kind == "gorgon":
+            reopened.session.context.native_play_projection = None
+        return reopened
+
+    app = open_activity()
+    with ledger.engine.connect() as c:
+        scene = game.scene(c, 900)["id"]
+    setup_initiative(game, scene, app)
+    actor_data = actor.model_dump(mode="json")
+    saved = app.write(
+        owner,
+        "voice",
+        scene,
+        "portrayal-draft",
+        {
+            "actor": actor_data,
+            "version": 0,
+            "portrayal": {"voice": voice},
+        },
+    )
+    app.write(
+        owner,
+        "voice-approve",
+        scene,
+        "portrayal-confirm",
+        {
+            "actor": actor_data,
+            "id": saved["id"],
+        },
+    )
+    app.write(
+        owner,
+        "voice-draft",
+        scene,
+        "portrayal-draft",
+        {
+            "actor": actor_data,
+            "version": 1,
+            "portrayal": {"voice": "UNCONFIRMED_PORTRAYAL"},
+        },
+    )
+
+    def comms():
+        return [
+            option
+            for option in app.read(ADMIN, scene, "scene-initiative")["options"]
+            if option["source"]["kind"] == "comms"
+        ]
+
+    line = "Relay contact, how long has the beacon been dark?"
+    _, source = submission(app, scene, speaker, "contact", line)
+    listener = current_ref(state(game), speaker.user_id).model_dump(mode="json")
+    assert comms() == []
+    app.write(
+        owner,
+        "enable-dialogue",
+        scene,
+        "scene-alternate-control",
+        {
+            "actor": actor_data,
+            "enabled": True,
+            "revision": None,
+        },
+    )
+    submission(app, scene, speaker, "private", "UNHEARD_PRIVATE_LINE", channel="private")
+    submission(app, scene, speaker, "gm", "GM, UNHEARD_REQUEST")
+    (option,) = comms()
+    assert option["actor"] == actor_data and option["quote"] == line
+    assert option["source"]["id"] == source["source_id"]
+    before = state(game)
+    request = app.write(
+        ADMIN, "open-reply", scene, "scene-initiative-open", {"option": option["id"]}
+    )
+    payload = {"request": request["id"]}
+    proposal = app.write(ADMIN, "draft-reply", scene, "reaction-generate", payload)["id"]
+    assert app.write(ADMIN, "draft-again", scene, "reaction-generate", payload)["id"] == proposal
+    (packet,) = calls
+    assert packet["actor"] == actor_data
+    assert packet["identity"]["kind"] == ("harpy" if kind == "external_pilot" else "gorgon")
+    assert packet["dossier"]["profile"]["voice"] == voice
+    assert packet["question"] == line and packet["native_plays"] == []
+    assert packet["available_actions"] == ["WAIT", "DIALOGUE"]
+    assert "UNHEARD_" not in str(packet) and "UNCONFIRMED_PORTRAYAL" not in str(packet)
+
+    assert app.read(excluded, scene, "work")["reactions"] == []
+    with pytest.raises(WorkflowError, match="REACTION_NOT_OWNED"):
+        app.read(speaker, scene, "npc-owner-review", proposal)
+    ledger.engine.dispose()
+    app = open_activity()
+    (pending,) = app.read(owner, scene, "work")["reactions"]
+    assert pending["id"] == proposal and pending["status"] == "awaiting_controller_review"
+    review = app.read(owner, scene, "npc-owner-review", proposal)
+    assert review["proposal"]["text"] == reply and "rationale" not in review["proposal"]
+    assert review["source_quote"] == line
+    assert listener in [item["actor"] for item in review["delivery_candidates"]]
+    approval = dict(proposal=proposal, decision="approve", reason="Approve the exact reply.")
+    with pytest.raises(WorkflowError, match="choose the actual listeners"):
+        app.write(owner, "no-recipients", scene, "npc-review", approval | {"recipients": []})
+    app.write(owner, "approve-reply", scene, "npc-review", approval | {"recipients": [listener]})
+    assert app.read(owner, scene, "work")["reactions"][0]["status"] == "awaiting_delivery"
+    assert all(entry["text"] != reply for entry in app.timeline(speaker, scene)["entries"])
+    delivery = {"proposal": proposal}
+    with pytest.raises(WorkflowError, match="REACTION_NOT_OWNED"):
+        app.write(speaker, "wrong-sender", scene, "npc-deliver", delivery)
+    receipt = app.write(owner, "send-reply", scene, "npc-deliver", delivery)
+
+    ledger.engine.dispose()
+    app = open_activity()
+    assert app.write(owner, "send-again", scene, "npc-deliver", delivery) == receipt
+    assert app.read(owner, scene, "work")["reactions"] == []
+    assert comms() == []
+    for viewer in (owner, speaker):
+        (entry,) = [x for x in app.timeline(viewer, scene)["entries"] if x["text"] == reply]
+        assert entry["id"] == receipt["id"] and entry["actor"] == actor_data
+    assert all(entry["text"] != reply for entry in app.timeline(excluded, scene)["entries"])
+    assert state(game) == before and game.dice.calls == 0
+
+
+@pytest.mark.parametrize("change", ("edit", "revoke", "wait"))
+def test_alternate_comms_closes_after_source_change_or_reviewed_wait(ledger, change):
+    game, _, _, owner, actor, speaker, _ = native_case(ledger, "external_pilot")
+
+    class ReplyModel:
+        def generate(self, instructions, packet, response):
+            if change == "wait":
+                return response(kind="WAIT", rationale="The Harpy stays silent.")
+            return response(
+                kind="DIALOGUE", text="The relay is clear.", rationale="Heard the pilot."
+            )
+
+    app = activity(game, ReplyModel())
+    with ledger.engine.connect() as c:
+        scene = game.scene(c, 900)["id"]
+    setup_initiative(game, scene, app)
+    actor_ref = actor.model_dump(mode="json")
+    granted = app.write(
+        owner,
+        "grant",
+        scene,
+        "scene-alternate-control",
+        {
+            "actor": actor_ref,
+            "enabled": True,
+            "revision": None,
+        },
+    )
+    _, source = submission(app, scene, speaker, "source", "Is the relay still clear?")
+    option = next(
+        item
+        for item in app.read(ADMIN, scene, "scene-initiative")["options"]
+        if item["source"]["kind"] == "comms"
+    )
+    request = app.write(ADMIN, "open", scene, "scene-initiative-open", {"option": option["id"]})
+    proposal = app.write(ADMIN, "draft", scene, "reaction-generate", {"request": request["id"]})[
+        "id"
+    ]
+    app.write(
+        owner,
+        "approve",
+        scene,
+        "npc-review",
+        dict(
+            proposal=proposal,
+            decision="approve",
+            reason="Heard the original line.",
+            recipients=[]
+            if change == "wait"
+            else [current_ref(state(game), speaker.user_id).model_dump(mode="json")],
+        ),
+    )
+    if change == "wait":
+        assert app.read(owner, scene, "work")["reactions"] == []
+        assert all(
+            item["source"]["kind"] != "comms"
+            for item in app.read(ADMIN, scene, "scene-initiative")["options"]
+        )
+        return
+    if change == "edit":
+        submission(
+            app,
+            scene,
+            speaker,
+            "edit",
+            "Is the relay still powered?",
+            source_id=source["source_id"],
+            expected_source_revision=1,
+        )
+    else:
+        app.write(
+            owner,
+            "revoke",
+            scene,
+            "scene-alternate-control",
+            {
+                "actor": actor_ref,
+                "enabled": False,
+                "revision": granted["revision"],
+            },
+        )
+    with pytest.raises(WorkflowError, match="STALE_NPC_DELIVERY|INITIATIVE_STALE"):
+        app.write(owner, "stale-send", scene, "npc-deliver", {"proposal": proposal})
+    assert app.read(owner, scene, "work")["reactions"][0]["status"] == "stale_reopen_source"
+    assert all(
+        entry["text"] != "The relay is clear." for entry in app.timeline(speaker, scene)["entries"]
+    )
 
 
 @pytest.mark.parametrize("changed", ("turn", "controller", "consent", "control"))

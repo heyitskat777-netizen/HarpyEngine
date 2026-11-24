@@ -8,9 +8,12 @@ from sqlalchemy import Connection
 
 from girlframe.ai.director import KnowledgeReference
 from girlframe.ai.director_dossiers import DossierPacket, DossierPressure
+from girlframe.ai.observation import Observation
 from girlframe.database import tables as t
-from girlframe.engine.m3_actor_state import ActorRef, CastRole
+from girlframe.engine.m2 import GameState
+from girlframe.engine.m3_actor_state import ActorRef, ActorView, CastRole
 from girlframe.engine.pilot_portrayal import PilotPortrayal
+from girlframe.services.activity_dialogue import npc_owned
 from girlframe.services.activity_scene_opening import ActivitySceneOpening
 from girlframe.services.campaign_difficulty import opening
 from girlframe.services.director_context import DirectorContextService
@@ -20,6 +23,7 @@ from girlframe.services.director_knowledge import DirectorKnowledgeService
 from girlframe.services.director_observation import _digest
 from girlframe.services.director_play_options import initiative_play_options
 from girlframe.services.m2_state import load_state
+from girlframe.services.m3_sentinel import require_communication
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -234,6 +238,57 @@ class DirectorInitiative:
         ):
             raise WorkflowError("INITIATIVE_REVIEW_OWNER: use the approved facilitator.")
 
+    def _recent_comms(
+        self, c: Connection, row: dict[str, Any], actors: tuple[ActorView, ...]
+    ) -> tuple[Observation, ...]:
+        table = t.director["inputs"]
+        recent = self.observer._pending(row["id"], 0, include_handled=True).where(
+            table.c.kind == "message",
+            sa.func.json_extract(table.c.body_json, "$.fictional_channel") == "comms",
+        )
+        capture = {actor.ref.token: actor.controller for actor in actors}
+        audience = tuple(sorted(str(uid) for uid in row["participants"]))
+        sources = tuple(
+            item
+            for raw in c.scalars(
+                recent.with_only_columns(table.c.body_json)
+                .order_by(table.c.sequence.desc())
+                .limit(20)
+            )
+            if (item := Observation.model_validate_json(raw)).cast_controllers == capture
+            and item.audience_ids == audience
+            and not item.gm_addressed
+        )
+        reserved = npc_owned(
+            c, self.store.campaign_id, row["id"], tuple(item.source_id for item in sources)
+        )
+        return tuple(item for item in sources if item.source_id not in reserved)
+
+    def _reply_source(
+        self,
+        c: Connection,
+        scene: str,
+        canon: GameState,
+        actor: ActorRef,
+        sources: tuple[Observation, ...],
+    ) -> Observation | None:
+        from girlframe.services.director_npc_delivery import NpcDeliveryService, heard_episode
+
+        delivery = NpcDeliveryService(self.context)
+        for source in sources:
+            if source.actor == actor:
+                continue
+            episode = heard_episode(actor, source.source_id, source.source_revision)
+            if delivery._record(c, scene, episode):
+                # Keep the reply attached to this turn. An older turn does not regain the floor.
+                return None
+            try:
+                require_communication(c, self.store.campaign_id, canon, source.actor, (actor,))
+            except WorkflowError:
+                continue
+            return source
+        return None
+
     def candidates(self, c: Connection, scene: str) -> list[dict[str, Any]]:
         row = self.observer._scene(c, scene)
         self.observer.game.scene_unpaused(c, scene)
@@ -249,15 +304,30 @@ class DirectorInitiative:
         native_guard = self.observer._guard(c, row, state)
         result = []
         alternate = self._alternate_roles(c, row)
-        canon = load_state(c, self.store.campaign_id) if alternate else None
-        for role in self.knowledge._actor_views(c, row):
+        grants = {
+            actor: grant
+            for actor, role in alternate.items()
+            if (grant := self._delegated(c, row, role)) is not None
+        }
+        actors = self.knowledge._actor_views(c, row)
+        comms = (
+            self._recent_comms(c, row, actors)
+            if state.activity_epoch is not None
+            and any(actor.kind in ("external_pilot", "gorgon") for actor in grants)
+            else ()
+        )
+        canon = load_state(c, self.store.campaign_id) if grants else None
+        for role in actors:
             actor = role.ref
-            delegated = self._delegated(c, row, alternate[actor]) if actor in alternate else None
+            delegated = grants.get(actor)
             if delegated:
                 plays = initiative_play_options(self.context, c, scene, actor, alternate=True)
-                if plays:
-                    turn = plays[0]["alternate"]["turn"]
-                    source_id = "native:" + _digest((scene, actor.token, delegated, turn))
+                reply = (
+                    self._reply_source(c, scene, canon, actor, comms)
+                    if canon is not None and comms and actor.kind in ("external_pilot", "gorgon")
+                    else None
+                )
+                if plays or reply:
                     dossier = self.dossiers._role_packet(
                         c, scene, actor, omit_stale_portrayal=True, activity_pilot=True
                     )
@@ -273,26 +343,48 @@ class DirectorInitiative:
                     elif canon and canon.world:
                         gorgon = next(x for x in canon.world.gorgons if x.id == actor.entity)
                         identity.update(gorgon_class=gorgon.gorgon_class, types=list(gorgon.types))
-                    result.append(
-                        dict(
-                            option=dict(
-                                id=_digest((source_id, "alternate")),
-                                actor=actor.model_dump(mode="json"),
-                                label=role.label,
-                                source=dict(kind="native", id=source_id),
-                                subject=subject,
-                            ),
-                            controller=str(role.controller),
-                            dossier=dossier.model_dump(mode="json"),
-                            references=[ref.model_dump(mode="json") for ref in refs],
-                            agenda=agenda,
-                            role_identity=identity,
-                            trigger={"kind": "current_turn" if turn else "current_scene"},
-                            native_guard=native_guard,
-                            alternate=delegated,
-                            native_plays=plays,
-                        )
+                    base = dict(
+                        controller=str(role.controller),
+                        dossier=dossier.model_dump(mode="json"),
+                        references=[ref.model_dump(mode="json") for ref in refs],
+                        agenda=agenda,
+                        role_identity=identity,
+                        native_guard=native_guard,
+                        alternate=delegated,
                     )
+                    if plays:
+                        turn = plays[0]["alternate"]["turn"]
+                        source_id = "native:" + _digest((scene, actor.token, delegated, turn))
+                        result.append(
+                            dict(
+                                **base,
+                                option=dict(
+                                    id=_digest((source_id, "alternate")),
+                                    actor=actor.model_dump(mode="json"),
+                                    label=role.label,
+                                    source=dict(kind="native", id=source_id),
+                                    subject=subject,
+                                ),
+                                trigger={"kind": "current_turn" if turn else "current_scene"},
+                                native_plays=plays,
+                            )
+                        )
+                    if reply:
+                        source = (actor.token, delegated, reply.source_id, reply.source_revision)
+                        result.append(
+                            dict(
+                                **base,
+                                option=dict(
+                                    id=_digest(source),
+                                    actor=actor.model_dump(mode="json"),
+                                    label=role.label,
+                                    source=dict(kind="comms", id=reply.source_id),
+                                    subject="Comms reply",
+                                    quote=reply.text,
+                                ),
+                                trigger={"kind": "heard_comms", "revision": reply.source_revision},
+                            )
+                        )
             pilot = pilots.get(actor)
             handler = (
                 actor.kind == "handler"
@@ -414,6 +506,7 @@ class DirectorInitiative:
             raise WorkflowError("INITIATIVE_STALE: refresh the approved opening or event.")
         selected = candidate["option"]
         actor = ActorRef.model_validate(selected["actor"])
+        dialogue = selected["source"]["kind"] == "comms"
         role = {
             "actor": selected["actor"],
             "label": selected["label"],
@@ -424,14 +517,18 @@ class DirectorInitiative:
                 "trigger": candidate["trigger"],
                 "agenda": candidate["agenda"],
             },
-            "available_actions": ["WAIT", "SCENE_OFFER"],
+            "available_actions": ["WAIT", "DIALOGUE" if dialogue else "SCENE_OFFER"],
             **({"identity": candidate["role_identity"]} if candidate.get("alternate") else {}),
             "native_plays": list(
-                candidate["native_plays"]
+                ()
+                if dialogue
+                else candidate["native_plays"]
                 if candidate.get("alternate")
                 else initiative_play_options(self.context, c, scene, actor)
             ),
         }
+        if dialogue:
+            role["question"] = selected["quote"]
         revision = _digest((role, candidate["native_guard"]))
         return {
             "request_id": "reaction-initiative:" + _digest((option, revision)),
@@ -444,7 +541,9 @@ class DirectorInitiative:
             "revision": revision,
             "initiative": option,
             **(
-                {"activity_alternate": candidate["alternate"]}
+                {"activity_alternate_dialogue": candidate["alternate"]}
+                if dialogue
+                else {"activity_alternate": candidate["alternate"]}
                 if candidate.get("alternate")
                 else {"activity_pilot": True}
                 if actor.kind != "handler"

@@ -142,17 +142,38 @@ motivations and witnessed evidence. Pending drafts and another actor's
 portrayal stay outside the prompt. The model can propose or wait, and a
 proposal or portrayal edit grants no native Play authority.
 
-NPCs already have an independent reviewed dialogue route when they are
-addressed. Harpy and Gorgon AI currently propose from available native
-initiative. They still need a reviewed standalone dialogue path with precise
-hearing, independently triggered scene participation, and a sustained
-mixed-cast rehearsal before comparing their narrative quality with the Girls
-and Handler. Cross-cast memory can reference authorized evidence, while
-relationship subjects outside the existing identity projection remain gated.
-The checks use authored traits and a stub, so they establish the actual
-prompt and privacy boundary.
+### Reviewed Harpy and Gorgon comms
 
-The final Activity suite passed 19 tests (49.33 seconds). Its three portrayal
+The facilitator can now select **Draft reply** under **Character initiatives**
+for an AI-enabled Harpy or Gorgon. This path uses the latest eligible captured
+comms and the actor's own approved portrayal. It works without an eligible
+native Play. The source must still belong to the current cast and audience
+and reach the actor through the engine's communication checks. A private
+line, a request addressed to the GM, or a turn claimed by the NPC address
+workflow stays outside this path.
+
+The actor's controller sees the heard line and the draft under **AI
+contributions**, approves it for specific listeners, then sends it. The
+Activity files the exact reply in the selected listeners' transcripts. The
+saved receipt recovers after reopening and retries file one copy. A source
+edit or withdrawn control before delivery requires a fresh review. An
+approved decision to wait closes the turn. HarpyEngine still owns all
+native Plays, resources and outcomes.
+
+Unprompted scene initiative and narrative quality in a sustained mixed-cast
+session remain separate work. Cross-cast relationships outside the existing
+identity projection remain gated. The automated checks use synthetic actors
+and stub responses.
+
+The Activity alternate-initiative suite passed 24 tests (76.00 seconds) with
+`python -m pytest -q --tb=short harpy-activity-lab/test_alternate_initiative.py`
+from this checkout. Five cases cover Harpy and Gorgon dialogue, reopening,
+selected-listener visibility, retry, source edits, control revocation and
+reviewed waiting. The Gorgon case supplies no native Play projection. Nine
+focused shared Director and AI Pilot checks also passed (22.23 seconds).
+Ruff, mypy, JavaScript syntax and patch whitespace checks passed.
+
+The Activity suite at `b70383b` passed 19 tests (49.33 seconds). Its three portrayal
 cases verify the approved voice, drive, and source-backed role identity after
 restart, a rejected edit from another controller, and exclusion of unpublished
 drafts before model generation. Nine focused Director, dossier, Pilot

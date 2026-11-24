@@ -2373,7 +2373,10 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     if (!items.length) return;
     const list = card(body, "AI contributions");
     for (const item of items) {
-      const action = item.ai_alternate ? "Alternate actor initiative"
+      const action = item.ai_alternate
+        ? (item.kind === "DIALOGUE"
+          ? (item.actor.kind === "gorgon" ? "Gorgon dialogue" : "Harpy dialogue")
+          : "Alternate actor initiative")
         : item.kind === "DIALOGUE" ? "Pilot dialogue" : item.initiative ? "Pilot initiative" : "Pilot intent";
       const row = card(list, action);
       if (item.status === "stale_reopen_source") {
@@ -2390,7 +2393,11 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
           row.replaceChildren(element("p", "The scene changed. Review a fresh batch."));
           return;
         }
-        row.replaceChildren(element("h4", action), element("p", draft.proposal.text));
+        row.replaceChildren(element("h4", action));
+        if (draft.source_quote) {
+          row.append(element("p", "Heard on comms"), element("blockquote", draft.source_quote));
+        }
+        row.append(element("p", draft.proposal.text));
         if (draft.native_play) row.append(element("p", "Native Play · " + draft.native_play.label));
         if (draft.native_play_approved) {
           if (draft.native_play.alternate) {
@@ -2527,13 +2534,16 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     const panel = card(body, "Character initiatives");
     for (const item of choices) {
       const row = card(panel, item.label + " · " + item.subject);
+      const comms = item.source.kind === "comms";
       row.append(element("p", item.source.kind === "opening" ? "Approved opening"
-        : item.source.kind === "native" ? "Eligible native Play" : "Witnessed outcome"));
+        : item.source.kind === "native" ? "Eligible native Play"
+          : comms ? "Heard on comms" : "Witnessed outcome"));
+      if (comms) row.append(element("blockquote", item.quote));
       if (!item.model_configured) {
         row.append(element("p", "Model unassigned for this role."));
         continue;
       }
-      row.append(button("Prepare initiative", async key => {
+      row.append(button(comms ? "Draft reply" : "Prepare initiative", async key => {
         const request = await write("scene-initiative-open", {option: item.id}, key + ".open");
         if (!request.proposal) await write("reaction-generate", {request: request.id}, key + ".generate");
         await refresh();
@@ -3520,7 +3530,8 @@ export function mountActivityAITrial(parent, activityFetch, openNativePlay) {
       const view = await activityAIRequest(activityFetch, root + "timeline");
       if (generation !== visit) return;
       for (const entry of view.entries) {
-        const speaker = entry.speaker ?? ({gm:"GM", handler:"Handler", pilot:"Pilot", npc:"NPC"}[entry.actor.kind]);
+        const speaker = entry.speaker ?? ({gm:"GM", handler:"Handler", pilot:"Pilot", npc:"NPC",
+          external_pilot:"Harpy", gorgon:"Gorgon"}[entry.actor.kind]);
         const item = element("li");
         item.append(element("strong", speaker), element("p", entry.text));
         if (entry.action) item.append(element("p", entry.action));

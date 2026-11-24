@@ -510,7 +510,12 @@ class DirectorReactionService:
                 proposal={k: v for k, v in record["proposal"].items() if k != "rationale"},
                 publication="private_review_only",
                 effects_applied=False,
-                **self._pilot_review_options(c, scene, identity, record, packet),
+                **(
+                    {"source_quote": packet["role"]["question"]}
+                    if packet.get("activity_alternate_dialogue")
+                    else {}
+                ),
+                **self._dialogue_review_options(c, scene, identity, record, packet),
                 **self._native_play_preview(c, scene, identity, record, packet),
             )
 
@@ -690,7 +695,7 @@ class DirectorReactionService:
             if (receipt := self._alternate_receipt(c, scene, proposal)) and "action_id" in receipt
         }
 
-    def _pilot_review_options(
+    def _dialogue_review_options(
         self,
         c: Connection,
         scene: str,
@@ -698,7 +703,10 @@ class DirectorReactionService:
         record: dict[str, Any],
         packet: dict[str, Any],
     ) -> dict[str, Any]:
-        if not packet.get("activity_pilot") or record["proposal"]["kind"] != "DIALOGUE":
+        if (
+            not (packet.get("activity_pilot") or packet.get("activity_alternate_dialogue"))
+            or record["proposal"]["kind"] != "DIALOGUE"
+        ):
             return {}
         approval = self._review_record(c, scene, identity)
         if approval is not None:
@@ -900,7 +908,13 @@ class DirectorReactionService:
                         _, packet = self._owned(c, viewer, scene, record["id"], fresh=False)
                     except (WorkflowError, ValueError):
                         continue
-                if approval and not native and not packet.get("activity_pilot"):
+                if (
+                    approval
+                    and not native
+                    and not (
+                        packet.get("activity_pilot") or packet.get("activity_alternate_dialogue")
+                    )
+                ):
                     continue
                 status = (
                     "approved_native_suggestion"
@@ -925,7 +939,12 @@ class DirectorReactionService:
                         kind=record["proposal"]["kind"],
                         status=status,
                         **({"ai_pilot": True} if packet.get("activity_pilot") else {}),
-                        **({"ai_alternate": True} if packet.get("activity_alternate") else {}),
+                        **(
+                            {"ai_alternate": True}
+                            if packet.get("activity_alternate")
+                            or packet.get("activity_alternate_dialogue")
+                            else {}
+                        ),
                         **({"initiative": True} if packet.get("initiative") else {}),
                     )
                 )
@@ -1038,7 +1057,9 @@ class DirectorReactionService:
             if decision == "approve":
                 self._fresh(c, packet)
                 self._front_current(c, scene, record, packet)
-                if packet.get("activity_pilot") and record["proposal"]["kind"] == "DIALOGUE":
+                if (
+                    packet.get("activity_pilot") or packet.get("activity_alternate_dialogue")
+                ) and record["proposal"]["kind"] == "DIALOGUE":
                     if not recipients:
                         raise WorkflowError("AI_PILOT_AUDIENCE: choose the actual listeners.")
                 if recipients:
@@ -1065,6 +1086,14 @@ class DirectorReactionService:
             slot = "reaction-episode:" + _digest(
                 dict(actor=packet["actor"], source=packet["source_id"], run=packet["run_id"])
             )
+            if packet.get("activity_alternate_dialogue"):
+                from girlframe.services.director_npc_delivery import heard_episode
+
+                slot = heard_episode(
+                    ActorRef.model_validate(packet["actor"]),
+                    packet["source_id"],
+                    packet["role"]["initiative"]["trigger"]["revision"],
+                )
             if decision == "approve" and not packet.get("activity_alternate"):
                 if c.scalar(
                     sa.select(table.c.id).where(

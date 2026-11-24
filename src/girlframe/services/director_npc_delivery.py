@@ -1,4 +1,4 @@
-"""Explicit, actor-owned and recipient-scoped synthetic NPC scene contributions."""
+"""Actor-owned, recipient-scoped Activity dialogue delivery."""
 
 import json
 from typing import Any
@@ -24,6 +24,12 @@ from girlframe.services.read_only_bot import GuildViewer
 def _reported_claim(text: str, fiction: dict[str, Any]) -> str:
     action = fiction.get("own_action")
     return "Reported claim: " + text + ("\nPilot action: " + action if action else "")
+
+
+def heard_episode(actor: ActorRef, source: str, revision: int) -> str:
+    return "npc-heard-episode:" + _digest(
+        {"actor": actor.model_dump(mode="json"), "source": source, "revision": revision}
+    )
 
 
 class NpcDeliveryService:
@@ -72,16 +78,19 @@ class NpcDeliveryService:
         recipients: tuple[ActorRef, ...],
     ) -> dict[str, Any]:
         actor = ActorRef.model_validate(packet["actor"])
+        alternate = packet.get("activity_alternate_dialogue") and actor.kind in (
+            "external_pilot",
+            "gorgon",
+        )
         native_pilot = (
             actor.kind == "pilot" and packet.get("activity_pilot") and packet.get("run_id")
         )
-        if (actor.kind != "npc" and not native_pilot) or proposal["kind"] not in {
-            "DIALOGUE",
-            "REFUSE",
-            "COMPROMISE",
-            "DELAY",
-        }:
-            raise WorkflowError("NPC_DELIVERY_REVIEW: use a reviewed dialogue-only NPC reaction.")
+        if (
+            not (actor.kind == "npc" or native_pilot or alternate)
+            or proposal["kind"] not in {"DIALOGUE", "REFUSE", "COMPROMISE", "DELAY"}
+            or (alternate and proposal["kind"] != "DIALOGUE")
+        ):
+            raise WorkflowError("NPC_DELIVERY_REVIEW: use a reviewed dialogue proposal.")
         row = self._scope(c, scene)
         if native_pilot:
             from girlframe.services.director_dossiers import DirectorDossierService
@@ -107,7 +116,7 @@ class NpcDeliveryService:
         self._shared_refs(c, scene, roles, tuple(proposal["cited_references"]))
         origin = self.knowledge._source(c, scene, packet["source_id"])
         fiction = proposal.get("fiction")
-        if packet.get("activity_pilot"):
+        if packet.get("activity_pilot") or alternate:
             if any(
                 RULES_IN_PROSE.search(text)
                 for text in (proposal["text"], (fiction or {}).get("own_action") or "")
@@ -120,6 +129,17 @@ class NpcDeliveryService:
                 if recipient != origin.actor
             ):
                 raise WorkflowError("AI_PILOT_AUDIENCE: listeners must share the heard source.")
+            if alternate:
+                from girlframe.services.m2_state import load_state
+                from girlframe.services.m3_sentinel import require_communication
+
+                require_communication(
+                    c,
+                    self.store.campaign_id,
+                    load_state(c, self.store.campaign_id),
+                    actor,
+                    recipients,
+                )
             if fiction is not None:
                 assert origin.actor is not None
                 if len(_reported_claim(proposal["text"], fiction)) > 1200:
@@ -225,12 +245,8 @@ class NpcDeliveryService:
                 ActorRef.model_validate(plan["actor"]),
                 tuple(ActorRef.model_validate(x) for x in plan["recipients"]),
             )
-            episode = "npc-heard-episode:" + _digest(
-                {
-                    "actor": plan["actor"],
-                    "source": plan["source"],
-                    "revision": plan["source_revision"],
-                }
+            episode = heard_episode(
+                ActorRef.model_validate(plan["actor"]), plan["source"], plan["source_revision"]
             )
             if self._record(c, scene, episode):
                 raise WorkflowError(
