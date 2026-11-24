@@ -752,8 +752,11 @@ class Battlefield:
             if option is not None:
                 available.append(option)
 
-    def declared_options(self, state, bound, battle, play):
-        acting = next((item for item in battle["actors"] if item["owned"]), None)
+    @staticmethod
+    def declared_options(state, bound, battle, play, *, actor_token=None):
+        acting = next((item for item in battle["actors"] if item["owned"] and (
+            actor_token is None or item["token"] == actor_token
+        )), None)
         if acting is None:
             return None
         origin_ref = ActorRef.model_validate(acting["ref"])
@@ -776,7 +779,9 @@ class Battlefield:
             return None
         targets = []
         for item in battle["actors"]:
-            if item["owned"] or (play == ASSAULT and not item["assets"]):
+            if (item["owned"] if actor_token is None else item["token"] == actor_token) or (
+                play == ASSAULT and not item["assets"]
+            ):
                 continue
             ref = ActorRef.model_validate(item["ref"])
             actual = resolve(state, ref, bound)

@@ -109,10 +109,8 @@ class ErraticService:
 
     def _access(self, c: Connection, viewer: GuildViewer) -> None:
         GorgonPlayService(self.game).authorize(c, viewer)
-        registry = Access(self.store).registry
-        assert registry is not None
         try:
-            registry.require_available(RULE)
+            Access(self.store).require_specialist_rule(RULE)
         except ValueError as error:
             raise WorkflowError(str(error)) from None
 

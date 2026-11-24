@@ -168,7 +168,9 @@ class GorgonPlayService:
             rows = []
             visible: dict[str, ActorView] = {}
             owned_gorgons: set[ActorRef] = set()
-            can_corrupt = False
+            environment: dict[str, list[str]] = {
+                kind: [] for kind in ("corrupt", "warp", "collateral")
+            }
             can_grow: dict[str, list[str]] = {}
             can_birth: list[str] = []
             can_jam: list[str] = []
@@ -218,9 +220,17 @@ class GorgonPlayService:
                         for x in state.world.gorgons
                     )
                 ):
-                    can_corrupt = True
-                if owned and role.actor.kind == "gorgon":
+                    environment["corrupt"].append(role.actor.token)
+                if owned and role.actor.kind == "gorgon" and not actual.offstage_source:
                     owned_gorgons.add(role.actor)
+                    if state.world is not None:
+                        original = next(x for x in state.world.gorgons if x.id == role.actor.entity)
+                        if original.exposed:
+                            environment["warp"].append(role.actor.token)
+                        if actual.assets and (
+                            original.gorgon_class != "benevolent" or vicious(state, role.actor)
+                        ):
+                            environment["collateral"].append(role.actor.token)
                 rows.append(
                     dict(
                         ref=role.actor.model_dump(mode="json"),
@@ -367,7 +377,7 @@ class GorgonPlayService:
             for kind, identity in RULES.items():
                 if kind == "attack" and not attack_targets:
                     continue
-                if kind == "corrupt" and not can_corrupt:
+                if kind in environment and not environment[kind]:
                     continue
                 if (
                     kind in TAG_TYPES
@@ -393,10 +403,7 @@ class GorgonPlayService:
                 if kind in jackdaw.EFFECTS and not can_jam:
                     continue
                 try:
-                    if kind == "attack":
-                        access.require_specialist_rule(identity)
-                    else:
-                        access.registry.require_available(identity)
+                    access.require_specialist_rule(identity)
                 except ValueError:
                     continue
                 plays.append(kind)
@@ -416,6 +423,7 @@ class GorgonPlayService:
                 conditioning_tags=conditioning_tags,
                 hazard_tags=hazard_tags,
                 shed_assets=shed_assets,
+                environment=environment,
             )
 
     def begin(
@@ -437,10 +445,7 @@ class GorgonPlayService:
                 )
             access = Access(self.store)
             assert access.registry is not None
-            if declaration.kind == "attack":
-                access.require_specialist_rule(RULES[declaration.kind])
-            else:
-                access.registry.require_available(RULES[declaration.kind])
+            access.require_specialist_rule(RULES[declaration.kind])
             cast = _cast(self.game, c, state, channel)
             bound = profiles(c, self.store.campaign_id)
             actual = resolve(state, declaration.actor, bound, require_current_profile=False)
@@ -457,6 +462,8 @@ class GorgonPlayService:
             gorgon = next(
                 item for item in state.world.gorgons if item.id == declaration.actor.entity
             )
+            if declaration.kind == "warp" and not gorgon.exposed:
+                raise WorkflowError("Warp charges an actually exposed Core.")
             from girlframe.engine.m3_janus_pandora import require_can_harm, vicious
 
             if infection.inhabits_original_body(state, actual.ref):

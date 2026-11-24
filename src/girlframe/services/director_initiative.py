@@ -21,7 +21,7 @@ from girlframe.services.director_dossiers import DirectorDossierService
 from girlframe.services.director_fronts import DirectorFrontService
 from girlframe.services.director_knowledge import DirectorKnowledgeService
 from girlframe.services.director_observation import _digest
-from girlframe.services.director_play_options import initiative_play_options
+from girlframe.services.director_play_options import NativePlayOption, initiative_play_options
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_sentinel import require_communication
 from girlframe.services.onboarding import WorkflowError
@@ -38,9 +38,9 @@ ALTERNATE_REFERRALS = {
         "The Mask Order has no native Disobey continuation for this original Harpy body.",
     ),
     "gorgon": (
-        "Gorgon Collateral Damage",
-        "Independent initiative lacks the original threatened site, verified attacking "
-        "capabilities and reach, and the saving-Play follow-up binding.",
+        "Source-bound Gorgon consequence",
+        "Use the original Class, Type, opponent and scene source for any follow-up "
+        "that has no matching Activity control.",
     ),
 }
 
@@ -342,6 +342,10 @@ class DirectorInitiative:
                     )
                     refs = self.context._actor_references(references, actor)
                     portrayal = dossier.profile.pilot_portrayal if dossier.profile else None
+                    direction = dossier.profile.character_setup if dossier.profile else None
+                    narrates = actor.kind == "gorgon" and not (
+                        direction and direction.gorgon_speech
+                    )
                     agendas = self._agendas(c, scene, dossier, refs, portrayal, "")
                     subject, agenda = next(iter(agendas), ("Act in the current scene", {}))
                     identity: dict[str, Any] = {"kind": actor.kind}
@@ -362,22 +366,36 @@ class DirectorInitiative:
                         alternate=delegated,
                     )
                     if plays:
-                        turn = plays[0]["alternate"]["turn"]
-                        source_id = "native:" + _digest((scene, actor.token, delegated, turn))
-                        result.append(
-                            dict(
-                                **base,
-                                option=dict(
-                                    id=_digest((source_id, "alternate")),
-                                    actor=actor.model_dump(mode="json"),
-                                    label=role.label,
-                                    source=dict(kind="native", id=source_id),
-                                    subject=subject,
-                                ),
-                                trigger={"kind": "current_turn" if turn else "current_scene"},
-                                native_plays=plays,
+                        episodes: dict[tuple[str | None, str | None], list[NativePlayOption]] = {}
+                        for play in plays:
+                            binding = play["alternate"]
+                            group = (binding["turn"], binding.get("source_work"))
+                            episodes.setdefault(group, []).append(play)
+                        for (turn, work), options in episodes.items():
+                            native_source = (scene, actor.token, delegated, turn)
+                            source_id = "native:" + _digest(
+                                (*native_source, work) if work else native_source
                             )
-                        )
+                            result.append(
+                                dict(
+                                    **base,
+                                    option=dict(
+                                        id=_digest((source_id, "alternate")),
+                                        actor=actor.model_dump(mode="json"),
+                                        label=role.label,
+                                        source=dict(kind="native", id=source_id),
+                                        subject=options[0]["label"] if work else subject,
+                                    ),
+                                    trigger={
+                                        "kind": "source_choice"
+                                        if work
+                                        else "current_turn"
+                                        if turn
+                                        else "current_scene"
+                                    },
+                                    native_plays=options,
+                                )
+                            )
                     if reply:
                         source = (actor.token, delegated, reply.source_id, reply.source_revision)
                         result.append(
@@ -393,6 +411,7 @@ class DirectorInitiative:
                                     speaker=labels.get(reply.actor, reply.actor.kind.title()),
                                 ),
                                 trigger={"kind": "heard_comms", "revision": reply.source_revision},
+                                response="NARRATION" if narrates else "DIALOGUE",
                             )
                         )
             pilot = pilots.get(actor)
@@ -527,7 +546,7 @@ class DirectorInitiative:
                 "trigger": candidate["trigger"],
                 "agenda": candidate["agenda"],
             },
-            "available_actions": ["WAIT", "DIALOGUE" if dialogue else "SCENE_OFFER"],
+            "available_actions": ["WAIT", candidate["response"] if dialogue else "SCENE_OFFER"],
             **({"identity": candidate["role_identity"]} if candidate.get("alternate") else {}),
             "native_plays": list(
                 ()

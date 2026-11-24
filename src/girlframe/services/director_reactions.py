@@ -552,10 +552,16 @@ class DirectorReactionService:
     ) -> dict[str, Any]:
         """Start the one approved exact-role Play through its existing native command."""
         from girlframe.engine.m2 import PlayInput
+        from girlframe.engine.m3_battle_state import Declaration as BattleDeclaration
         from girlframe.engine.m3_gorgon_play_state import Declaration
         from girlframe.services.m3_actor_plays import ActorPlayService
+        from girlframe.services.m3_battle import BattleService
+        from girlframe.services.m3_erratic_gorgon import ErraticService
+        from girlframe.services.m3_gorgon_forms import declaration as gorgon_declaration
         from girlframe.services.m3_gorgon_play import GorgonPlayService
         from girlframe.services.m3_npc_handover import LABELS, NpcHandoverService
+        from girlframe.services.m3_npc_intelligence import IntelligenceService
+        from girlframe.services.native_form_fields import Field, selected_fields
 
         key = "director-alternate-play:" + _digest((scene, identity))
 
@@ -587,7 +593,10 @@ class DirectorReactionService:
         channel = binding["channel"]
         account = record["proposal"]["text"]
         values = binding["choices"]
-        if choices.keys() != values.keys() or any(
+        form_values = {}
+        if "fields" in binding:
+            form_values = selected_fields([Field(**field) for field in binding["fields"]], choices)
+        elif choices.keys() != values.keys() or any(
             type(value) is not (int if field == "heat" else str) or value not in values[field]
             for field, value in choices.items()
         ):
@@ -615,10 +624,27 @@ class DirectorReactionService:
                     raise WorkflowError(
                         "REACTION_ADDRESSED: this actor already acted in this episode."
                     )
-                self._save(c, scene, slot, "alternate_native_start", reaction_id=identity)
+                self._save(
+                    c,
+                    scene,
+                    slot,
+                    "alternate_native_start",
+                    reaction_id=identity,
+                    **({"battle": True} if binding.get("harpy_battle") else {}),
+                )
 
         game = self.observer.game
         with self.store.source_guard(guard):
+            if actor.kind == "npc" and binding["play"] == "npc_inquiry":
+                return IntelligenceService(game).ask(
+                    viewer,
+                    key,
+                    channel,
+                    actor,
+                    binding["revision"],
+                    binding["target_token"],
+                    account,
+                )
             if actor.kind == "npc" and binding["play"] in LABELS:
                 return NpcHandoverService(game).propose(
                     viewer,
@@ -631,7 +657,10 @@ class DirectorReactionService:
                     account,
                     choices.get("item"),
                 )
-            if binding["play"] == "harpy_beneath" and actor.kind == "external_pilot":
+            harpy_basic = binding.get("harpy_basic") or (
+                "put_someone_beneath_you" if binding["play"] == "harpy_beneath" else None
+            )
+            if harpy_basic and actor.kind == "external_pilot":
                 return ActorPlayService(game).begin(
                     viewer,
                     key,
@@ -643,11 +672,34 @@ class DirectorReactionService:
                     else None,
                     binding["cast_revision"],
                     PlayInput(
-                        play="put_someone_beneath_you",
+                        play=harpy_basic,
                         context=account,
                         trigger_confirmed=True,
-                        heat=choices["heat"],
-                        target_actor=ActorRef.model_validate(binding["target"]),
+                        heat=choices.get("heat", 0),
+                        source_work=binding.get("source_work"),
+                        target_actor=ActorRef.model_validate(binding["target"])
+                        if binding["target"]
+                        else None,
+                        piloting=bool(binding.get("piloting"))
+                        if harpy_basic in ("engage", "snoop", "enforcement_initiative")
+                        else False,
+                    ),
+                )
+            if binding.get("harpy_battle") and actor.kind == "external_pilot":
+                return BattleService(self.store).propose(
+                    viewer,
+                    key,
+                    binding["revision"],
+                    channel,
+                    BattleDeclaration(
+                        play=binding["harpy_battle"],
+                        actor=actor,
+                        target=ActorRef.model_validate(binding["target"]),
+                        actor_sha256=binding["combat_sha256"],
+                        target_sha256=binding["target_sha256"],
+                        attacking_asset=form_values["weapon"][0],
+                        target_asset=form_values.get("opposing_asset", (None,))[0],
+                        account=account,
                     ),
                 )
             if binding["play"] == "gorgon_attack" and actor.kind == "gorgon":
@@ -667,10 +719,51 @@ class DirectorReactionService:
                         reach_confirmed=True,
                     ),
                 )
+            if binding["play"] == "gorgon_erratic_tag" and actor.kind == "gorgon":
+                return ErraticService(game).tag(
+                    viewer,
+                    key,
+                    channel,
+                    binding["revision"],
+                    actor.entity,
+                    binding["target_npc"],
+                    form_values["tag"],
+                    account,
+                )
+            if binding["play"] == "gorgon_erratic_flee" and actor.kind == "gorgon":
+                try:
+                    destination = (int(form_values["x"]), int(form_values["y"]))
+                except ValueError:
+                    raise WorkflowError("Enter actual mapped X and Y coordinates.") from None
+                return ErraticService(game).flee(
+                    viewer,
+                    key,
+                    channel,
+                    binding["revision"],
+                    actor.entity,
+                    binding["battle"],
+                    destination,
+                    account,
+                )
+            if "kind" in binding and actor.kind == "gorgon":
+                return GorgonPlayService(game).begin(
+                    viewer,
+                    key,
+                    channel,
+                    binding["revision"],
+                    gorgon_declaration(packet["actor"], binding, account, form_values),
+                )
         raise WorkflowError("NATIVE_ROUTE_REQUIRED: recover the original alternate actor's Play.")
 
     def _alternate_receipt(self, c: Connection, scene: str, identity: str) -> dict[str, Any] | None:
-        key = "director-alternate-play:" + _digest((scene, identity))
+        return self._command_receipt(c, "director-alternate-play:" + _digest((scene, identity)))
+
+    def alternate_battle_receipt(
+        self, c: Connection, scene: str, identity: str
+    ) -> dict[str, Any] | None:
+        return self._command_receipt(c, "director-alternate-battle:" + _digest((scene, identity)))
+
+    def _command_receipt(self, c: Connection, key: str) -> dict[str, Any] | None:
         raw = c.scalar(
             sa.select(t.commands.c.outcome_json).where(
                 t.commands.c.campaign_id == self.store.campaign_id,
@@ -679,21 +772,57 @@ class DirectorReactionService:
         )
         return json.loads(raw) if raw else None
 
-    def alternate_action_ids(self, c: Connection, scene: str) -> set[str]:
+    def _alternate_starts(self, c: Connection, scene: str) -> list[dict[str, Any]]:
         table = t.director_context["shadow"]
-        proposals = c.scalars(
-            sa.select(sa.func.json_extract(table.c.body_json, "$.reaction_id")).where(
-                table.c.campaign_id == self.store.campaign_id,
-                table.c.scene_id == scene,
-                sa.func.json_extract(table.c.body_json, "$.record_type")
-                == "alternate_native_start",
+        return [
+            json.loads(raw)
+            for raw in c.scalars(
+                sa.select(table.c.body_json).where(
+                    table.c.campaign_id == self.store.campaign_id,
+                    table.c.scene_id == scene,
+                    sa.func.json_extract(table.c.body_json, "$.record_type")
+                    == "alternate_native_start",
+                )
             )
-        )
+        ]
+
+    def alternate_battle_ids(self, c: Connection, scene: str) -> dict[str, str]:
         return {
-            receipt["action_id"]
-            for proposal in proposals
-            if (receipt := self._alternate_receipt(c, scene, proposal)) and "action_id" in receipt
+            receipt["id"]: row["reaction_id"]
+            for row in self._alternate_starts(c, scene)
+            if row.get("battle")
+            and (receipt := self._alternate_receipt(c, scene, row["reaction_id"]))
         }
+
+    def alternate_action_ids(self, c: Connection, scene: str) -> set[str]:
+        actions = {
+            receipt["action_id"]
+            for row in self._alternate_starts(c, scene)
+            if (receipt := self._alternate_receipt(c, scene, row["reaction_id"]))
+            and "action_id" in receipt
+        }
+        actions.update(
+            receipt["action_id"]
+            for identity in self.alternate_battle_ids(c, scene)
+            if (receipt := self.alternate_battle_receipt(c, scene, identity))
+        )
+        if actions:
+            table = t.m2["m2_actions"]
+            descendants = list(
+                c.execute(
+                    sa.select(table.c.id, table.c.parent_id).where(
+                        table.c.campaign_id == self.store.campaign_id,
+                        table.c.scene_id == scene,
+                        table.c.parent_id.is_not(None),
+                    )
+                )
+            )
+            pending = actions.copy()
+            while pending:
+                children = {identity for identity, parent in descendants if parent in pending}
+                pending = children - actions
+                actions.update(pending)
+        return actions
 
     def _dialogue_review_options(
         self,
@@ -703,10 +832,9 @@ class DirectorReactionService:
         record: dict[str, Any],
         packet: dict[str, Any],
     ) -> dict[str, Any]:
-        if (
-            not (packet.get("activity_pilot") or packet.get("activity_alternate_dialogue"))
-            or record["proposal"]["kind"] != "DIALOGUE"
-        ):
+        if not (
+            packet.get("activity_pilot") or packet.get("activity_alternate_dialogue")
+        ) or record["proposal"]["kind"] not in ("DIALOGUE", "NARRATION"):
             return {}
         approval = self._review_record(c, scene, identity)
         if approval is not None:
@@ -1059,7 +1187,7 @@ class DirectorReactionService:
                 self._front_current(c, scene, record, packet)
                 if (
                     packet.get("activity_pilot") or packet.get("activity_alternate_dialogue")
-                ) and record["proposal"]["kind"] == "DIALOGUE":
+                ) and record["proposal"]["kind"] in ("DIALOGUE", "NARRATION"):
                     if not recipients:
                         raise WorkflowError("AI_PILOT_AUDIENCE: choose the actual listeners.")
                 if recipients:

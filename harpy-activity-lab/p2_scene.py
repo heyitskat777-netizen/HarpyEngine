@@ -75,6 +75,11 @@ from girlframe.services.read_only_bot import GuildViewer
 from girlframe.services.session_zero import SessionZeroService
 from girlframe.services.sheet_portrayal import SheetPortrayalService
 
+from alternate_battle import AlternateBattle
+from alternate_work import WORK as ALTERNATE_WORK, AlternateWork
+from gorgon_followups import fields_for_gorgon, normalize_choice
+from harpy_followups import dive_form
+
 REVIEW_READS = frozenset(
     {
         "activity-policy",
@@ -94,14 +99,11 @@ REVIEW_READS = frozenset(
         "world-draft",
     }
 )
-ALTERNATE_CHOICES = frozenset({
-    "gorgon_asset_capability", "gorgon_defend", "gorgon_damage_asset",
-    "gorgon_contest_assets", "gorgon_contest_judge",
-    "tag_window", "harpy_beneath_select",
-})
 
 
 def alternate_choice_fields(decision):
+    from dataclasses import replace
+
     from girlframe.discord_adapter.m2_forms import Field
     from girlframe.discord_adapter.m2_ui import choice_fields
 
@@ -132,24 +134,77 @@ def alternate_choice_fields(decision):
         detail = decision["detail"]
         opposing = dict.fromkeys(detail["attacking_assets"] + detail["defending_assets"])
         fields = [
-            Field("options", "Who wins the contest?", (("attacker", "Attacker"), ("defender", "Defender"))),
-            Field("fields.asset", "Actual losing Asset", tuple((asset, asset) for asset in opposing)),
+            Field(
+                "options",
+                "Who wins the contest?",
+                (("attacker", "Attacker"), ("defender", "Defender")),
+            ),
+            Field(
+                "fields.asset", "Actual losing Asset", tuple((asset, asset) for asset in opposing)
+            ),
             Field("text", "Describe the outcome", paragraph=True),
         ]
         if detail.get("indirect_required"):
-            fields.append(Field(
-                "flag", "Confirm the indirect approach if needed", (("yes", "Yes"), ("no", "No")),
-                required=False,
-            ))
+            fields.append(
+                Field(
+                    "flag",
+                    "Confirm the indirect approach if needed",
+                    (("yes", "Yes"), ("no", "No")),
+                    required=False,
+                )
+            )
         return fields
+    if decision.get("gorgon_play"):
+        return fields_for_gorgon(decision)
+    if kind in ("engage_maneuvers", "engage_assault_extra") and decision.get("engage"):
+        from girlframe.discord_adapter.m3_engage import engage_fields
+
+        names = {"maneuvers": "options", "text": "text", "denied": "denied"}
+        return [
+            replace(spec, key=names.get(spec.key, "fields." + spec.key.removeprefix("asset_")))
+            for spec in engage_fields(decision["engage"])
+        ]
+    if decision.get("battle"):
+        from girlframe.discord_adapter.m3_battle import battle_fields
+
+        fields = battle_fields(kind, decision["battle"])
+        if fields:
+            names = {"account": "text", "decision": "flag", "asset": "fields.asset"}
+            return [replace(spec, key=names.get(spec.key, spec.key)) for spec in fields]
+    if kind == "harpy_off_duty_hide":
+        return [
+            Field(
+                "fields.identities",
+                "Ordinary Identity names, one per line",
+                paragraph=True,
+                required=False,
+            ),
+            Field("text", "Actual Voidspace hide", paragraph=True),
+            Field("fields.navigation", "How you navigate there", paragraph=True),
+            Field("flag", "Confirm your hide and Identity changes", (("yes", "Confirm"),)),
+        ]
+    if kind == "harpy_off_duty_route":
+        return [
+            Field(
+                "flag", "Review the original navigation", (("yes", "Approve"), ("no", "Decline"))
+            ),
+            Field("text", "Your factual ruling", paragraph=True),
+        ]
     return choice_fields(decision)
 
 
-MODEL_WRITES = frozenset({
-    "activity-review-run", "handler-need-generate", "mission-briefing-queue",
-    "mission-briefing-run", "plan-generate", "reaction-generate", "ruling-generate",
-    "world-generate",
-})
+MODEL_WRITES = frozenset(
+    {
+        "activity-review-run",
+        "handler-need-generate",
+        "mission-briefing-queue",
+        "mission-briefing-run",
+        "plan-generate",
+        "reaction-generate",
+        "ruling-generate",
+        "world-generate",
+    }
+)
 REVIEW_WRITES = frozenset(
     {
         "activity-policy-save",
@@ -227,6 +282,8 @@ class P2Scene:
         self.shadow = ActivityShadowReview(session.conversation, pilot_batch)
         self.scene_opening = ActivitySceneOpening(session.context, facilitator_id)
         self.npc_delivery = NpcDeliveryService(session.context)
+        self.alternate_battle = AlternateBattle(session)
+        self.alternate_work = AlternateWork(session)
         self.time = ActivityTiming(session.game)
         self.timing_reviews = DirectorTimingReview(session.observer, facilitator_id)
         self.canon = ActivityCanon(session.store)
@@ -660,30 +717,66 @@ class P2Scene:
             return self.session.reactions.handler_initiative_review(viewer, scene, identity)
         if route == "scene-alternate-actors" and scene and identity is None:
             return {"actors": self.session.reactions.initiative.alternate_controls(viewer, scene)}
+        if route == "scene-alternate-battles" and scene and identity is None:
+            return self.alternate_battle.view(viewer, scene)
         if route == "scene-alternate-handovers" and scene and identity is None:
             from girlframe.services.m3_npc_handover import NpcHandoverService
+            from girlframe.services.m3_npc_intelligence import IntelligenceService
 
             native = NpcHandoverService(self.session.game)
+            intelligence = IntelligenceService(self.session.game)
             with self.session.store.engine.connect() as c:
                 self.session.observer._scene(c, scene, viewer)
                 state = load_state(c, self.session.store.campaign_id)
                 owned = [x.id for x in native.tasks(c, state, viewer) if x.scene == scene]
-            return {"handovers": [native.get(viewer, ident) | {"id": ident} for ident in owned]}
+                inquiries = [
+                    item.id
+                    for item, _ in intelligence.tasks(c, state, viewer)
+                    if item.scene == scene
+                ]
+            reports = []
+            for ident in inquiries:
+                try:
+                    reports.append(intelligence.get(viewer, ident) | {"id": ident})
+                except WorkflowError:
+                    reports.append({"id": ident, "step": "unavailable"})
+            return {
+                "handovers": [native.get(viewer, ident) | {"id": ident} for ident in owned],
+                "inquiries": reports,
+            }
         if route == "scene-alternate-choices" and scene and identity is None:
             with self.session.store.engine.connect() as c:
                 self.session.observer._scene(c, scene, viewer)
                 actions = self.session.reactions.alternate_action_ids(c, scene)
             choices = []
             for item in self.session.game.choices(viewer):
-                if item["action_id"] not in actions or item["kind"] not in ALTERNATE_CHOICES:
+                if item["action_id"] not in actions:
                     continue
                 decision = self.session.game.decision(viewer, item["id"])
-                fields = alternate_choice_fields(decision)
+                if item["kind"] in ALTERNATE_WORK:
+                    form = self.alternate_work.form(viewer, decision)
+                    if form is not None:
+                        choices.append(form)
+                    continue
+                if item["kind"] == "gorgon_response_play":
+                    if form := self.alternate_battle.response_view(viewer, decision):
+                        choices.append(form)
+                    continue
+                fields, account = (
+                    dive_form(decision)
+                    if "dive" in decision
+                    else (alternate_choice_fields(decision), "")
+                )
                 if fields:
-                    choices.append(dict(
-                        id=item["id"], revision=item["revision"], kind=item["kind"],
-                        fields=[asdict(field) for field in fields],
-                    ))
+                    choices.append(
+                        dict(
+                            id=item["id"],
+                            revision=item["revision"],
+                            kind=item["kind"],
+                            fields=[asdict(field) for field in fields],
+                            **({"account": account} if account else {}),
+                        )
+                    )
             return {"choices": choices}
         if route == "npc-hearing" and identity is not None:
             return self.npc_delivery.hearing(viewer, scene, identity)
@@ -1303,12 +1396,86 @@ class P2Scene:
             )
         if route == "scene-alternate-refer" and scene and data.keys() == {"actor"}:
             return self.session.reactions.initiative.refer_alternate(
-                viewer, key, scene, ActorRef.model_validate(data["actor"]),
+                viewer,
+                key,
+                scene,
+                ActorRef.model_validate(data["actor"]),
+            )
+        if route == "scene-alternate-battle-review" and scene:
+            required = {"opening", "reach", "outside_permission", "indirect"}
+            optional = {"core_capability_confirmed", "dormant_awakened", "dormant_close"}
+            fields = data.keys() - {"id", "revision", "evidence"}
+            if (
+                required <= fields <= required | optional
+                and all(type(data[field]) is bool for field in fields)
+                and isinstance(data.get("id"), str)
+                and type(data.get("revision")) is int
+                and isinstance(data.get("evidence"), str)
+                and 0 < len(data["evidence"].strip()) <= 1200
+            ):
+                return self.alternate_battle.review(viewer, key, scene, data)
+        if (
+            route == "scene-alternate-battle-commit"
+            and scene
+            and data.keys() == {"id", "heat"}
+            and isinstance(data["id"], str)
+            and type(data["heat"]) is int
+            and data["heat"] >= 0
+        ):
+            return self.alternate_battle.commit(viewer, scene, data["id"], data["heat"])
+        if (
+            route == "scene-alternate-advance"
+            and scene
+            and data.keys() == {"id"}
+            and isinstance(data["id"], str)
+        ):
+            return self.alternate_battle.advance(viewer, key, scene, data["id"])
+        if (
+            route == "scene-alternate-response"
+            and scene
+            and data.keys() == {"id", "revision", "heat", "play", "account"}
+            and isinstance(data["id"], str)
+            and type(data["revision"]) is int
+            and type(data["heat"]) is int
+            and data["heat"] >= 0
+            and data["play"] in ("keep_your_head", "engage")
+            and isinstance(data["account"], str)
+            and 0 < len(data["account"].strip()) <= 1200
+        ):
+            return self.alternate_battle.respond_with_play(viewer, key, scene, data)
+        if (
+            route == "scene-alternate-work"
+            and scene
+            and data.keys() == {"id", "revision", "game_revision", "answer"}
+            and isinstance(data["id"], str)
+            and type(data["revision"]) is int
+            and type(data["game_revision"]) is int
+        ):
+            return self.alternate_work.answer(
+                viewer,
+                key,
+                scene,
+                data["id"],
+                data["revision"],
+                data["game_revision"],
+                ChoiceAnswer.model_validate_json(json.dumps(data["answer"])),
             )
         if (
-            route == "scene-alternate-handover-answer" and scene
-            and data.keys() == {"id", "revision", "item"} and isinstance(data["id"], str)
-            and type(data["revision"]) is int and (data["item"] is None or isinstance(data["item"], str))
+            route == "scene-alternate-erratic-catch"
+            and scene
+            and data.keys() == {"revision", "event", "action"}
+            and type(data["revision"]) is int
+            and isinstance(data["event"], str)
+            and isinstance(data["action"], str)
+        ):
+            return self.alternate_battle.catch_erratic(viewer, key, scene, data)
+        if (
+            route == "scene-alternate-handover-answer"
+            and scene
+            and data.keys() == {"id", "revision", "item"}
+            and isinstance(data["id"], str)
+            and type(data["revision"]) is int
+            and (data["item"] is None or isinstance(data["item"], str))
         ):
             from girlframe.services.m3_npc_handover import NpcHandoverService, records
 
@@ -1320,26 +1487,95 @@ class P2Scene:
 
             with self.session.store.source_guard(guard):
                 return NpcHandoverService(self.session.game).respond(
-                    viewer, key, data["id"], data["revision"], data["item"],
+                    viewer,
+                    key,
+                    data["id"],
+                    data["revision"],
+                    data["item"],
                 )
         if (
-            route == "scene-alternate-answer" and scene
-            and data.keys() == {"id", "revision", "answer"} and isinstance(data["id"], str)
+            route == "scene-alternate-inquiry-review"
+            and scene
+            and data.keys() == {"id", "revision", "faction", "finding"}
+            and isinstance(data["id"], str)
+            and type(data["revision"]) is int
+            and isinstance(data["finding"], str)
+            and (data["faction"] is None or isinstance(data["faction"], str))
+        ):
+            from girlframe.services.m3_npc_intelligence import IntelligenceService, inquiries
+
+            def original_inquiry(c: Connection) -> None:
+                self.session.observer._scene(c, scene, viewer)
+                state = load_state(c, self.session.store.campaign_id)
+                if not any(
+                    item.id == data["id"]
+                    and item.scene == scene
+                    and item.facilitator == viewer.user_id
+                    for item in inquiries(state)
+                ):
+                    raise WorkflowError("Use the original inquiry assigned to you in this scene.")
+
+            with self.session.store.source_guard(original_inquiry):
+                return IntelligenceService(self.session.game).review(
+                    viewer,
+                    key,
+                    data["id"],
+                    data["revision"],
+                    data["faction"],
+                    data["finding"],
+                )
+        if (
+            route == "scene-alternate-answer"
+            and scene
+            and data.keys() == {"id", "revision", "answer"}
+            and isinstance(data["id"], str)
             and type(data["revision"]) is int
         ):
-            def guard(c: Connection) -> None:
+
+            def guard(c: Connection) -> str:
                 self.session.observer._scene(c, scene, viewer)
                 table = t.m2["m2_choices"]
-                action = c.scalar(sa.select(table.c.action_id).where(
-                    table.c.campaign_id == self.session.store.campaign_id,
-                    table.c.id == data["id"], table.c.kind.in_(ALTERNATE_CHOICES),
-                    table.c.actor_id == str(viewer.user_id),
-                ))
-                if action not in self.session.reactions.alternate_action_ids(c, scene):
-                    raise WorkflowError("Use your own native choice from this scene's alternate Play.")
+                choice = c.execute(
+                    sa.select(table.c.action_id, table.c.kind).where(
+                        table.c.campaign_id == self.session.store.campaign_id,
+                        table.c.id == data["id"],
+                        table.c.actor_id == str(viewer.user_id),
+                    )
+                ).first()
+                if (
+                    choice is None
+                    or choice.action_id not in self.session.reactions.alternate_action_ids(c, scene)
+                ):
+                    raise WorkflowError(
+                        "Use your own native choice from this scene's alternate Play."
+                    )
+                return choice.kind
 
-            return self.session.game.respond(viewer, key, data["id"], data["revision"],
-                ChoiceAnswer.model_validate_json(json.dumps(data["answer"])), source_authorize=guard)
+            with self.session.store.engine.connect() as c:
+                kind = guard(c)
+            answer = ChoiceAnswer.model_validate_json(
+                json.dumps(normalize_choice(kind, data["answer"]))
+            )
+            if kind == "harpy_off_duty_route":
+                from girlframe.services.m3_harpy_defeat import HarpyDefeatService
+
+                decision = self.session.game.decision(viewer, data["id"])
+                if answer.flag is None or decision["revision"] != data["revision"]:
+                    raise WorkflowError("Open the current navigation review and choose a ruling.")
+                service = HarpyDefeatService(self.session.store, self.session.game)
+                route = service.task(viewer, "harpy_route", decision["route"])
+                with self.session.store.source_guard(guard):
+                    return service.review_route(
+                        viewer,
+                        key,
+                        decision["route"],
+                        route["revision"],
+                        allow=answer.flag,
+                        account=answer.text,
+                    )
+            return self.session.game.respond(
+                viewer, key, data["id"], data["revision"], answer, source_authorize=guard
+            )
         if (
             route == "scene-initiative-review"
             and scene

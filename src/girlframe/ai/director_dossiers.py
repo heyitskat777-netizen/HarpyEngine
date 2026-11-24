@@ -199,6 +199,7 @@ class CharacterSetup(Contract):
     voice_at_ease: SetupCue = ""
     voice_under_pressure: SetupCue = ""
     voice_on_repair: SetupCue = ""
+    gorgon_speech: bool = Field(default=False, exclude_if=lambda value: not value)
 
 
 class DossierProfile(Contract):

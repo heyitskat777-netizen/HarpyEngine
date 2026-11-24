@@ -1,21 +1,27 @@
 """Read the same native, owner-scoped Play controls used by the Activity."""
 
+import hashlib
+
 from girlframe.engine import m3_disposable_psyche, m3_show_dog, m3_tracker_implants
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_handler_consequences import same_handler_body
 from girlframe.services.director_play_catalog import PlayCatalog
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
-from girlframe.services.m3_actor_plays import ActorPlayService
 from girlframe.services.m3_actors import profiles
+from girlframe.services.m3_erratic_gorgon import ErraticService
+from girlframe.services.m3_gorgon_forms import declarations as gorgon_declarations
 from girlframe.services.m3_gorgon_play import GorgonPlayService
 from girlframe.services.m3_handler_plays import _ordinary_scene_idle
 from girlframe.services.m3_npc_handover import LABELS, NpcHandoverService
+from girlframe.services.m3_npc_intelligence import IntelligenceService
+from girlframe.services.native_form_fields import Field, form_fields
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
 from am_scene_controls import PLAYS as AM_PLAYS
 from handler_playbook import RULES as BASIC_HANDLER_RULES
+from harpy_play_options import harpy_plays
 from native_scene_forms import HANDLER_SCENE_PLAYS, NATIVE_TITLES
 from play_catalog import character_plays
 from psyche_controls import PsycheControls
@@ -137,8 +143,13 @@ class ActivityNativePlays:
                     return ()
                 turn = f"{record['epoch']}:{active[0]}"
             viewer = GuildViewer(role.controller, self.game.store.policy.guild_id, True, False)
-            binding = dict(channel=channel, revision=state.revision, turn=turn,
-                           actor_sha256=role.source_sha256, cast_revision=cast.revision)
+            binding = dict(
+                channel=channel,
+                revision=state.revision,
+                turn=turn,
+                actor_sha256=role.source_sha256,
+                cast_revision=cast.revision,
+            )
             if actor.kind == "npc":
                 native = NpcHandoverService(self.game)
                 handovers = []
@@ -154,41 +165,159 @@ class ActivityNativePlays:
                     choices = {"item": menu["items"]} if job != "fan" else {}
                     handovers.extend(
                         self._alternate_option(
-                            job, f"{job.title()} handover", token, name, binding,
-                            costs={}, choices=choices, reach="same_cell",
+                            job,
+                            f"{job.title()} handover",
+                            token,
+                            name,
+                            binding,
+                            costs={},
+                            choices=choices,
+                            reach="same_cell",
                         )
                         for token, name in menu["targets"].items()
                     )
+                if "intelligence_agent" in role.jobs:
+                    try:
+                        inquiry = IntelligenceService(self.game).menu(viewer, channel, actor)
+                    except (ValueError, WorkflowError):
+                        inquiry = None
+                    if inquiry and inquiry["revision"] == state.revision:
+                        handovers.extend(
+                            self._alternate_option(
+                                "npc_inquiry",
+                                "Make an intelligence inquiry",
+                                token,
+                                name,
+                                binding,
+                                costs={},
+                                choices={},
+                                reach="same_cell",
+                            )
+                            for token, name in inquiry["targets"].items()
+                        )
                 return tuple(handovers)
             if actor.kind == "external_pilot" and role.girl == "harpy":
-                service = ActorPlayService(self.game)
-                service._eligible_play(state, actor, rejection=False, play="put_someone_beneath_you")
-                view = service.preview(viewer, channel, actor)
-                binding["adjudicator"] = view["adjudicator"]["ref"]
-                if role.heat is None:
-                    return ()
-                heat = [role.heat] if role.heat >= 5 else list(range(role.heat + 1))
-                return tuple(self._alternate_option(
-                    "harpy_beneath", "Put Someone Beneath You", target["token"], target["name"],
-                    binding, target=target["ref"], costs={"heat": heat}, choices={"heat": heat},
-                    reach="same_cell",
-                ) for target in view["beneath_targets"])
+                return tuple(
+                    self._alternate_option(
+                        row["key"],
+                        row["label"],
+                        row["target_token"],
+                        row["target_name"],
+                        binding,
+                        **row["binding"],
+                    )
+                    for row in harpy_plays(self.game, connection, viewer, scene, state, cast, role)
+                )
             if actor.kind == "gorgon":
                 view = GorgonPlayService(self.game).preview(viewer, channel)
+                if view["revision"] != state.revision:
+                    return ()
                 targets = view["attack_targets"].get(actor.token, {})
                 assets = {x.id: x.name for x in role.assets}
-                return tuple(self._alternate_option(
-                    "gorgon_attack", "Attack", target["token"], target["label"], binding,
-                    target=target["ref"], target_sha256=target["source_sha256"],
-                    costs={}, choices={"asset": assets}, reach=targets[target["token"]],
-                ) for target in view["actors"] if target["token"] in targets)
+                attacks = tuple(
+                    self._alternate_option(
+                        "gorgon_attack",
+                        "Attack",
+                        target["token"],
+                        target["label"],
+                        binding,
+                        target=target["ref"],
+                        target_sha256=target["source_sha256"],
+                        costs={},
+                        choices={"asset": assets},
+                        reach=targets[target["token"]],
+                    )
+                    for target in view["actors"]
+                    if target["token"] in targets
+                )
+                return (
+                    attacks
+                    + tuple(
+                        self._alternate_option(
+                            "gorgon_declaration_" + entry["kind"],
+                            "Collateral Damage"
+                            if entry["kind"] == "collateral"
+                            else entry["kind"].replace("_", " ").title(),
+                            entry["target_token"],
+                            entry["target_name"],
+                            binding,
+                            kind=entry["kind"],
+                            target=entry["target"],
+                            target_sha256=entry["target_sha256"],
+                            day=entry["day"],
+                            fields=entry["fields"],
+                            costs={},
+                            choices={},
+                            reach="native_review",
+                        )
+                        for entry in gorgon_declarations(view, actor.token)
+                    )
+                    + (
+                        self.erratic_plays(viewer, actor, binding)
+                        if state.world
+                        and any(
+                            x.id == actor.entity and x.gorgon_class == "erratic"
+                            for x in state.world.gorgons
+                        )
+                        else ()
+                    )
+                )
         except (ValueError, WorkflowError):
             return ()
         return ()
 
+    def erratic_plays(self, viewer, actor, binding):
+        service = ErraticService(self.game)
+        channel = binding["channel"]
+        try:
+            originals = service.view(viewer, channel)
+            if originals["revision"] != binding["revision"] or actor.entity not in dict(
+                originals["gorgons"]
+            ):
+                return ()
+            flight = service.flight_view(viewer, channel)
+        except (ValueError, WorkflowError):
+            return ()
+        tags = tuple(
+            self._alternate_option(
+                "gorgon_erratic_tag",
+                "Give an Erratic Tag",
+                "npc:" + identity,
+                label,
+                binding,
+                target_npc=identity,
+                fields=form_fields((Field("tag", "Original NPC Tag"),)),
+                choices={},
+                costs={},
+                reach="native_review",
+            )
+            for identity, label in originals["npcs"]
+        )
+        if flight["revision"] != binding["revision"]:
+            return ()
+        return tags + tuple(
+            self._alternate_option(
+                "gorgon_erratic_flee",
+                "Slip away from the exchange",
+                item["action"],
+                "",
+                binding,
+                source_work="erratic:" + item["action"],
+                battle=item["action"],
+                fields=form_fields((Field("x", "Destination X"), Field("y", "Destination Y"))),
+                choices={},
+                costs={},
+                reach="mapped_destination",
+            )
+            for item in flight["battles"]
+            if item["gorgon"] == actor.entity
+        )
+
     def _alternate_option(self, play, label, token, name, binding, **details):
         identity = f"{play}:{token}"
-        option = self.option(identity, f"{label} · {name}", "alternate_native")
+        if len(identity) > 120:
+            identity = play[:50] + ":" + hashlib.sha256(identity.encode("utf-8")).hexdigest()
+        option = self.option(identity, f"{label} · {name}" if name else label, "alternate_native")
         return option | {"alternate": binding | {"play": play, "target_token": token} | details}
 
     def battlefield_plays(self, view, sheet, state):

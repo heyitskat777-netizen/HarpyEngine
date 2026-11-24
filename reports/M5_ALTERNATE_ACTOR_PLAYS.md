@@ -1,5 +1,77 @@
 # Independent AI Plays for alternate actors
 
+## Mixed-encounter Activity update
+
+This update builds on `1d6bf50` on `codex/activity-ai-play-parity`.
+The facilitator drafts through **Character initiatives**. The original
+controller opens **AI contributions**, reviews the draft and confirms the
+native Play. **Your alternate Play decisions** opens the original assigned
+follow-up in a popup. A combat declaration waits for the actual judge to
+confirm opening and reach, then the Harpy controller commits Heat. The
+engine retains every roll, cost, resource and source-bound decision.
+
+For an ordinary Gorgon comms reaction, the model receives a description-or-wait
+contract. Its native Play accounts also ask for observable movement and
+physical detail. A Gorgon can use the speaking contract after the controller
+confirms **Allow spoken replies for this Gorgon** on its sheet. A reviewed
+description reaches only the approved listeners and reopens as narration.
+The shared portrayal sheet supplies the same approved drives, pressures and
+role memories used by Pilot drafts.
+
+| Source | Activity coverage |
+| --- | --- |
+| Harpy common Plays | Keep Your Head, Check Sensors, Dive Deep, Go Off-Duty, Flirt, Put Someone Beneath You and Engage use the cast Harpy's own resources. The projection also checks the native Snoop and Enforcement Initiative prerequisites. |
+| Harpy combat | All Out Assault and Go For the Core use the native battle declaration, reach ruling and actual target and Assets. The simulator verifies the Assault table and extra maneuver and Go For the Core against an eligible NPC. |
+| Harpy source work | A completed Flirt can nominate its actual owed follow-through as a separate reviewed episode. The original recipient confirms it. Dive effect selectors, owned table responses and native receipt recovery use the original effect text and resources. |
+| Gorgon general declarations | Attack, Collateral Damage, Warp and the other declarations in `GorgonPlayService` use the native actor, Class, Type, eligible targets and required fields. The simulator verifies Growth regrowth, Warp, Collateral Damage and Sentinel corruption with no dice. |
+| Gorgon Class work | Aggressive immediate hit, the actual Gorgon's Dormant counter-Void and a Sprite intercept use the original assigned controller and native resources. Erratic uses original NPC Tags, a mapped flight after a completed exchange and a source-bound pursuit. Directed protection and Benevolent restrictions stay with the native rules. |
+| Ordinary NPCs | Fan, Patron and Smuggler handovers use original NPC resources. The Intelligence Agent can submit an inquiry. Its assigned facilitator records the finding, then only the original Agent can read it. |
+
+The checked-in registry still marks the Gorgon Classes and Types, ordinary
+NPC Intelligence and most Harpy rules as subsets pending independent review.
+Synthetic fixtures used exact Activity specialist approvals for candidates
+that require them. Each campaign keeps its existing rule policy.
+
+### Remaining Activity work
+
+| Remaining path | Current boundary |
+| --- | --- |
+| Harpy Orders and advancement paths | Masked Disobey needs an engine continuation for the same body and source Order. Sparrows and an active Human Mask can affect their original engine Plays. Acquiring and starting the other Harpy advancements, Harpy-specific intimacy chains, and the full Harpy Defeat, Voidspace and repossession sequences still need dedicated Activity forms and source recovery. |
+| Gorgon counter and specialist chains | Keep Your Head and Engage can start from the original Gorgon response. Combat counter declarations, the other source-bound response Plays, Parasite excision, Leviathan obsession and some Class and Type aftermath still use their original native controls. The Activity coverage for Erratic flight and pursuit relies on the tested native service. |
+| NPC source responses | Care, a Guard counter and source-assigned Flirt retain their original jobs and initiating sources. Independent NPC Flirt still requires a native initiation rule. The Activity can refer unsupported source work to the facilitator. |
+
+### Rehearsal
+
+Two synthetic AI Pilot seats, one Harpy and one Gorgon faced off at an
+emergency hatch. The approved Harpy asked the Pilots to leave the light on.
+The Gorgon hooked a forelimb over the hatch lip and swept white dust off the
+threshold with its other limbs. These were separate approved contributions.
+The Gorgon made a diceless Attack. Its defending Pilot rolled **2 + 3** for
+Keep Your Head. The Harpy then spent its own Heat on Engage against the other
+Pilot and rolled **1 + 2** before the controller selected its maneuvers.
+The two original die receipts and the audience-scoped transcript survived
+reopening. The test uses scripted model responses against real role packets.
+Configured-provider dialogue quality and Discord-client interaction remain
+unverified.
+
+The alternate Play and mixed-encounter tests plus the native Erratic and
+Harpy Dive tests passed **20** checks. A separate selection of Gorgon
+runtime, Aggressive, Dormant and Harpy Assault tests passed **13** checks.
+The earlier combined Activity suite passed **37** checks during this update.
+The final simulator and local HTTP selection passed **10** checks, including
+the mixed encounter and the sheet-approved speaking exception. These
+selections overlap. Scoped Ruff, mypy, JavaScript syntax and patch whitespace
+checks passed.
+
+```sh
+python -m pytest -q --tb=short \
+  harpy-activity-lab/test_alternate_plays.py \
+  harpy-activity-lab/test_mixed_ai_encounter.py \
+  tests/rules/test_erratic_gorgon.py tests/rules/test_harpy_dive.py
+```
+
+## Earlier checkpoints
+
 The development branch `codex/activity-alternate-play-initiative` starts at
 the verified Activity parity commit `4f6e487841f4504b8387dd370f65f514f3a59932`.
 It carries the earlier native audit and target fixes as `373749e` and

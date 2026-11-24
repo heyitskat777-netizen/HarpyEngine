@@ -200,13 +200,25 @@ export function openSheetPortrayal({activityFetch, scene, kind, actorToken}) {
       const value = values[key];
       return [key, area(panel, label, Array.isArray(value) ? value.join("\n") : value, length)];
     });
+    let speech;
+    if (sheet.actor.kind === "gorgon") {
+      const caption = element("label", "Allow spoken replies for this Gorgon");
+      speech = element("input");
+      speech.type = "checkbox";
+      speech.checked = values.gorgon_speech === true;
+      caption.prepend(speech);
+      panel.append(caption);
+    }
     const save = () => ({
       actor: sheet.actor, version: sheet.version,
-      character_setup: Object.fromEntries(inputs.map(([key, input]) => [
-        key, ["resources", "limits"].includes(key)
-          ? input.value.split("\n").map(line => line.trim()).filter(Boolean)
-          : input.value.trim(),
-      ])),
+      character_setup: {
+        ...Object.fromEntries(inputs.map(([key, input]) => [
+          key, ["resources", "limits"].includes(key)
+            ? input.value.split("\n").map(line => line.trim()).filter(Boolean)
+            : input.value.trim(),
+        ])),
+        ...(speech ? {gorgon_speech: speech.checked} : {}),
+      },
     });
     action(panel, "File direction for review", async key => {
       await request("portrayal-draft", save(), key);
@@ -216,6 +228,7 @@ export function openSheetPortrayal({activityFetch, scene, kind, actorToken}) {
     if (pending) {
       const approve = writeConfirm(panel, sheet, pending.id, "Approve character direction");
       for (const [, input] of inputs) input.addEventListener("input", () => { approve.disabled = true; });
+      speech?.addEventListener("change", () => { approve.disabled = true; });
     }
   }
 
@@ -2153,8 +2166,8 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     return control;
   }
 
-  function nativeChoiceForm(row, fields) {
-    const controls = fields.map(spec => {
+  function nativeInputs(row, fields) {
+    return fields.map(spec => {
       const input = spec.options.length ? menu(row, spec.label, spec.options)
         : textArea(row, spec.label, "", 1200, spec.required);
       input.required = spec.required;
@@ -2168,6 +2181,10 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       }
       return [spec.key,input];
     });
+  }
+
+  function nativeChoiceForm(row, fields) {
+    const controls = nativeInputs(row, fields);
     function answerFields() {
       const answer = {fields:{}};
       for (const [name, control] of controls) {
@@ -2177,7 +2194,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
         if (name === "options" || name === "denied") answer[name] = values;
         else if (name === "flag") answer.flag = values[0] === "yes";
         else if (name === "number") answer.number = Number(values[0]);
-        else if (name.startsWith("fields.")) answer.fields[name.slice(7)] = values[0];
+        else if (name.startsWith("fields.")) answer.fields[name.slice(7)] = values.join(",");
         else answer[name] = values[0];
       }
       return answer;
@@ -2426,7 +2443,9 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     if (!items.length) return;
     const list = card(body, "AI contributions");
     for (const item of items) {
-      const action = item.ai_alternate
+      const described = item.kind === "NARRATION";
+      const contribution = described || item.kind === "DIALOGUE";
+      const action = described ? "Gorgon action" : item.ai_alternate
         ? (item.kind === "DIALOGUE"
           ? ({gorgon:"Gorgon", external_pilot:"Harpy", npc:"NPC"}[item.actor.kind] + " dialogue")
           : "Alternate actor initiative")
@@ -2455,21 +2474,25 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
         if (draft.native_play_approved) {
           if (draft.native_play.alternate) {
             const native = draft.native_play.alternate;
-            if (native.reach === "requires_judge") row.append(element("p", "The original judge will review reach."));
-            const fields = Object.entries(native.choices).map(([field, values]) => {
-              const options = field === "heat" ? values.map(value => [String(value), String(value)]) : Object.entries(values);
-              const labels = {heat:"Own Heat to spend", asset:"Own attacking Asset", item:"Your offered item"};
-              const [label, select] = choiceField(labels[field], options);
-              select.required = true;
-              row.append(label);
-              return [field, select];
-            });
-            row.append(button("Start approved Play", async key => {
-              if (fields.some(([, select]) => !select.reportValidity())) return;
-              const choices = Object.fromEntries(fields.map(([field, select]) =>
-                [field, field === "heat" ? Number(select.value) : select.value]));
-              await write("scene-alternate-start", {proposal:item.id, choices}, key);
-              await refresh();
+            row.append(alternatePopup("Open " + draft.native_play.label, (form, save) => {
+              if (native.reach === "requires_judge") form.append(element("p", "The original judge will review reach."));
+              const fields = native.fields ? nativeInputs(form, native.fields)
+                : Object.entries(native.choices).map(([field, values]) => {
+                    const options = field === "heat" ? values.map(value => [String(value), String(value)]) : Object.entries(values);
+                    const labels = {heat:"Own Heat to spend", asset:"Own attacking Asset", item:"Your offered item"};
+                    const select = menu(form, labels[field], options);
+                    select.required = true;
+                    return [field, select];
+                  });
+              const values = () => ({
+                proposal:item.id,
+                choices:Object.fromEntries(fields.filter(([, input]) => input.value).map(([field, input]) => [
+                  field, field === "heat" ? Number(input.value)
+                    : input.multiple ? [...input.selectedOptions].map(option => option.value) : input.value,
+                ])),
+              });
+              save("Start approved Play", "scene-alternate-start", values,
+                () => fields.every(([, input]) => input.reportValidity()));
             }));
           } else if (openNativePlay) row.append(button("Open approved Play", () => openNativePlay(draft.native_play)));
           return;
@@ -2478,7 +2501,8 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
           row.append(element("p", draft.proposal.fiction.own_action));
         }
         if (item.status === "awaiting_delivery") {
-          timeSave(row, "Deliver approved dialogue", "npc-deliver", () => ({proposal: item.id}));
+          timeSave(row, described ? "File approved action" : "Deliver approved dialogue",
+            "npc-deliver", () => ({proposal: item.id}));
           return;
         }
         const reason = textArea(row, "Reason for review", "", 1200, true);
@@ -2504,7 +2528,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
               : listeners.filter(([check]) => check.checked).map(([, actor]) => actor)
             : [],
         });
-        if (item.kind !== "DIALOGUE" || (candidates.length && candidates.length >= intended.length)) {
+        if (!contribution || (candidates.length && candidates.length >= intended.length)) {
           if (draft.native_play && !draft.native_play.alternate && openNativePlay) {
             row.append(button("Approve intent and open Play", async key => {
               if (!reason.reportValidity()) return;
@@ -2513,7 +2537,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
               await refresh();
             }, () => JSON.stringify(payload("approve"))));
           } else {
-            timeSave(row, item.kind === "DIALOGUE" ? "Approve dialogue" : "Accept intent",
+            timeSave(row, described ? "Approve action" : item.kind === "DIALOGUE" ? "Approve dialogue" : "Accept intent",
               "npc-review", () => payload("approve"));
           }
         }
@@ -2568,17 +2592,130 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     }
   }
 
+  function alternatePopup(name, form) {
+    return button(name, () => {
+      const dialog = element("dialog");
+      dialog.className = "activity-dialog terminal-dialog";
+      dialog.setAttribute("aria-label", name);
+      const close = element("button", "Close");
+      close.type = "button";
+      close.addEventListener("click", () => dialog.close());
+      const feedback = element("p");
+      feedback.setAttribute("role", "status");
+      const row = element("section");
+      dialog.append(element("h2", name), close, row, feedback);
+      dialog.addEventListener("close", () => dialog.remove());
+      const save = (label, route, values, valid) => {
+        row.append(button(label, async key => {
+          if (!valid()) return;
+          try {
+            await write(route, values(), key);
+            dialog.close();
+            await refresh();
+          } catch (error) {
+            if (dialog.open) feedback.textContent = error.message;
+            else throw error;
+          }
+        }, () => JSON.stringify(values())));
+      };
+      form(row, save);
+      document.body.append(dialog);
+      dialog.showModal();
+    });
+  }
+
+  function renderAlternateInquiries(inquiries) {
+    if (!inquiries?.length) return;
+    const panel = card(body, "Private intelligence");
+    for (const item of inquiries) {
+      if (item.step === "unavailable") {
+        panel.append(element("p", "The original inquiry is unavailable. Recheck the current cast."));
+        continue;
+      }
+      const name = item.step === "review" ? "Review an intelligence inquiry" : "Open the private finding";
+      panel.append(alternatePopup(name, (row, save) => {
+        row.append(element("p", item.inquiry));
+        if (item.step === "report") {
+          row.append(element("h4", item.learned), element("p", item.finding));
+          return;
+        }
+        const choice = menu(row, "Verified affiliation", [["declined", "No verified affiliation"],
+          ...Object.entries(item.factions).map(([id, label]) => ["faction/" + id, label])]);
+        choice.required = true;
+        const finding = textArea(row, "Record what the Agent can learn", "", 1200);
+        save("File private finding", "scene-alternate-inquiry-review", () => ({
+          id:item.id, revision:item.revision, faction:choice.value === "declined" ? null : choice.value.slice(8),
+          finding:finding.value,
+        }), () => [choice, finding].every(input => input.reportValidity()));
+      }));
+    }
+  }
+
   function renderAlternateNativeChoices(choices) {
     if (!choices?.length) return;
     const panel = card(body, "Your alternate Play decisions");
     for (const item of choices) {
-      const row = card(panel, item.kind.replaceAll("_", " "));
-      const [answer, validate] = nativeChoiceForm(row, item.fields);
-      row.append(button("Confirm my choice", async key => {
-        if (!validate()) return;
-        await write("scene-alternate-answer", {id:item.id, revision:item.revision, answer:answer()}, key);
-        await refresh();
-      }, () => JSON.stringify(answer())));
+      const name = item.title ?? item.kind.replaceAll("_", " ");
+      panel.append(alternatePopup(name, (row, save) => {
+        if (item.account) row.append(element("p", item.account));
+        if (item.response) {
+          const play = menu(row, "Your actual response Play", item.plays);
+          const heat = menu(row, "Your Heat to spend", item.heat.map(n => [String(n), String(n)]));
+          play.required = heat.required = true;
+          const account = textArea(row, "Describe the actual response", "", 1200);
+          save("Begin my response Play", "scene-alternate-response",
+            () => ({id:item.id, revision:item.revision, play:play.value,
+              heat:Number(heat.value), account:account.value}),
+            () => [play, heat, account].every(input => input.reportValidity()));
+        } else {
+          const [answer, validate] = nativeChoiceForm(row, item.fields);
+          const route = item.native_work ? "scene-alternate-work" : "scene-alternate-answer";
+          save("Confirm my choice", route,
+            () => ({id:item.id, revision:item.revision, answer:answer(),
+              ...(item.native_work ? {game_revision:item.game_revision} : {})}), validate);
+        }
+      }));
+    }
+  }
+
+  function renderAlternateBattles(view) {
+    if (!view || (!view.battles.length && !view.advances.length && !view.pursuits?.length)) return;
+    const panel = card(body, "Alternate Play declarations");
+    for (const item of view.battles) {
+      const row = card(panel, item.play.replaceAll("_", " "));
+      row.append(element("p", item.account));
+      if (item.review) row.append(alternatePopup("Review opening and reach", (form, save) => {
+        const labels = [
+          ["opening", "The opening was established"], ["reach", "The target can be reached"],
+          ["outside_permission", "Approve an out-of-Frame strike"], ["indirect", "Indirect approach"],
+          ...(item.play === "go_for_the_core" ? [["core_capability_confirmed", "Confirm the Asset can strike the Core"]] : []),
+          ...(item.dormant ? [["dormant_awakened", "The Dormant Gorgon awakens"], ["dormant_close", "Actual close contact"]] : []),
+        ];
+        const decisions = labels.map(([name, label]) => [name, menu(form, label, [["yes", "Yes"], ["no", "No"]])]);
+        const evidence = textArea(form, "Establish the actual circumstances", "", 1200);
+        const data = () => ({id:item.id, revision:item.revision, evidence:evidence.value,
+          ...Object.fromEntries(decisions.map(([name, input]) => [name, input.value === "yes"]))});
+        for (const [name, input] of decisions) input.required = name === "opening" || name === "reach";
+        save("File the judge’s ruling", "scene-alternate-battle-review", data,
+          () => [...decisions.map(([, input]) => input), evidence].every(input => input.reportValidity()));
+      }));
+      else if (item.commit) row.append(alternatePopup("Confirm the Harpy’s Play", (form, save) => {
+        const heat = menu(form, "Your actual Heat to spend", item.heat.map(value => [String(value), String(value)]));
+        heat.required = true;
+        save("Confirm", "scene-alternate-battle-commit", () => ({id:item.id, heat:Number(heat.value)}),
+          () => heat.reportValidity());
+      }));
+      else row.append(element("p", item.state === "proposed" ? "Waiting for the original judge." : "The opening was declined."));
+    }
+    for (const item of view.advances) {
+      const row = card(panel, item.play.replaceAll("_", " "));
+      if (item.ready) timeSave(row, item.diceless ? "Advance Play" : "Roll this Play",
+        "scene-alternate-advance", () => ({id:item.id}));
+      else row.append(element("p", "Waiting for the scene lock."));
+    }
+    for (const {revision, event, action} of view.pursuits ?? []) {
+      timeSave(panel, "Complete the Erratic pursuit", "scene-alternate-erratic-catch",
+        () => ({revision, event, action}));
     }
   }
 
@@ -3119,7 +3256,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       body.append(button("Refresh Director work", refresh));
       return;
     }
-    const [work, gm, opening, brief, persona, policy, observation, review, time, timingReview, sessionZero, pilotDossiers, canon, missionDrafts, sceneOpening, nativeHandler, initiatives, alternate, handovers, alternateChoices] = await Promise.all([
+    const [work, gm, opening, brief, persona, policy, observation, review, time, timingReview, sessionZero, pilotDossiers, canon, missionDrafts, sceneOpening, nativeHandler, initiatives, alternate, handovers, alternateChoices, alternateBattles] = await Promise.all([
       scene ? read("work", true) : null, scene ? read("gm-work", true) : null,
       read("opening", true), read("opening-brief", true), read("persona-setup", true),
       activityShadow ? read("activity-policy", true) : null,
@@ -3140,6 +3277,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       scene && liveTrial ? read("scene-alternate-actors", true) : null,
       scene && liveTrial ? read("scene-alternate-handovers", true) : null,
       scene && liveTrial ? read("scene-alternate-choices", true) : null,
+      scene && liveTrial ? read("scene-alternate-battles", true) : null,
     ]);
     body.replaceChildren();
     if (scene) renderSceneOpening(sceneOpening ?? {});
@@ -3148,6 +3286,8 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     renderAlternateControls(alternate?.actors);
     renderNativeHandovers(handovers?.handovers);
     renderAlternateNativeChoices(alternateChoices?.choices);
+    renderAlternateInquiries(handovers?.inquiries);
+    renderAlternateBattles(alternateBattles);
     if (nativeHandler) renderNativeHandler(nativeHandler);
     if (canon) renderCanon(canon, time?.scenes?.find(booking => booking.id === scene));
     renderMissionDrafts(missionDrafts, canon?.[2], time?.handler_controls?.pilots);

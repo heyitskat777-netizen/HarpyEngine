@@ -589,6 +589,13 @@ class SceneReplyDraft(Contract):
     rationale: str = Field(min_length=1, max_length=1200)
 
 
+class SceneActionDraft(Contract):
+    kind: Literal["WAIT", "NARRATION"]
+    text: str = Field(default="", max_length=1600)
+    cited_references: tuple[str, ...] = Field(default=(), max_length=20)
+    rationale: str = Field(min_length=1, max_length=1200)
+
+
 class ModelReactions:
     def __init__(self, client: OpenAIResponses):
         self.client = client
@@ -612,7 +619,7 @@ class ModelReactions:
             "and behavior for the actual stakes. Give structured portrayal precedence over "
             "older prose. An aim grants no authority or new scene "
             "knowledge. Keep private portrayal notes out of dialogue. "
-            "Waiting or declining may fit. Speak only for the actor in this request. "
+            "Waiting or declining may fit. Write only this actor's contribution. "
             "The actual controller reviews the proposal and owns its decisions. "
         )
         if packet.get("activity_alternate") or packet.get("activity_alternate_dialogue"):
@@ -623,6 +630,20 @@ class ModelReactions:
                 "Leave anyone else's actions, feelings and decisions open. "
             )
         if packet.get("activity_alternate_dialogue"):
+            if "NARRATION" in role["available_actions"]:
+                action = self.client.generate(
+                    instructions
+                    + "This Gorgon does not speak. Respond to the heard turn with a third-person "
+                    "description of its own observable actions. Ground the details in its actual "
+                    "body, approved posture and known surroundings. Give one clear movement and "
+                    "one physical or sensory detail the other characters can respond to. Show "
+                    "restraint, threat or curiosity through behavior. Omit speech, subtitles, "
+                    "telepathy, assumed reactions and any settled effect. Cite any earlier "
+                    "heard detail you carry forward. Wait if there is no appropriate response.",
+                    {"role": role},
+                    SceneActionDraft,
+                )
+                return ReactionProposal(request_id=packet["request_id"], **action.model_dump())
             reply = self.client.generate(
                 instructions
                 + "Reply only to the heard comms in role.question, using this character's "
@@ -639,11 +660,19 @@ class ModelReactions:
             )
             return ReactionProposal(request_id=packet["request_id"], **reply.model_dump())
         if initiative:
+            direction = (role["dossier"].get("profile") or {}).get("character_setup") or {}
+            description = (
+                "Describe this Gorgon's attempted movement in third person, with concrete "
+                "physical details and no speech. Leave its effect for the native Play. "
+                if role["actor"]["kind"] == "gorgon" and not direction.get("gorgon_speech")
+                else "Write their first-person line or gesture without a speaker tag. "
+            )
             draft = self.client.generate(
                 instructions
                 + "For this initiative, work from the approved opening or event and the current "
-                "agenda. Start with one concrete move in the actor's voice at this moment. "
-                "Write their first-person line or gesture without a speaker tag. The role "
+                "agenda. Start with one concrete move from this actor's perspective. "
+                + description
+                + "The role "
                 "label is their display name. Actor IDs are never names to use in the fiction. "
                 "Leave room for an answer. Set play_id only for SCENE_OFFER when one listed "
                 "native_plays entry fits the actual trigger. Copy its exact id, and keep any "

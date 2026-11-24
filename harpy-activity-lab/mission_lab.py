@@ -963,6 +963,7 @@ def serve(
                 "handler-native-work", "handler-hunt", "scene-initiative-review",
                 "npc-owner-review", "scene-alternate-actors", "scene-alternate-handovers",
                 "scene-alternate-choices",
+                "scene-alternate-battles",
             }
             trial_access = ai_trial and selected == UUID(ai_trial.campaign).hex and (
                 path in ("/api/activity/review-scenes", "/api/activity/ai-provider")

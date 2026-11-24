@@ -172,8 +172,8 @@ ROUNDS = (
     (
         "gorgon",
         "I called it an alarm. I should have asked what you heard.",
-        "Then ask me. I didn't have the word for it either.",
-        "Get a genuine question before speaking.",
+        "The Gorgon stills its head. One forelimb withdraws from the threshold, slow enough to follow.",
+        "Leave room for a genuine question.",
         "Patient and precise. Drops its guard on an apology.",
     ),
     (
@@ -198,7 +198,8 @@ def test_facilitator_rehearses_mixed_cast_with_exact_audience_and_owned_follow_t
             name, line, reply, drive, voice = active["round"]
             role = packet["role"]
             attempts.append(name)
-            assert "voice cue" in instructions and role["question"] == line
+            assert ("third-person" if name == "gorgon" else "voice cue") in instructions
+            assert role["question"] == line
             assert role["actor"] == roles[name].model_dump(mode="json")
             setup = role["dossier"]["profile"]["character_setup"]
             assert setup["drive"] == drive and voice in setup.values()
@@ -209,7 +210,7 @@ def test_facilitator_rehearses_mixed_cast_with_exact_audience_and_owned_follow_t
                 assert clerk_line not in str(role["references"])
             cited = tuple(item["id"] for item in role["references"] if clerk_line in item["text"])
             return response(
-                kind="DIALOGUE",
+                kind="NARRATION" if name == "gorgon" else "DIALOGUE",
                 text=reply,
                 cited_references=cited,
                 rationale="PRIVATE_REHEARSAL_REASON",
@@ -341,7 +342,7 @@ def test_facilitator_rehearses_mixed_cast_with_exact_audience_and_owned_follow_t
                 {
                     "kind": "relationship",
                     "subject": roles["gorgon"].model_dump(mode="json"),
-                    "text": "The Gorgon wants to be asked directly.",
+                    "text": "The Gorgon left the threshold clear after an apology.",
                     "knowledge_refs": [reference],
                 }
             ],

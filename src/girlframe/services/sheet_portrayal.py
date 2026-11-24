@@ -451,6 +451,8 @@ class SheetPortrayalService:
         continuity: tuple[DossierContinuityEdit, ...] | None = None,
     ) -> dict[str, Any]:
         edits = (portrayal, character_setup, experience, memory, continuity)
+        if character_setup and character_setup.gorgon_speech and actor.kind != "gorgon":
+            raise WorkflowError("Gorgon speech is a choice on the original Gorgon sheet.")
         if sum(value is not None for value in edits) != 1:
             raise WorkflowError("Choose one character setup, portrayal, or memory revision.")
         if continuity is not None and (

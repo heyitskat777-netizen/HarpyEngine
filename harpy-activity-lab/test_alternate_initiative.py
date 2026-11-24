@@ -186,13 +186,12 @@ def submit_choice(app, scene, actor, kind, **answer):
         for item in app.read(actor, scene, "scene-alternate-choices")["choices"]
         if item["kind"] == kind
     )
-    projected = {field["key"] for field in choice["fields"]}
-    assert {"options", "text"} <= projected
     provided = answer.keys() | {"fields." + key for key in answer.get("fields", {})}
     assert all(not field["required"] or field["key"] in provided for field in choice["fields"])
     payload = {"id": choice["id"], "revision": choice["revision"], "answer": answer}
-    receipt = app.write(actor, kind, scene, "scene-alternate-answer", payload)
-    assert app.write(actor, kind, scene, "scene-alternate-answer", payload) == receipt
+    key = f"alternate-choice:{choice['id']}"
+    receipt = app.write(actor, key, scene, "scene-alternate-answer", payload)
+    assert app.write(actor, key, scene, "scene-alternate-answer", payload) == receipt
     return receipt
 
 
@@ -505,20 +504,29 @@ def test_alternate_personality_is_owned_approved_and_used_by_the_facilitator(
 
 
 @pytest.mark.parametrize(
-    ("kind", "voice"),
-    (("external_pilot", "Abrupt and familiar with the rig."), ("gorgon", "Patient and exact.")),
+    ("kind", "voice", "speaks"),
+    (
+        ("external_pilot", "Abrupt and familiar with the rig.", False),
+        ("gorgon", "Patient and exact.", False),
+        ("gorgon", "Stilted and careful when it speaks.", True),
+    ),
 )
-def test_alternate_comms_uses_approved_voice_and_survives_reopen(ledger, kind, voice):
+def test_alternate_comms_uses_approved_voice_and_survives_reopen(ledger, kind, voice, speaks):
     game, _, _, owner, actor, speaker, _ = native_case(ledger, kind)
     excluded = next(viewer for viewer in (ADMIN, PLAYER, OTHER) if viewer not in (owner, speaker))
     calls = []
-    reply = "The relay was silent before your signal reached me."
+    narrated = kind == "gorgon" and not speaks
+    contribution = "NARRATION" if narrated else "DIALOGUE"
+    reply = (
+        "The Gorgon lowers its head toward the relay. A thin rattle runs through its plates."
+        if narrated else "The relay was silent before your signal reached me."
+    )
 
     class ReplyModel:
         def generate(self, instructions, packet, response):
             calls.append(packet["role"])
-            assert "Reply only to the heard comms" in instructions
-            return response(kind="DIALOGUE", text=reply, rationale="PRIVATE_DRAFT_REASON")
+            assert ("third-person" if narrated else "Reply only to the heard comms") in instructions
+            return response(kind=contribution, text=reply, rationale="PRIVATE_DRAFT_REASON")
 
     model = ReplyModel()
 
@@ -554,6 +562,18 @@ def test_alternate_comms_uses_approved_voice_and_survives_reopen(ledger, kind, v
             "id": saved["id"],
         },
     )
+    revision = 1
+    if speaks:
+        direction = dict(
+            actor=actor_data, version=revision, character_setup={"gorgon_speech": True},
+        )
+        with pytest.raises(WorkflowError, match="controlled by another"):
+            app.write(excluded, "take-voice", scene, "portrayal-draft", direction)
+        approved = app.write(owner, "speech", scene, "portrayal-draft", direction)["id"]
+        app.write(owner, "speech-approve", scene, "portrayal-confirm", {
+            "actor": actor_data, "id": approved,
+        })
+        revision += 1
     app.write(
         owner,
         "voice-draft",
@@ -561,7 +581,7 @@ def test_alternate_comms_uses_approved_voice_and_survives_reopen(ledger, kind, v
         "portrayal-draft",
         {
             "actor": actor_data,
-            "version": 1,
+            "version": revision,
             "portrayal": {"voice": "UNCONFIRMED_PORTRAYAL"},
         },
     )
@@ -605,7 +625,7 @@ def test_alternate_comms_uses_approved_voice_and_survives_reopen(ledger, kind, v
     assert packet["identity"]["kind"] == ("harpy" if kind == "external_pilot" else "gorgon")
     assert packet["dossier"]["profile"]["voice"] == voice
     assert packet["question"] == line and packet["native_plays"] == []
-    assert packet["available_actions"] == ["WAIT", "DIALOGUE"]
+    assert packet["available_actions"] == ["WAIT", contribution]
     assert "UNHEARD_" not in str(packet) and "UNCONFIRMED_PORTRAYAL" not in str(packet)
 
     assert app.read(excluded, scene, "work")["reactions"] == []
@@ -638,6 +658,7 @@ def test_alternate_comms_uses_approved_voice_and_survives_reopen(ledger, kind, v
     for viewer in (owner, speaker):
         (entry,) = [x for x in app.timeline(viewer, scene)["entries"] if x["text"] == reply]
         assert entry["id"] == receipt["id"] and entry["actor"] == actor_data
+        assert entry.get("narration", False) == narrated
     assert all(entry["text"] != reply for entry in app.timeline(excluded, scene)["entries"])
     assert state(game) == before and game.dice.calls == 0
 

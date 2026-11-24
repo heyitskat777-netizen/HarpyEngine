@@ -12,7 +12,14 @@ from girlframe.engine.m3_actor_state import ActorRef
 class ReactionProposal(Contract):
     request_id: str
     kind: Literal[
-        "WAIT", "DIALOGUE", "REFUSE", "COMPROMISE", "DELAY", "SCENE_OFFER", "REQUEST_ACTION"
+        "WAIT",
+        "DIALOGUE",
+        "NARRATION",
+        "REFUSE",
+        "COMPROMISE",
+        "DELAY",
+        "SCENE_OFFER",
+        "REQUEST_ACTION",
     ]
     text: str = Field(default="", max_length=1600)
     cited_references: tuple[str, ...] = Field(default=(), max_length=20)

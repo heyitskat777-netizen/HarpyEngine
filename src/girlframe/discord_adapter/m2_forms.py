@@ -3,25 +3,14 @@
 import asyncio
 from collections.abc import Awaitable, Callable
 from copy import deepcopy
-from dataclasses import dataclass
 from typing import Any
 
 import discord
 
 from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.onboarding import reply
+from girlframe.services.native_form_fields import Field as Field
 from girlframe.services.onboarding import WorkflowError
-
-
-@dataclass(frozen=True)
-class Field:
-    key: str
-    label: str
-    options: tuple[tuple[str, str], ...] = ()
-    minimum: int = 1
-    maximum: int = 1
-    paragraph: bool = False
-    required: bool = True
 
 
 class FormSelect(discord.ui.Select["NativeForm"]):

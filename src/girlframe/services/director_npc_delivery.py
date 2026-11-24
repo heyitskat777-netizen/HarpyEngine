@@ -88,8 +88,8 @@ class NpcDeliveryService:
         )
         if (
             not (actor.kind == "npc" or native_pilot or alternate)
-            or proposal["kind"] not in {"DIALOGUE", "REFUSE", "COMPROMISE", "DELAY"}
-            or (alternate and proposal["kind"] != "DIALOGUE")
+            or proposal["kind"] not in {"DIALOGUE", "NARRATION", "REFUSE", "COMPROMISE", "DELAY"}
+            or (alternate and proposal["kind"] not in ("DIALOGUE", "NARRATION"))
         ):
             raise WorkflowError("NPC_DELIVERY_REVIEW: use a reviewed dialogue proposal.")
         row = self._scope(c, scene)
@@ -172,6 +172,7 @@ class NpcDeliveryService:
             **({"fiction": fiction} if fiction is not None else {}),
             "source": origin.id,
             "source_revision": origin.revision,
+            **({"narration": True} if proposal["kind"] == "NARRATION" else {}),
         }
 
     def _record_authority(
@@ -372,6 +373,7 @@ class NpcDeliveryService:
                         "ordinal": record["ordinal"],
                         "created": record["delivered_at"],
                         "text": record["text"],
+                        **({"narration": True} if record.get("narration") else {}),
                         **(
                             {"action": record["fiction"]["own_action"]}
                             if record.get("fiction", {}).get("own_action")
