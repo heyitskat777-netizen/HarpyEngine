@@ -145,4 +145,8 @@ def test_actual_learned_am_pair_performances_enable_native_court_transfer(
         court.transfer(PLAYER, str(uuid4()), after.revision, another.id, target, source, "sex")
     assert state(game) == after and game.dice.calls == calls
     with ledger.engine.connect() as c:
+        assert all(
+            entry["id"] != source
+            for entry in transfer_options(game, c, after, actor, target, "sex")
+        )
         assert c.scalar(sa.select(sa.func.count()).select_from(t.m2["m2_actions"])) == action_count

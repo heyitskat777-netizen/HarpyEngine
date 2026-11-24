@@ -28,9 +28,7 @@ from girlframe.services.onboarding import WorkflowError
 from girlframe.services.shared_setup import SharedSetupService
 
 
-def test_native_am_pair_complete_performances_enable_native_court_transfer_without_action(
-    ledger, tmp_path, monkeypatch
-):
+def prepare_native_am_transfer(ledger, tmp_path, monkeypatch):
     # Choose the actual Frame during real original creation, never replace a saved sheet.
     original_draft, original_selected = creation_fixture.DraftInput, creation_fixture.selected
 
@@ -103,8 +101,19 @@ def test_native_am_pair_complete_performances_enable_native_court_transfer_witho
         "My actual first performance",
         circuits_touched=False,
     )
+    return game, court, actor, target, selected_am, sex, source
+
+
+def test_native_am_pair_complete_performances_enable_native_court_transfer_without_action(
+    ledger, tmp_path, monkeypatch
+):
+    game, court, actor, target, selected_am, sex, source = prepare_native_am_transfer(
+        ledger, tmp_path, monkeypatch
+    )
     partial = state(game)
     assert am_sex.source(partial, source).phase == "active"
+    with ledger.engine.connect() as c:
+        assert not transfer_options(game, c, partial, actor, target, "sex")
     with pytest.raises(WorkflowError, match="completed native AM"):
         court.transfer(OTHER, str(uuid4()), partial.revision, selected_am.id, target, source, "sex")
     assert state(game) == partial
@@ -167,4 +176,5 @@ def test_native_am_pair_complete_performances_enable_native_court_transfer_witho
         court.transfer(OTHER, str(uuid4()), after.revision, another.id, target, source, "sex")
     assert state(game) == after and game.dice.calls == 0
     with ledger.engine.connect() as c:
+        assert not transfer_options(game, c, after, actor, target, "sex")
         assert c.scalar(sa.select(sa.func.count()).select_from(t.m2["m2_actions"])) == 0

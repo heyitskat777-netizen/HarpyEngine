@@ -31,6 +31,7 @@ def test_entire_inventory_and_every_native_identifier_have_explicit_review_route
         | {"gorgon_" + key for key in GORGON_RULES}
         | {
             "receive_orders",
+            "red_queen_transfer",
             "handler_advocate_alone",
             "handler_frantic_breakdown",
             "handler_casualty_parts",
@@ -44,6 +45,10 @@ def test_entire_inventory_and_every_native_identifier_have_explicit_review_route
         }
         == NATIVE_RULES.keys()
     )
+    transfer = catalog.get("red_queen_transfer")
+    assert transfer.rule_id == "frame.red-queen.am-transfer"
+    assert transfer.adapter == "native_owner_review"
+    assert catalog.get(transfer.rule_id).play_id == "red_queen_transfer"
     for identity in NATIVE_RULES:
         matched = catalog.recognize(
             "GM, I declare " + identity + " to attempt this synthetic task."

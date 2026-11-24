@@ -366,48 +366,87 @@ def test_memory_extraction_collects_each_owner_and_preserves_original_roll(
     assert reopened.inspect(PLAYER, action)["receipt"] == original
 
 
-def test_transfer_uses_a_proven_completed_source_once(ledger, tmp_path, monkeypatch):
-    game, _, _, service = queen_ready(ledger, tmp_path, monkeypatch, inside=False)
-    initialize(service)
-    actor, other = (current_ref(state(game), user.user_id) for user in (PLAYER, OTHER))
-    with ledger.transaction() as c:
-        state_before = state(game)
-        for delta in (1, -1):
-            event = str(uuid4())
-            state_before = change(state_before, actor, other, delta, event)
-            game.event(
-                c,
-                PLAYER.user_id,
-                str(uuid4()),
-                "synthetic.bond_source",
-                state_before,
-                event_id=event,
+@pytest.mark.parametrize("kind", ("bond", "sex", "punishment"))
+def test_transfer_uses_a_proven_completed_source_once(ledger, tmp_path, monkeypatch, kind):
+    owner, wrong = PLAYER, OTHER
+    if kind == "sex":
+        from test_court_native_am_transfer import prepare_native_am_transfer
+        from test_intracadre_marriage import FOUR
+
+        game, _, actor, other, _, sex, source = prepare_native_am_transfer(
+            ledger, tmp_path, monkeypatch
+        )
+        owner, wrong = OTHER, PLAYER
+        assert TRANSFER not in suggestions(game, owner)
+        sex.perform(
+            FOUR,
+            str(uuid4()),
+            source,
+            state(game).revision,
+            "Confirm the already accepted scene is complete.",
+            circuits_touched=False,
+        )
+    else:
+        game, worker, gateway, service = queen_ready(ledger, tmp_path, monkeypatch, inside=False)
+        initialize(service)
+        actor, other = (current_ref(state(game), user.user_id) for user in (PLAYER, OTHER))
+        if kind == "punishment":
+            from test_red_queen_transfer_sources import (
+                finish_ordinary_punishment,
+                prepare_ordinary_punishment,
             )
+
+            action, source = prepare_ordinary_punishment(game, worker, gateway)
+            assert TRANSFER not in suggestions(game, owner)
+            finish_ordinary_punishment(game, worker, gateway, action, source)
+        else:
+            with ledger.transaction() as c:
+                state_before = state(game)
+                for delta in (1, -1):
+                    event = str(uuid4())
+                    state_before = change(state_before, actor, other, delta, event)
+                    game.event(
+                        c,
+                        PLAYER.user_id,
+                        str(uuid4()),
+                        "synthetic.bond_source",
+                        state_before,
+                        event_id=event,
+                    )
+            source = None
+
     scene = SpecialistScene(game, 900)
-    transfer = popup(scene, PLAYER, TRANSFER)
-    assert suggestions(game, PLAYER)[TRANSFER]["control"] == transfer[0]["id"]
-    assert TRANSFER not in suggestions(game, OTHER)
+    transfer = popup(scene, owner, TRANSFER)
+    assert suggestions(game, owner)[TRANSFER]["control"] == transfer[0]["id"]
+    assert TRANSFER not in suggestions(game, wrong)
     encoded = option(transfer, "source")
-    assert json.loads(encoded)["kind"] == "bond"
+    provenance = json.loads(encoded)
+    assert provenance["kind"] == kind
+    assert source is None or provenance["id"] == source
     values = {"am": option(transfer, "am"), "source": encoded}
+    before = state(game)
+    calls = game.dice.calls
     with pytest.raises(WorkflowError):
-        press(scene, OTHER, transfer, values)
+        press(scene, wrong, transfer, values)
+    assert state(game) == before
     key = str(uuid4())
-    reply = press(scene, PLAYER, transfer, values, key=key)
-    assert press(scene, PLAYER, transfer, values, key=key) == reply
+    reply = press(scene, owner, transfer, values, key=key)
+    assert press(scene, owner, transfer, values, key=key) == reply
+    after = state(game)
+    assert game.dice.calls == calls
     reopened = GameService(ledger)
+    assert state(reopened) == after
     saved = next(
-        x
-        for x in m3_red_queen.records(state(reopened), m3_red_queen.Assignment)
-        if x.id == reply["id"]
+        x for x in m3_red_queen.records(after, m3_red_queen.Assignment) if x.id == reply["id"]
     )
     assert saved.previous == actor and saved.target == other
+    assert any(x.bearer == actor for x in m3_red_queen.records(after, m3_red_queen.CourtAM))
     assert not any(
         op["id"] == TRANSFER
-        for card in SpecialistScene(reopened, 900).view(PLAYER, ROOM)
+        for card in SpecialistScene(reopened, 900).view(owner, ROOM)
         for op in card["operations"]
     )
-    assert TRANSFER not in suggestions(reopened, PLAYER)
+    assert TRANSFER not in suggestions(reopened, owner)
 
 
 def test_mid_clay_uses_disclosed_appearance_and_handler_taste(

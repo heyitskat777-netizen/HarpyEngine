@@ -2592,18 +2592,41 @@ def transfer_options(
         )
     elif kind == "punishment":
         candidates = [x.id for x in state.role_punishments if x.completion_event]
+        work = t.m3["m3_required_work"]
+        candidates.extend(
+            c.scalars(
+                sa.select(work.c.id)
+                .where(
+                    work.c.campaign_id == game.store.campaign_id,
+                    work.c.kind == "punishment",
+                    work.c.state == "resolved",
+                    work.c.subject_id == target.entity,
+                )
+                .distinct()
+                .order_by(work.c.id)
+            )
+        )
     else:
         from girlframe.engine.m3_bond_operations import records
 
         candidates = [
             x.id for x in records(state) if x.delta == -1 and {x.first, x.second} == {actor, target}
         ]
+    used = {
+        assignment.source
+        for assignment in rules.records(state, rules.Assignment)
+        if assignment.previous == actor and assignment.target == target
+    }
     result: list[dict[str, str]] = []
-    for source in candidates:
+    for source in dict.fromkeys(candidates):
         try:
             event = transfer_source(game, c, state, actor, target, source, kind)
         except WorkflowError:
             continue
+        source_key = source if kind == "bond" else event
+        if source_key in used:
+            continue
+        used.add(source_key)
         result.append(
             dict(
                 id=source,

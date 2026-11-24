@@ -156,6 +156,11 @@ def test_native_court_transfer_after_actual_group_sex_to_nonprimary_original_par
     assert changed.bearer == second
     assert after.sheets == before.sheets and after.mockingbird == before.mockingbird
     assert game.dice.calls == 1
+    with ledger.engine.connect() as c:
+        assert not transfer_options(game, c, after, actor, second, "sex")
+        assert any(
+            entry["id"] == action for entry in transfer_options(game, c, after, actor, first, "sex")
+        )
     another = next(x for x in rules.records(after, rules.CourtAM) if x.bearer == actor)
     with pytest.raises(WorkflowError, match="already transferred"):
         court.transfer(PLAYER, str(uuid4()), after.revision, another.id, second, action, "sex")

@@ -515,34 +515,27 @@ class SpecialistScene:
                 for x in m3_red_queen.ams(state, court)
                 if x.bearer == actor
             ]
-            assigned = {
-                (x.target.token, x.source)
-                for x in m3_red_queen.records(state, m3_red_queen.Assignment)
-                if x.previous == actor
-            }
             sources = []
             if ams:
                 for target in menu["targets"]:
                     other = ActorRef.model_validate(target["ref"])
                     if other != actor:
                         for kind, label in TRANSFER_KINDS.items():
-                            for entry in transfer_options(
-                                self.game, c, state, actor, other, kind
-                            ):
-                                if (other.token, entry["id"]) not in assigned:
-                                    source = json.dumps(
-                                        {
-                                            "id": entry["id"],
-                                            "kind": kind,
-                                            "target": target["ref"],
-                                        }
+                            for entry in transfer_options(self.game, c, state, actor, other, kind):
+                                source = json.dumps(
+                                    {
+                                        "id": entry["id"],
+                                        "kind": kind,
+                                        "target": target["ref"],
+                                    }
+                                )
+                                sources.append(
+                                    (
+                                        source,
+                                        f"{target['label']} · {label} · "
+                                        f"{entry['label'].split()[-1]}",
                                     )
-                                    sources.append(
-                                        (
-                                            source,
-                                            f"{target['label']} · {label} · {entry['label'].split()[-1]}",
-                                        )
-                                    )
+                                )
             if sources:
                 forms.append(
                     operation(
