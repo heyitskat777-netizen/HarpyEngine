@@ -81,6 +81,7 @@ class NpcDeliveryService:
         alternate = packet.get("activity_alternate_dialogue") and actor.kind in (
             "external_pilot",
             "gorgon",
+            "npc",
         )
         native_pilot = (
             actor.kind == "pilot" and packet.get("activity_pilot") and packet.get("run_id")
@@ -130,9 +131,18 @@ class NpcDeliveryService:
             ):
                 raise WorkflowError("AI_PILOT_AUDIENCE: listeners must share the heard source.")
             if alternate:
+                from girlframe.services.director_dossiers import DirectorDossierService
                 from girlframe.services.m2_state import load_state
                 from girlframe.services.m3_sentinel import require_communication
 
+                dossiers = DirectorDossierService(self.context)
+                if any(
+                    listener.kind in ("npc", "external_pilot", "gorgon")
+                    and actual[listener] != actual[actor]
+                    and not dossiers._visible_identity(c, actor, listener)
+                    for listener in recipients
+                ):
+                    raise WorkflowError("NPC_DELIVERY_AUDIENCE: choose known cast listeners.")
                 require_communication(
                     c,
                     self.store.campaign_id,

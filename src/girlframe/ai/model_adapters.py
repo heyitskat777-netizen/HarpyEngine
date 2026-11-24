@@ -627,8 +627,13 @@ class ModelReactions:
                 instructions
                 + "Reply only to the heard comms in role.question, using this character's "
                 "voice and stakes in the moment. Address what the speaker actually said. "
-                "Give one in-character reply without a speaker tag or wait if the actor "
-                "would stay silent. Leave any other actor's answer open. Do not select a Play.",
+                "For routine, pressure, or repair, use the matching approved voice cue. "
+                "Show the character's motive in what they notice, ask, or withhold. Avoid "
+                "explaining their profile or repeating the line back. Use earlier heard words "
+                "when relevant and cite the exact reference ID for any detail you bring forward. "
+                "Treat someone else's report as their account, not a proven fact. "
+                "Write natural dialogue without a speaker tag or wait if this actor would stay "
+                "silent. Leave any other character's answer open. Do not select a Play.",
                 {"role": role},
                 SceneReplyDraft,
             )

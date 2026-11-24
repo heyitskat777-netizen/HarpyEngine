@@ -141,6 +141,23 @@ class DirectorDossierService:
                 npc.id == subject.entity and npc.alive and (npc.revealed or linked)
                 for npc in canon.world.npcs
             )
+        if subject.kind in ("gorgon", "external_pilot"):
+            from girlframe.services.m3_consume_support import knowledge_allowed
+
+            if not knowledge_allowed(canon, subject):
+                return False
+            if subject.kind == "gorgon":
+                return canon.world is not None and any(
+                    x.id == subject.entity and x.alive and x.revealed for x in canon.world.gorgons
+                )
+            if any(
+                x.id == subject.entity and x.alive and x.revealed for x in canon.harpy_states
+            ) or any(x.id == subject.entity and x.alive and x.revealed for x in canon.janus_cores):
+                return True
+            return canon.world is not None and any(
+                x.kind == "harpy" and x.id == subject.entity and x.alive and x.revealed
+                for x in canon.world.pilots
+            )
         return False
 
     def _continuity_sources(

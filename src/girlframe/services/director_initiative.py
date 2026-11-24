@@ -65,10 +65,9 @@ class DirectorInitiative:
             for role in cast.roles
             if role.actor in actual
             and role.controller == actual[role.actor].controller
+            and not actual[role.actor].offstage_source
             and (
-                role.actor.kind == "gorgon"
-                or role.actor.kind == "npc"
-                and actual[role.actor].rules == "npc"
+                role.actor.kind in ("gorgon", "npc")
                 or role.actor.kind == "external_pilot"
                 and actual[role.actor].girl == "harpy"
             )
@@ -115,16 +114,19 @@ class DirectorInitiative:
                 enabled = bool(self._delegated(c, row, roles[actor.ref]))
                 native = (
                     initiative_play_options(self.context, c, scene, actor.ref, alternate=True)
-                    if enabled and consented
+                    if enabled and consented and actor.rules != "director"
                     else ()
                 )
                 result.append(
                     dict(
                         actor=actor.ref.model_dump(mode="json"),
+                        token=actor.ref.token,
                         label=actor.label,
                         enabled=enabled,
                         revision=self._control(c, scene, actor.ref).get("event"),
-                        referral=ALTERNATE_REFERRALS[actor.ref.kind][0],
+                        referral=ALTERNATE_REFERRALS[actor.ref.kind][0]
+                        if actor.rules != "director"
+                        else None,
                         plays=[
                             dict(
                                 id=play["id"],
@@ -208,7 +210,10 @@ class DirectorInitiative:
                 raise WorkflowError("INITIATIVE_CONTROL_OWNER: choose your actual cast actor.")
             if state.policy.mode != "shadow" or not self.observer._consented(c, row, state):
                 raise WorkflowError("OBSERVATION_DISABLED: current scene consent required.")
-            return int(row["channel_id"]), load_state(c, self.store.campaign_id).revision
+            canon = load_state(c, self.store.campaign_id)
+            if actor.kind == "npc" and self.dossiers._actor(c, scene, actor).rules == "director":
+                raise WorkflowError("INITIATIVE_REFERRAL: use the Director's own native route.")
+            return int(row["channel_id"]), canon.revision
 
         with self.store.engine.connect() as c:
             channel, revision = scoped(c)
@@ -310,10 +315,10 @@ class DirectorInitiative:
             if (grant := self._delegated(c, row, role)) is not None
         }
         actors = self.knowledge._actor_views(c, row)
+        labels = {actor.ref: actor.label for actor in actors}
         comms = (
             self._recent_comms(c, row, actors)
-            if state.activity_epoch is not None
-            and any(actor.kind in ("external_pilot", "gorgon") for actor in grants)
+            if state.activity_epoch is not None and grants
             else ()
         )
         canon = load_state(c, self.store.campaign_id) if grants else None
@@ -321,10 +326,14 @@ class DirectorInitiative:
             actor = role.ref
             delegated = grants.get(actor)
             if delegated:
-                plays = initiative_play_options(self.context, c, scene, actor, alternate=True)
+                plays = (
+                    initiative_play_options(self.context, c, scene, actor, alternate=True)
+                    if role.rules != "director"
+                    else ()
+                )
                 reply = (
                     self._reply_source(c, scene, canon, actor, comms)
-                    if canon is not None and comms and actor.kind in ("external_pilot", "gorgon")
+                    if canon is not None and comms and actor not in pilots
                     else None
                 )
                 if plays or reply:
@@ -381,6 +390,7 @@ class DirectorInitiative:
                                     source=dict(kind="comms", id=reply.source_id),
                                     subject="Comms reply",
                                     quote=reply.text,
+                                    speaker=labels.get(reply.actor, reply.actor.kind.title()),
                                 ),
                                 trigger={"kind": "heard_comms", "revision": reply.source_revision},
                             )

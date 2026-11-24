@@ -2,6 +2,8 @@
 
 import json
 
+from play_continuations import field, operation
+
 from girlframe.engine.m2 import PlayInput
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.services.m3_actor_plays import ActorPlayService
@@ -10,8 +12,6 @@ from girlframe.services.m3_cast import CastService
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_npc_orders import NpcOrderService
 from girlframe.services.onboarding import WorkflowError
-
-from play_continuations import field, operation
 
 ORIGINS = {
     "broken": "Broken",
@@ -103,7 +103,7 @@ class SceneOrders:
                 for item in owned["actors"]
                 if item["token"] not in present
                 and (
-                    item["kind"] == "npc"
+                    item["kind"] in ("npc", "gorgon")
                     or item["rules"] in ("handler_girl", "clone_am")
                     or item["kind"] == "external_pilot"
                     and item["girl"] == "harpy"
@@ -114,7 +114,7 @@ class SceneOrders:
                 for item in cast["roles"]
                 if item["own"]
                 and item["ref"]["kind"]
-                in ("npc", "handler", "clone_am", "external_pilot")
+                in ("npc", "handler", "clone_am", "external_pilot", "gorgon")
             ]
             for code, label, options in (
                 ("join", "Bring a controlled role into the scene", join),
@@ -257,7 +257,7 @@ class SceneOrders:
             )
         if action in ("join", "withdraw") and values.keys() == {"actor"}:
             ref = ActorRef.model_validate_json(values["actor"])
-            if ref.kind not in ("npc", "handler", "clone_am", "external_pilot"):
+            if ref.kind not in ("npc", "handler", "clone_am", "external_pilot", "gorgon"):
                 raise WorkflowError("Choose an original controlled role.")
             return self.cast.change(
                 viewer, key, self.channel, revision, cast_revision, action, ref

@@ -38,24 +38,25 @@ function choiceField(label, choices, value) {
   return [row, control];
 }
 
-export function openSheetPortrayal({activityFetch, scene, kind}) {
+export function openSheetPortrayal({activityFetch, scene, kind, actorToken}) {
   const root = scene ? "/api/director/" + encodeURIComponent(scene) + "/" : "/api/campaign-opening/";
   const dialog = element("dialog");
   dialog.className = "activity-dialog terminal-dialog";
   const body = element("section");
   const status = element("p");
   status.setAttribute("role", "status");
-  dialog.setAttribute("aria-label", "Character portrayal");
+  const heading = kind === "alternate" ? "Character sheets" : "Character portrayal";
+  dialog.setAttribute("aria-label", heading);
   const close = element("button", "Close");
   close.type = "button";
   close.addEventListener("click", () => dialog.close());
-  dialog.append(element("h2", "Character portrayal"), close, status, body);
+  dialog.append(element("h2", heading), close, status, body);
   dialog.addEventListener("close", () => dialog.remove());
   document.body.append(dialog);
   dialog.showModal();
   const active = new AbortController();
   dialog.addEventListener("close", () => active.abort());
-  let token;
+  let token = actorToken;
   const traits = [
     ["archetype", "Archetype", 60], ["vibe", "Vibe", 60], ["voice", "How they speak", 1000],
     ["approach", "What they do first", 1000], ["pressure", "Under pressure", 500],
@@ -190,7 +191,7 @@ export function openSheetPortrayal({activityFetch, scene, kind}) {
   ];
 
   function editCharacterSetup(parent, sheet) {
-    const panel = details(parent, "Session Zero · Character direction");
+    const panel = details(parent, kind === "alternate" ? "Character direction" : "Session Zero · Character direction");
     const pending = sheet.pending?.kind === "character_setup" && !sheet.pending.stale
       ? sheet.pending : null;
     const values = pending?.character_setup ?? sheet.character_setup ?? {};
@@ -481,6 +482,57 @@ export function openSheetPortrayal({activityFetch, scene, kind}) {
     changes.open = true;
   }
 
+  function nativeRecord(parent, record) {
+    const label = value => value.replaceAll("_", " ");
+    const harpy = record.kind === "harpy";
+    const panel = element("section");
+    panel.append(element("h4", harpy ? "Harpy service record" : "Gorgon specimen record"));
+    const fields = element("dl");
+    const state = harpy ? [
+      ["Frame", record.frame?.toUpperCase() ?? "Unlinked"],
+      ["Heat", record.heat],
+      ["Body", record.incapacitated ? "Incapacitated" : "Active"],
+      ["Frame state", record.frame_shutdown ? "Shut down" : record.piloting ? "Piloting" : "Idle"],
+      ["Custody", label(record.custody)],
+    ] : [
+      ["Class", label(record.gorgon_class)],
+      ["Types", record.types.map(label).join(" · ")],
+      ["Core conditions", record.core_conditions.join(" · ")],
+      ["Core weakness", record.core_weakness],
+      ["Protected Asset", record.protected_asset],
+    ];
+    state.push(["Core", record.core_exposed ? "Exposed" : "Covered"]);
+    for (const [name, value] of state) {
+      if (value != null && value !== "") fields.append(element("dt", name), element("dd", value));
+    }
+    panel.append(fields);
+    if (record.assets.length) {
+      const assets = details(panel, "Assets");
+      assets.open = true;
+      for (const asset of record.assets) {
+        const row = element("p");
+        row.append(element("strong", asset.name), document.createTextNode(" · " + [
+          asset.family, asset.destroyed ? "Destroyed" : asset.damaged ? "Damaged" : "Intact",
+          asset.void ? "Void-touched" : "",
+        ].filter(Boolean).join(" · ")));
+        assets.append(row);
+        if (asset.description) assets.append(element("p", asset.description));
+      }
+    }
+    const notes = [
+      ["Identities", record.identities?.map(x => x.name + (x.marked ? " (marked)" : ""))],
+      ["Tags", record.tags.map(x => x.label + (x.marked ? " (marked)" : ""))],
+      ["Advancements", record.advancements],
+      ["Retained Plays", record.retained_plays?.map(label)],
+      ["Blocked Plays", record.blocked_plays?.map(label)],
+    ];
+    for (const [name, values] of notes) {
+      if (!values?.length) continue;
+      panel.append(element("h5", name), element("p", values.join(" · ")));
+    }
+    parent.append(panel);
+  }
+
   async function load(openPreview = false) {
     const view = await request("portrayal-sheets");
     const kinds = kind === "pilot" ? ["pilot", "npc"]
@@ -505,6 +557,7 @@ export function openSheetPortrayal({activityFetch, scene, kind}) {
         : sheet.actor.kind === "handler" ? "Handler portrayal comes from your private sheet notes."
         : "Portrayal awaits your approval."),
     );
+    if (sheet.native_record) nativeRecord(body, sheet.native_record);
     if (sheet.pending?.stale) body.append(element("p", "The saved draft is stale. Reopen the current sheet before editing."));
     else if (["experience", "memory", "continuity"].includes(sheet.pending?.kind)) body.append(element("p", "A character change awaits your approval in its source scene."));
     else if (sheet.pending) body.append(element("p", "A portrayal draft awaits your approval."));
@@ -2375,7 +2428,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     for (const item of items) {
       const action = item.ai_alternate
         ? (item.kind === "DIALOGUE"
-          ? (item.actor.kind === "gorgon" ? "Gorgon dialogue" : "Harpy dialogue")
+          ? ({gorgon:"Gorgon", external_pilot:"Harpy", npc:"NPC"}[item.actor.kind] + " dialogue")
           : "Alternate actor initiative")
         : item.kind === "DIALOGUE" ? "Pilot dialogue" : item.initiative ? "Pilot initiative" : "Pilot intent";
       const row = card(list, action);
@@ -2471,9 +2524,11 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
 
   function renderAlternateControls(actors) {
     if (!actors?.length) return;
-    const panel = card(body, "Alternate actor initiative");
+    const panel = card(body, "Controlled scene cast");
     for (const actor of actors) {
       const row = card(panel, actor.label);
+      row.append(button("Open character sheet", () =>
+        openSheetPortrayal({activityFetch, scene, kind:"alternate", actorToken:actor.token})));
       if (actor.plays?.length) {
         const plays = element("ul");
         for (const play of actor.plays) {
@@ -2486,7 +2541,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
           revision:actor.revision ?? null}, key);
         await refresh();
       }));
-      if (actor.enabled) row.append(button("Refer " + actor.referral, async key => {
+      if (actor.enabled && actor.referral) row.append(button("Refer " + actor.referral, async key => {
         await write("scene-alternate-refer", {actor:actor.actor}, key);
         status.textContent = "Filed for the assigned facilitator.";
       }));
@@ -2537,7 +2592,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       const comms = item.source.kind === "comms";
       row.append(element("p", item.source.kind === "opening" ? "Approved opening"
         : item.source.kind === "native" ? "Eligible native Play"
-          : comms ? "Heard on comms" : "Witnessed outcome"));
+          : comms ? "Heard on comms · " + item.speaker : "Witnessed outcome"));
       if (comms) row.append(element("blockquote", item.quote));
       if (!item.model_configured) {
         row.append(element("p", "Model unassigned for this role."));
@@ -3115,7 +3170,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       if (activityShadow) renderAIPilotReview(work);
       if (gm) renderFacilitator(gm);
       if (pilotDossiers) renderPilotDossiers(pilotDossiers, work);
-      body.append(button("Open alternate actor portrayal", () =>
+      body.append(button("Open Harpy, Gorgon and NPC sheets", () =>
         openSheetPortrayal({activityFetch, scene, kind:"alternate"})));
       renderOwn(work);
     }

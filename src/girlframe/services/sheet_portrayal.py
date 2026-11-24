@@ -31,6 +31,10 @@ from girlframe.engine.m3_actor_state import ActorRef, ActorView
 from girlframe.engine.m3_actors import owned_refs
 from girlframe.engine.m3_handler_character import PROFILES
 from girlframe.engine.m3_handler_consequences import active_handler
+from girlframe.engine.m3_harpy_advancements import ADVANCEMENTS, advances
+from girlframe.engine.m3_harpy_defeat import harpy
+from girlframe.engine.m3_harpy_resources import assets as harpy_assets
+from girlframe.engine.m3_void_state import HarpyState
 from girlframe.engine.pilot_portrayal import PilotPortrayal
 from girlframe.engine.playbooks import FRAME_TYPES, GIRL_TYPES
 from girlframe.services.campaign_difficulty import opening
@@ -253,6 +257,58 @@ class SheetPortrayalService:
         ):
             raise WorkflowError("PRESSURE_UNAVAILABLE: recover its known sources.")
 
+    @staticmethod
+    def _character_record(canon: GameState, actor: ActorView) -> dict[str, Any] | None:
+        if actor.ref.kind == "external_pilot" and actor.girl == "harpy":
+            try:
+                original = harpy(canon, actor.ref)
+                resources = harpy_assets(canon, actor.ref)
+            except ValueError:
+                return None
+            titles = dict(ADVANCEMENTS)
+            return {
+                "kind": "harpy",
+                "frame": actor.frame,
+                "heat": actor.heat,
+                "piloting": actor.piloting,
+                "frame_shutdown": original.frame_shutdown,
+                "incapacitated": original.body_incapacitated,
+                "custody": original.custody,
+                "core_exposed": actor.core_exposed,
+                "identities": [identity.model_dump(mode="json") for identity in actor.identities],
+                "tags": [{"label": tag.label, "marked": tag.marked} for tag in original.tags],
+                "assets": [
+                    asset.model_dump(include={"name", "family", "description", "damaged", "void"})
+                    for asset in resources
+                ],
+                "advancements": [
+                    titles[item.rule] for item in advances(canon, actor.ref) if item.rule in titles
+                ],
+                "retained_plays": list(original.plays) if isinstance(original, HarpyState) else [],
+                "blocked_plays": [item.play for item in original.blocked_plays],
+            }
+        if actor.ref.kind == "gorgon" and canon.world:
+            gorgon = next(item for item in canon.world.gorgons if item.id == actor.ref.entity)
+            records = (*gorgon.assets, *gorgon.destroyed_assets)
+            asset_names = {asset.id: asset.name for asset in records}
+            destroyed = {asset.id for asset in gorgon.destroyed_assets}
+            return {
+                "kind": "gorgon",
+                "gorgon_class": gorgon.gorgon_class,
+                "types": list(gorgon.types),
+                "core_exposed": actor.core_exposed,
+                "core_conditions": [asset_names[identity] for identity in gorgon.core_plan.assets],
+                "core_weakness": gorgon.core_plan.weakness,
+                "protected_asset": asset_names.get(gorgon.protected_asset or ""),
+                "tags": [{"label": tag.label, "marked": tag.marked} for tag in gorgon.tags],
+                "assets": [
+                    asset.model_dump(include={"name", "family", "description", "damaged", "void"})
+                    | {"destroyed": asset.id in destroyed}
+                    for asset in records
+                ],
+            }
+        return None
+
     def view(self, viewer: GuildViewer) -> dict[str, Any]:
         with self.store.engine.connect() as c:
             c.exec_driver_sql("BEGIN")
@@ -278,6 +334,7 @@ class SheetPortrayalService:
                     if pending and draft and draft.kind == "character_setup"
                     else None
                 )
+                record = self._character_record(canon, actual)
                 sheets.append(
                     {
                         "actor": actor.model_dump(mode="json"),
@@ -287,6 +344,7 @@ class SheetPortrayalService:
                         "approved": approved.version if approved else None,
                         "portrayal": portrayal.model_dump(mode="json") if portrayal else None,
                         "character_setup": setup.model_dump(mode="json") if setup else None,
+                        **({"native_record": record} if record else {}),
                         "pending": {
                             "id": draft.proposal.id,
                             "kind": draft.kind,

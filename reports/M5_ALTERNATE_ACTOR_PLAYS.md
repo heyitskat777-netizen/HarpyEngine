@@ -133,7 +133,7 @@ actually control and can adjudicate an outcome when the native workflow assigns
 them that role. The narrower role packet enters generation even when the
 facilitator can see more of the world.
 
-NPC, Harpy and Gorgon owners can use **Open alternate actor portrayal** in
+NPC, Harpy and Gorgon owners can use **Open Harpy, Gorgon and NPC sheets** in
 the Activity Director work. The approved version carries voice, current drive,
 fear, contradiction, limits and contextual reactions. NPC jobs, the actual
 Harpy Frame, and Gorgon Class and Types enter generation from the actor's own
@@ -160,10 +160,9 @@ edit or withdrawn control before delivery requires a fresh review. An
 approved decision to wait closes the turn. HarpyEngine still owns all
 native Plays, resources and outcomes.
 
-Unprompted scene initiative and narrative quality in a sustained mixed-cast
-session remain separate work. Cross-cast relationships outside the existing
-identity projection remain gated. The automated checks use synthetic actors
-and stub responses.
+Unprompted scene initiative and narrative quality across a full campaign
+remain separate work. The automated checks here use synthetic actors and
+stub responses.
 
 The Activity alternate-initiative suite passed 24 tests (76.00 seconds) with
 `python -m pytest -q --tb=short harpy-activity-lab/test_alternate_initiative.py`
@@ -180,6 +179,47 @@ drafts before model generation. Nine focused Director, dossier, Pilot
 initiative and Play catalog checks passed (108 deselected, 10.64 seconds).
 Scoped Ruff, mypy, JavaScript syntax and patch whitespace checks passed.
 These runs exclude the full repository regression and authenticated Discord.
+
+### Native character sheets and mixed-cast review
+
+From **Orders and scene cast**, a controller can join or withdraw their own
+Gorgon as well as their NPCs and Harpies. **Controlled scene cast** in the
+Director desk opens the exact character's sheet and sets its scene-specific
+AI control. Harpy files display the actual Frame, Heat, custody, Core,
+Identities, Tags, Assets and retained or blocked Plays. Gorgon files display
+the actual Class, Types, Core conditions, Tags and intact, damaged or destroyed
+Assets. The records are owner-only projections from HarpyEngine. Both use
+the same approved voice, character direction and source-backed memory and
+continuity forms as AI Pilots. An actual revealed Harpy or Gorgon can be a
+relationship subject when the author has authorized scene evidence.
+
+The facilitator can draft for a living, current Harpy, Gorgon, ordinary NPC
+or Director NPC once its native controller enables AI. NPCs assigned to a
+regular AI Pilot seat use that seat's existing dialogue workflow. Each
+controller approves and sends its own draft. The ordinary NPC native actions
+and a Director's assigned rulings retain their existing controls. The mixed
+cast fixture included two GM-controlled roles, a Pilot-controlled Harpy, a
+separately controlled Guard and Director, an uncast NPC and a concealed
+Gorgon. Scoped packets, ownership checks and exact listeners prevented
+private knowledge from passing between roles controlled by the same human.
+
+In an additional offline rehearsal, the session supplied the actual role
+packets one turn at a time and accepted fresh replies written against those
+packets. The clerk kept the watch open for Vale. The Harpy declined to have
+its name used on comms and gave the Pilot a practical question to ask. The
+Gorgon answered an apology by asking to start on the current channel and
+leave room for a refusal. The Director offered to take responsibility for a report
+that distinguished the log from a finding. The responses used the approved
+routine, pressure or repair cues and left other actors' decisions open. All
+four replies survived reopening with no native state change or rolls. This
+was an offline portrayal check. It establishes the input, review and delivery
+path, with configured-provider quality and real Discord verification pending.
+
+The focused checks passed two new cast and sheet tests, 24 alternate
+initiative tests and 10 related Director tests. The new checks cover the
+original owner, Gorgon casting, private mechanical state, routine, pressure
+and repair cues, exact audience rejection, and a saved cross-cast relationship.
+Ruff, mypy, JavaScript syntax and patch whitespace checks passed.
 
 ```sh
 python -m pytest -q --tb=short \
