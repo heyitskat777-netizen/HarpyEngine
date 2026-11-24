@@ -92,19 +92,23 @@ function input(form, name, label, value, maxLength, required = true) {
 function picks(form, prefix, label, options, selected) {
   for (const index of [0, 1]) {
     const name = prefix + index;
-    field(form, name, label + " asset " + (index + 1), selected[index]?.name ?? "", [
+    const choice = field(form, name, label + " asset " + (index + 1), selected[index]?.name ?? "", [
       ["", "Choose an asset"], ...options.map(value => [value, value]),
-    ]).required = true;
-    input(form, name + "-description", label + " asset " + (index + 1) + " description",
+    ]);
+    choice.required = true;
+    const description = input(form, name + "-description", label + " asset " + (index + 1) + " description",
       selected[index]?.description ?? "", 700);
+    const updateDescription = () => { description.disabled = !choice.value; };
+    choice.addEventListener("change", updateDescription);
+    updateDescription();
   }
 }
 
 function assets(values, prefix) {
-  return [0, 1].map(index => ({
-    name: values.get(prefix + index),
-    description: values.get(prefix + index + "-description"),
-  }));
+  return [0, 1].flatMap(index => {
+    const name = values.get(prefix + index);
+    return name ? [{name, description: values.get(prefix + index + "-description") ?? ""}] : [];
+  });
 }
 
 function rollLabel(play) {
@@ -1712,6 +1716,10 @@ export function createEnrollment(dialog, trigger, artwork, send, refresh) {
     body.querySelector("section:not([hidden]) input")?.focus();
   }
 
+  function dossierComplete() {
+    return sections?.dossier.querySelector("form")?.matches(":valid");
+  }
+
   for (const tab of tabs) tab.addEventListener("click", () => select(tab.dataset.enrollmentTab));
   trigger.addEventListener("click", open);
 
@@ -1774,7 +1782,7 @@ export function createEnrollment(dialog, trigger, artwork, send, refresh) {
     const wizard = {sections};
     renderPlayerSetup(body, state, send, inboxBonds, wizard);
     sections.bond.append(refreshControl);
-    const next = pendingStep ?? step ?? (state.revision ? "bond" : "dossier");
+    const next = pendingStep ?? step ?? (dossierComplete() ? "bond" : "dossier");
     pendingStep = null;
     select(stage === "profile" ? "callsign" : next === "callsign" ? "dossier" : next);
     if (!shown) {
@@ -1786,7 +1794,7 @@ export function createEnrollment(dialog, trigger, artwork, send, refresh) {
 
   function saved(command) {
     if (command === "profile") pendingStep = "dossier";
-    if (command === "build") pendingStep = "bond";
+    if (command === "build" && dossierComplete()) pendingStep = "bond";
     if (command === "select-bond") pendingStep = "review";
   }
 
@@ -1868,6 +1876,9 @@ export function renderPlayerSetup(target, state, send, bondTarget = target, wiza
           } : {}),
         },
       }));
+      // Required fields indicate when the dossier can advance. HarpyEngine reviews
+      // completeness separately, so this form can file an unfinished draft.
+      build.noValidate = true;
       input(build, "frame_name", "Frame name", draft.frame_name, 80);
       input(build, "girl_appearance", "Pilot appearance", draft.girl_appearance, 700);
       input(build, "frame_appearance", "Frame appearance", draft.frame_appearance, 700);

@@ -36,7 +36,8 @@ const p2BattlefieldCheck = process.argv.includes("--p2-battlefield-check");
 const playParityCheck = process.argv.includes("--play-parity-check");
 const p2Facility = process.argv.includes("--outpost") ? "outpost" : "hangar";
 const directorDiscordCheck = archiveCheck || intelCheck || sceneArtworkCheck || p2BattlefieldCheck || playParityCheck || rehearsalCheck || process.argv.includes("--director-discord-check");
-const boundRosterCheck = sceneOrdersCheck || missionDeskCheck || rosterBattlefieldCheck || campaignSwitchCheck || campaignDmCheck || handlerPlaysCheck || process.argv.includes("--bound-roster-check");
+const enrollmentDraftCheck = process.argv.includes("--enrollment-draft-check");
+const boundRosterCheck = enrollmentDraftCheck || sceneOrdersCheck || missionDeskCheck || rosterBattlefieldCheck || campaignSwitchCheck || campaignDmCheck || handlerPlaysCheck || process.argv.includes("--bound-roster-check");
 const discordOffline = directorDiscordCheck || dmOffline || boundRosterCheck || process.argv.includes("--discord-offline");
 const chromePath = process.argv.slice(2).find(argument => !argument.startsWith("--"));
 const tacticalTier = process.argv.slice(2).find(argument => argument.startsWith("--tactical-tier="))?.split("=")[1];
@@ -2117,6 +2118,50 @@ async function verifyPlayParity(browser, server, saved) {
   return {choice:pending.id, roll:root.receipt};
 }
 
+async function verifyPartialEnrollment(browser, server) {
+  const dialog = pilot => pilot.view.locator("#enrollment-dialog");
+  const field = (pilot, label) => dialog(pilot).getByLabel(label, {exact:true});
+  const button = (pilot, label) => dialog(pilot).getByRole("button", {name:label, exact:true});
+  const load = async pilot => {
+    const response = await fetch(server.origin + "/api/player-setup", {
+      headers:{Authorization:"Bearer " + pilot.session}, signal:AbortSignal.timeout(8000),
+    });
+    assert.equal(response.status, 200);
+    return response.json();
+  };
+  const pilot = await openPilot(browser, server, "invited");
+  await pilot.page.setViewportSize({width:390, height:720});
+  await field(pilot, "Callsign").fill("TEST RAIL");
+  await button(pilot, "File callsign").click();
+  const frameName = field(pilot, "Frame name");
+  await frameName.fill("First draft");
+  const before = await load(pilot);
+  const firstAsset = before.options.girl_assets[0];
+  await field(pilot, "Pilot asset 1").selectOption(firstAsset);
+  await field(pilot, "Pilot asset 1 description").fill("A scratched visor.");
+  const filed = pilot.page.waitForResponse(response =>
+    new URL(response.url()).pathname === "/api/player-setup/build" &&
+    response.request().method() === "POST");
+  await button(pilot, "File enrollment draft").click();
+  assert.equal((await filed).status(), 200);
+  await pilot.view.getByText("ENROLLMENT RECORD FILED", {exact:true}).waitFor();
+  await pilot.page.context().close();
+
+  const reopened = await openPilot(browser, server, "invited");
+  const restored = await load(reopened);
+  assert.equal(restored.revision, before.revision + 1);
+  assert.equal(restored.stage, "draft");
+  assert.equal(restored.review.ready, false);
+  assert.equal(restored.draft.frame_name, "First draft");
+  assert.deepEqual(restored.draft.girl_assets, [{name:firstAsset, description:"A scratched visor."}]);
+  assert.deepEqual(restored.draft.frame_assets, []);
+  assert.equal(await field(reopened, "Frame name").inputValue(), "First draft");
+  assert.equal(await field(reopened, "Pilot asset 1 description").inputValue(), "A scratched visor.");
+  await button(reopened, "Review").click();
+  assert.equal(await button(reopened, "Activate pilot").count(), 0);
+  await reopened.page.context().close();
+}
+
 async function mainTest() {
   let server;
   let browser;
@@ -2147,6 +2192,11 @@ async function mainTest() {
       executablePath: chromePath ?? "C:/Program Files/Google/Chrome/Application/chrome.exe",
       headless: true, args: ["--disable-background-networking", "--disable-sync"],
     });
+    if (enrollmentDraftCheck) {
+      await verifyPartialEnrollment(browser, server);
+      console.log("Partial enrollment survived a fresh synthetic Discord sign-in and stayed pending.");
+      return;
+    }
     if (playParityCheck) {
       const pending = await verifyPlayParity(browser, server);
       await Promise.all(browser.contexts().map(context => context.close()));
