@@ -2,6 +2,7 @@
 
 import json
 import os
+import sys
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
@@ -26,8 +27,10 @@ from girlframe.services.director_observation import DirectorObservationService
 from girlframe.services.director_session import DirectorSessionService
 from girlframe.services.onboarding import WorkflowError
 
-bundled_adapter = Path(__file__).resolve().parents[1] / "integrations" / "activity" / "p2_scene.py"
+activity_root = Path(__file__).resolve().parents[1] / "harpy-activity-lab"
+bundled_adapter = activity_root / "p2_scene.py"
 adapter_file = Path(os.environ.get("HARPY_ACTIVITY_TEST_ADAPTER", str(bundled_adapter)))
+sys.path.insert(0, str(adapter_file.resolve().parent))
 adapter_spec = spec_from_file_location("activity_p2_scene", adapter_file)
 assert adapter_spec and adapter_spec.loader
 activity_adapter = module_from_spec(adapter_spec)

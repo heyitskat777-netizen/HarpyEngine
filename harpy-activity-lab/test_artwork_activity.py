@@ -58,7 +58,7 @@ runpy.run_path("discord_test_host.py", run_name="__main__")
             server.communicate()
 
 
-def request(config, path, token=None, data=None, status=HTTPStatus.OK):
+def request(config, path, token=None, data=None, status=HTTPStatus.OK, *, key=None):
     headers = {}
     if token:
         headers["Authorization"] = f"Bearer {token}"
@@ -67,7 +67,7 @@ def request(config, path, token=None, data=None, status=HTTPStatus.OK):
             {
                 "Origin": config["discord_activity_origin"],
                 "Content-Type": "application/json",
-                "Idempotency-Key": str(uuid4()),
+                "Idempotency-Key": str(uuid4()) if key is None else key,
             }
         )
     payload = None if data is None else json.dumps(data).encode("utf-8")
@@ -78,6 +78,8 @@ def request(config, path, token=None, data=None, status=HTTPStatus.OK):
         response = error
     with response:
         body = response.read()
+        if status is None:
+            return response.status, json.loads(body)
         assert response.status == status, (path, response.status, body[:200])
         if response.headers.get_content_type() == "image/webp":
             return body
@@ -136,11 +138,7 @@ def activate_recruit(config, recruit, owner, *, keep_callsign=False):
     )
     setup = request(config, "/api/player-setup", recruit)
     incoming = next(
-        (
-            item
-            for item in setup["bonds"]
-            if item["incoming"] and item["state"] == "accepted"
-        ),
+        (item for item in setup["bonds"] if item["incoming"] and item["state"] == "accepted"),
         None,
     )
     if incoming and setup.get("bond_setup"):
@@ -161,9 +159,7 @@ def activate_recruit(config, recruit, owner, *, keep_callsign=False):
             "review",
             {"revision": review["revision"], "fingerprint": review["fingerprint"]},
         )
-        setup_action(
-            config, recruit, "activate", {"fingerprint": review["fingerprint"]}
-        )
+        setup_action(config, recruit, "activate", {"fingerprint": review["fingerprint"]})
         return
     selection = {}
     if setup.get("bond_setup"):
@@ -190,9 +186,7 @@ def activate_recruit(config, recruit, owner, *, keep_callsign=False):
         },
     )
     bond = next(
-        item
-        for item in request(config, "/api/player-setup", owner)["bonds"]
-        if item["incoming"]
+        item for item in request(config, "/api/player-setup", owner)["bonds"] if item["incoming"]
     )
     setup_action(
         config,
@@ -238,9 +232,7 @@ def test_artwork_uses_session_ownership_and_persists(tmp_path):
         def projection(token):
             state = request(config, "/api/player-setup", token)
             pilot = next(item for item in state["cadre"] if item["callsign"] == "SYNTH")
-            room = next(
-                item for item in state["directory"]["rooms"] if item["id"] == room_id
-            )
+            room = next(item for item in state["directory"]["rooms"] if item["id"] == room_id)
             return pilot, room
 
         def select(token, kind, target, artwork, previous=None, status=HTTPStatus.OK):
@@ -308,17 +300,11 @@ def test_scene_posts_use_the_authors_own_portrait(tmp_path):
         code = setup_action(config, pilot, "invite-issue", {"target": room})["code"]
         setup_action(config, recruit, "invite-redeem", {"code": code})
 
-        setup_action(
-            config, pilot, "room-post", {"target": room, "text": "New pilot post"}
-        )
-        setup_action(
-            config, recruit, "room-post", {"target": room, "text": "Recruit post"}
-        )
+        setup_action(config, pilot, "room-post", {"target": room, "text": "New pilot post"})
+        setup_action(config, recruit, "room-post", {"target": room, "text": "Recruit post"})
         with closing(sqlite3.connect(directory / "activity-records.sqlite3")) as db, db:
             authors = list(
-                db.execute(
-                    "SELECT actor, author_character FROM dialogue ORDER BY rowid"
-                )
+                db.execute("SELECT actor, author_character FROM dialogue ORDER BY rowid")
             )
             assert len(authors) == 2 and all(character for _, character in authors)
             (pilot_actor, _), (recruit_actor, _) = authors
@@ -368,6 +354,5 @@ def test_scene_posts_use_the_authors_own_portrait(tmp_path):
             "Unmatched legacy post": None,
         }
         assert all(
-            set(entry) == {"id", "callsign", "body", "created", "portrait"}
-            for entry in entries
+            set(entry) == {"id", "callsign", "body", "created", "portrait"} for entry in entries
         )

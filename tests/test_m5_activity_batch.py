@@ -133,10 +133,10 @@ class RelayRehearsal(Rehearsal):
 @pytest.fixture
 def relay(ledger, request):
     variant = getattr(request, "param", "Advocate")
-    trial = RelayRehearsal(ledger, "Advocate" if variant == "unframed" else variant)
+    trial = RelayRehearsal(ledger, "Advocate" if variant in {"unframed", "reviewed"} else variant)
     trial.calls = []
     trial.output = WAIT
-    zero, approved = trial.setup()
+    zero, approved = trial.setup(facilitator=ADMIN.user_id if variant == "reviewed" else None)
     trial.dispatch(zero, approved)
     if variant != "unframed":
         publish_opening(trial.app, trial.scene, FACILITATOR)
@@ -304,7 +304,13 @@ def test_relay_batch_rehearsal(relay):
     assert relay.run_batch() == {"status": "stale", "reason": "context_changed"}
     assert relay.run_batch(119) is None
     relay.output = {"kind": "NEEDS_REVIEW", "reason": "unsupported_outcome"}
-    assert relay.run_batch(1) == {"status": "escalated", "reason": "unsupported_outcome"}
+    escalation = relay.run_batch(1)
+    assert escalation == {
+        "status": "escalated",
+        "reason": "unsupported_outcome",
+        "source": escalation["source"],
+    }
+    assert escalation["source"]
     assert relay.canon_and_time() == start
     history = records(relay.app, relay.scene)
     assert sum(batch["model_outcome"]["status"] == "draft" for batch in history) == 1
@@ -438,6 +444,7 @@ def test_named_handler_request_keeps_its_source_and_audience_in_a_batch(relay):
     assert relay.canon_and_time() == initial
 
 
+@pytest.mark.parametrize("relay", ["reviewed"], indirect=True)
 def test_reviewed_activity_trial_has_fresh_opt_in_and_owner_scoped_play(relay):
     model = OpenAIResponses(
         model="offline-reviewed-trial",
@@ -454,7 +461,7 @@ def test_reviewed_activity_trial_has_fresh_opt_in_and_owner_scoped_play(relay):
     assert relay.scene in [item["id"] for item in app.trial_scenes(PLAYER)["scenes"]]
     assert app.trial_scenes(OUTSIDE) == {"scenes": []}
     assert app.read(ADMIN, relay.scene, "activity-policy") == {"enabled": False, "revision": 0}
-    with pytest.raises(WorkflowError, match="OBSERVATION_DISABLED"):
+    with pytest.raises(WorkflowError, match="AI assistance is off for this campaign"):
         review(app, relay.scene)
     revision = app.read(ADMIN, relay.scene, "status")["policy_revision"]
     app.write(

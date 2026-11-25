@@ -1,5 +1,8 @@
 """Offline, one-time migration of a local synthetic P2 trial's Frame label."""
 
+# ruff: noqa: E402
+# Select the exact candidate before importing its engine modules.
+
 import argparse
 import hashlib
 import json
@@ -8,11 +11,12 @@ import sqlite3
 import subprocess
 import sys
 from collections import Counter
-from pathlib import Path
 from contextlib import closing
+from pathlib import Path
 
-RUNTIME = Path(__file__).resolve().parent.parent / ".sites-runtime/harpyengine-mission-lab"
-ENGINE = RUNTIME / "HarpyEngine-p2-candidate"
+from activity_paths import RUNTIME, engine_root
+
+ENGINE = engine_root(trial=True)
 OLD_REVISION = "484f6fcecc532e2acfb3ccd9021cb95d2e3718de"
 OLD_LABEL = "JANUS-B"
 LEDGER = "ledger.db"
@@ -28,12 +32,13 @@ sys.path[:0] = [str(ENGINE / part) for part in ("src", "tests", "tests/rules", "
 os.environ["GIRLFRAME_RULES_REGISTRY"] = str(ENGINE / "rules/registry.json")
 
 from director_trial import DirectorTrial
+from p2_trial_runtime import Trial
+from player_setup import PlayerSetup
+
 from girlframe.database.maintenance import copy_database
 from girlframe.engine.creation_review import ReviewSheet
 from girlframe.engine.m2_registry import registry_digest
 from girlframe.services.m3_access import digest, load_registry
-from p2_trial_runtime import Trial
-from player_setup import PlayerSetup
 
 
 def open_readonly(path):
@@ -56,7 +61,7 @@ def registry_transition():
 
     previous = subprocess.check_output(
         ["git", "show", f"{OLD_REVISION}:rules/registry.json"],
-        cwd=RUNTIME / "HarpyEngine-playtest",
+        cwd=ENGINE,
     )
     old = Registry.model_validate_json(previous)
     current = load_registry()
@@ -82,7 +87,10 @@ def migrate(source, destination):
         or Path(policy["sandbox"]).resolve() != source.resolve()
         or policy["m2_approval"]["registry_sha256"] != registry_digest()
         or policy["m3_approval"]["registry_sha256"] != old
-        or any("synthetic" not in policy[key]["reviewer"].lower() for key in ("m2_approval", "m3_approval"))
+        or any(
+            "synthetic" not in policy[key]["reviewer"].lower()
+            for key in ("m2_approval", "m3_approval")
+        )
     ):
         raise ValueError("This migration requires the original synthetic P2 policy and registry.")
 
@@ -104,7 +112,9 @@ def migrate(source, destination):
                 body = json.loads(raw)
                 transform(body)
                 if body != json.loads(raw):
-                    db.execute(f"UPDATE {table} SET {column}=? WHERE rowid=?", (json_dumps(body), rowid))
+                    db.execute(
+                        f"UPDATE {table} SET {column}=? WHERE rowid=?", (json_dumps(body), rowid)
+                    )
                     changes[table] = changes.get(table, 0) + 1
 
         for table, column in (
@@ -152,7 +162,10 @@ def migrate(source, destination):
         update("m2_actions", "body_json", action)
         for name in TRIGGERS:
             db.execute(guards[name])
-        if db.execute("PRAGMA integrity_check").fetchall() != [("ok",)] or db.execute("PRAGMA foreign_key_check").fetchall():
+        if (
+            db.execute("PRAGMA integrity_check").fetchall() != [("ok",)]
+            or db.execute("PRAGMA foreign_key_check").fetchall()
+        ):
             raise ValueError("The migrated database failed SQLite validation.")
         for table, column in (
             ("characters", "public_json"),
@@ -164,8 +177,12 @@ def migrate(source, destination):
             ("m2_state_history", "body_json"),
             ("m2_actions", "body_json"),
         ):
-            if db.execute(f"SELECT 1 FROM {table} WHERE instr({column}, ?) LIMIT 1", (OLD_LABEL,)).fetchone():
-                raise ValueError(f"A legacy label outside the migration's typed fields remains in {table}.")
+            if db.execute(
+                f"SELECT 1 FROM {table} WHERE instr({column}, ?) LIMIT 1", (OLD_LABEL,)
+            ).fetchone():
+                raise ValueError(
+                    f"A legacy label outside the migration's typed fields remains in {table}."
+                )
     policy["sandbox"] = str(destination.resolve())
     policy["m3_approval"]["registry_sha256"] = new
     write_json(destination / SETTINGS, saved)
@@ -173,18 +190,35 @@ def migrate(source, destination):
 
 
 def verify(original, destination):
-    with closing(open_readonly(original / LEDGER)) as before, closing(open_readonly(destination / LEDGER)) as after:
+    with (
+        closing(open_readonly(original / LEDGER)) as before,
+        closing(open_readonly(destination / LEDGER)) as after,
+    ):
         schema = "SELECT type, name, tbl_name, sql FROM sqlite_master ORDER BY type, name"
         if before.execute(schema).fetchall() != after.execute(schema).fetchall():
             raise ValueError("The migration changed the database schema or guards.")
-        for table in ("m2_choices", "m2_receipts", "roll_receipts", "commands_inbox", "events", "director_shadow", "director_inputs"):
+        for table in (
+            "m2_choices",
+            "m2_receipts",
+            "roll_receipts",
+            "commands_inbox",
+            "events",
+            "director_shadow",
+            "director_inputs",
+        ):
             sql = f"SELECT * FROM {table}"
             if Counter(before.execute(sql)) != Counter(after.execute(sql)):
                 raise ValueError(f"Saved {table} evidence changed.")
         counts = dict(after.execute("SELECT state, count(*) FROM m2_choices GROUP BY state"))
-        pending = after.execute("SELECT id, actor_id FROM m2_choices WHERE state='pending'").fetchall()
-        original_sheets = json.loads(before.execute("SELECT body_json FROM m2_state").fetchone()[0])["sheets"]
-        saved_sheets = json.loads(after.execute("SELECT body_json FROM m2_state").fetchone()[0])["sheets"]
+        pending = after.execute(
+            "SELECT id, actor_id FROM m2_choices WHERE state='pending'"
+        ).fetchall()
+        original_sheets = json.loads(
+            before.execute("SELECT body_json FROM m2_state").fetchone()[0]
+        )["sheets"]
+        saved_sheets = json.loads(after.execute("SELECT body_json FROM m2_state").fetchone()[0])[
+            "sheets"
+        ]
         if original_sheets.keys() != saved_sheets.keys():
             raise ValueError("A sheet changed owners.")
         for identity, sheet in original_sheets.items():
@@ -234,7 +268,10 @@ def install(original, stage, backup):
     write_json(backup / SETTINGS, saved)
 
     def restore_database(source):
-        with closing(open_readonly(source / LEDGER)) as source_db, closing(sqlite3.connect(original / LEDGER)) as dest:
+        with (
+            closing(open_readonly(source / LEDGER)) as source_db,
+            closing(sqlite3.connect(original / LEDGER)) as dest,
+        ):
             source_db.backup(dest)
             if dest.execute("PRAGMA integrity_check").fetchall() != [("ok",)]:
                 raise ValueError("The installed ledger failed SQLite integrity checks.")

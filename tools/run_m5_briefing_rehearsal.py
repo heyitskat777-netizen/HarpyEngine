@@ -258,7 +258,7 @@ class Rehearsal:
             self.game.join_scene(actor, f"join:{label}:{actor.user_id}", self.scene_channel)
         configure(self.app, scene)
 
-    def setup(self):
+    def setup(self, *, facilitator=None):
         zero = SessionZeroService(self.store)
         zero.set_group(ADMIN, "start-group", 0, (1, 2, 3))
         zero.propose(
@@ -270,7 +270,14 @@ class Rehearsal:
         approve(zero, zero.view(PLAYER)["proposal"])
         for pilot in (PLAYER, OTHER):
             zero.attach(pilot, f"attach:{pilot.user_id}", zero.view(pilot)["revision"])
-        zero.goals(ADMIN, "goals", zero.view(ADMIN)["revision"], self.brief.goals, "narrative")
+        zero.goals(
+            ADMIN,
+            "goals",
+            zero.view(ADMIN)["revision"],
+            self.brief.goals,
+            "narrative",
+            facilitator=facilitator,
+        )
         agree(zero)
         complete(zero)
         opening = zero.view(ADMIN)["opening"]

@@ -6,11 +6,11 @@ import re
 from dataclasses import replace
 from hashlib import sha256
 from http import HTTPStatus
+from urllib.error import HTTPError
 from uuid import uuid4
 
-import sqlalchemy as sa
-
 import mission_lab
+import sqlalchemy as sa
 from campaign_registry import CampaignRegistry
 from discord_session import DiscordConfig, DiscordSessions, SignInError
 from mission_lab import HANDLER, OFFERED, open_campaign, serve
@@ -35,6 +35,39 @@ MANAGED_ROLES = ("999999999999999991", "999999999999999992")
 MANAGED_CHANNELS = ("888888888888888891", "888888888888888892")
 TACTICAL_DICE = {"low": (1, 1), "mid": (4, 5), "high": (6, 6)}
 DEFEAT_DICE = {"mid": (3, 3), "high": (6, 6), "low": (1, 1), "death": (1, 1)}
+
+
+def stub_provider():
+    """Keep this test host's provider checks entirely in process."""
+    import activity_ai_trial
+
+    def post(request, _timeout):
+        assert request.full_url == "https://api.openai.com/v1/responses"
+        assert request.get_header("Authorization") == "Bearer offline-test-token"
+        body = json.loads(request.data)
+        assert body["store"] is False
+        assert json.loads(body["input"][1]["content"])["packet"] == {}
+        if body["model"] == "offline-denied":
+            raise HTTPError(request.full_url, 403, "PRIVATE_PROVIDER_ERROR", {}, None)
+        return json.dumps(
+            {
+                "status": "completed",
+                "output": [
+                    {
+                        "type": "message",
+                        "role": "assistant",
+                        "content": [{"type": "output_text", "text": '{"status":"ok"}'}],
+                    }
+                ],
+                "usage": {"input_tokens": 64, "output_tokens": 7},
+            }
+        ).encode()
+
+    class OfflineResponses(activity_ai_trial.ReviewedResponses):
+        def __init__(self, **options):
+            super().__init__(**options, post=post)
+
+    activity_ai_trial.ReviewedResponses = OfflineResponses
 
 
 def prepare_off_duty_fixture(missions, observation):
@@ -68,9 +101,7 @@ def prepare_off_duty_fixture(missions, observation):
             id=str(uuid4()),
             handler=HANDLER.user_id,
             pilots=pilots,
-            character_ids={
-                str(uid): state.sheets[str(uid)].character_id for uid in pilots
-            },
+            character_ids={str(uid): state.sheets[str(uid)].character_id for uid in pilots},
             phase="active",
         )
         event = missions.game.event(
@@ -169,17 +200,12 @@ def offline_discord_request(path, *, token=None, form=None):
                 "pending": False,
                 "roles": [TESTER_ROLE] if token == "role-pilot" else [],
             }
-    raise SignInError(
-        HTTPStatus.FORBIDDEN, "Discord authorization or membership was denied."
-    )
+    raise SignInError(HTTPStatus.FORBIDDEN, "Discord authorization or membership was denied.")
 
 
 def managed_campaign_fixture(campaign):
     catalog = CampaignRegistry(
-        mission_lab.RUNTIME
-        / "playtest-campaigns"
-        / campaign
-        / "managed-fixture.sqlite3"
+        mission_lab.RUNTIME / "playtest-campaigns" / campaign / "managed-fixture.sqlite3"
     )
     source = 100_000_000_000_000_000 + 2 * int.from_bytes(
         sha256(campaign.encode()).digest()[:7], "big"
@@ -222,6 +248,7 @@ def managed_discord_request(path, *, token=None, form=None):
 def copy_rehearsal_for_browser(name, config):
     """Use the migrated ledger in a separate fixture with fake Discord identities."""
     from director_trial import discord_trial_binding
+
     from girlframe.database.maintenance import copy_database
 
     if not re.fullmatch(r"browser-[0-9a-f-]{36}", name):
@@ -253,6 +280,7 @@ if __name__ == "__main__":
     parser.add_argument("--bound-roster", action="store_true")
     parser.add_argument("--tester-roles", action="store_true")
     parser.add_argument("--managed-campaigns", action="store_true")
+    parser.add_argument("--ai-provider-stub", action="store_true")
     parser.add_argument("--tactical-tier", choices=TACTICAL_DICE)
     parser.add_argument("--scene-tier", choices=TACTICAL_DICE)
     parser.add_argument("--core-test-heat", action="store_true")
@@ -267,6 +295,10 @@ if __name__ == "__main__":
         parser.error("--tester-roles requires --bound-roster.")
     if args.managed_campaigns and not args.bound_roster:
         parser.error("--managed-campaigns requires --bound-roster.")
+    if args.ai_provider_stub:
+        if not args.managed_campaigns:
+            parser.error("--ai-provider-stub requires --managed-campaigns.")
+        stub_provider()
     if args.copy_p2_rehearsal and not args.p2_trial:
         parser.error("--copy-p2-rehearsal requires --p2-trial.")
     if args.p2_trial:
@@ -295,9 +327,7 @@ if __name__ == "__main__":
             director=director,
         )
         raise SystemExit
-    missions = open_campaign(
-        args.campaign, roster=CONFIG if args.bound_roster else None
-    )
+    missions = open_campaign(args.campaign, roster=CONFIG if args.bound_roster else None)
     if args.off_duty_test:
         prepare_off_duty_fixture(missions, args.off_duty_test == "observation")
     config = replace(
@@ -312,24 +342,18 @@ if __name__ == "__main__":
         True,
         DiscordSessions(
             config,
-            managed_discord_request
-            if args.managed_campaigns
-            else offline_discord_request,
+            managed_discord_request if args.managed_campaigns else offline_discord_request,
         ),
         bound_roster=args.bound_roster,
         campaign_registry=managed_campaign_fixture(args.campaign)
         if args.managed_campaigns
         else None,
-        tactical_dice=FixedTacticalDice(
-            TACTICAL_DICE["low"], DEFEAT_DICE[args.defeat_test]
-        )
+        tactical_dice=FixedTacticalDice(TACTICAL_DICE["low"], DEFEAT_DICE[args.defeat_test])
         if args.defeat_test
         else FixedTacticalDice(TACTICAL_DICE[args.tactical_tier])
         if args.tactical_tier
         else None,
-        scene_dice=FixedTacticalDice(TACTICAL_DICE[args.scene_tier])
-        if args.scene_tier
-        else None,
+        scene_dice=FixedTacticalDice(TACTICAL_DICE[args.scene_tier]) if args.scene_tier else None,
         prepare_test_battlefield=(
             lambda battlefield: seed_test_state(
                 battlefield,

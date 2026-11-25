@@ -1,5 +1,6 @@
 .venv/
 /.sites-runtime/
+/harpy-activity-lab/node_modules/
 .cache/
 __pycache__/
 *.py[cod]

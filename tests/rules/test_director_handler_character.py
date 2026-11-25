@@ -164,7 +164,11 @@ def test_all_printed_types_shape_the_saved_sheet_prompt_and_intervention(ledger,
     performer = Handler()
 
     def reply(packet):
-        request = HandlerRequest.model_validate_json(json.dumps(packet))
+        request_fields = packet.copy()
+        speech_habits = request_fields.pop("speech_habits")
+        assert set(speech_habits) == {"cadence", "under_pressure", "tell"}
+        assert all(speech_habits.values())
+        request = HandlerRequest.model_validate_json(json.dumps(request_fields))
         return performer.respond(request).model_dump(
             mode="json",
             exclude={

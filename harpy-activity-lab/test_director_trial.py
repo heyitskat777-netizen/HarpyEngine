@@ -1,13 +1,15 @@
 """The Activity boundary retains the native owner and source of a GM proposal."""
 
 import json
+import os
 from types import SimpleNamespace
 
 import pytest
 
 pytest.importorskip("girlframe.services.director_session")
 
-from girlframe.services.onboarding import WorkflowError
+from director_trial import DirectorTrial, open_trial
+from discord_session import DiscordConfig
 from test_director_adjudication import prepare
 from test_director_conversation import routed as routed_fixture
 from test_director_observation import observed as observed_fixture
@@ -15,8 +17,7 @@ from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger_fixture
 from test_m2_game import tick
 
-from director_trial import DirectorTrial, open_trial
-from discord_session import DiscordConfig
+from girlframe.services.onboarding import WorkflowError
 
 ledger = ledger_fixture
 observed = observed_fixture
@@ -57,13 +58,12 @@ def test_discord_trial_cannot_reassign_existing_persona_receipts(tmp_path, monke
                 "rehearsal",
                 discord_config=expected,
             )
+        assert "GIRLFRAME_RULES_REGISTRY" not in os.environ
 
 
 def test_activity_proposal_uses_native_choice_and_retains_confirmed_outcome(routed):
     observer, context, scene, game, dice = routed
-    _, _, action, worker, gateway = prepare(
-        routed, "Keep the needle steady.", "trial-prepare"
-    )
+    _, _, action, worker, gateway = prepare(routed, "Keep the needle steady.", "trial-prepare")
     trial = SimpleNamespace(
         scene=scene,
         viewers=lambda: {"handler": ADMIN, "lark": PLAYER, "kite": OTHER},
