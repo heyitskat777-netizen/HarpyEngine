@@ -3,6 +3,7 @@
 from http import HTTPStatus
 from time import monotonic, sleep
 
+from discord_test_host import CONFIG
 from test_artwork_activity import (
     activate_recruit,
     offline_activity,
@@ -20,6 +21,97 @@ def wait_for(read, predicate):
             return result
         sleep(0.2)
     raise AssertionError("The engine did not assign the expected scene decision.")
+
+
+def test_disobey_follow_uses_exact_discord_member(tmp_path):
+    with offline_activity(tmp_path, "--bound-roster", "--scene-tier", "mid") as config:
+        first, second, handler = (sign_in(config, role) for role in ("invited", "other", "handler"))
+        setup_action(config, second, "profile", {"revision": 0, "callsign": "PEER"})
+        activate_recruit(config, first, second)
+        activate_recruit(config, second, first, keep_callsign=True)
+        for token in (first, second):
+            setup_action(config, token, "enter-scene", {"room": "relay"})
+
+        def current(token):
+            return request(config, "/api/player-setup", token)
+
+        def pending(token):
+            return [
+                choice for receipt in current(token)["scene_mail"] for choice in receipt["pending"]
+            ]
+
+        def choice(token, kind):
+            return wait_for(lambda: pending(token), lambda item: item["kind"] == kind)
+
+        def refusal_form(kind):
+            return wait_for(
+                lambda: current(first)["active_scene"]["options"]["receive_orders"]["choices"],
+                lambda item: item["kind"] == kind,
+            )
+
+        def file(token, item, answer, status=HTTPStatus.OK):
+            setup_action(
+                config,
+                token,
+                "scene-choice",
+                {
+                    "room": "relay",
+                    "role": "handler" if token == handler else "pilot",
+                    "id": item["id"],
+                    "revision": item["revision"],
+                    "answer": answer,
+                },
+                status,
+            )
+
+        form = next(
+            row
+            for row in current(handler)["specialist_work"]
+            if row["room"] == "relay" and row["action"] == "scene_orders"
+        )
+        order = {"target": CONFIG.invited_user_id, "instruction": "Stand down at the relay."}
+        setup_action(
+            config,
+            handler,
+            "scene-orders",
+            form
+            | {
+                "answer": {"operation": "direct", "values": order},
+            },
+        )
+        file(first, choice(first, "order_response"), {"options": ["disobey"]})
+        refusal = refusal_form("order_disobey")
+        file(
+            first,
+            refusal,
+            {
+                "context": "I refuse and rally the other pilot.",
+                "heat": 0,
+                "witnessed": True,
+                "character_revision": refusal["character_revision"],
+            },
+        )
+        choice(first, "tag_window")
+        for token in (first, second, handler):
+            cards = (
+                pending(token)
+                if token != handler
+                else [row["choice"] for row in current(handler)["handler_choices"]]
+            )
+            for item in cards:
+                if item["kind"] == "tag_window":
+                    file(token, item, {"options": ["pass"]})
+        selected = refusal_form("actor_disobey")
+        exact_id = CONFIG.other_user_id
+        picker = next(field for field in selected["fields"] if field["key"] == "member")
+        assert [item[0] for item in picker["options"]] == [exact_id]
+        rounded_id = int(float(exact_id))
+        assert rounded_id != int(exact_id)
+        file(first, selected, {"options": ["follow"], "member": rounded_id}, HTTPStatus.BAD_REQUEST)
+        file(first, selected, {"options": ["follow"], "member": exact_id})
+        follower = choice(second, "follow_disobey")
+        assert not any(item["id"] == follower["id"] for item in pending(first))
+        file(second, follower, {"flag": True})
 
 
 def test_bound_handler_owns_scene_choices(tmp_path):
@@ -63,10 +155,7 @@ def test_bound_handler_owns_scene_choices(tmp_path):
             "stakes": "",
         }
         setup_action(config, first, "handler-play-submit", effect, HTTPStatus.FORBIDDEN)
-        assert (
-            setup_action(config, handler, "handler-play-submit", effect)["state"]
-            == "complete"
-        )
+        assert setup_action(config, handler, "handler-play-submit", effect)["state"] == "complete"
         assert current(handler)["handler_playbook"]["tasks"] == []
         for move, detail, stakes in (
             (
@@ -179,20 +268,14 @@ def test_bound_handler_owns_scene_choices(tmp_path):
         ruling = handler_choice("keep-choice", "handler_keep")
         transcript = request(config, "/api/rooms/relay/transcript", first)
         receipt = next(
-            item
-            for item in transcript["receipts"]
-            if item["id"] == pilot_keep()["current"]["id"]
+            item for item in transcript["receipts"] if item["id"] == pilot_keep()["current"]["id"]
         )
         assert receipt["roll"]["faces"] == pilot_keep()["current"]["receipt"]["faces"]
         assert receipt["pending"] == []
         assert ruling["choice"]["id"] not in str(transcript)
-        request(
-            config, "/api/rooms/relay/transcript", second, status=HTTPStatus.FORBIDDEN
-        )
+        request(config, "/api/rooms/relay/transcript", second, status=HTTPStatus.FORBIDDEN)
         outcome = {"flag": True, "text": "Restore the station grid."}
-        answer(
-            first, ruling["step"], ruling["choice"], outcome, status=HTTPStatus.CONFLICT
-        )
+        answer(first, ruling["step"], ruling["choice"], outcome, status=HTTPStatus.CONFLICT)
         answer(handler, ruling["step"], ruling["choice"], outcome)
         result = wait_for(
             lambda: [pilot_keep()["current"]], lambda play: play["state"] == "complete"
@@ -249,12 +332,8 @@ def test_bound_handler_owns_scene_choices(tmp_path):
         }
         answer(first, card["step"], card["choice"], answers, status=HTTPStatus.CONFLICT)
         answer(handler, card["step"], card["choice"], answers)
-        result = wait_for(
-            lambda: [sensors()["current"]], lambda play: play["state"] == "complete"
-        )
-        assert set(result["result"]["answers"].values()) == {
-            "Sensors report nominal readings."
-        }
+        result = wait_for(lambda: [sensors()["current"]], lambda play: play["state"] == "complete")
+        assert set(result["result"]["answers"].values()) == {"Sensors report nominal readings."}
 
 
 def test_dialogue_joins_the_actual_scene_and_starts_beneath_there(tmp_path):
@@ -268,14 +347,9 @@ def test_dialogue_joins_the_actual_scene_and_starts_beneath_there(tmp_path):
             (pilot, "I report to the relay."),
             (peer, "I answer in the relay."),
         ):
-            receipt = setup_action(
-                config, member, "room-post", {"target": "relay", "text": line}
-            )
+            receipt = setup_action(config, member, "room-post", {"target": "relay", "text": line})
             assert receipt["entry"]
-            assert (
-                request(config, "/api/player-setup", member)["active_scene"]["id"]
-                == "relay"
-            )
+            assert request(config, "/api/player-setup", member)["active_scene"]["id"] == "relay"
         transcript = request(config, "/api/rooms/relay/transcript", pilot)
         assert {row["body"] for row in transcript["entries"]} >= {
             "I report to the relay.",

@@ -203,7 +203,8 @@ export function renderTagDecision(target, choice, submit, role) {
       const selected = values.getAll(spec.key).map(value => value.trim()).filter(Boolean);
       if (!selected.length) continue;
       if (spec.key.startsWith("fields.")) (answer.fields ??= {})[spec.key.slice(7)] = selected[0];
-      else if (spec.key === "number" || spec.key === "member") answer[spec.key] = Number(selected[0]);
+      else if (spec.key === "number") answer.number = Number(selected[0]);
+      else if (spec.key === "member") answer.member = selected[0];
       else if (spec.key === "flag") answer.flag = selected[0] === "yes";
       else answer[spec.key] = spec.paragraph ? selected[0] : selected;
     }
@@ -480,7 +481,8 @@ function renderSceneAction(details, play, label, state, send) {
             ? selected.join(",") : selected[0];
         else if (spec.key === "beneath_extra") (answer.options ??= []).push(...selected);
         else if (spec.key === "flag") answer.flag = selected[0] === "yes";
-        else if (spec.key === "number" || spec.key === "member") answer[spec.key] = Number(selected[0]);
+        else if (spec.key === "number") answer.number = Number(selected[0]);
+        else if (spec.key === "member") answer.member = selected[0];
         else if (spec.paragraph) answer[spec.key] = selected[0];
         else answer[spec.key] = selected;
       }

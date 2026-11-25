@@ -459,8 +459,10 @@ export function tacticalUI(read, send, updateRoster, openPilot, renderFrameWork)
             : commaSeparatedFields.includes(field.key) ? value.join(",") : field.paragraph ? value : value[0];
         } else if (field.key === "flag") {
           answer.flag = value[0] === "yes";
-        } else if (field.key === "number" || field.key === "member") {
-          answer[field.key] = Number(value[0]);
+        } else if (field.key === "number") {
+          answer.number = Number(value[0]);
+        } else if (field.key === "member") {
+          answer.member = value[0];
         } else if (field.key === "beneath_extra") {
           answer.options = [...answer.options, ...value];
         } else {

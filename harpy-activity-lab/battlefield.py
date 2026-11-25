@@ -27,16 +27,14 @@ from play_catalog import (
     frame_upgrades,
     play_category,
 )
-from pydantic import ValidationError
 from rulebook_text import FLIRT_QUESTION_TEXT, printed_fields, sensor_question_text
-from scene_plays import TestSceneGateway, completed_flirt, start_game_worker
+from scene_plays import TestSceneGateway, activity_choice_answer, completed_flirt, start_game_worker
 
 from girlframe.database import tables
 from girlframe.discord_adapter.m2_ui import choice_fields
 from girlframe.engine import m3_battle as battle_rules
 from girlframe.engine.frame_classes import FRAME_CLASSES
 from girlframe.engine.m2 import (
-    ChoiceAnswer,
     GameState,
     PlayInput,
 )
@@ -1710,8 +1708,8 @@ class Battlefield:
                 ),
             )
         try:
-            answer = ChoiceAnswer.model_validate_json(json.dumps(body["answer"]))
-        except ValidationError as error:
+            answer = activity_choice_answer(body["answer"])
+        except ValueError as error:
             raise WorkflowError("Use the fields from the current choice.") from error
         allowed = (
             row.kind in TAG_DECISIONS | {RISK_CHOICE}
