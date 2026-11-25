@@ -136,16 +136,31 @@ Run `node harpy-activity-lab/verify-mission.cjs --bound-roster-check` from `app`
 
 For the existing private HarpyEngine application on Windows, run `./start-campaign-setup.ps1` once from the same Windows profile as the Activity task. Enter the bot token in the masked prompt. The launcher verifies the application, encrypts the token with Windows user protection, and restarts the existing private Activity task. On subsequent starts the task runs the command listener inside the Activity web process. Discord sign-in uses the separately stored OAuth client secret.
 
-The setup bot registers `/activity-campaign create` and `/activity-campaign launch` for the configured guild. Keep the setup bot running to receive these commands. With `create`, the server owner chooses a name, a text or voice channel, an existing Discord role, and optionally a Handler. The Handler defaults to the owner. Assign the bound role to everyone who should open that campaign, including its Handler. A Discord administrator who does not own the server cannot provision a campaign.
+The setup bot registers `/activity-campaign create`, `/activity-campaign help`, and `/activity-campaign launch` for the configured guild. Keep the setup bot running to receive these commands. With `create`, the server owner chooses a name, a text or voice channel, an existing Discord role, and optionally a Handler. The Handler defaults to the owner. Assign the bound role to everyone who should open that campaign, including its Handler. A Discord administrator who does not own the server cannot provision a campaign.
 
 The bot initializes a separate HarpyEngine store and saves the channel and role binding in `.sites-runtime/harpyengine-mission-lab/activity-campaigns.sqlite3` by default. From the bound channel, a member with that role can type `/activity-campaign launch` to open HarpyEngine. The Activity uses the roles verified at sign-in to preselect the channel's campaign. Users with access to multiple campaigns can use **Switch campaign** in the header. The existing private test campaign remains available under its existing tester settings.
 
 The Windows Activity task also enables the DM version of `/activity-campaign launch`. The DM command is available in the bot's own DMs and, with Discord User Install configured and the app installed to the user, in other private chats. After sign-in, HarpyEngine opens the only role-bound campaign the member can access or shows **Choose a campaign** when several are available.
 
+Open **Safety** in the Activity header or **Campaign safety** in the enrollment window. It works before character creation and without joining a scene. It pauses the same campaign as the scene safety controls. Anyone signed into that campaign can pause without a reason, and each person can clear only their own pause. If the Activity cannot confirm a pause, stop play and tell the group out of character.
+
 Discord DM notifications use the bot's own Discord requests. Before sending a queued notice, the bot checks that the recipient still holds the campaign role. Checking the Activity Inbox uses the signed-in Activity session.
 
 Run `node harpy-activity-lab/verify-mission.cjs --campaign-switch-check` to switch between two active sheets in separate role-bound campaigns.
 Run `node harpy-activity-lab/verify-mission.cjs --campaign-dm-check` to check both DM selection paths with synthetic accounts.
+
+#### Retire the old Discord command menu
+
+Updating the code does not remove commands already registered with Discord. On the host, use the same checked-out Python environment and supply the existing setup bot credential through the host's usual secret loader. Inspect the installed command names without registering or deleting anything.
+
+```text
+python harpy-activity-lab/campaign_bot.py --application-id APP_ID --guild-id GUILD_ID --list-commands
+```
+
+1. Start the updated Activity listener normally and verify the three guild commands. Confirm Help, launch from the bound channel, and any DM or global launch path the group uses. Check that each of two members can pause and clear their own pause from the Activity header, even without a scene.
+2. Verify existing campaign access, pending choices and receipts using the same store. Binding a brand-new campaign is not a migration. Preserve required workflows that are not exposed by the Activity, such as authoritative character file exchange, shelving intake, legacy ledger lookup, and any enabled specialist work. Resolve those paths before removing shortcuts the players still need. Stop any old listener that still syncs the legacy gameplay menu.
+3. Set `GIRLFRAME_ACTIVITY_RETIRE_LEGACY_COMMANDS=1` in the managed Activity process for a controlled restart. This is read by the same process that uses `GIRLFRAME_ACTIVITY_SETUP_BOT_TOKEN`. For a standalone command listener, `--retire-legacy-commands` opts into the same behavior. The listener installs the Activity group first, then deletes only the named legacy **guild slash** entries for this application and guild. It does not run a bulk sync, remove global launch, delete context-menu commands, change the campaign database, or turn off gameplay and Inbox workers.
+4. Re-run `--list-commands` to check removal and try Help and launch again. Remove the opt-in flag to avoid repeating cleanup on later starts. The flag does not restore removed registrations. If rollback is necessary, the prior host runtime can re-register the previous menu using its original configuration. Keep and reuse the original campaign store.
 
 ### Foundation interface
 

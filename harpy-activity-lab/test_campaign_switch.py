@@ -4,7 +4,7 @@ import asyncio
 from http import HTTPStatus
 from threading import Event
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import campaign_bot
 import discord
@@ -78,7 +78,110 @@ def test_only_guild_owner_can_persist_a_role_binding(tmp_path):
     bot = SetupBot(int(CONFIG.client_id), int(CONFIG.guild_id), registry)
     payload = bot.command.to_dict(bot.tree)
     assert payload["name"] == "activity-campaign"
-    assert {item["name"] for item in payload["options"]} == {"create", "launch"}
+    assert {item["name"] for item in payload["options"]} == {"create", "launch", "help"}
+
+
+def test_activity_help_is_private_and_points_to_campaign_safety(tmp_path):
+    bot = SetupBot(int(CONFIG.client_id), int(CONFIG.guild_id), CampaignRegistry(tmp_path / "db"))
+    response = Mock(spec=discord.InteractionResponse)
+    asyncio.run(bot.command.get_command("help").callback(SimpleNamespace(response=response)))
+    text = response.send_message.call_args.args[0]
+    assert all(
+        item in text
+        for item in ("/activity-campaign create", "/activity-campaign launch", "**Safety**")
+    )
+    assert response.send_message.call_args.kwargs["ephemeral"] is True
+    assert response.send_message.call_args.kwargs["allowed_mentions"].everyone is False
+
+
+@pytest.mark.parametrize("mode", ["default", "retire", "list", "failed_publish", "wrong_app"])
+def test_activity_registration_only_retires_known_guild_commands_after_publish(
+    mode, tmp_path, monkeypatch, capsys
+):
+    bot = SetupBot(
+        int(CONFIG.client_id),
+        int(CONFIG.guild_id),
+        CampaignRegistry(tmp_path / "db"),
+        allow_dm=True,
+        retire_legacy=mode in {"retire", "failed_publish", "wrong_app"},
+        list_commands=mode == "list",
+    )
+    activity = SimpleNamespace(
+        name="activity-campaign", type=discord.AppCommandType.chat_input, delete=AsyncMock()
+    )
+    legacy = SimpleNamespace(
+        name="play", type=discord.AppCommandType.chat_input, delete=AsyncMock()
+    )
+    old_help = SimpleNamespace(
+        name="help", type=discord.AppCommandType.chat_input, delete=AsyncMock()
+    )
+    context = SimpleNamespace(name="play", type=discord.AppCommandType.user, delete=AsyncMock())
+    other = SimpleNamespace(
+        name="other-tool", type=discord.AppCommandType.chat_input, delete=AsyncMock()
+    )
+    global_launch = SimpleNamespace(
+        name="launch", type=discord.AppCommandType.chat_input, delete=AsyncMock()
+    )
+    calls = []
+
+    async def read(*, guild=None):
+        calls.append("guild read" if guild else "global read")
+        if guild is None:
+            return [global_launch]
+        assert guild.id == int(CONFIG.guild_id)
+        return [activity, legacy, old_help, context, other]
+
+    async def publish_guild(application, guild, payload):
+        assert application == int(CONFIG.client_id) and guild == int(CONFIG.guild_id)
+        calls.append("guild upsert")
+        assert {item["name"] for item in payload["options"]} == {"create", "help", "launch"}
+        if mode == "failed_publish":
+            raise RuntimeError("Can't publish.")
+
+    async def publish_dm(application, payload):
+        assert application == int(CONFIG.client_id)
+        calls.append("global upsert")
+        assert {item["name"] for item in payload["options"]} == {"help", "launch"}
+
+    info = SimpleNamespace(
+        id=int(CONFIG.client_id) if mode != "wrong_app" else 999,
+        user_integration_config=None,
+    )
+    monkeypatch.setattr(bot, "application_info", AsyncMock(return_value=info))
+    monkeypatch.setattr(bot.tree, "fetch_commands", read)
+    monkeypatch.setattr(bot.tree, "sync", AsyncMock())
+    monkeypatch.setattr(bot.http, "upsert_guild_command", publish_guild)
+    monkeypatch.setattr(bot.http, "upsert_global_command", publish_dm)
+    if mode in {"failed_publish", "wrong_app"}:
+        with pytest.raises(RuntimeError):
+            asyncio.run(bot.setup_hook())
+    else:
+        asyncio.run(bot.setup_hook())
+
+    assert (
+        calls
+        == {
+            "default": ["guild upsert", "global upsert"],
+            "retire": ["guild upsert", "global upsert", "guild read"],
+            "list": ["guild read", "global read"],
+            "failed_publish": ["guild upsert"],
+            "wrong_app": [],
+        }[mode]
+    )
+    if mode == "retire":
+        legacy.delete.assert_awaited_once()
+        old_help.delete.assert_awaited_once()
+    else:
+        legacy.delete.assert_not_awaited()
+        old_help.delete.assert_not_awaited()
+    for command in (activity, context, other, global_launch):
+        command.delete.assert_not_awaited()
+    bot.tree.sync.assert_not_awaited()
+    if mode == "list":
+        output = capsys.readouterr().out
+        assert "guild chat_input play (retired HarpyEngine guild command)" in output
+        assert "guild user play\n" in output
+        assert "global chat_input launch\n" in output
 
 
 @pytest.mark.parametrize(
@@ -144,7 +247,7 @@ def test_dm_launch_registration_and_callback(tmp_path, user_install, contexts, i
     payload = dm.to_dict(bot.tree)
     assert payload["contexts"] == contexts
     assert payload["integration_types"] == installs
-    assert [item["name"] for item in payload["options"]] == ["launch"]
+    assert {item["name"] for item in payload["options"]} == {"help", "launch"}
     response = Mock(spec=discord.InteractionResponse)
     asyncio.run(dm.get_command("launch").callback(SimpleNamespace(response=response)))
     response.launch_activity.assert_awaited_once_with()
@@ -156,10 +259,11 @@ def test_integrated_command_listener_lifetime(tmp_path, monkeypatch):
     registry = CampaignRegistry(tmp_path / "campaigns.sqlite3")
 
     class OfflineGateway:
-        def __init__(self, app, guild, catalog, *, allow_dm, provision):
+        def __init__(self, app, guild, catalog, *, allow_dm, provision, retire_legacy):
             assert app == int(CONFIG.client_id)
             assert guild == int(CONFIG.guild_id)
             assert catalog is registry
+            assert retire_legacy is True
 
         async def __aenter__(self):
             return self
@@ -173,7 +277,7 @@ def test_integrated_command_listener_lifetime(tmp_path, monkeypatch):
             await asyncio.Future()
 
     monkeypatch.setattr(campaign_bot, "SetupBot", OfflineGateway)
-    with serve_commands(CONFIG, registry, "synthetic-token", None):
+    with serve_commands(CONFIG, registry, "synthetic-token", None, retire_legacy=True):
         assert started.wait(2)
         assert not closed.is_set()
     assert closed.is_set()
@@ -199,18 +303,82 @@ def test_removed_campaign_role_is_checked_on_the_next_sign_in():
         sessions.exchange("role-pilot", sessions.challenge(), CONFIG.guild_id)
 
 
-def test_campaign_scope_is_role_bound_and_keeps_drafts_separate(tmp_path):
-    def sign_in(host, identity):
-        challenge = request(host, "/api/discord/challenge", data={})
-        return request(
+def sign_in(host, identity):
+    challenge = request(host, "/api/discord/challenge", data={})
+    return request(
+        host,
+        "/api/discord/session",
+        data={"nonce": challenge["nonce"], "code": identity, "guild_id": CONFIG.guild_id},
+    )["session"]
+
+
+def test_campaign_safety_is_available_without_a_scene_and_isolated_on_reopen(tmp_path):
+    with offline_activity(tmp_path, "--bound-roster", "--managed-campaigns") as host:
+        first = sign_in(host, "invited")
+        second = sign_in(host, "role-pilot")
+        campaigns = {
+            row["name"]: row["id"] for row in request(host, "/api/campaigns", first)["campaigns"]
+        }
+        north = f"/api/activity/safety?campaign={campaigns['Northern Reach']}"
+        south = f"/api/activity/safety?campaign={campaigns['Southern Signal']}"
+        request(host, north, status=HTTPStatus.UNAUTHORIZED)
+        request(host, south, second, status=HTTPStatus.FORBIDDEN)
+        request(host, south, second, {"pause": True, "revision": 0}, status=HTTPStatus.FORBIDDEN)
+        before = request(host, north, first)
+        assert before.keys() == {"paused", "own", "revision"}
+        assert before["paused"] is False and before["own"] is False
+        assert (
+            request(host, north.replace("activity/safety", "player-setup"), first)["stage"]
+            == "profile"
+        )
+        pause = {"pause": True, "revision": before["revision"]}
+        receipt = request(host, north, first, pause, key="north-first-pause")
+        assert receipt == {"paused": True, "your_pause": True}
+        assert request(host, north, first, pause, key="north-first-pause") == receipt
+        assert request(host, south, first)["paused"] is False
+        another = request(host, north, second)
+        assert another["paused"] is True and another["own"] is False
+        request(
             host,
-            "/api/discord/session",
-            data={
-                "nonce": challenge["nonce"],
-                "code": identity,
-                "guild_id": CONFIG.guild_id,
-            },
-        )["session"]
+            north,
+            second,
+            {"pause": False, "revision": another["revision"], "owner_id": CONFIG.invited_user_id},
+            status=HTTPStatus.BAD_REQUEST,
+        )
+        assert request(host, north, second, {"pause": False, "revision": another["revision"]}) == {
+            "paused": True,
+            "your_pause": False,
+        }
+        request(
+            host,
+            north,
+            first,
+            {"pause": False, "revision": before["revision"]},
+            status=HTTPStatus.CONFLICT,
+        )
+        request(host, north, second, {"pause": True, "revision": another["revision"]})
+
+    with offline_activity(tmp_path, "--bound-roster", "--managed-campaigns") as host:
+        first = sign_in(host, "invited")
+        second = sign_in(host, "role-pilot")
+        state = request(host, north, first)
+        assert state["paused"] is True and state["own"] is True
+        assert request(host, south, first)["paused"] is False
+        assert request(host, north, first, {"pause": False, "revision": state["revision"]}) == {
+            "paused": True,
+            "your_pause": False,
+        }
+        state = request(host, north, second)
+        assert state["paused"] is True and state["own"] is True
+        assert request(host, north, second, {"pause": False, "revision": state["revision"]}) == {
+            "paused": False,
+            "your_pause": False,
+        }
+        assert request(host, north, first, pause, key="north-first-pause") == receipt
+        assert request(host, north, first)["paused"] is False
+
+
+def test_campaign_scope_is_role_bound_and_keeps_drafts_separate(tmp_path):
 
     with offline_activity(tmp_path, "--bound-roster", "--managed-campaigns") as host:
         request(host, "/api/campaigns", status=HTTPStatus.UNAUTHORIZED)

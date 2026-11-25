@@ -67,6 +67,28 @@ class CampaignLedger(OnboardingStore):
                 ),
             }
 
+    def safety_status(self, viewer: GuildViewer) -> dict[str, bool | int]:
+        """Return the campaign pause and this member's pause without exposing other owners."""
+        self.guild_member(viewer)
+        with self.engine.connect() as connection:
+            self._binding_matches(connection)
+            if not (viewer.is_administrator and self.policy.allow_guild_administrators):
+                self._membership(connection, viewer)
+            pauses = sa.select(t.pauses.c.user_id).where(t.pauses.c.campaign_id == self.campaign_id)
+            revision = (
+                sa.select(t.campaigns.c.revision)
+                .where(t.campaigns.c.id == self.campaign_id)
+                .scalar_subquery()
+            )
+            row = connection.execute(
+                sa.select(
+                    pauses.exists(),
+                    pauses.where(t.pauses.c.user_id == str(viewer.user_id)).exists(),
+                    revision,
+                )
+            ).one()
+            return {"paused": bool(row[0]), "own": bool(row[1]), "revision": int(row[2] or 0)}
+
     def create_campaign(
         self, viewer: GuildViewer, key: str, expected_revision: int, name: str
     ) -> dict[str, Any]:

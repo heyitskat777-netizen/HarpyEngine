@@ -17,6 +17,23 @@ from campaign_registry import RUNTIME, SNOWFLAKE, CampaignBindingError, Campaign
 from discord import app_commands
 
 logger = logging.getLogger("harpy_activity.discord")
+RETIRE_ENV = "GIRLFRAME_ACTIVITY_RETIRE_LEGACY_COMMANDS"
+
+
+def add_help(group):
+    @group.command(name="help", description="Find campaign setup, play and safety in the Activity")
+    async def help_command(interaction: discord.Interaction):
+        await interaction.response.send_message(
+            "**HarpyEngine Activity**\n"
+            "Server owner: use `/activity-campaign create` in the server to bind a role and "
+            "channel. Give the role to everyone who should enter.\n"
+            "Use `/activity-campaign launch` in the bound channel, then sign in. Use the "
+            "Activity for Session Zero, sheets, Plays and the private Inbox.\n"
+            "Use **Safety** in the Activity header to pause without giving a reason. "
+            "If the Activity is unavailable, stop play and tell your group out of character.",
+            ephemeral=True,
+            allowed_mentions=discord.AllowedMentions.none(),
+        )
 
 
 def create_from_interaction(
@@ -58,6 +75,7 @@ def setup_command(registry, provision):
         name="activity-campaign",
         description="Set up or launch a private HarpyEngine Activity campaign",
     )
+    add_help(group)
 
     @group.command(name="create", description="Bind a new Activity campaign to a server role")
     @app_commands.describe(
@@ -180,12 +198,13 @@ def setup_command(registry, provision):
 def dm_command(include_user_installs):
     group = app_commands.Group(
         name="activity-campaign",
-        description="Launch a private HarpyEngine Activity campaign in this DM",
+        description="Open a private HarpyEngine Activity campaign or get help",
         allowed_contexts=app_commands.AppCommandContext(
             guild=False, dm_channel=True, private_channel=include_user_installs
         ),
         allowed_installs=app_commands.AppInstallationType(guild=True, user=include_user_installs),
     )
+    add_help(group)
 
     @group.command(name="launch", description="Open your HarpyEngine campaign")
     async def launch(interaction: discord.Interaction):
@@ -196,11 +215,23 @@ def dm_command(include_user_installs):
 
 
 class SetupBot(discord.Client):
-    def __init__(self, application_id, guild_id, registry, *, allow_dm=False, provision=None):
+    def __init__(
+        self,
+        application_id,
+        guild_id,
+        registry,
+        *,
+        allow_dm=False,
+        provision=None,
+        retire_legacy=False,
+        list_commands=False,
+    ):
         super().__init__(intents=discord.Intents(guilds=True), application_id=application_id)
         self.activity_id = application_id
         self.target = discord.Object(id=guild_id)
         self.allow_dm = allow_dm
+        self.retire_legacy = retire_legacy
+        self.list_commands = list_commands
         self.tree = app_commands.CommandTree(self)
         self.command = setup_command(registry, provision)
         self.tree.add_command(self.command, guild=self.target)
@@ -209,6 +240,18 @@ class SetupBot(discord.Client):
         info = await self.application_info()
         if info.id != self.activity_id:
             raise RuntimeError("The bot token belongs to a different Discord application.")
+        if self.list_commands:
+            from girlframe.discord_adapter.command_surface import is_retired_guild_slash
+
+            for scope, guild in (("guild", self.target), ("global", None)):
+                for entry in await self.tree.fetch_commands(guild=guild):
+                    label = (
+                        " (retired HarpyEngine guild command)"
+                        if (guild is not None and is_retired_guild_slash(entry))
+                        else ""
+                    )
+                    print(f"{scope} {entry.type.name} {entry.name}{label}", flush=True)
+            return
         # Upsert only this group. A bulk sync would remove the bot's other guild commands.
         await self.http.upsert_guild_command(
             self.activity_id, self.target.id, self.command.to_dict(self.tree)
@@ -217,6 +260,12 @@ class SetupBot(discord.Client):
             command = dm_command(info.user_integration_config is not None)
             self.tree.add_command(command, override=True)
             await self.http.upsert_global_command(self.activity_id, command.to_dict(self.tree))
+        if self.retire_legacy:
+            from girlframe.discord_adapter.command_surface import retire_guild_slash_commands
+
+            removed = await retire_guild_slash_commands(self.tree, self.target)
+            if removed:
+                logger.warning("Retired legacy guild commands: %s", ", ".join(removed))
 
     async def on_ready(self):
         logger.warning("Private Activity command listener connected.")
@@ -233,6 +282,7 @@ def serve_commands(
     token,
     provision,
     *,
+    retire_legacy=False,
     inbox_notices=None,
     notice_pending=None,
     scan_interactions=None,
@@ -249,6 +299,7 @@ def serve_commands(
                     registry,
                     allow_dm=config.allow_dm,
                     provision=provision,
+                    retire_legacy=retire_legacy,
                 ) as bot:
                     gateway = asyncio.create_task(bot.start(token))
                     workers = []
@@ -320,7 +371,16 @@ def main():
     parser.add_argument("--guild-id", required=True)
     parser.add_argument("--registry", type=Path, default=RUNTIME / "activity-campaigns.sqlite3")
     parser.add_argument("--allow-dm", action="store_true")
-    parser.add_argument("--check-token", action="store_true")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--check-token", action="store_true")
+    mode.add_argument(
+        "--list-commands", action="store_true", help="Read registrations without changes"
+    )
+    mode.add_argument(
+        "--retire-legacy-commands",
+        action="store_true",
+        help="Retire old guild slash commands after installing the Activity group",
+    )
     args = parser.parse_args()
     if not SNOWFLAKE.fullmatch(args.application_id) or not SNOWFLAKE.fullmatch(args.guild_id):
         parser.error("Provide the installed application and Discord server IDs.")
@@ -331,13 +391,24 @@ def main():
         raise SystemExit(asyncio.run(verify_bot_token(token, int(args.application_id))))
     from mission_lab import provision_managed_campaign
 
-    SetupBot(
+    bot = SetupBot(
         int(args.application_id),
         int(args.guild_id),
         CampaignRegistry(args.registry),
         allow_dm=args.allow_dm,
         provision=provision_managed_campaign,
-    ).run(token)
+        retire_legacy=args.retire_legacy_commands or os.environ.get(RETIRE_ENV) == "1",
+        list_commands=args.list_commands,
+    )
+    if args.list_commands:
+
+        async def inspect():
+            async with bot:
+                await bot.login(token)
+
+        asyncio.run(inspect())
+    else:
+        bot.run(token)
 
 
 if __name__ == "__main__":

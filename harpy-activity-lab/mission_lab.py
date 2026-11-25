@@ -121,6 +121,7 @@ BATTLEFIELD_ROUTE = re.compile(
 )
 KEY = re.compile(r"[A-Za-z0-9._-]{8,100}")
 SESSION_ZERO_PATH = "/api/campaign-opening/session-zero"
+CAMPAIGN_SAFETY_PATH = "/api/activity/safety"
 FACILITATOR_ROUTE = re.compile(r"/api/facilitator-reviews(?:/([0-9a-f-]{36}))?")
 START_FRESH_PATH = "/api/activity/start-fresh"
 FRESH_JOB_ROUTE = re.compile(r"/api/activity/start-fresh/([0-9a-f]{32})")
@@ -494,6 +495,7 @@ def serve(
     bound_roster=False,
     campaign_registry=None,
     campaign_bot_token=None,
+    retire_legacy_commands=False,
     director=None,
     rehearsal_origin=None,
     inbox_dms=True,
@@ -1054,6 +1056,7 @@ def serve(
                     "/api/activity/ai-setup",
                     "/api/activity/ai-settings",
                     "/api/activity/ai-models",
+                    CAMPAIGN_SAFETY_PATH,
                 )
                 or session_zero
                 or FACILITATOR_ROUTE.fullmatch(path)
@@ -1425,6 +1428,16 @@ def serve(
                         "campaign_role_gate": bool(discord and discord.campaign_roles_only),
                     },
                 )
+            elif path == CAMPAIGN_SAFETY_PATH:
+                try:
+                    _, viewer = self.session()
+                    state = CampaignLedger(service.store).safety_status(viewer)
+                except SignInError as error:
+                    self.send_access_error(error)
+                except WorkflowError as error:
+                    self.send_json(HTTPStatus.FORBIDDEN, {"error": str(error)})
+                else:
+                    self.send_json(HTTPStatus.OK, state)
             elif path == "/api/director-trial" and (director or campaign.training):
                 try:
                     _, viewer = self.session()
@@ -1832,6 +1845,28 @@ def serve(
                 campaign.battlefield,
             )
             handler = setup.handler
+            if path == CAMPAIGN_SAFETY_PATH:
+                try:
+                    key = self.headers.get("Idempotency-Key", "")
+                    data = self.read_object(256, {"pause", "revision"})
+                    if (
+                        not KEY.fullmatch(key)
+                        or type(data["pause"]) is not bool
+                        or type(data["revision"]) is not int
+                        or data["revision"] < 0
+                    ):
+                        raise ValueError
+                    self.send_json(
+                        HTTPStatus.OK,
+                        CampaignLedger(service.store).safety(
+                            session[1], key, data["revision"], pause=data["pause"]
+                        ),
+                    )
+                except (TypeError, ValueError, UnicodeError):
+                    self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Refresh the safety form."})
+                except WorkflowError as error:
+                    self.send_json(HTTPStatus.CONFLICT, {"error": str(error)})
+                return
             if path == START_FRESH_PATH:
                 try:
                     self.send_json(HTTPStatus.ACCEPTED, self.start_fresh(campaign, session[1]))
@@ -2315,6 +2350,7 @@ def serve(
                 catalog,
                 campaign_bot_token,
                 provision_managed_campaign,
+                retire_legacy=retire_legacy_commands,
                 inbox_notices=inbox_notices,
                 notice_pending=notice_pending,
                 scan_interactions=scan_interactions,
@@ -2437,4 +2473,6 @@ if __name__ == "__main__":
             campaign_bot_token=os.environ.pop("GIRLFRAME_ACTIVITY_SETUP_BOT_TOKEN", None)
             if args.bound_roster
             else None,
+            retire_legacy_commands=os.environ.get("GIRLFRAME_ACTIVITY_RETIRE_LEGACY_COMMANDS")
+            == "1",
         )

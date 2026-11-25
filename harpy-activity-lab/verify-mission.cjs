@@ -763,9 +763,9 @@ async function openPilot(browser, server, role, failFirstMissionPost = false, ca
   }
   await auth.locator("#sign-in").click();
   if (options.pickCampaign) {
-    const picker = view.getByRole("dialog",{name:"Choose a campaign"});
+    const picker = view.getByRole("dialog",{name:"Select duty file", exact:true});
     await picker.getByLabel("Campaign",{exact:true}).selectOption({label:options.pickCampaign});
-    await picker.getByRole("button",{name:"Open campaign"}).click();
+    await picker.getByRole("button",{name:"Open campaign file", exact:true}).click();
   }
   try {
     await view.locator("#pilot[data-ready]").waitFor();
@@ -1309,6 +1309,9 @@ async function verifyBoundRoster(browser, server, owner, other, loadSetup, postS
       }), "Enrollment dialog fits a narrow Activity window.");
       await goStep(connection, "Close pilot enrollment");
       await enrollment(connection).waitFor({state:"hidden"});
+      await control(connection, "Create pilot").evaluate(button => {
+        button.scrollIntoView({block:"center"});
+      });
       await control(connection, "Create pilot").click();
       await enrollment(connection).waitFor();
       if (originalSize) await connection.page.setViewportSize(originalSize);
@@ -1662,6 +1665,35 @@ async function verifyCampaignSwitch(browser, server, owner, other, request, play
   for (const campaignInfo of [north, south]) {
     const first = await openPilot(browser, server, "invited", false, campaignInfo.id);
     const second = await openPilot(browser, server, "other", false, campaignInfo.id);
+    if (campaignInfo === north) {
+      // Neither account has joined a scene or even created a character here.
+      const enroll = pilot => pilot.view.getByRole("dialog", {name:"Pilot enrollment"});
+      const openSafety = async pilot => {
+        const scope = pilot === first ? enroll(pilot) : pilot.view.locator(".masthead");
+        await scope.getByRole("button", {name:"Campaign safety", exact:true}).click();
+        return pilot.view.getByRole("dialog", {name:"Campaign safety", exact:true});
+      };
+      assert.equal((await playerSetup(first)).stage, "profile");
+      const firstSafety = await openSafety(first);
+      await firstSafety.getByRole("button", {name:"Pause campaign", exact:true}).click();
+      await firstSafety.getByText("Your safety pause is active.", {exact:true}).waitFor();
+      await enroll(second).getByRole("button", {name:"Close pilot enrollment", exact:true}).click();
+      const secondSafety = await openSafety(second);
+      await secondSafety.getByText("The campaign is paused. This is not your pause.", {exact:true}).waitFor();
+      await secondSafety.getByRole("button", {name:"Pause campaign", exact:true}).click();
+      await secondSafety.getByText("Your safety pause is active.", {exact:true}).waitFor();
+      await firstSafety.getByRole("button", {name:"Check safety status", exact:true}).click();
+      await firstSafety.getByRole("button", {name:"Clear my campaign pause", exact:true}).click();
+      await firstSafety.getByText("Your pause is cleared. The campaign is still paused.", {exact:true}).waitFor();
+      await secondSafety.getByRole("button", {name:"Check safety status", exact:true}).click();
+      await secondSafety.getByRole("button", {name:"Clear my campaign pause", exact:true}).click();
+      await secondSafety.getByText("No safety pause is active.", {exact:true}).waitFor();
+      for (const dialog of [firstSafety, secondSafety]) {
+        await dialog.getByRole("button", {name:"Close campaign safety", exact:true}).click();
+      }
+      await second.view.getByRole("button", {name:"Create pilot", exact:true}).click();
+      console.log("Two signed-in members used campaign safety without joining a scene, and only cleared their own pauses.");
+    }
     await verifyBoundRoster(browser, server, first, second, playerSetup, setupPost, campaignInfo);
   }
   const pilot = await openPilot(browser, server, "invited", false, north.id);
@@ -2313,8 +2345,8 @@ async function mainTest() {
       assert.equal(await multiple.view.locator("#campaign-name").textContent(), "Southern Signal");
       const single = await openPilot(browser, server, "role-pilot", false, undefined, undefined, {dm:true});
       assert.equal(await single.view.locator("#campaign-name").textContent(), "Northern Reach");
-      assert.equal(await single.view.getByRole("dialog",{name:"Choose a campaign"}).isVisible(), false);
-      console.log("DM launch offered a campaign picker for two approved bindings, opened the sole binding automatically, and denied a user without a campaign role.");
+      assert.equal(await single.view.getByRole("dialog",{name:"Select duty file", exact:true}).isVisible(), false);
+      console.log("DM launch offered a campaign picker for two approved bindings and opened the sole binding automatically.");
       return;
     }
     const owner = await openPilot(browser, server, "invited", discordOffline);

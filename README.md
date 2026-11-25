@@ -357,12 +357,13 @@ is a synthetic **read-only engine-status fixture**, not a runnable game engine.
 Policy examples are in `config/discord-policy.example.json`. The offline `--check`
 validates policy/sandbox only, not schema, credentials or live guild access.
 
-Engine startup checks the authenticated application and guild, then removes the
-retired HarpyEngine guild slash commands by name. The Activity's command listener
-owns `/activity-campaign create` (including the role and channel binding) and
-`/activity-campaign launch`. The engine worker preserves that group, unrelated
-commands, and the game services used by the Activity. Reconnect does not repeat
-startup or duplicate workers. SDK DEBUG logging must stay disabled because it can
+Engine startup checks the authenticated application and guild and runs background
+services without changing Discord command registrations. The Activity listener
+owns `/activity-campaign create` (role and channel binding), `/activity-campaign help`,
+and `/activity-campaign launch`. The [Activity command cutover guide](harpy-activity-lab/README.md#retire-the-old-discord-command-menu)
+explains how to inventory and remove old guild slash commands without affecting
+global launch or unrelated commands. Gateway resume does not repeat startup or
+duplicate workers. SDK DEBUG logging must stay disabled because it can
 include interaction credentials. HTTP/Gateway use the inherited HTTPS proxy and
 verified TLS. SIGTERM and Ctrl-C close the bot.
 

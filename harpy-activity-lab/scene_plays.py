@@ -372,19 +372,7 @@ class ScenePlays:
         return start_game_worker(self.game, self.gateway, work_lock=work_lock)
 
     def safety_status(self, viewer):
-        status = self.ledger.status(viewer)
-        with self.game.store.engine.connect() as connection:
-            yours = connection.scalar(
-                sa.select(tables.pauses.c.user_id).where(
-                    tables.pauses.c.campaign_id == self.game.store.campaign_id,
-                    tables.pauses.c.user_id == str(viewer.user_id),
-                )
-            )
-        return {
-            "paused": status["paused"],
-            "own": bool(yours),
-            "revision": status["revision"],
-        }
+        return self.ledger.safety_status(viewer)
 
     def safety(self, viewer, key, data):
         if (

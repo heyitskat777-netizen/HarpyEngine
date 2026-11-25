@@ -44,6 +44,7 @@
     <div class="masthead-identity"><strong id="campaign-name">The Long Winter</strong><span id="pilot">Awaiting personnel authorization</span></div>
   </div>
   <div class="tools">
+    <button id="campaign-safety" data-campaign-safety type="button" aria-label="Campaign safety" aria-haspopup="dialog" hidden>Safety</button>
     <button id="handler-pilot-toggle" type="button" aria-pressed="false" hidden>Pilot mode</button>
     <button id="assignments-toggle" type="button" aria-expanded="false" aria-controls="inbox" hidden>Assignments <span id="assignments-count" aria-live="polite"></span></button>
     <button id="inbox-toggle" type="button" aria-label="Inbox" aria-expanded="false" aria-controls="inbox"><span class="mail-mark" aria-hidden="true"></span><span class="tool-label">Inbox</span><span id="inbox-count" aria-live="polite"></span></button>
@@ -71,6 +72,16 @@
   </div>
 </section>
 </div>
+<dialog id="campaign-safety-dialog" class="activity-dialog terminal-dialog" aria-labelledby="campaign-safety-title">
+  <header class="record-heading"><h2 id="campaign-safety-title">Campaign safety</h2><form method="dialog"><button aria-label="Close campaign safety">×</button></form></header>
+  <p>Anyone in the campaign can pause play without giving a reason. Only you can clear your own pause.</p>
+  <p id="campaign-safety-status" role="status"></p>
+  <div class="actions terminal-actions">
+    <button id="campaign-safety-change" type="button" hidden></button>
+    <button id="campaign-safety-refresh" type="button">Check safety status</button>
+  </div>
+  <p>If you can’t confirm a pause, stop play and tell the group out of character.</p>
+</dialog>
 <dialog id="mail-reader" class="activity-dialog terminal-dialog" aria-labelledby="mail-reader-title">
   <header class="record-heading"><h2 id="mail-reader-title">Dispatch record</h2><form method="dialog"><button aria-label="Close dispatch record">×</button></form></header>
   <div class="terminal-panel">
@@ -258,6 +269,7 @@
   <div id="enrollment-scroll" class="terminal-panel">
     <div class="terminal-line"><span>Foundation / Personnel intake</span><span id="enrollment-state" class="terminal-state" aria-live="polite"></span></div>
     <div id="enrollment-identity"></div>
+    <button data-campaign-safety type="button" aria-haspopup="dialog">Campaign safety</button>
     <button id="enrollment-choices-link" type="button" aria-haspopup="dialog" hidden>Enrollment assignments</button>
     <nav class="enrollment-steps" aria-label="Enrollment steps">
       <button type="button" data-enrollment-tab="callsign">Callsign</button>
@@ -448,6 +460,62 @@ perspectiveToggle.addEventListener("click", async () => {
 });
 let campaignSwitcher = false;
 let campaignId = new URL(location.href).searchParams.get("campaign") ?? "default";
+const safetyButton = document.getElementById("campaign-safety");
+const safetyDialog = document.getElementById("campaign-safety-dialog");
+const safetyStatus = document.getElementById("campaign-safety-status");
+const safetyChange = document.getElementById("campaign-safety-change");
+const safetyRefresh = document.getElementById("campaign-safety-refresh");
+const safetyUrl = "/api/activity/safety";
+let campaignSafety;
+let safetyBusy = false;
+let safetyIntent;
+async function readCampaignSafety(receipt) {
+  campaignSafety = await responseData(await activityFetch(safetyUrl));
+  const state = campaignSafety;
+  safetyStatus.textContent = state.own ? "Your safety pause is active."
+    : state.paused ? "The campaign is paused. This is not your pause."
+    : "No safety pause is active.";
+  if (receipt?.your_pause === false && state.paused && !state.own) {
+    safetyStatus.textContent = "Your pause is cleared. The campaign is still paused.";
+  }
+  safetyChange.textContent = state.own ? "Clear my campaign pause" : "Pause campaign";
+  safetyChange.hidden = false;
+}
+async function runSafetyAction(operation) {
+  if (safetyBusy) return;
+  safetyBusy = safetyChange.disabled = safetyRefresh.disabled = true;
+  safetyStatus.textContent = "Checking campaign safety…";
+  try {
+    await operation();
+  } catch (error) {
+    campaignSafety = undefined;
+    safetyChange.hidden = true;
+    safetyStatus.textContent = "Could not confirm campaign safety. " + error.message;
+  } finally {
+    safetyBusy = safetyChange.disabled = safetyRefresh.disabled = false;
+  }
+}
+for (const trigger of document.querySelectorAll("[data-campaign-safety]")) {
+  trigger.addEventListener("click", () => {
+    safetyDialog.showModal();
+    runSafetyAction(readCampaignSafety);
+  });
+}
+safetyRefresh.addEventListener("click", () => runSafetyAction(readCampaignSafety));
+safetyChange.addEventListener("click", () => runSafetyAction(async () => {
+  if (!campaignSafety) return;
+  const body = JSON.stringify({pause:!campaignSafety.own, revision:campaignSafety.revision});
+  if (safetyIntent?.body !== body) safetyIntent = {body, key:crypto.randomUUID()};
+  const receipt = await responseData(await activityFetch(safetyUrl, {
+    method:"POST",
+    headers:{"Content-Type":"application/json", "Idempotency-Key":safetyIntent.key},
+    body,
+  }));
+  safetyIntent = undefined;
+  await readCampaignSafety(receipt);
+  refreshScene().catch(() => {});
+  if (battlefieldEnabled) tactical.reload();
+}));
 const switchKey = "harpy-activity-campaign-switch";
 let displayedScenePlays;
 let displayedOffDuty;
@@ -1099,6 +1167,7 @@ async function readTranscript(room) {
 
 async function refresh() {
   refreshButton.hidden = false;
+  safetyButton.hidden = false;
   try {
     await refreshScene();
   } catch (error) {

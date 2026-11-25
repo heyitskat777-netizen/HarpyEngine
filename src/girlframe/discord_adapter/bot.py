@@ -21,31 +21,6 @@ from girlframe.services.read_only_bot import (
     ReadOnlyCommand,
 )
 
-RETIRED_GUILD_COMMANDS = frozenset(
-    (
-        "battle",
-        "campaign",
-        "campaign_status",
-        "character",
-        "choice",
-        "facilitator",
-        "frame_core",
-        "girl",
-        "health",
-        "help",
-        "ledger",
-        "mission",
-        "play",
-        "roll",
-        "safety",
-        "server",
-        "sheet",
-        "shelving",
-        "session-zero",
-        "start",
-    )
-)
-
 
 def viewer_from_interaction(interaction: discord.Interaction[discord.Client]) -> GuildViewer:
     member = isinstance(interaction.user, discord.Member)
@@ -325,19 +300,8 @@ class ReadOnlyDiscordBot(discord.Client):
             assert self.game is not None
             self.add_view(SceneControls(self.game))
         await self.fetch_guild(self.policy.guild_id)
-        guild = discord.Object(id=self.policy.guild_id)
-        if self.activity_only:
-            # Avoid bulk sync: the Activity owns its create, channel binding and launch group.
-            for command in await self.tree.fetch_commands(guild=guild):
-                if (
-                    command.type == discord.AppCommandType.chat_input
-                    and command.name in RETIRED_GUILD_COMMANDS
-                ):
-                    try:
-                        await command.delete()
-                    except discord.NotFound:
-                        continue
-        else:
+        if not self.activity_only:
+            guild = discord.Object(id=self.policy.guild_id)
             await self.tree.sync(guild=guild)
 
     async def _publish_presence(self, phase: presence.Phase) -> None:

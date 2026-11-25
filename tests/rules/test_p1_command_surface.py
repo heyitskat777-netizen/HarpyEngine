@@ -6,7 +6,8 @@ from unittest.mock import AsyncMock, MagicMock
 import discord
 from test_ledger import ledger as ledger
 
-from girlframe.discord_adapter.bot import RETIRED_GUILD_COMMANDS, ReadOnlyDiscordBot
+from girlframe.discord_adapter.bot import ReadOnlyDiscordBot
+from girlframe.discord_adapter.command_surface import RETIRED_GUILD_COMMANDS
 from girlframe.services.read_only_bot import ReadOnlyBotService
 
 
@@ -45,7 +46,7 @@ def test_actual_bot_registers_complete_bounded_private_command_surface(ledger):
     asyncio.run(run())
 
 
-def test_activity_worker_removes_only_retired_guild_slash_commands(ledger, monkeypatch):
+def test_activity_engine_worker_leaves_registrations_to_the_activity_listener(ledger, monkeypatch):
     async def run():
         async with ReadOnlyDiscordBot(
             ledger.policy,
@@ -68,21 +69,12 @@ def test_activity_worker_removes_only_retired_guild_slash_commands(ledger, monke
                 ),
             )
             monkeypatch.setattr(bot, "fetch_guild", AsyncMock())
-            legacy = MagicMock(name="legacy", type=discord.AppCommandType.chat_input)
-            legacy.name, legacy.delete = "play", AsyncMock()
-            activity = MagicMock(type=discord.AppCommandType.chat_input)
-            activity.name, activity.delete = "activity-campaign", AsyncMock()
-            unrelated = MagicMock(type=discord.AppCommandType.user)
-            unrelated.name, unrelated.delete = "play", AsyncMock()
-            fetch = AsyncMock(return_value=[legacy, activity, unrelated])
+            fetch = AsyncMock()
             sync = AsyncMock()
             monkeypatch.setattr(bot.tree, "fetch_commands", fetch)
             monkeypatch.setattr(bot.tree, "sync", sync)
             await bot.setup_hook()
-            fetch.assert_awaited_once_with(guild=guild)
-            legacy.delete.assert_awaited_once()
-            activity.delete.assert_not_awaited()
-            unrelated.delete.assert_not_awaited()
+            fetch.assert_not_awaited()
             sync.assert_not_awaited()
 
     asyncio.run(run())
