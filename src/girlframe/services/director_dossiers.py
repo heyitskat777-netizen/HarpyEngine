@@ -9,6 +9,7 @@ from sqlalchemy import Connection
 
 from girlframe.ai.director import DirectorContext, KnowledgeReference
 from girlframe.ai.director_dossiers import (
+    CharacterSetup,
     DossierContinuity,
     DossierContinuityEdit,
     DossierMemorySource,
@@ -966,6 +967,31 @@ class DirectorDossierService:
                 ],
             }
 
+    @staticmethod
+    def _scope_handler_portrayal(
+        record: DossierRecord, sheet_setup: CharacterSetup | None
+    ) -> DossierRecord:
+        state = record.state.model_copy(
+            update={
+                name: tuple(item for item in getattr(record.state, name) if item.knowledge_refs)
+                for name in (
+                    "pressures",
+                    "promises",
+                    "beliefs",
+                    "obligations",
+                    "experiences",
+                    "relationships",
+                )
+            }
+        )
+        return record.model_copy(
+            update={
+                "profile": DossierProfile(character_setup=sheet_setup),
+                "state": state,
+                "personnel": Personnel(),
+            }
+        )
+
     def _role_packet(
         self,
         c: Connection,
@@ -984,29 +1010,31 @@ class DirectorDossierService:
         entitled = head is not None and head.controller == actual.controller
         context = self._context(c, scene, actor)
         portrayal = head if entitled else None
-        # Handler sheet notes are enduring. Free-form dossier text authored for
-        # another scene is not a substitute for approved carry-forward knowledge.
-        foreign_handler_portrayal = (
-            portrayal is not None and actor.kind == "handler" and portrayal.scene_id != scene
-        )
-        if portrayal is not None and foreign_handler_portrayal:
-            current = portrayal.state
-            scoped = current.model_copy(
-                update={
-                    name: tuple(item for item in getattr(current, name) if item.knowledge_refs)
-                    for name in (
-                        "pressures",
-                        "promises",
-                        "beliefs",
-                        "obligations",
-                        "experiences",
-                        "relationships",
-                    )
-                }
-            )
-            portrayal = portrayal.model_copy(
-                update={"profile": DossierProfile(), "state": scoped, "personnel": Personnel()}
-            )
+        profile_visible = portrayal is not None
+        if portrayal is not None and actor.kind == "handler":
+            # A structured setup confirmed on the private sheet is campaign-wide.
+            # Sheet memory writes can copy a raw scene profile into a new revision,
+            # so use the original dossier confirmation to identify its scene.
+            origin = None
+            sheet_setup = None
+            for record in reversed(history):
+                if record.controller != actual.controller:
+                    break
+                if origin is None and record.proposal_id.startswith("dossier-proposal:"):
+                    origin = record
+                if (
+                    sheet_setup is None
+                    and not record.scene_id
+                    and record.proposal_id.startswith("sheet-dossier:")
+                    and record.profile.character_setup is not None
+                ):
+                    sheet_setup = record.profile.character_setup
+                if origin is not None and sheet_setup is not None:
+                    break
+            portrayal_scene = origin.scene_id if origin is not None else portrayal.scene_id
+            if portrayal_scene != scene:
+                portrayal = self._scope_handler_portrayal(portrayal, sheet_setup)
+                profile_visible = sheet_setup is not None
         continuity: tuple[DossierContinuity, ...] = ()
         if portrayal is not None and portrayal.state.continuity:
             continuity = self._visible_continuity(
@@ -1087,7 +1115,7 @@ class DirectorDossierService:
             actor=actor,
             dossier_version=head.version if head else 0,
             dossier_id=portrayal.id if portrayal else None,
-            profile=portrayal.profile if portrayal and not foreign_handler_portrayal else None,
+            profile=portrayal.profile if portrayal and profile_visible else None,
             state=(
                 portrayal.state
                 if portrayal

@@ -15,7 +15,12 @@ from test_p2_handler_archetype_missions import end_mission
 from test_p2_mission_cycle import launch
 from test_timed_handler_archetypes import timed_archetype
 
-from girlframe.ai.director_dossiers import DossierPerspective, DossierProfile, DossierState
+from girlframe.ai.director_dossiers import (
+    CharacterSetup,
+    DossierPerspective,
+    DossierProfile,
+    DossierState,
+)
 from girlframe.ai.model_adapters import ModelHandlerNeeds
 from girlframe.ai.observation import ObservationPolicy
 from girlframe.engine.m3_handler_state import HandlerNotes
@@ -257,13 +262,30 @@ def test_approved_pilot_experience_changes_the_same_handlers_next_mission(ledger
         )
     local_voice = "Give short answers during this relay handoff."
     local_obligation = "Return the north relay keys before leaving."
+    local_drive = "Check the northern relay's spare key after handoff."
+    sheet_drive = "Make sure each Pilot gets a chance to speak."
+    actor = handler.model_dump(mode="json")
+    sheet = app.write(
+        ADMIN,
+        "write-handler-guidance",
+        "",
+        "portrayal-draft",
+        {"actor": actor, "version": 0, "character_setup": {"drive": sheet_drive}},
+    )
+    app.write(
+        ADMIN,
+        "approve-handler-guidance",
+        "",
+        "portrayal-confirm",
+        {"actor": actor, "id": sheet["id"]},
+    )
     scripted = dossiers.propose(
         ADMIN,
         "source-portrayal",
         source,
         handler,
-        0,
-        DossierProfile(voice=local_voice),
+        1,
+        DossierProfile(voice=local_voice, character_setup=CharacterSetup(drive=local_drive)),
         DossierState(
             resource_refs=(posted[0],),
             obligations=(DossierPerspective(text=local_obligation),),
@@ -284,6 +306,7 @@ def test_approved_pilot_experience_changes_the_same_handlers_next_mission(ledger
     assert svc.delivery.preview(ADMIN, source, initial)["text"] == ordinary
     assert "experiences" not in recorder.packets[-1]["persona"]
     assert recorder.packets[-1]["persona"]["profile"]["voice"] == local_voice
+    assert recorder.packets[-1]["persona"]["profile"]["character_setup"]["drive"] == local_drive
     assert local_obligation in json.dumps(recorder.packets[-1])
     assert recorder.packets[-1]["persona"]["identity"]["starting_relationship"] == {
         "pilot": pilot.model_dump(mode="json"),
@@ -298,6 +321,8 @@ def test_approved_pilot_experience_changes_the_same_handlers_next_mission(ledger
     assert "closed_scene_reports" not in recorder.packets[-1]
     assert local_voice not in json.dumps(recorder.packets[-1])
     assert local_obligation not in json.dumps(recorder.packets[-1])
+    assert local_drive not in json.dumps(recorder.packets[-1])
+    assert recorder.packets[-1]["persona"]["profile"]["character_setup"]["drive"] == sheet_drive
 
     preview = app.read(ADMIN, source, "closeout")
     assert [report["id"] for report in preview["reports"]] == posted[:1]
@@ -339,6 +364,8 @@ def test_approved_pilot_experience_changes_the_same_handlers_next_mission(ledger
         app.read(PLAYER, target, "portrayal-preview", handler.token)
     assert local_voice not in json.dumps(recorder.packets[-1])
     assert local_obligation not in json.dumps(recorder.packets[-1])
+    assert local_drive not in json.dumps(recorder.packets[-1])
+    assert recorder.packets[-1]["persona"]["profile"]["character_setup"]["drive"] == sheet_drive
     assert memory["kind"] == "declined_help" and memory["reference_id"] == posted[0]
     assert memory["pilot"] == pilot.model_dump(mode="json") and memory["scene"] == source
     svc.review_handler(
