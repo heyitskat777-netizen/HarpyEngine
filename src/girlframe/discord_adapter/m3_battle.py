@@ -519,7 +519,6 @@ async def open_battle(interaction: discord.Interaction, game: GameService, ident
 
         await open_play(interaction, HandlerPlayService(game.store), detail["grant_id"])
         return
-    fields = []
     if kind == "battle_counter_play":
         own = detail.get("own_plays", [])
         if own:
@@ -672,8 +671,12 @@ def battle_answer(kind: str, values: dict[str, Any]) -> ChoiceAnswer:
             if values["options"] == ("pass",)
             else ChoiceAnswer(options=values["options"])
         )
-    if kind in ("battle_low_damage", "battle_actor_damage", "battle_target_damage",
-                "battle_trainer_protect"):
+    if kind in (
+        "battle_low_damage",
+        "battle_actor_damage",
+        "battle_target_damage",
+        "battle_trainer_protect",
+    ):
         return ChoiceAnswer(fields={"asset": values["asset"][0]})
     raise ValueError("Open the original assigned battle form.")
 

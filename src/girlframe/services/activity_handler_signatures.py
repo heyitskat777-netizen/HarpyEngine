@@ -1,7 +1,7 @@
 """Source-bound Activity access to native Handler signature work."""
 
 import json
-from typing import Any
+from typing import Any, Literal
 
 import sqlalchemy as sa
 from sqlalchemy import Connection
@@ -107,13 +107,20 @@ def conditioning_targets(
                                 actors.setdefault(key, []).append((actor.token, name))
                         except (ValueError, WorkflowError):
                             continue
-        phrases = [(key, label) for key, label in phrases
-                   if key not in ("hunt", "protect") or actors.get(key)]
+        phrases = [
+            (key, label)
+            for key, label in phrases
+            if key not in ("hunt", "protect") or actors.get(key)
+        ]
         if phrases:
-            targets.append({
-                "id": str(uid), "name": state.sheets[str(uid)].callsign,
-                "phrases": phrases, "actors": actors,
-            })
+            targets.append(
+                {
+                    "id": str(uid),
+                    "name": state.sheets[str(uid)].callsign,
+                    "phrases": phrases,
+                    "actors": actors,
+                }
+            )
     return targets
 
 
@@ -158,6 +165,7 @@ def native_signature(
                 break
         if not control:
             return ()
+        destination: Literal["signature_choice", "conditioning_phrase", "off_duty_signature"]
         destination = "signature_choice"
         play = "catch_more_flies_with_honey" if book == "Mistress" else "rebel_sympathizers"
     elif book in ("Scientist", "Trainer"):
@@ -194,8 +202,10 @@ def native_signature(
                 except WorkflowError:
                     pass
         if not control and book == "Trainer":
-            if any(row["id"] == girl.entity
-                   for row in conditioning_targets(game, c, state, scene, int(handler.entity))):
+            if any(
+                row["id"] == girl.entity
+                for row in conditioning_targets(game, c, state, scene, int(handler.entity))
+            ):
                 control = girl.entity
                 destination = "conditioning_phrase"
         if not control:
@@ -203,10 +213,15 @@ def native_signature(
         play = "head_to_the_lab" if book == "Scientist" else "conditioning_phrases"
     else:
         return ()
-    return (NativeSignatureOpportunity(
-        play=play, title=result.title, trigger=result.trigger,
-        control=control, destination=destination,
-    ),)
+    return (
+        NativeSignatureOpportunity(
+            play=play,
+            title=result.title,
+            trigger=result.trigger,
+            control=control,
+            destination=destination,
+        ),
+    )
 
 
 def _conditioning_action(action: dict[str, Any]) -> bool:

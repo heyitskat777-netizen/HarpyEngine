@@ -384,7 +384,7 @@ class MissionService:
         reviewed = FirstMissionBriefing(self.store) if reviewed_first_briefing is not None else None
 
         def authorize(c: Connection) -> None:
-            if reviewed is not None:
+            if reviewed is not None and reviewed_first_briefing is not None:
                 reviewed.receipt(c, viewer, reviewed_first_briefing)
             else:
                 HandlerService(self.store).authorize(c, viewer)
@@ -394,7 +394,7 @@ class MissionService:
                 reviewed.confirm_offer(
                     c, viewer, reviewed_first_briefing, objective.strip(), players
                 )
-                if reviewed is not None
+                if reviewed is not None and reviewed_first_briefing is not None
                 else self._handler(c, viewer)
             )
             self._not_off_duty(c)

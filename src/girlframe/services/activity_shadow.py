@@ -1234,13 +1234,18 @@ class ActivityShadowReview:
             )
             if match is None:
                 return {"status": "rejected", "reason": "handler_play_trigger"}
-            result = {
-                "status": "native_signature", "reason": "owned_native_work", "play": match.play,
+            receipt = {
+                "status": "native_signature",
+                "reason": "owned_native_work",
+                "play": match.play,
             }
             if match.control and match.destination:
-                result.update(control=match.control, destination=match.destination,
-                              target=view.source.actor.entity)
-            return result
+                receipt.update(
+                    control=match.control,
+                    destination=match.destination,
+                    target=view.source.actor.entity,
+                )
+            return receipt
         return self._draft(c, batch, view, decision)
 
     def _record_stale(self, batch: ReviewBatch) -> None:

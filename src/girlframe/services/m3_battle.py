@@ -472,12 +472,12 @@ def prepare(
             raise WorkflowError(
                 "Record the attacked original Girl's actual cockpit occupancy before rolling."
             )
-    source = (
+    core_source = (
         rules.core_available(state, declaration.target, declaration.actor, bound)
         if prepared.play == "go_for_the_core"
         else None
     )
-    if source != context.core_source:
+    if core_source != context.core_source:
         raise WorkflowError("STALE_CORE: recover this target's actual exposure facts.")
     if (
         acting.inside_frame is False
@@ -563,11 +563,11 @@ def prepare(
             {x.controller for x in cast.roles} | ({cast.facilitator} if cast.facilitator else set())
         ),
         target_category=rules.category(state, declaration.target),
-        modifier=-len(rules.intact_assets(state, declaration.target, bound)) if source else 0,
+        modifier=-len(rules.intact_assets(state, declaration.target, bound)) if core_source else 0,
         indirect=context.indirect,
         steps=[],
         votes={},
-        source_core=source,
+        source_core=core_source,
         followups=[],
         state="initial",
         defense=context.defense.model_dump(mode="json") if context.defense else None,
