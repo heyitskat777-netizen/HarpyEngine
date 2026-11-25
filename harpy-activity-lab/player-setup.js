@@ -1688,20 +1688,86 @@ function renderWorldReview(panel, world, send) {
   }
 }
 
+function enrollmentField(form, path) {
+  if (!form || !Array.isArray(path)) return null;
+  const [name, index, part] = path;
+  if (name === "girl_assets" || name === "frame_assets") {
+    const prefix = name === "girl_assets" ? "girl" : "frame";
+    const choices = [0, 1].map(slot => form.elements.namedItem(prefix + slot)).filter(Boolean);
+    const submitted = choices.filter(choice => choice.value);
+    const choice = submitted[index ?? 0] ?? choices[index ?? 0];
+    return part === "description" && choice ? form.elements.namedItem(choice.name + "-description") : choice;
+  }
+  if (name === "npc_bonds") {
+    const prefix = part === "name" ? "npc_name" : part === "feelings" ? "npc_feelings" : "npc_slot";
+    return form.elements.namedItem(prefix + (index === 1 ? "2" : ""));
+  }
+  if (name === "prior_missions") {
+    const rows = Array.from(form.elements).filter(control => control.name.startsWith("mission_"));
+    return Number.isInteger(index) ? rows.filter(row => row.value !== "")[index] ?? rows[0]
+      : rows.find(row => row.value === "") ?? rows[0];
+  }
+  if (name === "pair_asset_descriptions") return form.elements.namedItem("pair_description_" + (index ?? 0));
+  if (name === "girl_details" || name === "fanbase" || name === "dna_basis") {
+    const group = form.querySelector("[data-enrollment-specialist]");
+    return group?.querySelector(".field :is(input,select,textarea)");
+  }
+  return typeof name === "string" ? form.elements.namedItem(name) : null;
+}
+
 export function createEnrollment(dialog, trigger, artwork, send, refresh) {
   const body = dialog.querySelector("#enrollment-record");
+  const scroll = dialog.querySelector("#enrollment-scroll");
   const identity = dialog.querySelector("#enrollment-identity");
   const feedback = dialog.querySelector("#enrollment-feedback");
+  const errors = dialog.querySelector("#enrollment-errors");
+  const submits = dialog.querySelector("#enrollment-submit");
   const recordState = dialog.querySelector("#enrollment-state");
   const tabs = [...dialog.querySelectorAll("[data-enrollment-tab]")];
   let sections;
+  let primary = {};
   let step;
   let shown = false;
   let stage;
   let pendingStep;
+  const marked = new Set();
+
+  function clearErrors() {
+    errors.replaceChildren();
+    for (const control of marked) control.removeAttribute("aria-invalid");
+    marked.clear();
+  }
+
+  function showErrors(message, entries = []) {
+    clearErrors();
+    const jump = control => {
+      control.scrollIntoView({block:"center", inline:"nearest"});
+      control.focus({preventScroll:true});
+    };
+    const form = primary[step]?.form;
+    let first;
+    for (const entry of entries) {
+      if (typeof entry?.message !== "string") continue;
+      const row = element("li", entry.message);
+      const control = entry.control ?? enrollmentField(form, entry.path);
+      if (control instanceof HTMLElement && !control.disabled && control.getClientRects().length) {
+        const label = control.labels?.[0]?.textContent?.trim();
+        row.replaceChildren(action(label ? label + " — " + entry.message : entry.message, () => jump(control)));
+        control.setAttribute("aria-invalid", "true");
+        marked.add(control);
+        first ??= control;
+      }
+      errors.append(row);
+    }
+    feedback.textContent = errors.children.length ? "" : message;
+    if (first) jump(first);
+  }
 
   function select(name) {
-    if (name !== step) dialog.scrollTop = 0;
+    if (name !== step) {
+      scroll.scrollTop = 0;
+      clearErrors();
+    }
     step = name;
     for (const tab of tabs) {
       const current = tab.dataset.enrollmentTab === step;
@@ -1709,6 +1775,7 @@ export function createEnrollment(dialog, trigger, artwork, send, refresh) {
       else tab.removeAttribute("aria-current");
     }
     for (const [name, panel] of Object.entries(sections)) panel.hidden = name !== step;
+    submits.replaceChildren(...(primary[step] ? [primary[step]] : []));
   }
 
   function open() {
@@ -1722,6 +1789,15 @@ export function createEnrollment(dialog, trigger, artwork, send, refresh) {
 
   for (const tab of tabs) tab.addEventListener("click", () => select(tab.dataset.enrollmentTab));
   trigger.addEventListener("click", open);
+  dialog.addEventListener("invalid", event => {
+    const form = primary[step]?.form;
+    if (!form || event.target.form !== form) return;
+    event.preventDefault();
+    const invalid = [...form.querySelectorAll("input:invalid, select:invalid, textarea:invalid")];
+    if (event.target === invalid[0]) {
+      showErrors("", invalid.map(control => ({control, message:control.validationMessage})));
+    }
+  }, true);
 
   function update(state, inboxBonds) {
     trigger.hidden = !state.enrollment;
@@ -1782,6 +1858,18 @@ export function createEnrollment(dialog, trigger, artwork, send, refresh) {
     const wizard = {sections};
     renderPlayerSetup(body, state, send, inboxBonds, wizard);
     sections.bond.append(refreshControl);
+    primary = {};
+    for (const [name, panel] of Object.entries(sections)) {
+      const form = panel.querySelector("form");
+      const submit = form?.querySelector(':scope > button[type="submit"]');
+      if (submit) {
+        form.id = "enrollment-" + name + "-form";
+        submit.setAttribute("form", form.id);
+        primary[name] = submit;
+      }
+    }
+    if (wizard.reviewAction) primary.review = wizard.reviewAction;
+    clearErrors();
     const next = pendingStep ?? step ?? (dossierComplete() ? "bond" : "dossier");
     pendingStep = null;
     select(stage === "profile" ? "callsign" : next === "callsign" ? "dossier" : next);
@@ -1798,7 +1886,7 @@ export function createEnrollment(dialog, trigger, artwork, send, refresh) {
     if (command === "select-bond") pendingStep = "review";
   }
 
-  return {update, saved, open};
+  return {update, saved, open, clearErrors, showErrors};
 }
 
 export function renderPlayerSetup(target, state, send, bondTarget = target, wizard) {
@@ -1840,6 +1928,7 @@ export function renderPlayerSetup(target, state, send, bondTarget = target, wiza
       const pairNames = state.enrollment?.pair_names ?? [];
       const details = structuredClone(draft);
       const extra = element("section");
+      extra.dataset.enrollmentSpecialist = "";
       const build = form(buildPanel, "File enrollment draft", values => send("build", {
         revision: state.revision,
         character_revision: state.character_revision,
@@ -1986,8 +2075,8 @@ export function renderPlayerSetup(target, state, send, bondTarget = target, wiza
           : action("File activation review", () => send("review", {
               revision: review.revision, fingerprint: review.fingerprint,
             }));
-        if (wizard) next.className = "primary";
-        reviewPanel.append(next);
+        if (wizard) wizard.reviewAction = next;
+        else reviewPanel.append(next);
       }
     }
   }

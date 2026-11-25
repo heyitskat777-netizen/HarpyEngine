@@ -4,6 +4,7 @@ import json
 from dataclasses import replace
 
 import sqlalchemy as sa
+from pydantic import ValidationError
 from girlframe.database import tables
 from girlframe.engine.bonds import BondProposal
 from girlframe.engine.creation import CreationDraft, official_frame
@@ -108,6 +109,52 @@ SUPPORTED_ROOM_PLAYS = [
 BATTLEFIELD_PLAYS = frozenset(
     {"all_out_assault", "go_for_the_core", "living_battery", *ORDER_PLAYS}
 )
+
+
+class EnrollmentInputError(ValueError):
+    def __init__(self, fields, *, conflict=False):
+        super().__init__("Check the enrollment fields below.")
+        self.fields = fields
+        self.conflict = conflict
+
+
+def _enrollment_validation(error, draft):
+    fields = []
+    for issue in error.errors(include_input=False, include_url=False)[:8]:
+        path = list(issue["loc"])
+        context = issue.get("ctx") or {}
+        reason = str(context.get("error", ""))
+        if reason == "Choose distinct Assets from the selected playbook":
+            for key in ("girl_assets", "frame_assets"):
+                seen = set()
+                for index, asset in enumerate(draft.get(key, [])):
+                    name = asset["name"]
+                    if name in seen:
+                        fields.append({
+                            "path": [key, index, "name"],
+                            "message": "Choose a different Asset for this slot.",
+                        })
+                    seen.add(name)
+            if fields:
+                continue
+        if reason == "Choose distinct NPC roles":
+            path, message = ["npc_bonds", 1, "slot"], "Choose a different NPC Bond role."
+        elif reason == "Only a selected Mockingbird Girl Asset can start Void-altered":
+            path, message = ["void_asset"], "Choose one of your selected Pilot Assets."
+        elif reason == "Declare each Cadre counterpart only once":
+            path, message = ["prior_missions"], "Use one answer per Cadre member."
+        elif reason == "Only a custom standard takes nonempty custom text":
+            message = "Enter text for a custom standard, or choose a listed standard."
+        elif issue["type"] == "string_too_long":
+            message = f"Use at most {context['max_length']} characters."
+        elif issue["type"] in ("missing", "string_too_short"):
+            message = "Enter a value for this field."
+        else:
+            message = "Choose a listed value or correct this entry." if path else (
+                "Check the Asset, Bond, and playbook selections in this dossier."
+            )
+        fields.append({"path": path, "message": message})
+    return EnrollmentInputError(fields)
 
 
 def seed_players(store, handler, owner, recruit):
@@ -1583,18 +1630,23 @@ class PlayerSetup:
                         raise WorkflowError(
                             "Enrollment for this cadre has closed. Contact the Handler for campaign placement."
                         )
-            draft = DraftInput(
-                callsign=data["callsign"],
-                girl_playbook=data.get("girl_playbook", GIRL)
-                if self.bound_roster
-                else GIRL,
-                frame_playbook=data.get("frame_playbook", FRAME)
-                if self.bound_roster
-                else FRAME,
-                notes=current.get("notes", "") if current and not archive else "",
-            )
+            try:
+                draft = DraftInput(
+                    callsign=data["callsign"],
+                    girl_playbook=data.get("girl_playbook", GIRL)
+                    if self.bound_roster
+                    else GIRL,
+                    frame_playbook=data.get("frame_playbook", FRAME)
+                    if self.bound_roster
+                    else FRAME,
+                    notes=current.get("notes", "") if current and not archive else "",
+                )
+            except ValidationError as error:
+                raise _enrollment_validation(error, data) from None
             if draft.callsign.casefold() == "recruit":
-                raise WorkflowError("Choose a callsign for your Pilot.")
+                raise EnrollmentInputError([
+                    {"path": ["callsign"], "message": "Choose a callsign for your Pilot."},
+                ], conflict=True)
             if archive:
                 if data["revision"] != current["revision"]:
                     raise WorkflowError(
@@ -1625,32 +1677,49 @@ class PlayerSetup:
                 # Discord IDs travel as text in the Activity. The engine still
                 # checks exact integer identities against the current Cadre.
                 adapted = []
-                for entry in history:
+                for index, entry in enumerate(history):
                     identity = entry.get("user_id") if isinstance(entry, dict) else None
                     if isinstance(identity, str):
-                        entry = entry | {"user_id": _snowflake(identity)}
+                        try:
+                            entry = entry | {"user_id": _snowflake(identity)}
+                        except ValueError:
+                            raise EnrollmentInputError([{
+                                "path": ["prior_missions", index, "user_id"],
+                                "message": "Choose a current Cadre member.",
+                            }]) from None
                     adapted.append(entry)
                 fields = fields | {"prior_missions": adapted}
             current = self.creation.get(viewer).draft
-            draft = CreationDraft.model_validate_json(
-                json.dumps(
-                    current.model_dump(mode="json")
-                    | fields
-                    | {
-                        "shared_tokens": data.get(
-                            "shared_tokens", current.shared_tokens
-                        )
-                    }
+            try:
+                draft = CreationDraft.model_validate_json(
+                    json.dumps(
+                        current.model_dump(mode="json")
+                        | fields
+                        | {
+                            "shared_tokens": data.get(
+                                "shared_tokens", current.shared_tokens
+                            )
+                        }
+                    )
                 )
-            )
-            return self.creation.save(
-                viewer,
-                key,
-                data["revision"],
-                data["character_revision"],
-                draft,
-                expected_pair_token=data.get("pair_token"),
-            )
+            except ValidationError as error:
+                raise _enrollment_validation(error, fields) from None
+            try:
+                return self.creation.save(
+                    viewer,
+                    key,
+                    data["revision"],
+                    data["character_revision"],
+                    draft,
+                    expected_pair_token=data.get("pair_token"),
+                )
+            except WorkflowError as error:
+                if str(error) == "Discuss and declare history for every current Cadre counterpart.":
+                    raise EnrollmentInputError([{
+                        "path": ["prior_missions"],
+                        "message": "Answer for every current Cadre member before confirming the discussion.",
+                    }], conflict=True) from None
+                raise
         if (
             self.bound_roster
             and step == "select-bond"

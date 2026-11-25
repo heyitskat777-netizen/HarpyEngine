@@ -466,6 +466,45 @@ dialog:modal {
 #director-trial-dialog pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 #director-trial-dialog textarea { width: 100%; min-height: 65px; }
 #enrollment-dialog { width: min(620px, calc(100vw - 22px)); }
+#enrollment-dialog[open] { display: flex; flex-direction: column; overflow: hidden; }
+#enrollment-dialog > .record-heading { flex: none; }
+#enrollment-scroll { min-block-size: 0; overflow-y: auto; overscroll-behavior: contain; }
+#enrollment-footer {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 6px 12px;
+  padding: 8px 12px;
+  border-block-start: 1px solid var(--line);
+  background: var(--rail) var(--scanlines);
+}
+#enrollment-footer:has(#enrollment-submit:empty):not(:has(.enrollment-footer-status > :not(:empty))) {
+  display: none;
+}
+.enrollment-footer-status {
+  flex: 1 1 8rem;
+  min-inline-size: 0;
+  max-block-size: min(6rem, 19dvh);
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+.enrollment-footer-status > * { margin-block: 0; }
+.enrollment-footer-status > :empty { display: none; }
+#enrollment-submit { margin-inline-start: auto; }
+#enrollment-submit:empty { display: none; }
+#enrollment-submit button { background: var(--key); color: var(--key-ink); }
+#enrollment-errors { padding-inline-start: 1rem; }
+#enrollment-errors button {
+  border: 0;
+  min-height: 0;
+  padding: 0;
+  text-align: start;
+  text-decoration: underline;
+  background: transparent;
+  color: inherit;
+}
+#enrollment-record [aria-invalid="true"] { outline: 2px solid var(--key); outline-offset: 2px; }
 .enrollment-steps { display: flex; flex-wrap: wrap; gap: 4px; }
 .enrollment-steps button { font: 600 12px/1.4 var(--mono); }
 .enrollment-steps button[aria-current="step"] { background: var(--key); color: var(--key-ink); }

@@ -146,6 +146,17 @@ def test_newgirl_prior_missions_round_trip_exact_discord_ids(tmp_path):
                 },
                 status,
             )
+        incomplete = setup_action(
+            server,
+            pilot,
+            "build",
+            payload | {"draft": dossier | {"cadre_discussed": True}},
+            HTTPStatus.CONFLICT,
+        )
+        assert incomplete["fields"] == [{
+            "path": ["prior_missions"],
+            "message": "Answer for every current Cadre member before confirming the discussion.",
+        }]
         receipt = setup_action(server, pilot, "build", payload)
         assert receipt["status"] == "creation_in_progress"
         assert receipt["revision"] == record["revision"] + 1

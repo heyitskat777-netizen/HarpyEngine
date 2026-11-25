@@ -63,7 +63,7 @@ from p2_scene import (
     local_fixture_director,
     manual_campaign_setup,
 )
-from player_setup import SCENE, PlayerSetup, seed_players, seed_roster
+from player_setup import SCENE, EnrollmentInputError, PlayerSetup, seed_players, seed_roster
 from private_battlefield import PRIVATE_BATTLEFIELD_CHANNEL, PrivateBattlefield
 
 from girlframe.config import Settings
@@ -2223,6 +2223,11 @@ def serve(
                             for invite in receipt["invitations"]
                         ]
                     self.send_json(HTTPStatus.OK, receipt)
+                except EnrollmentInputError as error:
+                    self.send_json(
+                        HTTPStatus.CONFLICT if error.conflict else HTTPStatus.BAD_REQUEST,
+                        {"error": str(error), "fields": error.fields},
+                    )
                 except (TypeError, ValueError, UnicodeError):
                     self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Invalid setup fields."})
                 except WorkflowError as error:

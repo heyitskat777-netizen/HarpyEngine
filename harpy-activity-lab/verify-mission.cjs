@@ -2130,7 +2130,10 @@ async function verifyPartialEnrollment(browser, server) {
     return response.json();
   };
   const pilot = await openPilot(browser, server, "invited");
-  await pilot.page.setViewportSize({width:390, height:720});
+  await pilot.page.setViewportSize({width:390, height:490});
+  await button(pilot, "File callsign").click();
+  assert.equal(await field(pilot, "Callsign").getAttribute("aria-invalid"), "true");
+  await dialog(pilot).locator("#enrollment-errors").getByRole("button", {name:/Callsign/}).waitFor();
   await field(pilot, "Callsign").fill("TEST RAIL");
   await button(pilot, "File callsign").click();
   const frameName = field(pilot, "Frame name");
@@ -2139,10 +2142,35 @@ async function verifyPartialEnrollment(browser, server) {
   const firstAsset = before.options.girl_assets[0];
   await field(pilot, "Pilot asset 1").selectOption(firstAsset);
   await field(pilot, "Pilot asset 1 description").fill("A scratched visor.");
-  const filed = pilot.page.waitForResponse(response =>
+  const buildResponse = () => pilot.page.waitForResponse(response =>
     new URL(response.url()).pathname === "/api/player-setup/build" &&
     response.request().method() === "POST");
-  await button(pilot, "File enrollment draft").click();
+  const submit = dialog(pilot).locator("#enrollment-submit").getByRole("button", {
+    name:"File enrollment draft", exact:true,
+  });
+  const scroll = dialog(pilot).locator("#enrollment-scroll");
+  const footer = dialog(pilot).locator("#enrollment-footer");
+  const beforeScroll = await footer.boundingBox();
+  await scroll.evaluate(panel => { panel.scrollTop = panel.scrollHeight; });
+  const afterScroll = await footer.boundingBox();
+  assert.equal(afterScroll.y, beforeScroll.y);
+  assert(afterScroll.y + afterScroll.height <= 490);
+  const duplicate = field(pilot, "Pilot asset 2");
+  await duplicate.selectOption(firstAsset);
+  await scroll.evaluate(panel => { panel.scrollTop = 0; });
+  const rejected = buildResponse();
+  await submit.click();
+  assert.equal((await rejected).status(), 400);
+  await footer.getByRole("button", {name:"Pilot asset 2 — Choose a different Asset for this slot.", exact:true}).waitFor();
+  assert.equal(await duplicate.getAttribute("aria-invalid"), "true");
+  assert(await duplicate.evaluate(control => document.activeElement === control));
+  assert(await scroll.evaluate(panel => panel.scrollTop > 0));
+  assert.equal(await frameName.inputValue(), "First draft");
+  assert.equal(await field(pilot, "Pilot asset 1 description").inputValue(), "A scratched visor.");
+  assert.equal((await load(pilot)).revision, before.revision);
+  await duplicate.selectOption("");
+  const filed = buildResponse();
+  await submit.click();
   assert.equal((await filed).status(), 200);
   await pilot.view.getByText("ENROLLMENT RECORD FILED", {exact:true}).waitFor();
   await pilot.page.context().close();

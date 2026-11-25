@@ -255,7 +255,7 @@
 </dialog>
 <dialog id="enrollment-dialog" class="activity-dialog terminal-dialog" aria-labelledby="enrollment-title">
   <header class="record-heading"><h2 id="enrollment-title">Pilot enrollment</h2><form method="dialog"><button aria-label="Close pilot enrollment">×</button></form></header>
-  <div class="terminal-panel">
+  <div id="enrollment-scroll" class="terminal-panel">
     <div class="terminal-line"><span>Foundation / Personnel intake</span><span id="enrollment-state" class="terminal-state" aria-live="polite"></span></div>
     <div id="enrollment-identity"></div>
     <button id="enrollment-choices-link" type="button" aria-haspopup="dialog" hidden>Enrollment assignments</button>
@@ -265,10 +265,16 @@
       <button type="button" data-enrollment-tab="bond">Bond</button>
       <button type="button" data-enrollment-tab="review">Review</button>
     </nav>
-    <p id="enrollment-feedback" role="status"></p>
-    <p id="enrollment-dm-status" class="terminal-feedback" role="status"></p>
     <div id="enrollment-record"></div>
   </div>
+  <footer id="enrollment-footer">
+    <div class="enrollment-footer-status">
+      <p id="enrollment-feedback" role="status"></p>
+      <ul id="enrollment-errors" aria-live="polite" aria-label="Enrollment errors"></ul>
+      <p id="enrollment-dm-status" class="terminal-feedback" role="status"></p>
+    </div>
+    <div id="enrollment-submit"></div>
+  </footer>
 </dialog>
 <dialog id="sheet-reset-dialog" class="activity-dialog terminal-dialog" aria-labelledby="sheet-reset-title">
   <header class="record-heading"><h2 id="sheet-reset-title">Restart character</h2><form method="dialog"><button aria-label="Cancel restart">×</button></form></header>
@@ -823,7 +829,9 @@ async function responseData(response) {
       session = null;
       location.reload();
     }
-    throw new Error(typeof data?.error === "string" ? data.error.replace(/\bDiscord\b/g,"identity relay") : details);
+    const error = new Error(typeof data?.error === "string" ? data.error.replace(/\bDiscord\b/g,"identity relay") : details);
+    if (Array.isArray(data?.fields)) error.fields = data.fields;
+    throw error;
   }
   return data;
 }
@@ -920,6 +928,7 @@ async function saveSetup(step, payload) {
     : punishment ? document.getElementById("punishment-feedback")
     : controls === enrollmentDialog ? enrollmentFeedback
     : controls === utility ? document.getElementById("utility-feedback") : status;
+  if (controls === enrollmentDialog) enrollment.clearErrors();
   if (!playCommand) feedback.textContent = "Saving setup…";
   const body = JSON.stringify(payload);
   try {
@@ -1047,6 +1056,8 @@ async function saveSetup(step, payload) {
     if (playCommand) {
       playFeedback.textContent = error.message;
       playFeedback.hidden = false;
+    } else if (controls === enrollmentDialog && enrollmentDialog.open && currentPlayer?.mailbox === mailbox) {
+      enrollment.showErrors(error.message, error.fields);
     } else {
       feedback.textContent = error.message;
     }
