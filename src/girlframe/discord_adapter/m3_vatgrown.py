@@ -44,6 +44,7 @@ async def open_choice(
     interaction: discord.Interaction, game: GameService, decision: dict[str, Any]
 ) -> None:
     detail = decision["detail"]
+
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
         await asyncio.to_thread(
             game.respond,

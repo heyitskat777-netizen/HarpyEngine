@@ -5,7 +5,9 @@ from dataclasses import asdict
 from uuid import NAMESPACE_URL, uuid5
 
 import sqlalchemy as sa
-from play_continuations import ACTIONS as CONTINUATION_ACTIONS, PlayContinuations
+from play_continuations import ACTIONS as CONTINUATION_ACTIONS
+from play_continuations import PlayContinuations
+
 from girlframe.database import tables
 from girlframe.discord_adapter.m2_ui import choice_fields
 from girlframe.engine.m2 import ChoiceAnswer, PlayInput
@@ -115,9 +117,7 @@ def gorgon_values(data, values, key):
         if not goal or not values.get("protected_asset"):
             raise ValueError("Choose the Directed Gorgon’s goal and protective Asset.")
         extra = {
-            "goal": {
-                k: v for k, v in goal.items() if k in ("kind", "cell", "entity_id")
-            },
+            "goal": {k: v for k, v in goal.items() if k in ("kind", "cell", "entity_id")},
             "protected_asset": values["protected_asset"],
         }
     elif kind == "sprite":
@@ -129,11 +129,7 @@ def gorgon_values(data, values, key):
         "account": values["account"],
         "alive": values.get("alive", "yes") == "yes",
         "gorgon": {
-            "id": str(
-                uuid5(
-                    NAMESPACE_URL, "girlframe:activity:void:" + data["id"] + ":" + key
-                )
-            ),
+            "id": str(uuid5(NAMESPACE_URL, "girlframe:activity:void:" + data["id"] + ":" + key)),
             "name": values["name"],
             "cell": data["frame_cell"],
             "gorgon_class": kind,
@@ -189,9 +185,7 @@ def feedback_card(data, scenes):
                     options(data["targets"]),
                     required=False,
                 ),
-                field(
-                    "asset", "Asset to tear", options(data["assets"]), required=False
-                ),
+                field("asset", "Asset to tear", options(data["assets"]), required=False),
                 field("name", "Name of the rewritten Asset", required=False),
                 field(
                     "replace",
@@ -375,8 +369,7 @@ class OwnedFollowups:
                 row
                 for row in self.ankou._tasks(c, viewer)
                 if row["pending"]
-                and row["label"]
-                in ("Ankou — feedback sequence", "Ankou — feedback step")
+                and row["label"] in ("Ankou — feedback sequence", "Ankou — feedback step")
             ]
         cards = []
         for row in ankou_tasks:
@@ -424,8 +417,7 @@ class OwnedFollowups:
                     "work_revision": data["revision"],
                     "expected": data["expected"],
                     "action": "resolve_void",
-                    "instruction": "Void threshold · "
-                    + data["stage"].replace("_", " "),
+                    "instruction": "Void threshold · " + data["stage"].replace("_", " "),
                     "scene": data["question"]
                     or (data["occupancy"] or data["approach"] or {}).get("account"),
                     "operations": [
@@ -448,12 +440,8 @@ class OwnedFollowups:
     def strain_cards(self, viewer):
         cards = []
         with self.game.store.engine.connect() as c:
-            entry_tasks = [
-                row for row in self.entry._tasks(c, viewer) if row["pending"]
-            ]
-            prisoner_tasks = [
-                row for row in self.prisoner._tasks(c, viewer) if row["pending"]
-            ]
+            entry_tasks = [row for row in self.entry._tasks(c, viewer) if row["pending"]]
+            prisoner_tasks = [row for row in self.prisoner._tasks(c, viewer) if row["pending"]]
         for task in entry_tasks:
             data = self.entry.view(viewer, task["id"])
             card = {
@@ -466,9 +454,7 @@ class OwnedFollowups:
                     card
                     | {
                         "action": "followup_entry_bind",
-                        "fields": [
-                            field("channel", "Joined scene", self.scenes(viewer))
-                        ],
+                        "fields": [field("channel", "Joined scene", self.scenes(viewer))],
                     }
                 )
             elif data.get("child_descriptor"):
@@ -482,10 +468,7 @@ class OwnedFollowups:
                             field(
                                 "heat",
                                 "Heat to spend",
-                                [
-                                    (str(value), str(value))
-                                    for value in range(max(0, heat) + 1)
-                                ],
+                                [(str(value), str(value)) for value in range(max(0, heat) + 1)],
                             ),
                             ACCOUNT,
                         ],
@@ -515,9 +498,7 @@ class OwnedFollowups:
                     movement = self.movement.menu(viewer, data["channel"])
                 except WorkflowError:
                     movement = None
-                if movement and any(
-                    row["ref"] == data["actor"] for row in movement["actors"]
-                ):
+                if movement and any(row["ref"] == data["actor"] for row in movement["actors"]):
                     cards.append(
                         card
                         | {
@@ -552,9 +533,7 @@ class OwnedFollowups:
                     )
             evidence = [("held:" + row["id"], row["label"]) for row in data["grips"]]
             if data["can_fail"]:
-                evidence += [
-                    ("failed:" + row["id"], row["label"]) for row in data["movements"]
-                ]
+                evidence += [("failed:" + row["id"], row["label"]) for row in data["movements"]]
             if evidence:
                 cards.append(
                     card
@@ -585,10 +564,7 @@ class OwnedFollowups:
             ]
         actions = {row["id"]: row for row in active if self.is_followup(row)}
         for row in actions.values():
-            if (
-                row["actor_id"] == str(viewer.user_id)
-                and row["state"] == "ready_to_roll"
-            ):
+            if row["actor_id"] == str(viewer.user_id) and row["state"] == "ready_to_roll":
                 cards.append(
                     {
                         "id": row["id"],
@@ -648,9 +624,7 @@ class OwnedFollowups:
                             [
                                 x
                                 for x in detail["assets"]
-                                if not x["void"]
-                                and x["tear_accessible"]
-                                and x["tear_supported"]
+                                if not x["void"] and x["tear_accessible"] and x["tear_supported"]
                             ],
                             "name",
                         ),
@@ -682,11 +656,7 @@ class OwnedFollowups:
                         "replace",
                         "Identity to replace at capacity",
                         options(
-                            [
-                                x
-                                for x in detail["identities"]
-                                if x["purpose_replaceable"]
-                            ],
+                            [x for x in detail["identities"] if x["purpose_replaceable"]],
                             "name",
                         ),
                         required=False,
@@ -719,9 +689,7 @@ class OwnedFollowups:
         if action == "followup_decision":
             return self.action_decision(viewer, key, identity, revision, answer)
         if action == "followup_entry_bind":
-            return self.entry.bind_venue(
-                viewer, key, identity, revision, int(answer["channel"])
-            )
+            return self.entry.bind_venue(viewer, key, identity, revision, int(answer["channel"]))
         if action == "followup_entry_dive":
             detail = self.entry.view(viewer, identity)
             descriptor = detail.get("child_descriptor")
@@ -762,15 +730,11 @@ class OwnedFollowups:
                     key,
                     {"outcome": (answer["outcome"],), "account": answer["account"]},
                 )
-            raise WorkflowError(
-                "This movement belongs to the actual prisoner’s controller."
-            )
+            raise WorkflowError("This movement belongs to the actual prisoner’s controller.")
         if action == "feedback_activate":
             channel = int(answer["channel"])
             if str(channel) not in dict(self.scenes(viewer)):
-                raise WorkflowError(
-                    "Join the Activity scene before starting Feedback there."
-                )
+                raise WorkflowError("Join the Activity scene before starting Feedback there.")
             return sequence.activate(
                 self.game, viewer, key, identity, channel, revision, answer["account"]
             )
@@ -778,17 +742,12 @@ class OwnedFollowups:
         if action == "feedback_purpose":
             if answer.get("given") not in ("yes", "no"):
                 raise ValueError("Choose an explicit answer for this purpose request.")
-            return sequence.answer_purpose(
-                *args, answer["given"] == "yes", answer["account"]
-            )
+            return sequence.answer_purpose(*args, answer["given"] == "yes", answer["account"])
         if action == "feedback_identity":
             return sequence.write_purpose(*args, answer.get("replace"))
         detail = self.ankou.view(viewer, identity)
         if action == "feedback_choose" and detail.get("can_choose"):
-            targets = {
-                row["id"]: ActorRef.model_validate(row["ref"])
-                for row in detail["targets"]
-            }
+            targets = {row["id"]: ActorRef.model_validate(row["ref"]) for row in detail["targets"]}
             return sequence.choose(
                 *args,
                 answer["choice"],
@@ -804,9 +763,7 @@ class OwnedFollowups:
         if action == "feedback_reprisal" and (counter := detail.get("counter")):
             target = ActorRef.model_validate(counter["body"]["target"])
             with self.game.store.engine.connect() as c:
-                sheet = load_state(c, self.game.store.campaign_id).sheets[
-                    str(viewer.user_id)
-                ]
+                sheet = load_state(c, self.game.store.campaign_id).sheets[str(viewer.user_id)]
             return self.begin(
                 viewer,
                 key,
@@ -818,9 +775,7 @@ class OwnedFollowups:
                 sheet.heat,
                 target=target,
             )
-        raise WorkflowError(
-            "This Feedback step belongs to another account or is complete."
-        )
+        raise WorkflowError("This Feedback step belongs to another account or is complete.")
 
     def begin(
         self,
@@ -848,12 +803,8 @@ class OwnedFollowups:
                 heat=heat,
                 trigger_confirmed=True,
                 parent=parent,
-                target=int(target.entity)
-                if target and target.kind == "pilot"
-                else None,
-                target_actor=target
-                if target and target.kind in ("npc", "handler")
-                else None,
+                target=int(target.entity) if target and target.kind == "pilot" else None,
+                target_actor=target if target and target.kind in ("npc", "handler") else None,
             ),
         )
 
@@ -892,11 +843,7 @@ class OwnedFollowups:
         elif kind == "ankou_feedback_purpose":
             answer = {"flag": answer["given"] == "yes", "text": answer["account"]}
         elif kind == "ankou_feedback_identity":
-            answer = {
-                "fields": {"replace": answer["replace"]}
-                if answer.get("replace")
-                else {}
-            }
+            answer = {"fields": {"replace": answer["replace"]} if answer.get("replace") else {}}
         return self.game.respond(
             viewer,
             key,
@@ -912,9 +859,7 @@ class OwnedFollowups:
             resist = start_view(self.game, viewer, identity)
             channel = int(values["channel"])
             if channel not in resist["channels"] or resist["child"]:
-                raise WorkflowError(
-                    "Resume the original resistance in its actual scene."
-                )
+                raise WorkflowError("Resume the original resistance in its actual scene.")
             return self.begin(
                 viewer,
                 key,
@@ -927,16 +872,11 @@ class OwnedFollowups:
                 parent=resist["parent"],
             )
         if op == "answer":
-            if (
-                values.get("answer") not in ("yes", "no")
-                or values.get("honest") != "yes"
-            ):
+            if values.get("answer") not in ("yes", "no") or values.get("honest") != "yes":
                 raise ValueError("Choose an explicit answer to this question.")
             values = values | {"answer": values["answer"] == "yes", "honest": True}
         elif op == "protect":
-            values = values | {
-                "guardian": detail["guardians"][int(values["guardian"])]["ref"]
-            }
+            values = values | {"guardian": detail["guardians"][int(values["guardian"])]["ref"]}
         elif op in FRAME_TRANSFORM and detail["handler"]:
             values = gorgon_values(detail, values, key)
         return self.void.respond(

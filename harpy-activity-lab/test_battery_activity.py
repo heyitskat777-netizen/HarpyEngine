@@ -4,12 +4,12 @@ import asyncio
 from uuid import uuid4
 
 import pytest
+from battlefield import Battlefield
 from test_janus_battery import connected
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger_fixture
 from test_m2_game import pass_tags, state
 
-from battlefield import Battlefield
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.onboarding import WorkflowError
 
@@ -27,15 +27,11 @@ ledger = ledger_fixture
 def test_living_battery_uses_actual_contact_and_owns_private_reply(
     ledger, tmp_path, monkeypatch, faces, picks
 ):
-    game, worker, gateway, core, _ = connected(
-        ledger, tmp_path, monkeypatch, faces=faces
-    )
+    game, worker, gateway, core, _ = connected(ledger, tmp_path, monkeypatch, faces=faces)
     activity = Battlefield(MissionService(ledger), ADMIN, PLAYER, OTHER, shared=True)
     activity.game = game
     option = next(
-        item
-        for item in activity.view(PLAYER)["actions"]
-        if item["id"] == "living_battery"
+        item for item in activity.view(PLAYER)["actions"] if item["id"] == "living_battery"
     )
     assert option["targets"][0]["ref"] == core.model_dump(mode="json")
     started = activity.perform(
@@ -58,9 +54,7 @@ def test_living_battery_uses_actual_contact_and_owns_private_reply(
     pass_tags(game)
     if faces == (1, 1):
         erase = next(
-            item
-            for item in activity.view(PLAYER)["choices"]
-            if item["kind"] == "janus_erase"
+            item for item in activity.view(PLAYER)["choices"] if item["kind"] == "janus_erase"
         )
         activity.perform(
             PLAYER,
@@ -74,9 +68,7 @@ def test_living_battery_uses_actual_contact_and_owns_private_reply(
             },
         )
     benefit = next(
-        item
-        for item in activity.view(PLAYER)["choices"]
-        if item["kind"] == "janus_select"
+        item for item in activity.view(PLAYER)["choices"] if item["kind"] == "janus_select"
     )
     assert benefit["schema"][0]["minimum"] == len(picks)
     activity.perform(
@@ -95,9 +87,7 @@ def test_living_battery_uses_actual_contact_and_owns_private_reply(
         },
     )
     question = next(
-        item
-        for item in activity.view(OTHER)["choices"]
-        if item["kind"] == "janus_answer"
+        item for item in activity.view(OTHER)["choices"] if item["kind"] == "janus_answer"
     )
     assert question["prompt"] == "What did you hear?"
     answer = {

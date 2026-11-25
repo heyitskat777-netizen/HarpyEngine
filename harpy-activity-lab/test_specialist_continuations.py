@@ -4,12 +4,13 @@ from uuid import uuid4
 
 import mission_lab  # noqa: F401
 import pytest
-from girlframe.services.m2_game import GameService
-from girlframe.services.onboarding import WorkflowError
+from handler_punishments import HandlerPunishments
+from owned_followups import OwnedFollowups
+from scene_beneath_work import SceneBeneathWork
 from test_defeat_debts import owed
 from test_defeat_replacement import destroyed
-from test_enforcer_snoop import rolled as snoop_rolled
 from test_dive_handler_void import nearby_director
+from test_enforcer_snoop import rolled as snoop_rolled
 from test_final_handler_workflows import bundled_registry  # noqa: F401
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger_fixture
@@ -17,12 +18,12 @@ from test_m2_game import pass_tags, state, tick
 from test_medical import injured, selection
 from test_mockingbird_communion import source
 from test_oldgen import ready as oldgen_ready
-
-from owned_followups import OwnedFollowups
-from handler_punishments import HandlerPunishments
-from scene_beneath_work import SceneBeneathWork
+from test_scene_beneath_followups import adapter
+from test_scene_beneath_followups import submit as scene_response
 from test_scene_popup_plays import play_options, start
-from test_scene_beneath_followups import adapter, submit as scene_response
+
+from girlframe.services.m2_game import GameService
+from girlframe.services.onboarding import WorkflowError
 
 ledger = ledger_fixture
 
@@ -42,9 +43,9 @@ def test_post_mission_defeat_discipline_uses_only_the_original_debt(ledger):
         if card["instruction"] == "Defeat · Post-mission Punishment"
     ]
     assert not any(card["id"] == pending["id"] for card in controls.view(PLAYER))
-    payload = {
-        key: pending[key] for key in ("id", "revision", "work_revision", "action")
-    } | {"answer": {"kind": "stimulant_injection"}}
+    payload = {key: pending[key] for key in ("id", "revision", "work_revision", "action")} | {
+        "answer": {"kind": "stimulant_injection"}
+    }
     with pytest.raises(WorkflowError):
         controls.perform(PLAYER, str(uuid4()), payload)
     key = str(uuid4())
@@ -64,11 +65,7 @@ def room_map():
 def card(game, viewer, action):
     native = OwnedFollowups(game, room_map)
     scene = SceneBeneathWork(game, room_map, native)
-    return next(
-        row
-        for row in scene.view(viewer, native.view(viewer))
-        if row["action"] == action
-    )
+    return next(row for row in scene.view(viewer, native.view(viewer)) if row["action"] == action)
 
 
 def submit(game, viewer, projection, op, values, *, key=None):
@@ -88,13 +85,9 @@ def test_dive_call_assigns_boarding_and_answers_on_source_popup(ledger, monkeypa
     with pytest.raises(WorkflowError):
         submit(game, PLAYER, invite, "accept", {"account": "Wrong participant"})
     key = str(uuid4())
-    response = submit(
-        game, OTHER, invite, "accept", {"account": "I board the cockpit."}, key=key
-    )
+    response = submit(game, OTHER, invite, "accept", {"account": "I board the cockpit."}, key=key)
     assert (
-        submit(
-            game, OTHER, invite, "accept", {"account": "I board the cockpit."}, key=key
-        )
+        submit(game, OTHER, invite, "accept", {"account": "I board the cockpit."}, key=key)
         == response
     )
     reopened = GameService(ledger)
@@ -180,9 +173,7 @@ def test_defeat_replacement_requires_pilot_and_handler_and_is_idempotent(ledger)
     proposal = card(game, PLAYER, "frame_replacement")
     with pytest.raises(WorkflowError):
         submit(game, ADMIN, proposal, "propose:THE ENFORCER", {})
-    submit(
-        game, PLAYER, proposal, "propose:THE ENFORCER", {"frame_name": "Still Standing"}
-    )
+    submit(game, PLAYER, proposal, "propose:THE ENFORCER", {"frame_name": "Still Standing"})
     package = card(GameService(ledger), ADMIN, "frame_replacement")
     submit(
         game,
@@ -204,35 +195,27 @@ def test_defeat_replacement_requires_pilot_and_handler_and_is_idempotent(ledger)
     assert state(game).sheets["2"].frame == "THE ENFORCER"
 
 
-def test_oldgen_advice_uses_native_scene_targets_and_recipient(
-    ledger, tmp_path, monkeypatch
-):
+def test_oldgen_advice_uses_native_scene_targets_and_recipient(ledger, tmp_path, monkeypatch):
     game, worker, gateway, _ = oldgen_ready(ledger, tmp_path, monkeypatch)
     game.dice.faces = (4, 5)
     option = play_options(game, PLAYER, "old_dog_new_pups")
     assert option["can_start"] and option["targets"][0]["id"] == str(OTHER.user_id)
-    root = start(
-        game, "old_dog_new_pups", "Stay near the relay.", str(OTHER.user_id), heat=1
-    )["action_id"]
+    root = start(game, "old_dog_new_pups", "Stay near the relay.", str(OTHER.user_id), heat=1)[
+        "action_id"
+    ]
     tick(worker, gateway, 3)
     pass_tags(game)
     (maxim,) = play_options(game, PLAYER, "old_dog_new_pups")["choices"]
     assert not play_options(game, OTHER, "old_dog_new_pups")["choices"]
-    scene_response(
-        adapter(game), PLAYER, maxim, {"text": "Hold the line by the relay."}
-    )
+    scene_response(adapter(game), PLAYER, maxim, {"text": "Hold the line by the relay."})
     (choice,) = play_options(game, OTHER, "old_dog_new_pups")["choices"]
     with pytest.raises(WorkflowError):
         scene_response(adapter(game), PLAYER, choice, {"text": "Wrong pilot"})
-    scene_response(
-        adapter(game), OTHER, choice, {"text": "I listened to their advice."}
-    )
+    scene_response(adapter(game), OTHER, choice, {"text": "I listened to their advice."})
     assert GameService(ledger).inspect(PLAYER, root)["state"] == "complete"
 
 
-def test_snoop_answers_stay_with_the_original_property_owner(
-    ledger, tmp_path, monkeypatch
-):
+def test_snoop_answers_stay_with_the_original_property_owner(ledger, tmp_path, monkeypatch):
     game, _, _, root = snoop_rolled(ledger, tmp_path, monkeypatch)
     questions = card(game, PLAYER, "snoop_decision")
     assert questions["root"] == root

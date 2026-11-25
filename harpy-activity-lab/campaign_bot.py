@@ -13,9 +13,8 @@ from threading import Thread
 
 import discord
 from aiohttp import ClientError
-from discord import app_commands
-
 from campaign_registry import RUNTIME, SNOWFLAKE, CampaignBindingError, CampaignRegistry
+from discord import app_commands
 
 logger = logging.getLogger("harpy_activity.discord")
 
@@ -35,9 +34,7 @@ def create_from_interaction(
     if guild is None or interaction.guild_id != guild.id:
         raise CampaignBindingError("Run this command in the Discord server.")
     if interaction.user.id != guild.owner_id:
-        raise CampaignBindingError(
-            "Only the Discord server owner can create a campaign."
-        )
+        raise CampaignBindingError("Only the Discord server owner can create a campaign.")
     if handler is not None and (handler.guild.id != guild.id or handler.bot):
         raise CampaignBindingError("Choose a human Handler in this Discord server.")
     return registry.register(
@@ -62,9 +59,7 @@ def setup_command(registry, provision):
         description="Set up or launch a private HarpyEngine Activity campaign",
     )
 
-    @group.command(
-        name="create", description="Bind a new Activity campaign to a server role"
-    )
+    @group.command(name="create", description="Bind a new Activity campaign to a server role")
     @app_commands.describe(
         name="Campaign name",
         role="Members with this role can enter",
@@ -87,24 +82,16 @@ def setup_command(registry, provision):
         try:
             guild = await interaction.client.fetch_guild(interaction.guild_id)
             if guild.owner_id != interaction.user.id:
-                raise CampaignBindingError(
-                    "Only the Discord server owner can create a campaign."
-                )
+                raise CampaignBindingError("Only the Discord server owner can create a campaign.")
             current_role = guild.get_role(role.id)
             if current_role is None:
-                raise CampaignBindingError(
-                    "Choose an existing Discord role from this server."
-                )
+                raise CampaignBindingError("Choose an existing Discord role from this server.")
             current_channel = await interaction.client.fetch_channel(channel.id)
             if (
-                not isinstance(
-                    current_channel, (discord.TextChannel, discord.VoiceChannel)
-                )
+                not isinstance(current_channel, (discord.TextChannel, discord.VoiceChannel))
                 or current_channel.guild.id != guild.id
             ):
-                raise CampaignBindingError(
-                    "Choose a text or voice channel in this Discord server."
-                )
+                raise CampaignBindingError("Choose a text or voice channel in this Discord server.")
             saved = await asyncio.to_thread(
                 create_from_interaction,
                 registry,
@@ -137,7 +124,8 @@ def setup_command(registry, provision):
             )
             return
         await interaction.followup.send(
-            f"Saved **{discord.utils.escape_markdown(saved.name)}** for role **{discord.utils.escape_markdown(role.name)}** "
+            f"Saved **{discord.utils.escape_markdown(saved.name)}** for role "
+            f"**{discord.utils.escape_markdown(role.name)}** "
             f"in **#{discord.utils.escape_markdown(channel.name)}**. "
             "Assign that role to the Handler and pilots so they can use "
             "`/activity-campaign launch` in the bound channel.",
@@ -169,11 +157,7 @@ def setup_command(registry, provision):
             )
             return
         binding = next(
-            (
-                item
-                for item in bindings
-                if item.channel_id == str(interaction.channel_id)
-            ),
+            (item for item in bindings if item.channel_id == str(interaction.channel_id)),
             None,
         )
         if binding is None:
@@ -200,9 +184,7 @@ def dm_command(include_user_installs):
         allowed_contexts=app_commands.AppCommandContext(
             guild=False, dm_channel=True, private_channel=include_user_installs
         ),
-        allowed_installs=app_commands.AppInstallationType(
-            guild=True, user=include_user_installs
-        ),
+        allowed_installs=app_commands.AppInstallationType(guild=True, user=include_user_installs),
     )
 
     @group.command(name="launch", description="Open your HarpyEngine campaign")
@@ -214,12 +196,8 @@ def dm_command(include_user_installs):
 
 
 class SetupBot(discord.Client):
-    def __init__(
-        self, application_id, guild_id, registry, *, allow_dm=False, provision=None
-    ):
-        super().__init__(
-            intents=discord.Intents(guilds=True), application_id=application_id
-        )
+    def __init__(self, application_id, guild_id, registry, *, allow_dm=False, provision=None):
+        super().__init__(intents=discord.Intents(guilds=True), application_id=application_id)
         self.activity_id = application_id
         self.target = discord.Object(id=guild_id)
         self.allow_dm = allow_dm
@@ -230,9 +208,7 @@ class SetupBot(discord.Client):
     async def setup_hook(self):
         info = await self.application_info()
         if info.id != self.activity_id:
-            raise RuntimeError(
-                "The bot token belongs to a different Discord application."
-            )
+            raise RuntimeError("The bot token belongs to a different Discord application.")
         # Upsert only this group. A bulk sync would remove the bot's other guild commands.
         await self.http.upsert_guild_command(
             self.activity_id, self.target.id, self.command.to_dict(self.tree)
@@ -240,9 +216,7 @@ class SetupBot(discord.Client):
         if self.allow_dm:
             command = dm_command(info.user_integration_config is not None)
             self.tree.add_command(command, override=True)
-            await self.http.upsert_global_command(
-                self.activity_id, command.to_dict(self.tree)
-            )
+            await self.http.upsert_global_command(self.activity_id, command.to_dict(self.tree))
 
     async def on_ready(self):
         logger.warning("Private Activity command listener connected.")
@@ -254,8 +228,14 @@ class SetupBot(discord.Client):
 
 @contextmanager
 def serve_commands(
-    config, registry, token, provision, *, inbox_notices=None,
-    notice_pending=None, scan_interactions=None,
+    config,
+    registry,
+    token,
+    provision,
+    *,
+    inbox_notices=None,
+    notice_pending=None,
+    scan_interactions=None,
 ):
     stopping = Future()
 
@@ -275,12 +255,12 @@ def serve_commands(
                     if inbox_notices is not None:
                         from campaign_inbox import deliver_notices, scan_notices
 
-                        workers.append(asyncio.create_task(
-                            deliver_notices(bot, registry, inbox_notices, notice_pending)
-                        ))
-                        workers.append(asyncio.create_task(
-                            scan_notices(bot, scan_interactions)
-                        ))
+                        workers.append(
+                            asyncio.create_task(
+                                deliver_notices(bot, registry, inbox_notices, notice_pending)
+                            )
+                        )
+                        workers.append(asyncio.create_task(scan_notices(bot, scan_interactions)))
                     try:
                         done, _ = await asyncio.wait(
                             (stopped, gateway), return_when=asyncio.FIRST_COMPLETED
@@ -320,14 +300,10 @@ async def verify_bot_token(token, application_id):
         async with discord.Client(intents=discord.Intents.none()) as client:
             await asyncio.wait_for(client.login(token), timeout=15)
     except discord.LoginFailure:
-        print(
-            "Discord rejected the bot token. Paste the current raw HarpyEngine bot token."
-        )
+        print("Discord rejected the bot token. Paste the current raw HarpyEngine bot token.")
         return 1
     except discord.HTTPException as error:
-        print(
-            f"Discord could not verify the bot token (HTTP {error.status}). Try again."
-        )
+        print(f"Discord could not verify the bot token (HTTP {error.status}). Try again.")
         return 1
     except (ClientError, OSError, TimeoutError):
         print("The verification request could not reach Discord. Try again.")
@@ -342,21 +318,15 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--application-id", required=True)
     parser.add_argument("--guild-id", required=True)
-    parser.add_argument(
-        "--registry", type=Path, default=RUNTIME / "activity-campaigns.sqlite3"
-    )
+    parser.add_argument("--registry", type=Path, default=RUNTIME / "activity-campaigns.sqlite3")
     parser.add_argument("--allow-dm", action="store_true")
     parser.add_argument("--check-token", action="store_true")
     args = parser.parse_args()
-    if not SNOWFLAKE.fullmatch(args.application_id) or not SNOWFLAKE.fullmatch(
-        args.guild_id
-    ):
+    if not SNOWFLAKE.fullmatch(args.application_id) or not SNOWFLAKE.fullmatch(args.guild_id):
         parser.error("Provide the installed application and Discord server IDs.")
     token = os.environ.pop("GIRLFRAME_ACTIVITY_SETUP_BOT_TOKEN", None)
     if not token:
-        parser.error(
-            "Set GIRLFRAME_ACTIVITY_SETUP_BOT_TOKEN in the bot process environment."
-        )
+        parser.error("Set GIRLFRAME_ACTIVITY_SETUP_BOT_TOKEN in the bot process environment.")
     if args.check_token:
         raise SystemExit(asyncio.run(verify_bot_token(token, int(args.application_id))))
     from mission_lab import provision_managed_campaign

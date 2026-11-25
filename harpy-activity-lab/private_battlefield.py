@@ -8,6 +8,18 @@ from typing import get_args
 from uuid import UUID, uuid4, uuid5
 
 import sqlalchemy as sa
+from battlefield import (
+    ASSAULT,
+    BENEATH,
+    CORE,
+    DECLARED_PLAYS,
+    FLIRT,
+    PLAY_LABELS,
+    Battlefield,
+    BattlefieldChanged,
+)
+from battlefield_frame_work import BattlefieldFrameWork
+
 from girlframe.database import tables
 from girlframe.engine import m3_battle as battle_rules
 from girlframe.engine.m3_actor_state import ActorRef
@@ -30,22 +42,12 @@ from girlframe.services.m3_movement import proposal_context
 from girlframe.services.m3_physical import PhysicalService
 from girlframe.services.onboarding import WorkflowError
 
-from battlefield import (
-    ASSAULT,
-    BENEATH,
-    CORE,
-    DECLARED_PLAYS,
-    FLIRT,
-    PLAY_LABELS,
-    Battlefield,
-    BattlefieldChanged,
-)
-from battlefield_frame_work import BattlefieldFrameWork
-
 PRIVATE_BATTLEFIELD_CHANNEL = 901
 TURN_FACT = "activity_battlefield_turn"
 FACILITY_FACT = "activity_battlefield_facility"
-FACILITY_PLANS = json.loads(Path(__file__).with_name("facility-plans.json").read_text(encoding="utf-8"))
+FACILITY_PLANS = json.loads(
+    Path(__file__).with_name("facility-plans.json").read_text(encoding="utf-8")
+)
 LOCATION_CELLS = ((0, 0), (4, 0), (8, 0), (0, 5), (8, 5), (2, 3), (5, 5), (7, 8))
 LOCATION_KINDS = (
     "base",
@@ -62,11 +64,17 @@ GORGON_TYPES = get_args(GorgonType)
 
 def facility_board(plan):
     x, y = plan["minimum"]
-    return Board(minimum=(x, y), maximum=(x + len(plan["floor"][0]) - 1, y + len(plan["floor"]) - 1))
+    return Board(
+        minimum=(x, y), maximum=(x + len(plan["floor"][0]) - 1, y + len(plan["floor"]) - 1)
+    )
 
 
 def walkable(plan, cell):
-    if not isinstance(cell, (list, tuple)) or len(cell) != 2 or any(type(value) is not int for value in cell):
+    if (
+        not isinstance(cell, (list, tuple))
+        or len(cell) != 2
+        or any(type(value) is not int for value in cell)
+    ):
         raise ValueError("Choose an actual grid square.")
     x, y = cell
     left, top = plan["minimum"]
@@ -128,13 +136,22 @@ class PrivateBattlefield(Battlefield):
                 raise WorkflowError("This facility does not fit the existing HarpyEngine board.")
             state.facts.append({"kind": FACILITY_FACT, "body": identity})
             self.game.event(
-                connection, viewer.user_id, key, "activity.battlefield.facility",
-                state, channel=self.channel,
+                connection,
+                viewer.user_id,
+                key,
+                "activity.battlefield.facility",
+                state,
+                channel=self.channel,
             )
             return {"facility": identity}
 
         result = self.store._write(
-            viewer, key, "activity.battlefield.facility", data, operation, auto_audit=False,
+            viewer,
+            key,
+            "activity.battlefield.facility",
+            data,
+            operation,
+            auto_audit=False,
             authorize=lambda c: self.game.authorize(c, viewer),
         )
         self.bind_battlefield(viewer)
@@ -153,11 +170,7 @@ class PrivateBattlefield(Battlefield):
             .mappings()
             .first()
         )
-        return (
-            dict(row) | {"participants": json.loads(row["participants_json"])}
-            if row
-            else None
-        )
+        return dict(row) | {"participants": json.loads(row["participants_json"])} if row else None
 
     def joined(self, viewer, scene):
         return bool(scene and viewer.user_id in scene["participants"])
@@ -166,17 +179,13 @@ class PrivateBattlefield(Battlefield):
         if not state.world or not scene:
             return {}
         bindings = profiles(connection, self.store.campaign_id)
-        order = list(state.order) + sorted(
-            set(scene["participants"]) - set(state.order)
-        )
+        order = list(state.order) + sorted(set(scene["participants"]) - set(state.order))
         eligible = {}
         for uid in order:
             sheet = state.sheets.get(str(uid))
             if uid not in scene["participants"] or not sheet or not sheet.character_id:
                 continue
-            ref = ActorRef(
-                kind="pilot", entity=str(uid), incarnation=sheet.character_id
-            )
+            ref = ActorRef(kind="pilot", entity=str(uid), incarnation=sheet.character_id)
             try:
                 actor = resolve(state, ref, bindings, require_current_profile=False)
             except ValueError:
@@ -184,20 +193,19 @@ class PrivateBattlefield(Battlefield):
             if actor.alive and actor.controller == uid and actor.cell is not None:
                 eligible[ref.token] = actor
         cast = next(
-            (
-                item
-                for item in state.scene_casts
-                if item.id == scene["id"] and item.open
-            ),
+            (item for item in state.scene_casts if item.id == scene["id"] and item.open),
             None,
         )
         visible = {
             ActorRef(kind=kind, entity=x.id).token
             for kind, actors in (("npc", state.world.npcs), ("gorgon", state.world.gorgons))
-            for x in actors if x.revealed and x.alive
+            for x in actors
+            if x.revealed and x.alive
         }
         harpies = {x.id for x in state.harpy_states if x.alive and x.revealed}
-        harpies.update(x.id for x in state.world.pilots if x.kind == "harpy" and x.alive and x.revealed)
+        harpies.update(
+            x.id for x in state.world.pilots if x.kind == "harpy" and x.alive and x.revealed
+        )
         for role in cast.roles if cast else ():
             harpy = role.actor.kind == "external_pilot" and role.actor.entity in harpies
             if not harpy and role.actor.token not in visible:
@@ -205,9 +213,7 @@ class PrivateBattlefield(Battlefield):
             if role.controller not in scene["participants"]:
                 continue
             try:
-                actor = resolve(
-                    state, role.actor, bindings, require_current_profile=False
-                )
+                actor = resolve(state, role.actor, bindings, require_current_profile=False)
             except ValueError:
                 continue
             if (
@@ -264,9 +270,7 @@ class PrivateBattlefield(Battlefield):
         joined = self.joined(viewer, scene)
         record = self.turn_record(state, scene)
         is_active = bool(active and eligible[active[1]].controller == viewer.user_id)
-        own_placement = bool(
-            any(actor.controller == viewer.user_id for actor in eligible.values())
-        )
+        own_placement = bool(any(actor.controller == viewer.user_id for actor in eligible.values()))
         placement = self.physical.tasks(viewer) if state.world and joined else []
         reviews = []
         if handler:
@@ -339,16 +343,18 @@ class PrivateBattlefield(Battlefield):
         with self.store.engine.connect() as connection:
             state = load_state(connection, self.store.campaign_id)
             if world["game_revision"] != state.revision:
-                raise BattlefieldChanged(
-                    "Battlefield changed while loading. Please retry."
-                )
+                raise BattlefieldChanged("Battlefield changed while loading. Please retry.")
             scene = self.scene_row(connection)
             plan = self.facility(state)
-            map_view = {
-                "board": facility_board(plan).model_dump(mode="json"),
-                "facility": {key: plan[key] for key in ("name", "floor", "rooms")},
-                "locations": [],
-            } if plan else {}
+            map_view = (
+                {
+                    "board": facility_board(plan).model_dump(mode="json"),
+                    "facility": {key: plan[key] for key in ("name", "floor", "rooms")},
+                    "locations": [],
+                }
+                if plan
+                else {}
+            )
             eligible = self.placed(connection, state, scene)
             active = self.current_turn(self.turn_record(state, scene), eligible)
             acting = eligible[active[1]] if active else None
@@ -383,21 +389,30 @@ class PrivateBattlefield(Battlefield):
                     sa.select(scenes.c.channel_id).where(
                         scenes.c.campaign_id == self.store.campaign_id,
                         scenes.c.open.is_(True),
-                        sa.select(1).select_from(participants).where(
-                            participants.c.value == viewer.user_id
-                        ).exists(),
+                        sa.select(1)
+                        .select_from(participants)
+                        .where(participants.c.value == viewer.user_id)
+                        .exists(),
                     )
                 )
                 if any(
-                    (lock := self.game.lock(connection, int(channel))) and lock["state"] != "released"
+                    (lock := self.game.lock(connection, int(channel)))
+                    and lock["state"] != "released"
                     for channel in joined_channels
                 ):
                     setup["can_join"] = False
-                    setup["entry_blocker"] = "Resolve the pending Play in your active scene before entering Battlefield."
+                    setup["entry_blocker"] = (
+                        "Resolve the pending Play in your active scene before entering Battlefield."
+                    )
             if self.facilities:
-                setup["facility_options"] = [
-                    {"id": identity, "name": item["name"]} for identity, item in FACILITY_PLANS.items()
-                ] if setup["can_open"] and not plan else []
+                setup["facility_options"] = (
+                    [
+                        {"id": identity, "name": item["name"]}
+                        for identity, item in FACILITY_PLANS.items()
+                    ]
+                    if setup["can_open"] and not plan
+                    else []
+                )
             enemy_move = None
             if setup["enemy_turn"] and setup["yours"]:
                 try:
@@ -425,18 +440,17 @@ class PrivateBattlefield(Battlefield):
                             "label": "Select an enemy destination on the mapped board.",
                         },
                     }
-            if (
-                setup["handler"]
-                and setup["joined"]
-                and not setup["running"]
-                and not paused
-            ):
+            if setup["handler"] and setup["joined"] and not setup["running"] and not paused:
                 setup["can_add_enemies"] = not self.lock_active(connection)
                 setup["enemies"] = [
                     {"id": token, "label": label}
                     for token, (ref, label) in self.enemy_roster(state).items()
-                    if token not in eligible and (
-                        not plan or walkable(plan, resolve(state, ref, bindings, require_current_profile=False).cell)
+                    if token not in eligible
+                    and (
+                        not plan
+                        or walkable(
+                            plan, resolve(state, ref, bindings, require_current_profile=False).cell
+                        )
                     )
                 ]
             setup["expose_core"] = (
@@ -456,9 +470,7 @@ class PrivateBattlefield(Battlefield):
         if setup["joined"] and world["world"]:
             view = super().view(viewer)
             if view["revision"] != state.revision:
-                raise BattlefieldChanged(
-                    "Battlefield changed while loading. Please retry."
-                )
+                raise BattlefieldChanged("Battlefield changed while loading. Please retry.")
             if not setup["yours"] or paused:
                 view["actions"] = [
                     item for item in view["actions"] if item["range"]["kind"] == "order"
@@ -467,8 +479,7 @@ class PrivateBattlefield(Battlefield):
                 view["actions"].append(enemy_move)
             for actor in view["actors"]:
                 actor["enemy"] = (
-                    actor["id"] in eligible
-                    and eligible[actor["id"]].ref.kind != "pilot"
+                    actor["id"] in eligible and eligible[actor["id"]].ref.kind != "pilot"
                 )
                 actor["core_exposed"] = actor["id"] in exposed
             if setup["handler"] and not paused and not view["busy"]:
@@ -479,12 +490,14 @@ class PrivateBattlefield(Battlefield):
                         target["owner"] = str(target["owner"])
             view["frame_work"] = BattlefieldFrameWork(self.game, self.channel).view(
                 viewer,
-                proactive=not setup["running"]
-                or setup["yours"]
-                and not setup["enemy_turn"],
+                proactive=not setup["running"] or setup["yours"] and not setup["enemy_turn"],
                 busy=view["busy"],
             )
-            return view | map_view | {"title": plan["name"] if plan else "Campaign Battlefield", "encounter": setup}
+            return (
+                view
+                | map_view
+                | {"title": plan["name"] if plan else "Campaign Battlefield", "encounter": setup}
+            )
         return {
             "title": plan["name"] if plan else "Campaign Battlefield",
             "revision": world["game_revision"],
@@ -505,15 +518,9 @@ class PrivateBattlefield(Battlefield):
         actors = {actor["id"]: actor["label"] for actor in view["actors"]}
         reviews = []
         for item in self.combat.tasks(viewer):
-            if (
-                not item["incoming"]
-                or item["scene"] != scene["id"]
-                or item["source_action"]
-            ):
+            if not item["incoming"] or item["scene"] != scene["id"] or item["source_action"]:
                 continue
-            saved = Context.model_validate(
-                self.combat.context(viewer, item["id"])["context"]
-            )
+            saved = Context.model_validate(self.combat.context(viewer, item["id"])["context"])
             play = saved.declaration.play
             if play not in DECLARED_PLAYS.values():
                 continue
@@ -530,26 +537,20 @@ class PrivateBattlefield(Battlefield):
         return reviews
 
     def actions(self, connection, viewer, state, scene, pilot, movement, battle):
-        actions = super().actions(
-            connection, viewer, state, scene, pilot, movement, battle
-        )
+        actions = super().actions(connection, viewer, state, scene, pilot, movement, battle)
         try:
             self.game.pilot_cast(connection, state, scene, owners=(viewer.user_id,))
         except WorkflowError:
             # Mixed casts use only the actor-aware adapters wired into this board.
             return [
-                action
-                for action in actions
-                if action["id"] in ("move", "engage", ASSAULT, CORE)
+                action for action in actions if action["id"] in ("move", "engage", ASSAULT, CORE)
             ]
         return actions
 
     def handler_only(self, connection, viewer, state):
         self.world.missions._handler(connection, viewer)
         if state.handler != viewer.user_id:
-            raise WorkflowError(
-                "Activate a pilot to finalize the campaign Handler appointment."
-            )
+            raise WorkflowError("Activate a pilot to finalize the campaign Handler appointment.")
 
     def set_enemy(self, viewer, key, command, body, scene_id):
         if command == "create-enemy":
@@ -576,10 +577,7 @@ class PrivateBattlefield(Battlefield):
             target = ActorRef(kind="npc", entity=identity).token
             cast_key = key + ":cast"
         else:
-            if (
-                body.keys() != {"revision", "target"}
-                or type(body["revision"]) is not int
-            ):
+            if body.keys() != {"revision", "target"} or type(body["revision"]) is not int:
                 raise ValueError
             target = body["target"]
             cast_key = key
@@ -587,24 +585,14 @@ class PrivateBattlefield(Battlefield):
             state = load_state(connection, self.store.campaign_id)
             cast, _ = self.casts._current(connection, state, self.channel)
             items = self.enemy_roster(state)
-            if (
-                cast.id != scene_id
-                or not isinstance(target, str)
-                or target not in items
-            ):
-                raise WorkflowError(
-                    "Choose a visible, mapped enemy controlled by the Handler."
-                )
+            if cast.id != scene_id or not isinstance(target, str) or target not in items:
+                raise WorkflowError("Choose a visible, mapped enemy controlled by the Handler.")
             ref, _ = items[target]
-            if command == "create-enemy" and any(
-                role.actor == ref for role in cast.roles
-            ):
+            if command == "create-enemy" and any(role.actor == ref for role in cast.roles):
                 return {"actor": target}
             revision = state.revision if command == "create-enemy" else body["revision"]
             cast_revision = cast.revision
-        self.casts.change(
-            viewer, cast_key, self.channel, revision, cast_revision, "join", ref
-        )
+        self.casts.change(viewer, cast_key, self.channel, revision, cast_revision, "join", ref)
         return {"actor": target}
 
     def open_world(self, viewer, key, data):
@@ -691,9 +679,8 @@ class PrivateBattlefield(Battlefield):
                 self.channel,
             )
         if not self.game.scene_info(viewer, self.channel)["joined"]:
-            self.game.join_scene(
-                viewer, "activity-battlefield-handler-entry", self.channel
-            )
+            self.game.join_scene(viewer, "activity-battlefield-handler-entry", self.channel)
+
     def change_turn(self, viewer, key, command, body):
         if body.keys() != {"revision"} or type(body["revision"]) is not int:
             raise ValueError
@@ -704,9 +691,7 @@ class PrivateBattlefield(Battlefield):
             if not self.joined(viewer, scene) or not state.world:
                 raise WorkflowError("Enter the mapped Battlefield first.")
             if body["revision"] != state.revision or self.lock_active(connection):
-                raise WorkflowError(
-                    "Refresh the Battlefield and resolve any pending Play."
-                )
+                raise WorkflowError("Refresh the Battlefield and resolve any pending Play.")
             eligible = self.placed(connection, state, scene)
             record = self.turn_record(state, scene)
             if command == "end-turn":
@@ -717,9 +702,7 @@ class PrivateBattlefield(Battlefield):
             else:
                 self.handler_only(connection, viewer, state)
                 if command == "start-turns":
-                    if record or not any(
-                        actor.ref.kind == "pilot" for actor in eligible.values()
-                    ):
+                    if record or not any(actor.ref.kind == "pilot" for actor in eligible.values()):
                         raise WorkflowError("Place a pilot and open turns once.")
                     record = {
                         "order": list(eligible),
@@ -733,9 +716,7 @@ class PrivateBattlefield(Battlefield):
             state.facts = [
                 fact
                 for fact in state.facts
-                if not (
-                    fact.get("kind") == TURN_FACT and fact.get("scene") == scene["id"]
-                )
+                if not (fact.get("kind") == TURN_FACT and fact.get("scene") == scene["id"])
             ]
             if record:
                 state.facts.append(
@@ -778,7 +759,9 @@ class PrivateBattlefield(Battlefield):
                 if self.facilities:
                     with self.store.engine.connect() as connection:
                         if self.facility(load_state(connection, self.store.campaign_id)) is None:
-                            raise WorkflowError("Select a facility before opening Battlefield admission.")
+                            raise WorkflowError(
+                                "Select a facility before opening Battlefield admission."
+                            )
                 return self.open_world(viewer, key, body)
             if command in ("start-turns", "end-turn", "close-turns"):
                 return self.change_turn(viewer, key, command, body)
@@ -797,12 +780,18 @@ class PrivateBattlefield(Battlefield):
                     if plan and (sheet := state.sheets.get(str(viewer.user_id))):
                         current = resolve(
                             state,
-                            ActorRef(kind="pilot", entity=str(viewer.user_id), incarnation=sheet.character_id),
+                            ActorRef(
+                                kind="pilot",
+                                entity=str(viewer.user_id),
+                                incarnation=sheet.character_id,
+                            ),
                             profiles(connection, self.store.campaign_id),
                             require_current_profile=False,
                         )
                         if current.cell is not None and not walkable(plan, current.cell):
-                            raise WorkflowError("Your saved placement is outside the facility's accessible floor.")
+                            raise WorkflowError(
+                                "Your saved placement is outside the facility's accessible floor."
+                            )
                     return self.scene.enter(viewer, key)
                 if not self.joined(viewer, scene):
                     raise WorkflowError("Enter the Battlefield first.")
@@ -846,11 +835,15 @@ class PrivateBattlefield(Battlefield):
                             if not found:
                                 raise WorkflowError("Choose a visible enemy on this facility map.")
                             cell = resolve(
-                                state, found[0], profiles(connection, self.store.campaign_id),
+                                state,
+                                found[0],
+                                profiles(connection, self.store.campaign_id),
                                 require_current_profile=False,
                             ).cell
                         if not walkable(plan, cell):
-                            raise WorkflowError("Deploy the enemy on an accessible facility square.")
+                            raise WorkflowError(
+                                "Deploy the enemy on an accessible facility square."
+                            )
                     return self.set_enemy(viewer, key, command, body, scene["id"])
                 if command == "place":
                     if body.keys() != {"revision", "cell", "mode", "account"}:
@@ -863,9 +856,7 @@ class PrivateBattlefield(Battlefield):
                         actor.controller == viewer.user_id
                         for actor in self.placed(connection, state, scene).values()
                     ):
-                        raise WorkflowError(
-                            "This pilot already has an initial placement."
-                        )
+                        raise WorkflowError("This pilot already has an initial placement.")
                     original = self.physical.preview(viewer)
                     proof = InitialPlacement.model_validate_json(
                         json.dumps(
@@ -912,9 +903,7 @@ class PrivateBattlefield(Battlefield):
                 if not active or eligible[active[1]].controller != viewer.user_id:
                     raise WorkflowError("Wait for the turn of an actor you control.")
                 if body.pop("turn", None) != f"{record['epoch']}:{active[0]}":
-                    raise WorkflowError(
-                        "Refresh the current turn before submitting this action."
-                    )
+                    raise WorkflowError("Refresh the current turn before submitting this action.")
                 if (
                     command == "move"
                     and ActorRef.model_validate(body.get("actor")).token != active[1]
@@ -940,19 +929,13 @@ class PrivateBattlefield(Battlefield):
                             "Voluntarily expose only your own occupied Frame Core on your turn."
                         )
                     account = body["account"]
-                    if (
-                        not isinstance(account, str)
-                        or not account.strip()
-                        or len(account) > 1200
-                    ):
+                    if not isinstance(account, str) or not account.strip() or len(account) > 1200:
                         raise ValueError
                     return self.combat.expose(
                         viewer, key, body["revision"], actor.ref, account, willing=True
                     )
                 if eligible[active[1]].ref.kind != "pilot" and command != "move":
-                    raise WorkflowError(
-                        "The Handler can move the active enemy or end its turn."
-                    )
+                    raise WorkflowError("The Handler can move the active enemy or end its turn.")
                 if command in (FLIRT, BENEATH):
                     target = body.get("target")
                     if (

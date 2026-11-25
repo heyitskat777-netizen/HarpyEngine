@@ -580,14 +580,16 @@ def pc_execution(
     case = case_proof(c, game, identity)
     current(c, game, load_state(c, game.store.campaign_id), case)
     saved_effect = (
-        allow_resolved and row["state"] == "resolved"
+        allow_resolved
+        and row["state"] == "resolved"
         and source.get("applied_event") == case.effect_event
     )
     if (
         case.pc_work != row["id"]
         or viewer.user_id != case.executor_controller
         or case.instruction is None
-        or case.effect_event is not None and not saved_effect
+        or case.effect_event is not None
+        and not saved_effect
         or case.ended_event is not None
         or set(case.attendance) != {case.executor_controller, case.subject_controller}
     ):
@@ -1071,7 +1073,8 @@ class RolePunishmentService:
                             )
                         work_revision = applied_revision - 1
                     pc_call = (
-                        case.pc_work, work_revision,
+                        case.pc_work,
+                        work_revision,
                         Details.model_validate_json(case.instruction.details_json),
                     )
             if pc_call:

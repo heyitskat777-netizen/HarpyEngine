@@ -543,7 +543,9 @@ class SessionZeroService:
             self._group_member(c, viewer, current)
             if self._opening_operator(c, current) != viewer.user_id:
                 if self._bot_setup(c):
-                    raise WorkflowError("Only the approved facilitator advances an introductory day.")
+                    raise WorkflowError(
+                        "Only the approved facilitator advances an introductory day."
+                    )
                 raise WorkflowError("Only the appointed Handler advances an introductory day.")
 
         def operation(c: Connection) -> dict[str, Any]:

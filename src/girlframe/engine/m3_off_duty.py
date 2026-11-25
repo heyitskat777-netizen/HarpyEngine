@@ -66,9 +66,7 @@ class Scene(Model):
     summary: str = Field(min_length=1, max_length=1200)
     character_ids: dict[str, str] = Field(default_factory=dict)
     roles: tuple["ActorRef", ...] = Field(default=(), exclude_if=lambda value: not value)
-    conditioning_phrase: Phrase | None = Field(
-        default=None, exclude_if=lambda value: value is None
-    )
+    conditioning_phrase: Phrase | None = Field(default=None, exclude_if=lambda value: value is None)
     lab: LabProposal | None = Field(default=None, exclude_if=lambda value: value is None)
     lab_answer: LabAnswer | None = Field(default=None, exclude_if=lambda value: value is None)
 

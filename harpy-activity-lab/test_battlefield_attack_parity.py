@@ -3,7 +3,16 @@
 import json
 from uuid import uuid4
 
+import mission_lab  # noqa: F401
 import pytest
+from battlefield import Battlefield
+from test_battle_service import prepared
+from test_enforcer_requisitions import approved
+from test_ledger import ADMIN, OTHER, PLAYER
+from test_ledger import ledger as ledger_fixture
+from test_m2_game import pass_tags, state, tick
+from test_vatgrown_plays import _learn_daily_source, ready
+
 from girlframe.engine import m3_casualty, m3_vatgrown_plays
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actors import resolve
@@ -14,15 +23,6 @@ from girlframe.services.m3_handler_plays import HandlerPlayService
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_physical import PhysicalService
 from girlframe.services.onboarding import WorkflowError
-from test_battle_service import prepared
-from test_enforcer_requisitions import approved
-from test_ledger import ADMIN, OTHER, PLAYER
-from test_ledger import ledger as ledger_fixture
-from test_m2_game import pass_tags, state, tick
-from test_vatgrown_plays import _learn_daily_source, ready
-
-import mission_lab  # noqa: F401
-from battlefield import Battlefield
 
 ledger = ledger_fixture
 
@@ -84,9 +84,7 @@ def test_battlefield_attack_reviews_and_rolls_belong_to_original_owners(ledger, 
         roll["heat"] = 0
     with pytest.raises(WorkflowError):
         adapter.perform(OTHER, "forged-attack-roll", kind + "-roll", roll)
-    action = adapter.perform(PLAYER, "original-attack-roll", kind + "-roll", roll)[
-        "action_id"
-    ]
+    action = adapter.perform(PLAYER, "original-attack-roll", kind + "-roll", roll)["action_id"]
     tick(worker, gateway, 3)
     pass_tags(game)
     receipt = game.inspect(PLAYER, action)["receipt"]
@@ -97,8 +95,7 @@ def test_battlefield_attack_reviews_and_rolls_belong_to_original_owners(ledger, 
         choice = next(
             row
             for row in reopened.game.choices(owner)
-            if row["kind"]
-            == ("battle_assault_table" if kind == "assault" else "battle_counter")
+            if row["kind"] == ("battle_assault_table" if kind == "assault" else "battle_counter")
         )
         body = {
             "id": choice["id"],
@@ -111,9 +108,7 @@ def test_battlefield_attack_reviews_and_rolls_belong_to_original_owners(ledger, 
             reopened.perform(
                 intruder, "wrong-original-answer-" + str(owner.user_id), "choice", body
             )
-        reopened.perform(
-            owner, "actual-original-answer-" + str(owner.user_id), "choice", body
-        )
+        reopened.perform(owner, "actual-original-answer-" + str(owner.user_id), "choice", body)
     saved = reopened.game.inspect(PLAYER, action)
     assert saved["state"] == "complete" and saved["receipt"] == receipt
     assert game.dice.calls == 1
@@ -124,9 +119,7 @@ def test_learned_extra_assault_maneuver_uses_the_original_owner_and_receipt(
     tmp_path,
     monkeypatch,
 ):
-    game, worker, gateway, controls = ready(
-        ledger, tmp_path, monkeypatch, teacher="CASUALTY"
-    )
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch, teacher="CASUALTY")
     vat = m3_vatgrown_plays
     approved(
         ledger,
@@ -141,9 +134,7 @@ def test_learned_extra_assault_maneuver_uses_the_original_owner_and_receipt(
         actual = state(game)
         actor = current_ref(actual, viewer.user_id)
         with ledger.engine.connect() as c:
-            pose = resolve(
-                actual, actor, profiles(c, ledger.campaign_id)
-            ).position_sha256
+            pose = resolve(actual, actor, profiles(c, ledger.campaign_id)).position_sha256
         physical.operate(
             viewer,
             str(uuid4()),
@@ -172,12 +163,8 @@ def test_learned_extra_assault_maneuver_uses_the_original_owner_and_receipt(
 
     adapter = battlefield()
     actual = state(game)
-    actor_asset = next(
-        row.id for row in actual.sheets["2"].assets if row.family == "frame"
-    )
-    target_asset = next(
-        row.id for row in actual.sheets["3"].assets if row.family == "frame"
-    )
+    actor_asset = next(row.id for row in actual.sheets["2"].assets if row.family == "frame")
+    target_asset = next(row.id for row in actual.sheets["3"].assets if row.family == "frame")
     offered = adapter.perform(
         PLAYER,
         "learned-assault-declaration",
@@ -228,9 +215,7 @@ def test_learned_extra_assault_maneuver_uses_the_original_owner_and_receipt(
     reopened = battlefield()
     choices = reopened.choices(action, PLAYER, str(PLAYER.user_id))
     extra = next(row for row in choices if row["kind"] == "engage_assault_extra")
-    assert not any(
-        row["id"] == extra["id"] for row in reopened.choices(action, OTHER, "2")
-    )
+    assert not any(row["id"] == extra["id"] for row in reopened.choices(action, OTHER, "2"))
     assert "spent lesson" in extra["prompt"] and "cover" in extra["fields"]["maneuvers"]
     assert actor_asset in {row["id"] for row in extra["fields"]["assets"]}
     data = {name: extra[name] for name in ("id", "revision", "role")} | {
@@ -246,26 +231,14 @@ def test_learned_extra_assault_maneuver_uses_the_original_owner_and_receipt(
     assert reopened.perform(PLAYER, "own-earned-maneuver", "choice", data) == saved
     changed = state(reopened.game)
     maneuvers = [
-        json.loads(row["body"])
-        for row in changed.facts
-        if row["kind"] == "engage_maneuver"
+        json.loads(row["body"]) for row in changed.facts if row["kind"] == "engage_maneuver"
     ]
-    assert (
-        sum(
-            row["source_action"] == action and row["kind"] == "cover"
-            for row in maneuvers
-        )
-        == 1
-    )
+    assert sum(row["source_action"] == action and row["kind"] == "cover" for row in maneuvers) == 1
     used = next(
-        row
-        for row in changed.sheets["2"].girl_runtime.learned_plays
-        if row.id == lesson.id
+        row for row in changed.sheets["2"].girl_runtime.learned_plays if row.id == lesson.id
     )
     assert (
-        used.rolled_event
-        and game.dice.calls == calls + 1
-        and changed.sheets["2"].heat == heat - 1
+        used.rolled_event and game.dice.calls == calls + 1 and changed.sheets["2"].heat == heat - 1
     )
     assert reopened.game.inspect(PLAYER, action)["receipt"] == receipt
 
@@ -278,9 +251,7 @@ def test_assault_last_asset_starts_only_the_actual_battlefield_defeat(ledger):
     last = frames[-1].id
     for row in frames[:-1]:
         key = "previous-frame-damage-" + row.id
-        issued = handler.start(ADMIN, key, state(game).revision, (declaration.target,))[
-            "id"
-        ]
+        issued = handler.start(ADMIN, key, state(game).revision, (declaration.target,))["id"]
         handler.submit(
             ADMIN,
             key + "-apply",
@@ -294,9 +265,7 @@ def test_assault_last_asset_starts_only_the_actual_battlefield_defeat(ledger):
                 account="Actual prior Frame damage.",
             ),
         )
-    weapon = next(
-        row.id for row in state(game).sheets["2"].assets if row.family == "frame"
-    )
+    weapon = next(row.id for row in state(game).sheets["2"].assets if row.family == "frame")
 
     def battlefield():
         return Battlefield(
@@ -350,9 +319,7 @@ def test_assault_last_asset_starts_only_the_actual_battlefield_defeat(ledger):
     receipt = game.inspect(PLAYER, root)["receipt"]
     for viewer in (PLAYER, ADMIN, OTHER):
         table = next(
-            row
-            for row in field.choices(root, viewer, "2")
-            if row["kind"] == "battle_assault_table"
+            row for row in field.choices(root, viewer, "2") if row["kind"] == "battle_assault_table"
         )
         field.perform(
             viewer,
@@ -369,13 +336,9 @@ def test_assault_last_asset_starts_only_the_actual_battlefield_defeat(ledger):
     ledger.engine.dispose()
     reopened = battlefield()
     choice = next(
-        row
-        for row in reopened.choices(root, OTHER, "2")
-        if row["kind"] == "battle_defeat"
+        row for row in reopened.choices(root, OTHER, "2") if row["kind"] == "battle_defeat"
     )
-    assert not any(
-        row["id"] == choice["id"] for row in reopened.choices(root, PLAYER, "2")
-    )
+    assert not any(row["id"] == choice["id"] for row in reopened.choices(root, PLAYER, "2"))
     data = {name: choice[name] for name in ("id", "role", "revision")} | {
         "answer": {"account": "My own Frame's last intact Asset failed."},
     }
@@ -383,9 +346,7 @@ def test_assault_last_asset_starts_only_the_actual_battlefield_defeat(ledger):
         reopened.perform(PLAYER, "wrong-defeat-owner", "choice", data)
     game.dice.faces = (2, 3)
     started = reopened.perform(OTHER, "start-actual-battle-defeat", "choice", data)
-    assert (
-        reopened.perform(OTHER, "start-actual-battle-defeat", "choice", data) == started
-    )
+    assert reopened.perform(OTHER, "start-actual-battle-defeat", "choice", data) == started
     tick(worker, gateway, 3)
     pass_tags(game)
     child = started["action_id"]
@@ -394,12 +355,7 @@ def test_assault_last_asset_starts_only_the_actual_battlefield_defeat(ledger):
     ledger.engine.dispose()
     reopened = battlefield()
     assert reopened.game.inspect(OTHER, child)["receipt"] == saved_child["receipt"]
-    assert (
-        reopened.game.inspect(PLAYER, root)["receipt"] == receipt
-        and game.dice.calls == 2
-    )
+    assert reopened.game.inspect(PLAYER, root)["receipt"] == receipt and game.dice.calls == 2
     assert next(
-        row
-        for row in reopened.choices(child, OTHER, "3")
-        if row["kind"] == "defeat_select"
+        row for row in reopened.choices(child, OTHER, "3") if row["kind"] == "defeat_select"
     )

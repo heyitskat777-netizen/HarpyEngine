@@ -256,9 +256,7 @@ class AttackService:
             else:
                 proof = self._rescue(c, state, viewer, case, self.game.action(c, action))
                 if proof is None:
-                    raise WorkflowError(
-                        "Use the original Cadre defender's completed Core strike"
-                    )
+                    raise WorkflowError("Use the original Cadre defender's completed Core strike")
                 if any(
                     x.active
                     and x.subject == case.handler

@@ -159,9 +159,7 @@ class CapturedService:
             targets[role.actor.token] = girl
         return cast, actor, base.id, faction.id, targets
 
-    def _require_current_cast(
-        self, c: Connection, state: GameState, value: rules.Capture
-    ) -> None:
+    def _require_current_cast(self, c: Connection, state: GameState, value: rules.Capture) -> None:
         cast, captor, base, faction, targets = self._source(
             c, state, value.channel, value.captor, held=bool(value.confirmed)
         )

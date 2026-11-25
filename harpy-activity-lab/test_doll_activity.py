@@ -2,20 +2,20 @@
 
 import json
 
-import pytest
-from girlframe.services.m2_game import GameService
-from girlframe.services.m3_vatgrown import DollService
-from girlframe.services.onboarding import WorkflowError
-from test_ledger import ADMIN, OTHER, PLAYER
-from test_ledger import ledger as ledger_fixture
-from test_m2_game import tick
-from test_vatgrown import ready
-
 import mission_lab  # noqa: F401
+import pytest
 from doll_controls import DEPARTURE, DOLL, RETURN
 from specialist_scene import SpecialistScene
 from test_identity_specialists import option, popup, press, respond, scoped, suggestions
+from test_ledger import ADMIN, OTHER, PLAYER
+from test_ledger import ledger as ledger_fixture
+from test_m2_game import tick
 from test_prince_activity import pass_windows
+from test_vatgrown import ready
+
+from girlframe.services.m2_game import GameService
+from girlframe.services.m3_vatgrown import DollService
+from girlframe.services.onboarding import WorkflowError
 
 ledger = ledger_fixture
 
@@ -27,17 +27,30 @@ def test_doll_private_answer_and_actual_departure_reopen(ledger, tmp_path, monke
     form = popup(adapter, PLAYER, DOLL)
     assert json.loads(option(form, "target"))["entity"] == str(OTHER.user_id)
     game.dice.faces = (4, 5)
-    action = press(adapter, PLAYER, form, {
-        "target": option(form, "target"), "heat": "0", "account": "I fade into the background.",
-    })
+    action = press(
+        adapter,
+        PLAYER,
+        form,
+        {
+            "target": option(form, "target"),
+            "heat": "0",
+            "account": "I fade into the background.",
+        },
+    )
     tick(worker, gateway, 3)
     pass_windows(game)
     root = action["action_id"]
     original = game.inspect(PLAYER, root)["receipt"]
     ask = scoped(game, PLAYER, "vat_doll_benefits")
-    respond(ask, PLAYER, "vat_doll_benefits", {
-        "options": ["information", "leave"], "text": "Who actually held the key?",
-    })
+    respond(
+        ask,
+        PLAYER,
+        "vat_doll_benefits",
+        {
+            "options": ["information", "leave"],
+            "text": "Who actually held the key?",
+        },
+    )
     ledger.engine.dispose()
     fresh = GameService(ledger, dice=game.dice)
     reply = scoped(fresh, OTHER, "vat_doll_information")

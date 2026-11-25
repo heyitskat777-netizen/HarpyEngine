@@ -4,13 +4,13 @@ from uuid import uuid4
 
 import mission_lab  # noqa: F401
 import pytest
-from girlframe.services.m2_game import GameService
-from girlframe.services.onboarding import WorkflowError
+from scene_plays import ScenePlays
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger_fixture
 from test_m2_game import setup_game, tick
 
-from scene_plays import ScenePlays
+from girlframe.services.m2_game import GameService
+from girlframe.services.onboarding import WorkflowError
 
 ledger = ledger_fixture
 
@@ -53,9 +53,7 @@ def test_cancel_preserves_native_handler_ownership_receipt_and_retry(ledger):
     with pytest.raises(ValueError, match="Confirm cancellation"):
         scene.cancel(ADMIN, str(uuid4()), {"id": root, "confirmed": False})
     with pytest.raises(WorkflowError, match="this scene's original"):
-        scene_adapter(game, 901).cancel(
-            ADMIN, str(uuid4()), {"id": root, "confirmed": True}
-        )
+        scene_adapter(game, 901).cancel(ADMIN, str(uuid4()), {"id": root, "confirmed": True})
     key = str(uuid4())
     payload = {"id": root, "confirmed": True}
     result = scene.cancel(ADMIN, key, payload)
@@ -90,9 +88,7 @@ def test_cancel_preserves_native_handler_ownership_receipt_and_retry(ledger):
     assert fresh_scene.cancellation(ADMIN)["id"] == fresh
     with pytest.raises(WorkflowError, match="STALE_ACTION"):
         fresh_scene.cancel(ADMIN, str(uuid4()), payload)
-    unrolled = fresh_scene.cancel(
-        ADMIN, str(uuid4()), {"id": fresh, "confirmed": True}
-    )
+    unrolled = fresh_scene.cancel(ADMIN, str(uuid4()), {"id": fresh, "confirmed": True})
     assert unrolled["receipt_preserved"] is False
     assert reopened.inspect(PLAYER, fresh)["receipt"] is None
     assert reopened.inspect(PLAYER, root)["receipt"] == original

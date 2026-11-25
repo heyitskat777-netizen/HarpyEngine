@@ -1,7 +1,8 @@
 """Use HarpyEngine's paid Snoop targets and private original responses."""
 
-from girlframe.engine.m2 import ChoiceAnswer
 from rulebook_text import SNOOP_QUESTION_TEXT as LABELS
+
+from girlframe.engine.m2 import ChoiceAnswer
 from girlframe.services.m3_enforcer_snoop import preview
 
 SNOOP = "snoop"
@@ -29,16 +30,19 @@ def snoop_form(data, field, choices, yes_no):
             field(
                 "questions",
                 "Printed questions",
-                [(value,LABELS.get(value,label)) for value,label in choices(detail["questions"])],
+                [
+                    (value, LABELS.get(value, label))
+                    for value, label in choices(detail["questions"])
+                ],
                 multiple=detail["maximum"] > 1,
             )
         ]
     if kind == "snoop_answer":
         fields = [field("account", "Your original private finding")]
         if detail["question"] in ("valuable", "personal"):
-            property_choices = [
-                ("ordinary", "Describe an existing ordinary object")
-            ] + [("item:" + row["id"], row["label"]) for row in detail["items"]]
+            property_choices = [("ordinary", "Describe an existing ordinary object")] + [
+                ("item:" + row["id"], row["label"]) for row in detail["items"]
+            ]
             if detail["question"] == "personal":
                 property_choices += [
                     ("asset:" + row["id"], row["label"]) for row in detail["assets"]
@@ -103,14 +107,13 @@ def snoop_answer(operation, values):
             details = {}
         return ChoiceAnswer(text=values["account"], fields=details)
     if operation == "snoop_relevance":
-        return ChoiceAnswer(
-            options=tuple(values.get("assets", ())), text=values["account"]
-        )
+        return ChoiceAnswer(options=tuple(values.get("assets", ())), text=values["account"])
     if operation == "snoop_capacity":
         value = values["replace"]
         return ChoiceAnswer(fields={} if value == "none" else {"replace": value})
-    if operation in ("snoop_object_fact", "snoop_body_context") and values[
-        "confirmed"
-    ] in ("yes", "no"):
+    if operation in ("snoop_object_fact", "snoop_body_context") and values["confirmed"] in (
+        "yes",
+        "no",
+    ):
         return ChoiceAnswer(flag=values["confirmed"] == "yes", text=values["account"])
     raise ValueError("Choose an assigned Snoop response.")

@@ -6,13 +6,9 @@ import mission_lab
 
 # isort: split
 import pytest
-from girlframe.engine.m3_strain_effects import Choice
-from girlframe.engine.m3_world_state import Faction
-from girlframe.services.m2_game import GameService
-from girlframe.services.m3_missions import MissionService
-from girlframe.services.m3_strain_effects import EffectService
-from girlframe.services.m3_world import WorldService
-from girlframe.services.onboarding import OnboardingStore, WorkflowError
+from handler_punishments import HandlerPunishments
+from mission_desk import MissionDesk
+from off_duty_followups import OffDutyFollowups
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger_fixture
 from test_m2_game import state
@@ -22,17 +18,19 @@ from test_strain_effect_service import selected
 from test_strain_service import ready
 from test_world import initial
 
-from handler_punishments import HandlerPunishments
-from mission_desk import MissionDesk
-from off_duty_followups import OffDutyFollowups
+from girlframe.engine.m3_strain_effects import Choice
+from girlframe.engine.m3_world_state import Faction
+from girlframe.services.m2_game import GameService
+from girlframe.services.m3_missions import MissionService
+from girlframe.services.m3_strain_effects import EffectService
+from girlframe.services.m3_world import WorldService
+from girlframe.services.onboarding import OnboardingStore, WorkflowError
 
 ledger = ledger_fixture
 
 
 def test_mission_desk_debrief_then_off_duty_and_next_dispatch(ledger, monkeypatch):
-    monkeypatch.setenv(
-        "GIRLFRAME_RULES_REGISTRY", str(mission_lab.ENGINE / "rules/registry.json")
-    )
+    monkeypatch.setenv("GIRLFRAME_RULES_REGISTRY", str(mission_lab.ENGINE / "rules/registry.json"))
     strain, game = ready(ledger)
     mission_lab.enable_private_subsystems(game)
     missions = strain.missions
@@ -53,9 +51,7 @@ def test_mission_desk_debrief_then_off_duty_and_next_dispatch(ledger, monkeypatc
             for asset in sheet.assets:
                 asset.void = False
         game.event(c, ADMIN.user_id, "mission-fixture", "synthetic.baseline", current)
-    strain.configure(
-        ADMIN, "scenario", state(game).revision, "business_as_usual", frozenset()
-    )
+    strain.configure(ADMIN, "scenario", state(game).revision, "business_as_usual", frozenset())
 
     def command(action, viewer=ADMIN, key=None, **data):
         return desk.perform(viewer, key or str(uuid4()), {"action": action, **data})
@@ -63,17 +59,11 @@ def test_mission_desk_debrief_then_off_duty_and_next_dispatch(ledger, monkeypatc
     offered = command("offer", objective="Survey Relay Nine", pilots=["2", "3"])
     identity = offered["id"]
     assert desk.view(PLAYER, "Pilot", lifecycle=True)["desk"] is None
-    assert desk.view(ADMIN, "Handler", lifecycle=True)["offers"][0]["actions"] == [
-        "cancel"
-    ]
+    assert desk.view(ADMIN, "Handler", lifecycle=True)["offers"][0]["actions"] == ["cancel"]
     with pytest.raises(WorkflowError):
         command("dispatch", id=identity, revision=offered["revision"])
-    accepted = missions.respond(
-        PLAYER, "pilot-accept", identity, offered["revision"], "accept"
-    )
-    both = missions.respond(
-        OTHER, "other-accept", identity, accepted["revision"], "accept"
-    )
+    accepted = missions.respond(PLAYER, "pilot-accept", identity, offered["revision"], "accept")
+    both = missions.respond(OTHER, "other-accept", identity, accepted["revision"], "accept")
     with pytest.raises(WorkflowError):
         command("dispatch", PLAYER, id=identity, revision=both["revision"])
     started = command("dispatch", id=identity, revision=both["revision"])
@@ -119,12 +109,8 @@ def test_mission_desk_debrief_then_off_duty_and_next_dispatch(ledger, monkeypatc
         command("off_duty")
 
     punishment = HandlerPunishments(game)
-    card = next(
-        x for x in punishment.view(ADMIN) if "Dog's Punishment" in x["instruction"]
-    )
-    discipline = {
-        key: card[key] for key in ("id", "revision", "work_revision", "action")
-    }
+    card = next(x for x in punishment.view(ADMIN) if "Dog's Punishment" in x["instruction"])
+    discipline = {key: card[key] for key in ("id", "revision", "work_revision", "action")}
     discipline["answer"] = {"kind": "stimulant_injection"}
     with pytest.raises(WorkflowError):
         punishment.perform(PLAYER, "wrong-punishment", discipline)
@@ -180,9 +166,7 @@ def test_mission_desk_debrief_then_off_duty_and_next_dispatch(ledger, monkeypatc
         strain.dice = D6(face)
         request = next(x for x in state(game).strain.requests if x.track == track)
         strain.roll(ADMIN, "roll-" + track, request.id, 1, state(game).revision)
-        strain.choose(
-            ADMIN, "choose-" + track, request.id, 2, state(game).revision, column
-        )
+        strain.choose(ADMIN, "choose-" + track, request.id, 2, state(game).revision, column)
         EffectService(strain).apply(
             ADMIN,
             "effect-" + track,
@@ -200,9 +184,7 @@ def test_mission_desk_debrief_then_off_duty_and_next_dispatch(ledger, monkeypatc
         }
 
     def duty(actor, action, answer):
-        return cycle_desk.perform(
-            actor, str(uuid4()), duty_payload(actor, action, answer)
-        )
+        return cycle_desk.perform(actor, str(uuid4()), duty_payload(actor, action, answer))
 
     duty(ADMIN, "activate_period", {})
     recover_both(cycle_desk.cycle, game, period["id"])
@@ -219,13 +201,9 @@ def test_mission_desk_debrief_then_off_duty_and_next_dispatch(ledger, monkeypatc
     )
     duty(ADMIN, "acknowledge_handler_scene", {})
     duty(PLAYER, "acknowledge_handler_scene", {})
-    duty(
-        ADMIN, "review_status", {"order": ["3", "2"], "account": "Filed annual review."}
-    )
+    duty(ADMIN, "review_status", {"order": ["3", "2"], "account": "Filed annual review."})
     finish = cycle_desk.view(ADMIN)["closing"]["finish"]
-    moves = [
-        {"gorgon": row["id"], "destination": row["cells"][0]} for row in finish["moves"]
-    ]
+    moves = [{"gorgon": row["id"], "destination": row["cells"][0]} for row in finish["moves"]]
     final = duty_payload(ADMIN, "finish_period", {"moves": moves, "changes": []})
     closed = cycle_desk.perform(ADMIN, "close-off-duty", final)
     assert closed["phase"] == "complete"
@@ -235,9 +213,7 @@ def test_mission_desk_debrief_then_off_duty_and_next_dispatch(ledger, monkeypatc
 
     next_mission = command("offer", objective="Survey the uplink", pilots=["2", "3"])
     yes = missions.respond(PLAYER, "next-accept", next_mission["id"], 1, "accept")
-    no = missions.respond(
-        OTHER, "next-decline", next_mission["id"], yes["revision"], "decline"
-    )
+    no = missions.respond(OTHER, "next-decline", next_mission["id"], yes["revision"], "decline")
     second = command("dispatch", id=next_mission["id"], revision=no["revision"])
     assert second["phase"] == "active"
     assert missions.get(ADMIN, second["id"])["mission"]["participants"] == [2]

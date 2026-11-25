@@ -63,10 +63,7 @@ def test_bound_handler_owns_scene_choices(tmp_path):
             "stakes": "",
         }
         setup_action(config, first, "handler-play-submit", effect, HTTPStatus.FORBIDDEN)
-        assert (
-            setup_action(config, handler, "handler-play-submit", effect)["state"]
-            == "complete"
-        )
+        assert setup_action(config, handler, "handler-play-submit", effect)["state"] == "complete"
         assert current(handler)["handler_playbook"]["tasks"] == []
         for move, detail, stakes in (
             (
@@ -179,20 +176,14 @@ def test_bound_handler_owns_scene_choices(tmp_path):
         ruling = handler_choice("keep-choice", "handler_keep")
         transcript = request(config, "/api/rooms/relay/transcript", first)
         receipt = next(
-            item
-            for item in transcript["receipts"]
-            if item["id"] == pilot_keep()["current"]["id"]
+            item for item in transcript["receipts"] if item["id"] == pilot_keep()["current"]["id"]
         )
         assert receipt["roll"]["faces"] == pilot_keep()["current"]["receipt"]["faces"]
         assert receipt["pending"] == []
         assert ruling["choice"]["id"] not in str(transcript)
-        request(
-            config, "/api/rooms/relay/transcript", second, status=HTTPStatus.FORBIDDEN
-        )
+        request(config, "/api/rooms/relay/transcript", second, status=HTTPStatus.FORBIDDEN)
         outcome = {"flag": True, "text": "Restore the station grid."}
-        answer(
-            first, ruling["step"], ruling["choice"], outcome, status=HTTPStatus.CONFLICT
-        )
+        answer(first, ruling["step"], ruling["choice"], outcome, status=HTTPStatus.CONFLICT)
         answer(handler, ruling["step"], ruling["choice"], outcome)
         result = wait_for(
             lambda: [pilot_keep()["current"]], lambda play: play["state"] == "complete"
@@ -249,12 +240,8 @@ def test_bound_handler_owns_scene_choices(tmp_path):
         }
         answer(first, card["step"], card["choice"], answers, status=HTTPStatus.CONFLICT)
         answer(handler, card["step"], card["choice"], answers)
-        result = wait_for(
-            lambda: [sensors()["current"]], lambda play: play["state"] == "complete"
-        )
-        assert set(result["result"]["answers"].values()) == {
-            "Sensors report nominal readings."
-        }
+        result = wait_for(lambda: [sensors()["current"]], lambda play: play["state"] == "complete")
+        assert set(result["result"]["answers"].values()) == {"Sensors report nominal readings."}
 
 
 def test_dialogue_joins_the_actual_scene_and_starts_beneath_there(tmp_path):
@@ -268,14 +255,9 @@ def test_dialogue_joins_the_actual_scene_and_starts_beneath_there(tmp_path):
             (pilot, "I report to the relay."),
             (peer, "I answer in the relay."),
         ):
-            receipt = setup_action(
-                config, member, "room-post", {"target": "relay", "text": line}
-            )
+            receipt = setup_action(config, member, "room-post", {"target": "relay", "text": line})
             assert receipt["entry"]
-            assert (
-                request(config, "/api/player-setup", member)["active_scene"]["id"]
-                == "relay"
-            )
+            assert request(config, "/api/player-setup", member)["active_scene"]["id"] == "relay"
         transcript = request(config, "/api/rooms/relay/transcript", pilot)
         assert {row["body"] for row in transcript["entries"]} >= {
             "I report to the relay.",

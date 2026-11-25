@@ -111,7 +111,9 @@ class ActorPlayService:
         if original is None or original.draft.book != "REVOLUTIONARY IDEALIST":
             return False
         try:
-            Access(self.store).require_specialist_rule("ancillary.revolutionary-idealist.easily-broken")
+            Access(self.store).require_specialist_rule(
+                "ancillary.revolutionary-idealist.easily-broken"
+            )
         except (WorkflowError, ValueError):
             return False
         return True
@@ -1524,11 +1526,13 @@ class ActorPlayService:
                     raise WorkflowError("Recover the actual original marker for this Tag.")
             tag = next(x for x in rules.tags(state, actor.ref) if x.id == body["tag"])
             if marker_source is not None and (
-                answer.fields or answer.text or answer.number is not None or answer.flag is not None
+                answer.fields
+                or answer.text
+                or answer.number is not None
+                or answer.flag is not None
                 or answer.member is not None
-                or not set(answer.denied) <= {
-                    x.id for x in actor.identities if not x.protected and not x.paired
-                }
+                or not set(answer.denied)
+                <= {x.id for x in actor.identities if not x.protected and not x.paired}
             ):
                 raise WorkflowError("Choose only the original marker's allowed Tag resolution.")
             if answer.options == ("embrace",):
@@ -1583,8 +1587,12 @@ class ActorPlayService:
                 action["data"].get(ROLL_CHOICE) is not None
                 or action["data"]["play"] != "keep_your_head"
                 or len(answer.options) != 1
-                or answer.denied or answer.text or answer.fields or answer.number is not None
-                or answer.flag is not None or answer.member is not None
+                or answer.denied
+                or answer.text
+                or answer.fields
+                or answer.number is not None
+                or answer.flag is not None
+                or answer.member is not None
             ):
                 raise WorkflowError("Pass or spend one original notch on this saved roll.")
             choice = answer.options[0]
@@ -1609,11 +1617,7 @@ class ActorPlayService:
                 mask = active_human_mask(
                     self.game, c, state, actor.ref, int(action["channel_id"]), action["scene_id"]
                 )
-                if (
-                    mask is None
-                    or mask.event != mask_event
-                    or seems_human not in (None, "yes")
-                ):
+                if mask is None or mask.event != mask_event or seems_human not in (None, "yes"):
                     raise WorkflowError("Use the actual original Human Mask for this choice")
                 if seems_human == "yes":
                     extra.add("seems_human")
@@ -1780,10 +1784,15 @@ class ActorPlayService:
 
             result["battle"] = damage_projection(self.game, c, state, action, row)
         if row["kind"] == "tag_resolution" and result["body"].get("original_marker"):
-            result["revolutionary_replacement"] = [
-                item.model_dump(mode="json") for item in actor.identities
-                if not item.protected and not item.paired
-            ] if len(actor.identities) >= 4 else []
+            result["revolutionary_replacement"] = (
+                [
+                    item.model_dump(mode="json")
+                    for item in actor.identities
+                    if not item.protected and not item.paired
+                ]
+                if len(actor.identities) >= 4
+                else []
+            )
         if row["kind"] == "tag_resolution" and actor.ref.kind == "clone_am":
             result["copy_identity_cap"] = 1
         if row["kind"] == "actor_keep" and own and self._soldier_surgery(state, actor.ref):

@@ -111,8 +111,7 @@ def body_preparation_fields(source: dict[str, Any]) -> list[Field]:
         ),
         Field(
             "assets",
-            "Actual Assets per line; 'none' for none: "
-            "name | source | intact/damaged | clear/void",
+            "Actual Assets per line; 'none' for none: name | source | intact/damaged | clear/void",
             paragraph=True,
         ),
         *(

@@ -5,23 +5,23 @@ from uuid import uuid4
 
 import mission_lab  # noqa: F401
 import pytest
-from girlframe.engine.m3_actor_bonds import current_ref
-from girlframe.services import m3_mockingbird_plays
-from girlframe.services.m2_game import GameService
-from girlframe.services.m3_missions import MissionService
-from girlframe.services.onboarding import WorkflowError
+from ai_native_plays import ActivityNativePlays
+from campaign_inbox import pending_interactions
+from player_setup import PlayerSetup
+from scene_beneath_work import SceneBeneathWork
 from test_beneath_service import ready
 from test_final_handler_workflows import bundled_registry  # noqa: F401
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger_fixture
 from test_m2_game import answer, pass_tags, state, tick
-from scene_beneath_work import SceneBeneathWork
 from test_scene_beneath_followups import adapter, scene_work, submit
 
-from campaign_inbox import pending_interactions
-from ai_native_plays import ActivityNativePlays
-from player_setup import PlayerSetup
+from girlframe.engine.m3_actor_bonds import current_ref
+from girlframe.services import m3_mockingbird_plays
+from girlframe.services.m2_game import GameService
 from girlframe.services.m3_access import load_registry
+from girlframe.services.m3_missions import MissionService
+from girlframe.services.onboarding import WorkflowError
 
 ledger = ledger_fixture
 
@@ -124,9 +124,7 @@ def test_dive_popup_uses_native_effect_and_individual_table_answers(ledger):
 
 
 @pytest.mark.parametrize("faces", [(6, 6), (1, 2)])
-def test_mockingbird_popup_uses_real_trigger_and_counterpart(
-    ledger, monkeypatch, faces
-):
+def test_mockingbird_popup_uses_real_trigger_and_counterpart(ledger, monkeypatch, faces):
     monkeypatch.setattr(
         m3_mockingbird_plays,
         "load_registry",
@@ -135,9 +133,7 @@ def test_mockingbird_popup_uses_real_trigger_and_counterpart(
     game, worker, gateway = ready(ledger, faces)
     play = "mockingbird_person"
     target = current_ref(state(game), OTHER.user_id).token
-    assert target in {
-        row["id"] for row in play_options(game, PLAYER, play)["counterparts"]
-    }
+    assert target in {row["id"] for row in play_options(game, PLAYER, play)["counterparts"]}
     source = start(game, play, "Converse with that pilot", [target])
     (record,) = play_options(game, PLAYER, play)["sources"]
     assert record["id"] == source["id"]
@@ -149,11 +145,7 @@ def test_mockingbird_popup_uses_real_trigger_and_counterpart(
         adapter(game),
         PLAYER,
         selection,
-        {
-            "options": ["words", "sentences", "eye_contact", "deception"]
-            if faces == (6, 6)
-            else []
-        },
+        {"options": ["words", "sentences", "eye_contact", "deception"] if faces == (6, 6) else []},
     )
     (tag,) = play_options(game, OTHER, play)["choices"]
     players = PlayerSetup(game.store, ADMIN, PLAYER, OTHER, bound_roster=True)
@@ -193,7 +185,9 @@ def test_scene_followthrough_requires_a_completed_flirt_and_its_assigned_owner(l
     play = "flirt_followthrough"
     projection = ActivityNativePlays(
         SimpleNamespace(
-            game=game, handler=ADMIN, scene_plays=adapter(game),
+            game=game,
+            handler=ADMIN,
+            scene_plays=adapter(game),
             play_registry=load_registry(),
             handler_rooms=lambda: {900: ("relay", "Relay operations")},
         ),
@@ -245,15 +239,27 @@ def test_receipt_names_waiting_owner_without_exposing_another_players_choice(led
     assert pilot["waiting_on"] == [game.sheet(PLAYER)["callsign"]]
     assert pilot["pending"][0]["kind"] == "actor_sensors"
     assert receipt(OTHER)["pending"] == []
-    answer(game, PLAYER, "actor_sensors", options=(
-        "foundation_destination", "foundation_avoid", "enemy_activity",
-    ))
+    answer(
+        game,
+        PLAYER,
+        "actor_sensors",
+        options=(
+            "foundation_destination",
+            "foundation_avoid",
+            "enemy_activity",
+        ),
+    )
     next_receipt = receipt(PLAYER)
     assert next_receipt["waiting_on"] == ["Handler"]
     assert next_receipt["pending"] == []
     assert next_receipt["revision"] > pilot["revision"]
     assert next_receipt["roll"] == pilot["roll"]
-    answer(game, ADMIN, "handler_sensors", fields={"a1":"North deck", "a2":"Service lift", "a3":"Scanning"})
+    answer(
+        game,
+        ADMIN,
+        "handler_sensors",
+        fields={"a1": "North deck", "a2": "Service lift", "a3": "Scanning"},
+    )
     filed = receipt(PLAYER)
     assert filed["state"] == "complete" and filed["waiting_on"] == []
     assert filed["roll"]["faces"] == [5, 6]

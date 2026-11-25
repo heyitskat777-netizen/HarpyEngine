@@ -10,7 +10,6 @@ from typing import Literal
 from uuid import UUID
 
 import sqlalchemy as sa
-
 from p2_scene import P2Scene
 
 from girlframe.ai.contracts import Contract
@@ -29,7 +28,6 @@ from girlframe.database import tables
 from girlframe.services.m2_game import GameService
 from girlframe.services.onboarding import WorkflowError
 
-
 DEFAULT_HANDLER_MODEL = "gpt-6.1-sol"
 MODEL_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")
 MODEL_SELECTION = "activity.ai_models_saved"
@@ -45,7 +43,9 @@ def parse_models(values):
         model and (model.startswith("sk-") or not MODEL_ID.fullmatch(model))
         for model in models.values()
     ):
-        raise ValueError("Enter a valid Handler model ID and optional Pilot and Director model IDs.")
+        raise ValueError(
+            "Enter a valid Handler model ID and optional Pilot and Director model IDs."
+        )
     return models
 
 
@@ -74,8 +74,12 @@ class ActivityAITrial:
     pilot_model: str | None = None
     director_model: str | None = None
     output_tokens: int = 700
-    _clients: dict[str, OpenAIResponses] = field(default_factory=dict, init=False, repr=False, compare=False)
-    _models: dict[str, str | None] = field(default_factory=dict, init=False, repr=False, compare=False)
+    _clients: dict[str, OpenAIResponses] = field(
+        default_factory=dict, init=False, repr=False, compare=False
+    )
+    _models: dict[str, str | None] = field(
+        default_factory=dict, init=False, repr=False, compare=False
+    )
     _checks: dict[str, str] = field(default_factory=dict, init=False, repr=False, compare=False)
     _check_keys: dict[str, tuple[str, str]] = field(
         default_factory=dict, init=False, repr=False, compare=False
@@ -94,7 +98,10 @@ class ActivityAITrial:
             for model in models.values():
                 if model and model not in self._clients:
                     self._clients[model] = ReviewedResponses(
-                        model=model, api_key=self.key, limits=limits, allowed=lambda: self._allowed()
+                        model=model,
+                        api_key=self.key,
+                        limits=limits,
+                        allowed=lambda: self._allowed(),
                     )
             self._models.update(models)
             return {role: self._clients.get(model) for role, model in models.items()}
@@ -120,23 +127,38 @@ class ActivityAITrial:
             ModelLimits(attempts=attempts, output_tokens=tokens)
         except ValueError:
             raise ValueError("Invalid Activity AI campaign, facilitator or model limits.") from None
-        models = parse_models({
-            "handler": env.get("GIRLFRAME_ACTIVITY_HANDLER_MODEL", "").strip() or DEFAULT_HANDLER_MODEL,
-            "pilot": env.get("GIRLFRAME_ACTIVITY_PILOT_MODEL"),
-            "director": env.get("GIRLFRAME_ACTIVITY_DIRECTOR_MODEL"),
-        })
+        models = parse_models(
+            {
+                "handler": env.get("GIRLFRAME_ACTIVITY_HANDLER_MODEL", "").strip()
+                or DEFAULT_HANDLER_MODEL,
+                "pilot": env.get("GIRLFRAME_ACTIVITY_PILOT_MODEL"),
+                "director": env.get("GIRLFRAME_ACTIVITY_DIRECTOR_MODEL"),
+            }
+        )
         key = env.get("OPENAI_API_KEY", "").strip()
         if not key or (facilitator is not None and not 0 < facilitator < 2**64):
             raise ValueError("Supply a server API key and valid legacy facilitator ID, if used.")
-        return cls(campaign, facilitator, models["handler"], key, attempts, models["pilot"],
-                   models["director"] or models["handler"], tokens)
+        return cls(
+            campaign,
+            facilitator,
+            models["handler"],
+            key,
+            attempts,
+            models["pilot"],
+            models["director"] or models["handler"],
+            tokens,
+        )
 
     def model_selection(self, connection):
         events = tables.events
         saved = connection.scalar(
-            sa.select(events.c.payload_json).where(
-                events.c.campaign_id == self.campaign, events.c.kind == MODEL_SELECTION,
-            ).order_by(events.c.seq.desc()).limit(1)
+            sa.select(events.c.payload_json)
+            .where(
+                events.c.campaign_id == self.campaign,
+                events.c.kind == MODEL_SELECTION,
+            )
+            .order_by(events.c.seq.desc())
+            .limit(1)
         )
         return json.loads(saved) if saved else {"revision": 0, "models": self.defaults()}
 
@@ -159,8 +181,14 @@ class ActivityAITrial:
                 raise WorkflowError("Model settings changed. Refresh AI setup and try again.")
             return {"revision": revision + 1, "models": models}
 
-        game.store._write(viewer, key, MODEL_SELECTION, {"revision": revision, "models": models},
-                          apply, authorize=authorize)
+        game.store._write(
+            viewer,
+            key,
+            MODEL_SELECTION,
+            {"revision": revision, "models": models},
+            apply,
+            authorize=authorize,
+        )
 
     def status(self) -> dict[str, object]:
         with self._lock:
@@ -213,7 +241,9 @@ class ActivityAITrial:
                 self._check_keys[key] = (model, outcome)
         return outcome
 
-    def adapter(self, game: GameService, *, opening_channel: int, setup=None, battlefield=None) -> P2Scene:
+    def adapter(
+        self, game: GameService, *, opening_channel: int, setup=None, battlefield=None
+    ) -> P2Scene:
         if game.store.campaign_id != self.campaign:
             raise ValueError("The Activity AI trial is configured for a different campaign.")
         with game.store.engine.connect() as connection:
@@ -224,9 +254,7 @@ class ActivityAITrial:
             facilitator_id=self.facilitator,
             opening_channel=opening_channel,
             handler_batch=ModelActivityBatch(clients["handler"]),
-            pilot_batch=ModelActivityPilot(clients["pilot"])
-            if clients["pilot"]
-            else None,
+            pilot_batch=ModelActivityPilot(clients["pilot"]) if clients["pilot"] else None,
             planning_provider=ModelDirectorPlanning(director) if director else None,
             review_models=director,
         )

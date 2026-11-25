@@ -10,8 +10,9 @@ from time import time
 from uuid import UUID
 
 import discord
-from girlframe.services.onboarding import WorkflowError
 from sqlalchemy.exc import SQLAlchemyError
+
+from girlframe.services.onboarding import WorkflowError
 
 logger = logging.getLogger("harpy_activity.discord")
 DELIVERY_WINDOW = 120
@@ -66,8 +67,19 @@ class InboxNotices:
             ).rowcount
             db.executemany(
                 "INSERT OR IGNORE INTO notices VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                ((campaign, kind, record, str(recipient), stamp, stamp, first, "skipped" if first else None)
-                 for kind, record, recipient in items),
+                (
+                    (
+                        campaign,
+                        kind,
+                        record,
+                        str(recipient),
+                        stamp,
+                        stamp,
+                        first,
+                        "skipped" if first else None,
+                    )
+                    for kind, record, recipient in items
+                ),
             )
 
     def file(self, campaign, kind, record, recipients):
@@ -77,8 +89,10 @@ class InboxNotices:
         with closing(sqlite3.connect(self.path)) as db, db:
             db.executemany(
                 "INSERT OR IGNORE INTO notices VALUES (?, ?, ?, ?, ?, ?, 0, NULL)",
-                ((str(campaign), kind, record, str(recipient), stamp, stamp)
-                 for recipient in recipients),
+                (
+                    (str(campaign), kind, record, str(recipient), stamp, stamp)
+                    for recipient in recipients
+                ),
             )
 
     def claim(self):
@@ -120,7 +134,10 @@ class InboxNotices:
                 (secrets.token_hex(16), *scope),
             )
             return db.execute(
-                "SELECT id FROM notice_receipts WHERE (campaign, sender, kind, record)=(?, ?, ?, ?)",
+                (
+                    "SELECT id FROM notice_receipts WHERE (campaign, sender, kind, record)=(?, "
+                    "?, ?, ?)"
+                ),
                 scope,
             ).fetchone()[0]
 
@@ -136,9 +153,15 @@ class InboxNotices:
             ).fetchall()
         now = time()
         return [
-            (recipient, outcome or (
-                "unconfirmed" if finished or (created < now - DELIVERY_WINDOW and next_attempt <= now) else "queued"
-            ))
+            (
+                recipient,
+                outcome
+                or (
+                    "unconfirmed"
+                    if finished or (created < now - DELIVERY_WINDOW and next_attempt <= now)
+                    else "queued"
+                ),
+            )
             for recipient, created, next_attempt, finished, outcome in rows
         ]
 
@@ -149,7 +172,7 @@ class InboxNotices:
                    ORDER BY rowid DESC LIMIT 3""",
                 (str(campaign), str(sender)),
             ).fetchall()
-        return [identity for identity, in reversed(rows)]
+        return [identity for (identity,) in reversed(rows)]
 
     def bond(self, setup, sender, receipt):
         record = setup.bonds.get(sender, receipt["id"])
@@ -162,13 +185,17 @@ class InboxNotices:
     def mission(self, service, handler, receipt):
         record = service.get(handler, receipt["id"])["mission"]
         if record["phase"] == "offered":
-            self.file(service.store.campaign_id, "mission", record["id"], (
-                uid for uid in record["offered_to"] if str(uid) not in record["responses"]
-            ))
+            self.file(
+                service.store.campaign_id,
+                "mission",
+                record["id"],
+                (uid for uid in record["offered_to"] if str(uid) not in record["responses"]),
+            )
 
 
 def pending_interactions(setup, missions, battlefield, viewer):
     """Build notice keys from owner-scoped HarpyEngine views."""
+
     def read(operation):
         try:
             return operation()
@@ -194,22 +221,28 @@ def pending_interactions(setup, missions, battlefield, viewer):
         if row["needs_response"]:
             add("mission", row["id"])
     if viewer == setup.handler:
-        from girlframe.services.m3_careers import CareerService
-
         from mission_desk import MissionDesk
+
+        from girlframe.services.m3_careers import CareerService
 
         career = CareerService(setup.store)
         for request in read(lambda: career.status_requests(viewer)) or ():
             if request["position"] is None:
                 add("enrollment", f"status:{request['character']}")
         desk = MissionDesk(missions)
-        for row in (read(lambda: desk.view(viewer, "Handler", lifecycle=True)) or {}).get("offers", ()):
+        for row in (read(lambda: desk.view(viewer, "Handler", lifecycle=True)) or {}).get(
+            "offers", ()
+        ):
             for action in ("dispatch", "advance"):
                 if action in row.get("actions", ()):
                     add("mission_review", f"{row['id']}:{action}")
     else:
         for row in read(lambda: setup.bonds.list(viewer)) or ():
-            if row["target_id"] == str(viewer.user_id) and row["state"] == "pending" and not row["stale"]:
+            if (
+                row["target_id"] == str(viewer.user_id)
+                and row["state"] == "pending"
+                and not row["stale"]
+            ):
                 add("bond", row["id"])
 
     choices = read(lambda: setup.enrollment_choices.view(viewer, ())) or {}
@@ -218,8 +251,12 @@ def pending_interactions(setup, missions, battlefield, viewer):
             add("enrollment", row["id"])
 
     # Some specialist follow-ups live outside the shared required-work ledger.
-    for view in (setup.owned_followups.view, setup.handler_punishments.view, setup.beneath_work.view):
-        for card in read(lambda: view(viewer)) or ():
+    for view in (
+        setup.owned_followups.view,
+        setup.handler_punishments.view,
+        setup.beneath_work.view,
+    ):
+        for card in read(lambda view=view: view(viewer)) or ():
             if card.get("action") and card["id"] not in work:
                 add("play_work", f"{card['id']}:{card['action']}:{card.get('work_revision', '')}")
 
@@ -259,15 +296,15 @@ async def scan_notices(bot, scan):
         try:
             await asyncio.to_thread(scan)
         except (OSError, sqlite3.Error, SQLAlchemyError, RuntimeError) as error:
-            logger.warning("Activity assignment notifications could not be scanned (%s).", type(error).__name__)
+            logger.warning(
+                "Activity assignment notifications could not be scanned (%s).", type(error).__name__
+            )
         await asyncio.sleep(5)
 
 
 async def send_notice(bot, registry, item, pending):
     campaign, kind, _, recipient = item
-    bindings = await asyncio.to_thread(
-        registry.bindings, str(bot.activity_id), str(bot.target.id)
-    )
+    bindings = await asyncio.to_thread(registry.bindings, str(bot.activity_id), str(bot.target.id))
     binding = next((row for row in bindings if UUID(row.id) == UUID(campaign)), None)
     if binding is None:
         return "unavailable"
@@ -307,6 +344,15 @@ async def deliver_notices(bot, registry, notices, pending):
                 await asyncio.sleep(2)
                 continue
             await deliver_one(bot, registry, notices, pending, item)
-        except (discord.DiscordException, OSError, sqlite3.Error, SQLAlchemyError, TimeoutError, RuntimeError) as error:
-            logger.warning("An Activity Inbox DM could not be delivered (%s).", type(error).__name__)
+        except (
+            discord.DiscordException,
+            OSError,
+            sqlite3.Error,
+            SQLAlchemyError,
+            TimeoutError,
+            RuntimeError,
+        ) as error:
+            logger.warning(
+                "An Activity Inbox DM could not be delivered (%s).", type(error).__name__
+            )
             await asyncio.sleep(2)

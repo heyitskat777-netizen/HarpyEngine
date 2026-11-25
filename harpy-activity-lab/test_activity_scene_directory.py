@@ -3,9 +3,9 @@
 from types import SimpleNamespace
 
 import pytest
-from girlframe.services.onboarding import WorkflowError
-
 from activity_records import RELAY, ActivityRecords, scene_locations
+
+from girlframe.services.onboarding import WorkflowError
 
 
 @pytest.fixture
@@ -19,9 +19,9 @@ def test_optional_locations_reuse_names_and_preserve_legacy_ids(directory):
     records, host, _ = directory
     assert scene_locations(records.directory(host, {})) == []
     old = records.create_room(host, "old", {"name": "Old relay", "location": "hangar"})
-    assert records.create_room(
-        host, "old", {"name": "Old relay", "location": " Hangar DECK "}
-    ) == old
+    assert (
+        records.create_room(host, "old", {"name": "Old relay", "location": " Hangar DECK "}) == old
+    )
     first = records.create_room(
         host, "first", {"name": "Supply inspection", "location": "  Loading   Dock  "}
     )
@@ -34,9 +34,7 @@ def test_optional_locations_reuse_names_and_preserve_legacy_ids(directory):
         ("blank", {"location": " \t "}),
     ):
         receipt = records.create_room(host, key, {"name": key} | form)
-        assert records.create_room(
-            host, key, {"name": key, "location": ""}
-        ) == receipt
+        assert records.create_room(host, key, {"name": key, "location": ""}) == receipt
 
     reopened = ActivityRecords(records.path, host.user_id)
     rooms = reopened.directory(host, {})
@@ -94,7 +92,12 @@ def test_handover_dialogue_is_limited_and_never_exposes_private_transcripts(dire
     projected = records.handover_dialogue(host, requested)
     assert set(projected) == {active}
     assert [record["id"] for record in projected[active]] == entries[1:]
-    assert all(set(record) == {"id", "callsign", "created", "portrait"} for record in projected[active])
-    assert set(records.handover_dialogue(host, requested, relay_joined=True)) == {active, RELAY["id"]}
+    assert all(
+        set(record) == {"id", "callsign", "created", "portrait"} for record in projected[active]
+    )
+    assert set(records.handover_dialogue(host, requested, relay_joined=True)) == {
+        active,
+        RELAY["id"],
+    }
     assert set(records.handover_dialogue(visitor, requested)) == {other}
     assert records.handover_dialogue(host, []) == {}

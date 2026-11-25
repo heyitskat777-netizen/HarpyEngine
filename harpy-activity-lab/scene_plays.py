@@ -11,6 +11,25 @@ from threading import Event, Thread
 from uuid import uuid4
 
 import sqlalchemy as sa
+from defeat_play import DEFEAT, DEFEAT_CHOICES, defeat_choice
+from dive_play import DIVE, DIVE_CHOICES, dive_choice
+from mockingbird_play import (
+    PERSON,
+    PERSON_CHOICES,
+    person_choice,
+    person_start,
+    start_person,
+)
+from native_scene_forms import (
+    RISK_CHOICE,
+    TAG_DECISIONS,
+    risk_choice_card,
+    tag_choice_card,
+)
+from oldgen_play import OLDGEN_ADVICE, OLDGEN_CHOICES, advice_choice, advice_targets
+from rulebook_text import FLIRT_QUESTION_TEXT, printed_fields, sensor_question_text
+from snoop_play import SNOOP, snoop_targets
+
 from girlframe.database import tables
 from girlframe.delivery.m2_worker import GameWorker
 from girlframe.delivery.p1_source_pause_worker import SourcePauseWorker
@@ -44,25 +63,6 @@ from girlframe.services.m3_princess_sex import decision_author
 from girlframe.services.m3_scene_requisitions import guard
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.p1_source_pause import require_clear as require_source_clear
-
-from defeat_play import DEFEAT, DEFEAT_CHOICES, defeat_choice
-from dive_play import DIVE, DIVE_CHOICES, dive_choice
-from mockingbird_play import (
-    PERSON,
-    PERSON_CHOICES,
-    person_choice,
-    person_start,
-    start_person,
-)
-from native_scene_forms import (
-    RISK_CHOICE,
-    TAG_DECISIONS,
-    risk_choice_card,
-    tag_choice_card,
-)
-from oldgen_play import OLDGEN_ADVICE, OLDGEN_CHOICES, advice_choice, advice_targets
-from rulebook_text import FLIRT_QUESTION_TEXT, printed_fields, sensor_question_text
-from snoop_play import SNOOP, snoop_targets
 
 PLAY = "keep_your_head"
 FOLLOW_THROUGH = "flirt_followthrough"
@@ -147,10 +147,7 @@ def scene_child_allowed(root, action):
         not action["parent_id"]
         or (root["data"]["play"] == "flirt" and action["data"]["play"] == PLAY)
         or (root["data"]["play"] == RECEIVE and action["data"]["play"] == DISOBEY)
-        or (
-            root["data"]["play"] == BENEATH
-            and action["data"]["play"] in BENEATH_CHILDREN
-        )
+        or (root["data"]["play"] == BENEATH and action["data"]["play"] in BENEATH_CHILDREN)
     )
 
 
@@ -180,18 +177,15 @@ class TestSceneGateway:
         self.has_channel = has_channel
         self.actor_lookup = actor_lookup
         with closing(sqlite3.connect(path)) as db, db:
-            db.execute(
-                "CREATE TABLE IF NOT EXISTS overwrites (target TEXT PRIMARY KEY, body TEXT)"
-            )
+            db.execute("CREATE TABLE IF NOT EXISTS overwrites (target TEXT PRIMARY KEY, body TEXT)")
             db.execute("CREATE TABLE IF NOT EXISTS deliveries (nonce TEXT UNIQUE)")
             db.execute(
-                "CREATE TABLE IF NOT EXISTS room_overwrites (channel INTEGER NOT NULL, target TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY (channel, target))"
+                "CREATE TABLE IF NOT EXISTS room_overwrites (channel INTEGER NOT NULL, "
+                "target TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY (channel, target))"
             )
 
     def check(self, channel):
-        if channel != self.channel and not (
-            self.has_channel and self.has_channel(channel)
-        ):
+        if channel != self.channel and not (self.has_channel and self.has_channel(channel)):
             raise WorkflowError("This local scene is unavailable.")
 
     def overwrites(self, channel):
@@ -211,8 +205,7 @@ class TestSceneGateway:
                 "everyone_id": self.owner.guild_id,
                 "bot_id": self.application,
                 "overwrites": [
-                    dict(zip(("kind", "id"), json.loads(target), strict=True))
-                    | json.loads(body)
+                    dict(zip(("kind", "id"), json.loads(target), strict=True)) | json.loads(body)
                     for target, body in db.execute(
                         f"SELECT target, body FROM {table}{where}",
                         tuple(columns.values()),
@@ -240,21 +233,18 @@ class TestSceneGateway:
         with closing(sqlite3.connect(self.path)) as db, db:
             if value is None:
                 where = " AND ".join(f"{column} = ?" for column in conditions)
-                db.execute(
-                    f"DELETE FROM {table} WHERE {where}", tuple(conditions.values())
-                )
+                db.execute(f"DELETE FROM {table} WHERE {where}", tuple(conditions.values()))
             else:
                 record = conditions | {"body": json.dumps(value)}
                 db.execute(
-                    f"INSERT OR REPLACE INTO {table} ({', '.join(record)}) VALUES ({', '.join('?' for _ in record)})",
+                    f"INSERT OR REPLACE INTO {table} ({', '.join(record)}) "
+                    f"VALUES ({', '.join('?' for _ in record)})",
                     tuple(record.values()),
                 )
 
     def find_delivery(self, nonce):
         with closing(sqlite3.connect(self.path)) as db:
-            row = db.execute(
-                "SELECT rowid FROM deliveries WHERE nonce = ?", (nonce,)
-            ).fetchone()
+            row = db.execute("SELECT rowid FROM deliveries WHERE nonce = ?", (nonce,)).fetchone()
         return row[0] if row else None
 
     def acknowledge(self, nonce):
@@ -352,11 +342,7 @@ class ScenePlays:
     def allows_cast(self, channel):
         return channel in self.activity_cast_channels or (
             not self.handler_proxy
-            and (
-                channel == self.gateway.channel
-                or self.has_channel
-                and self.has_channel(channel)
-            )
+            and (channel == self.gateway.channel or self.has_channel and self.has_channel(channel))
         )
 
     def allows_parallel_membership(self, channel, scene_id, active_casts, *, unbound_room=False):
@@ -424,11 +410,8 @@ class ScenePlays:
                 "play": source["data"]["play"],
                 "owner_id": str(source["actor_id"]),
                 "can_cancel": can_cancel,
-                "can_request": not can_cancel
-                and source["actor_id"] == str(viewer.user_id),
-                "reason": None
-                if can_cancel
-                else "The Handler must cancel this pending Play.",
+                "can_request": not can_cancel and source["actor_id"] == str(viewer.user_id),
+                "reason": None if can_cancel else "The Handler must cancel this pending Play.",
                 "receipt_preserved": bool(source["data"].get("receipt")),
                 "state": source["state"],
             }
@@ -457,9 +440,7 @@ class ScenePlays:
             }
             for entry in sheet.blocked_plays
         }
-        if not any(
-            uid != viewer.user_id and str(uid) in state.sheets for uid in pilots
-        ):
+        if not any(uid != viewer.user_id and str(uid) in state.sheets for uid in pilots):
             reasons.setdefault(
                 "flirt",
                 {
@@ -545,20 +526,14 @@ class ScenePlays:
             destination = game.scene(connection, self.channel)
             sheet = state.sheets.get(str(viewer.user_id))
             if not sheet or state.handler not in destination["participants"]:
-                raise WorkflowError(
-                    "An active pilot and the scene Handler are required."
-                )
+                raise WorkflowError("An active pilot and the scene Handler are required.")
             if viewer.user_id in destination["participants"]:
                 return {"channel": self.channel}
             if play and (
-                reason := self.start_reasons(
-                    viewer, state, destination["participants"]
-                ).get(play)
+                reason := self.start_reasons(viewer, state, destination["participants"]).get(play)
             ):
                 raise WorkflowError(reason["message"])
-            ref = ActorRef(
-                kind="pilot", entity=str(viewer.user_id), incarnation=sheet.character_id
-            )
+            ref = ActorRef(kind="pilot", entity=str(viewer.user_id), incarnation=sheet.character_id)
             guard(connection, game.store, destination["id"], ref)
             current = [
                 row
@@ -573,17 +548,14 @@ class ScenePlays:
             casts = {cast.id: cast for cast in state.scene_casts if cast.open}
             if self.allows_parallel_membership(self.channel, destination["id"], casts):
                 current = [
-                    row for row in current
-                    if not self.allows_parallel_membership(
-                        int(row["channel_id"]), row["id"], casts
-                    )
+                    row
+                    for row in current
+                    if not self.allows_parallel_membership(int(row["channel_id"]), row["id"], casts)
                 ]
             for scene in [*current, destination]:
                 channel = int(scene["channel_id"])
                 if scene["id"] in casts and not self.allows_cast(channel):
-                    raise WorkflowError(
-                        "This scene requires its original cast controls."
-                    )
+                    raise WorkflowError("This scene requires its original cast controls.")
                 lock = game.lock(connection, channel)
                 if lock and lock["state"] != "released":
                     message = (
@@ -608,8 +580,7 @@ class ScenePlays:
 
             def save_cast(updated):
                 state.scene_casts = [
-                    updated if cast.id == updated.id else cast
-                    for cast in state.scene_casts
+                    updated if cast.id == updated.id else cast for cast in state.scene_casts
                 ]
 
             for old in current:
@@ -623,11 +594,7 @@ class ScenePlays:
                         raise WorkflowError(str(error)) from None
                 save_members(
                     old,
-                    [
-                        uid
-                        for uid in json.loads(old["participants_json"])
-                        if uid != viewer.user_id
-                    ],
+                    [uid for uid in json.loads(old["participants_json"]) if uid != viewer.user_id],
                 )
                 game.event(
                     connection,
@@ -641,9 +608,7 @@ class ScenePlays:
             destination_cast = casts.get(destination["id"])
             if destination_cast:
                 try:
-                    actor = resolve(
-                        state, ref, profiles(connection, game.store.campaign_id)
-                    )
+                    actor = resolve(state, ref, profiles(connection, game.store.campaign_id))
                     save_cast(
                         m3_cast.join(
                             state.scene_casts,
@@ -655,9 +620,7 @@ class ScenePlays:
                     )
                 except ValueError as error:
                     raise WorkflowError(str(error)) from None
-            save_members(
-                destination, sorted({*destination["participants"], viewer.user_id})
-            )
+            save_members(destination, sorted({*destination["participants"], viewer.user_id}))
             game.event(
                 connection,
                 viewer.user_id,
@@ -701,15 +664,14 @@ class ScenePlays:
             return []
         table = tables.m2["m2_actions"]
         events = tables.events
-        participants = sa.func.json_each(
-            table.c.body_json, "$.participants"
-        ).table_valued("value", joins_implicitly=True)
+        participants = sa.func.json_each(table.c.body_json, "$.participants").table_valued(
+            "value", joins_implicitly=True
+        )
         filed = (
             sa.select(events.c.created_utc)
             .where(
                 events.c.campaign_id == table.c.campaign_id,
-                sa.func.json_extract(events.c.payload_json, "$.action_id")
-                == table.c.id,
+                sa.func.json_extract(events.c.payload_json, "$.action_id") == table.c.id,
             )
             .order_by(events.c.seq)
             .limit(1)
@@ -730,9 +692,7 @@ class ScenePlays:
             state = load_state(connection, self.game.store.campaign_id)
             own = self.game.pending_choices(connection, viewer)
             proxy = (
-                self.game.pending_choices(connection, self.handler)
-                if self.handler_proxy
-                else []
+                self.game.pending_choices(connection, self.handler) if self.handler_proxy else []
             )
             rows = (
                 connection.execute(
@@ -777,9 +737,14 @@ class ScenePlays:
                         continue
                     owner = owner if owner is not None else int(item["actor_id"])
                     pilot = state.sheets.get(str(owner))
-                    label = "Handler" if owner == state.handler else (
-                        pilot.callsign if pilot and owner in source["data"]["participants"]
-                        else "Assigned participant"
+                    label = (
+                        "Handler"
+                        if owner == state.handler
+                        else (
+                            pilot.callsign
+                            if pilot and owner in source["data"]["participants"]
+                            else "Assigned participant"
+                        )
                     )
                     waiting.setdefault(item["action_id"], set()).add(label)
             receipts = []
@@ -792,8 +757,7 @@ class ScenePlays:
                     [
                         {key: item[key] for key in ("id", "revision", "kind")} | {"owner": owner}
                         for item, owner in audience
-                        if item["action_id"] == row["id"]
-                        and item["kind"] in SCENE_CHOICES
+                        if item["action_id"] == row["id"] and item["kind"] in SCENE_CHOICES
                     ]
                     if view["state"] not in ("complete", "aborted")
                     else []
@@ -833,14 +797,13 @@ class ScenePlays:
                         else None,
                         "pending": pending,
                         "waiting_on": sorted(waiting.get(row["id"], ()))
-                        if view["state"] not in ("complete", "aborted") else [],
+                        if view["state"] not in ("complete", "aborted")
+                        else [],
                     }
                 )
             return receipts
 
-    def view(
-        self, viewer, character, locked, paused=False, *, scene=None, blocked=False
-    ):
+    def view(self, viewer, character, locked, paused=False, *, scene=None, blocked=False):
         recent = self.recent(viewer)
         identity = recent[0] if recent else None
         current = self.game.inspect(viewer, identity) if identity else None
@@ -919,7 +882,11 @@ class ScenePlays:
             return {}
         permit = None
         if daily["psyche"]:
-            lesson = next(row for row in sheet.girl_runtime.learned_plays if row.id == daily["psyche"][0]["id"])
+            lesson = next(
+                row
+                for row in sheet.girl_runtime.learned_plays
+                if row.id == daily["psyche"][0]["id"]
+            )
             mode = "mark_off_duty" if play in OFF_DUTY_PLAYS else "mark"
             permit = PsychePermit(lesson=lesson, mode=mode)
         marks = self.lesson_marks(state, sheet, permit) if native or permit else []
@@ -928,7 +895,8 @@ class ScenePlays:
         allowed = LESSON_FIELDS[play]
         choices = {
             name: [(row["id"], row["label"]) for row in rows]
-            for name, rows in options.items() if name in allowed and rows
+            for name, rows in options.items()
+            if name in allowed and rows
         }
         if not (choices or marks):
             return {}
@@ -950,11 +918,19 @@ class ScenePlays:
                 for disposal in (3, 4):
                     draft = sheet.model_copy(deep=True)
                     try:
-                        mark_identity(draft, identity.id, gain, state=state,
-                                      disposable_heat=disposal, learned_psyche=permit)
+                        mark_identity(
+                            draft,
+                            identity.id,
+                            gain,
+                            state=state,
+                            disposable_heat=disposal,
+                            learned_psyche=permit,
+                        )
                     except (ValueError, WorkflowError):
                         continue
-                    amounts.setdefault(str(gain), {})[str(disposal)] = list(self.beneath_heat(draft))
+                    amounts.setdefault(str(gain), {})[str(disposal)] = list(
+                        self.beneath_heat(draft)
+                    )
             if amounts:
                 marks.append({"id": identity.id, "name": identity.name, "amounts": amounts})
         return marks
@@ -1000,9 +976,7 @@ class ScenePlays:
                         table.c.campaign_id == self.game.store.campaign_id,
                         table.c.channel_id == str(self.channel),
                         table.c.parent_id.is_(None),
-                        sa.func.json_extract(table.c.body_json, "$.play").in_(
-                            SCENE_PLAYS
-                        ),
+                        sa.func.json_extract(table.c.body_json, "$.play").in_(SCENE_PLAYS),
                     )
                     .order_by(sa.literal_column("rowid").desc())
                 )
@@ -1015,9 +989,7 @@ class ScenePlays:
                 self.game.scene(connection, self.channel)["id"],
             )
             dive_unavailable = (
-                None
-                if locked or paused
-                else self.dive_reason(connection, viewer, state)
+                None if locked or paused else self.dive_reason(connection, viewer, state)
             )
             held = scene["lock"] if locked else None
             for action in actions:
@@ -1026,8 +998,7 @@ class ScenePlays:
                 prepared = action["data"].get("prepared", {})
                 play = action["data"]["play"]
                 counterparty = play == FOLLOW_THROUGH and any(
-                    item.id == action["data"]["obligation_id"]
-                    and item.target == viewer.user_id
+                    item.id == action["data"]["obligation_id"] and item.target == viewer.user_id
                     for item in state.obligations
                 )
                 if play == PERSON:
@@ -1061,9 +1032,7 @@ class ScenePlays:
                         .where(
                             table.c.campaign_id == self.game.store.campaign_id,
                             table.c.parent_id == root["id"],
-                            sa.func.json_extract(table.c.body_json, "$.play").in_(
-                                allowed
-                            ),
+                            sa.func.json_extract(table.c.body_json, "$.play").in_(allowed),
                         )
                         .order_by(sa.literal_column("rowid").desc())
                     )
@@ -1097,15 +1066,9 @@ class ScenePlays:
         ]
         result = {}
         reasons = self.start_reasons(viewer, state, scene["pilots"])
-        person = (
-            {}
-            if locked or paused
-            else person_start(self.game, viewer, state, self.channel)
-        )
+        person = {} if locked or paused else person_start(self.game, viewer, state, self.channel)
         pupils, advice_reason = (
-            ([], None)
-            if locked or paused
-            else advice_targets(self.game, viewer, self.channel)
+            ([], None) if locked or paused else advice_targets(self.game, viewer, self.channel)
         )
         property_targets = (
             [] if locked or paused else snoop_targets(self.game, viewer, self.channel)
@@ -1113,10 +1076,7 @@ class ScenePlays:
         for play in SCENE_PLAYS:
             past = visible.get(play, [])
             current = self.game.inspect(viewer, past[0]["id"]) if past else None
-            nested = [
-                self.game.inspect(viewer, identity)
-                for identity in children.get(play, ())
-            ]
+            nested = [self.game.inspect(viewer, identity) for identity in children.get(play, ())]
             choices = []
             waiting = False
             if current and current["state"] not in ("complete", "aborted"):
@@ -1127,17 +1087,12 @@ class ScenePlays:
                 }
                 for role, principal in self.roles(viewer, past[0]).items():
                     for item in self.game.choices(principal):
-                        if (
-                            item["action_id"] in active
-                            and item["kind"] in SCENE_CHOICES
-                        ):
+                        if item["action_id"] in active and item["kind"] in SCENE_CHOICES:
                             choices.append(self.choice_card(principal, role, item))
                 waiting = not choices
             reason = reasons.get(play, {}).get("message")
             if play == RECEIVE and not current:
-                reason = (
-                    "A superior or an NPC with authority must file the original order."
-                )
+                reason = "A superior or an NPC with authority must file the original order."
             period = off_duty.get(play, {})
             reason = reason or period.get("reason")
             if play == FOLLOW_THROUGH and not obligations:
@@ -1159,17 +1114,16 @@ class ScenePlays:
                     or (None if pupils else "Another eligible Girl must be present.")
                 )
             if play == SNOOP and not property_targets:
-                reason = "Snoop needs an available paid Requisition and eligible property in this scene."
+                reason = (
+                    "Snoop needs an available paid Requisition and eligible property in this scene."
+                )
             result[play] = {
                 "current": current,
                 "child": nested[0] if nested else None,
                 **({"children": nested} if play == BENEATH else {}),
                 "choices": choices,
                 "waiting": waiting,
-                "can_start": play != RECEIVE
-                and not locked
-                and not paused
-                and not reason,
+                "can_start": play != RECEIVE and not locked and not paused and not reason,
                 "reason": reason
                 or (
                     "Resolve the current Play first."
@@ -1180,13 +1134,13 @@ class ScenePlays:
                 ),
                 **({"period": period["period"]} if "period" in period else {}),
                 "character_revision": sheet["revision"],
-                **(self.scene_lessons(viewer, state, play) if not locked and not paused and not reason else {}),
                 **(
-                    {
-                        key: person[key]
-                        for key in ("sources", "counterparts")
-                        if key in person
-                    }
+                    self.scene_lessons(viewer, state, play)
+                    if not locked and not paused and not reason
+                    else {}
+                ),
+                **(
+                    {key: person[key] for key in ("sources", "counterparts") if key in person}
                     if play == PERSON
                     else {}
                 ),
@@ -1200,18 +1154,11 @@ class ScenePlays:
                 if play == DEFEAT
                 else pupils
                 if play == OLDGEN_ADVICE
-                else [
-                    {"id": item["token"], "label": item["label"]}
-                    for item in property_targets
-                ]
+                else [{"id": item["token"], "label": item["label"]} for item in property_targets]
                 if play == SNOOP
                 else [],
                 **(
-                    {
-                        "heat_options": self.beneath_heat(
-                            state.sheets[str(viewer.user_id)]
-                        )
-                    }
+                    {"heat_options": self.beneath_heat(state.sheets[str(viewer.user_id)])}
                     if play in (BENEATH, DIVE, OLDGEN_ADVICE, SNOOP)
                     or (play == PERSON and person.get("sources"))
                     else {}
@@ -1223,9 +1170,7 @@ class ScenePlays:
                 ],
             }
         confrontation = result[BENEATH]
-        if any(
-            choice["kind"] == "beneath_defeat" for choice in confrontation["choices"]
-        ) or any(
+        if any(choice["kind"] == "beneath_defeat" for choice in confrontation["choices"]) or any(
             child["play"] == DEFEAT and child["state"] not in ("complete", "aborted")
             for child in confrontation["children"]
         ):
@@ -1301,16 +1246,12 @@ class ScenePlays:
         if kind == RISK_CHOICE:
             return card | risk_choice_card(decision)
         if kind in ("order_response", "order_disobey"):
-            issuer = decision.get("npc_order_issuer") or decision.get(
-                "ranked_order_issuer"
-            )
+            issuer = decision.get("npc_order_issuer") or decision.get("ranked_order_issuer")
             order = decision.get("order_text")
             card["prompt"] = f"{issuer}: {order}" if issuer else order
         if kind == "order_disobey":
             with self.game.store.engine.connect() as c:
-                sheet = load_state(c, self.game.store.campaign_id).sheets[
-                    str(principal.user_id)
-                ]
+                sheet = load_state(c, self.game.store.campaign_id).sheets[str(principal.user_id)]
             return card | {
                 "character_revision": sheet.revision,
                 "heat_options": self.beneath_heat(sheet),
@@ -1326,20 +1267,18 @@ class ScenePlays:
             return card | person_choice(decision)
         if kind in OLDGEN_CHOICES:
             return card | advice_choice(decision)
-        card["fields"] = printed_fields([asdict(field) for field in choice_fields(decision)],choice["kind"])
+        card["fields"] = printed_fields(
+            [asdict(field) for field in choice_fields(decision)], choice["kind"]
+        )
         if choice["kind"] == "harpy_sensor_answers":
             card["prompt"] = decision["context"]
         if choice["kind"] == "handler_sensors":
             for field in card["fields"]:
                 if field["key"].startswith("fields.a"):
                     index = int(field["key"][8:]) - 1
-                    field["label"] = sensor_question_text(
-                        decision["result"]["questions"][index]
-                    )
+                    field["label"] = sensor_question_text(decision["result"]["questions"][index])
         if choice["kind"] in ("target_flirt", "actor_flirt_answer"):
-            result_key = (
-                "question" if choice["kind"] == "target_flirt" else "return_question"
-            )
+            result_key = "question" if choice["kind"] == "target_flirt" else "return_question"
             question = decision["result"].get(result_key)
             card["prompt"] = FLIRT_QUESTION_TEXT.get(question, question)
             if choice["kind"] == "target_flirt" and decision["result"].get("tier") == "low":
@@ -1383,9 +1322,7 @@ class ScenePlays:
                 raise WorkflowError("This choice is unavailable.")
             action = self.game.action(connection, choice.action_id)
             root = (
-                self.game.action(connection, action["parent_id"])
-                if action["parent_id"]
-                else action
+                self.game.action(connection, action["parent_id"]) if action["parent_id"] else action
             )
             principal = self.roles(viewer, root).get(data["role"])
             if (
@@ -1401,8 +1338,7 @@ class ScenePlays:
             answer = data["answer"]
             if (
                 not isinstance(answer, dict)
-                or answer.keys()
-                != {"context", "character_revision", "heat", "witnessed"}
+                or answer.keys() != {"context", "character_revision", "heat", "witnessed"}
                 or not isinstance(answer["context"], str)
                 or type(answer["character_revision"]) is not int
                 or type(answer["heat"]) is not int
@@ -1416,9 +1352,7 @@ class ScenePlays:
                     and choice.revision == data["revision"] + 1
                 )
             ):
-                raise WorkflowError(
-                    "Reopen your original assigned order before refusing."
-                )
+                raise WorkflowError("Reopen your original assigned order before refusing.")
             return self.game.begin(
                 viewer,
                 key,
@@ -1467,17 +1401,21 @@ class ScenePlays:
         if not isinstance(play, str) or play not in SCENE_PLAYS or play == RECEIVE:
             raise ValueError("Choose an available Scene Play.")
         off_duty = play in OFF_DUTY_PLAYS
-        required = {
-            "play",
-            "context",
-            "confirmed",
-            "character_revision",
-            "target",
-        } | ({"period"} if off_duty else set()) | (
-            {"heat"}
-            if play in (BENEATH, DIVE, OLDGEN_ADVICE, SNOOP)
-            or (play == PERSON and isinstance(data.get("target"), str))
-            else set()
+        required = (
+            {
+                "play",
+                "context",
+                "confirmed",
+                "character_revision",
+                "target",
+            }
+            | ({"period"} if off_duty else set())
+            | (
+                {"heat"}
+                if play in (BENEATH, DIVE, OLDGEN_ADVICE, SNOOP)
+                or (play == PERSON and isinstance(data.get("target"), str))
+                else set()
+            )
         )
         optional = LESSON_FIELDS.get(play, set())
         if play in LESSON_FIELDS and not off_duty:
@@ -1486,9 +1424,7 @@ class ScenePlays:
             raise ValueError
         if data["confirmed"] is not True:
             raise ValueError
-        if type(data["character_revision"]) is not int or not isinstance(
-            data["context"], str
-        ):
+        if type(data["character_revision"]) is not int or not isinstance(data["context"], str):
             raise ValueError
         context = data["context"].strip()
         target = data["target"]
@@ -1508,9 +1444,7 @@ class ScenePlays:
                 None,
             )
             if actor is None:
-                raise WorkflowError(
-                    "Choose an eligible property owner from the original scene."
-                )
+                raise WorkflowError("Choose an eligible property owner from the original scene.")
             return self.game.begin(
                 viewer,
                 key,
@@ -1527,18 +1461,20 @@ class ScenePlays:
         if play == DEFEAT:
             if not isinstance(target, str):
                 raise ValueError("Choose an assigned Defeat.")
-            return start_defeat_work(
-                self.game, viewer, key, target, self.channel, context
-            )
+            return start_defeat_work(self.game, viewer, key, target, self.channel, context)
         if play in (FOLLOW_THROUGH, REJECT_TAG):
             if not isinstance(target, str):
                 raise ValueError
             with self.game.store.engine.connect() as connection:
                 state = load_state(connection, self.game.store.campaign_id)
-                obligation = next((
-                    item for item in state.obligations
-                    if item.id == target and item.kind == play and item.owner == viewer.user_id
-                ), None)
+                obligation = next(
+                    (
+                        item
+                        for item in state.obligations
+                        if item.id == target and item.kind == play and item.owner == viewer.user_id
+                    ),
+                    None,
+                )
                 if obligation is None or (
                     play == FOLLOW_THROUGH
                     and not completed_flirt(self.game, connection, obligation.action)
@@ -1547,10 +1483,7 @@ class ScenePlays:
             return self.game.fulfill(viewer, key, self.channel, target, context)
         targeted = play in ("flirt", BENEATH, OLDGEN_ADVICE)
         if (
-            targeted
-            and not (
-                isinstance(target, str) and target.isascii() and target.isdecimal()
-            )
+            targeted and not (isinstance(target, str) and target.isascii() and target.isdecimal())
         ) or (not targeted and target is not None):
             raise ValueError
         heat = data.get("heat", 0)
@@ -1592,13 +1525,12 @@ class ScenePlays:
             "confirmed",
             "character_revision",
         }
-        if step == "keep-start" and required <= data.keys() <= required | LESSON_FIELDS[PLAY] | {"heat"}:
+        if step == "keep-start" and required <= data.keys() <= required | LESSON_FIELDS[PLAY] | {
+            "heat"
+        }:
             if not isinstance(data["context"], str) or not data["context"].strip():
                 raise WorkflowError("Describe what the pilot is trying to endure.")
-            if (
-                data["confirmed"] is not True
-                or type(data["character_revision"]) is not int
-            ):
+            if data["confirmed"] is not True or type(data["character_revision"]) is not int:
                 raise WorkflowError("Confirm the Play's trigger.")
             prepared = PlayInput(
                 play=PLAY,
@@ -1607,9 +1539,7 @@ class ScenePlays:
                 heat=data.get("heat", 0),
                 **{name: data[name] for name in LESSON_FIELDS[PLAY] if name in data},
             )
-            return self.game.begin(
-                viewer, key, self.channel, data["character_revision"], prepared
-            )
+            return self.game.begin(viewer, key, self.channel, data["character_revision"], prepared)
         if step == "keep-choice" and data.keys() == {
             "id",
             "revision",
@@ -1667,7 +1597,5 @@ class ScenePlays:
                 ):
                     raise WorkflowError("This choice is unavailable.")
             answer = ChoiceAnswer.model_validate_json(json.dumps(data["answer"]))
-            return self.game.respond(
-                principal, key, data["id"], data["revision"], answer
-            )
+            return self.game.respond(principal, key, data["id"], data["revision"], answer)
         raise ValueError

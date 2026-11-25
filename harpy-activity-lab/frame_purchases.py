@@ -42,9 +42,7 @@ class FramePurchases:
         }
 
     def perform(self, viewer, key, data):
-        if data.keys() != {"actor", "expected", "choice"} or not isinstance(
-            data["expected"], str
-        ):
+        if data.keys() != {"actor", "expected", "choice"} or not isinstance(data["expected"], str):
             raise ValueError("Reopen your current Frame requisition form.")
         return self.service.buy(
             viewer,
@@ -57,7 +55,10 @@ class FramePurchases:
     def acquire(self, viewer, key, data):
         if (
             data.keys() != {"actor", "expected", "kind", "rule", "account", "confirmed"}
-            or any(not isinstance(data[field], str) for field in ("expected", "kind", "rule", "account"))
+            or any(
+                not isinstance(data[field], str)
+                for field in ("expected", "kind", "rule", "account")
+            )
             or data["kind"] not in ("ability_unlock", "frame_grafting")
             or not 1 <= len(data["account"].strip()) <= 1200
             or data["confirmed"] is not True

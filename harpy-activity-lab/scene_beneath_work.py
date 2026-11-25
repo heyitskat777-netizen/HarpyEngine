@@ -4,24 +4,6 @@ import json
 from dataclasses import asdict
 
 import sqlalchemy as sa
-from girlframe.database import tables
-from girlframe.discord_adapter.m2_ui import choice_fields
-from girlframe.engine import m3_ankou
-from girlframe.engine.m2 import ChoiceAnswer
-from girlframe.engine.m3_lobotomy_state import OPTIONS
-from girlframe.engine.m3_punishments import KINDS
-from girlframe.services.m2_state import load_state
-from girlframe.services.m3_beneath import (
-    discipline_finished,
-    discipline_ready,
-    work_root,
-)
-from girlframe.services.m3_lobotomy import LobotomyService
-from girlframe.services.m3_punishments import PunishmentService
-from girlframe.services.m3_role_punishments import _latest_work
-from girlframe.services.m3_tag_permissions import PermissionService
-from girlframe.services.onboarding import WorkflowError
-
 from alpha_controls import BRUTALIZE
 from alpha_controls import COUNTER as ALPHA_COUNTER
 from easy_target_controls import CHILD_ACTION as EASY_CHILD_ACTION
@@ -53,6 +35,24 @@ from specialist_effects import CHOICES as SPECIALIST_CHOICES
 from specialist_effects import SOURCE_PLAYS
 from wyvern_controls import ESCAPE as WYVERN_ESCAPE
 from wyvern_controls import ESCAPE_ACTION as WYVERN_ESCAPE_ACTION
+
+from girlframe.database import tables
+from girlframe.discord_adapter.m2_ui import choice_fields
+from girlframe.engine import m3_ankou
+from girlframe.engine.m2 import ChoiceAnswer
+from girlframe.engine.m3_lobotomy_state import OPTIONS
+from girlframe.engine.m3_punishments import KINDS
+from girlframe.services.m2_state import load_state
+from girlframe.services.m3_beneath import (
+    discipline_finished,
+    discipline_ready,
+    work_root,
+)
+from girlframe.services.m3_lobotomy import LobotomyService
+from girlframe.services.m3_punishments import PunishmentService
+from girlframe.services.m3_role_punishments import _latest_work
+from girlframe.services.m3_tag_permissions import PermissionService
+from girlframe.services.onboarding import WorkflowError
 
 BENEATH = "put_someone_beneath_you"
 DISCIPLINE_STEPS = (
@@ -88,9 +88,17 @@ class SceneBeneathWork:
         return (action, room) if room else (None, None)
 
     def role_case_source(self, c, state, identity):
-        case = next((item for item in state.role_punishments
-                     if item.id == identity and item.action and item.source_kind in ACTIVITY_ROLE_CASES
-                     and item.source_kind != "handler_play"), None)
+        case = next(
+            (
+                item
+                for item in state.role_punishments
+                if item.id == identity
+                and item.action
+                and item.source_kind in ACTIVITY_ROLE_CASES
+                and item.source_kind != "handler_play"
+            ),
+            None,
+        )
         if case:
             action, room = self.popup_source(c, case.action)
             if room:
@@ -104,9 +112,7 @@ class SceneBeneathWork:
         identity = json.loads(original["body_json"])["source_action"]
         action, room = self.source(c, identity)
         if original["scene_id"] != action["scene_id"]:
-            raise WorkflowError(
-                "The discipline work no longer matches its original scene."
-            )
+            raise WorkflowError("The discipline work no longer matches its original scene.")
         return identity, room
 
     @staticmethod
@@ -121,8 +127,7 @@ class SceneBeneathWork:
         if root is None or root["state"] != "resolved":
             return None
         if not any(
-            row["kind"] == "beneath_punishment"
-            for row in self.game.pending(c, action["id"])
+            row["kind"] == "beneath_punishment" for row in self.game.pending(c, action["id"])
         ):
             return None
         return root if discipline_ready(self.game, c, root, work) else None
@@ -132,9 +137,19 @@ class SceneBeneathWork:
             original = self.game.action(c, identity)
             saved, room = self.popup_source(c, identity)
             return (saved["id"], room) if saved and mounted_roll(self.game, c, original) else None
-        if action in ("snoop_decision", "consume_partake", "specialist_choice", "native_scene_choice",
-                      "native_body_consequence", "consume_child_play", "pandora_child", "alpha_counter",
-                      EASY_CHILD_ACTION, WYVERN_ESCAPE_ACTION, "native_choice_review"):
+        if action in (
+            "snoop_decision",
+            "consume_partake",
+            "specialist_choice",
+            "native_scene_choice",
+            "native_body_consequence",
+            "consume_child_play",
+            "pandora_child",
+            "alpha_counter",
+            EASY_CHILD_ACTION,
+            WYVERN_ESCAPE_ACTION,
+            "native_choice_review",
+        ):
             choices = tables.m2["m2_choices"]
             original = c.execute(
                 sa.select(choices.c.action_id, choices.c.kind).where(
@@ -155,15 +170,20 @@ class SceneBeneathWork:
                         native_choice_supported(native["data"]["play"], original.kind)
                         or is_native_child_choice(self.game, c, native, original.kind)
                     )
-                    or action == "consume_child_play" and original.kind in CONSUME_CHILDREN
+                    or action == "consume_child_play"
+                    and original.kind in CONSUME_CHILDREN
                     or action == "pandora_child"
-                    and original.kind == PANDORA_CHILD and native["data"]["play"] == PANDORA
+                    and original.kind == PANDORA_CHILD
+                    and native["data"]["play"] == PANDORA
                     or action == "alpha_counter"
-                    and original.kind == ALPHA_COUNTER and native["data"]["play"] == BRUTALIZE
+                    and original.kind == ALPHA_COUNTER
+                    and native["data"]["play"] == BRUTALIZE
                     or action == EASY_CHILD_ACTION
-                    and original.kind.partition(":")[0] == EASY_CHILD and native["data"]["play"] == EASY
+                    and original.kind.partition(":")[0] == EASY_CHILD
+                    and native["data"]["play"] == EASY
                     or action == WYVERN_ESCAPE_ACTION
-                    and original.kind == WYVERN_ESCAPE and native["data"]["play"] == "wyvern_explore"
+                    and original.kind == WYVERN_ESCAPE
+                    and native["data"]["play"] == "wyvern_explore"
                     or action == "native_choice_review"
                     and choice_review_source(native["data"]["play"], original.kind)
                     or action == "native_body_consequence"
@@ -172,8 +192,10 @@ class SceneBeneathWork:
                     or action == "specialist_choice"
                     and (
                         original.kind in SPECIALIST_CHOICES
-                        or original.kind in TAG_DECISIONS and native["data"]["play"] in SOURCE_PLAYS
-                        or original.kind == RISK_CHOICE and (
+                        or original.kind in TAG_DECISIONS
+                        and native["data"]["play"] in SOURCE_PLAYS
+                        or original.kind == RISK_CHOICE
+                        and (
                             native["data"]["play"] in NATIVE_TITLES.keys() | SOURCE_PLAYS
                             or is_native_child_choice(self.game, c, native, original.kind)
                         )
@@ -184,9 +206,7 @@ class SceneBeneathWork:
         if action in CONTINUATION_ACTIONS:
             if not self.followups:
                 return None
-            original = self.followups.continuations.origin(
-                identity, action, state, work
-            )
+            original = self.followups.continuations.origin(identity, action, state, work)
             if original:
                 saved, room = self.popup_source(c, original)
                 if saved:
@@ -215,11 +235,7 @@ class SceneBeneathWork:
         row = work.get(identity)
         if row is None:
             step = next(
-                (
-                    x
-                    for x in m3_ankou.records(state, m3_ankou.FeedbackStep)
-                    if x.id == identity
-                ),
+                (x for x in m3_ankou.records(state, m3_ankou.FeedbackStep) if x.id == identity),
                 None,
             )
             row = work.get(step.sequence) if step else None
@@ -258,12 +274,12 @@ class SceneBeneathWork:
                 if card.get("role_case"):
                     action, room = self.role_case_source(c, state, card["id"])
                     if action:
-                        cards.append(self.scoped(card, action["id"], room)
-                                     | {"specialty": True, "play": action["data"]["play"]})
+                        cards.append(
+                            self.scoped(card, action["id"], room)
+                            | {"specialty": True, "play": action["data"]["play"]}
+                        )
             for card in followup_cards:
-                if source := self.followup_source(
-                    c, card["id"], card["action"], state, items
-                ):
+                if source := self.followup_source(c, card["id"], card["action"], state, items):
                     action, _ = self.popup_source(c, source[0])
                     if card["action"] and self.legacy_origin(c, action, items):
                         card = {
@@ -281,8 +297,7 @@ class SceneBeneathWork:
                 if conversation.ended_event or (
                     str(viewer.user_id) != conversation.actor.entity
                     and not any(
-                        party.controller == viewer.user_id
-                        for party in conversation.counterparts
+                        party.controller == viewer.user_id for party in conversation.counterparts
                     )
                 ):
                     continue
@@ -290,9 +305,7 @@ class SceneBeneathWork:
                 if action and action["data"]["play"] == PERSON:
                     cards.extend(
                         self.scoped(card, action["id"], room) | {"play": PERSON}
-                        for card in conversation_work(
-                            self.game, viewer, state, conversation
-                        )
+                        for card in conversation_work(self.game, viewer, state, conversation)
                     )
             for row in items.values():
                 if row["state"] == "resolved" or row["owner_id"] != uid:
@@ -300,9 +313,7 @@ class SceneBeneathWork:
                 kind = row["kind"]
                 if kind not in ("punishment", "punishment_consult", *DISCIPLINE_STEPS):
                     continue
-                if kind == "punishment" and json.loads(row["body_json"]).get(
-                    "lobotomy_id"
-                ):
+                if kind == "punishment" and json.loads(row["body_json"]).get("lobotomy_id"):
                     continue
                 try:
                     root, room = self.discipline_source(c, row)
@@ -324,8 +335,7 @@ class SceneBeneathWork:
                                 "id": task["id"],
                                 "revision": data["game_revision"],
                                 "action": "surgery_" + data["phase"],
-                                "instruction": "Experimental surgery · "
-                                + data["patient"],
+                                "instruction": "Experimental surgery · " + data["patient"],
                                 "surgery": data | {"options": OPTIONS},
                             },
                             root,
@@ -355,9 +365,7 @@ class SceneBeneathWork:
                     self.scoped(
                         {
                             "id": gate.id,
-                            "action": "allow_locked_tag"
-                            if data["can_consent"]
-                            else None,
+                            "action": "allow_locked_tag" if data["can_consent"] else None,
                             "revision": state.revision,
                             "expected": data["source_sha256"],
                             "instruction": "Locked Tag · " + data["label"],
@@ -374,10 +382,7 @@ class SceneBeneathWork:
                 )
                 if viewer.user_id == gate.target:
                     for row in own_resolutions:
-                        if (
-                            json.loads(row["body_json"]).get("tag")
-                            != gate.details["tag"]
-                        ):
+                        if json.loads(row["body_json"]).get("tag") != gate.details["tag"]:
                             continue
                         decision = self.game.decision(viewer, row["id"])
                         cards.append(
@@ -387,8 +392,7 @@ class SceneBeneathWork:
                                     "action": "resolve_locked_tag",
                                     "revision": row["revision"],
                                     "permission": gate.id,
-                                    "instruction": "Resolve locked Tag · "
-                                    + data["label"],
+                                    "instruction": "Resolve locked Tag · " + data["label"],
                                     "decision_fields": [
                                         asdict(spec) for spec in choice_fields(decision)
                                     ],
@@ -448,18 +452,14 @@ class SceneBeneathWork:
         }
 
     def perform(self, viewer, key, data):
-        identity, step, answer, root = (
-            data.get(k) for k in ("id", "action", "answer", "root")
-        )
+        identity, step, answer, root = (data.get(k) for k in ("id", "action", "answer", "root"))
         if (
             not all(isinstance(value, str) for value in (identity, step, root))
             or type(data.get("revision")) is not int
         ):
             raise ValueError("Choose an assigned decision in its original scene.")
         if step == "recover_scene_followup":
-            return self.recover_followup(
-                viewer, key, identity, root, data["revision"], answer
-            )
+            return self.recover_followup(viewer, key, identity, root, data["revision"], answer)
         if step in ROLE_CASE_STEPS:
             with self.game.store.engine.connect() as c:
                 self.game.authorize(c, viewer, game=False)
@@ -474,14 +474,8 @@ class SceneBeneathWork:
             with self.game.store.engine.connect() as c:
                 self.game.authorize(c, viewer, game=False)
                 action, _ = self.popup_source(c, root)
-                if (
-                    action is None
-                    or action["id"] != root
-                    or action["data"]["play"] != PERSON
-                ):
-                    raise WorkflowError(
-                        "Open the original conversation in an Activity scene."
-                    )
+                if action is None or action["id"] != root or action["data"]["play"] != PERSON:
+                    raise WorkflowError("Open the original conversation in an Activity scene.")
                 state = load_state(c, self.game.store.campaign_id)
             return complete_conversation(
                 self.game, viewer, key, root, state, identity, step, answer
@@ -504,22 +498,16 @@ class SceneBeneathWork:
                     _latest_work(c, self.game),
                 )
                 if not self.followups or source is None or source[0] != root:
-                    raise WorkflowError(
-                        "Open this follow-up in its original scene popup."
-                    )
+                    raise WorkflowError("Open this follow-up in its original scene popup.")
             elif step in ("allow_locked_tag", "resolve_locked_tag"):
-                permission = (
-                    identity if step == "allow_locked_tag" else data.get("permission")
-                )
+                permission = identity if step == "allow_locked_tag" else data.get("permission")
                 _, gate = self.permissions._gate(c, viewer, permission)
                 if gate.action != root:
                     raise WorkflowError("Open the original Tag restriction.")
                 if step == "resolve_locked_tag":
                     choice = tables.m2["m2_choices"]
                     row = c.execute(
-                        sa.select(
-                            choice.c.kind, choice.c.actor_id, choice.c.body_json
-                        ).where(
+                        sa.select(choice.c.kind, choice.c.actor_id, choice.c.body_json).where(
                             choice.c.campaign_id == self.game.store.campaign_id,
                             choice.c.id == identity,
                         )
@@ -587,9 +575,7 @@ class SceneBeneathWork:
             current = self.discipline.get(viewer, identity)
             consent = current["consultation"]
             if not consent or not consent["approved"]:
-                raise WorkflowError(
-                    "The Handler must approve the exact proposal first."
-                )
+                raise WorkflowError("The Handler must approve the exact proposal first.")
             answer = self.discipline.get(viewer, consent["id"])["proposal"]
         operation = (
             self.discipline.consult

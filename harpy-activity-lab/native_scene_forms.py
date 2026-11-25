@@ -1,30 +1,5 @@
 """Project and interpret native Play forms for the Activity scene popup."""
 
-from girlframe.discord_adapter.m2_forms import Field
-from girlframe.discord_adapter.m2_ui import answer_values, choice_fields
-from girlframe.discord_adapter.m3_battle import battle_answer, battle_fields
-from girlframe.discord_adapter.m3_bonded import _answer as bonded_answer
-from girlframe.discord_adapter.m3_bonded import _choice_fields as bonded_fields
-from girlframe.discord_adapter.m3_doctor import (
-    doctor_choice_answer,
-    doctor_choice_fields,
-)
-from girlframe.discord_adapter.m3_easy_target import easy_target_choice_answer
-from girlframe.discord_adapter.m3_enforcement_initiative import (
-    initiative_answer,
-    initiative_choice_fields,
-)
-from girlframe.discord_adapter.m3_engage import engage_answer, engage_fields
-from girlframe.discord_adapter.m3_prince import (
-    performance_choice_answer,
-    performance_choice_fields,
-)
-from girlframe.discord_adapter.m3_vatgrown import doll_choice_fields
-from girlframe.engine import m3_ankou, m3_bonded, m3_casualty
-from girlframe.engine.m2 import ChoiceAnswer
-from girlframe.engine.m3_janus_pandora import ChildProposal
-from girlframe.services.onboarding import WorkflowError
-
 from alpha_controls import BRUTALIZE, result_answer, result_fields
 from alpha_controls import RESULTS as ALPHA_RESULTS
 from am_scene_controls import ANSWERS as AM_ANSWERS
@@ -51,6 +26,31 @@ from wyvern_controls import PLAYS as WYVERN_PLAYS
 from wyvern_controls import SOURCE_OPERATIONS as WYVERN_SOURCE_OPERATIONS
 from wyvern_controls import decision_answer as wyvern_answer
 from wyvern_controls import decision_fields as wyvern_fields
+
+from girlframe.discord_adapter.m2_forms import Field
+from girlframe.discord_adapter.m2_ui import answer_values, choice_fields
+from girlframe.discord_adapter.m3_battle import battle_answer, battle_fields
+from girlframe.discord_adapter.m3_bonded import _answer as bonded_answer
+from girlframe.discord_adapter.m3_bonded import _choice_fields as bonded_fields
+from girlframe.discord_adapter.m3_doctor import (
+    doctor_choice_answer,
+    doctor_choice_fields,
+)
+from girlframe.discord_adapter.m3_easy_target import easy_target_choice_answer
+from girlframe.discord_adapter.m3_enforcement_initiative import (
+    initiative_answer,
+    initiative_choice_fields,
+)
+from girlframe.discord_adapter.m3_engage import engage_answer, engage_fields
+from girlframe.discord_adapter.m3_prince import (
+    performance_choice_answer,
+    performance_choice_fields,
+)
+from girlframe.discord_adapter.m3_vatgrown import doll_choice_fields
+from girlframe.engine import m3_ankou, m3_bonded, m3_casualty
+from girlframe.engine.m2 import ChoiceAnswer
+from girlframe.engine.m3_janus_pandora import ChildProposal
+from girlframe.services.onboarding import WorkflowError
 
 ENFORCEMENT = "enforcement_initiative"
 DOSE = "dose_up"
@@ -84,9 +84,18 @@ CONSUME_CHILD_PLAYS = {
 }
 CHILD_SCENE_CHOICES = frozenset(
     {
-        "actor_sensors", "handler_sensors", "actor_keep", "handler_keep",
-        "actor_flirt", "target_flirt", "actor_flirt_answer", "flirt_owe_tag", "flirt_escape",
-        "beneath_select", "beneath_details", "beneath_pin_response",
+        "actor_sensors",
+        "handler_sensors",
+        "actor_keep",
+        "handler_keep",
+        "actor_flirt",
+        "target_flirt",
+        "actor_flirt_answer",
+        "flirt_owe_tag",
+        "flirt_escape",
+        "beneath_select",
+        "beneath_details",
+        "beneath_pin_response",
         *DEFEAT_CHOICES,
         *OLDGEN_CHOICES,
     }
@@ -96,10 +105,17 @@ CHILD_STARTS = {
     "beneath_response_play": ("keep_your_head", "Keep Your Head · Respond"),
     "beneath_defeat": ("defeat", "Defeat · Original consequence"),
 }
-CHILD_BATTLE_CHOICES = frozenset({
-    "battle_assault_table", "battle_handler", "battle_counter", "battle_low_damage",
-    "battle_actor_damage", "battle_target_damage", "battle_trainer_protect",
-})
+CHILD_BATTLE_CHOICES = frozenset(
+    {
+        "battle_assault_table",
+        "battle_handler",
+        "battle_counter",
+        "battle_low_damage",
+        "battle_actor_damage",
+        "battle_target_damage",
+        "battle_trainer_protect",
+    }
+)
 CHILD_ENGAGE_CHOICES = frozenset({"engage_maneuvers", "engage_assault_extra"})
 DOCTOR_PLAYS = {
     "nanobot_injection": "Nanobot Injection",
@@ -122,9 +138,20 @@ NATIVE_TITLES = {
     **CONSUME_PLAYS,
 }
 NATIVE_OPERATIONS = frozenset(
-    (*NATIVE_TITLES, DOSE_CONTACT, PROCESSOR_PROPOSAL, PROCESSOR_UNLINK, *HANDLER_SCENE_PLAYS,
-     TRACKER_MOMENT, BONDED_SOURCE, *WYVERN_SOURCE_OPERATIONS, *PRINCE_OPERATIONS, *AM_OPERATIONS,
-     *DOLL_OPERATIONS, *EASY_OPERATIONS)
+    (
+        *NATIVE_TITLES,
+        DOSE_CONTACT,
+        PROCESSOR_PROPOSAL,
+        PROCESSOR_UNLINK,
+        *HANDLER_SCENE_PLAYS,
+        TRACKER_MOMENT,
+        BONDED_SOURCE,
+        *WYVERN_SOURCE_OPERATIONS,
+        *PRINCE_OPERATIONS,
+        *AM_OPERATIONS,
+        *DOLL_OPERATIONS,
+        *EASY_OPERATIONS,
+    )
 )
 DOSE_CHOICES = frozenset({"dose_up_components", "dose_up_target_low"})
 DOCTOR_CHOICES = frozenset(
@@ -174,8 +201,12 @@ NATIVE_TAG_FIELDS = frozenset(
 )
 TAG_DECISIONS = frozenset(
     {
-        "tag_window", "tag_resolution", "tag_marker_selection", "tag_marker_agreement",
-        "actor_tag_selection", "actor_tag_agreement",
+        "tag_window",
+        "tag_resolution",
+        "tag_marker_selection",
+        "tag_marker_agreement",
+        "actor_tag_selection",
+        "actor_tag_agreement",
     }
 )
 
@@ -186,8 +217,7 @@ def form_fields(fields):
             "key": spec.key,
             "label": spec.label,
             "options": list(spec.options) if spec.options else None,
-            "required": spec.required
-            and not any(value == "" for value, _ in spec.options),
+            "required": spec.required and not any(value == "" for value, _ in spec.options),
             "multiple": spec.maximum > 1,
             "paragraph": spec.paragraph,
         }
@@ -230,37 +260,70 @@ def risk_choice_card(decision):
     if detail["assets"]:
         fields = [
             total,
-            Field("asset", "Original uncorrupted Asset",
-                  tuple((row["id"], row["label"]) for row in detail["assets"])),
+            Field(
+                "asset",
+                "Original uncorrupted Asset",
+                tuple((row["id"], row["label"]) for row in detail["assets"]),
+            ),
             account,
         ]
         if detail["storage_available"]:
-            fields.append(Field("storage", "Optional destination",
-                                (("yes", "Store Void in the connected Harpy"),), required=False))
+            fields.append(
+                Field(
+                    "storage",
+                    "Optional destination",
+                    (("yes", "Store Void in the connected Harpy"),),
+                    required=False,
+                )
+            )
         if detail["casualty_parts"]:
-            fields.extend((
-                Field("casualty_part", "Wounded God · Original part to break",
-                      tuple((x["id"], x["name"]) for x in detail["casualty_parts"]), required=False),
-                Field("casualty_site_account", "Actual infected site, if resisting",
-                      paragraph=True, required=False),
-            ))
-        operations.append({
-            "id": "risk_alter_asset", "label": "Choose result and alter Asset", "fields": form_fields(fields),
-        })
+            fields.extend(
+                (
+                    Field(
+                        "casualty_part",
+                        "Wounded God · Original part to break",
+                        tuple((x["id"], x["name"]) for x in detail["casualty_parts"]),
+                        required=False,
+                    ),
+                    Field(
+                        "casualty_site_account",
+                        "Actual infected site, if resisting",
+                        paragraph=True,
+                        required=False,
+                    ),
+                )
+            )
+        operations.append(
+            {
+                "id": "risk_alter_asset",
+                "label": "Choose result and alter Asset",
+                "fields": form_fields(fields),
+            }
+        )
     if growth := detail.get("sup"):
         fields = [
-            total, Field("sup_name", "Name the new Void Asset"), account,
+            total,
+            Field("sup_name", "Name the new Void Asset"),
+            account,
             Field("sup_family", "Asset family", tuple((x, x.title()) for x in growth["families"])),
-            Field("sup_replace", "Replace a same-family Asset only at its cap",
-                  tuple((x["id"], x["label"] + " · " + x["family"]) for x in growth["replacements"]),
-                  required=False),
+            Field(
+                "sup_replace",
+                "Replace a same-family Asset only at its cap",
+                tuple((x["id"], x["label"] + " · " + x["family"]) for x in growth["replacements"]),
+                required=False,
+            ),
         ]
-        operations.append({
-            "id": "risk_grow_asset", "label": "Choose result and grow Void Asset", "fields": form_fields(fields),
-        })
+        operations.append(
+            {
+                "id": "risk_grow_asset",
+                "label": "Choose result and grow Void Asset",
+                "fields": form_fields(fields),
+            }
+        )
     return {
         "risk_operations": operations,
-        "prompt": f"Current result · {detail['total']}" + (
+        "prompt": f"Current result · {detail['total']}"
+        + (
             " · A shift spends the original one-use lesson." if detail.get("learned_source") else ""
         ),
     }
@@ -273,7 +336,10 @@ def risk_choice_answer(op, values):
     if values.get("total") not in dict(RISK_TOTAL):
         raise ValueError("Choose a printed Risk Factor result.")
     if op == "risk_alter_asset" and required | {"asset"} <= values.keys() <= required | {
-        "asset", "storage", "casualty_part", "casualty_site_account",
+        "asset",
+        "storage",
+        "casualty_part",
+        "casualty_site_account",
     }:
         fields = {key: value for key, value in values.items() if key not in required}
     elif op == "risk_grow_asset" and required | {"sup_name", "sup_family"} <= values.keys() <= (
@@ -282,15 +348,18 @@ def risk_choice_answer(op, values):
         fields = {key: values.get(key, "") for key in ("sup_name", "sup_family", "sup_replace")}
     else:
         raise ValueError("Use the fields from the current Risk Factor decision.")
-    return ChoiceAnswer.model_validate({
-        "number": int(values["total"]), "text": values["account"], "fields": fields,
-    })
+    return ChoiceAnswer.model_validate(
+        {
+            "number": int(values["total"]),
+            "text": values["account"],
+            "fields": fields,
+        }
+    )
 
 
 def heat_options(heat):
     return tuple(
-        (str(amount), str(amount))
-        for amount in ((heat,) if heat >= 5 else range(heat + 1))
+        (str(amount), str(amount)) for amount in ((heat,) if heat >= 5 else range(heat + 1))
     )
 
 
@@ -350,9 +419,7 @@ def child_proposal(variant, values):
         gorgon_class=values["class"],
         assets=tuple(values[f"asset{i}"] for i in range(count)),
         descriptions=tuple(values[f"description{i}"] for i in range(count)),
-        core_assets=tuple(
-            int(item) for item in ([core] if isinstance(core, str) else core)
-        ),
+        core_assets=tuple(int(item) for item in ([core] if isinstance(core, str) else core)),
         weakness=values["weakness"],
         account=values["account"],
     )
@@ -384,7 +451,8 @@ def choice_supported(play, kind):
         or kind == "prince_bad_girl"
         or kind in AM_ANSWERS
         or kind in DOLL_ANSWERS
-            or play == EASY and (kind.partition(":")[0] in EASY_ANSWERS or kind == "battle_target_damage")
+        or play == EASY
+        and (kind.partition(":")[0] in EASY_ANSWERS or kind == "battle_target_damage")
         or (
             play == ENFORCEMENT
             and kind in ENFORCER_CHOICES
@@ -413,7 +481,8 @@ def is_native_child_choice(game, c, action, kind):
     return (
         kind in TAG_DECISIONS | CHILD_SCENE_CHOICES | CHILD_STARTS.keys() | {RISK_CHOICE}
         and native_child(game, c, action)
-        or data.get("easy_target_child") and kind in CHILD_BATTLE_CHOICES | CHILD_ENGAGE_CHOICES
+        or data.get("easy_target_child")
+        and kind in CHILD_BATTLE_CHOICES | CHILD_ENGAGE_CHOICES
     )
 
 
@@ -421,8 +490,16 @@ def native_child(game, c, action):
     # A Fanbase demand can start a source-bound action directly in its scene.
     while True:
         data = action["data"]
-        if any(data.get(key) for key in ("consume_child", "alpha_counter_source",
-                                        "prince_demand_attempt", "easy_target_child", "wyvern_child")):
+        if any(
+            data.get(key)
+            for key in (
+                "consume_child",
+                "alpha_counter_source",
+                "prince_demand_attempt",
+                "easy_target_child",
+                "wyvern_child",
+            )
+        ):
             return True
         parent = action["parent_id"]
         if not parent:
@@ -438,10 +515,7 @@ def native_choice_fields(decision):
     kind = decision["kind"]
     if kind in ("tag_window", "tag_resolution", "actor_tag_selection", "actor_tag_agreement"):
         specs = choice_fields(decision)
-        if (
-            kind == "tag_window"
-            and len(markers := decision.get("tag_markers", ())) == 1
-        ):
+        if kind == "tag_window" and len(markers := decision.get("tag_markers", ())) == 1:
             specs.append(
                 Field(
                     "fields.marker",
@@ -457,8 +531,11 @@ def native_choice_fields(decision):
     elif kind in DEFEAT_CHOICES:
         specs = [Field(**row) for row in defeat_choice(decision)["schema"]]
     elif kind in CHILD_SCENE_CHOICES:
-        specs = ([Field(**row) for row in advice_choice(decision)["fields"]]
-                 if kind in OLDGEN_CHOICES else choice_fields(decision))
+        specs = (
+            [Field(**row) for row in advice_choice(decision)["fields"]]
+            if kind in OLDGEN_CHOICES
+            else choice_fields(decision)
+        )
         return printed_fields(form_fields(specs), kind)
     elif kind == "tag_marker_selection":
         specs = [
@@ -500,9 +577,7 @@ def native_choice_fields(decision):
     elif kind in CONSUME_CHOICES:
         detail = decision["detail"]
         specs = [
-            Field(
-                "option", "Your printed outcome", tuple(map(tuple, detail["options"]))
-            ),
+            Field("option", "Your printed outcome", tuple(map(tuple, detail["options"]))),
             Field("account", "Describe your actual response", paragraph=True),
         ]
         if kind == "consume_eat":
@@ -576,8 +651,10 @@ def native_choice_answer(kind, values, *, source=None):
     if kind in CHILD_SCENE_CHOICES:
         if kind == "defeat_alternative":
             values = {
-                key: ",".join(value) if key in {"fields.assets", "fields.identities"} and isinstance(value, list)
-                else value for key, value in values.items()
+                key: ",".join(value)
+                if key in {"fields.assets", "fields.identities"} and isinstance(value, list)
+                else value
+                for key, value in values.items()
             }
         return answer_values(
             response_values(
@@ -600,16 +677,11 @@ def native_choice_answer(kind, values, *, source=None):
     ):
         return doctor_choice_answer(kind, response_values(values, DOCTOR_SELECTS))
     if kind in DOSE_CHOICES and values.keys() == {"components"}:
-        return ChoiceAnswer(
-            options=response_values(values, {"components"})["components"]
-        )
+        return ChoiceAnswer(options=response_values(values, {"components"})["components"])
     if (
         kind in CONSUME_CHOICES
         and {"option", "account"} <= values.keys()
-        and (
-            not values.keys()
-            - {"option", "account", "own_asset", "target_asset", "identity"}
-        )
+        and (not values.keys() - {"option", "account", "own_asset", "target_asset", "identity"})
         and all(isinstance(value, str) for value in values.values())
     ):
         option = values["option"]
@@ -655,9 +727,7 @@ def native_choice_answer(kind, values, *, source=None):
 def processor_benefit_fields(detail):
     available = tuple((item, item.title()) for item in detail["benefits"])
     identities = tuple((item["id"], item["label"]) for item in detail["identities"])
-    marked = tuple(
-        (item["id"], item["label"]) for item in detail["identities"] if item["marked"]
-    )
+    marked = tuple((item["id"], item["label"]) for item in detail["identities"] if item["marked"])
     assets = tuple((item["id"], item["label"]) for item in detail["assets"])
     specs = []
     for slot in range(detail["count"]):
@@ -673,9 +743,7 @@ def processor_benefit_fields(detail):
             )
         if marked:
             specs.append(
-                Field(
-                    f"unmark{slot}", "Identity benefit · Unmark", marked, required=False
-                )
+                Field(f"unmark{slot}", "Identity benefit · Unmark", marked, required=False)
             )
         specs.append(
             Field(
@@ -703,9 +771,7 @@ def processor_benefit_answer(values):
         raise ValueError("Use the current owned Processor Core result.")
     selected = [values[f"benefit{slot}"] for slot in range(slots)]
     options = tuple(
-        f"identity_repeat_{slot}"
-        if item == "identity" and item in selected[:slot]
-        else item
+        f"identity_repeat_{slot}" if item == "identity" and item in selected[:slot] else item
         for slot, item in enumerate(selected)
     )
     fields = {}

@@ -4,13 +4,13 @@ from typing import Any
 from uuid import UUID
 
 import sqlalchemy as sa
-from girlframe.database import tables
-from girlframe.services.m3_replacement import COURT, PACKAGE, ROOTS
 
+from girlframe.database import tables
 from girlframe.services.m3_mission_control import MissionControlService
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_off_duty import OffDutyService
 from girlframe.services.m3_reactions import ReactionService
+from girlframe.services.m3_replacement import COURT, PACKAGE, ROOTS
 from girlframe.services.read_only_bot import GuildViewer
 
 REACTIONS = frozenset({"princess_mission_end", "doctor_obsolescence"})
@@ -57,7 +57,9 @@ class MissionDesk:
                     if field in saved
                 }
             )
-        return self._file_details(viewer, {"pilot": label, "offers": offers, "desk": None}, lifecycle=False)
+        return self._file_details(
+            viewer, {"pilot": label, "offers": offers, "desk": None}, lifecycle=False
+        )
 
     def _file_details(self, viewer, payload, *, lifecycle):
         offers = payload["offers"]
@@ -82,7 +84,11 @@ class MissionDesk:
                 if len(mission["responses"]) < len(mission["offered_to"]):
                     wait = "invitees"
                 else:
-                    wait = "dispatch" if "accept" in mission["responses"].values() else "handler_review"
+                    wait = (
+                        "dispatch"
+                        if "accept" in mission["responses"].values()
+                        else "handler_review"
+                    )
             row.update(needs_response=wait == "viewer", waiting_on=wait)
         return payload
 
@@ -94,19 +100,26 @@ class MissionDesk:
         history = tables.m3["m3_mission_history"]
         events = tables.events
         with store.engine.connect() as connection:
-            return dict(connection.execute(
-                sa.select(history.c.id, events.c.created_utc)
-                .join(events, sa.and_(
-                    events.c.campaign_id == history.c.campaign_id,
-                    events.c.id == history.c.event_id,
-                ))
-                .where(
-                    history.c.campaign_id == store.campaign_id,
-                    history.c.id.in_(mission_ids),
-                    history.c.revision == 1,
-                    events.c.kind == "m3.mission_offered",
+            return dict(
+                connection.execute(
+                    sa.select(history.c.id, events.c.created_utc)
+                    .join(
+                        events,
+                        sa.and_(
+                            events.c.campaign_id == history.c.campaign_id,
+                            events.c.id == history.c.event_id,
+                        ),
+                    )
+                    .where(
+                        history.c.campaign_id == store.campaign_id,
+                        history.c.id.in_(mission_ids),
+                        history.c.revision == 1,
+                        events.c.kind == "m3.mission_offered",
+                    )
                 )
-            ).tuples().all())
+                .tuples()
+                .all()
+            )
 
     def perform(self, viewer: GuildViewer, key: str, data: dict[str, Any]) -> dict[str, Any]:
         with self.missions.store.engine.connect() as c:

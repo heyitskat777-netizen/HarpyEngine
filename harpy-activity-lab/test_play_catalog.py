@@ -6,6 +6,18 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from ai_native_plays import SCENE_STARTERS
+from handler_playbook import RULES as HANDLER_STARTERS
+from play_catalog import character_plays
+from player_setup import RELAY, PlayerSetup
+from test_enforcer_requisitions import approved, buy
+from test_ledger import ADMIN, OTHER, PLAYER
+from test_ledger import ledger as ledger_fixture
+from test_m2_game import state
+from test_requisition_service import ready
+from test_vatgrown_plays import _learn_daily_source
+from test_vatgrown_plays import ready as vatgrown_ready
+
 from girlframe.engine import m3_casualty
 from girlframe.engine import m3_vatgrown_plays as vat
 from girlframe.engine.m2 import GameState
@@ -25,18 +37,6 @@ from girlframe.services.m3_learned_plays import (
     RISK,
     SHOW_DOG,
 )
-from test_enforcer_requisitions import approved, buy
-from test_ledger import ADMIN, OTHER, PLAYER
-from test_ledger import ledger as ledger_fixture
-from test_m2_game import state
-from test_requisition_service import ready
-from test_vatgrown_plays import _learn_daily_source
-from test_vatgrown_plays import ready as vatgrown_ready
-
-from ai_native_plays import SCENE_STARTERS
-from handler_playbook import RULES as HANDLER_STARTERS
-from play_catalog import character_plays
-from player_setup import RELAY, PlayerSetup
 
 ledger = ledger_fixture
 # Flirt follow-through effects are contextual and have no standalone entry.
@@ -79,12 +79,21 @@ def test_parity_checklist_covers_the_native_pilot_handler_catalog(registry):
     path = Path(__file__).with_name("AI-PLAY-PARITY.md")
     recorded = set(re.findall(r"^\| `([^`]+)` \|", path.read_text(encoding="utf-8"), re.MULTILINE))
     expected = {key for key in NATIVE_RULES if not key.startswith("gorgon_")}
-    expected.update((*KEEP_RIDERS, HOUND, CALL, SHOW_DOG, PSYCHE, RISK, NO_ONE_BETTER, m3_casualty.BARELY))
+    expected.update(
+        (*KEEP_RIDERS, HOUND, CALL, SHOW_DOG, PSYCHE, RISK, NO_ONE_BETTER, m3_casualty.BARELY)
+    )
     known_rules = set(NATIVE_RULES.values())
     expected.update(
-        entry.id for entry in registry.entries
-        if entry.id not in known_rules and entry.scope in {
-            "basic", "girl", "frame", "handler", "handler-playbook",
+        entry.id
+        for entry in registry.entries
+        if entry.id not in known_rules
+        and entry.scope
+        in {
+            "basic",
+            "girl",
+            "frame",
+            "handler",
+            "handler-playbook",
         }
         and (entry.kind == "play" or entry.contract and entry.contract.roll_kind in {"2d6", "d6"})
     )
@@ -93,7 +102,8 @@ def test_parity_checklist_covers_the_native_pilot_handler_catalog(registry):
 
 def test_all_private_playbooks_require_an_original_consent_source_and_registry_review(registry):
     gated = {
-        entry.id for entry in registry.entries
+        entry.id
+        for entry in registry.entries
         if entry.scope in {"girl", "handler-playbook"} and entry.id.endswith(".sex-play")
     }
     assert len(gated) == len(GIRL_TYPES) + 7
@@ -111,8 +121,14 @@ def test_all_private_playbooks_require_an_original_consent_source_and_registry_r
 def test_model_cannot_reuse_a_human_pilot_sheet_for_an_alternate_actor(kind):
     def would_use_wrong_sheet(*args):
         pytest.fail("An alternate body must not be passed to the Pilot and Handler projection.")
+
     context = SimpleNamespace(native_play_projection=would_use_wrong_sheet)
-    assert initiative_play_options(context, None, "test-scene", ActorRef(kind=kind, entity="other-body")) == ()
+    assert (
+        initiative_play_options(
+            context, None, "test-scene", ActorRef(kind=kind, entity="other-body")
+        )
+        == ()
+    )
 
 
 @pytest.mark.parametrize(("girl", "frame"), list(product(GIRL_PLAYS, FRAME_PLAYS)))
@@ -185,9 +201,7 @@ def test_grafted_play_follows_paid_current_frame_not_legacy_sheet_or_old_scene(
     adapter = setup.scene_plays
     monkeypatch.setattr(adapter, "for_channel", lambda _: adapter)
     historical = {"current": {"state": "complete"}, "choices": [], "can_start": False}
-    monkeypatch.setattr(
-        adapter, "play_options", lambda *_: {"snoop": historical.copy()}
-    )
+    monkeypatch.setattr(adapter, "play_options", lambda *_: {"snoop": historical.copy()})
     args = (
         PLAYER,
         RELAY,
@@ -211,13 +225,9 @@ def test_grafted_play_follows_paid_current_frame_not_legacy_sheet_or_old_scene(
     assert {"snoop", "living_battery"}.isdisjoint(play_ids(service.registry, saved))
 
 
-def test_engine_learned_play_stays_on_only_its_owner_until_used(
-    ledger, tmp_path, monkeypatch
-):
+def test_engine_learned_play_stays_on_only_its_owner_until_used(ledger, tmp_path, monkeypatch):
     rule = "girl.am.scrutinized"
-    game, worker, gateway, controls = vatgrown_ready(
-        ledger, tmp_path, monkeypatch, teacher="AM"
-    )
+    game, worker, gateway, controls = vatgrown_ready(ledger, tmp_path, monkeypatch, teacher="AM")
     approved(
         ledger,
         game,
@@ -234,9 +244,7 @@ def test_engine_learned_play_stays_on_only_its_owner_until_used(
     assert "am_scrutinized" not in play_ids(registry, before, owns_sheet=False)
     sheet.girl_runtime = sheet.girl_runtime.model_copy(
         update={
-            "learned_plays": (
-                lesson.model_copy(update={"rolled_event": "synthetic-spent-roll"}),
-            )
+            "learned_plays": (lesson.model_copy(update={"rolled_event": "synthetic-spent-roll"}),)
         }
     )
     assert "am_scrutinized" not in play_ids(registry, before)

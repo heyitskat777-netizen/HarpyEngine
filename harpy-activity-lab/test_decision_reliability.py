@@ -15,7 +15,7 @@ from uuid import uuid4
 from campaign_inbox import InboxNotices
 from player_setup import OWNER_CREATION_FIELDS
 from test_bot_enrollment import selected
-from test_campaign_role_access import CONFIG, role_activity, request
+from test_campaign_role_access import CONFIG, request, role_activity
 from test_handler_pilot_view import login
 
 PILOT = "666666666666666666"
@@ -46,37 +46,71 @@ def prepare_bond(host, first, second, query):
     path = "/api/player-setup"
     for token, callsign in ((first, "RELAY ZERO"), (second, "RELAY ONE")):
         state = request(host, path + query, token)
-        request(host, path + "/profile" + query, token, {
-            "revision": state["revision"], "callsign": callsign,
-        })
+        request(
+            host,
+            path + "/profile" + query,
+            token,
+            {
+                "revision": state["revision"],
+                "callsign": callsign,
+            },
+        )
     draft = selected("MOCKINGBIRD", "JANUS").model_dump(mode="json")
     for token in (first, second):
         state = request(host, path + query, token)
-        request(host, path + "/build" + query, token, {
-            "revision": state["revision"], "character_revision": state["character_revision"],
-            "draft": {key: value for key, value in draft.items() if key in OWNER_CREATION_FIELDS},
-        })
+        request(
+            host,
+            path + "/build" + query,
+            token,
+            {
+                "revision": state["revision"],
+                "character_revision": state["character_revision"],
+                "draft": {
+                    key: value for key, value in draft.items() if key in OWNER_CREATION_FIELDS
+                },
+            },
+        )
     owner = request(host, path + query, first)["bond_setup"]
     target = next(row for row in owner["targets"] if row["id"] == CONFIG.invited_user_id)
-    return request(host, path + "/bond" + query, first, {
-        "target": target["id"], "source_revision": owner["source_revision"],
-        "target_revision": target["revision"], "prompt": 0, "context": PRIVATE_BOND,
-    })
+    return request(
+        host,
+        path + "/bond" + query,
+        first,
+        {
+            "target": target["id"],
+            "source_revision": owner["source_revision"],
+            "target_revision": target["revision"],
+            "prompt": 0,
+            "context": PRIVATE_BOND,
+        },
+    )
 
 
 def activate(host, first, second, query, bond_id):
     path = "/api/player-setup"
     peer = request(host, path + query, second)
-    request(host, path + "/select-bond" + query, second, {
-        "id": bond_id, "revision": peer["revision"],
-        "character_revision": peer["character_revision"],
-    })
+    request(
+        host,
+        path + "/select-bond" + query,
+        second,
+        {
+            "id": bond_id,
+            "revision": peer["revision"],
+            "character_revision": peer["character_revision"],
+        },
+    )
     for token in (first, second):
         review = request(host, path + query, token)["review"]
         assert review["ready"]
-        request(host, path + "/review" + query, token, {
-            "revision": review["revision"], "fingerprint": review["fingerprint"],
-        })
+        request(
+            host,
+            path + "/review" + query,
+            token,
+            {
+                "revision": review["revision"],
+                "fingerprint": review["fingerprint"],
+            },
+        )
         review = request(host, path + query, token)["review"]
         request(host, path + "/activate" + query, token, {"fingerprint": review["fingerprint"]})
 
@@ -99,7 +133,9 @@ def test_pending_bond_access_retry_and_restart(tmp_path):
 
         # Advance the relay clock past the synthetic OAuth lease without sleeping.
         relay(tmp_path, 1600)
-        expired = request(host, path + "/bond-decision" + query, second, accept, HTTPStatus.UNAUTHORIZED)
+        expired = request(
+            host, path + "/bond-decision" + query, second, accept, HTTPStatus.UNAUTHORIZED
+        )
         assert expired["reauthenticate"] is True
         first = login(host, "role-pilot")
         assert request(host, path + query, first)["bonds"][0]["state"] == "pending"
@@ -109,12 +145,21 @@ def test_pending_bond_access_retry_and_restart(tmp_path):
             assert request(host, path + query, first)["bonds"][0]["state"] == "pending"
             request(host, path + "/bond-decision" + query, first, accept, HTTPStatus.CONFLICT)
             nonce = request(host, "/api/discord/challenge", data={})["nonce"]
-            denied = request(host, "/api/discord/session", data={
-                "nonce": nonce, "code": "role-pilot", "guild_id": CONFIG.guild_id,
-            }, status=HTTPStatus.FORBIDDEN)
+            denied = request(
+                host,
+                "/api/discord/session",
+                data={
+                    "nonce": nonce,
+                    "code": "role-pilot",
+                    "guild_id": CONFIG.guild_id,
+                },
+                status=HTTPStatus.FORBIDDEN,
+            )
             assert denied["reauthenticate"] is True
         relay(tmp_path, 2200, revoked=True)
-        expired = request(host, path + "/bond-decision" + query, first, withdraw, HTTPStatus.UNAUTHORIZED)
+        expired = request(
+            host, path + "/bond-decision" + query, first, withdraw, HTTPStatus.UNAUTHORIZED
+        )
         assert expired["reauthenticate"] is True
         relay(tmp_path, 2201)
         first = login(host, "role-pilot")
@@ -130,8 +175,13 @@ def test_pending_bond_access_retry_and_restart(tmp_path):
 
         one, two = race(answer, answer)
         assert one == two
-        request(host, path + "/bond-decision" + query, second,
-                accept | {"decision": "decline"}, HTTPStatus.CONFLICT)
+        request(
+            host,
+            path + "/bond-decision" + query,
+            second,
+            accept | {"decision": "decline"},
+            HTTPStatus.CONFLICT,
+        )
         assert request(host, path + query, first)["bonds"][0]["state"] == "accepted"
     with role_activity(tmp_path, PILOT, bot_handler=True, decisions=True) as host:
         second, outside = [login(host, code) for code in ("invited", "other")]
@@ -148,15 +198,30 @@ def test_mission_decisions_are_private_and_revision_checked_across_restarts(tmp_
         campaign = request(host, "/api/campaigns", first)["campaigns"][0]["id"]
         query = "?campaign=" + campaign
         bond = prepare_bond(host, first, second, query)
-        request(host, "/api/player-setup/bond-decision" + query, second, {
-            "id": bond["id"], "revision": bond["revision"], "decision": "accept",
-        })
+        request(
+            host,
+            "/api/player-setup/bond-decision" + query,
+            second,
+            {
+                "id": bond["id"],
+                "revision": bond["revision"],
+                "decision": "accept",
+            },
+        )
         activate(host, first, second, query, bond["id"])
 
     def respond(row, token, response, key, status=HTTPStatus.OK):
-        return request(host, path + "/" + row["id"] + "/response" + query, token, {
-            "expected_revision": row["revision"], "response": response,
-        }, status, key=key)
+        return request(
+            host,
+            path + "/" + row["id"] + "/response" + query,
+            token,
+            {
+                "expected_revision": row["revision"],
+                "response": response,
+            },
+            status,
+            key=key,
+        )
 
     with role_activity(tmp_path, PILOT, bot_handler=True, decisions=True) as host:
         first, second, outside = [login(host, code) for code in ("role-pilot", "invited", "other")]
@@ -187,7 +252,9 @@ def test_mission_decisions_are_private_and_revision_checked_across_restarts(tmp_
 
         accepted = respond(shared, first, "accept", "shared-first")
         assert respond(shared, first, "accept", "shared-first") == accepted
-        own = next(row for row in request(host, path + query, first)["offers"] if row["id"] == shared["id"])
+        own = next(
+            row for row in request(host, path + query, first)["offers"] if row["id"] == shared["id"]
+        )
         assert own["waiting_on"] == "invitees"
         respond(shared, second, "decline", "shared-stale", HTTPStatus.CONFLICT)
         peer = request(host, path + query, second)["offers"][0]
@@ -202,11 +269,15 @@ def test_mission_decisions_are_private_and_revision_checked_across_restarts(tmp_
         first, second, outside = [login(host, code) for code in ("role-pilot", "invited", "other")]
         assert respond(solo, first, winning_choice, "double-" + winning_choice) == winning_receipt
         rows = {row["id"]: row for row in request(host, path + query, first)["offers"]}
-        assert rows[solo["id"]]["response"] == winning_choice and not rows[solo["id"]]["needs_response"]
+        assert (
+            rows[solo["id"]]["response"] == winning_choice
+            and not rows[solo["id"]]["needs_response"]
+        )
         assert rows[shared["id"]]["response"] == "accept"
         peer = request(host, path + query, second)["offers"]
         assert len(peer) == 1 and peer[0]["id"] == shared["id"] and peer[0]["response"] == "decline"
         assert request(host, path + query, outside)["offers"] == []
+
 
 def test_scene_invite_is_private_and_joins_only_on_owner_acceptance(tmp_path):
     relay(tmp_path, 1000)
@@ -216,23 +287,45 @@ def test_scene_invite_is_private_and_joins_only_on_owner_acceptance(tmp_path):
         campaign = request(host, "/api/campaigns", first)["campaigns"][0]["id"]
         query = "?campaign=" + campaign
         bond = prepare_bond(host, first, second, query)
-        request(host, path + "/bond-decision" + query, second, {
-            "id": bond["id"], "revision": bond["revision"], "decision": "accept",
-        })
+        request(
+            host,
+            path + "/bond-decision" + query,
+            second,
+            {
+                "id": bond["id"],
+                "revision": bond["revision"],
+                "decision": "accept",
+            },
+        )
         activate(host, first, second, query, bond["id"])
-        room = request(host, path + "/room-create" + query, first, {
-            "name": "Rehearsal Annex", "location": "hangar",
-        })["room"]
+        room = request(
+            host,
+            path + "/room-create" + query,
+            first,
+            {
+                "name": "Rehearsal Annex",
+                "location": "hangar",
+            },
+        )["room"]
         invite = {"room": room, "recipient": CONFIG.invited_user_id}
-        issued = request(host, path + "/scene-invite" + query, first, invite, key="scene-invite-proof")
-        assert request(host, path + "/scene-invite" + query, first, invite, key="scene-invite-proof") == issued
+        issued = request(
+            host, path + "/scene-invite" + query, first, invite, key="scene-invite-proof"
+        )
+        assert (
+            request(host, path + "/scene-invite" + query, first, invite, key="scene-invite-proof")
+            == issued
+        )
         proof = "/api/dm-receipts/" + issued["dm_receipt"] + query
         request(host, proof, status=HTTPStatus.UNAUTHORIZED)
         request(host, proof, second, status=HTTPStatus.NOT_FOUND)
         request(host, proof, outsider, status=HTTPStatus.NOT_FOUND)
         queued = {"name": "RELAY ONE", "online": False, "status": "queued"}
         assert request(host, proof, first) == {"recipients": [queued]}
-        outbox = tmp_path / "role-runtime" / f"activity-inbox-notices-{CONFIG.client_id}-{CONFIG.guild_id}.sqlite3"
+        outbox = (
+            tmp_path
+            / "role-runtime"
+            / f"activity-inbox-notices-{CONFIG.client_id}-{CONFIG.guild_id}.sqlite3"
+        )
         with closing(sqlite3.connect(outbox)) as db:
             (item,) = db.execute(
                 "SELECT campaign, kind, record, recipient FROM notices WHERE kind = 'scene_invite'"
@@ -245,11 +338,15 @@ def test_scene_invite_is_private_and_joins_only_on_owner_acceptance(tmp_path):
         assert request(host, proof, first) == {"recipients": [sent | {"online": True}]}
         decision = {"id": issued["id"], "decision": "accept"}
         request(host, path + "/scene-invite-decision" + query, first, decision, HTTPStatus.CONFLICT)
-        request(host, path + "/scene-invite-decision" + query, outsider, decision, HTTPStatus.CONFLICT)
+        request(
+            host, path + "/scene-invite-decision" + query, outsider, decision, HTTPStatus.CONFLICT
+        )
         assert not request(host, path + query, first)["scene_invites"]
         assert not request(host, path + query, outsider).get("scene_invites")
         peer = request(host, path + query, second)
-        assert peer["scene_invites"] == [{"id": issued["id"], "room": room, "name": "Rehearsal Annex"}]
+        assert peer["scene_invites"] == [
+            {"id": issued["id"], "room": room, "name": "Rehearsal Annex"}
+        ]
         assert not next(row for row in peer["directory"]["rooms"] if row["id"] == room)["joined"]
 
     with role_activity(tmp_path, PILOT, bot_handler=True, decisions=True, inbox=True) as host:
@@ -263,8 +360,13 @@ def test_scene_invite_is_private_and_joins_only_on_owner_acceptance(tmp_path):
         saved = request(host, path + "/scene-invite-decision" + query, second, decision)
         assert saved == {"room": room, "decision": "accept"}
         assert request(host, path + "/scene-invite-decision" + query, second, decision) == saved
-        request(host, path + "/scene-invite-decision" + query, second,
-                decision | {"decision": "decline"}, HTTPStatus.CONFLICT)
+        request(
+            host,
+            path + "/scene-invite-decision" + query,
+            second,
+            decision | {"decision": "decline"},
+            HTTPStatus.CONFLICT,
+        )
         peer = request(host, path + query, second)
         assert not peer["scene_invites"]
         assert next(row for row in peer["directory"]["rooms"] if row["id"] == room)["joined"]
@@ -276,8 +378,11 @@ def local_pilot(host, label):
         pass
 
     def read(step="", data=None, *, key=None, status=HTTPStatus.OK):
-        headers = {"Origin": host["origin"], "Content-Type": "application/json",
-                   "Idempotency-Key": key or str(uuid4())}
+        headers = {
+            "Origin": host["origin"],
+            "Content-Type": "application/json",
+            "Idempotency-Key": key or str(uuid4()),
+        }
         body = None if data is None else json.dumps(data).encode("utf-8")
         request = Request(host["origin"] + "/api/player-setup" + step, body, headers)
         try:
@@ -298,7 +403,9 @@ def test_create_and_invite_without_discord_and_recover_after_restart(tmp_path):
     with role_activity(tmp_path, local=True) as host:
         owner = local_pilot(host, "Invited pilot")
         peer = local_pilot(host, "Other pilot")
-        invitee = next(row for row in owner()["scene_invite_targets"] if row["id"] == str(OTHER.user_id))
+        invitee = next(
+            row for row in owner()["scene_invite_targets"] if row["id"] == str(OTHER.user_id)
+        )
         draft = {"name": "Local Annex", "location": "hangar", "recipients": [invitee["id"]]}
         key = "synthetic-room-file"
         receipt = owner("/room-create", draft, key=key)
@@ -306,8 +413,11 @@ def test_create_and_invite_without_discord_and_recover_after_restart(tmp_path):
         assert invite["recipient"] == invitee["id"] and "dm_receipt" not in invite
         assert owner("/room-create", draft, key=key) == receipt
         owner("/room-create", draft | {"recipients": []}, key=key, status=HTTPStatus.CONFLICT)
-        owner("/room-create", draft | {"name": "Invalid Annex", "recipients": ["777777"]},
-              status=HTTPStatus.CONFLICT)
+        owner(
+            "/room-create",
+            draft | {"name": "Invalid Annex", "recipients": ["777777"]},
+            status=HTTPStatus.CONFLICT,
+        )
         assert "Invalid Annex" not in [row["name"] for row in owner()["directory"]["rooms"]]
         assert not owner()["scene_invites"]
         (pending,) = peer()["scene_invites"]
@@ -320,9 +430,13 @@ def test_create_and_invite_without_discord_and_recover_after_restart(tmp_path):
         owner("/scene-invite-decision", decision, status=HTTPStatus.CONFLICT)
         assert peer()["scene_invites"] == [pending]
         assert peer("/scene-invite-decision", decision)["room"] == receipt["room"]
-        assert next(row for row in peer()["directory"]["rooms"] if row["id"] == receipt["room"])["joined"]
+        assert next(row for row in peer()["directory"]["rooms"] if row["id"] == receipt["room"])[
+            "joined"
+        ]
         subsequent = owner("/room-create", {"name": "Second Annex", "location": "hangar"})
-        invitation = owner("/scene-invite", {"room": subsequent["room"], "recipient": invitee["id"]})
+        invitation = owner(
+            "/scene-invite", {"room": subsequent["room"], "recipient": invitee["id"]}
+        )
         assert "dm_receipt" not in invitation
         assert peer()["scene_invites"][0]["id"] == invitation["id"]
 
@@ -336,16 +450,29 @@ def test_pending_plays_in_two_scenes_keep_independent_rolls_and_choices(tmp_path
         return scene["keep"]
 
     def start(client, room, status=HTTPStatus.OK):
-        return client("/keep-start", {
-            "room": room, "confirmed": True, "context": "Hold position in this room.",
-            "character_revision": keep(client, room)["character_revision"],
-        }, status=status)
+        return client(
+            "/keep-start",
+            {
+                "room": room,
+                "confirmed": True,
+                "context": "Hold position in this room.",
+                "character_revision": keep(client, room)["character_revision"],
+            },
+            status=status,
+        )
 
     def respond(client, room, choice, answer, status=HTTPStatus.OK):
-        return client("/keep-choice", {
-            "room": room, "id": choice["id"], "revision": choice["revision"],
-            "role": choice["role"], "answer": answer,
-        }, status=status)
+        return client(
+            "/keep-choice",
+            {
+                "room": room,
+                "id": choice["id"],
+                "revision": choice["revision"],
+                "role": choice["role"],
+                "answer": answer,
+            },
+            status=status,
+        )
 
     def wait_for(client, room, kind):
         deadline = monotonic() + 15
@@ -356,7 +483,7 @@ def test_pending_plays_in_two_scenes_keep_independent_rolls_and_choices(tmp_path
                     return choice
                 if choice["kind"] == "tag_window":
                     respond(client, room, choice, {"options": ["pass"]})
-            sleep(.15)
+            sleep(0.15)
         raise AssertionError(f"{kind} never opened in the selected scene.")
 
     with role_activity(tmp_path, local=True, rolls=rolls) as host:
@@ -382,19 +509,30 @@ def test_pending_plays_in_two_scenes_keep_independent_rolls_and_choices(tmp_path
         assert first != second
         assert keep(pilot, room_a)["current"]["receipt"]["faces"] == [5, 6]
         assert keep(pilot, room_b)["current"]["receipt"]["faces"] == [6, 6]
-        respond(pilot, room_b, first_choice, {"flag": True, "text": "Wrong room."}, HTTPStatus.CONFLICT)
+        respond(
+            pilot, room_b, first_choice, {"flag": True, "text": "Wrong room."}, HTTPStatus.CONFLICT
+        )
         assert wait_for(pilot, room_a, "handler_keep") == first_choice
 
     with role_activity(tmp_path, local=True, rolls=rolls) as host:
         pilot = local_pilot(host, "Invited pilot")
         first_state = keep(pilot, room_a)
         second_state = keep(pilot, room_b)
-        assert first_state["current"]["id"] == first and first_state["current"]["receipt"]["faces"] == [5, 6]
-        assert second_state["current"]["id"] == second and second_state["current"]["receipt"]["faces"] == [6, 6]
+        assert first_state["current"]["id"] == first and first_state["current"]["receipt"][
+            "faces"
+        ] == [5, 6]
+        assert second_state["current"]["id"] == second and second_state["current"]["receipt"][
+            "faces"
+        ] == [6, 6]
         assert wait_for(pilot, room_a, "handler_keep") == first_choice
         assert wait_for(pilot, room_b, "actor_keep") == second_choice
         respond(pilot, room_b, second_choice, {"text": "Held the intake."})
-        respond(pilot, room_b, wait_for(pilot, room_b, "handler_keep"), {"flag": True, "text": "Intake secured."})
+        respond(
+            pilot,
+            room_b,
+            wait_for(pilot, room_b, "handler_keep"),
+            {"flag": True, "text": "Intake secured."},
+        )
         assert keep(pilot, room_b)["current"]["state"] == "complete"
         assert wait_for(pilot, room_a, "handler_keep") == first_choice
         respond(pilot, room_a, first_choice, {"flag": True, "text": "Relay secured."})

@@ -3,6 +3,10 @@
 import json
 
 import sqlalchemy as sa
+from consume_regrowth import KIND as PARTAKE
+from consume_regrowth import regrowth_answer, regrowth_operations
+from play_continuations import ACCOUNT, YES_NO, field, operation
+
 from girlframe.database import tables
 from girlframe.engine import m3_wyvern as wyvern
 from girlframe.engine.m2 import ChoiceAnswer, PlayInput, spend_heat
@@ -14,9 +18,6 @@ from girlframe.services.m3_sprite import SpriteService
 from girlframe.services.m3_wyvern import WyvernService
 from girlframe.services.m3_wyvern_combat import WyvernCombatService
 from girlframe.services.onboarding import WorkflowError
-
-from consume_regrowth import KIND as PARTAKE, regrowth_answer, regrowth_operations
-from play_continuations import ACCOUNT, YES_NO, field, operation
 
 ROUSE = "wyvern_rouse"
 ROUSE_COST = "wyvern_rouse_cost"
@@ -39,9 +40,7 @@ def available_heat(sheet):
 
 
 def heat_field(sheet):
-    return field(
-        "heat", "Heat to spend", [(str(n), str(n)) for n in available_heat(sheet)]
-    )
+    return field("heat", "Heat to spend", [(str(n), str(n)) for n in available_heat(sheet)])
 
 
 def card(identity, revision, action, title, forms, description=None):
@@ -75,9 +74,7 @@ def choice_fields(data):
                 )
             )
     if data["heat"]:
-        fields.append(
-            field("heat", "Heat to gain", [(str(x), str(x)) for x in range(1, 11)])
-        )
+        fields.append(field("heat", "Heat to gain", [(str(x), str(x)) for x in range(1, 11)]))
     return [*fields, ACCOUNT]
 
 
@@ -98,13 +95,9 @@ class BattlefieldFrameWork:
             except WorkflowError:
                 return []
             sheet = state.sheets.get(str(viewer.user_id))
-            connections = (
-                self.neural._tasks(c, viewer) if state.neural_connections else []
-            )
+            connections = self.neural._tasks(c, viewer) if state.neural_connections else []
             connected = {
-                value.id
-                for value in state.neural_connections
-                if value.cast.channel == self.channel
+                value.id for value in state.neural_connections if value.cast.channel == self.channel
             }
         cards = []
         for task in connections:
@@ -114,11 +107,7 @@ class BattlefieldFrameWork:
             phase = saved["connection"]["phase"]
             forms = []
             if saved["can_act"]:
-                title = (
-                    "Confirm contact"
-                    if phase == "target"
-                    else "Review the spinal connection"
-                )
+                title = "Confirm contact" if phase == "target" else "Review the spinal connection"
                 forms = [
                     operation(
                         "decide",
@@ -172,10 +161,7 @@ class BattlefieldFrameWork:
                                     field(
                                         "target",
                                         "Battery",
-                                        [
-                                            (x["token"], x["label"])
-                                            for x in preview["targets"]
-                                        ],
+                                        [(x["token"], x["label"]) for x in preview["targets"]],
                                     ),
                                     field(
                                         "account",
@@ -191,9 +177,7 @@ class BattlefieldFrameWork:
             with self.game.store.engine.connect() as c:
                 scene = self.game.scene(c, self.channel)
                 lock = self.game.lock(c, self.channel)
-                reserved = (
-                    self.game.action(c, lock["action_id"]) if scene and lock else None
-                )
+                reserved = self.game.action(c, lock["action_id"]) if scene and lock else None
             if (
                 reserved
                 and reserved["data"]["play"] == ROUSE
@@ -355,9 +339,7 @@ class BattlefieldFrameWork:
     def combat_operations(self, viewer, sheet, data):
         operations = []
         if data["can_release"]:
-            operations.append(
-                operation("release", "Release the pinned actor", [ACCOUNT])
-            )
+            operations.append(operation("release", "Release the pinned actor", [ACCOUNT]))
         if data["can_counter"] and sheet:
             blocked = {record.play for record in sheet.blocked_plays}
             if parent := data["counter"]["parent"]:
@@ -411,8 +393,7 @@ class BattlefieldFrameWork:
                 if (
                     choice is None
                     or choice.kind != action
-                    or self.game.action(c, choice.action_id)["channel_id"]
-                    != str(self.channel)
+                    or self.game.action(c, choice.action_id)["channel_id"] != str(self.channel)
                 ):
                     raise WorkflowError("Open your assigned Battlefield decision.")
             if action == INTERCEPT and op == "intercept":
@@ -432,9 +413,7 @@ class BattlefieldFrameWork:
                 response = regrowth_answer(op, values)
             elif op == "cost":
                 picked = tuple(
-                    values[f"identity_{i}"]
-                    for i in range(2)
-                    if f"identity_{i}" in values
+                    values[f"identity_{i}"] for i in range(2) if f"identity_{i}" in values
                 )
                 mentors = {
                     name: values[f"mentor_{i}"]
@@ -453,17 +432,11 @@ class BattlefieldFrameWork:
         if action == "janus_start" and op == "connect":
             preview = battery_preview(self.game, viewer, self.channel)
             target = next(
-                (
-                    x["ref"]
-                    for x in preview.get("targets", ())
-                    if x["token"] == values["target"]
-                ),
+                (x["ref"] for x in preview.get("targets", ()) if x["token"] == values["target"]),
                 None,
             )
             if target is None:
-                raise WorkflowError(
-                    "Choose a battery HarpyEngine offers in this scene."
-                )
+                raise WorkflowError("Choose a battery HarpyEngine offers in this scene.")
             return self.neural.propose(
                 viewer,
                 key,
@@ -486,9 +459,7 @@ class BattlefieldFrameWork:
                     values["account"],
                 )
             if op == "unplug":
-                return self.neural.unplug(
-                    viewer, key, identity, revision, values["account"]
-                )
+                return self.neural.unplug(viewer, key, identity, revision, values["account"])
         if action == "wyvern_use" and op == "use":
             use = json.loads(values["use"])
             return self.wyvern.use_roused(
@@ -498,9 +469,7 @@ class BattlefieldFrameWork:
                 revision,
                 ActorRef.model_validate(use["target"]),
                 use["kind"],
-                **{
-                    k: use[k] for k in ("asset", "target_frame", "incoming") if k in use
-                },
+                **{k: use[k] for k in ("asset", "target_frame", "incoming") if k in use},
             )
         if action == "wyvern_start" and op == "start":
             return self.game.begin(
@@ -520,22 +489,16 @@ class BattlefieldFrameWork:
             with self.game.store.engine.connect() as c:
                 self.game.authorize(c, viewer, game=False)
                 saved = self.game.action(c, child)
-                native_source = saved["data"].get("wyvern_pin_response") or saved[
-                    "data"
-                ].get("wyvern_replacement")
+                native_source = saved["data"].get("wyvern_pin_response") or saved["data"].get(
+                    "wyvern_replacement"
+                )
                 valid = (
-                    saved["data"]["play"] == ROUSE
-                    and action == "wyvern_roll"
-                    and identity == child
+                    saved["data"]["play"] == ROUSE and action == "wyvern_roll" and identity == child
                 ) or (
-                    native_source
-                    and action == "wyvern_source"
-                    and native_source["id"] == identity
+                    native_source and action == "wyvern_source" and native_source["id"] == identity
                 )
                 if not valid or str(saved["channel_id"]) != str(self.channel):
-                    raise WorkflowError(
-                        "Roll from the actual original Battlefield Play."
-                    )
+                    raise WorkflowError("Roll from the actual original Battlefield Play.")
             return self.game.roll(viewer, key, child)
         if action == "wyvern_source":
             saved = self.combat.view(viewer, identity)
@@ -543,26 +506,16 @@ class BattlefieldFrameWork:
             if counter and counter["channel"] != self.channel:
                 raise WorkflowError("Open the original Wyvern scene.")
             if op == "release":
-                return self.combat.release_pin(
-                    viewer, key, identity, revision, values["account"]
-                )
-            if (
-                op == "counter"
-                and counter
-                and (saved["can_counter"] or saved["can_resume"])
-            ):
+                return self.combat.release_pin(viewer, key, identity, revision, values["account"])
+            if op == "counter" and counter and (saved["can_counter"] or saved["can_resume"]):
                 if values["play"] not in COUNTER_PLAYS:
-                    raise WorkflowError(
-                        "Choose a supported response to the original source."
-                    )
+                    raise WorkflowError("Choose a supported response to the original source.")
                 target = None
                 if saved["kind"] == "pin":
                     with self.game.store.engine.connect() as c:
                         state = load_state(c, self.game.store.campaign_id)
                         target = next(
-                            x.actor
-                            for x in wyvern.records(state, wyvern.Pin)
-                            if x.id == identity
+                            x.actor for x in wyvern.records(state, wyvern.Pin) if x.id == identity
                         )
                 return self.game.begin(
                     viewer,

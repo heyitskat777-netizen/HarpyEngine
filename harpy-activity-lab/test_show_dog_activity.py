@@ -2,16 +2,16 @@
 
 import json
 
+import mission_lab  # noqa: F401
 import pytest
-from girlframe.engine.m3_show_dog import RULE
-from girlframe.services.m2_game import GameService
-from girlframe.services.onboarding import WorkflowError
+from off_duty_followups import OffDutyFollowups
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger_fixture
 from test_show_dog import setup
 
-import mission_lab  # noqa: F401
-from off_duty_followups import OffDutyFollowups
+from girlframe.engine.m3_show_dog import RULE
+from girlframe.services.m2_game import GameService
+from girlframe.services.onboarding import WorkflowError
 
 ledger = ledger_fixture
 
@@ -27,7 +27,10 @@ def submit(scope, name, values):
     return {key: state[key] for key in ("period", "revision", "game_revision")} | {
         "action": "show_dog",
         "answer": {
-            "id": work["id"], "work_revision": work["revision"], "operation": name, "values": values,
+            "id": work["id"],
+            "work_revision": work["revision"],
+            "operation": name,
+            "values": values,
         },
     }
 
@@ -47,29 +50,47 @@ def test_show_dog_off_duty_and_private_correspondence_survive_reopen(ledger, tmp
     assert RULE == "girl.princess.show-dog"
     assert not any(row["id"] == identity for row in (desk.view(OTHER) or {}).get("work", []))
     addressed = "PRIVATE_ADDRESS: Meet me after the appearance."
-    target = select(own, "message", "target", lambda value: json.loads(value)["entity"] == str(OTHER.user_id))
-    message = submit(own, "message", {
-        "target": target, "account": "I actually deliver the message.", "message": addressed,
-    })
+    target = select(
+        own, "message", "target", lambda value: json.loads(value)["entity"] == str(OTHER.user_id)
+    )
+    message = submit(
+        own,
+        "message",
+        {
+            "target": target,
+            "account": "I actually deliver the message.",
+            "message": addressed,
+        },
+    )
     with pytest.raises(WorkflowError):
         desk.perform(OTHER, "wrong-appearance-owner", message)
     saved = desk.perform(PLAYER, "actual-message", message)
     ledger.engine.dispose()
     fresh = GameService(ledger, dice=game.dice)
     reopened = OffDutyFollowups(fresh)
-    risk = submit(card(reopened, ADMIN, identity), "risk", {
-        "punish": "no", "account": "The actual appearance raises no disciplinary issue.",
-    })
+    risk = submit(
+        card(reopened, ADMIN, identity),
+        "risk",
+        {
+            "punish": "no",
+            "account": "The actual appearance raises no disciplinary issue.",
+        },
+    )
     assert addressed not in json.dumps(reopened.show_dog.correspondence(ADMIN))
     assert addressed in json.dumps(reopened.show_dog.correspondence(OTHER))
     with pytest.raises(WorkflowError):
         reopened.perform(OTHER, "wrong-adjudicator", risk)
     reopened.perform(ADMIN, "original-handler-risk", risk)
     remaining = card(reopened, PLAYER, identity)
-    second = submit(remaining, "second", {
-        "npc": select(remaining, "second", "npc"), "desire": "emulate",
-        "account": "The actual witness wants to imitate me.",
-    })
+    second = submit(
+        remaining,
+        "second",
+        {
+            "npc": select(remaining, "second", "npc"),
+            "desire": "emulate",
+            "account": "The actual witness wants to imitate me.",
+        },
+    )
     reopened.perform(PLAYER, "actual-interest", second)
     assert control.view(PLAYER, identity)["complete"]
     assert reopened.perform(PLAYER, "actual-message", message) == saved

@@ -26,10 +26,11 @@ def special_form(strain, viewer, source, channels):
         if data["can_arm"]:
             return (
                 lambda _: [CONFIRM],
-                lambda actor, key, _: service.arm(
-                    actor, key, identity, data["revision"]
+                lambda actor, key, _: service.arm(actor, key, identity, data["revision"]),
+                (
+                    "Arm the shortage for the next actual Cadre battle. HarpyEngine will "
+                    "assign the loss when that battle is declared."
                 ),
-                "Arm the shortage for the next actual Cadre battle. HarpyEngine will assign the loss when that battle is declared.",
             )
     elif rule == ENTRY:
         service = VoidFrameEntryService(strain)
@@ -45,7 +46,10 @@ def special_form(strain, viewer, source, channels):
                     data["game_revision"],
                     values["account"],
                 ),
-                "Record the circumstances. HarpyEngine picks the original pilot once and binds the obligation to its next actual Frame entry.",
+                (
+                    "Record the circumstances. HarpyEngine picks the original pilot once and "
+                    "binds the obligation to its next actual Frame entry."
+                ),
             )
     elif rule == PRISONER:
         service = PrisonerEscapeService(strain)
@@ -74,32 +78,27 @@ def special_form(strain, viewer, source, channels):
                     Field(
                         "prisoner",
                         "Actual held prisoner",
-                        tuple(
-                            (token, row["label"]) for token, row in candidates.items()
-                        ),
+                        tuple((token, row["label"]) for token, row in candidates.items()),
                     ),
                     Field("channel", "Bound scene", channels),
                     ACCOUNT,
                 ],
                 start,
-                "Record the breakout attempt. The prisoner’s controller keeps ownership of its movement.",
+                (
+                    "Record the breakout attempt. The prisoner’s controller keeps ownership of "
+                    "its movement."
+                ),
             )
         if data["type"] != "start":
             return prisoner_outcome(service, data)
     elif rule == PATROL:
         return patrol_form(PatrolHarpyService(strain), viewer, identity)
-    raise WorkflowError(
-        "This Strain effect is waiting for its assigned native continuation."
-    )
+    raise WorkflowError("This Strain effect is waiting for its assigned native continuation.")
 
 
 def prisoner_outcome(service, data):
     held = {"held:" + row["id"]: row for row in data["grips"]}
-    failed = (
-        {"failed:" + row["id"]: row for row in data["movements"]}
-        if data["can_fail"]
-        else {}
-    )
+    failed = {"failed:" + row["id"]: row for row in data["movements"]} if data["can_fail"] else {}
     options = tuple((key, row["label"]) for key, row in (held | failed).items())
     if not options:
         raise WorkflowError(
@@ -143,20 +142,18 @@ def patrol_form(service, viewer, identity):
             lambda actor, key, _: service.roll(
                 actor, key, identity, data["revision"], data["game_revision"]
             ),
-            "Roll the additional sighting die once. HarpyEngine records the result for the original observer.",
+            (
+                "Roll the additional sighting die once. HarpyEngine records the result for the "
+                "original observer."
+            ),
         )
-    if not (
-        data["can_stage"] and data["observers"] and data["harpies"] and data["channels"]
-    ):
+    if not (data["can_stage"] and data["observers"] and data["harpies"] and data["channels"]):
         raise WorkflowError(
-            "An actual joined patrol pilot, a Harpy with an established body, and a source scene are required."
+            "An actual joined patrol pilot, a Harpy with an established body, and a source "
+            "scene are required."
         )
-    observers = {
-        ActorRef.model_validate(row["ref"]).token: row for row in data["observers"]
-    }
-    harpies = {
-        ActorRef.model_validate(row["ref"]).token: row for row in data["harpies"]
-    }
+    observers = {ActorRef.model_validate(row["ref"]).token: row for row in data["observers"]}
+    harpies = {ActorRef.model_validate(row["ref"]).token: row for row in data["harpies"]}
 
     def stage(actor, key, values):
         return service.stage(

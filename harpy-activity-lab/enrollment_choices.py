@@ -2,12 +2,13 @@
 
 import json
 
+from rulebook_text import DESIRES, STANDARDS
+
 from girlframe.engine.creation_catalog import CATALOG
 from girlframe.engine.creation_details import (
     DesireChoice,
     StandardChoice,
 )
-from rulebook_text import DESIRES, STANDARDS
 from girlframe.engine.handler_setup import PilotRef
 from girlframe.engine.pair_assets import PairNames
 from girlframe.engine.shared_setup import AM_ROLES, CallsignChoice, CourtChoice
@@ -49,23 +50,15 @@ class EnrollmentChoices:
         work = []
         for row in shared:
             owner = row["source_id"] if row["kind"] == "court" else row["target_id"]
-            if (
-                owner not in active
-                and not row["stale"]
-                and row["state"] in ("accepted", "pending")
-            ):
-                work.append(
-                    self.request(row, "shared", row["kind"], "target_id", viewer)
-                )
+            if owner not in active and not row["stale"] and row["state"] in ("accepted", "pending"):
+                work.append(self.request(row, "shared", row["kind"], "target_id", viewer))
         for row in coordinated:
             if (
                 row["owner_id"] not in active
                 and not row["stale"]
                 and row["state"] in ("accepted", "pending")
             ):
-                work.append(
-                    self.request(row, "coordination", row["role"], "owner_id", viewer)
-                )
+                work.append(self.request(row, "coordination", row["role"], "owner_id", viewer))
 
         current_requests = [
             item
@@ -131,10 +124,7 @@ class EnrollmentChoices:
                 continue
             if str(data["owner_id"]) not in active:
                 pairs.append(
-                    {
-                        k: data[k]
-                        for k in ("bond_id", "bond_revision", "names", "revision")
-                    }
+                    {k: data[k] for k in ("bond_id", "bond_revision", "names", "revision")}
                     | {"callsign": bond["counterpart"]}
                 )
 
@@ -144,8 +134,7 @@ class EnrollmentChoices:
                     "id": target,
                     "revision": row["revision"],
                     "callsign": row["callsign"],
-                    "newgirl": row["girl_playbook"] == "NEWGIRL"
-                    and target not in active,
+                    "newgirl": row["girl_playbook"] == "NEWGIRL" and target not in active,
                 }
                 for target, row in roster.items()
             ]
@@ -178,20 +167,14 @@ class EnrollmentChoices:
             "incoming": incoming,
             "state": state,
             "choice": json.loads(row["choice_json"]),
-            "decisions": ["accept", "decline"]
-            if incoming and state == "pending"
-            else ["withdraw"],
+            "decisions": ["accept", "decline"] if incoming and state == "pending" else ["withdraw"],
         }
 
     def perform(self, viewer, key, data):
         op = data.get("operation")
         if op == "decide":
-            service = {"shared": self.shared, "coordination": self.coordination}[
-                data["family"]
-            ]
-            return service.decide(
-                viewer, key, data["id"], data["revision"], data["decision"]
-            )
+            service = {"shared": self.shared, "coordination": self.coordination}[data["family"]]
+            return service.decide(viewer, key, data["id"], data["revision"], data["decision"])
         if op == "mentor":
             return self.handler.mentor(
                 viewer,

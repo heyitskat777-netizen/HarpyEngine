@@ -173,9 +173,9 @@ def test_easily_broken_repeated_marker_owns_replacement_and_tracks_original_loss
     assert actor.token in orders.menu(ADMIN, 900, REBEL)["people"]
     assert actor.token not in orders.menu(OTHER, 900, marker)["people"]
     intimacy = AncillaryIntimacyService(game)
-    source = intimacy.offer(
-        PLAYER, "bond-source", 900, actor, state(game).revision, marker.token
-    )["id"]
+    source = intimacy.offer(PLAYER, "bond-source", 900, actor, state(game).revision, marker.token)[
+        "id"
+    ]
     game.dice = Dice((6, 6))
     for viewer, choice in ((OTHER, "yes"), (ADMIN, "yes"), (PLAYER, "roll")):
         intimacy.act(viewer, choice + str(viewer.user_id), source, state(game).revision, choice)

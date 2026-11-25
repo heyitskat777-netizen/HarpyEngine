@@ -63,8 +63,12 @@ def pending(state: GameState, identity: str) -> bool:
 def _issued(state: GameState, identity: str, order: str) -> dict[str, str]:
     fact = next(
         (
-            x for x in state.facts if x.get("kind") == KIND and x.get("id") == identity
-            and x.get("order") == order and not x.get("decided")
+            x
+            for x in state.facts
+            if x.get("kind") == KIND
+            and x.get("id") == identity
+            and x.get("order") == order
+            and not x.get("decided")
         ),
         None,
     )

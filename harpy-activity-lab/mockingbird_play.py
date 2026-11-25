@@ -2,17 +2,17 @@
 
 from dataclasses import asdict
 
+from girlframe.discord_adapter.m2_forms import Field
 from girlframe.discord_adapter.m2_ui import menu, text
 from girlframe.discord_adapter.m3_mockingbird_plays import LABELS
-from girlframe.discord_adapter.m2_forms import Field
 from girlframe.engine.m2 import PlayInput
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_mockingbird import require_departure
 from girlframe.engine.m3_mockingbird_state import PERSON
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_mockingbird_plays import MockingbirdService
 from girlframe.services.onboarding import WorkflowError
-from girlframe.engine.m3_mockingbird import require_departure
 
 PERSON_CHOICES = (
     "mockingbird_person_capabilities",
@@ -66,9 +66,7 @@ def person_start(game, viewer, state, channel):
     except WorkflowError as error:
         return {"reason": str(error)}
     if PERSON not in view["plays"]:
-        return {
-            "reason": "HarpyEngine has no available Bad at Being a Person rule for this pilot."
-        }
+        return {"reason": "HarpyEngine has no available Bad at Being a Person rule for this pilot."}
     ready = [
         trigger
         for trigger in state.mockingbird.triggers
@@ -78,13 +76,9 @@ def person_start(game, viewer, state, channel):
         and trigger.state == "ready"
     ]
     if ready:
-        return {
-            "sources": [{"id": record.id, "label": record.account} for record in ready]
-        }
+        return {"sources": [{"id": record.id, "label": record.account} for record in ready]}
     return {
-        "counterparts": [
-            {"id": row["token"], "label": row["label"]} for row in view["targets"]
-        ],
+        "counterparts": [{"id": row["token"], "label": row["label"]} for row in view["targets"]],
         "reason": None
         if view["targets"]
         else "Another eligible conversation participant is required.",
@@ -97,15 +91,10 @@ def start_person(game, viewer, key, channel, data):
         state = load_state(c, game.store.campaign_id)
         actor = current_ref(state, viewer.user_id)
     target = data["target"]
-    if (
-        isinstance(target, list)
-        and target
-        and all(isinstance(item, str) for item in target)
-    ):
+    if isinstance(target, list) and target and all(isinstance(item, str) for item in target):
         projection = service.preview(viewer, channel, actor)
         targets = {
-            row["token"]: ActorRef.model_validate(row["ref"])
-            for row in projection["targets"]
+            row["token"]: ActorRef.model_validate(row["ref"]) for row in projection["targets"]
         }
         if not set(target) <= targets.keys():
             raise WorkflowError("Choose actual counterparts in this scene.")
@@ -158,8 +147,7 @@ def conversation_work(game, viewer, state, conversation):
             {
                 "id": conversation.id + ":" + token,
                 "revision": state.revision,
-                "instruction": "Conversation departure · "
-                + data["party_labels"][token],
+                "instruction": "Conversation departure · " + data["party_labels"][token],
                 "action": "mockingbird_release",
                 "fields": [
                     {
@@ -194,16 +182,12 @@ def conversation_work(game, viewer, state, conversation):
 
 def complete_conversation(game, viewer, key, root, state, identity, action, answer):
     service = MockingbirdService(game)
-    entry = next(
-        (item for item in state.mockingbird.conversations if item.action == root), None
-    )
+    entry = next((item for item in state.mockingbird.conversations if item.action == root), None)
     if entry is None:
         raise WorkflowError("Open the original conversation.")
     data = service.get(viewer, entry.id)
     if action == "mockingbird_end" and entry.id == identity and answer == {}:
-        return service.end(
-            viewer, key, entry.id, ActorRef.model_validate(data["current_actor"])
-        )
+        return service.end(viewer, key, entry.id, ActorRef.model_validate(data["current_actor"]))
     if (
         action == "mockingbird_release"
         and isinstance(answer, dict)
@@ -218,7 +202,5 @@ def complete_conversation(game, viewer, key, root, state, identity, action, answ
             None,
         )
         if party:
-            return service.release(
-                viewer, key, entry.id, party, answer["allow"] == "yes"
-            )
+            return service.release(viewer, key, entry.id, party, answer["allow"] == "yes")
     raise ValueError("Choose your role's conversation response.")

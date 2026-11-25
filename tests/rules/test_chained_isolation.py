@@ -148,12 +148,22 @@ def test_isolation_blocks_real_quality_time_bond_and_keeps_original_alternative_
             orders.get(OTHER, item.identity)
         with pytest.raises(WorkflowError, match="Use physical movement"):
             orders.act(
-                PLAYER, "claim-follow", item.identity, state(game).revision, "follow",
+                PLAYER,
+                "claim-follow",
+                item.identity,
+                state(game).revision,
+                "follow",
                 account="I am there.",
             )
         assert pending(state(game), work)
         movement.move(
-            PLAYER, "back", state(game).revision, 900, chained, (0, 4), frame=True,
+            PLAYER,
+            "back",
+            state(game).revision,
+            900,
+            chained,
+            (0, 4),
+            frame=True,
             account="I pilot back to the Handler's square.",
         )
         request = placement.propose(

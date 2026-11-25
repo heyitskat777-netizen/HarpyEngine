@@ -3,7 +3,27 @@
 import json
 from types import SimpleNamespace
 
+import mission_lab  # noqa: F401
 import pytest
+from ai_native_plays import ActivityNativePlays
+from handler_award_scenario import ordinary_pr_award
+from handler_playbook import HandlerPlaybook
+from native_scene_forms import HANDLER_WARP, TRACKER_MOMENT
+from off_duty_followups import OffDutyFollowups
+from specialist_scene import SpecialistScene
+from test_cast_service import change
+from test_contaminant_zone import acquire, quarantine_native
+from test_contaminant_zone import setup as zone_setup
+from test_doctor_npc_nanobot import roll_nanobot
+from test_doctor_npc_nanobot import setup as legacy_doctor
+from test_enforcer_requisitions import approved
+from test_identity_specialists import option, popup, respond, scoped
+from test_ledger import ADMIN, OTHER, PLAYER
+from test_ledger import ledger as ledger_fixture
+from test_m2_game import state, tick
+from test_strain_service import D6
+from test_tracker_implants import native_acquire
+
 from girlframe.engine import m3_tracker_implants
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_handler_advancements import awards
@@ -18,26 +38,6 @@ from girlframe.services.m3_strain import StrainService
 from girlframe.services.m3_tracker_implants import TrackerService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.p1_facilitator import FacilitatorService
-from handler_award_scenario import ordinary_pr_award
-from test_cast_service import change
-from test_contaminant_zone import acquire, quarantine_native
-from test_contaminant_zone import setup as zone_setup
-from test_doctor_npc_nanobot import roll_nanobot
-from test_doctor_npc_nanobot import setup as legacy_doctor
-from test_enforcer_requisitions import approved
-from test_ledger import ADMIN, OTHER, PLAYER
-from test_ledger import ledger as ledger_fixture
-from test_m2_game import state, tick
-from test_strain_service import D6
-from test_tracker_implants import native_acquire
-
-import mission_lab  # noqa: F401
-from ai_native_plays import ActivityNativePlays
-from handler_playbook import HandlerPlaybook
-from native_scene_forms import HANDLER_WARP, TRACKER_MOMENT
-from off_duty_followups import OffDutyFollowups
-from specialist_scene import SpecialistScene
-from test_identity_specialists import option, popup, respond, scoped
 
 ledger = ledger_fixture
 CHANNEL = 900
@@ -56,12 +56,17 @@ def book_for(game):
 
 def options(game, handler):
     setup = SimpleNamespace(
-        game=game, handler=ADMIN, play_registry=load_registry(), handler_playbook=book_for(game),
+        game=game,
+        handler=ADMIN,
+        play_registry=load_registry(),
+        handler_playbook=book_for(game),
         handler_rooms=lambda: {CHANNEL: ROOM},
     )
     with game.store.engine.connect() as connection:
         return ActivityNativePlays(setup, None)(
-            connection, game.scene(connection, CHANNEL), handler,
+            connection,
+            game.scene(connection, CHANNEL),
+            handler,
         )
 
 
@@ -70,20 +75,35 @@ def action(form, operation, values):
 
 
 def effect(book, key, grant, play, fields, *, viewer=ADMIN):
-    return book.perform(viewer, key, "handler-play-submit", {
-        "id": grant["id"], "revision": grant["game_revision"], "play": play,
-        "account": "I carry out the actual original effect.", "detail": "", "stakes": "",
-        "fields": fields,
-    })
+    return book.perform(
+        viewer,
+        key,
+        "handler-play-submit",
+        {
+            "id": grant["id"],
+            "revision": grant["game_revision"],
+            "play": play,
+            "account": "I carry out the actual original effect.",
+            "detail": "",
+            "stakes": "",
+            "fields": fields,
+        },
+    )
 
 
-def test_tracker_form_reopens_original_grant_and_keeps_moment_private(ledger, tmp_path, monkeypatch):
+def test_tracker_form_reopens_original_grant_and_keeps_moment_private(
+    ledger, tmp_path, monkeypatch
+):
     game, _, _ = ordinary_pr_award(ledger, tmp_path, monkeypatch)
     approved(ledger, game, tmp_path, monkeypatch, extra=(ORDINARY, m3_tracker_implants.RULE))
     approval = ledger.policy.m3_approval
-    ledger.policy = ledger.policy.model_copy(update={
-        "m3_approval": approval.model_copy(update={"subsystems": approval.subsystems | {"world", "plays"}}),
-    })
+    ledger.policy = ledger.policy.model_copy(
+        update={
+            "m3_approval": approval.model_copy(
+                update={"subsystems": approval.subsystems | {"world", "plays"}}
+            ),
+        }
+    )
     handler = join_handler(ledger, game)
     tracker = TrackerService(ledger)
     held = next(row for row in awards(state(game)) if row.phase == "held")
@@ -91,7 +111,11 @@ def test_tracker_form_reopens_original_grant_and_keeps_moment_private(ledger, tm
     original = m3_tracker_implants.acquisitions(state(game))[0]
     implant = original.implants[0]
     tracker.record_initial_presence(
-        ADMIN, "real-handler-position", original.id, state(game).revision, implant.id,
+        ADMIN,
+        "real-handler-position",
+        original.id,
+        state(game).revision,
+        implant.id,
         "My body is initially present here.",
     )
     native = SpecialistScene(game, CHANNEL)
@@ -115,11 +139,20 @@ def test_tracker_form_reopens_original_grant_and_keeps_moment_private(ledger, tm
         ledger.engine.dispose()
         fresh = GameService(ledger)
         offer = options(fresh, handler)
-        assert any(row["destination"] == "handler_effect" and row["control"] == prepared["id"]
-                   for row in offer)
+        assert any(
+            row["destination"] == "handler_effect" and row["control"] == prepared["id"]
+            for row in offer
+        )
         book = book_for(fresh)
-        first = effect(book, play, prepared, prepared["handler_effect"], {"target": implant.actor.token})
-        assert effect(book, play, prepared, prepared["handler_effect"], {"target": implant.actor.token}) == first
+        first = effect(
+            book, play, prepared, prepared["handler_effect"], {"target": implant.actor.token}
+        )
+        assert (
+            effect(
+                book, play, prepared, prepared["handler_effect"], {"target": implant.actor.token}
+            )
+            == first
+        )
         assert native.perform(ADMIN, "prepare-" + play, payload) == prepared
     book = book_for(fresh)
     assert book.service.notice(ADMIN, prepared["id"])["detail"] == moment
@@ -127,7 +160,9 @@ def test_tracker_form_reopens_original_grant_and_keeps_moment_private(ledger, tm
         assert moment not in json.dumps(book.notices(viewer))
 
 
-def test_zone_warp_prepares_native_scene_effect_and_rejects_a_foreign_cell(ledger, tmp_path, monkeypatch):
+def test_zone_warp_prepares_native_scene_effect_and_rejects_a_foreign_cell(
+    ledger, tmp_path, monkeypatch
+):
     game, control, _, _ = zone_setup(ledger, tmp_path, monkeypatch)
     handler = join_handler(ledger, game)
     strain = StrainService(OffDutyService(MissionService(ledger)), dice=D6(1))
@@ -145,8 +180,10 @@ def test_zone_warp_prepares_native_scene_effect_and_rejects_a_foreign_cell(ledge
     prepared = native.perform(ADMIN, "prepare-warp", payload)
     ledger.engine.dispose()
     fresh = GameService(ledger)
-    assert any(row["destination"] == "handler_effect" and row["control"] == prepared["id"]
-               for row in options(fresh, handler))
+    assert any(
+        row["destination"] == "handler_effect" and row["control"] == prepared["id"]
+        for row in options(fresh, handler)
+    )
     book = book_for(fresh)
     play = prepared["handler_effect"]
     fields = {"cell": "9,9", "feature": "Boundary", "description": "The ground forms a spiral."}
@@ -159,7 +196,9 @@ def test_zone_warp_prepares_native_scene_effect_and_rejects_a_foreign_cell(ledge
     assert native.perform(ADMIN, "prepare-warp", payload) == prepared
 
 
-def test_missing_npc_resource_only_goes_to_facilitator_after_owner_files_it(ledger, tmp_path, monkeypatch):
+def test_missing_npc_resource_only_goes_to_facilitator_after_owner_files_it(
+    ledger, tmp_path, monkeypatch
+):
     game, worker, gateway, patient, _ = legacy_doctor(ledger, tmp_path, monkeypatch)
     review = FacilitatorService(game)
     review.configure(ADMIN, "actual-facilitator", "user", OTHER.user_id)

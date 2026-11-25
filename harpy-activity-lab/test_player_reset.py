@@ -13,9 +13,7 @@ from test_artwork_activity import (
 
 def test_approved_sheet_reset_archives_owner_and_reopens_fresh_enrollment(tmp_path):
     with offline_activity(tmp_path, "--bound-roster") as server:
-        pilot, peer, handler = (
-            sign_in(server, name) for name in ("invited", "other", "handler")
-        )
+        pilot, peer, handler = (sign_in(server, name) for name in ("invited", "other", "handler"))
         for auth, callsign in ((pilot, "LATCH"), (peer, "ECHO")):
             setup_action(server, auth, "profile", {"revision": 0, "callsign": callsign})
         activate_recruit(server, pilot, peer, keep_callsign=True)
@@ -38,10 +36,7 @@ def test_approved_sheet_reset_archives_owner_and_reopens_fresh_enrollment(tmp_pa
         )
         setup_action(server, peer, "purge-sheet", payload, HTTPStatus.CONFLICT)
         setup_action(server, handler, "purge-sheet", payload, HTTPStatus.FORBIDDEN)
-        assert (
-            request(server, "/api/player-setup", pilot)["sheet_reset"]
-            == active["sheet_reset"]
-        )
+        assert request(server, "/api/player-setup", pilot)["sheet_reset"] == active["sheet_reset"]
         receipt = setup_action(server, pilot, "purge-sheet", payload)
         assert receipt["archive_id"]
         reopened = sign_in(server, "invited")
@@ -61,10 +56,7 @@ def test_approved_sheet_reset_archives_owner_and_reopens_fresh_enrollment(tmp_pa
         new_draft = request(server, "/api/player-setup", reopened)
         assert new_draft["callsign"] == "LATCH-2"
         assert new_draft["stage"] == "draft"
-        assert (
-            not new_draft["draft"]["girl_assets"]
-            and not new_draft["draft"]["frame_assets"]
-        )
+        assert not new_draft["draft"]["girl_assets"] and not new_draft["draft"]["frame_assets"]
         status = request(server, "/api/player-setup", handler)["career_status"][0]
         assert status["character"] != payload["character"]
         setup_action(
