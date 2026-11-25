@@ -16,6 +16,7 @@ from girlframe.engine.handler_setup import PilotRef
 from girlframe.engine.m2 import PLAY_IDS, ReleaseApproval
 from girlframe.engine.m2_registry import REGISTRY, registry_digest
 from girlframe.engine.playbooks import FRAME_TYPES, GIRL_TYPES, canonical_frame
+from girlframe.services.activity_timing import _snowflake
 from girlframe.services.bonds import BondService
 from girlframe.services.creation import CreationService
 from girlframe.services.creation_review import CreationReviewService
@@ -1238,6 +1239,9 @@ class PlayerSetup:
         bond_target = None
         if not self.bound_roster:
             bond_target = self.bonds.prepare(viewer, peer)
+        draft = progress.draft.model_dump(mode="json")
+        for entry in draft["prior_missions"]:
+            entry["user_id"] = str(entry["user_id"])
         return {
             "stage": "draft",
             "directory": directory,
@@ -1245,7 +1249,7 @@ class PlayerSetup:
             "callsign": profile["callsign"],
             "revision": progress.revision,
             "character_revision": progress.character_revision,
-            "draft": progress.draft.model_dump(mode="json"),
+            "draft": draft,
             "options": {
                 **options,
                 "girl_assets": CATALOG[options["girl"]]["assets"],
@@ -1617,6 +1621,16 @@ class PlayerSetup:
             fields = data["draft"]
             if not fields.keys() <= OWNER_CREATION_FIELDS:
                 raise ValueError("Only owner-controlled starting choices can be saved.")
+            if isinstance(history := fields.get("prior_missions"), list):
+                # Discord IDs travel as text in the Activity. The engine still
+                # checks exact integer identities against the current Cadre.
+                adapted = []
+                for entry in history:
+                    identity = entry.get("user_id") if isinstance(entry, dict) else None
+                    if isinstance(identity, str):
+                        entry = entry | {"user_id": _snowflake(identity)}
+                    adapted.append(entry)
+                fields = fields | {"prior_missions": adapted}
             current = self.creation.get(viewer).draft
             draft = CreationDraft.model_validate_json(
                 json.dumps(

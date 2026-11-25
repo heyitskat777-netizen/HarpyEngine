@@ -99,3 +99,61 @@ def test_enrollment_preserves_playbook_fields_and_their_actual_owners(tmp_path):
             row["kind"] == "vatgrown_handler"
             for row in handler_desk["creation_choices"]["proposals"]
         )
+
+
+def test_newgirl_prior_missions_round_trip_exact_discord_ids(tmp_path):
+    with offline_activity(tmp_path, "--bound-roster") as server:
+        pilot = sign_in(server, "invited")
+        peer = sign_in(server, "other")
+        for token, callsign, girl, frame in (
+            (pilot, "RAIL", "NEWGIRL", "CHANGELING"),
+            (peer, "GLASS", "MOCKINGBIRD", "JANUS"),
+        ):
+            setup_action(
+                server,
+                token,
+                "profile",
+                {
+                    "revision": 0,
+                    "callsign": callsign,
+                    "girl_playbook": girl,
+                    "frame_playbook": frame,
+                },
+            )
+        record = request(server, "/api/player-setup", pilot)
+        member = next(item for item in record["enrollment"]["cadre"] if item["callsign"] == "GLASS")
+        identity = member["id"]
+        assert int(float(identity)) != int(identity)
+        declaration = {"user_id": identity, "character_revision": member["revision"], "missions": 0}
+        dossier = {"frame_name": "試験 (Shiken)", "prior_missions": [declaration]}
+        payload = {
+            "revision": record["revision"],
+            "character_revision": record["character_revision"],
+            "draft": dossier,
+        }
+        for invalid_id, status in (
+            ("+" + identity, HTTPStatus.BAD_REQUEST),
+            (str(int(identity) + 1), HTTPStatus.CONFLICT),
+        ):
+            setup_action(
+                server,
+                pilot,
+                "build",
+                payload | {
+                    "draft": dossier | {
+                        "prior_missions": [declaration | {"user_id": invalid_id}],
+                    }
+                },
+                status,
+            )
+        receipt = setup_action(server, pilot, "build", payload)
+        assert receipt["status"] == "creation_in_progress"
+        assert receipt["revision"] == record["revision"] + 1
+
+    with offline_activity(tmp_path, "--bound-roster") as server:
+        reopened = sign_in(server, "invited")
+        restored = request(server, "/api/player-setup", reopened)
+        assert restored["revision"] == receipt["revision"]
+        assert restored["draft"]["frame_name"] == dossier["frame_name"]
+        assert restored["draft"]["prior_missions"] == [declaration]
+        assert restored["review"]["ready"] is False
