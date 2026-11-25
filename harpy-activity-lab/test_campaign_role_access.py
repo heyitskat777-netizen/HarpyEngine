@@ -9,10 +9,9 @@ from http import HTTPStatus
 from pathlib import Path
 from threading import Timer
 
-import pytest
-
 import discord_session
-
+import pytest
+from activity_paths import RUNTIME
 from discord_session import DiscordConfig, DiscordSessions, SignInError
 from discord_test_host import CONFIG, MANAGED_ROLES, TESTER_ROLE
 from test_artwork_activity import request
@@ -26,15 +25,16 @@ def test_role_is_the_only_access_gate_for_named_and_unlisted_accounts():
 
     def provider(path, *, token=None, form=None):
         if form is not None:
-            return {"access_token": "synthetic-role-user", "expires_in": 300,
-                    "scope": "identify guilds.members.read"}
+            return {
+                "access_token": "synthetic-role-user",
+                "expires_in": 300,
+                "scope": "identify guilds.members.read",
+            }
         if path == "/users/@me":
             return {"id": account}
         return {"user": {"id": account}, "roles": roles}
 
-    sessions = DiscordSessions(
-        replace(CONFIG, tester_role_ids=frozenset({TESTER_ROLE})), provider
-    )
+    sessions = DiscordSessions(replace(CONFIG, tester_role_ids=frozenset({TESTER_ROLE})), provider)
     sessions.campaign_roles_only = True
     sessions.managed_roles = lambda: frozenset(MANAGED_ROLES)
     result = sessions.exchange("synthetic", sessions.challenge(), CONFIG.guild_id)
@@ -43,7 +43,8 @@ def test_role_is_the_only_access_gate_for_named_and_unlisted_accounts():
     assert identity.discord_id == TESTER and identity.role == "campaign_member"
     assert not sessions.can_use_default(identity)
     roles = []
-    for account in (CONFIG.invited_user_id, CONFIG.handler_user_id):
+    for candidate in (CONFIG.invited_user_id, CONFIG.handler_user_id):
+        account = candidate
         with pytest.raises(SignInError, match="role assigned to a campaign"):
             sessions.exchange("synthetic", sessions.challenge(), CONFIG.guild_id)
     roles = [TESTER_ROLE]
@@ -57,8 +58,11 @@ def test_expiry_during_membership_check_does_not_issue_a_session(monkeypatch):
     def provider(path, *, token=None, form=None):
         nonlocal now
         if form is not None:
-            return {"access_token": "synthetic", "expires_in": 5,
-                    "scope": "identify guilds.members.read"}
+            return {
+                "access_token": "synthetic",
+                "expires_in": 5,
+                "scope": "identify guilds.members.read",
+            }
         if path == "/users/@me":
             return {"id": CONFIG.invited_user_id}
         now += 5
@@ -81,8 +85,11 @@ def test_signed_in_session_uses_one_discord_role_lookup_and_expires_after_an_hou
     def provider(path, *, token=None, form=None):
         calls.append(path)
         if form is not None:
-            return {"access_token": "synthetic", "expires_in": 7200,
-                    "scope": "identify guilds.members.read"}
+            return {
+                "access_token": "synthetic",
+                "expires_in": 7200,
+                "scope": "identify guilds.members.read",
+            }
         if path == "/users/@me":
             return {"id": TESTER}
         return {"roles": [MANAGED_ROLES[0]]}
@@ -93,7 +100,8 @@ def test_signed_in_session_uses_one_discord_role_lookup_and_expires_after_an_hou
     sessions.managed_roles = lambda: frozenset(MANAGED_ROLES)
     result = sessions.exchange("synthetic", sessions.challenge(), CONFIG.guild_id)
     header = "Bearer " + result["session"]
-    for now in (1000, 1021, 4599):
+    for check_at in (1000, 1021, 4599):
+        now = check_at
         assert sessions.resolve(header).role_ids == frozenset({MANAGED_ROLES[0]})
     now = 4600
     with pytest.raises(SignInError) as expired:
@@ -103,44 +111,51 @@ def test_signed_in_session_uses_one_discord_role_lookup_and_expires_after_an_hou
 
 
 def test_campaign_connection_requires_no_saved_persona_roster():
-    config = DiscordConfig.load({
-        "GIRLFRAME_ACTIVITY_DISCORD_CLIENT_ID": CONFIG.client_id,
-        "GIRLFRAME_ACTIVITY_DISCORD_CLIENT_SECRET": "synthetic-only",
-        "GIRLFRAME_ACTIVITY_DISCORD_GUILD_ID": CONFIG.guild_id,
-        "GIRLFRAME_ACTIVITY_DISCORD_INVITED_USER_ID": "obsolete-persona-config",
-        "GIRLFRAME_ACTIVITY_DISCORD_TESTER_ROLE_IDS": "obsolete-tester-config",
-    }, campaign_roles_only=True, allow_dm=True)
+    config = DiscordConfig.load(
+        {
+            "GIRLFRAME_ACTIVITY_DISCORD_CLIENT_ID": CONFIG.client_id,
+            "GIRLFRAME_ACTIVITY_DISCORD_CLIENT_SECRET": "synthetic-only",
+            "GIRLFRAME_ACTIVITY_DISCORD_GUILD_ID": CONFIG.guild_id,
+            "GIRLFRAME_ACTIVITY_DISCORD_INVITED_USER_ID": "obsolete-persona-config",
+            "GIRLFRAME_ACTIVITY_DISCORD_TESTER_ROLE_IDS": "obsolete-tester-config",
+        },
+        campaign_roles_only=True,
+        allow_dm=True,
+    )
     assert config.invited_user_id is None
     assert config.other_user_id is None
     assert config.handler_user_id is None
 
 
 @contextmanager
-def role_activity(tmp_path, tester=TESTER, *, bot_handler=False, decisions=False, inbox=False, local=False, rolls=None):
+def role_activity(
+    tmp_path,
+    tester=TESTER,
+    *,
+    bot_handler=False,
+    decisions=False,
+    inbox=False,
+    local=False,
+    rolls=None,
+):
     candidate = Path(__file__).resolve().parent
-    owning = candidate.parents[1] / "girlframe-campaign-ui/app/harpy-activity-lab"
-    if not owning.is_dir():
-        owning = candidate
     runtime = tmp_path / "role-runtime"
     sdk = runtime / "discord-sdk"
     sdk.mkdir(parents=True, exist_ok=True)
     (sdk / "embedded-app.js").write_bytes(
-        (owning.parent / ".sites-runtime/harpyengine-mission-lab/discord-sdk/embedded-app.js").read_bytes()
+        (RUNTIME / "discord-sdk" / "embedded-app.js").read_bytes()
     )
     script = """
-import json, sys, types
+import json, sys
 from dataclasses import replace
 from pathlib import Path
-candidate, owning, runtime = map(Path, sys.argv[1:4])
-tester = sys.argv[4]
-bot_mode, decisions, inbox, local, rolls = sys.argv[5:]
-sys.argv = [str(owning / 'mission_lab.py')]
+candidate, runtime = map(Path, sys.argv[1:3])
+tester = sys.argv[3]
+bot_mode, decisions, inbox, local, rolls = sys.argv[4:]
+sys.argv = [str(candidate / 'mission_lab.py')]
 sys.path.insert(0, str(candidate))
-mission = types.ModuleType('mission_lab')
-mission.__file__ = str(owning / 'mission_lab.py')
-sys.modules['mission_lab'] = mission
-exec(compile((candidate / 'mission_lab.py').read_bytes(), mission.__file__, 'exec'), mission.__dict__)
-mission.HERE, mission.RUNTIME = candidate, runtime
+import mission_lab as mission
+mission.RUNTIME = runtime
 if local:
     from discord_test_host import FixedTacticalDice
     dice = FixedTacticalDice(*map(tuple, json.loads(rolls))) if rolls else None
@@ -149,15 +164,19 @@ if local:
 from discord_test_host import CONFIG, IDENTITIES, managed_campaign_fixture, managed_discord_request
 from discord_session import DiscordSessions
 IDENTITIES['role-pilot'] = tester
-catalog = mission.CampaignRegistry(runtime / 'playtest-campaigns/discord-offline-single-role/managed-fixture.sqlite3')
+campaign_root = runtime / 'playtest-campaigns' / 'discord-offline-single-role'
+catalog = mission.CampaignRegistry(campaign_root / 'managed-fixture.sqlite3')
 if bot_mode != 'bot-handler' or not catalog.bindings(CONFIG.client_id, CONFIG.guild_id):
     catalog = managed_campaign_fixture('discord-offline-single-role')
-service = mission.open_managed_campaign(catalog.bindings(CONFIG.client_id, CONFIG.guild_id)[0], initialize=False)
-if bot_mode == 'bot-handler' and catalog.bindings(CONFIG.client_id, CONFIG.guild_id)[0].handler_id != CONFIG.client_id:
+binding = catalog.bindings(CONFIG.client_id, CONFIG.guild_id)[0]
+service = mission.open_managed_campaign(binding, initialize=False)
+if bot_mode == 'bot-handler' and binding.handler_id != CONFIG.client_id:
     from bot_handler_assignment import assign_bot_handler
     binding = catalog.bindings(CONFIG.client_id, CONFIG.guild_id)[0]
     assign_bot_handler(service,catalog,binding,bot_id=binding.application_id,expected_handler=binding.handler_id,actor_id=binding.handler_id,key='synthetic-bot-handler')
-config = replace(CONFIG, invited_user_id=None, other_user_id=None, handler_user_id=None, allow_dm=True)
+config = replace(
+    CONFIG, invited_user_id=None, other_user_id=None, handler_user_id=None, allow_dm=True
+)
 provider = managed_discord_request
 if decisions == 'decisions':
     import discord_session as auth
@@ -202,10 +221,24 @@ mission.serve(service, 0, True, DiscordSessions(config, provider),
               campaign_bot_token=bot_token)
 """
     child = subprocess.Popen(
-        [sys.executable, "-B", "-c", script, str(candidate), str(owning), str(runtime), tester,
-         "bot-handler" if bot_handler else "human-handler", "decisions" if decisions else "",
-         "notices" if inbox else "", "local" if local else "", json.dumps(rolls) if rolls else ""],
-        cwd=candidate, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        [
+            sys.executable,
+            "-B",
+            "-c",
+            script,
+            str(candidate),
+            str(runtime),
+            tester,
+            "bot-handler" if bot_handler else "human-handler",
+            "decisions" if decisions else "",
+            "notices" if inbox else "",
+            "local" if local else "",
+            json.dumps(rolls) if rolls else "",
+        ],
+        cwd=candidate,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     )
     timeout = Timer(40, child.kill)
     timeout.start()
@@ -227,11 +260,19 @@ mission.serve(service, 0, True, DiscordSessions(config, provider),
 
 def test_actual_tester_id_enrolls_its_own_sheet_in_only_its_role_campaign(tmp_path):
     with role_activity(tmp_path) as host:
+
         def sign_in(code, status=HTTPStatus.OK, guild_id=CONFIG.guild_id):
             nonce = request(host, "/api/discord/challenge", data={})["nonce"]
-            return request(host, "/api/discord/session", data={
-                "code": code, "nonce": nonce, "guild_id": guild_id,
-            }, status=status)
+            return request(
+                host,
+                "/api/discord/session",
+                data={
+                    "code": code,
+                    "nonce": nonce,
+                    "guild_id": guild_id,
+                },
+                status=status,
+            )
 
         sign_in("unapproved", HTTPStatus.FORBIDDEN)
         first = sign_in("role-pilot", guild_id=None)
@@ -244,8 +285,12 @@ def test_actual_tester_id_enrolls_its_own_sheet_in_only_its_role_campaign(tmp_pa
         assert initial["stage"] == "profile"
         assert initial["enrollment"]["owner_id"] == TESTER
         assert request(host, "/api/director-trial", token)["training_available"] is False
-        request(host, f"/api/player-setup/profile?campaign={campaign}", token,
-                {"revision": initial["revision"], "callsign": "TESTER ROLE"})
+        request(
+            host,
+            f"/api/player-setup/profile?campaign={campaign}",
+            token,
+            {"revision": initial["revision"], "callsign": "TESTER ROLE"},
+        )
         reopened = sign_in("role-pilot")["session"]
         own = request(host, f"/api/player-setup?campaign={campaign}", reopened)
         assert own["callsign"] == "TESTER ROLE"
@@ -254,7 +299,11 @@ def test_actual_tester_id_enrolls_its_own_sheet_in_only_its_role_campaign(tmp_pa
         peer = request(host, f"/api/player-setup?campaign={campaign}", other)
         assert peer["enrollment"]["owner_id"] != TESTER
         assert peer.get("callsign") != "TESTER ROLE"
-        second = next(item for item in request(host, "/api/campaigns", other)["campaigns"]
-                      if item["name"] == "Southern Signal")
-        request(host, "/api/player-setup?campaign=" + second["id"], token,
-                status=HTTPStatus.FORBIDDEN)
+        second = next(
+            item
+            for item in request(host, "/api/campaigns", other)["campaigns"]
+            if item["name"] == "Southern Signal"
+        )
+        request(
+            host, "/api/player-setup?campaign=" + second["id"], token, status=HTTPStatus.FORBIDDEN
+        )

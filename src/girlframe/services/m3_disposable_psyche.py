@@ -713,8 +713,11 @@ class PsycheService:
                             "The original source did have Tags; finish actual conversion"
                         )
                     return dict(
-                        id=identity, revision=state.revision, phase="no_tags",
-                        identities=[], **source,
+                        id=identity,
+                        revision=state.revision,
+                        phase="no_tags",
+                        identities=[],
+                        **source,
                     )
                 converted = prove_conversion(self.game, c, state, identity)
                 return dict(

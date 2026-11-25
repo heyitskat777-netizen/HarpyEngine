@@ -29,9 +29,7 @@ class PsycheControls:
             }
             if detail["phase"] == "pending":
                 card["tags"] = [(row["id"], row["label"]) for row in detail["tags"]]
-                card["identities"] = [
-                    (row["id"], row["label"]) for row in detail["identities"]
-                ]
+                card["identities"] = [(row["id"], row["label"]) for row in detail["identities"]]
                 card["count"] = detail["count"]
             else:
                 card["identities"] = detail["identities"]
@@ -60,11 +58,7 @@ class PsycheControls:
             raise WorkflowError("Reopen your original Off-Duty period.")
         replacements = answer["replacements"]
         selections = tuple(
-            TagSelection(
-                tag=tag, replace=replacements[i] if i < len(replacements) else None
-            )
+            TagSelection(tag=tag, replace=replacements[i] if i < len(replacements) else None)
             for i, tag in enumerate(answer["tags"])
         )
-        return self.service.convert(
-            viewer, key, answer["id"], game_revision, selections
-        )
+        return self.service.convert(viewer, key, answer["id"], game_revision, selections)

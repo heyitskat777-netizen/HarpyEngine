@@ -27,10 +27,17 @@ DISCIPLINE_TITLES = {
     "off_duty_handler": "Handler Off-Duty Punishment",
     "defeat_post_mission": "Defeat · Post-mission Punishment",
 }
-ACTIVITY_ROLE_CASES = frozenset({
-    "handler_play", "enforcement_initiative", "dose_up", "vatgrown_doll", "prince", "show_dog",
-    "easy_target",
-})
+ACTIVITY_ROLE_CASES = frozenset(
+    {
+        "handler_play",
+        "enforcement_initiative",
+        "dose_up",
+        "vatgrown_doll",
+        "prince",
+        "show_dog",
+        "easy_target",
+    }
+)
 
 
 class HandlerPunishments:
@@ -71,9 +78,7 @@ class HandlerPunishments:
                     )
                     or row["kind"] == "punishment_consult"
                     and row["owner_id"] == str(viewer.user_id)
-                    and work_ids.intersection(
-                        json.loads(row["body_json"]).get("work_versions", {})
-                    )
+                    and work_ids.intersection(json.loads(row["body_json"]).get("work_versions", {}))
                 )
             ]
             surgery_ids = {
@@ -97,9 +102,7 @@ class HandlerPunishments:
             case = data["case"]
             instruction = case["instruction"]
             details = (
-                Details.model_validate_json(instruction["details_json"])
-                if instruction
-                else None
+                Details.model_validate_json(instruction["details_json"]) if instruction else None
             )
             action = None
             if task["actionable"] and not data["stale"]:
@@ -119,9 +122,7 @@ class HandlerPunishments:
                     "revision": data["revision"],
                     "action": action,
                     "stale": data["stale"],
-                    "instruction": KINDS[instruction["kind"]][0]
-                    if instruction
-                    else None,
+                    "instruction": KINDS[instruction["kind"]][0] if instruction else None,
                     "instruction_details": [
                         f"{label} · {text}"
                         for label, text in (
@@ -132,9 +133,7 @@ class HandlerPunishments:
                     ],
                     "scene": case["scene_account"],
                     **({"role_case": True} if case["source_kind"] != "handler_play" else {}),
-                    "forms": instruction_forms(
-                        data["kinds"], data["pc_choices"], data["peers"]
-                    )
+                    "forms": instruction_forms(data["kinds"], data["pc_choices"], data["peers"])
                     if action == "instruct"
                     else [],
                 }
@@ -235,10 +234,7 @@ class HandlerPunishments:
             for kind, (_, severity) in KINDS.items()
             if (severity != "severe" or not delegated)
             and (not detail.get("narrative_limit") or kind not in RESTRICTED_PUNISHMENTS)
-            and (
-                detail["required_severity"] is None
-                or detail["required_severity"] == severity
-            )
+            and (detail["required_severity"] is None or detail["required_severity"] == severity)
         ]
         return card | {
             "action": "apply_off_duty_punishment",
@@ -290,9 +286,7 @@ class HandlerPunishments:
                 and isinstance(answer, dict)
                 and all(isinstance(value, str) for value in answer.values())
             ):
-                return self.surgeries.respond(
-                    viewer, key, identity, data["revision"], answer
-                )
+                return self.surgeries.respond(viewer, key, identity, data["revision"], answer)
             if action == "surgery_ready" and answer is True:
                 return self.surgeries.finish(viewer, key, identity)
             raise ValueError("Submit the current assigned surgery decision.")
@@ -304,18 +298,12 @@ class HandlerPunishments:
             actor = None
             if counterpart is not None:
                 actor = next(
-                    (
-                        row["ref"]
-                        for row in info["peers"]
-                        if row["token"] == counterpart
-                    ),
+                    (row["ref"] for row in info["peers"] if row["token"] == counterpart),
                     None,
                 )
                 if actor is None:
                     raise ValueError("Choose the original Bond counterpart.")
-            details = discipline_details(
-                {k: v for k, v in answer.items() if k != "counterpart"}
-            )
+            details = discipline_details({k: v for k, v in answer.items() if k != "counterpart"})
             fields = {
                 "instruction": Instruction(
                     kind=details.kind,
@@ -323,36 +311,23 @@ class HandlerPunishments:
                     counterpart=ActorRef.model_validate(actor) if actor else None,
                 )
             }
-        elif (
-            action == "scene"
-            and isinstance(answer, str)
-            and 1 <= len(answer.strip()) <= 1200
-        ):
+        elif action == "scene" and isinstance(answer, str) and 1 <= len(answer.strip()) <= 1200:
             fields = {"scene": answer}
         elif action in ("attest", "approve") and answer is True:
             fields = {action: True}
-        elif (
-            action == "execute"
-            and isinstance(answer, str)
-            and 1 <= len(answer.strip()) <= 1200
-        ):
+        elif action == "execute" and isinstance(answer, str) and 1 <= len(answer.strip()) <= 1200:
             fields = {"execute": True, "account": answer}
         else:
             raise ValueError("Use the fields for this Punishment step.")
         return self.service.change(viewer, key, identity, data["revision"], **fields)
 
-    def perform_work(
-        self, viewer, key, identity, revision, work_revision, action, answer
-    ):
+    def perform_work(self, viewer, key, identity, revision, work_revision, action, answer):
         if type(work_revision) is not int or not isinstance(answer, dict):
             raise ValueError("Reopen the assigned discipline work.")
         args = (viewer, key, identity, work_revision, revision)
         if action == "recover_punishment_followup" and not answer:
             return recover(self.discipline, *args)
-        if (
-            action == "answer_punishment_consult"
-            and type(answer.get("approve")) is bool
-        ):
+        if action == "answer_punishment_consult" and type(answer.get("approve")) is bool:
             return self.discipline.answer_consultation(
                 viewer, key, identity, work_revision, answer["approve"]
             )
@@ -370,9 +345,7 @@ class HandlerPunishments:
                     or self.discipline._body(row).get("reason") not in DISCIPLINE_TITLES
                 ):
                     raise WorkflowError("Open the original Punishment workflow.")
-            if action == "propose_punishment_scene" and isinstance(
-                answer.get("summary"), str
-            ):
+            if action == "propose_punishment_scene" and isinstance(answer.get("summary"), str):
                 return self.discipline.propose_scene(*args, answer["summary"])
             if action == "attest_punishment_scene" and not answer:
                 return self.discipline.attest_scene(*args)
@@ -380,15 +353,15 @@ class HandlerPunishments:
                 current = self.discipline.get(viewer, identity)
                 consultation = current["consultation"]
                 if not consultation or not consultation["approved"]:
-                    raise WorkflowError(
-                        "The designated Handler must approve the proposal first."
-                    )
+                    raise WorkflowError("The designated Handler must approve the proposal first.")
                 answer = self.discipline.get(viewer, consultation["id"])["proposal"]
             phrase = answer.get("conditioning_phrase")
             if "conditioning_phrase" in answer:
                 if action != "apply_off_duty_punishment" or not isinstance(phrase, str):
                     raise ValueError("Choose a phrase only for the original Trainer's Punishment.")
-                answer = {key: value for key, value in answer.items() if key != "conditioning_phrase"}
+                answer = {
+                    key: value for key, value in answer.items() if key != "conditioning_phrase"
+                }
             details = discipline_details(answer)
             if action == "request_punishment_consult":
                 return self.discipline.consult(*args, details)
@@ -414,20 +387,14 @@ class HandlerPunishments:
 def discipline_details(values):
     values = values.copy()
     for field in ("bond_with", "delegate"):
-        if (
-            isinstance(value := values.get(field), str)
-            and value.isascii()
-            and value.isdecimal()
-        ):
+        if isinstance(value := values.get(field), str) and value.isascii() and value.isdecimal():
             values[field] = int(value)
     return Details.model_validate_json(json.dumps(values))
 
 
 def handler_cases(state):
     return {
-        case.id: case
-        for case in state.role_punishments
-        if case.source_kind in ACTIVITY_ROLE_CASES
+        case.id: case for case in state.role_punishments if case.source_kind in ACTIVITY_ROLE_CASES
     }
 
 
@@ -445,10 +412,7 @@ def instruction_forms(kinds, choices, peers):
         return pick(
             key,
             label,
-            (
-                (str(row["id"]), row.get("name", row.get("label", row["id"])))
-                for row in rows
-            ),
+            ((str(row["id"]), row.get("name", row.get("label", row["id"]))) for row in rows),
             count,
         )
 
@@ -471,9 +435,7 @@ def instruction_forms(kinds, choices, peers):
     for kind in kinds:
         fields = []
         if kind == "passing_responsibility":
-            fields.append(
-                pick("delegate", "Pilot taking responsibility", own.get("pilots", ()))
-            )
+            fields.append(pick("delegate", "Pilot taking responsibility", own.get("pilots", ())))
         elif kind == "sedation" and own.get("identities"):
             fields.append(
                 entities(
@@ -501,16 +463,12 @@ def instruction_forms(kinds, choices, peers):
                 fields.extend(
                     [
                         text("replacement_name", "Replacement Girl Asset name", 120),
-                        text(
-                            "replacement_description", "Replacement description", 1200
-                        ),
+                        text("replacement_description", "Replacement description", 1200),
                     ]
                 )
         elif kind == "revoked_privileges":
             fields += [
-                entities(
-                    "requisition", "Held Requisition", own.get("requisitions", ())
-                ),
+                entities("requisition", "Held Requisition", own.get("requisitions", ())),
                 text("restoration", "Restoration condition", 1200),
             ]
         elif kind == "reduced_socialization":

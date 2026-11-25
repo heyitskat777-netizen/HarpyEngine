@@ -148,7 +148,8 @@ def test_activity_session_zero_opens_private_roleplay_and_freezes_approved_seats
             )
         ),
     )
-    adapter.authorize_provider(raw_handler)
+    with pytest.raises(WorkflowError, match="trial facilitator"):
+        adapter.authorize_provider(raw_handler)
     with pytest.raises(WorkflowError, match="trial facilitator"):
         adapter.authorize_provider(OTHER)
     for viewer in (ADMIN, PLAYER, OTHER):

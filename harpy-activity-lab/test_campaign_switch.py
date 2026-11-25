@@ -6,10 +6,9 @@ from threading import Event
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+import campaign_bot
 import discord
 import pytest
-
-import campaign_bot
 from campaign_bot import SetupBot, create_from_interaction, dm_command, serve_commands
 from campaign_registry import CampaignBindingError, CampaignRegistry
 from discord_session import DiscordSessions, SignInError
@@ -24,9 +23,7 @@ from test_artwork_activity import offline_activity, request
 
 def test_only_guild_owner_can_persist_a_role_binding(tmp_path):
     registry = CampaignRegistry(tmp_path / "campaigns.sqlite3")
-    guild = SimpleNamespace(
-        id=int(CONFIG.guild_id), owner_id=int(CONFIG.handler_user_id)
-    )
+    guild = SimpleNamespace(id=int(CONFIG.guild_id), owner_id=int(CONFIG.handler_user_id))
     role = SimpleNamespace(id=int(MANAGED_ROLES[0]), guild=guild)
     interaction = SimpleNamespace(
         guild=guild,
@@ -63,13 +60,8 @@ def test_only_guild_owner_can_persist_a_role_binding(tmp_path):
     )
     assert bound.role_id == MANAGED_ROLES[0]
     assert bound.channel_id == MANAGED_CHANNELS[0]
-    assert CampaignRegistry(registry.path).bindings(
-        CONFIG.client_id, CONFIG.guild_id
-    ) == [bound]
-    assert (
-        CampaignRegistry(registry.path).bindings(CONFIG.client_id, "111111111111111119")
-        == []
-    )
+    assert CampaignRegistry(registry.path).bindings(CONFIG.client_id, CONFIG.guild_id) == [bound]
+    assert CampaignRegistry(registry.path).bindings(CONFIG.client_id, "111111111111111119") == []
     assert (
         create_from_interaction(
             registry, interaction, "Northern Reach", role, None, channel=channel
@@ -82,9 +74,7 @@ def test_only_guild_owner_can_persist_a_role_binding(tmp_path):
     with pytest.raises(CampaignBindingError, match="already exists"):
         create_from_interaction(registry, interaction, "northern reach", role, None)
     with pytest.raises(CampaignBindingError, match="already exists"):
-        create_from_interaction(
-            registry, interaction, "New campaign", role, None, channel=channel
-        )
+        create_from_interaction(registry, interaction, "New campaign", role, None, channel=channel)
     bot = SetupBot(int(CONFIG.client_id), int(CONFIG.guild_id), registry)
     payload = bot.command.to_dict(bot.tree)
     assert payload["name"] == "activity-campaign"
@@ -147,9 +137,7 @@ def test_launch_requires_a_bound_channel_and_its_role(
         (True, [1, 2], [0, 1]),
     ],
 )
-def test_dm_launch_registration_and_callback(
-    tmp_path, user_install, contexts, installs
-):
+def test_dm_launch_registration_and_callback(tmp_path, user_install, contexts, installs):
     registry = CampaignRegistry(tmp_path / "campaigns.sqlite3")
     bot = SetupBot(int(CONFIG.client_id), int(CONFIG.guild_id), registry, allow_dm=True)
     dm = dm_command(user_install)
@@ -232,15 +220,11 @@ def test_campaign_scope_is_role_bound_and_keeps_drafts_separate(tmp_path):
         names = {item["name"]: item["id"] for item in options}
         north, south = names["Northern Reach"], names["Southern Signal"]
         assert (
-            request(host, f"/api/campaigns?channel={MANAGED_CHANNELS[1]}", pilot)[
-                "preferred"
-            ]
+            request(host, f"/api/campaigns?channel={MANAGED_CHANNELS[1]}", pilot)["preferred"]
             == south
         )
         assert (
-            request(host, f"/api/campaigns?channel={MANAGED_CHANNELS[1]}", outsider)[
-                "preferred"
-            ]
+            request(host, f"/api/campaigns?channel={MANAGED_CHANNELS[1]}", outsider)["preferred"]
             is None
         )
         assert request(host, "/api/campaigns", outsider)["campaigns"] == [
@@ -248,7 +232,10 @@ def test_campaign_scope_is_role_bound_and_keeps_drafts_separate(tmp_path):
         ]
         assert request(host, "/api/activity/config")["campaign_role_gate"] is True
         assert {item["name"] for item in options} == {"Northern Reach", "Southern Signal"}
-        assert request(host, "/api/player-setup", outsider)["enrollment"]["owner_id"] == "666666666666666666"
+        assert (
+            request(host, "/api/player-setup", outsider)["enrollment"]["owner_id"]
+            == "666666666666666666"
+        )
         for path in (
             f"/api/player-setup?campaign={south}",
             f"/api/player-setup?campaign={north}&campaign={south}",
@@ -277,29 +264,21 @@ def test_campaign_scope_is_role_bound_and_keeps_drafts_separate(tmp_path):
                 {"revision": initial["revision"], "callsign": callsign},
             )
         assert (
-            request(host, f"/api/player-setup?campaign={north}", pilot)["callsign"]
-            == "NORTH PILOT"
+            request(host, f"/api/player-setup?campaign={north}", pilot)["callsign"] == "NORTH PILOT"
         )
         assert (
-            request(host, f"/api/player-setup?campaign={south}", pilot)["callsign"]
-            == "SOUTH PILOT"
+            request(host, f"/api/player-setup?campaign={south}", pilot)["callsign"] == "SOUTH PILOT"
         )
         request(host, "/api/player-setup", pilot, status=HTTPStatus.CONFLICT)
 
-    with offline_activity(
-        tmp_path, "--bound-roster", "--managed-campaigns"
-    ) as reopened:
+    with offline_activity(tmp_path, "--bound-roster", "--managed-campaigns") as reopened:
         signed_in = sign_in(reopened, "invited")
         assert request(reopened, "/api/campaigns", signed_in)["campaigns"] == options
         assert (
-            request(reopened, f"/api/player-setup?campaign={north}", signed_in)[
-                "callsign"
-            ]
+            request(reopened, f"/api/player-setup?campaign={north}", signed_in)["callsign"]
             == "NORTH PILOT"
         )
         assert (
-            request(reopened, f"/api/player-setup?campaign={south}", signed_in)[
-                "callsign"
-            ]
+            request(reopened, f"/api/player-setup?campaign={south}", signed_in)["callsign"]
             == "SOUTH PILOT"
         )

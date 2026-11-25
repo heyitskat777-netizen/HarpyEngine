@@ -1475,7 +1475,11 @@ class HandlerPlayService:
                 sum(
                     x is not None
                     for x in (
-                        director_offer, director_brief, dress_scene, advice_scene, ordinary_scene
+                        director_offer,
+                        director_brief,
+                        dress_scene,
+                        advice_scene,
+                        ordinary_scene,
                     )
                 )
                 > 1

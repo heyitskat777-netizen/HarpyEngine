@@ -102,20 +102,13 @@ def forms(data, field, op, yes_no, registry):
             )
         return [op("package", "File free replacement package", fields)]
     if data["ready"]:
-        fields = [
-            field(
-                "confirm", "Confirm the exact reviewed package", (("yes", "Install"),)
-            )
-        ]
+        fields = [field("confirm", "Confirm the exact reviewed package", (("yes", "Install"),))]
         if data["firearm"]["needs_replacement"]:
             fields.append(
                 field(
                     "firearm_replace",
                     "Replace one of your non-Void Girl Assets",
-                    [
-                        (item["id"], item["label"])
-                        for item in data["firearm"]["replacements"]
-                    ],
+                    [(item["id"], item["label"]) for item in data["firearm"]["replacements"]],
                 )
             )
         return [
@@ -183,9 +176,7 @@ def package_summary(data, registry):
         return None
     preferences = data["preferences"]
     people = {str(uid): name for uid, name in data["people"]}
-    rule_titles = (
-        {entry.id: entry.title for entry in registry.entries} if registry else {}
-    )
+    rule_titles = {entry.id: entry.title for entry in registry.entries} if registry else {}
     frame = dict(data["frames"]).get(preferences["frame"], preferences["frame"])
     description = [f"Replacement Frame · {frame}"]
     for key, label in (("frame_name", "Name"), ("frame_appearance", "Appearance")):
@@ -193,9 +184,7 @@ def package_summary(data, registry):
             description.append(f"{label} · {preferences[key]}")
     if preferences["court_role"]:
         recipient = people.get(str(preferences["court_target"]), "Original recipient")
-        description.append(
-            f"Court assignment · {preferences['court_role']} / {recipient}"
-        )
+        description.append(f"Court assignment · {preferences['court_role']} / {recipient}")
     if fanbase := preferences["fanbase"]:
         for key, label in (
             ("demographics", "Fan demographics"),
@@ -215,8 +204,7 @@ def package_summary(data, registry):
                 description.append(f"{label} · {choices}")
     if package["psych_strings"]:
         targets = ", ".join(
-            people.get(str(uid), "Original Bond holder")
-            for uid in package["psych_strings"]
+            people.get(str(uid), "Original Bond holder") for uid in package["psych_strings"]
         )
         description.append(f"Psych Strings · {targets}")
     return "\n".join(
@@ -262,15 +250,11 @@ class ReplacementForms:
             if data["state"] != "resolved":
                 yield (
                     data,
-                    forms(
-                        data, field, op, yes_no, self.service.missions.access.registry
-                    ),
+                    forms(data, field, op, yes_no, self.service.missions.access.registry),
                     package_summary(data, self.service.missions.access.registry),
                 )
 
-    def perform(
-        self, viewer, key, identity, revision, game_revision, operation, values
-    ):
+    def perform(self, viewer, key, identity, revision, game_revision, operation, values):
         args = (viewer, key, identity, revision, game_revision)
         if operation.startswith("propose:"):
             frame = operation.split(":", 1)[1]
@@ -328,7 +312,5 @@ class ReplacementForms:
                 else None,
                 "psych_strings": values.get("psych_strings", []),
             }
-            return self.service.quote(
-                *args, Package.model_validate_json(json.dumps(package))
-            )
+            return self.service.quote(*args, Package.model_validate_json(json.dumps(package)))
         raise ValueError("Choose an assigned Frame replacement operation.")

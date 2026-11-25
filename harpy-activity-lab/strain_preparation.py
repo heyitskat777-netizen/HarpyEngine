@@ -3,6 +3,9 @@
 import json
 from dataclasses import asdict
 
+from strain_special import RULES as SPECIAL_RULES
+from strain_special import special_form
+
 from girlframe.discord_adapter.m3_strain import FACT_LABELS
 from girlframe.discord_adapter.m3_strain_effects import WAIT, effect_form
 from girlframe.engine.m3_strain import StartFacts
@@ -13,9 +16,6 @@ from girlframe.services.m3_strain import StrainService
 from girlframe.services.m3_strain_effects import EffectService
 from girlframe.services.m3_world import WorldService
 from girlframe.services.onboarding import WorkflowError
-
-from strain_special import RULES as SPECIAL_RULES
-from strain_special import special_form
 
 SCENARIOS = (
     ("business_as_usual", "Business As Usual"),
@@ -63,17 +63,11 @@ class StrainPreparation:
         source = self.effects.get(viewer, identity)
         if revision != source["revision"] or game_revision != source["game_revision"]:
             raise WorkflowError("Reopen the saved Strain result.")
-        channels = tuple(
-            (str(channel), label) for channel, (_, label) in self.rooms().items()
-        )
+        channels = tuple((str(channel), label) for channel, (_, label) in self.rooms().items())
         if source["rule_id"] in SPECIAL_RULES:
-            build, apply, instructions = special_form(
-                self.service, viewer, source, channels
-            )
+            build, apply, instructions = special_form(self.service, viewer, source, channels)
         else:
-            build, apply, instructions = effect_form(
-                viewer, self.effects, identity, channels
-            )
+            build, apply, instructions = effect_form(viewer, self.effects, identity, channels)
         if not isinstance(values, dict):
             raise ValueError("Use the form for this effect.")
         permitted = {}
@@ -99,9 +93,7 @@ class StrainPreparation:
                 break
             permitted = normalized
         else:
-            raise WorkflowError(
-                "Reopen the effect before changing its dependent fields."
-            )
+            raise WorkflowError("Reopen the effect before changing its dependent fields.")
         if commit:
             if any(
                 spec.options == WAIT
@@ -116,9 +108,7 @@ class StrainPreparation:
                 and len(permitted[spec.key]) < spec.minimum
                 for spec in fields
             ):
-                raise WorkflowError(
-                    "Complete all required effect choices before filing."
-                )
+                raise WorkflowError("Complete all required effect choices before filing.")
             return {"notice": apply(viewer, key, permitted)}
         return {
             "instructions": instructions,
@@ -156,26 +146,20 @@ class StrainPreparation:
                 cards.append(
                     {
                         **item,
-                        "action": "strain_prepare"
-                        if snapshot["strain"]
-                        else "strain_configure",
+                        "action": "strain_prepare" if snapshot["strain"] else "strain_configure",
                         "label": "Review worldwide triggers"
                         if snapshot["strain"]
                         else "Set initial Strain",
                         "facts": list(FACT_LABELS.items()),
                         "scenarios": SCENARIOS,
                         "tracks": TRACKS,
-                        "exemptions": [
-                            row["label"] for row in detail["budget_death_exemptions"]
-                        ],
+                        "exemptions": [row["label"] for row in detail["budget_death_exemptions"]],
                     }
                 )
                 continue
             track = body["track"]
             if kind == "strain_endgame":
-                columns = [
-                    (i, ENDGAMES[track][i - 1]) for i in detail["endgame_options"]
-                ]
+                columns = [(i, ENDGAMES[track][i - 1]) for i in detail["endgame_options"]]
                 cards.append(
                     {
                         **item,
@@ -188,9 +172,7 @@ class StrainPreparation:
                 )
                 continue
             face = body.get("face")
-            columns = (
-                enumerate(ROWS[(track, body["severity"])][face - 1], 1) if face else ()
-            )
+            columns = enumerate(ROWS[(track, body["severity"])][face - 1], 1) if face else ()
             cards.append(
                 {
                     **item,
@@ -222,10 +204,7 @@ class StrainPreparation:
                 key,
                 game_revision,
                 Board.model_validate_json(json.dumps(answer["board"])),
-                tuple(
-                    Location.model_validate_json(json.dumps(row))
-                    for row in answer["locations"]
-                ),
+                tuple(Location.model_validate_json(json.dumps(row)) for row in answer["locations"]),
                 Gorgon.model_validate_json(json.dumps(answer["secret"])),
             )
         if action == "strain_configure" and answer.keys() == {"scenario", "high"}:
@@ -257,22 +236,14 @@ class StrainPreparation:
                 period,
                 revision,
                 game_revision,
-                StartFacts(
-                    **task["canonical_facts"], **facts, account=answer["account"]
-                ),
+                StartFacts(**task["canonical_facts"], **facts, account=answer["account"]),
             )
-        if (
-            not isinstance(answer.get("id"), str)
-            or type(answer.get("revision")) is not int
-        ):
+        if not isinstance(answer.get("id"), str) or type(answer.get("revision")) is not int:
             raise ValueError("Reopen the assigned Strain work.")
         cmd = (viewer, key, answer["id"], answer["revision"], game_revision)
         if action == "strain_roll":
             return self.service.roll(*cmd)
-        if (
-            action in ("strain_column", "strain_endgame")
-            and type(answer.get("column")) is int
-        ):
+        if action in ("strain_column", "strain_endgame") and type(answer.get("column")) is int:
             return self.service.choose(
                 *cmd,
                 answer["column"],

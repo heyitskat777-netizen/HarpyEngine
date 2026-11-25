@@ -9,6 +9,7 @@ from tempfile import TemporaryDirectory
 from time import time
 
 import sqlalchemy as sa
+
 from girlframe.database import tables
 from girlframe.services.m2_game import GameService
 from girlframe.services.onboarding import WorkflowError
@@ -47,9 +48,7 @@ class DirectorTrial:
                     )
                 )
             )
-            roles = {
-                member.user_id: role for role, member in self.viewers.items()
-            }
+            roles = {member.user_id: role for role, member in self.viewers.items()}
             labels = {
                 "invited": "First pilot",
                 "other": "Second pilot",
@@ -61,8 +60,7 @@ class DirectorTrial:
                     "label": labels.get(roles.get(user_id), "Participant"),
                     "own": user_id == viewer.user_id,
                     "active": str(user_id) in active_members,
-                    "consented": state.consents.get(str(user_id))
-                    == status.policy_revision
+                    "consented": state.consents.get(str(user_id)) == status.policy_revision
                     and status.policy_revision > 0,
                 }
                 for user_id in scene["participants"]
@@ -115,9 +113,7 @@ class DirectorTrial:
                     raise ValueError
                 with self.session.store.engine.connect() as connection:
                     self.observer._scene(connection, scene, viewer)
-                return self.session.store.safety(
-                    viewer, key, data["revision"], pause=data["pause"]
-                )
+                return self.session.store.safety(viewer, key, data["revision"], pause=data["pause"])
             case "submit" if fields == {"revision", "text", "classification"}:
                 command = AppendSceneInput(
                     command_key=key,
@@ -135,16 +131,12 @@ class DirectorTrial:
                     if decision and decision["action"] == "RESPOND":
                         replies.append({"role": "GM", "reply": gm["reply"]["text"]})
                     if handler := conversation["handler"]:
-                        replies.append(
-                            {"role": "Handler", "reply": handler["reply"]["text"]}
-                        )
+                        replies.append({"role": "Handler", "reply": handler["reply"]["text"]})
                 return {"input": result["input"], "replies": replies}
             case "gm-work" if not fields:
                 return self.session.work(viewer, scene, gm=True)
             case "bind" if fields == {"review", "action"}:
-                return self.session.bind_action(
-                    viewer, key, scene, data["review"], data["action"]
-                )
+                return self.session.bind_action(viewer, key, scene, data["review"], data["action"])
             case "open" if fields == {"kind", "source", "frame"}:
                 frame = (
                     TaskFrame.model_validate_json(json.dumps(data["frame"]))
@@ -169,18 +161,14 @@ class DirectorTrial:
                 )
             case "review" if fields == {"proposal"}:
                 return self.outcomes.owner_review(viewer, scene, data["proposal"])
-            case "confirm" if (
-                fields == {"proposal", "approved"} and data["approved"] is True
-            ):
+            case "confirm" if fields == {"proposal", "approved"} and data["approved"] is True:
                 return self.outcomes.confirm(viewer, key, scene, data["proposal"])
             case "memory" if not fields:
                 with self.session.store.engine.connect() as connection:
                     self.outcomes._scope(connection, viewer, scene, gm=True)
                     context = self.session.context._build(connection, viewer, scene)
                     return context.model_dump(mode="json") | {
-                        "next_order": len(
-                            self.session.context._references(connection, scene)
-                        )
+                        "next_order": len(self.session.context._references(connection, scene))
                     }
             case "remember" if fields == {"source", "order", "roles", "topic"}:
                 if not isinstance(data["roles"], list) or any(
@@ -228,14 +216,8 @@ def discord_trial_binding(config):
         "other": config.other_user_id,
         "handler": config.handler_user_id,
     }
-    if (
-        None in accounts.values()
-        or len(set(accounts.values())) != 3
-        or config.tester_role_ids
-    ):
-        raise ValueError(
-            "P2 requires two named pilot accounts and one named Handler account."
-        )
+    if None in accounts.values() or len(set(accounts.values())) != 3 or config.tester_role_ids:
+        raise ValueError("P2 requires two named pilot accounts and one named Handler account.")
     return {
         "application": config.client_id,
         "guild": config.guild_id,
@@ -287,19 +269,17 @@ def fork_discord_rehearsal(root, config):
 
 
 def open_trial(engine: Path, root: Path, name: str, *, discord_config=None):
-    from girlframe.ai.observation import ObservationPolicy
     from p2_trial_runtime import Trial
 
-    binding = (
-        discord_trial_binding(discord_config) if discord_config is not None else None
-    )
+    from girlframe.ai.observation import ObservationPolicy
+
+    binding = discord_trial_binding(discord_config) if discord_config is not None else None
     if binding is not None:
         root = root.with_name("p2-discord-trials")
     root.mkdir(exist_ok=True)
     directory = (root / name).resolve()
     if directory.parent != root.resolve():
         raise WorkflowError("Use an isolated trial directory.")
-    os.environ["GIRLFRAME_RULES_REGISTRY"] = str(engine / "rules" / "registry.json")
     create = not directory.exists()
     binding_file = directory / "activity-discord-binding.json"
     if (
@@ -310,6 +290,7 @@ def open_trial(engine: Path, root: Path, name: str, *, discord_config=None):
         raise WorkflowError(
             "This P2 trial belongs to its original Discord roster. Use a new trial name."
         )
+    os.environ["GIRLFRAME_RULES_REGISTRY"] = str(engine / "rules" / "registry.json")
     trial = DirectorTrial(Trial(directory, create=create))
     trial.discord_binding = binding
     if create:
@@ -346,9 +327,7 @@ class CampaignTraining:
             ),
             "status": {"phase": "unavailable", "mode": "off"},
             "facilitator": viewer.user_id == self.handler.user_id,
-            "speaker": (
-                "handler" if viewer.user_id == self.handler.user_id else "pilot"
-            ),
+            "speaker": ("handler" if viewer.user_id == self.handler.user_id else "pilot"),
         }
 
     def perform(self, viewer, key, data):

@@ -652,7 +652,8 @@ class NpcOrderService:
             if (
                 state.revision != expected
                 or self.game.pending_actions(c)
-                or not ranked and origin_kind != "rebel_voice"
+                or not ranked
+                and origin_kind != "rebel_voice"
                 and not any(
                     x.actor == issuer
                     and (origin_kind == "secretary" or x.controller == viewer.user_id)

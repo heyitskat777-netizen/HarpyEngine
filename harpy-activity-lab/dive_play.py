@@ -2,10 +2,11 @@
 
 from dataclasses import asdict
 
+from rulebook_text import DIVE_OPTIONS
+
+from girlframe.discord_adapter.m2_forms import Field
 from girlframe.discord_adapter.m2_ui import entities, menu, text
 from girlframe.discord_adapter.m3_dive import LABELS, MANIFESTATIONS
-from rulebook_text import DIVE_OPTIONS
-from girlframe.discord_adapter.m2_forms import Field
 
 DIVE = "dive_deep"
 DIVE_CHOICES = (
@@ -25,7 +26,7 @@ def dive_choice(decision):
             Field(
                 "options",
                 "Choose one available effect",
-                tuple((x, DIVE_OPTIONS.get(x,LABELS[x])) for x in detail["options"]),
+                tuple((x, DIVE_OPTIONS.get(x, LABELS[x])) for x in detail["options"]),
             ),
             text("text", "Describe the actual connection"),
         ]

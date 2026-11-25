@@ -41,6 +41,7 @@ def configured(game: GameService, c: Connection) -> rules.Recipient | None:
         bot = game.store.policy.application_id
         if (
             plan.plan_approved
+            and plan.plan_proposal is not None
             and plan.facilitator in plan.members
             and zero.handler.current(c)[1].handler_id == bot
             and load_state(c, game.store.campaign_id).handler == bot

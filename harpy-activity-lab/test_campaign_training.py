@@ -3,12 +3,12 @@
 from types import SimpleNamespace
 
 import pytest
-
 from director_trial import campaign_training
-from girlframe.database import tables
-from girlframe.services.onboarding import WorkflowError
 from test_ledger import ADMIN, OTHER, PLAYER, count
 from test_ledger import ledger as ledger_fixture
+
+from girlframe.database import tables
+from girlframe.services.onboarding import WorkflowError
 
 ledger = ledger_fixture
 
@@ -29,7 +29,5 @@ def test_campaign_training_accepts_actual_members_and_keeps_their_identity(ledge
     with pytest.raises(WorkflowError, match="Join this campaign"):
         terminal.view(OTHER)
     with pytest.raises(WorkflowError, match="NATIVE_REHEARSAL_REQUIRED"):
-        terminal.perform(
-            PLAYER, "unavailable-consent", {"operation": "consent", "consent": True}
-        )
+        terminal.perform(PLAYER, "unavailable-consent", {"operation": "consent", "consent": True})
     assert count(ledger, tables.events) == events

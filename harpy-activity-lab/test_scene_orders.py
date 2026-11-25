@@ -7,20 +7,20 @@ import mission_lab
 
 # isort: split
 import pytest
-from girlframe.engine.m3_actor_bonds import current_ref
-from girlframe.engine.m3_alpha import conditions
-from girlframe.services.m2_game import GameService
-from girlframe.services.onboarding import WorkflowError
+from scene_orders import SceneOrders
+from scene_plays import ScenePlays
 from test_alpha_brutalize import guard_rolled
 from test_harpy_actor_plays import ready as harpy_ready
+from test_identity_specialists import suggestions
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger_fixture
 from test_m2_game import answer, state, tick
 from test_mission_service import service
 
-from scene_orders import SceneOrders
-from scene_plays import ScenePlays
-from test_identity_specialists import suggestions
+from girlframe.engine.m3_actor_bonds import current_ref
+from girlframe.engine.m3_alpha import conditions
+from girlframe.services.m2_game import GameService
+from girlframe.services.onboarding import WorkflowError
 
 ledger = ledger_fixture
 ROOM = ("orders-room", "Relay orders")
@@ -56,16 +56,13 @@ def respond(scene, actor, card, result, key=None):
     )
 
 
-def test_handler_issues_ranked_order_only_original_pilot_can_answer(
-    ledger, monkeypatch
-):
-    monkeypatch.setenv(
-        "GIRLFRAME_RULES_REGISTRY", str(mission_lab.ENGINE / "rules/registry.json")
-    )
+def test_handler_issues_ranked_order_only_original_pilot_can_answer(ledger, monkeypatch):
+    monkeypatch.setenv("GIRLFRAME_RULES_REGISTRY", str(mission_lab.ENGINE / "rules/registry.json"))
     _, game = service(ledger)
     mission_lab.enable_private_subsystems(game)
-    from girlframe.delivery.m2_worker import GameWorker
     from test_m2_game import Gateway
+
+    from girlframe.delivery.m2_worker import GameWorker
 
     actor_orders = SceneOrders(game, 900)
     direct_card = actor_orders.view(ADMIN, ROOM)[0]
@@ -86,9 +83,7 @@ def test_handler_issues_ranked_order_only_original_pilot_can_answer(
     assert actor_orders.perform(ADMIN, "issue-order", request) == saved
     worker, gateway = GameWorker(game), Gateway()
     tick(worker, gateway, 4)
-    scene = ScenePlays(
-        GameService(ledger), 900, ADMIN, PLAYER, OTHER, handler_proxy=False
-    )
+    scene = ScenePlays(GameService(ledger), 900, ADMIN, PLAYER, OTHER, handler_proxy=False)
     assert suggestions(game, PLAYER)["receive_orders"]["control"] == "receive_orders"
     assert "receive_orders" not in suggestions(game, OTHER)
     assert "disobey_orders" not in suggestions(game, PLAYER)
@@ -98,27 +93,19 @@ def test_handler_issues_ranked_order_only_original_pilot_can_answer(
         respond(scene, OTHER, card, {"options": ["obedient"]})
     with pytest.raises(WorkflowError):
         respond(scene.for_channel(901), PLAYER, card, {"options": ["obedient"]})
-    result = respond(
-        scene, PLAYER, card, {"options": ["obedient"]}, key="actual-pilot-choice"
-    )
+    result = respond(scene, PLAYER, card, {"options": ["obedient"]}, key="actual-pilot-choice")
     assert (
-        respond(
-            scene, PLAYER, card, {"options": ["obedient"]}, key="actual-pilot-choice"
-        )
-        == result
+        respond(scene, PLAYER, card, {"options": ["obedient"]}, key="actual-pilot-choice") == result
     )
     assert game.inspect(PLAYER, saved["action_id"])["result"]["response"] == "obedient"
 
 
-def test_actual_harpy_question_goes_to_its_adjudicator_without_a_roll(
-    ledger, monkeypatch
-):
-    monkeypatch.setenv(
-        "GIRLFRAME_RULES_REGISTRY", str(mission_lab.ENGINE / "rules/registry.json")
-    )
+def test_actual_harpy_question_goes_to_its_adjudicator_without_a_roll(ledger, monkeypatch):
+    monkeypatch.setenv("GIRLFRAME_RULES_REGISTRY", str(mission_lab.ENGINE / "rules/registry.json"))
     _, game, _, actor = harpy_ready(ledger)
-    from girlframe.delivery.m2_worker import GameWorker
     from test_m2_game import Gateway
+
+    from girlframe.delivery.m2_worker import GameWorker
 
     orders = SceneOrders(game, 900)
     ref = selected(orders, PLAYER, "role_sensors")
@@ -126,12 +113,8 @@ def test_actual_harpy_question_goes_to_its_adjudicator_without_a_roll(
     question = "Is the old antenna listening?"
     saved = issue(orders, PLAYER, "role_sensors", {"role": ref, "context": question})
     tick(GameWorker(game), Gateway(), 3)
-    scene = ScenePlays(
-        GameService(ledger), 900, ADMIN, PLAYER, OTHER, handler_proxy=False
-    )
-    assigned = next(
-        x for x in scene.handler_choices(ADMIN) if x["root"] == saved["action_id"]
-    )
+    scene = ScenePlays(GameService(ledger), 900, ADMIN, PLAYER, OTHER, handler_proxy=False)
+    assigned = next(x for x in scene.handler_choices(ADMIN) if x["root"] == saved["action_id"])
     card = assigned["choice"]
     assert card["kind"] == "harpy_sensor_answers" and card["prompt"] == question
     with pytest.raises(WorkflowError):
@@ -139,10 +122,7 @@ def test_actual_harpy_question_goes_to_its_adjudicator_without_a_roll(
     respond(scene, ADMIN, card, {"flag": True, "text": "Only on the emergency band."})
     result = scene.game.inspect(PLAYER, saved["action_id"])
     assert result["state"] == "complete" and result["receipt"] is None
-    assert (
-        result["result"]["answers"] == "Only on the emergency band."
-        and not game.dice.calls
-    )
+    assert result["result"]["answers"] == "Only on the emergency band." and not game.dice.calls
 
 
 @pytest.mark.parametrize("ranked", [False, True])
@@ -152,12 +132,8 @@ def test_actual_source_and_handler_ruling_stay_on_the_original_order(
     monkeypatch,
     ranked,
 ):
-    monkeypatch.setenv(
-        "GIRLFRAME_RULES_REGISTRY", str(mission_lab.ENGINE / "rules/registry.json")
-    )
-    game, guard, npc, alpha, worker, gateway = guard_rolled(
-        ledger, tmp_path, monkeypatch, (1, 1)
-    )
+    monkeypatch.setenv("GIRLFRAME_RULES_REGISTRY", str(mission_lab.ENGINE / "rules/registry.json"))
+    game, guard, npc, alpha, worker, gateway = guard_rolled(ledger, tmp_path, monkeypatch, (1, 1))
     answer(game, ADMIN, "alpha_low", options=("counter_broken",))
     pending = next(x for x in game.choices(ADMIN) if x["kind"] == "alpha_counter_play")
     data = guard.counter(ADMIN, alpha, pending["id"])
@@ -180,14 +156,10 @@ def test_actual_source_and_handler_ruling_stay_on_the_original_order(
     if ranked:
         proposed = json.loads(source)
         assert proposed["issuer"]["kind"] == "handler"
-        assert json.loads(selected(orders, ADMIN, "npc"))["actor"] == npc.model_dump(
-            mode="json"
-        )
+        assert json.loads(selected(orders, ADMIN, "npc"))["actor"] == npc.model_dump(mode="json")
         forged = json.dumps(proposed | {"issuer": npc.model_dump(mode="json")})
         with pytest.raises(WorkflowError, match="original ranked superior"):
-            issue(
-                orders, ADMIN, kind, {"target": forged, "instruction": "Forged issuer."}
-            )
+            issue(orders, ADMIN, kind, {"target": forged, "instruction": "Forged issuer."})
     started = issue(
         orders,
         ADMIN,
@@ -239,13 +211,9 @@ def test_actual_source_and_handler_ruling_stay_on_the_original_order(
         if ranked
         else {"options": ["remove_broken"]},
     )
-    reopened = ScenePlays(
-        GameService(ledger), 900, ADMIN, PLAYER, OTHER, handler_proxy=False
-    )
+    reopened = ScenePlays(GameService(ledger), 900, ADMIN, PLAYER, OTHER, handler_proxy=False)
     owned = next(
-        x
-        for x in reopened.handler_choices(ADMIN)
-        if x["choice"]["kind"] == "handler_disobey"
+        x for x in reopened.handler_choices(ADMIN) if x["choice"]["kind"] == "handler_disobey"
     )
     assert owned["root"] == started["action_id"]
     with pytest.raises(WorkflowError):
@@ -262,12 +230,9 @@ def test_actual_source_and_handler_ruling_stay_on_the_original_order(
     with pytest.raises(WorkflowError):
         orders.perform(OTHER, "wrong-controller", request)
     orders.perform(ADMIN, "withdraw-original-npc", request)
-    assert all(
-        role["token"] != npc.token for role in orders.cast.view(ADMIN, 900)["roles"]
-    )
+    assert all(role["token"] != npc.token for role in orders.cast.view(ADMIN, 900)["roles"])
     issue(orders, ADMIN, "join", {"actor": selected(orders, ADMIN, "join")})
     reopened_orders = SceneOrders(GameService(ledger), 900)
     assert any(
-        role["token"] == npc.token
-        for role in reopened_orders.cast.view(ADMIN, 900)["roles"]
+        role["token"] == npc.token for role in reopened_orders.cast.view(ADMIN, 900)["roles"]
     )

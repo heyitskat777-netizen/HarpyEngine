@@ -4,14 +4,18 @@ from uuid import uuid4
 
 import mission_lab  # noqa: F401
 import pytest
-from girlframe.services.m2_game import GameService
-from girlframe.services.m3_missions import MissionService
-from girlframe.services.onboarding import WorkflowError
+from battlefield import Battlefield
+from battlefield_frame_work import BattlefieldFrameWork
+from owned_followups import OwnedFollowups
+from play_continuations import PlayContinuations
+from scene_beneath_work import SceneBeneathWork
 from test_consume import (
     _elective_partake,
     acquire,
     asset,
     cockpit,
+)
+from test_consume import (
     ready as consume_ready,
 )
 from test_final_handler_workflows import bundled_registry  # noqa: F401
@@ -19,13 +23,12 @@ from test_frame_control import exposed_core
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger_fixture
 from test_m2_game import state
-from test_wyvern import free_chat, ready as wyvern_ready, roll
+from test_wyvern import free_chat, roll
+from test_wyvern import ready as wyvern_ready
 
-from battlefield_frame_work import BattlefieldFrameWork
-from battlefield import Battlefield
-from play_continuations import PlayContinuations
-from scene_beneath_work import SceneBeneathWork
-from owned_followups import OwnedFollowups
+from girlframe.services.m2_game import GameService
+from girlframe.services.m3_missions import MissionService
+from girlframe.services.onboarding import WorkflowError
 
 ledger = ledger_fixture
 
@@ -48,9 +51,7 @@ def perform(work, viewer, card, op, values, key=None):
     )
 
 
-def test_janus_contact_reopens_with_original_judge_and_unplug_owner(
-    ledger, tmp_path, monkeypatch
-):
+def test_janus_contact_reopens_with_original_judge_and_unplug_owner(ledger, tmp_path, monkeypatch):
     game, _, _ = exposed_core(ledger, tmp_path, monkeypatch, caster_mode="inside_frame")
     work = BattlefieldFrameWork(game, 900)
     start = find(work, PLAYER, "janus_start")
@@ -93,20 +94,17 @@ def test_janus_contact_reopens_with_original_judge_and_unplug_owner(
     assert state(game).neural_connections[-1].phase == "unplugged"
 
 
-def test_janus_optional_contact_requires_target_before_judge(
-    ledger, tmp_path, monkeypatch
-):
-    from girlframe.engine.m3_actor_bonds import current_ref
-    from girlframe.engine.m3_janus_requisitions import UNIVERSAL
+def test_janus_optional_contact_requires_target_before_judge(ledger, tmp_path, monkeypatch):
     from test_frame_control import place_original
     from test_janus_core_service import cast_core
     from test_janus_requisitions import training
 
+    from girlframe.engine.m3_actor_bonds import current_ref
+    from girlframe.engine.m3_janus_requisitions import UNIVERSAL
+
     service, game, core = training(ledger, tmp_path, monkeypatch, rule=UNIVERSAL)
     cast_core(service, game, core)
-    caster, battery = (
-        current_ref(state(game), viewer.user_id) for viewer in (PLAYER, OTHER)
-    )
+    caster, battery = (current_ref(state(game), viewer.user_id) for viewer in (PLAYER, OTHER))
     for actor in (caster, battery):
         place_original(game, actor, mode="outside_frame")
     work = BattlefieldFrameWork(game, 900)
@@ -130,9 +128,7 @@ def test_janus_optional_contact_requires_target_before_judge(
     with pytest.raises(WorkflowError):
         perform(work, ADMIN, target, "decide", approval)
     perform(work, OTHER, target, "decide", approval)
-    review = find(
-        BattlefieldFrameWork(GameService(ledger), 900), ADMIN, "janus_connection"
-    )
+    review = find(BattlefieldFrameWork(GameService(ledger), 900), ADMIN, "janus_connection")
     assert review["id"] == result["id"]
     perform(
         work,
@@ -144,9 +140,7 @@ def test_janus_optional_contact_requires_target_before_judge(
     assert state(game).neural_connections[-1].phase == "connected"
 
 
-def test_consume_repair_runs_in_original_dive_popup_and_saves_once(
-    ledger, tmp_path, monkeypatch
-):
+def test_consume_repair_runs_in_original_dive_popup_and_saves_once(ledger, tmp_path, monkeypatch):
     from girlframe.engine.m3_consume import PARTAKE
 
     game, worker, gateway, controls = consume_ready(ledger, tmp_path, monkeypatch)
@@ -159,7 +153,10 @@ def test_consume_repair_runs_in_original_dive_popup_and_saves_once(
     cockpit(game, "pilot")
     root, _ = _elective_partake(game, worker, gateway)
     original = game.inspect(PLAYER, root)["receipt"]
-    rooms = lambda: {900: ("relay", "Relay")}
+
+    def rooms():
+        return {900: ("relay", "Relay")}
+
     resumed = GameService(ledger)
     continuations = OwnedFollowups(resumed, rooms)
     scene = SceneBeneathWork(resumed, rooms, continuations)
@@ -170,9 +167,7 @@ def test_consume_repair_runs_in_original_dive_popup_and_saves_once(
     ]
     assert card["root"] == root
     assert not [
-        x
-        for x in PlayContinuations(resumed).view(OTHER)
-        if x["action"] == "consume_partake"
+        x for x in PlayContinuations(resumed).view(OTHER) if x["action"] == "consume_partake"
     ]
     values = {
         "girl_asset": girl,
@@ -187,9 +182,7 @@ def test_consume_repair_runs_in_original_dive_popup_and_saves_once(
     key = str(uuid4())
     receipt = scene.perform(PLAYER, key, payload)
     assert scene.perform(PLAYER, key, payload) == receipt
-    assert not next(
-        x for x in state(resumed).sheets["2"].assets if x.id == frame
-    ).damaged
+    assert not next(x for x in state(resumed).sheets["2"].assets if x.id == frame).damaged
     assert next(x for x in state(resumed).sheets["2"].assets if x.id == girl).damaged
     assert resumed.inspect(PLAYER, root)["receipt"] == original
 
@@ -217,9 +210,7 @@ def test_wyvern_roused_pin_uses_engine_targets_and_only_pinner_can_release(
     assert [item["id"] for item in counter["operations"]] == ["counter"]
     assert [item["id"] for item in releases["operations"]] == ["release"]
     with pytest.raises(WorkflowError):
-        perform(
-            resumed, OTHER, releases, "release", {"account": "I am not the pinner."}
-        )
+        perform(resumed, OTHER, releases, "release", {"account": "I am not the pinner."})
     response = perform(
         resumed,
         PLAYER,
@@ -231,13 +222,12 @@ def test_wyvern_roused_pin_uses_engine_targets_and_only_pinner_can_release(
     assert not [x for x in resumed.view(OTHER) if x["action"] == "wyvern_source"]
 
 
-def test_wyvern_crushing_bulk_offers_only_assessed_scene_vehicle(
-    ledger, tmp_path, monkeypatch
-):
+def test_wyvern_crushing_bulk_offers_only_assessed_scene_vehicle(ledger, tmp_path, monkeypatch):
+    from test_wyvern import buy
+
     from girlframe.engine import m3_vehicles, m3_wyvern
     from girlframe.engine.m3_actor_bonds import current_ref
     from girlframe.services.m3_vehicles import VehicleService
-    from test_wyvern import buy
 
     game, worker, gateway, source = wyvern_ready(ledger, tmp_path, monkeypatch)
     buy(source, m3_wyvern.CRUSH)
@@ -291,27 +281,22 @@ def test_wyvern_crushing_bulk_offers_only_assessed_scene_vehicle(
         activity.respond(OTHER, str(uuid4()), payload)
     activity.respond(PLAYER, str(uuid4()), payload)
     reopened = GameService(ledger)
-    vehicle = next(
-        x for x in m3_vehicles.vehicles(state(reopened)) if x.id == truck["id"]
-    )
+    vehicle = next(x for x in m3_vehicles.vehicles(state(reopened)) if x.id == truck["id"])
     assert vehicle.destroyed_event and vehicle.source_action == action
     assert reopened.inspect(PLAYER, action)["receipt"] == original
 
 
-def test_wyvern_too_big_replacement_keeps_incoming_receipt(
-    ledger, tmp_path, monkeypatch
-):
-    from girlframe.engine.m2 import ChoiceAnswer, PlayInput
+def test_wyvern_too_big_replacement_keeps_incoming_receipt(ledger, tmp_path, monkeypatch):
     from test_m2_game import answer, tick
+
+    from girlframe.engine.m2 import ChoiceAnswer, PlayInput
 
     game, worker, gateway, _ = wyvern_ready(ledger, tmp_path, monkeypatch)
     roll(game, worker, gateway)
     free_chat(worker, gateway)
     game.dice.faces = (3, 4)
     unmarked = next(
-        x.id
-        for x in state(game).sheets["3"].identities
-        if not x.marked and not x.protected
+        x.id for x in state(game).sheets["3"].identities if not x.marked and not x.protected
     )
     incoming = game.begin(
         OTHER,
@@ -369,9 +354,7 @@ def test_wyvern_too_big_replacement_keeps_incoming_receipt(
         )
     if any(x["kind"] == "mockingbird_risk" for x in game.choices(OTHER)):
         answer(game, OTHER, "mockingbird_risk")
-    activity = Battlefield(
-        MissionService(ledger), ADMIN, PLAYER, OTHER, shared=True, private=True
-    )
+    activity = Battlefield(MissionService(ledger), ADMIN, PLAYER, OTHER, shared=True, private=True)
     activity.game = game
     response = next(
         row
@@ -405,15 +388,16 @@ def test_wyvern_too_big_replacement_keeps_incoming_receipt(
 def test_crushing_bulk_sprite_interception_is_owned_and_preserves_original_roll(
     ledger, tmp_path, monkeypatch
 ):
-    from girlframe.engine import m3_wyvern
-    from girlframe.engine.m3_actor_bonds import current_ref
-    from girlframe.engine.m3_actor_state import ActorRef
-    from girlframe.engine.m3_world import introduce_gorgon
     from test_enforcement_initiative import cast_target
     from test_m2_game import answer
     from test_world import gorgon
     from test_wyvern import buy
     from test_wyvern_combat import actual_asset
+
+    from girlframe.engine import m3_wyvern
+    from girlframe.engine.m3_actor_bonds import current_ref
+    from girlframe.engine.m3_actor_state import ActorRef
+    from girlframe.engine.m3_world import introduce_gorgon
 
     game, worker, gateway, controls = wyvern_ready(ledger, tmp_path, monkeypatch)
     buy(controls, m3_wyvern.CRUSH)
@@ -431,9 +415,7 @@ def test_crushing_bulk_sprite_interception_is_owned_and_preserves_original_roll(
                     types=leader.types,
                 ),
             ).world
-        game.event(
-            c, ADMIN.user_id, str(uuid4()), "synthetic.test_sprite_bodies", saved
-        )
+        game.event(c, ADMIN.user_id, str(uuid4()), "synthetic.test_sprite_bodies", saved)
     target = ActorRef(kind="gorgon", entity="crush-target")
     cast_target(game, target)
     used = actual_asset(game, current_ref(state(game), PLAYER.user_id))
@@ -452,9 +434,7 @@ def test_crushing_bulk_sprite_interception_is_owned_and_preserves_original_roll(
     choice = find(resumed, ADMIN, "battle_sprite_intercept")
     options = choice["operations"][0]["fields"][0]["options"]
     assert options[0][0] == "pass" and len(options) > 1
-    assert not any(
-        x["action"] == "battle_sprite_intercept" for x in resumed.view(PLAYER)
-    )
+    assert not any(x["action"] == "battle_sprite_intercept" for x in resumed.view(PLAYER))
     values = {"target": "pass", "account": "The nearby Sprite declines."}
     with pytest.raises(WorkflowError):
         perform(resumed, PLAYER, choice, "intercept", values)

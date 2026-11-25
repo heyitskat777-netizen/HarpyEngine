@@ -17,9 +17,7 @@ def ready_batteries(game, viewer, channel):
         ref = ActorRef.model_validate(item["ref"])
         detail = preview(game, viewer, channel, ref)
         if detail.get("connection") and not detail["rolled"]:
-            targets.append(
-                {"id": item["token"], "label": item["label"], "ref": item["ref"]}
-            )
+            targets.append({"id": item["token"], "label": item["label"], "ref": item["ref"]})
     return targets
 
 

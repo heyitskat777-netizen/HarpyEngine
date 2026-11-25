@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       full_suite:
-        description: Final M3 candidate — run full regression and global static checks
+        description: Final candidate — run engine and Activity regression and global static checks
         type: boolean
         default: false
 
@@ -135,4 +135,58 @@ jobs:
           path: |
             var/ci-scope.txt
             var/pytest.xml
+
+  offline-activity:
+    if: github.event_name == 'workflow_dispatch' && inputs.full_suite
+    runs-on: ubuntu-latest
+    env:
+      HARPY_ACTIVITY_ENGINE_ROOT: ${{ github.workspace }}
+      HARPY_ACTIVITY_RUNTIME_ROOT: ${{ github.workspace }}/.sites-runtime/harpy-activity-regression
+      PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}/tests:${{ github.workspace }}/tests/rules:${{ github.workspace }}/harpy-activity-lab:${{ github.workspace }}/tools:${{ github.workspace }}/tools/offline_activity
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+          cache: npm
+          cache-dependency-path: harpy-activity-lab/package-lock.json
+      - name: Install locked dependencies
+        id: prerequisites
+        run: |
+          python -m pip install uv==0.12.23
+          uv sync --locked --all-groups
+          npm ci --prefix harpy-activity-lab
+          node harpy-activity-lab/build-discord-sdk.cjs
+          mkdir -p var
+      - name: Verify checkout provenance
+        id: provenance
+        run: |
+          uv run --no-sync python - <<'PY'
+          from pathlib import Path
+          import mission_lab
+          import girlframe
+          import p2_scene
+
+          checkout = Path.cwd().resolve()
+          assert mission_lab.ENGINE == checkout
+          assert Path(girlframe.__file__).resolve().parent == checkout / "src/girlframe"
+          assert Path(p2_scene.__file__).resolve() == checkout / "harpy-activity-lab/p2_scene.py"
+          PY
+      - name: Standalone Activity tests
+        env:
+          HARPY_ACTIVITY_LOOPBACK_ONLY: '1'
+        run: uv run --no-sync pytest -q harpy-activity-lab --junitxml=var/activity-standalone.xml
+      - name: Activity integration tests
+        if: ${{ !cancelled() && steps.prerequisites.outcome == 'success' && steps.provenance.outcome == 'success' }}
+        env:
+          HARPY_ACTIVITY_LOOPBACK_ONLY: '1'
+        run: uv run --no-sync pytest -q integrations/activity/tests --junitxml=var/activity-integration.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: offline-activity-results
+          path: var/activity-*.xml
           if-no-files-found: ignore

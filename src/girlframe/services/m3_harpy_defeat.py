@@ -3018,7 +3018,8 @@ class HarpyDefeatService:
                     "Only the actual original body's controller proposes its route."
                 )
             if (
-                not account.strip() or not (navigation.strip() or discovery)
+                not account.strip()
+                or not (navigation.strip() or discovery)
                 or rules.fight_required(canon, actor)
             ):
                 raise WorkflowError(
@@ -3044,8 +3045,11 @@ class HarpyDefeatService:
                 from girlframe.services.m3_voidspace_invasion import navigation as found_route
 
                 if (
-                    prior is None or return_of is not None or destination is not None
-                    or rift is not None or escape_effect is not None
+                    prior is None
+                    or return_of is not None
+                    or destination is not None
+                    or rift is not None
+                    or escape_effect is not None
                 ):
                     raise WorkflowError("Choose the original offstage journey and discovered route")
                 self._travel_proof(c, prior)
@@ -3170,7 +3174,8 @@ class HarpyDefeatService:
                 account=account,
                 navigation=navigation,
                 expected=expected,
-            ) | (dict(discovery=discovery) if discovery is not None else {}),
+            )
+            | (dict(discovery=discovery) if discovery is not None else {}),
             operation,
             authorize=access,
             auto_audit=False,
@@ -3238,7 +3243,8 @@ class HarpyDefeatService:
 
                     previous = rules.offstage_travel(canon, value.actor)
                     if (
-                        previous is None or previous.id != value.continuation_of
+                        previous is None
+                        or previous.id != value.continuation_of
                         or value.navigation_source is None
                         or found_route(self.game, c, canon, value.navigation_source, previous)
                         != value.navigation
@@ -3267,7 +3273,8 @@ class HarpyDefeatService:
                 if value.continuation_of:
                     canon.harpy_travels = [
                         x.model_copy(update=dict(state="ended", ended_event=event))
-                        if x.id == value.continuation_of else x
+                        if x.id == value.continuation_of
+                        else x
                         for x in canon.harpy_travels
                     ]
                 if value.actor.kind == "pilot":

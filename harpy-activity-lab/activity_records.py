@@ -75,7 +75,8 @@ class ActivityRecords:
                 );
                 CREATE TABLE IF NOT EXISTS invitations (
                     code TEXT PRIMARY KEY, recipient INTEGER, room TEXT NOT NULL,
-                    expires INTEGER NOT NULL, request_key TEXT NOT NULL UNIQUE, issuer INTEGER NOT NULL
+                    expires INTEGER NOT NULL, request_key TEXT NOT NULL UNIQUE, issuer
+                      INTEGER NOT NULL
                 );
                 CREATE TABLE IF NOT EXISTS scene_invites (
                     id TEXT PRIMARY KEY, room TEXT NOT NULL, issuer INTEGER NOT NULL,
@@ -85,7 +86,8 @@ class ActivityRecords:
                 CREATE INDEX IF NOT EXISTS scene_invites_recipient ON scene_invites (recipient);
                 CREATE TABLE IF NOT EXISTS descriptions (
                     actor INTEGER NOT NULL, character TEXT NOT NULL, asset TEXT NOT NULL,
-                    text TEXT NOT NULL, revision INTEGER NOT NULL, PRIMARY KEY (actor, character, asset)
+                    text TEXT NOT NULL, revision INTEGER NOT NULL, PRIMARY KEY (actor,
+                      character, asset)
                 );
                 CREATE TABLE IF NOT EXISTS artwork (
                     kind TEXT NOT NULL, subject TEXT NOT NULL, art_id TEXT NOT NULL,
@@ -111,19 +113,18 @@ class ActivityRecords:
                     request_key TEXT NOT NULL UNIQUE
                 );
                 CREATE TABLE IF NOT EXISTS scene_intel_recipients (
-                    recipient TEXT NOT NULL, report INTEGER NOT NULL, PRIMARY KEY (recipient, report)
+                    recipient TEXT NOT NULL, report INTEGER NOT NULL, PRIMARY KEY
+                      (recipient, report)
                 );
                 """
             )
             db.execute("BEGIN IMMEDIATE")
             if not any(
-                row[1] == "author_character"
-                for row in db.execute("PRAGMA table_info(dialogue)")
+                row[1] == "author_character" for row in db.execute("PRAGMA table_info(dialogue)")
             ):
                 db.execute("ALTER TABLE dialogue ADD COLUMN author_character TEXT")
             if not any(
-                row[1] == "pilots_json"
-                for row in db.execute("PRAGMA table_info(scene_archives)")
+                row[1] == "pilots_json" for row in db.execute("PRAGMA table_info(scene_archives)")
             ):
                 db.execute("ALTER TABLE scene_archives ADD COLUMN pilots_json TEXT")
 
@@ -143,14 +144,13 @@ class ActivityRecords:
                 (viewer.user_id,),
             ).fetchall()
             occupants = {}
-            for room, actor in db.execute(
-                "SELECT room, actor FROM participants ORDER BY actor"
-            ):
+            for room, actor in db.execute("SELECT room, actor FROM participants ORDER BY actor"):
                 occupants.setdefault(room, []).append(str(actor))
             legacy_callsigns = {}
             for room, actor, callsign in db.execute(
                 """SELECT p.room, p.actor,
-                          (SELECT d.callsign FROM dialogue d WHERE d.room = p.room AND d.actor = p.actor
+                          (SELECT d.callsign FROM dialogue d WHERE d.room = p.room AND
+                            d.actor = p.actor
                            ORDER BY d.rowid DESC LIMIT 1)
                    FROM participants p
                    JOIN scene_archives a ON a.room = p.room AND a.pilots_json IS NULL
@@ -191,7 +191,10 @@ class ActivityRecords:
             self.require_member(db, viewer, target)
             self.require_open(db, target)
             room = db.execute(
-                "SELECT name, (SELECT channel FROM room_channels WHERE room = rooms.id) FROM rooms WHERE id = ?",
+                (
+                    "SELECT name, (SELECT channel FROM room_channels WHERE room = rooms.id) "
+                    "FROM rooms WHERE id = ?"
+                ),
                 (target,),
             ).fetchone()
             if not room:
@@ -224,7 +227,8 @@ class ActivityRecords:
             return {
                 channel: (room, name)
                 for channel, room, name in db.execute(
-                    """SELECT rc.channel, r.id, r.name FROM room_channels rc JOIN rooms r ON r.id = rc.room
+                    """SELECT rc.channel, r.id, r.name FROM room_channels rc JOIN rooms r
+                      ON r.id = rc.room
                        WHERE NOT EXISTS (SELECT 1 FROM scene_archives a WHERE a.room = r.id)"""
                 )
             }
@@ -257,9 +261,7 @@ class ActivityRecords:
             ).fetchone()
             if row:
                 if row[1:] != (name.strip(), location, viewer.user_id):
-                    raise WorkflowError(
-                        "This room request already has a different result."
-                    )
+                    raise WorkflowError("This room request already has a different result.")
                 invites = [
                     {"id": identity, "recipient": recipient}
                     for identity, recipient in db.execute(
@@ -343,18 +345,25 @@ class ActivityRecords:
             rows = db.execute(
                 """WITH recent AS (
                        SELECT d.room, d.rowid AS id, d.callsign, d.created, art.art_id,
-                              ROW_NUMBER() OVER (PARTITION BY d.room ORDER BY d.rowid DESC) AS position
+                              ROW_NUMBER() OVER (PARTITION BY d.room ORDER BY d.rowid
+                                DESC) AS position
                        FROM json_each(?) requested
                        JOIN dialogue d ON d.room = requested.value
                        LEFT JOIN rooms r ON r.id = d.room
                        LEFT JOIN participants p ON p.room = r.id AND p.actor = ?
                        LEFT JOIN scene_archives a ON a.room = d.room
-                       LEFT JOIN artwork art ON art.kind = 'pilot' AND art.subject = d.author_character
+                       LEFT JOIN artwork art ON art.kind = 'pilot' AND art.subject =
+                         d.author_character
                        WHERE a.room IS NULL AND (p.actor IS NOT NULL OR (d.room = ? AND ?))
                    )
                    SELECT room, id, callsign, created, art_id FROM recent
                    WHERE position <= 75 ORDER BY room, id""",
-                (json.dumps(list(dict.fromkeys(room_ids))), viewer.user_id, RELAY["id"], relay_joined),
+                (
+                    json.dumps(list(dict.fromkeys(room_ids))),
+                    viewer.user_id,
+                    RELAY["id"],
+                    relay_joined,
+                ),
             ).fetchall()
         scenes = {}
         for room, identity, callsign, created, portrait in rows:
@@ -391,11 +400,18 @@ class ActivityRecords:
             db.execute("BEGIN IMMEDIATE")
             if self.room(db, target) != viewer.user_id:
                 raise WorkflowError("Only the scene host can end this scene.")
-            saved = db.execute("SELECT closed_at FROM scene_archives WHERE room = ?", (target,)).fetchone()
+            saved = db.execute(
+                "SELECT closed_at FROM scene_archives WHERE room = ?", (target,)
+            ).fetchone()
             if saved:
                 return {"room": target, "archived_at": saved[0]}
-            bound = db.execute("SELECT channel FROM room_channels WHERE room = ?", (target,)).fetchone()
-            members = [row[0] for row in db.execute("SELECT actor FROM participants WHERE room = ?", (target,))]
+            bound = db.execute(
+                "SELECT channel FROM room_channels WHERE room = ?", (target,)
+            ).fetchone()
+            members = [
+                row[0]
+                for row in db.execute("SELECT actor FROM participants WHERE room = ?", (target,))
+            ]
             entries = self.dialogue(db, target, limit=-1)
             for entry in entries:
                 entry.pop("legacy_author")
@@ -409,7 +425,8 @@ class ActivityRecords:
                 pilots.setdefault(str(actor), callsign)
             closed_at = int(time())
             db.execute(
-                """INSERT INTO scene_archives (room, closed_at, dialogue_json, views_json, pilots_json)
+                """INSERT INTO scene_archives (room, closed_at, dialogue_json, views_json,
+                  pilots_json)
                    VALUES (?, ?, ?, ?, ?)""",
                 (
                     target,
@@ -433,13 +450,12 @@ class ActivityRecords:
             ).fetchone()
             if previous:
                 if previous[1:] != (target, viewer.user_id, text.strip()):
-                    raise WorkflowError(
-                        "This dialogue request already has a different result."
-                    )
+                    raise WorkflowError("This dialogue request already has a different result.")
                 return {"entry": previous[0]}
             self.require_open(db, target)
             result = db.execute(
-                """INSERT INTO dialogue (room, actor, callsign, body, request_key, created, author_character)
+                """INSERT INTO dialogue (room, actor, callsign, body, request_key,
+                  created, author_character)
                    VALUES (?, ?, ?, ?, ?, ?, ?)""",
                 (
                     target,
@@ -459,7 +475,8 @@ class ActivityRecords:
         with closing(sqlite3.connect(self.path)) as db:
             return dict(
                 db.execute(
-                    f"SELECT sender, max(id) FROM private_messages WHERE recipient IN ({placeholders}) GROUP BY sender",
+                    f"SELECT sender, max(id) FROM private_messages "
+                    f"WHERE recipient IN ({placeholders}) GROUP BY sender",
                     recipients,
                 )
             )
@@ -472,7 +489,8 @@ class ActivityRecords:
             db.row_factory = sqlite3.Row
             rows = db.execute(
                 f"""SELECT id, sender, callsign, body, created FROM private_messages
-                   WHERE (sender IN ({a}) AND recipient IN ({b})) OR (sender IN ({b}) AND recipient IN ({a}))
+                   WHERE (sender IN ({a}) AND recipient IN ({b})) OR (sender IN ({b}) AND
+                     recipient IN ({a}))
                    ORDER BY id DESC LIMIT 75""",
                 (*actors, *peers, *peers, *actors),
             ).fetchall()
@@ -490,12 +508,11 @@ class ActivityRecords:
             ).fetchone()
             if previous:
                 if previous[1:] != message:
-                    raise WorkflowError(
-                        "This message request already has a different result."
-                    )
+                    raise WorkflowError("This message request already has a different result.")
                 return {"entry": previous[0]}
             result = db.execute(
-                """INSERT INTO private_messages (sender, recipient, body, callsign, created, request_key)
+                """INSERT INTO private_messages (sender, recipient, body, callsign,
+                  created, request_key)
                    VALUES (?, ?, ?, ?, ?, ?)""",
                 (*message, sender["label"], int(time()), key),
             )
@@ -525,8 +542,10 @@ class ActivityRecords:
             if previous:
                 previous_id, *request = previous
                 if request != [room, sender.character_id, text] or recipients != {
-                    row[0] for row in db.execute(
-                        "SELECT recipient FROM scene_intel_recipients WHERE report = ?", (previous_id,)
+                    row[0]
+                    for row in db.execute(
+                        "SELECT recipient FROM scene_intel_recipients WHERE report = ?",
+                        (previous_id,),
                     )
                 }:
                     raise WorkflowError("This intel request already has a different result.")
@@ -546,11 +565,16 @@ class ActivityRecords:
     def issue_scene_invite(self, viewer, key, room, recipient):
         with closing(sqlite3.connect(self.path)) as db, db:
             db.execute("BEGIN IMMEDIATE")
-            if room == "campaign" or recipient == str(viewer.user_id) or self.room(db, room) != viewer.user_id:
+            if (
+                room == "campaign"
+                or recipient == str(viewer.user_id)
+                or self.room(db, room) != viewer.user_id
+            ):
                 raise WorkflowError("Only the scene host may invite another pilot.")
             self.require_open(db, room)
             previous = db.execute(
-                "SELECT id, room, issuer, recipient FROM scene_invites WHERE request_key = ?", (key,)
+                "SELECT id, room, issuer, recipient FROM scene_invites WHERE request_key = ?",
+                (key,),
             ).fetchone()
             if previous:
                 if previous[1:] != (room, viewer.user_id, recipient):
@@ -609,7 +633,9 @@ class ActivityRecords:
                 raise WorkflowError("This scene invitation is closed.")
             self.require_open(db, room)
             if decision == "accept" and room != RELAY["id"]:
-                db.execute("INSERT OR IGNORE INTO participants VALUES (?, ?)", (room, viewer.user_id))
+                db.execute(
+                    "INSERT OR IGNORE INTO participants VALUES (?, ?)", (room, viewer.user_id)
+                )
             db.execute("UPDATE scene_invites SET decision = ? WHERE id = ?", (decision, identity))
             return {"room": room, "decision": decision}
 
@@ -618,9 +644,7 @@ class ActivityRecords:
             raise ValueError
         target = data["target"]
         if target == "campaign" and not self.campaign_codes:
-            raise WorkflowError(
-                "Campaign access comes from Discord sign-in and the server role."
-            )
+            raise WorkflowError("Campaign access comes from Discord sign-in and the server role.")
         with closing(sqlite3.connect(self.path)) as db, db:
             db.execute("BEGIN IMMEDIATE")
             if self.room(db, target) != viewer.user_id:
@@ -632,9 +656,7 @@ class ActivityRecords:
             ).fetchone()
             if row:
                 if (row[1], row[3]) != (target, viewer.user_id):
-                    raise WorkflowError(
-                        "This invitation request already has a different result."
-                    )
+                    raise WorkflowError("This invitation request already has a different result.")
                 return {"code": row[0], "expires": row[2]}
             code = "".join(secrets.choice(ALPHABET) for _ in range(12))
             expires = int(time()) + INVITE_LIFETIME
@@ -685,7 +707,10 @@ class ActivityRecords:
             return {
                 asset: (text, revision)
                 for asset, text, revision in db.execute(
-                    "SELECT asset, text, revision FROM descriptions WHERE actor = ? AND character = ?",
+                    (
+                        "SELECT asset, text, revision FROM descriptions WHERE actor = ? AND "
+                        "character = ?"
+                    ),
                     (viewer.user_id, character),
                 )
             }
@@ -694,9 +719,7 @@ class ActivityRecords:
         with closing(sqlite3.connect(self.path)) as db:
             return {
                 (kind, subject): art_id
-                for kind, subject, art_id in db.execute(
-                    "SELECT kind, subject, art_id FROM artwork"
-                )
+                for kind, subject, art_id in db.execute("SELECT kind, subject, art_id FROM artwork")
             }
 
     def select_artwork(self, viewer, kind, subject, artwork, previous):
@@ -718,9 +741,7 @@ class ActivityRecords:
             if current != previous:
                 raise WorkflowError("Refresh before saving. The artwork has changed.")
             if artwork is None:
-                db.execute(
-                    "DELETE FROM artwork WHERE kind = ? AND subject = ?", identity
-                )
+                db.execute("DELETE FROM artwork WHERE kind = ? AND subject = ?", identity)
             else:
                 db.execute(
                     "INSERT OR REPLACE INTO artwork VALUES (?, ?, ?)",
@@ -729,17 +750,10 @@ class ActivityRecords:
         return {"artwork": artwork}
 
     def describe_asset(self, viewer, character, asset, data):
-        if (
-            data.keys() != {"asset", "description", "revision"}
-            or data["asset"] != asset
-        ):
+        if data.keys() != {"asset", "description", "revision"} or data["asset"] != asset:
             raise ValueError
         text = data["description"]
-        if (
-            not isinstance(text, str)
-            or len(text) > 700
-            or type(data["revision"]) is not int
-        ):
+        if not isinstance(text, str) or len(text) > 700 or type(data["revision"]) is not int:
             raise ValueError
         if not character:
             raise WorkflowError("This assignment has no saved character.")
@@ -747,16 +761,17 @@ class ActivityRecords:
             db.execute("BEGIN IMMEDIATE")
             identity = (viewer.user_id, character, asset)
             row = db.execute(
-                "SELECT text, revision FROM descriptions WHERE actor = ? AND character = ? AND asset = ?",
+                (
+                    "SELECT text, revision FROM descriptions WHERE actor = ? AND character = ? "
+                    "AND asset = ?"
+                ),
                 identity,
             ).fetchone()
             revision = row[1] if row else 0
             if row and row[0] == text:
                 return {"revision": revision}
             if revision != data["revision"]:
-                raise WorkflowError(
-                    "Refresh the asset before saving. Its description has changed."
-                )
+                raise WorkflowError("Refresh the asset before saving. Its description has changed.")
             db.execute(
                 "INSERT OR REPLACE INTO descriptions VALUES (?, ?, ?, ?, ?)",
                 (*identity, text, revision + 1),

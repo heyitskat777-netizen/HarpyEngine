@@ -30,8 +30,11 @@ COURT_SELECTIONS = frozenset({"red_queen_consult", "red_queen_questions", "red_q
 CHOICES = CHANGELING_CHOICES | MEMORY_CHOICES | COURT_CHOICES
 SOURCE_PLAYS = frozenset(
     {
-        "changeling_blank_slate", "changeling_body_of_clay", "red_queen_memory",
-        "red_queen_consult", "red_queen_panopticon",
+        "changeling_blank_slate",
+        "changeling_body_of_clay",
+        "red_queen_memory",
+        "red_queen_consult",
+        "red_queen_panopticon",
     }
 )
 SAVED = frozenset({"changeling_copy", "red_queen_restore"})
@@ -40,15 +43,26 @@ SAVED = frozenset({"changeling_copy", "red_queen_restore"})
 def choice_fields(kind, data, field, account, yes_no):
     if kind == "red_queen_consult":
         ams = [(row["id"], row["label"]) for row in data["ams"]]
-        fields = [
-            field("options", "Court AMs to recall", ams,
-                  required=bool(data["minimum"]), multiple=data["maximum"] > 1)
-        ] if ams and data["maximum"] else []
+        fields = (
+            [
+                field(
+                    "options",
+                    "Court AMs to recall",
+                    ams,
+                    required=bool(data["minimum"]),
+                    multiple=data["maximum"] > 1,
+                )
+            ]
+            if ams and data["maximum"]
+            else []
+        )
         if data["low"]:
             return fields + [
-                field("queen", "Person who receives the Queen", [
-                    (row["id"], row["label"]) for row in data["targets"]
-                ]),
+                field(
+                    "queen",
+                    "Person who receives the Queen",
+                    [(row["id"], row["label"]) for row in data["targets"]],
+                ),
             ]
         fields.append(field("text", "Your Decree") | {"paragraph": True})
         if data["high"]:
@@ -56,8 +70,13 @@ def choice_fields(kind, data, field, account, yes_no):
         return fields
     if kind in ("red_queen_questions", "red_queen_reciprocal"):
         fields = [
-            field("options", "Printed questions", data["questions"],
-                  required=bool(data["minimum"]), multiple=data["maximum"] > 1)
+            field(
+                "options",
+                "Printed questions",
+                data["questions"],
+                required=bool(data["minimum"]),
+                multiple=data["maximum"] > 1,
+            )
         ]
         if kind == "red_queen_questions":
             fields.append(field("tag", "Optional observation Tag", required=False))
@@ -78,9 +97,7 @@ def choice_fields(kind, data, field, account, yes_no):
         ]
     if kind == "changeling_recent":
         return [
-            field(
-                "start_event", "Start of the recent memory window", data.get("anchors")
-            ),
+            field("start_event", "Start of the recent memory window", data.get("anchors")),
             field(
                 "earlier_event",
                 "Other recorded start event, if applicable",
@@ -123,10 +140,7 @@ def choice_fields(kind, data, field, account, yes_no):
     fields = []
     for i, category in enumerate(data["categories"]):
         label = f"{category['kind'].title()} · {category['scope']}"
-        fields += [
-            field(f"memories{i}", label + " · Memories, one per line")
-            | {"paragraph": True}
-        ]
+        fields += [field(f"memories{i}", label + " · Memories, one per line") | {"paragraph": True}]
         if data["identities"]:
             fields.append(
                 field(
@@ -145,11 +159,14 @@ def choice_answer(kind, values):
         selected = values.get("options")
         picked = (selected,) if isinstance(selected, str) else tuple(selected or ())
         return ChoiceAnswer(
-            options=picked, text=values.get("text", ""),
+            options=picked,
+            text=values.get("text", ""),
             fields={key: values[key] for key in ("queen", "advice", "tag") if key in values},
         )
     if kind in ("red_queen_answers", "red_queen_reciprocal_answer"):
-        return ChoiceAnswer(fields={key[7:]: value for key, value in values.items() if key.startswith("answer:")})
+        return ChoiceAnswer(
+            fields={key[7:]: value for key, value in values.items() if key.startswith("answer:")}
+        )
     if kind == "red_queen_tag":
         if values.get("flag") not in ("yes", "no"):
             raise WorkflowError("Choose your actual response.")
@@ -158,9 +175,7 @@ def choice_answer(kind, values):
         return ChoiceAnswer(denied=(values["identity"],), text=values["account"])
     if kind == "changeling_recent":
         return ChoiceAnswer(
-            fields={
-                "start_event": values.get("earlier_event") or values["start_event"]
-            },
+            fields={"start_event": values.get("earlier_event") or values["start_event"]},
             text=values["account"],
         )
     if kind == "changeling_taste":
@@ -169,18 +184,14 @@ def choice_answer(kind, values):
             flag=approve, text=values["account"] if approve else values.get("tag", "")
         )
     if kind.startswith("changeling_clay_"):
-        facets = {
-            key: values[key] for key in changeling.FACET_LABELS if values.get(key)
-        }
+        facets = {key: values[key] for key in changeling.FACET_LABELS if values.get(key)}
         if copy := values.get("copy"):
             if facets:
                 raise WorkflowError(
                     "Choose either a disclosed appearance or changes to individual facets."
                 )
             return ChoiceAnswer(fields={"copy": copy}, text=values["account"])
-        return ChoiceAnswer(
-            options=tuple(facets), fields=facets, text=values["account"]
-        )
+        return ChoiceAnswer(options=tuple(facets), fields=facets, text=values["account"])
     if kind == "red_queen_memory_links":
         return ChoiceAnswer(
             fields={
@@ -192,9 +203,7 @@ def choice_answer(kind, values):
     fields = {"years": "1+"} if values.get("years") == "yes" else {}
     if kind == "red_queen_memory_category" and values.get("am"):
         fields["am"] = values["am"]
-    return ChoiceAnswer(
-        options=(values["category"],), fields=fields, text=values["scope"]
-    )
+    return ChoiceAnswer(options=(values["category"],), fields=fields, text=values["scope"])
 
 
 def copy_fields(data, field):

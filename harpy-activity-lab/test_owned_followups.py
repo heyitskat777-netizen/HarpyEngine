@@ -1,27 +1,10 @@
 """Private Activity follow-ups against synthetic HarpyEngine campaigns."""
 
+import asyncio
 from uuid import uuid4
 
-import asyncio
-
 import mission_lab
-
 import pytest
-from girlframe.delivery.p1_source_pause_worker import SourcePauseWorker
-from girlframe.engine.m3_strain_effects import Choice
-from girlframe.engine.m3_world_state import Faction
-from girlframe.engine.m3_actor_bonds import current_ref
-from girlframe.engine.m3_handler_play_state import Effect
-from girlframe.services.m3_handler_plays import HandlerPlayService
-from girlframe.services.m3_strain_effects import EffectService
-from girlframe.services.onboarding import WorkflowError
-from test_handler_plays import begin
-from test_m2_game import Gateway
-from test_strain_effect_service import selected
-from test_strain_service import D6, ready
-from test_world import initial
-from test_world_service import ready as ready_world
-
 from handler_punishments import HandlerPunishments
 from off_duty_followups import OffDutyFollowups
 from owned_followups import OwnedFollowups
@@ -31,10 +14,27 @@ from test_final_handler_workflows import (  # initializes the bundled engine pat
     OTHER,
     PLAYER,
     bundled_registry,  # noqa: F401
-    ledger,  # noqa: F401,F811
     prepared,
     state,
 )
+from test_final_handler_workflows import (
+    ledger as ledger,
+)
+from test_handler_plays import begin
+from test_m2_game import Gateway
+from test_strain_effect_service import selected
+from test_strain_service import D6, ready
+from test_world import initial
+from test_world_service import ready as ready_world
+
+from girlframe.delivery.p1_source_pause_worker import SourcePauseWorker
+from girlframe.engine.m3_actor_bonds import current_ref
+from girlframe.engine.m3_handler_play_state import Effect
+from girlframe.engine.m3_strain_effects import Choice
+from girlframe.engine.m3_world_state import Faction
+from girlframe.services.m3_handler_plays import HandlerPlayService
+from girlframe.services.m3_strain_effects import EffectService
+from girlframe.services.onboarding import WorkflowError
 
 
 def call(desk, who, card, answer, *, key=None):
@@ -49,9 +49,7 @@ def call(desk, who, card, answer, *, key=None):
 def off_duty(desk, actor, action, answer, *, key=None, visible=None):
     data = visible or desk.view(actor)
     request = {k: data[k] for k in ("period", "game_revision", "revision")}
-    return desk.perform(
-        actor, key or str(uuid4()), request | {"action": action, "answer": answer}
-    )
+    return desk.perform(actor, key or str(uuid4()), request | {"action": action, "answer": answer})
 
 
 def test_delegated_off_duty_work_reassigns_attendance_and_consultation(ledger):
@@ -73,12 +71,8 @@ def test_delegated_off_duty_work_reassigns_attendance_and_consultation(ledger):
     off_duty(off, ADMIN, "acknowledge_handler_scene", {})
     off_duty(off, PLAYER, "acknowledge_handler_scene", {})
     desk = HandlerPunishments(game)
-    work = next(
-        row for row in desk.view(ADMIN) if row["action"] == "apply_off_duty_punishment"
-    )
-    passing = next(
-        row for row in work["forms"] if row["kind"] == "passing_responsibility"
-    )
+    work = next(row for row in desk.view(ADMIN) if row["action"] == "apply_off_duty_punishment")
+    passing = next(row for row in work["forms"] if row["kind"] == "passing_responsibility")
     assert passing["fields"][0]["options"][0][0] == str(OTHER.user_id)
     call(
         desk,
@@ -87,9 +81,7 @@ def test_delegated_off_duty_work_reassigns_attendance_and_consultation(ledger):
         {"kind": "passing_responsibility", "delegate": str(OTHER.user_id)},
     )
     assert all(row["id"] != work["id"] for row in desk.view(ADMIN))
-    scene = next(
-        row for row in desk.view(OTHER) if row["action"] == "propose_punishment_scene"
-    )
+    scene = next(row for row in desk.view(OTHER) if row["action"] == "propose_punishment_scene")
     with pytest.raises(WorkflowError):
         call(desk, ADMIN, scene, {"summary": "Not the new owner"})
     call(
@@ -100,14 +92,10 @@ def test_delegated_off_duty_work_reassigns_attendance_and_consultation(ledger):
     )
     for actor in (OTHER, PLAYER):
         attendance = next(
-            row
-            for row in desk.view(actor)
-            if row["action"] == "attest_punishment_scene"
+            row for row in desk.view(actor) if row["action"] == "attest_punishment_scene"
         )
         call(desk, actor, attendance, {})
-    work = next(
-        row for row in desk.view(OTHER) if row["action"] == "apply_off_duty_punishment"
-    )
+    work = next(row for row in desk.view(OTHER) if row["action"] == "apply_off_duty_punishment")
     call(
         desk,
         OTHER,
@@ -118,13 +106,9 @@ def test_delegated_off_duty_work_reassigns_attendance_and_consultation(ledger):
             "disclosed": True,
         },
     )
-    review = next(
-        row for row in desk.view(ADMIN) if row["action"] == "answer_punishment_consult"
-    )
+    review = next(row for row in desk.view(ADMIN) if row["action"] == "answer_punishment_consult")
     call(desk, ADMIN, review, {"approve": True})
-    approved = next(
-        row for row in desk.view(OTHER) if row["action"] == "apply_approved_punishment"
-    )
+    approved = next(row for row in desk.view(OTHER) if row["action"] == "apply_approved_punishment")
     call(desk, OTHER, approved, {})
     assert not desk.view(OTHER)
     assert state(game).regulations[-1].rule == "Keep the archive sealed"
@@ -148,14 +132,10 @@ def test_starting_strain_rolls_persist_and_effects_gate_activation(ledger):
         for sheet in current.sheets.values():
             for asset in sheet.assets:
                 asset.void = False
-        game.event(
-            c, ADMIN.user_id, "strain-test-baseline", "synthetic.baseline", current
-        )
+        game.event(c, ADMIN.user_id, "strain-test-baseline", "synthetic.baseline", current)
     period = desk.periods.begin(ADMIN, "prepare")
     assert desk.view(PLAYER) is None
-    off_duty(
-        desk, ADMIN, "strain_configure", {"scenario": "business_as_usual", "high": []}
-    )
+    off_duty(desk, ADMIN, "strain_configure", {"scenario": "business_as_usual", "high": []})
     card = desk.view(ADMIN)["closing"]["strain"]["cards"][0]
     report = {
         "id": card["id"],
@@ -174,13 +154,8 @@ def test_starting_strain_rolls_persist_and_effects_gate_activation(ledger):
     )
     request = {k: first[k] for k in ("id", "revision")}
     key = str(uuid4())
-    saved = off_duty(
-        desk, ADMIN, "strain_roll", request, key=key, visible=original_view
-    )
-    assert (
-        off_duty(desk, ADMIN, "strain_roll", request, key=key, visible=original_view)
-        == saved
-    )
+    saved = off_duty(desk, ADMIN, "strain_roll", request, key=key, visible=original_view)
+    assert off_duty(desk, ADMIN, "strain_roll", request, key=key, visible=original_view) == saved
     column = next(
         row
         for row in OffDutyFollowups(game).view(ADMIN)["closing"]["strain"]["cards"]
@@ -208,10 +183,7 @@ def test_starting_strain_rolls_persist_and_effects_gate_activation(ledger):
             "effect": selected().model_dump(mode="json"),
         },
     )
-    assert (
-        EffectService(desk.strain.service).get(ADMIN, effect["id"])["state"]
-        == "resolved"
-    )
+    assert EffectService(desk.strain.service).get(ADMIN, effect["id"])["state"] == "resolved"
     assert desk.strain.service.dice.calls == 1
     assert not desk.view(ADMIN)["closing"]["strain"]["ready"]
     assert desk.periods.get(ADMIN, period["id"])["phase"] == "preparing"
@@ -293,12 +265,8 @@ def test_starting_strain_rolls_persist_and_effects_gate_activation(ledger):
 
 @pytest.mark.parametrize("kind", ("sedation", "frame_disassembly"))
 @pytest.mark.parametrize("legacy", (False, True))
-def test_punishment_materializes_an_owned_canonical_followup(
-    ledger, kind, legacy, monkeypatch
-):
-    _, game = ready_world(
-        ledger, frame="PROJECT ANKOU" if kind == "sedation" else "JANUS"
-    )
+def test_punishment_materializes_an_owned_canonical_followup(ledger, kind, legacy, monkeypatch):
+    _, game = ready_world(ledger, frame="PROJECT ANKOU" if kind == "sedation" else "JANUS")
     policy = ledger.policy
     ledger.policy = policy.model_copy(
         update={
@@ -341,17 +309,13 @@ def test_punishment_materializes_an_owned_canonical_followup(
         from girlframe.services import m3_ankou_feedback_sequences, m3_punishments
 
         if kind == "sedation":
-            monkeypatch.setattr(
-                m3_ankou_feedback_sequences, "start", lambda *args, **kwargs: None
-            )
+            monkeypatch.setattr(m3_ankou_feedback_sequences, "start", lambda *args, **kwargs: None)
         else:
             original_related = m3_punishments.related
             monkeypatch.setattr(
                 m3_punishments,
                 "related",
-                lambda *args: (
-                    original_related(*args) if args[6] != "void_threshold" else None
-                ),
+                lambda *args: original_related(*args) if args[6] != "void_threshold" else None,
             )
     for actor, step, answer in (
         (ADMIN, "instruct", {"kind": kind, **details}),
@@ -369,6 +333,7 @@ def test_punishment_materializes_an_owned_canonical_followup(
         import json
 
         import sqlalchemy as sa
+
         from girlframe.database import tables
         from girlframe.services.m3_work import related
 
@@ -416,11 +381,7 @@ def test_punishment_materializes_an_owned_canonical_followup(
         assert not any(row["id"] == legacy_id for row in desk.view(PLAYER))
     followups = OwnedFollowups(game, lambda: {900: ("test", "Synthetic scene")})
     if kind == "sedation":
-        card = next(
-            row
-            for row in followups.view(PLAYER)
-            if row["action"] == "feedback_activate"
-        )
+        card = next(row for row in followups.view(PLAYER) if row["action"] == "feedback_activate")
         assert not followups.view(OTHER)
         call(
             followups,
@@ -432,9 +393,7 @@ def test_punishment_materializes_an_owned_canonical_followup(
             },
         )
         assert asyncio.run(SourcePauseWorker(game).tick(Gateway()))
-        card = next(
-            row for row in followups.view(PLAYER) if row["action"] == "feedback_choose"
-        )
+        card = next(row for row in followups.view(PLAYER) if row["action"] == "feedback_choose")
         target = current_ref(state(game), OTHER.user_id).token
         call(
             followups,
@@ -446,9 +405,7 @@ def test_punishment_materializes_an_owned_canonical_followup(
                 "account": "Ask the peer for purpose",
             },
         )
-        prompt = next(
-            row for row in followups.view(OTHER) if row["action"] == "feedback_purpose"
-        )
+        prompt = next(row for row in followups.view(OTHER) if row["action"] == "feedback_purpose")
         with pytest.raises(WorkflowError):
             call(
                 followups,
@@ -462,22 +419,15 @@ def test_punishment_materializes_an_owned_canonical_followup(
             prompt,
             {"given": "yes", "account": "Hold the western relay"},
         )
-        card = next(
-            row
-            for row in followups.view(PLAYER)
-            if row["action"] == "feedback_identity"
-        )
+        card = next(row for row in followups.view(PLAYER) if row["action"] == "feedback_identity")
         replace = state(game).sheets[str(PLAYER.user_id)].identities[0].id
         call(followups, PLAYER, card, {"replace": replace})
         assert "Hold the western relay" in {
-            identity.name
-            for identity in state(game).sheets[str(PLAYER.user_id)].identities
+            identity.name for identity in state(game).sheets[str(PLAYER.user_id)].identities
         }
         assert not followups.view(PLAYER)
     else:
-        card = next(
-            row for row in followups.view(PLAYER) if row["action"] == "resolve_void"
-        )
+        card = next(row for row in followups.view(PLAYER) if row["action"] == "resolve_void")
         assert not followups.view(OTHER)
         op = "propose_occupancy"
         assert op in {entry["id"] for entry in card["operations"]}
@@ -491,9 +441,7 @@ def test_punishment_materializes_an_owned_canonical_followup(
         with pytest.raises(WorkflowError):
             call(followups, OTHER, card, answer)
         call(followups, PLAYER, card, answer)
-        reopened = next(
-            row for row in followups.view(ADMIN) if row["action"] == "resolve_void"
-        )
+        reopened = next(row for row in followups.view(ADMIN) if row["action"] == "resolve_void")
         assert "confirm_occupancy" in {entry["id"] for entry in reopened["operations"]}
         call(
             followups,
@@ -506,9 +454,7 @@ def test_punishment_materializes_an_owned_canonical_followup(
         )
         saved = followups.void.get(PLAYER, card["id"])
         assert saved["stage"] == "abandoned"
-        resolution = next(
-            row for row in followups.view(ADMIN) if row["action"] == "resolve_void"
-        )
+        resolution = next(row for row in followups.view(ADMIN) if row["action"] == "resolve_void")
         frame = followups.void.get(ADMIN, card["id"])["frame_assets"]
         call(
             followups,

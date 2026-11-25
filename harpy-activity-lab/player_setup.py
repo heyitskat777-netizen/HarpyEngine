@@ -4,7 +4,33 @@ import json
 from dataclasses import replace
 
 import sqlalchemy as sa
+from activity_artwork import KINDS, frame_subject, validate_selection
+from activity_records import RELAY, ActivityRecords, scene_locations
+from am_scene_controls import am_work_channels
+from bot_enrollment import BotEnrollment
+from defeat_play import DEFEAT
+from dive_play import DIVE
+from doll_controls import RETURN as DOLL_RETURN
+from enrollment_choices import EnrollmentChoices
+from frame_purchases import FramePurchases
+from handler_playbook import HandlerPlaybook
+from handler_punishments import HandlerPunishments
+from mockingbird_play import PERSON, person_start
+from off_duty_followups import OffDutyFollowups
+from oldgen_play import OLDGEN_ADVICE, advice_targets
+from owned_followups import OwnedFollowups
+from play_catalog import ORDER_PLAYS, character_plays, frame_upgrades, play_category
+from play_continuations import ACTIONS as CONTINUATION_ACTIONS
+from player_reset import awaiting_replacement, purge_sheet
 from pydantic import ValidationError
+from rulebook_text import BOND_PROMPTS as PROMPTS
+from rulebook_text import NPC_BOND_ROLES as NPC_ROLES
+from scene_beneath_work import SceneBeneathWork
+from scene_orders import SceneOrders
+from scene_plays import BENEATH, OFF_DUTY_PLAYS, REJECT_TAG, ScenePlays
+from snoop_play import SNOOP, snoop_targets
+from specialist_scene import SpecialistScene
+
 from girlframe.database import tables
 from girlframe.engine.bonds import BondProposal
 from girlframe.engine.creation import CreationDraft, official_frame
@@ -30,32 +56,6 @@ from girlframe.services.m3_careers import CareerService
 from girlframe.services.m3_cast import CastService
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.onboarding import WorkflowError
-
-from activity_artwork import KINDS, frame_subject, validate_selection
-from activity_records import RELAY, ActivityRecords, scene_locations
-from am_scene_controls import am_work_channels
-from bot_enrollment import BotEnrollment
-from defeat_play import DEFEAT
-from dive_play import DIVE
-from doll_controls import RETURN as DOLL_RETURN
-from enrollment_choices import EnrollmentChoices
-from frame_purchases import FramePurchases
-from handler_playbook import HandlerPlaybook
-from handler_punishments import HandlerPunishments
-from mockingbird_play import PERSON, person_start
-from off_duty_followups import OffDutyFollowups
-from oldgen_play import OLDGEN_ADVICE, advice_targets
-from owned_followups import OwnedFollowups
-from play_catalog import ORDER_PLAYS, character_plays, frame_upgrades, play_category
-from play_continuations import ACTIONS as CONTINUATION_ACTIONS
-from player_reset import awaiting_replacement, purge_sheet
-from rulebook_text import BOND_PROMPTS as PROMPTS
-from rulebook_text import NPC_BOND_ROLES as NPC_ROLES
-from scene_beneath_work import SceneBeneathWork
-from scene_orders import SceneOrders
-from scene_plays import BENEATH, OFF_DUTY_PLAYS, REJECT_TAG, ScenePlays
-from snoop_play import SNOOP, snoop_targets
-from specialist_scene import SpecialistScene
 
 SCENE = 900
 GIRL = "MOCKINGBIRD"
@@ -130,10 +130,12 @@ def _enrollment_validation(error, draft):
                 for index, asset in enumerate(draft.get(key, [])):
                     name = asset["name"]
                     if name in seen:
-                        fields.append({
-                            "path": [key, index, "name"],
-                            "message": "Choose a different Asset for this slot.",
-                        })
+                        fields.append(
+                            {
+                                "path": [key, index, "name"],
+                                "message": "Choose a different Asset for this slot.",
+                            }
+                        )
                     seen.add(name)
             if fields:
                 continue
@@ -150,8 +152,10 @@ def _enrollment_validation(error, draft):
         elif issue["type"] in ("missing", "string_too_short"):
             message = "Enter a value for this field."
         else:
-            message = "Choose a listed value or correct this entry." if path else (
-                "Check the Asset, Bond, and playbook selections in this dossier."
+            message = (
+                "Choose a listed value or correct this entry."
+                if path
+                else ("Check the Asset, Bond, and playbook selections in this dossier.")
             )
         fields.append({"path": path, "message": message})
     return EnrollmentInputError(fields)
@@ -187,9 +191,7 @@ def seed_roster(store, handler, first=None, second=None):
     store.policy = store.policy.model_copy(
         update={
             "owner_initial_conditions": InitialConditions(),
-            "owner_creation_rulings": CreationRulings(
-                provenance="owner_approved_campaign_ruling"
-            ),
+            "owner_creation_rulings": CreationRulings(provenance="owner_approved_campaign_ruling"),
             "owner_intense_tag_bonus": 2,
             "m2_approval": ReleaseApproval(
                 registry_sha256=registry_digest(),
@@ -202,9 +204,7 @@ def seed_roster(store, handler, first=None, second=None):
         if viewer:
             store.join(viewer, f"roster-join-{role}")
     bootstrap = replace(handler, is_administrator=True)
-    HandlerService(store).appoint(
-        bootstrap, "roster-appoint-handler", 0, handler.user_id
-    )
+    HandlerService(store).appoint(bootstrap, "roster-appoint-handler", 0, handler.user_id)
     GameService(store).bind_scene(bootstrap, "lab-open-scene", SCENE)
 
 
@@ -225,14 +225,10 @@ class PlayerSetup:
         self.enrollment_choices = EnrollmentChoices(self.game)
         self.review = CreationReviewService(store)
         self.play_registry = load_registry()
-        self.handler_playbook = HandlerPlaybook(
-            store, self.play_registry, self.off_duty.periods
-        )
+        self.handler_playbook = HandlerPlaybook(store, self.play_registry, self.off_duty.periods)
         self.handler_punishments = HandlerPunishments(self.game)
         self.owned_followups = OwnedFollowups(self.game, self.handler_rooms)
-        self.beneath_work = SceneBeneathWork(
-            self.game, self.handler_rooms, self.owned_followups
-        )
+        self.beneath_work = SceneBeneathWork(self.game, self.handler_rooms, self.owned_followups)
         self.scene_plays = None
         self.records = None
 
@@ -266,8 +262,7 @@ class PlayerSetup:
                         events.c.campaign_id == self.store.campaign_id,
                         events.c.actor_id == str(viewer.user_id),
                         events.c.kind == "m2.scene_joined",
-                        sa.func.json_extract(events.c.payload_json, "$.channel")
-                        == SCENE,
+                        sa.func.json_extract(events.c.payload_json, "$.channel") == SCENE,
                     )
                     .limit(1)
                 )
@@ -292,11 +287,7 @@ class PlayerSetup:
                 sheet = state.sheets.get(str(author))
                 if sheet and sheet.callsign == entry["callsign"]:
                     entry["portrait"] = artwork.get(("pilot", sheet.character_id))
-        channel = (
-            SCENE
-            if target == RELAY["id"]
-            else self.records.play_room(viewer, target)[1]
-        )
+        channel = SCENE if target == RELAY["id"] else self.records.play_room(viewer, target)[1]
         return transcript | {
             "cast": self.transcript_cast(viewer, channel) if channel is not None else [],
             "receipts": self.scene_plays.receipts(viewer, {str(channel): target})
@@ -344,17 +335,23 @@ class PlayerSetup:
                 member: replace(viewer, user_id=int(member), is_administrator=False)
                 for member in active
             }
-            casts = {
-                member: self.transcript_cast(principal, channel)
-                for member, principal in principals.items()
-            } if is_open else {}
+            casts = (
+                {
+                    member: self.transcript_cast(principal, channel)
+                    for member, principal in principals.items()
+                }
+                if is_open
+                else {}
+            )
             if is_open:
                 authority = replace(self.handler, is_administrator=True)
                 self.game.close_scene(authority, f"activity-end-scene:{target}", channel)
             views = {
                 str(member): {
                     "cast": casts.get(member, []),
-                    "receipts": self.scene_plays.receipts(principal, {str(channel): target}, limit=None),
+                    "receipts": self.scene_plays.receipts(
+                        principal, {str(channel): target}, limit=None
+                    ),
                 }
                 for member, principal in principals.items()
             }
@@ -372,12 +369,23 @@ class PlayerSetup:
                 aliases = [f"pilot-account-{uid}", f"handler-{uid}"]
                 if profile:
                     aliases.append(f"pilot-{profile['id']}")
-                contact_id = f"handler-{uid}" if member["handler"] else (
-                    f"pilot-{profile['id']}" if profile else f"pilot-account-{uid}"
+                contact_id = (
+                    f"handler-{uid}"
+                    if member["handler"]
+                    else (f"pilot-{profile['id']}" if profile else f"pilot-account-{uid}")
                 )
-                people[uid] = {"id":contact_id, "aliases":[item for item in aliases if item != contact_id],
-                               "label":member["name"], "portrait":portraits.get(("pilot",profile["id"])) if profile else None,
-                               "bot":member.get("bot",False), "role":"Handler" if member["handler"] else "Pilot" if member["pilot"] else "Enrollment pending"}
+                people[uid] = {
+                    "id": contact_id,
+                    "aliases": [item for item in aliases if item != contact_id],
+                    "label": member["name"],
+                    "portrait": portraits.get(("pilot", profile["id"])) if profile else None,
+                    "bot": member.get("bot", False),
+                    "role": "Handler"
+                    if member["handler"]
+                    else "Pilot"
+                    if member["pilot"]
+                    else "Enrollment pending",
+                }
             if viewer.user_id not in people:
                 raise WorkflowError("Join this campaign before using Communications.")
             actor = people.pop(viewer.user_id)
@@ -413,7 +421,17 @@ class PlayerSetup:
         actor, contacts = self.communication_contacts(viewer, state, members=members)
         latest = self.records.private_updates(actor["id"], actor.get("aliases", ()))
         return [
-            contact | {"latest_message": max((latest.get(identity, 0) for identity in (contact["id"], *contact.get("aliases", ()))), default=0) or None}
+            contact
+            | {
+                "latest_message": max(
+                    (
+                        latest.get(identity, 0)
+                        for identity in (contact["id"], *contact.get("aliases", ()))
+                    ),
+                    default=0,
+                )
+                or None
+            }
             for contact in sorted(contacts, key=lambda item: item["label"].casefold())
         ]
 
@@ -426,14 +444,22 @@ class PlayerSetup:
             raise WorkflowError("This communication is unavailable.")
         if message is None:
             contact = next(contact for contact in contacts if contact["id"] == target)
-            thread = self.records.private_thread(actor["id"], target, actor.get("aliases", ()), contact.get("aliases", ()))
-            parties = {identity:party for party in (actor,contact) for identity in (party["id"],*party.get("aliases",()))}
+            thread = self.records.private_thread(
+                actor["id"], target, actor.get("aliases", ()), contact.get("aliases", ())
+            )
+            parties = {
+                identity: party
+                for party in (actor, contact)
+                for identity in (party["id"], *party.get("aliases", ()))
+            }
             for entry in thread["entries"]:
                 party = parties[entry["sender"]]
                 entry["portrait"] = party.get("portrait")
                 entry["author_id"] = party["id"]
-            return thread | {"sender":{k:v for k,v in actor.items() if k!="aliases"},
-                             "recipient":{k:v for k,v in contact.items() if k!="aliases"}}
+            return thread | {
+                "sender": {k: v for k, v in actor.items() if k != "aliases"},
+                "recipient": {k: v for k, v in contact.items() if k != "aliases"},
+            }
         key, text = message
         return self.records.send_private(key, actor, target, text)
 
@@ -458,7 +484,9 @@ class PlayerSetup:
         room, recipients, text = data["room"], data["recipients"], data["text"]
         if not isinstance(text, str) or not 1 <= len(text.strip()) <= 1200:
             raise WorkflowError("Enter a discovery of 1 to 1200 characters.")
-        if not isinstance(recipients, list) or not all(isinstance(item, str) for item in recipients):
+        if not isinstance(recipients, list) or not all(
+            isinstance(item, str) for item in recipients
+        ):
             raise ValueError
         if not recipients:
             raise WorkflowError("Choose at least one recipient.")
@@ -482,9 +510,7 @@ class PlayerSetup:
             self.handler,
             self.owner,
             self.recruit,
-            lambda channel: (
-                channel in extra_channels or self.records.has_channel(channel)
-            ),
+            lambda channel: channel in extra_channels or self.records.has_channel(channel),
             handler_proxy=not self.bound_roster,
             actor_lookup=self.activity_scene_actor if self.bound_roster else None,
             activity_cast_channels=extra_channels,
@@ -500,7 +526,8 @@ class PlayerSetup:
             state = load_state(connection, self.store.campaign_id)
             if state.order and viewer.user_id not in state.order:
                 raise WorkflowError(
-                    "Enrollment for this cadre has closed. Contact the Handler for campaign placement."
+                    "Enrollment for this cadre has closed. Contact the Handler for "
+                    "campaign placement."
                 )
         return self.store.join(viewer, f"discord-role-join-{viewer.user_id}")
 
@@ -537,25 +564,21 @@ class PlayerSetup:
             raise WorkflowError("Enter this scene first.")
         if enter:
             bootstrap = (
-                replace(self.handler, is_administrator=True)
-                if self.bound_roster
-                else self.handler
+                replace(self.handler, is_administrator=True) if self.bound_roster else self.handler
             )
             self.game.bind_scene(bootstrap, f"activity-room-bind:{target}", channel)
-            self.game.join_scene(
-                self.handler, f"activity-room-handler:{target}", channel
-            )
+            self.game.join_scene(self.handler, f"activity-room-handler:{target}", channel)
         return self.scene_plays.for_channel(channel)
 
-    def room_play_directory(self, viewer, rooms, channels, state, safety, off_duty, *, scene_id=None):
+    def room_play_directory(
+        self, viewer, rooms, channels, state, safety, off_duty, *, scene_id=None
+    ):
         active = None
         table = tables.m2["m2_scenes"]
         character = state.sheets[str(viewer.user_id)]
         specialist = {
             play["id"]
-            for play in character_plays(
-                self.play_registry, character, owns_sheet=True, state=state
-            )
+            for play in character_plays(self.play_registry, character, owns_sheet=True, state=state)
             if play["id"] in (PERSON, OLDGEN_ADVICE, SNOOP)
         }
         with self.store.engine.connect() as connection:
@@ -571,8 +594,7 @@ class PlayerSetup:
             current_locks = {
                 channel: lock
                 for channel in native
-                if (lock := self.game.lock(connection, channel))
-                and lock["state"] != "released"
+                if (lock := self.game.lock(connection, channel)) and lock["state"] != "released"
             }
             casts = {cast.id for cast in state.scene_casts if cast.open}
             locked_memberships = [
@@ -596,9 +618,7 @@ class PlayerSetup:
                 current_play = None
                 defeat_in_progress = None
                 if safety["paused"]:
-                    blockers.append(
-                        {"code": "paused", "message": "A safety pause is active."}
-                    )
+                    blockers.append({"code": "paused", "message": "A safety pause is active."})
                 if lock := current_locks.get(channel):
                     blockers.append(
                         {
@@ -613,11 +633,17 @@ class PlayerSetup:
                         current_play = held["data"]["play"]
                         if current_play == DEFEAT and held["actor_id"] == str(viewer.user_id):
                             defeat_in_progress = held["data"].get("defeat", {}).get("source_work")
-                elif not is_active and locked_memberships and (
-                    not all(locked_memberships)
-                    or not self.scene_plays.allows_parallel_membership(
-                        channel, row["id"] if row else None, casts,
-                        unbound_room=room["joined"],
+                elif (
+                    not is_active
+                    and locked_memberships
+                    and (
+                        not all(locked_memberships)
+                        or not self.scene_plays.allows_parallel_membership(
+                            channel,
+                            row["id"] if row else None,
+                            casts,
+                            unbound_room=room["joined"],
+                        )
                     )
                 ):
                     blockers.append(
@@ -659,7 +685,9 @@ class PlayerSetup:
                             issues.append(
                                 {
                                     "code": "required_defeat",
-                                    "message": "HarpyEngine has assigned no Defeat to this pilot here.",
+                                    "message": (
+                                        "HarpyEngine has assigned no Defeat to this pilot here."
+                                    ),
                                 }
                             )
                     if (
@@ -678,7 +706,9 @@ class PlayerSetup:
                         issues.append(
                             {
                                 "code": "required_tag_rejection",
-                                "message": "HarpyEngine has assigned no Tag rejection to this pilot.",
+                                "message": (
+                                    "HarpyEngine has assigned no Tag rejection to this pilot."
+                                ),
                             }
                         )
                     if (
@@ -686,9 +716,7 @@ class PlayerSetup:
                         and is_active
                         and not issues
                         and (
-                            reason := person_start(
-                                self.game, viewer, state, channel
-                            ).get("reason")
+                            reason := person_start(self.game, viewer, state, channel).get("reason")
                         )
                     ):
                         issues.append({"code": "conversation", "message": reason})
@@ -698,8 +726,7 @@ class PlayerSetup:
                             issues.append(
                                 {
                                     "code": "advice",
-                                    "message": reason
-                                    or "Another eligible Girl must be present.",
+                                    "message": reason or "Another eligible Girl must be present.",
                                 }
                             )
                     if (
@@ -724,7 +751,8 @@ class PlayerSetup:
                     availability[identity] = {"state": state_label, "reasons": issues}
                     if identity == DEFEAT:
                         availability[identity]["sources"] = (
-                            [defeat_in_progress] if state_label == "resume" and defeat_in_progress
+                            [defeat_in_progress]
+                            if state_label == "resume" and defeat_in_progress
                             else [source["id"] for source in defeat_sources]
                         )
                 room["play_availability"] = availability
@@ -735,22 +763,14 @@ class PlayerSetup:
                 ]
         return active
 
-    def scene_projection(
-        self, viewer, room, channel, canonical, sheet, state, safety, off_duty
-    ):
+    def scene_projection(self, viewer, room, channel, canonical, sheet, state, safety, off_duty):
         native = self.game.scene_info(viewer, channel)
         joined = native["joined"]
-        locked = bool(
-            joined and native["lock"] and native["lock"]["state"] != "released"
-        )
+        locked = bool(joined and native["lock"] and native["lock"]["state"] != "released")
         adapter = self.scene_plays.for_channel(channel)
-        blocked = "keep_your_head" in adapter.start_reasons(
-            viewer, state, native.get("pilots", [])
-        )
+        blocked = "keep_your_head" in adapter.start_reasons(viewer, state, native.get("pilots", []))
         options = (
-            adapter.play_options(
-                viewer, native, sheet, state, locked, safety["paused"], off_duty
-            )
+            adapter.play_options(viewer, native, sheet, state, locked, safety["paused"], off_duty)
             if joined
             else {}
         )
@@ -852,10 +872,7 @@ class PlayerSetup:
             for uid, profile in sorted(roster["pilots"].items())
         )
         with self.store.engine.connect() as connection:
-            if (
-                self.bound_roster
-                and load_state(connection, self.store.campaign_id).order
-            ):
+            if self.bound_roster and load_state(connection, self.store.campaign_id).order:
                 return
             current = self.handler_setup.current(connection)[1].status_order
         if order != tuple(current):
@@ -870,7 +887,8 @@ class PlayerSetup:
         return [
             {"id": row["id"], "name": row["name"], "pilot": row["pilot"]}
             for row in self.campaign_members(viewer)
-            if not row["bot"] and (not row["handler"] or row["pilot"])
+            if not row["bot"]
+            and (not row["handler"] or row["pilot"])
             and row["id"] != str(viewer.user_id)
         ]
 
@@ -901,7 +919,11 @@ class PlayerSetup:
             people.append(
                 {
                     "id": identity,
-                    "name": "HarpyEngine" if handler and identity == str(self.store.policy.application_id) else sheet.callsign if sheet else (
+                    "name": "HarpyEngine"
+                    if handler and identity == str(self.store.policy.application_id)
+                    else sheet.callsign
+                    if sheet
+                    else (
                         (self.store.draft(viewer, int(identity)) or {}).get("callsign")
                         or ("Handler" if handler else "Recruit · " + identity[-4:])
                     ),
@@ -924,8 +946,12 @@ class PlayerSetup:
             record = {
                 "stage": "handler",
                 "off_duty": self.off_duty.view(viewer),
-                "show_dog_mail": self.off_duty.show_dog.correspondence(viewer) if self.bound_roster else [],
-                "specialist_assignments": self.specialist_assignments(viewer, state) if self.bound_roster else [],
+                "show_dog_mail": self.off_duty.show_dog.correspondence(viewer)
+                if self.bound_roster
+                else [],
+                "specialist_assignments": self.specialist_assignments(viewer, state)
+                if self.bound_roster
+                else [],
                 "callsign": (self.store.draft(viewer) or {}).get("callsign") or "Handler",
                 "communications": self.communication_view(viewer, state),
                 "bonds": [],
@@ -936,8 +962,7 @@ class PlayerSetup:
                 record["creation_choices"] = self.enrollment_choices.view(viewer, ())
                 record["handler_playbook"] = self.handler_playbook.view(viewer)
                 record["handler_punishments"] = (
-                    punishments + followups
-                    + self.handler_playbook.dress_work(viewer)
+                    punishments + followups + self.handler_playbook.dress_work(viewer)
                 )
                 record["handler_notices"] = self.handler_playbook.notices(viewer)
                 record["career_status"] = [
@@ -945,7 +970,9 @@ class PlayerSetup:
                     for item in CareerService(self.store).status_requests(viewer)
                     if item["position"] is None
                 ]
-                record["scene_beneath_work"] = self.beneath_work.view(viewer, followups, punishments)
+                record["scene_beneath_work"] = self.beneath_work.view(
+                    viewer, followups, punishments
+                )
                 rooms = self.handler_rooms()
                 record["specialist_work"] = [
                     card
@@ -967,22 +994,22 @@ class PlayerSetup:
             elif self.scene_plays and not self.scene_plays.handler_proxy:
                 rooms = self.handler_rooms()
                 record["handler_choices"] = [
-                    {**card, "room": rooms[card["channel"]][0], "room_name": rooms[card["channel"]][1]}
+                    {
+                        **card,
+                        "room": rooms[card["channel"]][0],
+                        "room_name": rooms[card["channel"]][1],
+                    }
                     for card in self.scene_plays.handler_choices(viewer)
                     if card["channel"] in rooms
                 ]
             if self.scene_plays:
-                cancellation_rooms = self.handler_rooms() if self.records else {
-                    SCENE: (RELAY["id"], RELAY["name"])
-                }
+                cancellation_rooms = (
+                    self.handler_rooms() if self.records else {SCENE: (RELAY["id"], RELAY["name"])}
+                )
                 record["scene_cancellations"] = [
                     cancellation | {"room": room, "room_name": name}
                     for channel, (room, name) in cancellation_rooms.items()
-                    if (
-                        cancellation := self.scene_plays.for_channel(channel).cancellation(
-                            viewer
-                        )
-                    )
+                    if (cancellation := self.scene_plays.for_channel(channel).cancellation(viewer))
                     and cancellation["can_cancel"]
                 ]
             return record
@@ -1014,9 +1041,7 @@ class PlayerSetup:
             self.enrollment_choices.view(viewer, bonds) if self.bound_roster else None
         )
         bond_setup = (
-            self.bonds.enrollment_options(viewer)
-            if self.bound_roster and profile
-            else None
+            self.bonds.enrollment_options(viewer) if self.bound_roster and profile else None
         )
         if bond_setup:
             bond_setup["prompts"] = list(PROMPTS[profile["girl_playbook"]])
@@ -1053,9 +1078,7 @@ class PlayerSetup:
         if canonical:
             artwork = self.records.artwork() if self.records else {}
             for room in rooms:
-                room["artwork"] = (
-                    artwork.get(("scene", room["id"])) if room["joined"] else None
-                )
+                room["artwork"] = artwork.get(("scene", room["id"])) if room["joined"] else None
             descriptions = (
                 self.records.asset_descriptions(viewer, canonical["character_id"])
                 if self.records
@@ -1079,9 +1102,7 @@ class PlayerSetup:
                                 frame_subject(
                                     sheet.character_id,
                                     sheet.frame,
-                                    sheet.frame_runtime.id
-                                    if sheet.frame_runtime
-                                    else None,
+                                    sheet.frame_runtime.id if sheet.frame_runtime else None,
                                 ),
                             )
                         ),
@@ -1138,8 +1159,7 @@ class PlayerSetup:
                 if self.bound_roster
                 else [],
                 "handler_punishments": (
-                    punishments + followups
-                    + self.handler_playbook.dress_work(viewer)
+                    punishments + followups + self.handler_playbook.dress_work(viewer)
                 )
                 if self.bound_roster
                 else [],
@@ -1147,8 +1167,12 @@ class PlayerSetup:
                 if self.bound_roster
                 else [],
                 "off_duty": self.off_duty.view(viewer),
-                "show_dog_mail": self.off_duty.show_dog.correspondence(viewer) if self.bound_roster else [],
-                "specialist_assignments": self.specialist_assignments(viewer, game_state) if self.bound_roster else [],
+                "show_dog_mail": self.off_duty.show_dog.correspondence(viewer)
+                if self.bound_roster
+                else [],
+                "specialist_assignments": self.specialist_assignments(viewer, game_state)
+                if self.bound_roster
+                else [],
                 "callsign": canonical["callsign"],
                 "sheet_reset": {
                     "callsign": canonical["callsign"],
@@ -1162,10 +1186,15 @@ class PlayerSetup:
                 "communications": self.communication_view(viewer, game_state),
                 "intel_targets": [
                     {"id": sheet.character_id, "callsign": sheet.callsign}
-                    for sheet in sorted(intel_pilots.values(), key=lambda sheet: sheet.callsign.casefold())
-                ] if intel_pilot and self.records else [],
+                    for sheet in sorted(
+                        intel_pilots.values(), key=lambda sheet: sheet.callsign.casefold()
+                    )
+                ]
+                if intel_pilot and self.records
+                else [],
                 "intel_mail": self.records.intel_mail(intel_pilot.character_id)
-                if intel_pilot and self.records else [],
+                if intel_pilot and self.records
+                else [],
                 "bonds": bonds,
                 "creation_choices": creation_choices,
                 "bond_setup": bond_setup,
@@ -1183,17 +1212,15 @@ class PlayerSetup:
                         and channels.get(room["id"]) is not None
                     },
                     limit=25,
-                ) + (self.records.archived_receipts(viewer, archived_rooms) if self.records else []),
+                )
+                + (self.records.archived_receipts(viewer, archived_rooms) if self.records else []),
                 "profile": {
                     "status": next(pilot["status"] for pilot in cadre if pilot["own"]),
                     "heat": own_sheet["heat"],
                     "frame": own_sheet["frame"],
-                    "upgrades": frame_upgrades(
-                        self.play_registry, own_sheet.get("frame_runtime")
-                    ),
+                    "upgrades": frame_upgrades(self.play_registry, own_sheet.get("frame_runtime")),
                     "frame_name": (
-                        own_sheet.get("frame_runtime")
-                        or own_sheet["review"]["creation"]
+                        own_sheet.get("frame_runtime") or own_sheet["review"]["creation"]
                     )["frame_name"],
                     "tags": [tag["label"] for tag in own_sheet["tags"]],
                     "identities": [
@@ -1207,12 +1234,10 @@ class PlayerSetup:
                             "name": asset["name"],
                             "damaged": asset["damaged"],
                             "void": asset["void"],
-                            "description": descriptions.get(
-                                asset["id"], (asset["description"], 0)
-                            )[0],
-                            "description_revision": descriptions.get(
-                                asset["id"], ("", 0)
-                            )[1],
+                            "description": descriptions.get(asset["id"], (asset["description"], 0))[
+                                0
+                            ],
+                            "description_revision": descriptions.get(asset["id"], ("", 0))[1],
                         }
                         for asset in own_sheet["assets"]
                         if asset["family"] == "frame"
@@ -1220,18 +1245,12 @@ class PlayerSetup:
                 },
             }
         if not self.bound_roster and viewer != self.recruit:
-            raise WorkflowError(
-                "This lab did not seed an active Pilot for this account."
-            )
+            raise WorkflowError("This lab did not seed an active Pilot for this account.")
 
         options = {
             "girl": profile["girl_playbook"] if profile else GIRL,
             "frame": profile["frame_playbook"] if profile else canonical_frame(FRAME),
-            **(
-                {"girls": GIRL_TYPES, "frames": FRAME_TYPES}
-                if self.bound_roster
-                else {}
-            ),
+            **({"girls": GIRL_TYPES, "frames": FRAME_TYPES} if self.bound_roster else {}),
         }
         enrollment = None
         reset_pending = False
@@ -1239,9 +1258,7 @@ class PlayerSetup:
             if profile:
                 with self.store.engine.connect() as c:
                     reset_pending = bool(
-                        awaiting_replacement(
-                            load_state(c, self.store.campaign_id), viewer.user_id
-                        )
+                        awaiting_replacement(load_state(c, self.store.campaign_id), viewer.user_id)
                     )
             portrait = (
                 self.records.artwork().get(("pilot", profile["id"]))
@@ -1266,20 +1283,38 @@ class PlayerSetup:
             # An unmigrated cosmetic draft can be repaired by its actual owner
             # using the native revision-checked profile save. Never rewrite history.
             if profile.get("frame_playbook") != "JANUS-B":
-                raise WorkflowError("The saved enrollment needs engine validation. Its records have been preserved.") from error
+                raise WorkflowError(
+                    "The saved enrollment needs engine validation. Its records have been preserved."
+                ) from error
             with self.store.engine.connect() as connection:
-                saved_choices = connection.scalar(sa.select(sa.func.count()).select_from(tables.creation_drafts).where(
-                    tables.creation_drafts.c.campaign_id == self.store.campaign_id,
-                    tables.creation_drafts.c.user_id == str(viewer.user_id),
-                ))
+                saved_choices = connection.scalar(
+                    sa.select(sa.func.count())
+                    .select_from(tables.creation_drafts)
+                    .where(
+                        tables.creation_drafts.c.campaign_id == self.store.campaign_id,
+                        tables.creation_drafts.c.user_id == str(viewer.user_id),
+                    )
+                )
             if saved_choices:
-                raise WorkflowError("This saved enrollment requires a JANUS history migration. Its choices have been preserved.") from error
+                raise WorkflowError(
+                    "This saved enrollment requires a JANUS history migration. Its choices "
+                    "have been preserved."
+                ) from error
             return {
-                "stage":"profile", "callsign":profile["callsign"], "revision":profile["revision"],
-                "options":options | {"frame":"JANUS"}, "bonds":bonds,
-                "creation_choices":creation_choices, "directory":directory, "enrollment":enrollment,
-                "scene_invites":scene_invites,
-                "recovery_notice":"A previous Frame label is no longer supported. Confirm JANUS and save your callsign to resume enrollment. Your notes and profile picture are retained.",
+                "stage": "profile",
+                "callsign": profile["callsign"],
+                "revision": profile["revision"],
+                "options": options | {"frame": "JANUS"},
+                "bonds": bonds,
+                "creation_choices": creation_choices,
+                "directory": directory,
+                "enrollment": enrollment,
+                "scene_invites": scene_invites,
+                "recovery_notice": (
+                    "A previous Frame label is no longer supported. Confirm JANUS and save "
+                    "your callsign to resume enrollment. Your notes and profile picture are "
+                    "retained."
+                ),
             }
         review = self.review.get(viewer)
         peer = self.bond_peer(viewer).user_id
@@ -1309,9 +1344,7 @@ class PlayerSetup:
             "select_starting_bond": self.bound_roster,
             "enrollment": enrollment
             | {
-                "pair_names": list(progress.pair_choice.names)
-                if progress.pair_choice
-                else [],
+                "pair_names": list(progress.pair_choice.names) if progress.pair_choice else [],
                 "cadre": [
                     {
                         "id": str(uid),
@@ -1344,7 +1377,7 @@ class PlayerSetup:
 
     def perform(self, viewer, key, step, data):
         if step == "bot-enrollment" and self.bound_roster:
-            return self.bot_enrollment.request(viewer,key,data)
+            return self.bot_enrollment.request(viewer, key, data)
         if step == "share-intel" and self.records:
             return self.share_intel(viewer, key, data)
         if step == "room-end" and self.records:
@@ -1380,7 +1413,10 @@ class PlayerSetup:
         if step in ("scene-specialist", "scene-orders") and self.bound_roster:
             try:
                 adapter = self.room_plays(viewer, data["room"])
-                returning = step == "scene-specialist" and data["answer"]["operation"].partition(":")[0] == DOLL_RETURN
+                returning = (
+                    step == "scene-specialist"
+                    and data["answer"]["operation"].partition(":")[0] == DOLL_RETURN
+                )
                 if (
                     viewer != self.handler
                     and not returning
@@ -1390,9 +1426,7 @@ class PlayerSetup:
                 service = SceneOrders if step == "scene-orders" else SpecialistScene
                 return service(self.game, adapter.channel).perform(viewer, key, data)
             except (KeyError, TypeError, AttributeError) as error:
-                raise ValueError(
-                    "Use the fields from the current specialist form."
-                ) from error
+                raise ValueError("Use the fields from the current specialist form.") from error
         if step == "creation-choice" and self.bound_roster:
             try:
                 return self.enrollment_choices.perform(viewer, key, data)
@@ -1415,9 +1449,7 @@ class PlayerSetup:
             return self.handler_punishments.perform(viewer, key, data)
         if step.startswith("handler-play-") and self.bound_roster:
             if viewer != self.handler:
-                raise WorkflowError(
-                    "Only this campaign's Handler can make Handler Plays."
-                )
+                raise WorkflowError("Only this campaign's Handler can make Handler Plays.")
             room = data.get("room") if step == "handler-play-start" else None
             channel = self.room_plays(viewer, room).channel if room is not None else None
             return self.handler_playbook.perform(viewer, key, step, data, scene_channel=channel)
@@ -1427,11 +1459,7 @@ class PlayerSetup:
             if data.keys() != {"kind", "target", "artwork", "previous"}:
                 raise ValueError
             kind, target = data["kind"], data["target"]
-            if (
-                not isinstance(kind, str)
-                or kind not in KINDS
-                or not isinstance(target, str)
-            ):
+            if not isinstance(kind, str) or kind not in KINDS or not isinstance(target, str):
                 raise ValueError
             validate_selection(kind, data["artwork"])
             validate_selection(kind, data["previous"])
@@ -1440,9 +1468,7 @@ class PlayerSetup:
                 subject = target
             else:
                 if target != str(viewer.user_id):
-                    raise WorkflowError(
-                        "Select artwork for your own pilot or assigned Frame."
-                    )
+                    raise WorkflowError("Select artwork for your own pilot or assigned Frame.")
                 if kind == "pilot" and self.bound_roster:
                     profile = self.store.draft(viewer)
                     subject = profile["id"] if profile else None
@@ -1455,20 +1481,13 @@ class PlayerSetup:
                     )
                 if kind == "frame":
                     runtime = own_sheet.get("frame_runtime") or {}
-                    subject = frame_subject(
-                        subject, own_sheet["frame"], runtime.get("id")
-                    )
+                    subject = frame_subject(subject, own_sheet["frame"], runtime.get("id"))
             return self.records.select_artwork(
                 viewer, kind, subject, data["artwork"], data["previous"]
             )
         if self.records and step == "room-post" and data.keys() == {"target", "text"}:
-            if (
-                not isinstance(data["text"], str)
-                or not 1 <= len(data["text"].strip()) <= 1200
-            ):
-                raise WorkflowError(
-                    "Enter dialogue or narration of 1 to 1200 characters."
-                )
+            if not isinstance(data["text"], str) or not 1 <= len(data["text"].strip()) <= 1200:
+                raise WorkflowError("Enter dialogue or narration of 1 to 1200 characters.")
             pilot = self.check_room(viewer, data["target"], posting=True)
             adapter = self.room_plays(viewer, data["target"], enter=True)
             adapter.enter(viewer, "dialogue-join:" + key)
@@ -1483,7 +1502,9 @@ class PlayerSetup:
         if self.records and step in ("scene-invite", "scene-invite-decision"):
             if step == "scene-invite":
                 self.game.sheet(viewer)
-                if data.keys() != {"room", "recipient"} or not all(isinstance(value, str) for value in data.values()):
+                if data.keys() != {"room", "recipient"} or not all(
+                    isinstance(value, str) for value in data.values()
+                ):
                     raise ValueError
                 recipient = data["recipient"]
                 self.validate_scene_invitees(viewer, [recipient])
@@ -1524,16 +1545,10 @@ class PlayerSetup:
                 None,
             )
             if asset is None:
-                raise WorkflowError(
-                    "You can edit descriptions for your own Frame assets."
-                )
-            return self.records.describe_asset(
-                viewer, canonical["character_id"], asset["id"], data
-            )
+                raise WorkflowError("You can edit descriptions for your own Frame assets.")
+            return self.records.describe_asset(viewer, canonical["character_id"], asset["id"], data)
         if self.scene_plays and step == "enter-scene":
-            if data.keys() not in ({"room"}, {"room", "play"}) or data.get(
-                "play"
-            ) not in (
+            if data.keys() not in ({"room"}, {"room", "play"}) or data.get("play") not in (
                 None,
                 PERSON,
                 OLDGEN_ADVICE,
@@ -1565,9 +1580,7 @@ class PlayerSetup:
             return adapter.perform_scene(viewer, key, step, data)
         if step == "bond-decision" and data.keys() == {"id", "revision", "decision"}:
             decisions = (
-                ("accept", "decline", "withdraw")
-                if self.bound_roster
-                else ("accept", "decline")
+                ("accept", "decline", "withdraw") if self.bound_roster else ("accept", "decline")
             )
             if (
                 not isinstance(data["id"], str)
@@ -1575,9 +1588,7 @@ class PlayerSetup:
                 or data["decision"] not in decisions
             ):
                 raise ValueError
-            return self.bonds.decide(
-                viewer, key, data["id"], data["revision"], data["decision"]
-            )
+            return self.bonds.decide(viewer, key, data["id"], data["revision"], data["decision"])
         if self.bound_roster and step == "bond":
             if data.keys() != {
                 "target",
@@ -1622,20 +1633,15 @@ class PlayerSetup:
                 with self.store.engine.connect() as connection:
                     state = load_state(connection, self.store.campaign_id)
                     archive = awaiting_replacement(state, viewer.user_id)
-                    if (
-                        state.order
-                        and viewer.user_id not in state.order
-                        and not archive
-                    ):
+                    if state.order and viewer.user_id not in state.order and not archive:
                         raise WorkflowError(
-                            "Enrollment for this cadre has closed. Contact the Handler for campaign placement."
+                            "Enrollment for this cadre has closed. Contact the Handler for "
+                            "campaign placement."
                         )
             try:
                 draft = DraftInput(
                     callsign=data["callsign"],
-                    girl_playbook=data.get("girl_playbook", GIRL)
-                    if self.bound_roster
-                    else GIRL,
+                    girl_playbook=data.get("girl_playbook", GIRL) if self.bound_roster else GIRL,
                     frame_playbook=data.get("frame_playbook", FRAME)
                     if self.bound_roster
                     else FRAME,
@@ -1644,14 +1650,15 @@ class PlayerSetup:
             except ValidationError as error:
                 raise _enrollment_validation(error, data) from None
             if draft.callsign.casefold() == "recruit":
-                raise EnrollmentInputError([
-                    {"path": ["callsign"], "message": "Choose a callsign for your Pilot."},
-                ], conflict=True)
+                raise EnrollmentInputError(
+                    [
+                        {"path": ["callsign"], "message": "Choose a callsign for your Pilot."},
+                    ],
+                    conflict=True,
+                )
             if archive:
                 if data["revision"] != current["revision"]:
-                    raise WorkflowError(
-                        "Reopen the replacement enrollment before saving."
-                    )
+                    raise WorkflowError("Reopen the replacement enrollment before saving.")
                 return CareerService(self.store).begin_replacement(
                     viewer, key, archive.id, state.revision, draft
                 )
@@ -1683,10 +1690,14 @@ class PlayerSetup:
                         try:
                             entry = entry | {"user_id": _snowflake(identity)}
                         except ValueError:
-                            raise EnrollmentInputError([{
-                                "path": ["prior_missions", index, "user_id"],
-                                "message": "Choose a current Cadre member.",
-                            }]) from None
+                            raise EnrollmentInputError(
+                                [
+                                    {
+                                        "path": ["prior_missions", index, "user_id"],
+                                        "message": "Choose a current Cadre member.",
+                                    }
+                                ]
+                            ) from None
                     adapted.append(entry)
                 fields = fields | {"prior_missions": adapted}
             current = self.creation.get(viewer).draft
@@ -1695,11 +1706,7 @@ class PlayerSetup:
                     json.dumps(
                         current.model_dump(mode="json")
                         | fields
-                        | {
-                            "shared_tokens": data.get(
-                                "shared_tokens", current.shared_tokens
-                            )
-                        }
+                        | {"shared_tokens": data.get("shared_tokens", current.shared_tokens)}
                     )
                 )
             except ValidationError as error:
@@ -1715,10 +1722,18 @@ class PlayerSetup:
                 )
             except WorkflowError as error:
                 if str(error) == "Discuss and declare history for every current Cadre counterpart.":
-                    raise EnrollmentInputError([{
-                        "path": ["prior_missions"],
-                        "message": "Answer for every current Cadre member before confirming the discussion.",
-                    }], conflict=True) from None
+                    raise EnrollmentInputError(
+                        [
+                            {
+                                "path": ["prior_missions"],
+                                "message": (
+                                    "Answer for every current Cadre member "
+                                    "before confirming the discussion."
+                                ),
+                            }
+                        ],
+                        conflict=True,
+                    ) from None
                 raise
         if (
             self.bound_roster
@@ -1747,8 +1762,7 @@ class PlayerSetup:
             "context",
         }:
             if any(
-                type(data[field]) is not int
-                for field in ("source_revision", "target_revision")
+                type(data[field]) is not int for field in ("source_revision", "target_revision")
             ):
                 raise ValueError
             bond = BondProposal(
@@ -1760,9 +1774,7 @@ class PlayerSetup:
                 viewer, key, data["source_revision"], data["target_revision"], bond
             )
         if step == "review" and data.keys() == {"revision", "fingerprint"}:
-            if type(data["revision"]) is not int or not isinstance(
-                data["fingerprint"], str
-            ):
+            if type(data["revision"]) is not int or not isinstance(data["fingerprint"], str):
                 raise ValueError
             return self.review.save(viewer, key, data["revision"], data["fingerprint"])
         if step == "activate" and data.keys() == {"fingerprint"}:

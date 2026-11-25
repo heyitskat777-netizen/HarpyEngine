@@ -13,10 +13,11 @@ from girlframe.engine.m3_handler_play_state import (
     Effect,
 )
 from girlframe.engine.m3_world_state import Npc
+from girlframe.services.m2_state import load_state
 from girlframe.services.m3_dogrunner_dress import DressPerformanceService
 from girlframe.services.m3_handler_plays import HandlerPlayService
-from girlframe.services.m3_successor import SuccessorService, owned as owned_successor
-from girlframe.services.m2_state import load_state
+from girlframe.services.m3_successor import SuccessorService
+from girlframe.services.m3_successor import owned as owned_successor
 from girlframe.services.onboarding import WorkflowError
 
 HANDLER_PLAY_STEPS = (
@@ -84,9 +85,7 @@ class HandlerPlaybook:
             "support": "File a campaign map in Battlefield to set up canonical locations."
             if not detail["locations"]
             else None,
-            "mess": "No original affected target is on file."
-            if not detail["targets"]
-            else None,
+            "mess": "No original affected target is on file." if not detail["targets"] else None,
             "off_duty": "An actual Off-Duty period must be prepared first."
             if not detail["off_duty"]
             else None,
@@ -116,8 +115,7 @@ class HandlerPlaybook:
                     ],
                     "plays": self.available(detail),
                     "executors": [
-                        (actor["token"], actor["label"])
-                        for actor in detail["executors"]
+                        (actor["token"], actor["label"]) for actor in detail["executors"]
                     ],
                     "locations": detail["locations"],
                     "observed_moment": detail["observed_moment"],
@@ -156,7 +154,9 @@ class HandlerPlaybook:
     def successor_work(self, viewer):
         with self.service.store.engine.connect() as connection:
             state = load_state(connection, self.service.store.campaign_id)
-            acquisition = owned_successor(self.service.game, connection, state, active_handler(state))
+            acquisition = owned_successor(
+                self.service.game, connection, state, active_handler(state)
+            )
         if acquisition is None:
             return None
         return self.successor.menu(viewer, acquisition.id)
@@ -187,9 +187,7 @@ class HandlerPlaybook:
                     "instruction": "Dress Them Down · " + source["target"],
                     "dress": {
                         "phase": phase,
-                        "contacts": [
-                            dict(DRESS_CONTACTS)[key] for key in source["contacts"]
-                        ],
+                        "contacts": [dict(DRESS_CONTACTS)[key] for key in source["contacts"]],
                         "options": [*options, ("decline", "Decline the performance")]
                         if options
                         else [],
@@ -227,7 +225,9 @@ class HandlerPlaybook:
                 not isinstance(action, str)
                 or action not in fields
                 or data.keys() != expected | fields[action]
-                or any(not isinstance(value, str) for name, value in data.items() if name != "revision")
+                or any(
+                    not isinstance(value, str) for name, value in data.items() if name != "revision"
+                )
             ):
                 raise ValueError("Choose the saved advice, later lesson, or actual Star.")
             args = (viewer, key, data["id"], revision)
@@ -248,7 +248,9 @@ class HandlerPlaybook:
             scope = {}
             if data.keys() == {"revision", "targets", "room", "play"}:
                 source = (
-                    SCENE_EFFECTS.get(data["play"], "ordinary_scene" if data["play"] in RULES else None)
+                    SCENE_EFFECTS.get(
+                        data["play"], "ordinary_scene" if data["play"] in RULES else None
+                    )
                     if isinstance(data["play"], str)
                     else None
                 )
@@ -294,9 +296,7 @@ class HandlerPlaybook:
         if play in ("brief", "escalate", "expectation", "successor_advice"):
             if fields:
                 raise ValueError("Use the fields for the selected Play.")
-            return Effect(
-                kind=play, account=account, detail=data["detail"], stakes=data["stakes"]
-            )
+            return Effect(kind=play, account=account, detail=data["detail"], stakes=data["stakes"])
         detail = self.service.get(viewer, identity)
         if play == "dress_them_down":
             required = {"target", "dress_steps"}
@@ -329,11 +329,7 @@ class HandlerPlaybook:
             "description",
         }:
             location = next(
-                (
-                    row
-                    for row in detail["location_records"]
-                    if row["id"] == fields["location"]
-                ),
+                (row for row in detail["location_records"] if row["id"] == fields["location"]),
                 None,
             )
             if location is None or fields["department"] not in SUPPORT_JOBS:
@@ -358,16 +354,12 @@ class HandlerPlaybook:
             )
         if play == "off_duty" and not fields and detail["off_duty"]:
             return Effect(kind="off_duty", account=account, off_duty=detail["off_duty"])
-        if play in ("tracker_intercept", "tracker_voyeur") and fields.keys() == {
-            "target"
-        }:
+        if play in ("tracker_intercept", "tracker_voyeur") and fields.keys() == {"target"}:
             return Effect(
                 kind=play,
                 account=account,
                 target=actor_ref(detail["targets"], fields["target"]),
-                detail=(detail["observed_moment"] or "")
-                if play == "tracker_voyeur"
-                else "",
+                detail=(detail["observed_moment"] or "") if play == "tracker_voyeur" else "",
             )
         if (
             play == "contaminant_warp"
@@ -396,9 +388,7 @@ class HandlerPlaybook:
                 raise ValueError("Choose a Status, Tag, or Asset effect.")
             value = fields[keys[kind]]
             target = actor_ref(detail["targets"], fields["target"])
-            return Effect(
-                kind=kind, account=account, target=target, **{keys[kind]: value}
-            )
+            return Effect(kind=kind, account=account, target=target, **{keys[kind]: value})
         raise ValueError("Use the fields and prerequisites for the selected Play.")
 
 

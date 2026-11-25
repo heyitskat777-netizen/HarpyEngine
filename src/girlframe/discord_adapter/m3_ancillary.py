@@ -126,7 +126,7 @@ async def open_invitation(
         async def select_assets(choose_click: discord.Interaction, picked: dict[str, Any]) -> None:
             frame = picked["catalogue"][0]
             girls = picked["girl_assets"]
-            fields = [
+            optional_fields = [
                 Field("name", "Character name") if value.candidate_name is None else None,
                 Field(
                     "frame_assets",
@@ -140,7 +140,7 @@ async def open_invitation(
                 Field("frame_1", "Describe the first selected Frame Asset", paragraph=True),
                 Field("frame_2", "Describe the second selected Frame Asset", paragraph=True),
             ]
-            fields = [item for item in fields if item is not None]
+            fields = [item for item in optional_fields if item is not None]
             choices = {}
             for kind, label in (
                 ("bond", "Starting Bond"),

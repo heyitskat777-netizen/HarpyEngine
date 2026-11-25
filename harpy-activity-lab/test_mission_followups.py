@@ -6,9 +6,9 @@ import mission_lab
 
 # isort: split
 import pytest
-from girlframe.delivery.m2_worker import GameWorker
-from girlframe.services.m2_game import GameService
-from girlframe.services.onboarding import WorkflowError
+from mission_desk import MissionDesk
+from play_continuations import PlayContinuations
+from scene_plays import ScenePlays
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger_fixture
 from test_m2_game import Gateway, answer, pass_tags, state, tick
@@ -16,18 +16,16 @@ from test_replacement import supplied
 from test_replacement_service import pending
 from test_supply_drop import acquire, launch, native_receive, propose, ready, settle
 
-from mission_desk import MissionDesk
-from play_continuations import PlayContinuations
-from scene_plays import ScenePlays
+from girlframe.delivery.m2_worker import GameWorker
+from girlframe.services.m2_game import GameService
+from girlframe.services.onboarding import WorkflowError
 
 ledger = ledger_fixture
 
 
 @pytest.fixture(autouse=True)
 def set_registry(monkeypatch):
-    monkeypatch.setenv(
-        "GIRLFRAME_RULES_REGISTRY", str(mission_lab.ENGINE / "rules/registry.json")
-    )
+    monkeypatch.setenv("GIRLFRAME_RULES_REGISTRY", str(mission_lab.ENGINE / "rules/registry.json"))
 
 
 def work(desk, viewer, mission, kind):
@@ -53,9 +51,7 @@ def test_mission_reopens_doctor_replacement_for_the_actual_pilot_and_handler(led
     desk = MissionDesk(svc.missions)
     followups = PlayContinuations(game)
     assert work(desk, PLAYER, mission["id"], "doctor_frame_replacement")["id"] == root
-    assert not any(
-        row["followups"] for row in desk.view(OTHER, "Other", lifecycle=True)["offers"]
-    )
+    assert not any(row["followups"] for row in desk.view(OTHER, "Other", lifecycle=True)["offers"])
     card = next(x for x in followups.view(PLAYER) if x["id"] == root)
     result = post(followups, PLAYER, card, "propose:THE ENFORCER", {})
     package = work(desk, ADMIN, mission["id"], "frame_replacement_package")
@@ -68,14 +64,12 @@ def test_mission_reopens_doctor_replacement_for_the_actual_pilot_and_handler(led
         values[f"description{index}"] = asset.description
     post(followups, ADMIN, card, "package", values)
     card = next(x for x in followups.view(PLAYER) if x["id"] == root)
-    operation = next(
-        x["id"] for x in card["operations"] if x["id"].startswith("apply:")
-    )
+    operation = next(x["id"] for x in card["operations"] if x["id"].startswith("apply:"))
     post(followups, PLAYER, card, operation, {"confirm": "yes"})
     assert state(game).sheets["2"].frame == "THE ENFORCER"
-    assert svc.missions.complete(
-        ADMIN, "mission-reward", mission["id"], mission["revision"]
-    )["rewards_committed"]
+    assert svc.missions.complete(ADMIN, "mission-reward", mission["id"], mission["revision"])[
+        "rewards_committed"
+    ]
 
 
 @pytest.mark.parametrize("in_battle", (False, True))
@@ -114,9 +108,7 @@ def test_mission_supply_expiry_opens_only_the_assigned_context_review(
     key = "supply-loss-review"
     result = post(followups, ADMIN, card, "review", values, key=key)
     assert result["defeat_required"] is in_battle
-    assert (
-        post(PlayContinuations(game), ADMIN, card, "review", values, key=key) == result
-    )
+    assert post(PlayContinuations(game), ADMIN, card, "review", values, key=key) == result
     if in_battle:
         with pytest.raises(WorkflowError, match="pending"):
             missions.complete(ADMIN, str(uuid4()), mission, ended["revision"])

@@ -561,7 +561,10 @@ class P2Scene:
             return {
                 "options": [
                     item
-                    | {"model_configured": self._initiative_model(item["actor"]["kind"]) is not None}
+                    | {
+                        "model_configured": self._initiative_model(item["actor"]["kind"])
+                        is not None
+                    }
                     for item in options
                 ],
             }
@@ -768,7 +771,9 @@ class P2Scene:
                 key,
                 ActorRef.model_validate(data["actor"]),
                 data["version"],
-                character_setup=CharacterSetup.model_validate_json(json.dumps(data["character_setup"])),
+                character_setup=CharacterSetup.model_validate_json(
+                    json.dumps(data["character_setup"])
+                ),
             )
         if route == "portrayal-draft" and data.keys() == {"actor", "version", "portrayal"}:
             if type(data["version"]) is not int:
@@ -844,7 +849,8 @@ class P2Scene:
                 ),
             )
         if route == "pilot-dossier-propose" and data.keys() in (
-            {"actor", "origin"}, {"actor", "origin", "version"}
+            {"actor", "origin"},
+            {"actor", "origin", "version"},
         ):
             version = data.get("version", 0)
             if type(version) is not int:

@@ -2,11 +2,13 @@
 
 from dataclasses import asdict
 
-from girlframe.discord_adapter.m2_ui import text
 from girlframe.discord_adapter.m2_forms import Field
-from girlframe.engine.m3_oldgen import ADVICE, PLAY as OLDGEN_ADVICE  # noqa: F401
+from girlframe.discord_adapter.m2_ui import text
+from girlframe.engine.m3_oldgen import ADVICE, PLAY
 from girlframe.services.m3_oldgen import OldgenService, _access
 from girlframe.services.onboarding import WorkflowError
+
+OLDGEN_ADVICE = PLAY
 
 OLDGEN_CHOICES = ("oldgen_listen", "oldgen_low_maxim", "oldgen_write_maxim")
 

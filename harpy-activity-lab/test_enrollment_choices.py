@@ -11,10 +11,18 @@ def test_enrollment_preserves_playbook_fields_and_their_actual_owners(tmp_path):
         peer = sign_in(server, "other")
         handler = sign_in(server, "handler")
         initial = request(server, "/api/player-setup", pilot)
-        assert (
-            len(initial["options"]["girls"]) == 10
-            and len(initial["options"]["frames"]) == 10
-        )
+        assert len(initial["options"]["girls"]) == 10
+        assert set(initial["options"]["frames"]) == {
+            "THE PRINCE",
+            "CONSUME",
+            "JANUS",
+            "DOCTORDOCTOR MK. II",
+            "WYVERN 0.4",
+            "THE ENFORCER",
+            "CHANGELING",
+            "PROJECT ANKOU",
+            "THE RED QUEEN",
+        }
         for token, girl, frame, name in (
             (pilot, "OLDGEN", "THE PRINCE", "LATCH"),
             (peer, "VATGROWN", "THE RED QUEEN", "GLASS"),
@@ -65,9 +73,7 @@ def test_enrollment_preserves_playbook_fields_and_their_actual_owners(tmp_path):
         )
         glass = request(server, "/api/player-setup", peer)
         (court,) = [
-            record
-            for record in glass["creation_choices"]["proposals"]
-            if record["kind"] == "court"
+            record for record in glass["creation_choices"]["proposals"] if record["kind"] == "court"
         ]
         offered = setup_action(
             server,
@@ -90,9 +96,7 @@ def test_enrollment_preserves_playbook_fields_and_their_actual_owners(tmp_path):
         setup_action(server, pilot, "creation-choice", answer)
         assert any(
             token.startswith("court:")
-            for token in request(server, "/api/player-setup", peer)["draft"][
-                "shared_tokens"
-            ]
+            for token in request(server, "/api/player-setup", peer)["draft"]["shared_tokens"]
         )
         handler_desk = request(server, "/api/player-setup", handler)
         assert any(
@@ -139,8 +143,10 @@ def test_newgirl_prior_missions_round_trip_exact_discord_ids(tmp_path):
                 server,
                 pilot,
                 "build",
-                payload | {
-                    "draft": dossier | {
+                payload
+                | {
+                    "draft": dossier
+                    | {
                         "prior_missions": [declaration | {"user_id": invalid_id}],
                     }
                 },
@@ -153,10 +159,14 @@ def test_newgirl_prior_missions_round_trip_exact_discord_ids(tmp_path):
             payload | {"draft": dossier | {"cadre_discussed": True}},
             HTTPStatus.CONFLICT,
         )
-        assert incomplete["fields"] == [{
-            "path": ["prior_missions"],
-            "message": "Answer for every current Cadre member before confirming the discussion.",
-        }]
+        assert incomplete["fields"] == [
+            {
+                "path": ["prior_missions"],
+                "message": (
+                    "Answer for every current Cadre member before confirming the discussion."
+                ),
+            }
+        ]
         receipt = setup_action(server, pilot, "build", payload)
         assert receipt["status"] == "creation_in_progress"
         assert receipt["revision"] == record["revision"] + 1

@@ -4,10 +4,9 @@ import asyncio
 import sqlite3
 from types import SimpleNamespace
 
+import campaign_inbox
 import discord
 import pytest
-
-import campaign_inbox
 from campaign_inbox import InboxNotices, deliver_one, pending_interactions, send_notice
 
 CAMPAIGN = "9af87500-1f24-4ebd-98cf-8753e97806c5"
@@ -24,10 +23,15 @@ def test_queue_uses_authoritative_recipient_and_deduplicates(tmp_path, monkeypat
     receipt = {"id": "bond-a", "target": FIRST}
     setup = SimpleNamespace(
         store=SimpleNamespace(campaign_id=CAMPAIGN),
-        bonds=SimpleNamespace(get=lambda *_: {
-            "id": "bond-a", "target_id": SECOND, "state": "pending",
-            "stale": False, "context": "private starting prompt",
-        }),
+        bonds=SimpleNamespace(
+            get=lambda *_: {
+                "id": "bond-a",
+                "target_id": SECOND,
+                "state": "pending",
+                "stale": False,
+                "context": "private starting prompt",
+            }
+        ),
     )
     notices.bond(setup, FIRST, receipt)
     notices.bond(setup, FIRST, receipt)
@@ -45,10 +49,15 @@ def test_queue_uses_authoritative_recipient_and_deduplicates(tmp_path, monkeypat
 
     service = SimpleNamespace(
         store=setup.store,
-        get=lambda *_: {"mission": {
-            "id": "mission-a", "phase": "offered", "offered_to": [int(FIRST), int(SECOND)],
-            "responses": {FIRST: "accept"}, "objective": "restricted mission objective",
-        }},
+        get=lambda *_: {
+            "mission": {
+                "id": "mission-a",
+                "phase": "offered",
+                "offered_to": [int(FIRST), int(SECOND)],
+                "responses": {FIRST: "accept"},
+                "objective": "restricted mission objective",
+            }
+        },
     )
     reopened.mission(service, object(), {"id": "mission-a"})
     assert reopened.claim() == (CAMPAIGN, "mission", "mission-a", SECOND)
@@ -69,18 +78,27 @@ def test_delivery_rechecks_role_and_reuses_discord_nonce():
         recipients.append(user)
         return member
 
-    registry = SimpleNamespace(bindings=lambda *_: [SimpleNamespace(id=CAMPAIGN, role_id=str(ROLE))])
+    registry = SimpleNamespace(
+        bindings=lambda *_: [SimpleNamespace(id=CAMPAIGN, role_id=str(ROLE))]
+    )
     bot = SimpleNamespace(
-        activity_id=111, target=SimpleNamespace(id=222),
+        activity_id=111,
+        target=SimpleNamespace(id=222),
         get_guild=lambda _: SimpleNamespace(fetch_member=fetch_member),
     )
     item = CAMPAIGN, "bond", "bond-a", SECOND
-    pending = lambda *_: True
+
+    def pending(*_):
+        return True
+
     asyncio.run(send_notice(bot, registry, item, pending))
     asyncio.run(send_notice(bot, registry, item, pending))
     assert recipients == [int(SECOND), int(SECOND)]
     assert len(calls) == 2
-    assert calls[0][0] == "A pilot filed a starting Bond proposal for your response. Open HarpyEngine and check your Inbox."
+    assert calls[0][0] == (
+        "A pilot filed a starting Bond proposal for your response. Open HarpyEngine and "
+        "check your Inbox."
+    )
     assert calls[0][1]["allowed_mentions"].to_dict() == {"parse": []}
     assert calls[0][1]["nonce"] == calls[1][1]["nonce"]
     asyncio.run(send_notice(bot, registry, item, lambda *_: False))
@@ -118,18 +136,24 @@ def test_projection_excludes_observers_and_optional_actions():
         handler=object(),
         game=SimpleNamespace(choices=lambda _: [{"id": "real-choice", "revision": 3}]),
         bonds=SimpleNamespace(list=lambda _: []),
-        enrollment_choices=view({"requests": [
-            {"id": "incoming", "incoming": True, "state": "pending"},
-            {"id": "outgoing", "incoming": False, "state": "pending"},
-        ]}),
+        enrollment_choices=view(
+            {
+                "requests": [
+                    {"id": "incoming", "incoming": True, "state": "pending"},
+                    {"id": "outgoing", "incoming": False, "state": "pending"},
+                ]
+            }
+        ),
         owned_followups=view([{"id": "work-owned", "action": "resolve"}, {"id": "read-only"}]),
         handler_punishments=view([]),
         beneath_work=view([{"id": "work-owned", "action": "resolve"}]),
-        off_duty=view({
-            "period": "off-duty",
-            "closing": {"handler": True, "status_ready": True},
-            "invitations": [{"confirmed": False, "owner": FIRST}],
-        }),
+        off_duty=view(
+            {
+                "period": "off-duty",
+                "closing": {"handler": True, "status_ready": True},
+                "invitations": [{"confirmed": False, "owner": FIRST}],
+            }
+        ),
     )
     missions = SimpleNamespace(
         list=lambda _: [],
@@ -149,9 +173,15 @@ def test_projection_excludes_observers_and_optional_actions():
     }
 
 
-@pytest.mark.parametrize("failure, outcome", [
-    (None, "sent"), ("closed", "unavailable"), ("timeout", "unconfirmed"), ("closed-action", "skipped"),
-])
+@pytest.mark.parametrize(
+    "failure, outcome",
+    [
+        (None, "sent"),
+        ("closed", "unavailable"),
+        ("timeout", "unconfirmed"),
+        ("closed-action", "skipped"),
+    ],
+)
 def test_sender_receipt_reports_only_confirmed_dm_outcomes(tmp_path, monkeypatch, failure, outcome):
     clock = [1000]
     monkeypatch.setattr(campaign_inbox, "time", lambda: clock[0])
@@ -178,9 +208,12 @@ def test_sender_receipt_reports_only_confirmed_dm_outcomes(tmp_path, monkeypatch
         assert user == int(SECOND)
         return member
 
-    registry = SimpleNamespace(bindings=lambda *_: [SimpleNamespace(id=CAMPAIGN, role_id=str(ROLE))])
+    registry = SimpleNamespace(
+        bindings=lambda *_: [SimpleNamespace(id=CAMPAIGN, role_id=str(ROLE))]
+    )
     bot = SimpleNamespace(
-        activity_id=111, target=SimpleNamespace(id=222),
+        activity_id=111,
+        target=SimpleNamespace(id=222),
         get_guild=lambda _: SimpleNamespace(fetch_member=fetch_member),
     )
     item = outbox.claim()
@@ -203,7 +236,9 @@ def test_legacy_finished_notice_is_not_reported_as_a_confirmed_send(tmp_path):
             finished INTEGER NOT NULL DEFAULT 0,
             PRIMARY KEY (campaign, kind, record, recipient)
         )""")
-        db.execute("INSERT INTO notices VALUES (?, 'bond', 'bond-a', ?, 1, 1, 1)", (CAMPAIGN, SECOND))
+        db.execute(
+            "INSERT INTO notices VALUES (?, 'bond', 'bond-a', ?, 1, 1, 1)", (CAMPAIGN, SECOND)
+        )
     outbox = InboxNotices(path)
     proof = outbox.sender_receipt(CAMPAIGN, FIRST, "bond", "bond-a")
     assert outbox.read_receipt(CAMPAIGN, FIRST, proof) == [(SECOND, "unconfirmed")]

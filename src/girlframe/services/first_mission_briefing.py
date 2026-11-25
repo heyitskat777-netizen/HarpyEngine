@@ -4,7 +4,7 @@ import json
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Connection
+from sqlalchemy import Connection, Select
 
 from girlframe.database import tables as t
 from girlframe.engine.campaign_opening import Opening
@@ -35,7 +35,10 @@ class FirstMissionBriefing:
         policy = observer._activity_policy(c)
         if not policy["enabled"]:
             self.store._audit(
-                c, viewer.user_id, key, observer._activity_event(),
+                c,
+                viewer.user_id,
+                key,
+                observer._activity_event(),
                 {"enabled": True, "revision": policy["revision"] + 1, "first_mission": mission},
                 event_index=1,
             )
@@ -72,7 +75,7 @@ class FirstMissionBriefing:
             and not self.game.immediate_work(c, owner)
         }
 
-    def _receipts(self, viewer: GuildViewer):
+    def _receipts(self, viewer: GuildViewer) -> Select[Any]:
         return calendar.query(self.store.campaign_id, REVIEWED).where(
             t.events.c.actor_id == str(viewer.user_id)
         )
@@ -109,7 +112,7 @@ class FirstMissionBriefing:
                     "objective": reviewed["objective"],
                     "pilots": reviewed["pilots"],
                 }
-                if reviewed is not None
+                if row is not None and reviewed is not None
                 else None,
             }
 
@@ -122,7 +125,7 @@ class FirstMissionBriefing:
 
     def review(
         self, viewer: GuildViewer, key: str, anchor: str, objective: str, pilots: tuple[int, ...]
-    ):
+    ) -> dict[str, Any]:
         objective = objective.strip()
         players = tuple(sorted(pilots))
         identities = tuple(map(str, players))
@@ -158,6 +161,9 @@ class FirstMissionBriefing:
             )
             return {"id": receipt}
 
+        def authorize(c: Connection) -> None:
+            self._context(c, viewer)
+
         return self.store._write(
             viewer,
             key,
@@ -168,7 +174,7 @@ class FirstMissionBriefing:
                 "objective": objective,
             },
             apply,
-            authorize=lambda c: self._context(c, viewer),
+            authorize=authorize,
             auto_audit=False,
         )
 

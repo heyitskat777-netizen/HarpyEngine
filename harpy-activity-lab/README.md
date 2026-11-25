@@ -12,15 +12,20 @@ Choose JANUS in the Frame dropdown before re-exporting an older draft that uses 
 
 The catalog, schemas, codec, and declarations under `character-sheets/` come from v0.1.4, commit `fe47d7ef0b558a1106f5dc48b25c277aff5f875b`. To regenerate the committed CSP-safe validators with the existing Node dependencies, run `node harpy-activity-lab/character-sheets/build-validators.cjs` from the app directory. Run `node harpy-activity-lab/verify-character-files.cjs <package.zip>` for the focused browser and packaged-parser checks.
 
-The lab uses the HarpyEngine playtest build pinned at `5412ee8c431cfee63ecbd8b5e4ff2db97b60c601`. It binds to IPv4 loopback and uses SQLite under `.sites-runtime/harpyengine-mission-lab/playtest-campaigns`. Each campaign seeds an active pilot with a mission and an account without an activated pilot. The two local launch links require separate browser profiles or contexts.
+The integrated lab uses the engine and registry from the same checkout. It binds
+to IPv4 loopback and uses synthetic SQLite data. From a trusted shell you can set
+`HARPY_ACTIVITY_ENGINE_ROOT` to deliberately select a different full checkout
+and `HARPY_ACTIVITY_RUNTIME_ROOT` to isolate the SDK and saved lab data. The
+default runtime directory is `.sites-runtime/harpyengine-mission-lab`. The two
+local launch links require separate browser profiles or contexts.
 
 ## Run
 
-Use PowerShell from the parent `app` directory. The detached HarpyEngine source and locked Python environment are prepared under `.sites-runtime/harpyengine-mission-lab`.
-
-```powershell
-$engineLab = Resolve-Path '.sites-runtime/harpyengine-mission-lab/HarpyEngine-playtest'
-& "$engineLab/.venv/Scripts/python.exe" -B 'harpy-activity-lab/mission_lab.py' --campaign mission-offer
+```sh
+uv sync --locked --all-groups
+npm ci --prefix harpy-activity-lab
+node harpy-activity-lab/build-discord-sdk.cjs
+uv run --no-sync python -B harpy-activity-lab/mission_lab.py --campaign mission-offer
 ```
 
 Open the **Invited pilot** link printed by the server to see the mission. Open **Other pilot** to create a Mockingbird pilot with a JANUS Frame. Choose a callsign, appearances, Assets, a Void-altered Asset, an NPC Bond, and a starting Bond prompt. Accept the starting Bond from the invited account, then check for updates as the recruit, save the activation review, activate, and join **Relay operations**. The lab sets the synthetic Handler and starting Status order. Each account makes its own Bond decisions. The one-account DM mode also runs the Keep Your Head test below.
@@ -33,25 +38,29 @@ Reuse the same `--campaign` name to reopen the same saved campaign, or choose a 
 node 'harpy-activity-lab/verify-mission.cjs'
 ```
 
-The verifier uses the existing Playwright runtime at `.sites-runtime/browser-acceptance/node_modules/playwright-core` and local Chrome. An alternate Chrome executable path can be passed as the first argument. It uses a fresh synthetic campaign to test draft save, independent Bond consent, activation, scene membership, and the Play list. It tests that the second account cannot answer the mission, replays the original idempotency key, checks that only one response was written, and verifies persistence after the lab restarts.
-
-The test uses the playtest source revision's checked-in lock and Python 3.12.14. To rebuild the runtime, check out the pinned commit into `.sites-runtime/harpyengine-mission-lab/HarpyEngine-playtest` and run `uv sync --locked --all-groups --no-install-project` from that checkout. The campaign setup reuses the engine's synthetic approval and character fixtures.
+The verifier uses the locked Playwright package. Pass a local Chromium path,
+or install its Chromium build with
+`npm exec --prefix harpy-activity-lab -- playwright-core install chromium`.
+The browser exercises synthetic logins, not live Discord. The explicit
+standalone and integration Python suites also run in the workflow's
+`full_suite=true` mode with separate results and loopback-only transport.
 
 ## P2 assisted local trial
 
-Use the prepared local engine candidate in `.sites-runtime/harpyengine-mission-lab/HarpyEngine-p2-candidate`. Its upstream revision is `484f6fcecc532e2acfb3ccd9021cb95d2e3718de`, with the bundled Activity's uncommitted engine changes reconciled into the local candidate. The ordinary Activity still uses its existing engine directory. This trial keeps its own synthetic ledger and starts on IPv4 loopback.
+The trial keeps its own synthetic ledger and starts on IPv4 loopback using the
+selected engine. For a historical ledger, intentionally select its reviewed
+engine before opening it. Do not use the fixture to migrate a live ledger.
 
-From `app` in PowerShell:
+From the integrated checkout:
 
-```powershell
-$engineLab = Resolve-Path '.sites-runtime/harpyengine-mission-lab/HarpyEngine-playtest'
-& "$engineLab/.venv/Scripts/python.exe" -B 'harpy-activity-lab/mission_lab.py' --p2-trial rehearsal --port 8799
+```sh
+uv run --no-sync python -B harpy-activity-lab/mission_lab.py --p2-trial rehearsal --port 8799
 ```
 
-Open the two pilot launch links and the **GM and Handler** link in separate browser profiles. In each profile, open **Assisted trial** and give consent using invented dialogue only. Open the same trial name to resume after stopping the local process. Launch links are regenerated at startup and grant access to their named synthetic account.
+Open the two pilot launch links and the **GM and Handler** link in separate browser profiles. In each profile, open **Training terminal** and give consent using invented dialogue only. Open the same trial name to resume after stopping the local process. Launch links are regenerated at startup and grant access to their named synthetic account.
 
 1. From a pilot account, file a line of dialogue or a specific Play request. For example, `GM, I choose Keep Your Head to hold the calibration needle steady.` To actually roll, use the existing native Play controls in Relay operations and enter the exact same line.
-2. From the facilitator account, use **Open private GM desk** to see requests and engine-proved outcome sources. Bind the original request to the native action once both exist. For Keep, provide the typed task frame in the private GM desk and file the proposed judgment for the original owner's review. Use the source packet and [engine player-test guide](../.sites-runtime/harpyengine-mission-lab/HarpyEngine-p2-candidate/docs/P2_PLAYER_TEST_GUIDE.md) for the proposal format.
+2. From the facilitator account, use **Open private GM desk** to see requests and engine-proved outcome sources. Bind the original request to the native action once both exist. For Keep, provide the typed task frame in the private GM desk and file the proposed judgment for the original owner's review. Use the source packet and [engine player-test guide](../docs/P2_PLAYER_TEST_GUIDE.md) for the proposal format.
 3. The assigned account opens **Review my assigned proposal** and explicitly confirms the intended effects. Use the normal Activity controls for other native choices. An approved GM readback appears only where the viewer can inspect the original action. **Review retained references** assigns source-backed knowledge to specific roles or retires it from prompts.
 4. Test **Safety pause**, reopen the trial, and compare what each account can see. Record the Play or proposal ID and any missing or excessive intervention, unexpected disclosure, confusing choice, or lost state.
 
@@ -63,7 +72,7 @@ Run `node harpy-activity-lab/verify-mission.cjs --director-trial-check` from `ap
 
 The trial's separate ledger binds the three fictional seats to the original verified Discord accounts. Each named account must pass the existing private-server membership check. The Handler seat also runs the private GM desk for this trial. Reuse the same trial name and roster to recover choices. A changed roster requires a new trial name. Existing Girl or Frame roles continue to apply to the ordinary Activity. The P2 trial uses the explicit named roster.
 
-To run an in-Discord test, the unpublished development Activity's proxy must reach the P2 listener during the session. On launch, each tester signs in under their own Discord account and opens **Assisted trial**. Use invented dialogue and the workflow above. A reopening uses a new OAuth session and the same saved seat. The existing Activity's normal origin and campaign listener can be kept separate.
+To run an in-Discord test, the unpublished development Activity's proxy must reach the P2 listener during the session. On launch, each tester signs in under their own Discord account and opens **Training terminal**. Use invented dialogue and the workflow above. A reopening uses a new OAuth session and the same saved seat. The existing Activity's normal origin and campaign listener can be kept separate.
 
 Run `node harpy-activity-lab/verify-mission.cjs --director-discord-check` for the automated Discord iframe and OAuth simulation. It uses the actual Activity server and HarpyEngine store to verify the two pilots, Handler, private GM review, and pending and answered choices across a restart. A live OAuth exchange and Discord client launch need the configured testers to open the unpublished Activity.
 

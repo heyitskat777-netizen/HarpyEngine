@@ -41,9 +41,7 @@ class OffDutyReview:
             "attendance": {
                 "summary": scene["summary"],
                 "confirmed": viewer.user_id in scene["acknowledgements"],
-                "remaining": len(
-                    set(scene["participants"]) - set(scene["acknowledgements"])
-                ),
+                "remaining": len(set(scene["participants"]) - set(scene["acknowledgements"])),
             }
             if scene is not None
             else None,
@@ -57,9 +55,13 @@ class OffDutyReview:
                     actor = current_ref(state, viewer.user_id)
                     if scene["character_ids"].get(actor.entity) == actor.incarnation:
                         stored = stored_ids(state, actor)
-                        assets = [x for x in state.sheets[actor.entity].assets if x.family == "girl"]
+                        assets = [
+                            x for x in state.sheets[actor.entity].assets if x.family == "girl"
+                        ]
                         attendance["lab_assets"] = {
-                            "restore": [(x.id, x.name) for x in assets if x.void and x.id not in stored],
+                            "restore": [
+                                (x.id, x.name) for x in assets if x.void and x.id not in stored
+                            ],
                             "replace": [(x.id, x.name) for x in assets],
                         }
         if scene and scene["kind"] == "trainer_conditioning":
@@ -100,9 +102,7 @@ class OffDutyReview:
                 card["scene_kinds"].append("scientist_lab")
             if review["trainer_can_install_speak"]:
                 card["scene_kinds"].append("trainer_conditioning")
-                card["conditioning_phrases"] = [
-                    (key, label) for key, label in PHRASES
-                ]
+                card["conditioning_phrases"] = [(key, label) for key, label in PHRASES]
             card["npcs"] = [
                 {
                     "id": "npc:" + row["id"],
@@ -124,9 +124,7 @@ class OffDutyReview:
                 if row["alive"] and row["custody"] in ("captured", "transported")
             ]
         if card["status_ready"] and review["status_reviewed"]:
-            card["finish"] = self.advancement(
-                viewer, review["id"], review["game_revision"]
-            )
+            card["finish"] = self.advancement(viewer, review["id"], review["game_revision"])
         return card
 
     def advancement(self, viewer, period, revision):
@@ -143,9 +141,7 @@ class OffDutyReview:
         ]
         locations = [
             Location.model_validate_json(
-                json.dumps(
-                    {k: v for k, v in row.items() if k != "official_allegations"}
-                )
+                json.dumps({k: v for k, v in row.items() if k != "official_allegations"})
             )
             for row in world["locations"]
         ]
@@ -203,16 +199,18 @@ class OffDutyReview:
             if answer.keys() == {"lab"}:
                 return self.cycle.acknowledge(*args, None, LabAnswer.model_validate(answer["lab"]))
         if action == "review_status" and answer.keys() == {"order", "account"}:
-            return self.cycle.review_status(
-                *args, account_ids(answer["order"]), answer["account"]
-            )
+            return self.cycle.review_status(*args, account_ids(answer["order"]), answer["account"])
         if action == "set_handler_scene":
             fields = {
                 "scientist_lab": {"lab"},
                 "trainer_conditioning": {"conditioning_phrase"},
             }.get(answer.get("kind"), set())
             if answer.keys() != fields | {
-                "kind", "participants", "summary", "recipient", "context",
+                "kind",
+                "participants",
+                "summary",
+                "recipient",
+                "context",
             }:
                 raise ValueError("Complete the selected Handler scene's fields.")
             phrase = answer.get("conditioning_phrase")
@@ -232,20 +230,14 @@ class OffDutyReview:
                 lab=LabProposal.model_validate(answer["lab"]) if "lab" in fields else None,
             )
         if action == "finish_period" and answer.keys() == {"moves", "changes"}:
-            if not isinstance(answer["moves"], list) or not isinstance(
-                answer["changes"], list
-            ):
+            if not isinstance(answer["moves"], list) or not isinstance(answer["changes"], list):
                 raise ValueError("Review each required world effect.")
-            moves = tuple(
-                Movement.model_validate_json(json.dumps(row)) for row in answer["moves"]
-            )
+            moves = tuple(Movement.model_validate_json(json.dumps(row)) for row in answer["moves"])
             changes = ()
             if answer["changes"]:
                 source = self.world.advancement(viewer)
                 if not source["world"]:
-                    raise WorkflowError(
-                        "Refresh the actual world before filing this review."
-                    )
+                    raise WorkflowError("Refresh the actual world before filing this review.")
                 gorgons = {
                     row["id"]: row
                     for row in source["world"]["gorgons"]
@@ -259,17 +251,14 @@ class OffDutyReview:
 def class_change(change, gorgons):
     if (
         not isinstance(change, dict)
-        or change.keys()
-        != {"id", "class", "goal", "protect", "leader", "group", "account"}
+        or change.keys() != {"id", "class", "goal", "protect", "leader", "group", "account"}
         or not isinstance(change["id"], str)
         or change["id"] not in gorgons
         or change["class"] not in CLASSES
     ):
         raise ValueError("Review the actual Gorgon and its Class change.")
     original = Gorgon.model_validate_json(json.dumps(gorgons[change["id"]]))
-    goal = (
-        Goal.model_validate_json(json.dumps(change["goal"])) if change["goal"] else None
-    )
+    goal = Goal.model_validate_json(json.dumps(change["goal"])) if change["goal"] else None
     replacement = Gorgon.model_validate_json(
         original.model_copy(
             update={
@@ -281,6 +270,4 @@ def class_change(change, gorgons):
             }
         ).model_dump_json()
     )
-    return ClassChange(
-        gorgon=original.id, replacement=replacement, account=change["account"]
-    )
+    return ClassChange(gorgon=original.id, replacement=replacement, account=change["account"])

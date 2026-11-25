@@ -15,7 +15,7 @@ from test_p2_handler_archetype_missions import end_mission
 from test_p2_mission_cycle import launch
 from test_timed_handler_archetypes import timed_archetype
 
-from girlframe.ai.director_dossiers import DossierProfile, DossierState
+from girlframe.ai.director_dossiers import DossierPerspective, DossierProfile, DossierState
 from girlframe.ai.model_adapters import ModelHandlerNeeds
 from girlframe.ai.observation import ObservationPolicy
 from girlframe.engine.m3_handler_state import HandlerNotes
@@ -256,6 +256,7 @@ def test_approved_pilot_experience_changes_the_same_handlers_next_mission(ledger
             )["id"]
         )
     local_voice = "Give short answers during this relay handoff."
+    local_obligation = "Return the north relay keys before leaving."
     scripted = dossiers.propose(
         ADMIN,
         "source-portrayal",
@@ -263,7 +264,10 @@ def test_approved_pilot_experience_changes_the_same_handlers_next_mission(ledger
         handler,
         0,
         DossierProfile(voice=local_voice),
-        DossierState(resource_refs=(posted[0],)),
+        DossierState(
+            resource_refs=(posted[0],),
+            obligations=(DossierPerspective(text=local_obligation),),
+        ),
     )
     dossiers.confirm(ADMIN, "confirm-source-portrayal", source, scripted["id"])
 
@@ -280,6 +284,7 @@ def test_approved_pilot_experience_changes_the_same_handlers_next_mission(ledger
     assert svc.delivery.preview(ADMIN, source, initial)["text"] == ordinary
     assert "experiences" not in recorder.packets[-1]["persona"]
     assert recorder.packets[-1]["persona"]["profile"]["voice"] == local_voice
+    assert local_obligation in json.dumps(recorder.packets[-1])
     assert recorder.packets[-1]["persona"]["identity"]["starting_relationship"] == {
         "pilot": pilot.model_dump(mode="json"),
         "shared_history": draft.starting[0].history,
@@ -291,6 +296,8 @@ def test_approved_pilot_experience_changes_the_same_handlers_next_mission(ledger
     ask(app, target, "parallel-pilot", OTHER)
     assert "experiences" not in recorder.packets[-1]["persona"]
     assert "closed_scene_reports" not in recorder.packets[-1]
+    assert local_voice not in json.dumps(recorder.packets[-1])
+    assert local_obligation not in json.dumps(recorder.packets[-1])
 
     preview = app.read(ADMIN, source, "closeout")
     assert [report["id"] for report in preview["reports"]] == posted[:1]
@@ -331,6 +338,7 @@ def test_approved_pilot_experience_changes_the_same_handlers_next_mission(ledger
     with pytest.raises(WorkflowError, match="DOSSIER_NOT_OWNED"):
         app.read(PLAYER, target, "portrayal-preview", handler.token)
     assert local_voice not in json.dumps(recorder.packets[-1])
+    assert local_obligation not in json.dumps(recorder.packets[-1])
     assert memory["kind"] == "declined_help" and memory["reference_id"] == posted[0]
     assert memory["pilot"] == pilot.model_dump(mode="json") and memory["scene"] == source
     svc.review_handler(

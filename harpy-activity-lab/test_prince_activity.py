@@ -2,18 +2,8 @@
 
 import json
 
-import pytest
-from girlframe.engine import m3_prince as rules
-from girlframe.services.m2_game import GameService
-from girlframe.services.onboarding import WorkflowError
-from test_ledger import ADMIN, OTHER, PLAYER
-from test_ledger import ledger as ledger_fixture
-from test_m2_game import state, tick
-from test_prince import perform, ready
-from test_vatgrown import ready as doll_ready
-from test_vatgrown import roll as doll_roll
-
 import mission_lab  # noqa: F401
+import pytest
 from handler_punishments import HandlerPunishments
 from prince_controls import EXCEPTION, EXCEPTION_PLAY, PERFORMER
 from scene_beneath_work import SceneBeneathWork
@@ -27,7 +17,17 @@ from test_identity_specialists import (
     scoped,
     suggestions,
 )
+from test_ledger import ADMIN, OTHER, PLAYER
+from test_ledger import ledger as ledger_fixture
+from test_m2_game import state, tick
+from test_prince import perform, ready
 from test_scene_beneath_followups import scene_work
+from test_vatgrown import ready as doll_ready
+from test_vatgrown import roll as doll_roll
+
+from girlframe.engine import m3_prince as rules
+from girlframe.services.m2_game import GameService
+from girlframe.services.onboarding import WorkflowError
 
 ledger = ledger_fixture
 
@@ -50,33 +50,54 @@ def test_performer_reopens_for_original_caster_and_counterpart(ledger, tmp_path,
         press(scene, PLAYER, popup(scene, PLAYER, EXCEPTION), {"context": private})
         form = popup(scene, PLAYER, EXCEPTION_PLAY)
         game.dice.faces = (6, 6)
-        action = press(scene, PLAYER, form, {
-            "source": option(form, "source"), "play": "keep_your_head", "heat": "0", "piloting": "no",
-        })
+        action = press(
+            scene,
+            PLAYER,
+            form,
+            {
+                "source": option(form, "source"),
+                "play": "keep_your_head",
+                "heat": "0",
+                "piloting": "no",
+            },
+        )
         tick(worker, gateway, 3)
         ledger.engine.dispose()
         window = scoped(GameService(ledger, dice=game.dice), PLAYER, "tag_window")
         assert window[1]["root"] == action["action_id"]
         pass_windows(game)
-        respond(scoped(game, PLAYER, "actor_keep"), PLAYER, "actor_keep", {
-            "text": "I keep my nerve in the face of my actual contrary act."
-        })
-        respond(scoped(game, ADMIN, "handler_keep"), ADMIN, "handler_keep", {
-            "flag": "yes", "text": "The original danger was met."
-        })
+        respond(
+            scoped(game, PLAYER, "actor_keep"),
+            PLAYER,
+            "actor_keep",
+            {"text": "I keep my nerve in the face of my actual contrary act."},
+        )
+        respond(
+            scoped(game, ADMIN, "handler_keep"),
+            ADMIN,
+            "handler_keep",
+            {"flag": "yes", "text": "The original danger was met."},
+        )
         tick(worker, gateway, 5)
         exception = rules.records(state(game), rules.DemandException)[-1].id
         assert game.inspect(PLAYER, action["action_id"])["state"] == "complete"
     form = popup(scene, PLAYER, PERFORMER)
     target = next(
-        value for value, _ in next(
-            row for row in form[1]["fields"] if row["key"] == "target"
-        )["options"] if json.loads(value)["entity"] == str(OTHER.user_id)
+        value
+        for value, _ in next(row for row in form[1]["fields"] if row["key"] == "target")["options"]
+        if json.loads(value)["entity"] == str(OTHER.user_id)
     )
-    record = press(scene, PLAYER, form, {
-        "target": target, "part": "The composed public pilot",
-        "following": "no" if exception else "yes", "context": private,
-    })
+    record = press(
+        scene,
+        PLAYER,
+        form,
+        {
+            "target": target,
+            "part": "The composed public pilot",
+            "following": "no" if exception else "yes",
+            "context": private,
+        },
+    )
     with pytest.raises(WorkflowError):
         control.view(ADMIN, record["id"])
     assert "account" not in control.view(OTHER, record["id"])["record"]
@@ -101,16 +122,22 @@ def test_performer_reopens_for_original_caster_and_counterpart(ledger, tmp_path,
         assert any(tag.label == "False composure" for tag in state(fresh).sheets["2"].tags)
     else:
         if tier == "high":
-            respond(scoped(fresh, PLAYER, "prince_conform"), PLAYER, "prince_conform", {
-                "account": "The revised part follows my Fanbase demands."
-            })
+            respond(
+                scoped(fresh, PLAYER, "prince_conform"),
+                PLAYER,
+                "prince_conform",
+                {"account": "The revised part follows my Fanbase demands."},
+            )
         first = scoped(fresh, PLAYER, "prince_choose_actor")
         with pytest.raises(WorkflowError):
             respond(first, OTHER, "prince_choose_actor", {"option": "status"})
         respond(first, PLAYER, "prince_choose_actor", {"option": "status"})
-        respond(scoped(fresh, OTHER, "prince_choose_target"), OTHER, "prince_choose_target", {
-            "option": "bond", "account": "I deepen this actual Bond."
-        })
+        respond(
+            scoped(fresh, OTHER, "prince_choose_target"),
+            OTHER,
+            "prince_choose_target",
+            {"option": "bond", "account": "I deepen this actual Bond."},
+        )
     saved = fresh.inspect(PLAYER, action["action_id"])
     assert saved["state"] == "complete" and saved["receipt"] == original
     assert press(scene, PLAYER, roll_form, values, key="actual-performer") == action
@@ -119,7 +146,10 @@ def test_performer_reopens_for_original_caster_and_counterpart(ledger, tmp_path,
 
 @pytest.mark.parametrize("play", ("prince", "vatgrown_doll"))
 def test_original_counterpart_can_complete_the_scenebound_punishment(
-    ledger, tmp_path, monkeypatch, play,
+    ledger,
+    tmp_path,
+    monkeypatch,
+    play,
 ):
     if play == "prince":
         game, worker, gateway, control = ready(ledger, tmp_path, monkeypatch)
@@ -139,8 +169,11 @@ def test_original_counterpart_can_complete_the_scenebound_punishment(
     punishments = HandlerPunishments(fresh)
 
     def card(viewer, action):
-        saved = next(row for row in scene.view(viewer, role_cards=punishments.view(viewer))
-                     if row["id"] == case.id and row["action"] == action)
+        saved = next(
+            row
+            for row in scene.view(viewer, role_cards=punishments.view(viewer))
+            if row["id"] == case.id and row["action"] == action
+        )
         assert saved["root"] == original
         return saved
 
@@ -156,16 +189,30 @@ def test_original_counterpart_can_complete_the_scenebound_punishment(
     scene_work(scene, PLAYER, attend, True)
     before = state(fresh).sheets["2"].heat
     final = card(OTHER, "execute")
-    saved = scene_work(scene, OTHER, final, "I carry out the assigned effect.", key="original-role-punishment")
-    assert scene_work(scene, OTHER, final, "I carry out the assigned effect.", key="original-role-punishment") == saved
+    saved = scene_work(
+        scene, OTHER, final, "I carry out the assigned effect.", key="original-role-punishment"
+    )
+    assert (
+        scene_work(
+            scene, OTHER, final, "I carry out the assigned effect.", key="original-role-punishment"
+        )
+        == saved
+    )
     with pytest.raises(WorkflowError, match="IDEMPOTENCY_CONFLICT"):
         scene_work(scene, OTHER, final, "I change the account.", key="original-role-punishment")
     with pytest.raises(WorkflowError):
         scene_work(scene, OTHER, final, "I carry out the assigned effect.", key="different-command")
     with pytest.raises(WorkflowError):
-        scene_work(scene, PLAYER, final, "I carry out the assigned effect.", key="original-role-punishment")
+        scene_work(
+            scene, PLAYER, final, "I carry out the assigned effect.", key="original-role-punishment"
+        )
     assert state(fresh).sheets["2"].heat == before + 7
     if play == "vatgrown_doll":
-        respond(scoped(fresh, PLAYER, "vat_doll_benefits"), PLAYER, "vat_doll_benefits", {"options": "quiet"})
+        respond(
+            scoped(fresh, PLAYER, "vat_doll_benefits"),
+            PLAYER,
+            "vat_doll_benefits",
+            {"options": "quiet"},
+        )
     assert fresh.inspect(PLAYER, original)["state"] == "complete"
     assert fresh.inspect(PLAYER, original)["receipt"] == old and game.dice.calls == 1

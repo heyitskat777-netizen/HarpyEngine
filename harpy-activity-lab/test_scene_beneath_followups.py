@@ -5,29 +5,28 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 import mission_lab  # noqa: F401
-
 import pytest
 import test_m2_game
-from girlframe.delivery.p1_source_pause_worker import SourcePauseWorker
-from girlframe.engine.m2 import PlayInput
-from girlframe.engine.m3_actor_bonds import current_ref
-from girlframe.services.m2_game import GameService
-from girlframe.services.m3_access import load_registry
-from girlframe.services import m3_beneath
-from girlframe.services.onboarding import WorkflowError
+from ai_native_plays import ActivityNativePlays
+from owned_followups import OwnedFollowups
+from scene_beneath_work import SceneBeneathWork
+from scene_plays import BENEATH, ScenePlays
 from test_beneath_discipline import pending
 from test_beneath_service import rolled
 from test_defeat_service import required
+from test_final_handler_workflows import bundled_registry  # noqa: F401
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger_fixture
-from test_m2_game import answer as native_answer
 from test_m2_game import Gateway, pass_tags, state, tick
+from test_m2_game import answer as native_answer
 
-from owned_followups import OwnedFollowups
-from ai_native_plays import ActivityNativePlays
-from scene_plays import BENEATH, ScenePlays
-from scene_beneath_work import SceneBeneathWork
-from test_final_handler_workflows import bundled_registry  # noqa: F401
+from girlframe.delivery.p1_source_pause_worker import SourcePauseWorker
+from girlframe.engine.m2 import PlayInput
+from girlframe.engine.m3_actor_bonds import current_ref
+from girlframe.services import m3_beneath
+from girlframe.services.m2_game import GameService
+from girlframe.services.m3_access import load_registry
+from girlframe.services.onboarding import WorkflowError
 
 ledger = ledger_fixture
 
@@ -106,9 +105,7 @@ def scene_work(scene, viewer, card, answer, key=None, action=None):
     ("kind", "legacy"),
     [("sedation", False), ("sedation", True), ("frame_disassembly", False)],
 )
-def test_specialty_followups_keep_their_source_and_actual_owners(
-    ledger, monkeypatch, kind, legacy
-):
+def test_specialty_followups_keep_their_source_and_actual_owners(ledger, monkeypatch, kind, legacy):
     if kind == "sedation":
         selected = test_m2_game.selected
         ready = test_m2_game.ready
@@ -120,9 +117,7 @@ def test_specialty_followups_keep_their_source_and_actual_owners(
         monkeypatch.setattr(
             test_m2_game,
             "ready",
-            lambda store, girl, frame: ready(
-                store, girl, frame, other_frame="PROJECT ANKOU"
-            ),
+            lambda store, girl, frame: ready(store, girl, frame, other_frame="PROJECT ANKOU"),
         )
     _, game, worker, gateway, root, _ = pending(ledger)
     with ledger.transaction() as c:
@@ -137,9 +132,7 @@ def test_specialty_followups_keep_their_source_and_actual_owners(
             for asset in frames[1:]:
                 asset.void = True
             details = {"asset": frames[0].id}
-        game.event(
-            c, ADMIN.user_id, "before-scene-punishment", "synthetic.baseline", canon
-        )
+        game.event(c, ADMIN.user_id, "before-scene-punishment", "synthetic.baseline", canon)
 
     def rooms():
         return {900: ("relay", "Relay operations")}
@@ -221,9 +214,7 @@ def test_specialty_followups_keep_their_source_and_actual_owners(
         replacement = state(game).sheets["3"].identities[0].id
         scene_work(scene, OTHER, identity, {"replace": replacement})
         assert not specialty(OTHER, "feedback_identity")
-        assert any(
-            x.name == answer["account"] for x in state(game).sheets["3"].identities
-        )
+        assert any(x.name == answer["account"] for x in state(game).sheets["3"].identities)
     else:
         (threshold,) = specialty(OTHER, "resolve_void")
         assert not specialty(PLAYER, "resolve_void")
@@ -258,9 +249,7 @@ def test_scene_moderate_proposal_returns_to_inflictor_and_stays_exact(ledger):
     _, game, _, _, root, _ = pending(ledger)
     scene = SceneBeneathWork(game, lambda: {900: ("relay", "Relay operations")})
     card = scene.view(PLAYER)[0]
-    disassembly = next(
-        form for form in card["forms"] if form["kind"] == "frame_disassembly"
-    )
+    disassembly = next(form for form in card["forms"] if form["kind"] == "frame_disassembly")
     asset = disassembly["fields"][0]["options"][0][0]
     answer = {"kind": "frame_disassembly", "asset": asset}
     with pytest.raises(WorkflowError, match="HANDLER_CONSULT_REQUIRED"):
@@ -336,16 +325,20 @@ def test_beneath_permission_stays_in_its_original_scene(ledger):
         scene_work(scene, PLAYER, unlocked, {"options": ["reject"]})
     scene_work(scene, OTHER, unlocked, {"options": ["reject"]})
     assert state(game).sheets["3"].tags[-1].rejection_pending
-    native_answer(
-        game, OTHER, "actor_keep", options=("vicious", "tough"), denied=("desperate",)
-    )
+    native_answer(game, OTHER, "actor_keep", options=("vicious", "tough"), denied=("desperate",))
     native_answer(game, ADMIN, "handler_keep", flag=True, text="The pilot holds.")
     tick(worker, gateway, 5)
     saved = next(item for item in state(game).obligations if item.kind == "reject_tag")
-    projection = ActivityNativePlays(SimpleNamespace(
-        game=game, handler=ADMIN, scene_plays=adapter(game), play_registry=load_registry(),
-        handler_rooms=lambda: {900: ("relay", "Relay operations")},
-    ), None)
+    projection = ActivityNativePlays(
+        SimpleNamespace(
+            game=game,
+            handler=ADMIN,
+            scene_plays=adapter(game),
+            play_registry=load_registry(),
+            handler_rooms=lambda: {900: ("relay", "Relay operations")},
+        ),
+        None,
+    )
     with ledger.engine.connect() as c:
         canon = state(game)
         original = game.scene(c, 900)
@@ -443,9 +436,7 @@ def test_pin_response_and_its_handler_ruling_stay_in_the_scene(ledger):
     pilot = choice(scene, OTHER, "actor_keep")
     submit(scene, OTHER, pilot, {"text": "Steady"})
     ruling = next(
-        card
-        for card in scene.handler_choices(ADMIN)
-        if card["choice"]["kind"] == "handler_keep"
+        card for card in scene.handler_choices(ADMIN) if card["choice"]["kind"] == "handler_keep"
     )
     assert ruling["root"] == root
     submit(scene, ADMIN, ruling["choice"], {"flag": True, "text": "It holds steady."})
@@ -462,9 +453,9 @@ def test_scene_defeat_keeps_its_source_and_assigns_the_actual_next_owner(ledger,
     handoff = choice(scene, PLAYER, "beneath_defeat")
     native = game.scene_info(PLAYER, 900)
     assert (
-        scene.play_options(
-            PLAYER, native, game.sheet(PLAYER), state(game), True, False, {}
-        )["defeat"]["resume_source"]
+        scene.play_options(PLAYER, native, game.sheet(PLAYER), state(game), True, False, {})[
+            "defeat"
+        ]["resume_source"]
         == BENEATH
     )
     assert not options(scene, OTHER)["choices"]

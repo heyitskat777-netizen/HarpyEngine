@@ -5,12 +5,13 @@ const path = require("node:path");
 const readline = require("node:readline");
 const { randomUUID } = require("node:crypto");
 const { chromium } = require(process.env.HARPY_ACTIVITY_TEST_PLAYWRIGHT ??
-  "../.sites-runtime/browser-acceptance/node_modules/playwright-core");
+  "playwright-core");
 
-const engine = path.resolve(__dirname, "../.sites-runtime/harpyengine-mission-lab/HarpyEngine-playtest");
 const app = path.dirname(__dirname);
+const engine = path.resolve(process.env.HARPY_ACTIVITY_ENGINE_ROOT ?? app);
 const python = process.env.HARPY_ACTIVITY_TEST_PYTHON ??
-  path.join(engine, ".venv", "Scripts", "python.exe");
+  (process.platform === "win32" ? path.join(engine, ".venv", "Scripts", "python.exe")
+    : path.join(engine, ".venv", "bin", "python"));
 const main = path.join(__dirname, "mission_lab.py");
 const dmOffline = process.argv.includes("--discord-offline-dm");
 const sceneCheck = dmOffline && process.argv.includes("--scene-check");
@@ -116,12 +117,11 @@ async function verifyDirectorTrial(browser, server, previous = null) {
     try {
       const closeInbox = view.getByRole("button",{name:"Close inbox",exact:true});
       if (await closeInbox.isVisible()) await closeInbox.click();
-      await view.locator(".campaign-menu summary").click();
-      await view.getByRole("button", {name:"Assisted trial",exact:true}).click();
+      await view.getByRole("button", {name:"Training terminal",exact:true}).click();
     } catch (error) {
       throw new Error(label + " could not open the trial. " + await view.locator("#status").textContent(), {cause:error});
     }
-    return {page, session:connection?.session, dialog:view.getByRole("dialog", {name:"Assisted session"})};
+    return {page, session:connection?.session, dialog:view.getByRole("dialog", {name:"Training terminal"})};
   }
   function request(person, path, data, key = randomUUID(), origin = server.discord_activity_origin ?? server.origin) {
     const headers = {Origin:origin, "Idempotency-Key":key};
@@ -160,12 +160,12 @@ async function verifyDirectorTrial(browser, server, previous = null) {
     await pilot.dialog.getByText("Play request · awaiting gm review").waitFor();
     await pilot.dialog.getByRole("button", {name:"Safety pause",exact:true}).click();
     await pilot.dialog.getByText("PAUSED", {exact:true}).waitFor();
-    assert.equal(await pilot.dialog.getByLabel("Pilot dialogue").count(), 0);
+    assert.equal(await pilot.dialog.getByLabel("Pilot transmission").count(), 0);
     await pilot.dialog.getByRole("button", {name:"Lift my safety pause",exact:true}).click();
     await pilot.dialog.getByText("Play request · awaiting gm review").waitFor();
     await pilot.dialog.getByRole("button", {name:"Withdraw my consent"}).click();
     await pilot.dialog.getByText("AWAITING CONSENT", {exact:true}).waitFor();
-    assert.equal(await pilot.dialog.getByLabel("Pilot dialogue").count(), 0);
+    assert.equal(await pilot.dialog.getByLabel("Pilot transmission").count(), 0);
     return;
   }
   const other = await enter("Other pilot", "other");
@@ -176,11 +176,11 @@ async function verifyDirectorTrial(browser, server, previous = null) {
     await person.dialog.getByRole("button", {name:consent,exact:true}).click();
     await person.dialog.getByRole("button", {name:"Withdraw my consent"}).waitFor();
   }
-  await pilot.dialog.getByRole("button", {name:"Refresh assisted session"}).click();
+  await pilot.dialog.getByRole("button", {name:"Refresh training record"}).click();
   const greeting = "GM, I choose Keep Your Head to hold the calibration needle steady.";
-  await pilot.dialog.getByLabel("Pilot dialogue").fill(greeting);
-  await pilot.dialog.getByRole("button", {name:"Submit dialogue",exact:true}).click();
-  await pilot.dialog.getByText("Dialogue filed.", {exact:true}).waitFor();
+  await pilot.dialog.getByLabel("Pilot transmission").fill(greeting);
+  await pilot.dialog.getByRole("button", {name:"File transmission",exact:true}).click();
+  await pilot.dialog.getByText("Transmission filed.", {exact:true}).waitFor();
   await pilot.dialog.getByText("Play request · awaiting gm review").waitFor();
   assert.equal((await post(other, {operation:"gm-work"})).ok(), false);
   assert.equal((await post(other, {operation:"memory"})).ok(), false);
@@ -445,7 +445,7 @@ async function verifySceneArchive(browser, server, previous) {
   const closeInbox = owner.view.getByRole("button", {name:"Close inbox",exact:true});
   if (await closeInbox.isVisible()) await closeInbox.click();
   const name = "After-action archive";
-  const archive = owner.view.getByRole("button",{name:"Archive",exact:true});
+  const archive = owner.view.getByRole("button",{name:"Scene Archive",exact:true});
   function api(person, route, data) {
     return person.page.request.fetch(server.origin + route, {
       method:data ? "POST" : "GET", data,
@@ -475,7 +475,7 @@ async function verifySceneArchive(browser, server, previous) {
     await privateEntry.waitFor();
     await mainEntry.waitFor({state:"hidden"});
     await search.fill("nothing by this name");
-    await owner.view.getByText("No archived scenes match your search.",{exact:true}).waitFor();
+    await owner.view.getByText("No archived scene files match this search.",{exact:true}).waitFor();
     await search.fill("hangar " + previous.peerCallsign);
     const refreshed = owner.page.waitForResponse(response => new URL(response.url()).pathname === setup);
     await owner.view.locator("#refresh").evaluate(button => button.click());
@@ -510,6 +510,7 @@ async function verifySceneArchive(browser, server, previous) {
   const start = owner.view.getByRole("dialog",{name:"Start Scene",exact:true});
   await start.getByLabel("Scene name").fill(name);
   const refreshed = owner.page.waitForResponse(response => new URL(response.url()).pathname === setup);
+  await start.getByLabel("Location (optional)").fill("Hangar Deck");
   await owner.view.locator("#refresh").evaluate(button => button.click());
   await refreshed;
   await start.getByLabel("Scene name").press("End");
@@ -527,7 +528,7 @@ async function verifySceneArchive(browser, server, previous) {
   assert.equal(redeemed.status(),200,await redeemed.text());
   const line = "The crew logs the final relay reading.";
   await owner.view.getByLabel("Dialogue or narration").fill(line);
-  await owner.view.getByRole("button",{name:"Add to scene",exact:true}).click();
+  await owner.view.getByRole("button",{name:"File transmission",exact:true}).click();
   await owner.view.getByText(line,{exact:true}).waitFor();
   const handler = await openPilot(browser, server, "handler");
   async function waitFor(person, pick) {
@@ -568,8 +569,9 @@ async function verifySceneArchive(browser, server, previous) {
       await owner.view.locator("#inbox-toggle").click();
       await owner.view.locator("#dispatch-decisions").click();
       const dispatch = owner.view.locator(`#mail-entries [data-mail-id="choice:${tag.id}:${tag.revision}"]`);
-      await dispatch.getByText("Action required",{exact:true}).waitFor();
-      assert.match(await dispatch.textContent(),/Action ownerSYNTH/);
+      await dispatch.getByText("RESPONSE REQUIRED",{exact:true}).waitFor();
+      const profile = await (await api(owner,setup)).json();
+      assert((await dispatch.getAttribute("aria-description")).includes("Assigned to " + profile.callsign));
       const count = await owner.view.locator("#decision-count").textContent();
       assert(Number(count) > 0);
       await dispatch.click();
@@ -593,14 +595,15 @@ async function verifySceneArchive(browser, server, previous) {
     });
     if (context === "Hold the relay steady.") {
       await owner.view.locator("#inbox-toggle").click();
-      await owner.view.locator("#mail-entries").getByText("No decisions assigned to you.",{exact:true}).waitFor();
+      await owner.view.locator("#dispatch-decisions").click();
+      await owner.view.locator("#mail-entries").getByText("NO RESPONSE ASSIGNED",{exact:true}).waitFor();
       await owner.view.getByRole("button",{name:"Close inbox",exact:true}).click();
       await owner.view.locator('#scene-play-options button[data-play="keep_your_head"]').click();
       const filed = owner.view.getByRole("dialog",{name:/Keep Your Head/i});
       await filed.locator("#scene-action-record").getByText("Filed",{exact:true}).waitFor();
       await filed.getByRole("button",{name:"Close scene Play",exact:true}).click();
       await owner.view.locator('[data-folder="frame"]').click();
-      await owner.view.getByText("Log equipment variances before handover.",{exact:true}).waitFor();
+      await owner.view.locator("#notice").filter({hasText:"Log equipment variances before handover."}).waitFor();
       await owner.view.getByRole("button",{name:"Back",exact:true}).click();
     }
   }
@@ -775,7 +778,7 @@ async function openPilot(browser, server, role, failFirstMissionPost = false, ca
   await auth.waitFor({state:"hidden"});
   if (!await view.locator("#enrollment-dialog").isVisible()) await view.locator("#inbox-toggle").click();
   assert(session);
-  return {page, view, session};
+  return {page, view, get session() { return session; }};
 }
 
 async function selectPlayCategory(scope, category) {
@@ -1026,7 +1029,7 @@ async function verifyArtwork({view}) {
   await image(view.locator(".record-artwork--scene"), "Empty Hangar");
   const line = "Reporting from the relay with portrait on file.";
   await view.getByLabel("Dialogue or narration").fill(line);
-  await view.getByRole("button", {name:"Add to scene",exact:true}).click();
+  await view.getByRole("button", {name:"File transmission",exact:true}).click();
   const post = view.locator(".dialogue-entry").filter({hasText:line});
   const portrait = post.locator(".dialogue-portrait img");
   await portrait.waitFor();
@@ -1131,7 +1134,7 @@ print(json.dumps(catalogs))
   await popup.getByRole("button",{name:"Open on Battlefield",exact:true}).waitFor();
   await popup.getByRole("button",{name:"Close scene Play",exact:true}).click();
   await view.getByLabel("Dialogue or narration").fill("/play Keep Your Head");
-  await view.getByRole("button",{name:"Add to scene",exact:true}).click();
+  await view.getByRole("button",{name:"File transmission",exact:true}).click();
   await popup.getByLabel("What are you trying to endure?",{exact:true}).waitFor();
   await popup.getByRole("button",{name:"Close scene Play",exact:true}).click();
 
@@ -1260,6 +1263,9 @@ async function verifyBoundRoster(browser, server, owner, other, loadSetup, postS
   const handlerBook = handler.view.locator("#handler-playbook");
   const openHandlerPlays = () => handler.view.getByRole("button",{name:"Open Handler Plays",exact:true}).click();
   const closeHandlerPlays = () => handler.view.getByRole("button",{name:"Close Handler Plays",exact:true}).click();
+  const dismiss = handler.view.getByRole("button", {name:"Close inbox",exact:true});
+  if (await dismiss.isVisible()) await dismiss.click();
+  await handler.view.getByRole("button", {name:"Handler desk",exact:true}).click();
   await openHandlerPlays();
   await handlerBook.getByText("Handler rulebook",{exact:true}).waitFor();
   await handlerBook.getByText("Introduce the support",{exact:true}).waitFor();
@@ -1282,7 +1288,7 @@ async function verifyBoundRoster(browser, server, owner, other, loadSetup, postS
     await goStep(connection, "Bond");
     const loaded = connection.page.waitForResponse(response =>
       new URL(response.url()).pathname === "/api/player-setup" && response.request().method() === "GET");
-    await goStep(connection, "Check for updates");
+    await goStep(connection, "Synchronize terminal");
     assert.equal((await loaded).status(), 200);
   };
 
@@ -1314,7 +1320,7 @@ async function verifyBoundRoster(browser, server, owner, other, loadSetup, postS
     const field = connection.view.getByLabel("Callsign", {exact:true});
     assert.equal(await field.inputValue(), "");
     await field.fill(callsign);
-    await control(connection, "Save callsign").click();
+    await control(connection, "File callsign").click();
     await enrollment(connection).locator("#enrollment-identity").getByRole("heading", {name:callsign,exact:true}).waitFor();
     if (connection === owner) {
       await goStep(connection, "Close pilot enrollment");
@@ -1341,7 +1347,7 @@ async function verifyBoundRoster(browser, server, owner, other, loadSetup, postS
     await goStep(connection, "Select profile picture");
     const picker = connection.view.locator("#artwork-dialog");
     await picker.getByLabel("Artwork selection").selectOption(portrait);
-    await picker.getByRole("button", {name:"Save artwork"}).click();
+    await picker.getByRole("button", {name:"File artwork"}).click();
     await picker.waitFor({state:"hidden"});
     assert.equal(await field("Frame name").inputValue(), frame);
     assert.equal((await loadSetup(connection)).enrollment.portrait, portrait);
@@ -1359,12 +1365,12 @@ async function verifyBoundRoster(browser, server, owner, other, loadSetup, postS
     await field("Void-altered pilot asset").selectOption(options.girl_assets[0]);
     const saved = connection.page.waitForResponse(response =>
       new URL(response.url()).pathname === "/api/player-setup" && response.request().method() === "GET");
-    await control(connection, "Save character draft").click();
+    await control(connection, "File enrollment draft").click();
     assert.equal((await (await saved).json()).draft.frame_name, frame);
   }
   await enrollment(owner).getByLabel("Recipient", {exact:true}).selectOption(discordUsers.other);
   await control(owner, "Propose starting Bond").click();
-  await enrollment(owner).getByText("Awaiting a response", {exact:true}).waitFor();
+  await enrollment(owner).getByText("COUNTERSIGNATURE PENDING", {exact:true}).waitFor();
   const pending = (await loadSetup(owner)).bonds.find(bond => !bond.incoming && bond.state === "pending");
   assert(pending, "The starting Bond awaits the target player's decision.");
   assert.equal((await postSetup(owner, "bond-decision", {
@@ -1372,7 +1378,7 @@ async function verifyBoundRoster(browser, server, owner, other, loadSetup, postS
   })).status, 409);
   await update(other);
   await goStep(other, "Accept Bond");
-  await enrollment(other).getByText("Bond accepted", {exact:true}).waitFor();
+  await enrollment(other).getByText("Countersigned", {exact:true}).waitFor();
   await goStep(other, "Use as starting Bond");
   await enrollment(other).getByRole("heading", {name:"Activation review"}).waitFor();
   for (const {connection, callsign} of pilots) {
@@ -1380,7 +1386,7 @@ async function verifyBoundRoster(browser, server, owner, other, loadSetup, postS
     await goStep(connection, "Review");
     const {review} = await loadSetup(connection);
     assert.equal(review.ready, true, JSON.stringify(review.issues));
-    await control(connection, "Save activation review").click();
+    await control(connection, "File activation review").click();
     await control(connection, "Activate pilot").click();
     await connection.view.locator("#pilot").filter({hasText:new RegExp("^" + callsign + " \\| ")}).waitFor();
   }
@@ -1408,7 +1414,7 @@ async function verifyBoundRoster(browser, server, owner, other, loadSetup, postS
     await connection.page.context().close();
   }
   await closeInbox(handler);
-  await handler.view.getByRole("button",{name:"Check for updates",exact:true}).click();
+  await handler.view.getByRole("button",{name:"Synchronize terminal",exact:true}).click();
   await openHandlerPlays();
   await handlerBook.getByLabel(pilots[0].callsign,{exact:true}).check();
   await handlerBook.getByRole("button",{name:"Start Handler Play",exact:true}).click();
@@ -1432,7 +1438,7 @@ async function verifyBoundRoster(browser, server, owner, other, loadSetup, postS
     const refresh = async pilot => {
       await closeInbox(pilot);
       const response = pilot.page.waitForResponse(answer => new URL(answer.url()).pathname === "/api/player-setup" && answer.request().method() === "GET");
-      await control(pilot, "Check for updates").click();
+      await control(pilot, "Synchronize terminal").click();
       assert.equal((await response).status(),200);
     };
     const start = async play => {
@@ -1660,16 +1666,38 @@ async function verifyCampaignSwitch(browser, server, owner, other, request, play
   }
   const pilot = await openPilot(browser, server, "invited", false, north.id);
   const switcher = pilot.view.locator("#campaign-switch");
+  const access = pilot.view.locator("#auth-dialog");
+  const storageAvailable = await pilot.view.locator("html").evaluate(() => {
+    try {
+      return typeof sessionStorage.length === "number";
+    } catch (error) {
+      if (error.name === "SecurityError") return false;
+      throw error;
+    }
+  });
   const visit = async (entry, callsign, frame) => {
     if (await switcher.inputValue() !== entry.id) {
       const closeInbox = pilot.view.getByRole("button",{name:"Close inbox",exact:true});
       if (await closeInbox.isVisible()) await closeInbox.click();
-      await pilot.view.locator(".campaign-menu summary").click();
       await switcher.selectOption(entry.id);
+      if (!storageAvailable) {
+        // A blocked embedded store must fall back to fresh Discord authorization.
+        await access.locator("#sign-in").click();
+        await access.waitFor({state:"hidden"});
+      }
     }
-    await pilot.view.locator("#campaign-name").filter({hasText:entry.name}).waitFor();
+    try {
+      await pilot.view.locator("#campaign-name").filter({hasText:entry.name}).waitFor();
+    } catch (error) {
+      const state = await pilot.view.locator("html").evaluate(() => ({
+        campaign: new URL(location.href).searchParams.get("campaign"),
+        status: document.getElementById("status")?.textContent,
+        signingIn: document.getElementById("auth-dialog")?.open,
+      }));
+      throw new Error("Campaign switch did not open the selected file. " + JSON.stringify(state), {cause:error});
+    }
     await pilot.view.locator("#pilot[data-ready]").filter({hasText:callsign}).waitFor();
-    assert.equal(await pilot.view.getByRole("dialog",{name:"Discord authentication"}).isVisible(),false);
+    assert.equal(await access.isVisible(),false);
     const data = await playerSetup(pilot);
     assert.equal(data.stage,"active");
     assert.equal(data.callsign,callsign);
@@ -1685,7 +1713,8 @@ async function verifyCampaignSwitch(browser, server, owner, other, request, play
   const fromChannel = await openPilot(browser, server, "invited", false, undefined, "888888888888888892");
   assert.equal(await fromChannel.view.locator("#campaign-name").textContent(), "Southern Signal");
   assert.equal((await playerSetup(fromChannel)).mailbox, second);
-  console.log("The same Discord pilot switched between two active HarpyEngine sheets with separate callsigns, Frames and mailboxes. Launching from the bound channel selected its campaign.");
+  console.log("The same Discord pilot switched between two active HarpyEngine sheets with separate callsigns, Frames and mailboxes. Launching from the bound channel selected its campaign. " +
+    (storageAvailable ? "The existing session survived each switch." : "Blocked storage required fresh authorization at each switch."));
 }
 
 async function verifyP2Battlefield(browser, server, previous) {
@@ -2217,7 +2246,7 @@ async function mainTest() {
       }
     }
     browser = await chromium.launch({
-      executablePath: chromePath ?? "C:/Program Files/Google/Chrome/Application/chrome.exe",
+      executablePath: chromePath ?? chromium.executablePath(),
       headless: true, args: ["--disable-background-networking", "--disable-sync"],
     });
     if (enrollmentDraftCheck) {
@@ -2393,7 +2422,7 @@ async function mainTest() {
       assert(await owner.view.getByRole("button", {name:"Enter scene for Plays"}).isVisible());
       assert.equal(await owner.view.locator("#scene-play-options").isVisible(), false);
       await owner.view.getByLabel("Dialogue or narration").fill("SYNTH records a clean signal.");
-      await owner.view.getByRole("button", {name:"Add to scene"}).click();
+      await owner.view.getByRole("button", {name:"File transmission"}).click();
       await owner.view.getByText("SYNTH records a clean signal.", {exact:true}).waitFor();
       const room = (await playerSetup(owner)).directory.rooms.find(item => item.name === "Signal Watch");
       const transcript = "/api/rooms/" + room.id + "/transcript";
@@ -3158,7 +3187,7 @@ async function mainTest() {
       await owner.view.getByRole("button", {name:"Back", exact:true}).click();
       await owner.view.getByRole("heading", {name:"Relay operations"}).first().waitFor();
       const dialogue = owner.view.getByLabel("Dialogue or narration");
-      const addDialogue = owner.view.getByRole("button", {name:"Add to scene"});
+      const addDialogue = owner.view.getByRole("button", {name:"File transmission"});
       const scenePlayList = owner.view.locator("#scene-play-options");
       await scenePlayList.getByText("Keep your head", {exact:true}).waitFor();
       assert(await scenePlayList.evaluate(element => element.compareDocumentPosition(

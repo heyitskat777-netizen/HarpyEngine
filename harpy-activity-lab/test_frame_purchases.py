@@ -4,25 +4,23 @@ import mission_lab
 
 # isort: split
 import pytest
-from girlframe.engine.m3_enforcer_requisitions import MASTER
-from girlframe.services.m2_game import GameService
-from girlframe.services.onboarding import WorkflowError
+from frame_purchases import FramePurchases
 from test_enforcer_requisitions import approved
 from test_ledger import OTHER, PLAYER
 from test_ledger import ledger as ledger_fixture
 from test_m2_game import state
 from test_requisition_service import ready
 
-from frame_purchases import FramePurchases
+from girlframe.engine.m3_enforcer_requisitions import MASTER
+from girlframe.services.m2_game import GameService
+from girlframe.services.onboarding import WorkflowError
 
 ledger = ledger_fixture
 
 
 @pytest.fixture(autouse=True)
 def source_registry(monkeypatch):
-    monkeypatch.setenv(
-        "GIRLFRAME_RULES_REGISTRY", str(mission_lab.ENGINE / "rules/registry.json")
-    )
+    monkeypatch.setenv("GIRLFRAME_RULES_REGISTRY", str(mission_lab.ENGINE / "rules/registry.json"))
 
 
 def test_owned_installment_cost_and_receipt_survive_reopen(ledger):
@@ -84,6 +82,8 @@ def test_frame_acquisition_is_reviewed_owned_and_idempotent(
     assert reopened.acquire(PLAYER, "new-ability", request) == receipt
     view = reopened.view(PLAYER)
     assert view["permissions"] == 3 - price
-    assert [rule["rule"] for rule in view["abilities"]["enforcer_rules"] if rule["active"]] == [MASTER]
+    assert [rule["rule"] for rule in view["abilities"]["enforcer_rules"] if rule["active"]] == [
+        MASTER
+    ]
     assert MASTER not in {rule["id"] for rule in view["abilities"]["rules"]}
     assert not reopened.view(OTHER)["abilities"]["enforcer_rules"]

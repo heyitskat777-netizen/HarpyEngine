@@ -82,9 +82,7 @@ CATEGORY_BY_ID = {
     for category, identities in PLAY_CATEGORIES.items()
     for identity in identities
 }
-NATIVE_PLAYS = frozenset(
-    (*ASSET_IDS, *FIXED_IDS, *HEAT_IDS, *JANUS_ROLL_IDS, *ROLL_IDS)
-)
+NATIVE_PLAYS = frozenset((*ASSET_IDS, *FIXED_IDS, *HEAT_IDS, *JANUS_ROLL_IDS, *ROLL_IDS))
 # Older registry entries use printed headings for these registered operations.
 LEGACY_IDS = {
     "girl.mockingbird.bad-at-being-a-person": "mockingbird_person",
@@ -110,9 +108,7 @@ def character_plays(registry, sheet, *, owns_sheet, state, include_unimplemented
         # Its payment/custody record also detects suspensions and Frame changes.
         acquired.difference_update((*BASE, *RULES))
         if sheet.character_id:
-            actor = ActorRef(
-                kind="pilot", entity=str(sheet.owner), incarnation=sheet.character_id
-            )
+            actor = ActorRef(kind="pilot", entity=str(sheet.owner), incarnation=sheet.character_id)
             for rule_id in (*BASE, *RULES):
                 try:
                     if held(state, actor, rule_id):
@@ -131,17 +127,13 @@ def character_plays(registry, sheet, *, owns_sheet, state, include_unimplemented
             continue
         slug = rule.id.rsplit(".", 1)[-1].replace("-", "_")
         native_id = (
-            rule.m2_play_id
-            or LEGACY_IDS.get(rule.id)
-            or (slug if slug in NATIVE_PLAYS else None)
+            rule.m2_play_id or LEGACY_IDS.get(rule.id) or (slug if slug in NATIVE_PLAYS else None)
         )
         if rule.scope == "basic" and rule.kind == "play":
             native_id = native_id or rule.id.rsplit(".", 1)[-1]
         elif rule.scope == "girl" and rule.kind != "playbook":
             book = BOOK_BY_SLUG.get(rule.id.split(".")[1])
-            if not book or not (
-                has_rule(sheet, rule.id, book) if owns_sheet else girl == book
-            ):
+            if not book or not (has_rule(sheet, rule.id, book) if owns_sheet else girl == book):
                 continue
         elif rule.scope == "frame" and rule.kind != "playbook":
             if sheet.frame_scrapped or (
@@ -152,9 +144,7 @@ def character_plays(registry, sheet, *, owns_sheet, state, include_unimplemented
         else:
             continue
         if native_id is None and not (
-            rule.kind == "play"
-            or rule.contract
-            and rule.contract.roll_kind in ("2d6", "d6")
+            rule.kind == "play" or rule.contract and rule.contract.roll_kind in ("2d6", "d6")
         ):
             continue
         identity = native_id or rule.id
@@ -188,9 +178,7 @@ def frame_upgrades(registry, runtime):
             {
                 "id": identity,
                 "name": entry.title if entry else identity,
-                "description": entry.contract.trigger
-                if entry and entry.contract
-                else "",
+                "description": entry.contract.trigger if entry and entry.contract else "",
             }
         )
     return upgrades

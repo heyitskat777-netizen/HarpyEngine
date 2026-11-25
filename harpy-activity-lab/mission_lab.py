@@ -25,20 +25,24 @@ from time import monotonic
 from urllib.parse import parse_qs, urlsplit
 from uuid import UUID, uuid4
 
+from activity_paths import ACTIVITY_ROOT, RUNTIME, engine_root
 from discord_session import DiscordConfig, DiscordSessions, SignInError
 
-HERE = Path(__file__).resolve().parent
-RUNTIME = HERE.parent / ".sites-runtime" / "harpyengine-mission-lab"
-ENGINE = RUNTIME / (
-    "HarpyEngine-p2-candidate"
-    if any(arg == "--p2-trial" or arg.startswith("--p2-trial=") for arg in sys.argv)
-    else "HarpyEngine-release-723955c"
+HERE = ACTIVITY_ROOT
+ENGINE = engine_root(
+    trial=any(arg == "--p2-trial" or arg.startswith("--p2-trial=") for arg in sys.argv)
 )
 sys.path[:0] = [
     str(ENGINE / "src"),
     str(ENGINE / "tests"),
     str(ENGINE / "tests" / "rules"),
+    str(ENGINE / "tools"),
 ]
+
+import girlframe
+
+if Path(girlframe.__file__).resolve().parent != ENGINE / "src" / "girlframe":
+    raise RuntimeError("The imported HarpyEngine does not match the selected Activity engine.")
 
 import sqlalchemy as sa
 from activity_ai_trial import ActivityAITrial

@@ -2,6 +2,11 @@
 
 import json
 
+from off_duty_review import OffDutyReview
+from psyche_controls import PsycheControls
+from show_dog_controls import ShowDogControls
+from strain_preparation import StrainPreparation
+
 from girlframe.discord_adapter.m3_observation import LABELS
 from girlframe.engine.m2 import tier
 from girlframe.engine.m3_choices import OFF_DUTY
@@ -15,11 +20,6 @@ from girlframe.services.m3_observation import ObservationService
 from girlframe.services.m3_off_duty_cycle import CycleService
 from girlframe.services.m3_play_support import periods
 from girlframe.services.onboarding import WorkflowError
-
-from off_duty_review import OffDutyReview
-from psyche_controls import PsycheControls
-from show_dog_controls import ShowDogControls
-from strain_preparation import StrainPreparation
 
 
 def scene_label(kind):
@@ -74,12 +74,7 @@ class OffDutyFollowups:
         uid = str(viewer.user_id)
         callsigns = dict(review["participants"])
         own = review["own"]
-        ready = bool(
-            review["sheet"]
-            and own
-            and own["roll"]
-            and own["roll"]["stage"] == "choices"
-        )
+        ready = bool(review["sheet"] and own and own["roll"] and own["roll"]["stage"] == "choices")
         invitations = [
             {
                 "owner": str(scene["owner"]),
@@ -87,9 +82,7 @@ class OffDutyFollowups:
                 "pilot": callsigns.get(str(scene["owner"])),
                 "summary": scene["summary"],
                 "confirmed": viewer.user_id in scene["acknowledgements"],
-                "remaining": len(
-                    set(scene["participants"]) - set(scene["acknowledgements"])
-                ),
+                "remaining": len(set(scene["participants"]) - set(scene["acknowledgements"])),
             }
             for scene in review["invitations"]
         ]
@@ -100,8 +93,7 @@ class OffDutyFollowups:
                 data = self.observation.get(viewer, item["id"])
                 if data["owner_id"] == uid and data["state"] == "pending":
                     work.append(
-                        observation_card(data)
-                        | {"pilot": callsigns.get(data["subject_id"])}
+                        observation_card(data) | {"pilot": callsigns.get(data["subject_id"])}
                     )
             elif item["kind"] == "frame_off_duty_reward":
                 data = self.rewards.get(viewer, item["id"])
@@ -141,35 +133,27 @@ class OffDutyFollowups:
                 if not progress.scene and not progress.scene_declined:
                     picker = scene_picker(viewer.user_id, period, state, review)
                     if picker is None:
-                        reason = (
-                            "Waiting for the assigned Observation consequence choices."
-                        )
+                        reason = "Waiting for the assigned Observation consequence choices."
                 elif progress.scene and set(progress.scene.participants) != set(
                     progress.scene.acknowledgements
                 ):
                     reason = "Waiting for participants to confirm their own attendance."
                 elif progress.observation and not complete(period, viewer.user_id):
-                    reason = (
-                        "Resolve the saved Observation consequences before recovery."
-                    )
+                    reason = "Resolve the saved Observation consequences before recovery."
                 elif any(
                     item["subject_id"] == uid
-                    and item["kind"]
-                    not in ("off_duty_handler_scene", "off_duty_status_review")
+                    and item["kind"] not in ("off_duty_handler_scene", "off_duty_status_review")
                     for item in self.periods._pending(connection, period.id)
                 ):
                     reason = "Finish the remaining required work before recovery."
                 elif any(
                     item.owner == viewer.user_id
                     and item.state == "pending"
-                    and item.kind
-                    in ("punishment", "void_observation", "defeat", "helpless")
+                    and item.kind in ("punishment", "void_observation", "defeat", "helpless")
                     and item.details.get("after_period") != period.id
                     for item in state.obligations
                 ):
-                    reason = (
-                        "Resolve the compulsory sheet consequences before recovery."
-                    )
+                    reason = "Resolve the compulsory sheet consequences before recovery."
                 else:
                     recovery = recovery_fields(review)
             if self.periods.game.pending_actions(connection):
@@ -192,9 +176,7 @@ class OffDutyFollowups:
     def perform(self, viewer, key, data):
         if data.keys() != {"period", "revision", "game_revision", "action", "answer"}:
             raise ValueError
-        period, revision, game_revision = (
-            data[k] for k in ("period", "revision", "game_revision")
-        )
+        period, revision, game_revision = (data[k] for k in ("period", "revision", "game_revision"))
         action, answer = data["action"], data["answer"]
         if (
             not isinstance(period, str)
@@ -226,15 +208,11 @@ class OffDutyFollowups:
         }:
             from girlframe.engine.m3_actor_state import ActorRef
 
-            kind, people, summary = (
-                answer[k] for k in ("kind", "participants", "summary")
-            )
+            kind, people, summary = (answer[k] for k in ("kind", "participants", "summary"))
             if (
                 (kind is not None and not isinstance(kind, str))
                 or not isinstance(people, list)
-                or any(
-                    not isinstance(uid, str) or not uid.isdecimal() for uid in people
-                )
+                or any(not isinstance(uid, str) or not uid.isdecimal() for uid in people)
                 or not isinstance(summary, str)
                 or len(summary) > 1200
             ):
@@ -272,10 +250,7 @@ class OffDutyFollowups:
             return self.observation.select(
                 *cycle_args, int(answer["subject"]), tuple(answer["choices"])
             )
-        if (
-            not isinstance(answer.get("id"), str)
-            or type(answer.get("work_revision")) is not int
-        ):
+        if not isinstance(answer.get("id"), str) or type(answer.get("work_revision")) is not int:
             raise ValueError
         work_args = (viewer, key, answer["id"], answer["work_revision"])
         if action == "apply_observation" and answer.keys() == {
@@ -335,9 +310,7 @@ def observation_card(data):
         if "Malfunctioning" not in data["starting_identities"]:
             paired = {x["slot"] for x in data["identities"] if x["paired"]}
             card["slots"] = [
-                (x, x)
-                for i, x in enumerate(data["starting_identities"])
-                if i not in paired
+                (x, x) for i, x in enumerate(data["starting_identities"]) if i not in paired
             ]
     return card | {"consequence": kind, "label": LABELS[kind]}
 
@@ -345,9 +318,7 @@ def observation_card(data):
 def scene_picker(actor, period, state, review):
     progress = period.progress[str(actor)]
     level = tier(progress.roll.total)
-    participants = [
-        (uid, label) for uid, label in review["participants"] if uid != str(actor)
-    ]
+    participants = [(uid, label) for uid, label in review["participants"] if uid != str(actor)]
     options = list(OFF_DUTY[level])
     required = {}
     prime = []
@@ -387,14 +358,10 @@ def scene_picker(actor, period, state, review):
 
 def recovery_fields(review):
     sheet = review["sheet"]
-    identities = (
-        sheet["identities"] + sheet["additional_identities"] + sheet["marked_maxims"]
-    )
+    identities = sheet["identities"] + sheet["additional_identities"] + sheet["marked_maxims"]
     return {
         "tags": [(x["id"], x["label"]) for x in sheet["tags"]],
-        "replace": [
-            (x["id"], x["name"]) for x in sheet["identities"] if not x["protected"]
-        ],
+        "replace": [(x["id"], x["name"]) for x in sheet["identities"] if not x["protected"]],
         "unmark": [
             (x["id"], x["name"])
             for x in identities
@@ -409,9 +376,5 @@ def recovery_fields(review):
             ]
             for family in ("girl", "frame")
         },
-        "modular": [
-            (x["id"], x["name"])
-            for x in sheet["assets"]
-            if x["id"] in review["modular"]
-        ],
+        "modular": [(x["id"], x["name"]) for x in sheet["assets"] if x["id"] in review["modular"]],
     }

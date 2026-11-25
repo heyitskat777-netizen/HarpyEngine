@@ -26,6 +26,8 @@ def test_reviewed_ai_trial_isolated_to_nominated_managed_campaign(tmp_path, monk
             "campaign_id": north_uuid,
             "configured": False,
             "provider": None,
+            "policy": None,
+            "model_selection": None,
         }
 
     monkeypatch.setenv("GIRLFRAME_ACTIVITY_AI_CAMPAIGN", north_uuid)
@@ -80,15 +82,16 @@ def test_reviewed_ai_trial_isolated_to_nominated_managed_campaign(tmp_path, monk
             "campaign_id": str(UUID(south)),
             "configured": False,
             "provider": None,
+            "policy": None,
+            "model_selection": None,
         }
         roles = summary["provider"]["roles"]
         assert roles == request(host, provider, handler)["roles"]
         assert roles["handler"]["connection"] == "unchecked"
         assert roles["handler"]["attempts"] == 0
-        with monkeypatch.context() as replay:
-            replay.setattr("test_artwork_activity.uuid4", lambda: "fixture-probe-same-key")
-            checked = request(host, provider, handler, {"role": "handler"})
-            assert request(host, provider, handler, {"role": "handler"}) == checked
+        key = "fixture-probe-same-key"
+        checked = request(host, provider, handler, {"role": "handler"}, key=key)
+        assert request(host, provider, handler, {"role": "handler"}, key=key) == checked
         assert checked["result"] == "ok"
         assert checked["roles"]["handler"] == checked["roles"]["pilot"]
         assert checked["roles"]["handler"] == {

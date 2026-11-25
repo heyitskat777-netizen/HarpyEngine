@@ -57,43 +57,36 @@ class DiscordConfig:
             f"GIRLFRAME_ACTIVITY_DISCORD_{names[key]}"
             for key, value in values.items()
             if not value
-            and key not in (
+            and key
+            not in (
                 "other_user_id",
                 "handler_user_id",
                 *(("invited_user_id",) if campaign_roles_only else ()),
             )
         ]
         if missing:
-            raise ValueError(
-                "Missing development Discord configuration: " + ", ".join(missing)
-            )
+            raise ValueError("Missing development Discord configuration: " + ", ".join(missing))
         if any(
             not re.fullmatch(r"[0-9]{17,20}", value)
             for key, value in values.items()
             if value and key != "client_secret"
         ):
-            raise ValueError(
-                "Use numeric Discord application, server and test account IDs."
-            )
-        accounts = [
-            value for key, value in values.items() if key.endswith("_user_id") and value
-        ]
+            raise ValueError("Use numeric Discord application, server and test account IDs.")
+        accounts = [value for key, value in values.items() if key.endswith("_user_id") and value]
         if len(set(accounts)) != len(accounts):
-            raise ValueError(
-                "Use distinct Discord accounts for pilots and the Handler."
-            )
+            raise ValueError("Use distinct Discord accounts for pilots and the Handler.")
         for key in ("invited_user_id", "other_user_id", "handler_user_id"):
             values[key] = values[key] or None
-        roles = frozenset() if campaign_roles_only else frozenset(
-            environ.get("GIRLFRAME_ACTIVITY_DISCORD_TESTER_ROLE_IDS", "").split()
+        roles = (
+            frozenset()
+            if campaign_roles_only
+            else frozenset(environ.get("GIRLFRAME_ACTIVITY_DISCORD_TESTER_ROLE_IDS", "").split())
         )
         if any(
             role == values["guild_id"] or not re.fullmatch(r"[1-9][0-9]{16,19}", role)
             for role in roles
         ):
-            raise ValueError(
-                "Use individual Girl or Frame role IDs from the private test server."
-            )
+            raise ValueError("Use individual Girl or Frame role IDs from the private test server.")
         return cls(**values, allow_dm=allow_dm, tester_role_ids=roles)
 
 
@@ -173,10 +166,14 @@ def discord_request(path, *, token=None, form=None):
                 except (ValueError, TypeError):
                     delay = 5
                 with _provider_lock:
-                    scope = "*" if limited.get("global") is True or rate_scope == "global" else (
-                        auth_route if rate_scope == "user" else route
+                    scope = (
+                        "*"
+                        if limited.get("global") is True or rate_scope == "global"
+                        else (auth_route if rate_scope == "user" else route)
                     )
-                    _provider_cooldowns[scope] = max(_provider_cooldowns.get(scope, 0), monotonic() + delay)
+                    _provider_cooldowns[scope] = max(
+                        _provider_cooldowns.get(scope, 0), monotonic() + delay
+                    )
                 raise relay_limited(delay) from None
             elif status not in (500, 502, 503, 504):
                 break
@@ -220,9 +217,7 @@ class DiscordSessions:
     def can_use_default(self, session):
         if self.campaign_roles_only:
             return False
-        return session.role != "role_tester" or bool(
-            self.config.tester_role_ids & session.role_ids
-        )
+        return session.role != "role_tester" or bool(self.config.tester_role_ids & session.role_ids)
 
     def challenge(self) -> str:
         nonce = secrets.token_urlsafe(32)
@@ -244,12 +239,8 @@ class DiscordSessions:
             expiry = self.challenges.pop(nonce, 0)
         if expiry <= monotonic():
             raise SignInError(HTTPStatus.BAD_REQUEST, "Start a fresh Discord sign-in.")
-        if guild_id != self.config.guild_id and not (
-            guild_id is None and self.config.allow_dm
-        ):
-            raise SignInError(
-                HTTPStatus.FORBIDDEN, "Launch from the configured campaign server."
-            )
+        if guild_id != self.config.guild_id and not (guild_id is None and self.config.allow_dm):
+            raise SignInError(HTTPStatus.FORBIDDEN, "Launch from the configured campaign server.")
         tokens = self.request(
             "/oauth2/token",
             form={
@@ -277,9 +268,7 @@ class DiscordSessions:
         expires = monotonic() + min(seconds, 3600)
         user = self.request("/users/@me", token=access)
         discord_id = user.get("id")
-        if not isinstance(discord_id, str) or not re.fullmatch(
-            r"[1-9][0-9]{16,19}", discord_id
-        ):
+        if not isinstance(discord_id, str) or not re.fullmatch(r"[1-9][0-9]{16,19}", discord_id):
             raise SignInError(
                 HTTPStatus.FORBIDDEN, "The identity relay did not verify a personnel identifier."
             )
@@ -317,9 +306,7 @@ class DiscordSessions:
             if session.expires <= now:
                 raise SignInError(HTTPStatus.UNAUTHORIZED, "Sign in to the Activity.")
             self.sessions = {
-                key: value
-                for key, value in self.sessions.items()
-                if value.expires > now
+                key: value for key, value in self.sessions.items() if value.expires > now
             }
             if len(self.sessions) >= 256:
                 raise SignInError(
@@ -339,8 +326,7 @@ class DiscordSessions:
         )
         user = member.get("user")
         if member.get("pending") is True or (
-            user is not None
-            and (not isinstance(user, dict) or user.get("id") != discord_id)
+            user is not None and (not isinstance(user, dict) or user.get("id") != discord_id)
         ):
             raise SignInError(
                 HTTPStatus.FORBIDDEN,
@@ -353,7 +339,9 @@ class DiscordSessions:
             else frozenset()
         )
 
-    def resolve(self, authorization: str, *, fresh: bool = False, force: bool = False) -> VerifiedSession:
+    def resolve(
+        self, authorization: str, *, fresh: bool = False, force: bool = False
+    ) -> VerifiedSession:
         scheme, _, handle = authorization.partition(" ")
         with self.lock:
             session = self.sessions.get(handle) if scheme == "Bearer" else None
@@ -369,7 +357,9 @@ class DiscordSessions:
                 if not force and now - session.membership_checked_at < MEMBERSHIP_CACHE_SECONDS:
                     return session
                 if session.oauth_token is None:
-                    raise SignInError(HTTPStatus.UNAUTHORIZED, "Sign in to refresh campaign clearance.")
+                    raise SignInError(
+                        HTTPStatus.UNAUTHORIZED, "Sign in to refresh campaign clearance."
+                    )
                 try:
                     roles = self._discord_roles(session.discord_id, session.oauth_token)
                 except SignInError as error:

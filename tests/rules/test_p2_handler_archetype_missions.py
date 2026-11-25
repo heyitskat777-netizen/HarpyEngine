@@ -455,7 +455,10 @@ def test_p2_matched_mission_gives_each_handler_an_owned_signature_play(ledger, p
             native = game.scene(c, channel=900)
             assert native["id"] == original_scene
             (open_lab,) = native_signature(
-                game, c, native, current_ref(campaign, ADMIN.user_id),
+                game,
+                c,
+                native,
+                current_ref(campaign, ADMIN.user_id),
                 current_ref(campaign, OTHER.user_id),
             )
         assert open_lab.play == "head_to_the_lab"

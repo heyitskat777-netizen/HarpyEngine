@@ -106,7 +106,8 @@ def consequence_fields(decision):
     fields = [
         Field(
             "options",
-            "Choose nonlethal consequences" if narrative and not can_confirm
+            "Choose nonlethal consequences"
+            if narrative and not can_confirm
             else "Choose your printed consequences",
             tuple((key, LABELS[key]) for key in allowed),
             2 if tier == "high" else 1,
@@ -149,9 +150,7 @@ def consequence_fields(decision):
             assets = [
                 row
                 for row in own["assets"]
-                if row["family"] == family
-                and not row["void"]
-                and row.get("intrinsic") is None
+                if row["family"] == family and not row["void"] and row.get("intrinsic") is None
             ]
             if assets:
                 fields.append(
@@ -204,9 +203,7 @@ def consequence_fields(decision):
         )
         slots = tuple(
             (str(i), name)
-            for i, name in enumerate(
-                CATALOG.get(own.get("girl"), {}).get("identities", ())
-            )
+            for i, name in enumerate(CATALOG.get(own.get("girl"), {}).get("identities", ()))
         )
         if slots:
             fields.append(

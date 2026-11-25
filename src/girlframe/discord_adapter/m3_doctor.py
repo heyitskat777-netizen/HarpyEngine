@@ -350,9 +350,7 @@ def doctor_choice_fields(data: dict[str, Any]) -> list[Field]:
 
 def doctor_choice_answer(kind: str, values: dict[str, Any]) -> ChoiceAnswer:
     if kind == "doctor_support_response":
-        answer = ChoiceAnswer(
-            options=tuple(values["decision"]), fields={"bond": values["bond"][0]}
-        )
+        answer = ChoiceAnswer(options=tuple(values["decision"]), fields={"bond": values["bond"][0]})
     elif kind == "doctor_support_refused":
         answer = ChoiceAnswer(
             options=tuple(values["decision"]),

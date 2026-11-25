@@ -16,6 +16,7 @@ from girlframe.services.read_only_bot import GuildViewer
 if TYPE_CHECKING:
     from girlframe.services.director_play_options import PlayProjection
 
+
 def next_contribution_ordinal(c: Connection, campaign: str, scene: str) -> int:
     """Book actual scene deliveries and approved narration on the same timeline."""
     table = t.director_context["shadow"]

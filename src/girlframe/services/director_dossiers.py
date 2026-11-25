@@ -984,6 +984,29 @@ class DirectorDossierService:
         entitled = head is not None and head.controller == actual.controller
         context = self._context(c, scene, actor)
         portrayal = head if entitled else None
+        # Handler sheet notes are enduring. Free-form dossier text authored for
+        # another scene is not a substitute for approved carry-forward knowledge.
+        foreign_handler_portrayal = (
+            portrayal is not None and actor.kind == "handler" and portrayal.scene_id != scene
+        )
+        if portrayal is not None and foreign_handler_portrayal:
+            current = portrayal.state
+            scoped = current.model_copy(
+                update={
+                    name: tuple(item for item in getattr(current, name) if item.knowledge_refs)
+                    for name in (
+                        "pressures",
+                        "promises",
+                        "beliefs",
+                        "obligations",
+                        "experiences",
+                        "relationships",
+                    )
+                }
+            )
+            portrayal = portrayal.model_copy(
+                update={"profile": DossierProfile(), "state": scoped, "personnel": Personnel()}
+            )
         continuity: tuple[DossierContinuity, ...] = ()
         if portrayal is not None and portrayal.state.continuity:
             continuity = self._visible_continuity(
@@ -1064,7 +1087,7 @@ class DirectorDossierService:
             actor=actor,
             dossier_version=head.version if head else 0,
             dossier_id=portrayal.id if portrayal else None,
-            profile=portrayal.profile if portrayal else None,
+            profile=portrayal.profile if portrayal and not foreign_handler_portrayal else None,
             state=(
                 portrayal.state
                 if portrayal

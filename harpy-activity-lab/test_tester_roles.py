@@ -3,8 +3,8 @@
 from dataclasses import replace
 from http import HTTPStatus
 
+import discord_session
 import pytest
-
 from discord_session import DiscordSessions, SignInError
 from discord_test_host import CONFIG, IDENTITIES, TESTER_ROLE, offline_discord_request
 from test_artwork_activity import offline_activity, request, setup_action
@@ -43,8 +43,10 @@ def test_approved_role_starts_a_separate_pilot_draft(tmp_path):
         assert primary["enrollment"]["owner_id"] == IDENTITIES["invited"]
 
 
-def test_removed_role_is_rechecked_for_existing_session():
+def test_removed_role_is_rechecked_for_existing_session(monkeypatch):
     has_role = True
+    now = 1_000
+    monkeypatch.setattr(discord_session, "monotonic", lambda: now)
 
     def provider(path, *, token=None, form=None):
         result = offline_discord_request(path, token=token, form=form)
@@ -52,14 +54,18 @@ def test_removed_role_is_rechecked_for_existing_session():
             return {**result, "roles": []}
         return result
 
-    sessions = DiscordSessions(
-        replace(CONFIG, tester_role_ids=frozenset({TESTER_ROLE})), provider
-    )
+    sessions = DiscordSessions(replace(CONFIG, tester_role_ids=frozenset({TESTER_ROLE})), provider)
     result = sessions.exchange("role-pilot", sessions.challenge(), CONFIG.guild_id)
     authorization = "Bearer " + result["session"]
     session = sessions.resolve(authorization)
     assert session.role == "role_tester"
+    assert sessions.can_use_default(session)
     has_role = False
-    session.membership_valid_until = 0
-    with pytest.raises(SignInError, match="Girl or Frame role"):
-        sessions.resolve(authorization)
+    assert sessions.can_use_default(sessions.resolve(authorization, fresh=True))
+    now += discord_session.MEMBERSHIP_CACHE_SECONDS
+    refreshed = sessions.resolve(authorization, fresh=True)
+    assert not refreshed.role_ids
+    assert not sessions.can_use_default(refreshed)
+    with pytest.raises(SignInError) as rejected:
+        sessions.exchange("role-pilot", sessions.challenge(), CONFIG.guild_id)
+    assert rejected.value.status == HTTPStatus.FORBIDDEN

@@ -12,7 +12,7 @@ from girlframe.engine import m3_handler_advancements as awards
 from girlframe.engine import m3_tracker_implants as rules
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import current_ref
-from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_actor_state import ActorRef, SceneCast
 from girlframe.engine.m3_actors import physical_cell, resolve
 from girlframe.engine.m3_handler_consequences import same_handler_body
 from girlframe.engine.m3_handler_play_state import Effect, HandlerPlay
@@ -744,7 +744,16 @@ class TrackerService:
             operation,
         )
 
-    def _play_source(self, c, state, viewer, tracker, play, channel, moment):
+    def _play_source(
+        self,
+        c: Connection,
+        state: GameState,
+        viewer: GuildViewer,
+        tracker: str,
+        play: Literal["tracker_intercept", "tracker_voyeur"],
+        channel: int,
+        moment: str | None,
+    ) -> tuple[rules.Acquisition, rules.Implant, SceneCast, tuple[int, int]]:
         source, item = prove_installation(self.game, c, state, tracker)
         current(self.game, c, state, source.id)
         cast = _cast(self.game, c, state, channel)
@@ -754,8 +763,7 @@ class TrackerService:
             or not rules.attached(state, tracker)
             or cell is None
             or not any(
-                x.actor == item.actor and x.controller == int(item.actor.entity)
-                for x in cast.roles
+                x.actor == item.actor and x.controller == int(item.actor.entity) for x in cast.roles
             )
             or physical_cell(state, source.handler, profiles(c, self.store.campaign_id)) != cell
         ):
@@ -797,17 +805,25 @@ class TrackerService:
                     except (ValueError, WorkflowError):
                         continue
                     label = state.sheets[item.actor.entity].callsign
-                    rows.append(dict(play="tracker_intercept", tracker=item.id, moment=None, label=label))
+                    rows.append(
+                        dict(play="tracker_intercept", tracker=item.id, moment=None, label=label)
+                    )
                     for moment in rules.records(state, rules.Moment):
                         if (
-                            moment.actor == item.actor and moment.vessel == item.vessel
-                            and moment.cast == cast and moment.cell == cell
+                            moment.actor == item.actor
+                            and moment.vessel == item.vessel
+                            and moment.cast == cast
+                            and moment.cell == cell
                         ):
                             prove_moment(self.game, c, state, moment.id)
-                            rows.append(dict(
-                                play="tracker_voyeur", tracker=item.id, moment=moment.id,
-                                label=label,
-                            ))
+                            rows.append(
+                                dict(
+                                    play="tracker_voyeur",
+                                    tracker=item.id,
+                                    moment=moment.id,
+                                    label=label,
+                                )
+                            )
             return dict(revision=state.revision, sources=rows)
 
     def remove(

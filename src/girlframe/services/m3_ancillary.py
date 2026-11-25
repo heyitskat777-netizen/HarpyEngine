@@ -89,7 +89,7 @@ class AncillaryService:
             )
             from girlframe.services.m3_candidate_promotion import RULE, eligible
 
-            candidates = ()
+            candidates: tuple[tuple[ActorRef, str], ...] = ()
             try:
                 self.missions.access.require_specialist_rule(RULE)
             except (ValueError, WorkflowError):
@@ -97,10 +97,13 @@ class AncillaryService:
             else:
                 candidates = tuple(
                     (ActorRef(kind="npc", entity=npc.id), npc.name)
-                    for npc in world.npcs if eligible(state, npc)
+                    for npc in world.npcs
+                    if eligible(state, npc)
                 )
             return dict(
-                revision=state.revision, sites=tuple(sites), contacts=contacts,
+                revision=state.revision,
+                sites=tuple(sites),
+                contacts=contacts,
                 candidates=candidates,
             )
 
@@ -312,7 +315,11 @@ class AncillaryService:
 
                     self.missions.access.require_specialist_rule(RULE)
                     promoted = source(
-                        state, value.candidate, location, value.faction, viewer.user_id,
+                        state,
+                        value.candidate,
+                        location,
+                        value.faction,
+                        viewer.user_id,
                     )
                     if (
                         fingerprint(promoted) != value.candidate_sha256

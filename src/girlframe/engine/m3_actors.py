@@ -389,7 +389,9 @@ def resolve(
     if enclosed_cockpit is not None:
         actual = actual.model_copy(
             update=dict(
-                cell=None, inside_frame=True, piloting=False,
+                cell=None,
+                inside_frame=True,
+                piloting=False,
                 occupied_frame_instance=enclosed_cockpit.frame,
                 offstage_source=enclosed_cockpit.event,
                 custody="harpy:" + enclosed_cockpit.harpy.entity,
