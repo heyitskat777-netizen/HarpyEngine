@@ -2,7 +2,7 @@
 
 import json
 from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 import sqlalchemy as sa
@@ -13,6 +13,34 @@ from girlframe.engine.creation_review import CreationRulings
 from girlframe.engine.handler_setup import HandlerSetup, MentorAssignment, PilotRef
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
+
+if TYPE_CHECKING:
+    from girlframe.engine.m2 import GameState
+
+
+def late_wing_eligible(
+    state: "GameState", setup: HandlerSetup, owner: int, profile: dict[str, Any] | None
+) -> bool:
+    return (
+        len(state.order) >= 2
+        and state.handler == setup.handler_id
+        and owner not in state.order
+        and str(owner) not in state.sheets
+        and not any(x.actor.entity == str(owner) for x in state.career_archives)
+        and profile is not None
+        and profile["callsign"].casefold() != "recruit"
+        and profile["girl_playbook"] != "PRINCESS"
+    )
+
+
+def assigned_late_wing(
+    state: "GameState", setup: HandlerSetup, owner: int, profile: dict[str, Any] | None
+) -> bool:
+    return bool(
+        profile
+        and late_wing_eligible(state, setup, owner, profile)
+        and PilotRef(user_id=owner, character_revision=profile["revision"]) in setup.late_wings
+    )
 
 
 class HandlerService:
@@ -359,6 +387,57 @@ class HandlerService:
             expected,
             "campaign.status_assigned",
             {"order": [x.model_dump(mode="json") for x in order]},
+            lambda c: self.authorize(c, viewer),
+            change,
+        )
+
+    def late_wing_requests(self, viewer: GuildViewer) -> list[dict[str, Any]]:
+        from girlframe.services.m2_state import load_state
+
+        with self.store.engine.connect() as connection:
+            self.authorize(connection, viewer)
+            revision, setup = self.current(connection)
+            state = load_state(connection, self.store.campaign_id)
+            return [
+                {
+                    "owner": str(owner),
+                    "callsign": profile["callsign"],
+                    "character_revision": profile["revision"],
+                    "setup_revision": revision,
+                    "late_wing": True,
+                }
+                for owner, profile in self._roster(connection).items()
+                if late_wing_eligible(state, setup, owner, profile)
+                and not assigned_late_wing(state, setup, owner, profile)
+            ]
+
+    def assign_late_wing(
+        self, viewer: GuildViewer, key: str, expected: int, pilot: PilotRef
+    ) -> dict[str, Any]:
+        def change(connection: Connection, previous: HandlerSetup) -> HandlerSetup:
+            from girlframe.services.m2_state import load_state
+
+            state = load_state(connection, self.store.campaign_id)
+            profile = self._roster(connection).get(pilot.user_id)
+            if not late_wing_eligible(state, previous, pilot.user_id, profile):
+                raise WorkflowError("Choose an eligible filed pilot for a Wing placement.")
+            if profile is None or profile["revision"] != pilot.character_revision:
+                raise WorkflowError("STALE_PROFILE: reopen the late enrollment request.")
+            return previous.model_copy(
+                update={
+                    "late_wings": tuple(
+                        x for x in previous.late_wings if x.user_id != pilot.user_id
+                    )
+                    + (pilot,)
+                }
+            )
+
+        return self._save(
+            viewer,
+            key,
+            expected,
+            "campaign.late_wing_assigned",
+            {"pilot": pilot.model_dump(mode="json")},
             lambda c: self.authorize(c, viewer),
             change,
         )

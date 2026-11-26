@@ -1825,8 +1825,7 @@ export function createEnrollment(dialog, trigger, artwork, send, refresh) {
     sections.bond.append(heading("Starting Bond"));
     const file = element("div", undefined, "enrollment-identity");
     const personnel = element("div");
-    personnel.append(element("h2", state.callsign || "Create pilot"),
-      element("p", state.options.girl + " / " + state.options.frame, "eyebrow"));
+    personnel.append(element("h2", state.callsign || "Create pilot"));
     if (state.callsign) {
       const preview = element("figure", undefined, "enrollment-portrait");
       const choose = action("Select profile picture", () => {

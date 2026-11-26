@@ -27,6 +27,7 @@ from girlframe.engine.session_zero import (
     HandlerProfile,
     SessionZero,
     SheetReference,
+    StartingStatus,
 )
 from girlframe.services import campaign_time_history as calendar
 from girlframe.services import session_zero_opening as introduction
@@ -104,6 +105,19 @@ class SessionZeroService:
 
     def _active_group(self, c: Connection, current: SessionZero) -> bool:
         return all(self.handler._member(c, person) for person in current.members)
+
+    def _status_recommendation(
+        self, c: Connection, members: tuple[Snowflake, ...]
+    ) -> list[dict[str, str | int]]:
+        from girlframe.engine.starting_status import recommendation
+
+        return recommendation(
+            {
+                uid: (profile["callsign"], profile["girl_playbook"], profile["frame_playbook"])
+                for uid, profile in self.handler._roster(c).items()
+                if uid in members and profile["callsign"].casefold() != "recruit"
+            }
+        )
 
     @staticmethod
     def _expect(current: SessionZero, expected: int) -> None:
@@ -218,6 +232,7 @@ class SessionZeroService:
                     "plan_proposal": None,
                     "plan_approvals": (),
                     "seats": None,
+                    "starting_status": None,
                     "facilitator_only": current.facilitator_only
                     and current.facilitator != profile.member,
                     "submissions": {
@@ -396,6 +411,7 @@ class SessionZeroService:
         *,
         facilitator: Snowflake | None = None,
         facilitator_only: bool = False,
+        starting_status: StartingStatus | None = None,
     ) -> dict[str, Any]:
         if len(goals.strip()) > 800:
             raise WorkflowError("Use at most 800 characters for the short-term goals.")
@@ -429,6 +445,37 @@ class SessionZeroService:
                 current.facilitator_only = facilitator_only
             if not current.pilots:
                 raise WorkflowError("Keep at least one Pilot in the group.")
+            status_locked = bool(load_state(c, self.store.campaign_id).order)
+            if starting_status is not None:
+                if status_locked:
+                    raise WorkflowError("Starting Status was filed when the first pilot activated.")
+                current.starting_status = starting_status
+            if (status := current.starting_status) is not None and not status_locked:
+                ranked = self._status_recommendation(c, current.pilots)
+                order_hint = dict.fromkeys(
+                    [*(int(item["owner"]) for item in ranked), *current.pilots]
+                )
+                current.starting_status = status.model_copy(
+                    update={
+                        "wings": tuple(
+                            uid for uid in order_hint if uid not in (status.ace, status.dog)
+                        )
+                    }
+                )
+            order = current.starting_order
+            if order and (len(order) != len(set(order)) or set(order) != set(current.pilots)):
+                raise WorkflowError(
+                    "Choose distinct Ace and Dog pilots from the Session Zero group."
+                )
+            if order:
+                roster = self.handler._roster(c)
+                princesses = [
+                    uid for uid in order if roster.get(uid, {}).get("girl_playbook") == "PRINCESS"
+                ]
+                if princesses and princesses != [order[0]]:
+                    raise WorkflowError(
+                        "Princess must start as Ace. Resolve competing Princesses first."
+                    )
             proposed_seats = seats if seats is not None else current.seats
             if proposed_seats is not None and proposed_seats.player_count != current.human_players:
                 raise WorkflowError("Match the human player count to the Pilot and Handler seats.")
@@ -448,12 +495,39 @@ class SessionZeroService:
             | ({"difficulty": difficulty} if difficulty is not None else {})
             | ({"seats": seats.model_dump(mode="json")} if seats is not None else {})
             | (
+                {"starting_status": starting_status.model_dump(mode="json")}
+                if starting_status is not None
+                else {}
+            )
+            | (
                 {"facilitator": facilitator, "facilitator_only": facilitator_only}
                 if facilitator is not None
                 else {}
             ),
             update,
         )
+
+    def enrollment_order(
+        self, c: Connection, roster: dict[int, dict[str, Any]]
+    ) -> tuple[Snowflake, ...] | None:
+        """Use the approved Session Zero order for first activation when one was filed."""
+        current = self._latest(c)
+        order = current.starting_order
+        if not order:
+            return None
+        if (
+            not current.plan_approved
+            or not self._active_group(c, current)
+            or len(order) != len(set(order))
+            or set(order) != set(current.pilots)
+            or any(
+                uid not in roster or roster[uid]["callsign"].casefold() == "recruit"
+                for uid in order
+            )
+        ):
+            return ()
+        princesses = [uid for uid in order if roster[uid]["girl_playbook"] == "PRINCESS"]
+        return order if not princesses or princesses == [order[0]] else ()
 
     def decide_plan(
         self, viewer: GuildViewer, key: str, proposal: str, *, approve: bool
@@ -706,6 +780,9 @@ class SessionZeroService:
                 submissions = self._submissions(c, current) if ready is not None else {}
                 own = current.submissions.get(str(viewer.user_id))
                 anchor = calendar.anchor(c, self.store.campaign_id) if record else None
+                campaign = load_state(c, self.store.campaign_id)
+                ranked = self._status_recommendation(c, current.members)
+                status_profiles = {item["owner"]: item["callsign"] for item in ranked}
                 result.update(
                     profile=proposal.model_dump() if proposal else None,
                     sheets=submissions,
@@ -721,6 +798,18 @@ class SessionZeroService:
                     plan_proposal=current.plan_proposal,
                     plan_approvals=len(current.plan_approvals),
                     plan_approved=current.plan_approved,
+                    starting_status=(
+                        {
+                            "ace": str(current.starting_status.ace),
+                            "dog": str(current.starting_status.dog),
+                        }
+                        if current.starting_status
+                        else None
+                    ),
+                    starting_wings=[str(uid) for uid in current.starting_order[1:-1]],
+                    status_locked=bool(campaign.order),
+                    status_names=status_profiles,
+                    status_recommendation=ranked,
                     own_plan_approval=viewer.user_id in current.plan_approvals,
                     opening=record.model_dump(mode="json", exclude={"audience"})
                     if record

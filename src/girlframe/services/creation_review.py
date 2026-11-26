@@ -146,7 +146,18 @@ class CreationReviewService:
 
         canonical = load_state(connection, self.store.campaign_id)
         career = binding(canonical, owner)
-        if career and career.previous_archive and str(owner) not in canonical.sheets:
+        from girlframe.services.handler_setup import assigned_late_wing
+        from girlframe.services.session_zero import SessionZeroService
+
+        planned_order = (
+            SessionZeroService(self.store).enrollment_order(connection, roster)
+            if not canonical.order and not canonical.career_archives
+            else None
+        )
+        if active_handler and planned_order is not None:
+            rank_ids = list(planned_order)
+            status_dependencies = ("session_zero_status:" + ",".join(map(str, rank_ids)),)
+        elif career and career.previous_archive and str(owner) not in canonical.sheets:
             rank_ids = []
             if (
                 active_handler
@@ -162,6 +173,9 @@ class CreationReviewService:
                     "replacement_status:" + career.status_event,
                     "canonical_status_order:" + ",".join(map(str, rank_ids)),
                 )
+        elif active_handler and assigned_late_wing(canonical, setup, owner, roster.get(owner)):
+            rank_ids = [*canonical.order[:-1], owner, canonical.order[-1]]
+            status_dependencies = ("late_wing:" + str(owner),)
         elif (
             not rank_fresh
             and active_handler
@@ -170,7 +184,7 @@ class CreationReviewService:
         ):
             rank_ids = list(canonical.order)
             status_dependencies = ("canonical_status_order:" + ",".join(map(str, rank_ids)),)
-        elif not rank_fresh:
+        elif not rank_fresh or canonical.order and owner not in canonical.order:
             rank_ids = []
         if owner in rank_ids:
             position = rank_ids.index(owner)
@@ -178,7 +192,12 @@ class CreationReviewService:
         if status is None:
             issues.append(
                 ReviewIssue(
-                    code="status", message="Handler must confirm a current complete Status order."
+                    code="status",
+                    message=(
+                        "Approve the current Session Zero Status plan and file the pilot profiles."
+                        if planned_order is not None
+                        else "Handler must confirm a current complete Status order."
+                    ),
                 )
             )
         if progress.draft.girl_playbook == "PRINCESS" and status != "Ace":

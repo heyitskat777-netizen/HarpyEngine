@@ -671,7 +671,8 @@ class GameService:
                     "Already activated; activation cannot reset gameplay resources."
                 )
             review = CreationReviewService(self.store)._current(c, viewer).sheet
-            setup = HandlerService(self.store).current(c)[1]
+            handler_setup = HandlerService(self.store)
+            setup = handler_setup.current(c)[1]
             from girlframe.engine.m3_careers import binding, profile_character
 
             current_career = binding(state, viewer.user_id)
@@ -697,18 +698,52 @@ class GameService:
                 for x in state.career_archives
                 if int(x.actor.entity) not in state.order
             }
-            expected_roster = {x.user_id for x in setup.status_order} - absent_careers
+            session_order = next(
+                (
+                    json.loads(x["order"])
+                    for x in state.facts
+                    if x.get("kind") == "session_zero_starting_status"
+                ),
+                None,
+            )
+            expected_roster = (
+                set(session_order)
+                if session_order is not None
+                else {x.user_id for x in setup.status_order}
+            ) - absent_careers
+            expected_roster.update(x.user_id for x in setup.late_wings if x.user_id in state.order)
+            from girlframe.services.handler_setup import assigned_late_wing
+
+            roster = handler_setup._roster(c)
+            late_wing = assigned_late_wing(state, setup, viewer.user_id, roster.get(viewer.user_id))
             from girlframe.services.m3_budget_demotion import girl_slot
 
             demotion = girl_slot(state, viewer.user_id, setup)
             if not state.order and not state.career_archives:
-                state.order = tuple(x.user_id for x in setup.status_order)
+                from girlframe.services.session_zero import SessionZeroService
+
+                planned_order = SessionZeroService(self.store).enrollment_order(c, roster)
+                if planned_order is not None:
+                    if viewer.user_id not in planned_order:
+                        raise WorkflowError("Approve the current Session Zero Status plan first.")
+                    state.order = planned_order
+                    state.facts.append(
+                        {"kind": "session_zero_starting_status", "order": json.dumps(planned_order)}
+                    )
+                else:
+                    state.order = tuple(x.user_id for x in setup.status_order)
                 state.handler = setup.handler_id
                 state.intense_tag_bonus = self.store.policy.owner_intense_tag_bonus
             elif state.handler != setup.handler_id or set(state.order) != expected_roster:
                 raise WorkflowError(
                     "UNSUPPORTED_RULE: canonical roster/Handler changes need explicit migration."
                 )
+            elif late_wing:
+                state.order = (*state.order[:-1], viewer.user_id, state.order[-1])
+            elif viewer.user_id not in state.order and not (
+                current_career and current_career.previous_archive
+            ):
+                raise WorkflowError("The Handler must file your Wing placement before activation.")
             identities = [
                 IdentityState(
                     id="identity:" + str(i),

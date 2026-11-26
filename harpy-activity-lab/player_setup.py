@@ -969,7 +969,7 @@ class PlayerSetup:
                     item | {"owner": str(item["owner"])}
                     for item in CareerService(self.store).status_requests(viewer)
                     if item["position"] is None
-                ]
+                ] + self.handler_setup.late_wing_requests(viewer)
                 record["scene_beneath_work"] = self.beneath_work.view(
                     viewer, followups, punishments
                 )
@@ -1391,6 +1391,24 @@ class PlayerSetup:
         if step == "purge-sheet" and self.bound_roster and viewer != self.handler:
             return purge_sheet(self.game, viewer, key, data)
         if step == "career-status" and self.bound_roster and viewer == self.handler:
+            if data.keys() == {"owner", "character_revision", "setup_revision", "late_wing"}:
+                owner = data["owner"]
+                if (
+                    data["late_wing"] is not True
+                    or type(data["character_revision"]) is not int
+                    or type(data["setup_revision"]) is not int
+                    or not isinstance(owner, str)
+                    or not owner.isascii()
+                    or not owner.isdecimal()
+                    or not 0 < len(owner) <= 20
+                ):
+                    raise ValueError("Use the current Wing placement record.")
+                return self.handler_setup.assign_late_wing(
+                    viewer,
+                    key,
+                    data["setup_revision"],
+                    PilotRef(user_id=int(owner), character_revision=data["character_revision"]),
+                )
             if (
                 data.keys() != {"owner", "character", "revision", "position"}
                 or type(data["revision"]) is not int
@@ -1633,11 +1651,6 @@ class PlayerSetup:
                 with self.store.engine.connect() as connection:
                     state = load_state(connection, self.store.campaign_id)
                     archive = awaiting_replacement(state, viewer.user_id)
-                    if state.order and viewer.user_id not in state.order and not archive:
-                        raise WorkflowError(
-                            "Enrollment for this cadre has closed. Contact the Handler for "
-                            "campaign placement."
-                        )
             try:
                 draft = DraftInput(
                     callsign=data["callsign"],

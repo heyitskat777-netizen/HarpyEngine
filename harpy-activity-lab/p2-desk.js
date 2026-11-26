@@ -959,6 +959,15 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       element("p", state.difficulty_options[state.difficulty]),
     );
     if (state.goals) plan.append(element("p", state.goals));
+    const pilotName = id => state.status_names?.[id] ?? member(id);
+    if (state.starting_status) {
+      plan.append(
+        element("p", "Starting Ace · " + pilotName(state.starting_status.ace)),
+        element("p", "Starting Dog · " + pilotName(state.starting_status.dog)),
+      );
+      const wings = state.starting_wings ?? [];
+      if (wings.length) plan.append(element("p", "Starting Wings · " + wings.map(pilotName).join(", ")));
+    }
     if (state.facilitator) plan.append(element("p", (state.bot_managed && !state.plan_approved ? "Proposed facilitator · " : "Facilitator · ") + member(state.facilitator) +
       (state.facilitator === state.handler_ready ? " · Also controls the Handler" :
         state.facilitator_only ? " · Facilitator only" : " · Also plays a Pilot")));
@@ -1011,6 +1020,65 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       panel.append(facilitatorLabel, onlyLabel,
         element("p", "The facilitator reviews AI drafts and can also play a Pilot or control the Handler."),
         difficultyLabel, seatNote);
+      let startingStatus;
+      if (!state.status_locked) {
+        const status = element("fieldset");
+        status.append(element("legend", "Starting Status"));
+        const [aceLabel, ace] = choiceField("Starting Ace", [], "");
+        const [dogLabel, dog] = choiceField("Starting Dog", [], "");
+        const note = element("p");
+        note.setAttribute("role", "status");
+        const placement = () => state.members.filter(id => id !== state.nominee
+          && !(only.checked && id === facilitator.value));
+        const scored = () => (state.status_recommendation ?? []).filter(row => placement().includes(row.owner));
+        function useRecommendation() {
+          const ranked = scored();
+          ace.value = ranked[0].owner;
+          dog.value = ranked.at(-1).owner;
+          showWings();
+        }
+        const useRecommended = button("Use recommended Status", useRecommendation);
+        function showWings() {
+          const invalid = Boolean(ace.value || dog.value) && (
+            !ace.value || !dog.value || ace.value === dog.value);
+          ace.setCustomValidity(invalid && (!ace.value || ace.value === dog.value)
+            ? "Choose a different pilot for Ace." : "");
+          dog.setCustomValidity(invalid && (!dog.value || ace.value === dog.value)
+            ? "Choose a different pilot for Dog." : "");
+          if (!ace.value || !dog.value || ace.value === dog.value) {
+            note.textContent = "Choose distinct pilots for Ace and Dog. The other pilots are Wings.";
+            return;
+          }
+          const ranked = new Set([...scored().map(row => row.owner), ...placement()]);
+          const wings = [...ranked].filter(id => id !== ace.value && id !== dog.value);
+          note.textContent = wings.length ? "Wings · " + wings.map(pilotName).join(", ") : "No Wing seats in this group.";
+        }
+        function refreshOptions() {
+          const eligible = placement();
+          const weights = new Map(scored().map(row => [row.owner, row]));
+          for (const control of [ace, dog]) {
+            const value = control.value;
+            control.replaceChildren(new Option("Choose…", ""),
+              ...eligible.map(id => new Option(pilotName(id) + (weights.has(id)
+                ? " · Girl " + weights.get(id).girl_weight + " / Frame " + weights.get(id).frame_weight : ""), id)));
+            control.value = eligible.includes(value) ? value : "";
+          }
+          useRecommended.disabled = eligible.length < 2 || weights.size !== eligible.length;
+          showWings();
+        }
+        status.append(aceLabel, dogLabel, useRecommended, note);
+        panel.append(status);
+        refreshOptions();
+        if (state.starting_status) {
+          ace.value = state.starting_status.ace;
+          dog.value = state.starting_status.dog;
+        } else if (!useRecommended.disabled) useRecommendation();
+        showWings();
+        for (const control of [ace, dog]) control.addEventListener("change", showWings);
+        for (const control of [facilitator, only]) control.addEventListener("change", refreshOptions);
+        startingStatus = () => ace.value && dog.value
+          ? {starting_status:{ace:ace.value,dog:dog.value}} : {};
+      }
       const goals = textArea(panel, "Shared short-term goals", state.goals, 800);
       const pilots = [];
       const list = element("div");
@@ -1128,6 +1196,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
         revision, difficulty: select.value, goals: goals.value, facilitator: facilitator.value,
         facilitator_only: only.checked,
         seats: {player_count: seatCount(), ai_pilots: pilots.map(pilot => pilot.save())},
+        ...startingStatus?.(),
       }));
     }
     if (state.can_open_introduction) {

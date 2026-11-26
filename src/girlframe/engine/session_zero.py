@@ -57,6 +57,12 @@ class CharacterSubmission(Model):
     notes: CharacterNotes = Field(default_factory=CharacterNotes)
 
 
+class StartingStatus(Model):
+    ace: Snowflake
+    dog: Snowflake
+    wings: tuple[Snowflake, ...] = Field(default=(), exclude_if=lambda x: not x)
+
+
 class SessionZero(Model):
     revision: int = 0
     members: tuple[Snowflake, ...] = ()
@@ -71,6 +77,17 @@ class SessionZero(Model):
     seats: CampaignSeats | None = Field(default=None, exclude_if=lambda x: x is None)
     facilitator: Snowflake | None = Field(default=None, exclude_if=lambda x: x is None)
     facilitator_only: bool = Field(default=False, exclude_if=lambda x: not x)
+    starting_status: StartingStatus | None = Field(default=None, exclude_if=lambda x: x is None)
+
+    @property
+    def starting_order(self) -> tuple[Snowflake, ...]:
+        if self.starting_status is None:
+            return ()
+        ace, dog = self.starting_status.ace, self.starting_status.dog
+        wings = self.starting_status.wings or tuple(
+            uid for uid in self.pilots if uid not in (ace, dog)
+        )
+        return (ace, *wings, dog)
 
     @property
     def plan_approved(self) -> bool:

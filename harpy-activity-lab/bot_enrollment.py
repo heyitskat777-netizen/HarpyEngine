@@ -13,9 +13,10 @@ from girlframe.database import tables
 from girlframe.engine.creation_details import DESIRES, STANDARDS, DesireChoice, StandardChoice
 from girlframe.engine.handler_setup import PilotRef
 from girlframe.services.creation_coordination import CoordinationService
-from girlframe.services.handler_setup import HandlerService
+from girlframe.services.handler_setup import HandlerService, assigned_late_wing, late_wing_eligible
 from girlframe.services.m2_state import load_state
 from girlframe.services.onboarding import WorkflowError
+from girlframe.services.session_zero import SessionZeroService
 
 POLICY_VERSION = "foundation-enrollment-v1"
 
@@ -67,9 +68,34 @@ class BotEnrollment:
                 and not self.coordination._stale(c, row)
             ]
             rulings = self.handler.effective_rulings(c)
+            plan = (
+                SessionZeroService(self.store).enrollment_order(c, roster)
+                if not state.order
+                else None
+            )
         notes = []
         if not state.order and len(roster) < 2:
             notes.append("Starting Status requires at least two filed pilot profiles.")
+        if plan is not None:
+            notes.append(
+                "Starting Status is on file in the approved Session Zero plan."
+                if plan
+                else "Starting Status is awaiting the approved Session Zero plan."
+            )
+        if (
+            state.order
+            and profile
+            and viewer.user_id not in state.order
+            and not any(x.actor.entity == str(viewer.user_id) for x in state.career_archives)
+        ):
+            if profile["girl_playbook"] == "PRINCESS":
+                notes.append(
+                    "Princess requires starting as Ace. The current Ace position is occupied."
+                )
+            elif assigned_late_wing(state, setup, viewer.user_id, profile):
+                notes.append("Wing placement filed. Complete your own review to activate.")
+            else:
+                notes.append("Wing placement is awaiting the Handler.")
         if (
             sum(row["girl_playbook"] == "PRINCESS" for row in roster.values()) > 1
             and not state.order
@@ -180,7 +206,13 @@ class BotEnrollment:
         with self.lock:
             actions, blocked = [], []
             revision, setup, roster, state = self.snapshot()
-            if not state.order:
+            with self.store.engine.connect() as c:
+                plan = (
+                    SessionZeroService(self.store).enrollment_order(c, roster)
+                    if not state.order
+                    else None
+                )
+            if not state.order and plan is None:
                 if len(roster) < 2:
                     blocked.append("Starting Status requires at least two filed pilot profiles.")
                 elif any(row["callsign"] == "RECRUIT" for row in roster.values()):
@@ -215,6 +247,22 @@ class BotEnrollment:
                                 actions.append("STARTING STATUS FILED")
                             except WorkflowError as error:
                                 blocked.append(str(error))
+            elif state.order and owner is not None:
+                profile = roster.get(owner)
+                if (
+                    profile
+                    and late_wing_eligible(state, setup, owner, profile)
+                    and not (assigned_late_wing(state, setup, owner, profile))
+                ):
+                    ref = PilotRef(user_id=owner, character_revision=profile["revision"])
+                    payload = [revision, ref.model_dump(mode="json")]
+                    try:
+                        self.handler.assign_late_wing(
+                            self.bot, self.key("late-wing", payload), revision, ref
+                        )
+                        actions.append("WING PLACEMENT FILED")
+                    except WorkflowError as error:
+                        blocked.append(str(error))
             # Handler nominates; the Mentor still chooses the callsign and the Newgirl answers.
             _, setup, roster, state = self.snapshot()
             for uid, row in sorted(roster.items()):

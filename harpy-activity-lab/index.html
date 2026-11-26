@@ -1697,6 +1697,21 @@ function renderReplacementStatus(records) {
   for (const record of records) {
     const form = document.createElement("form");
     form.className = "record-card";
+    if (record.late_wing) {
+      const title = "File Wing placement · " + record.callsign;
+      const detail = document.createElement("p");
+      detail.textContent = "This pilot joins as Wings after approving its own enrollment.";
+      const submit = document.createElement("button");
+      submit.textContent = "File Wing placement";
+      form.append(detail, submit);
+      form.addEventListener("submit", event => {
+        event.preventDefault();
+        saveSetup("career-status", {owner: record.owner, late_wing: true,
+          character_revision: record.character_revision, setup_revision: record.setup_revision});
+      });
+      target.append(popupAction(title, form, "late-wing:" + record.owner));
+      continue;
+    }
     const label = document.createElement("label");
     label.textContent = "Assign replacement Status · " + record.callsign;
     const ranks = document.createElement("select");

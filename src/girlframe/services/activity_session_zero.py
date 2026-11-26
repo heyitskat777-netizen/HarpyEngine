@@ -10,7 +10,7 @@ from girlframe.engine.identity import Snowflake
 from girlframe.engine.m3_handler_state import PLAYBOOKS
 from girlframe.engine.pilot_portrayal import PILOT_CALLSIGNS, PILOT_PORTRAYALS
 from girlframe.engine.playbooks import FRAME_TYPES, GIRL_TYPES
-from girlframe.engine.session_zero import MAX_GROUP, CharacterNotes, HandlerProfile
+from girlframe.engine.session_zero import MAX_GROUP, CharacterNotes, HandlerProfile, StartingStatus
 from girlframe.services.first_mission_briefing import FirstMissionBriefing
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.read_only_bot import GuildViewer
@@ -96,6 +96,8 @@ class SessionZeroDesk:
             fields = WRITES[route] | {"facilitator"}
             if "facilitator_only" in data:
                 fields |= {"facilitator_only"}
+        if route == "session-zero-plan" and "starting_status" in data:
+            fields = (fields or set()) | {"starting_status"}
         if fields != data.keys():
             raise ValueError("Use the current Session Zero form.")
         service = self.service
@@ -164,6 +166,11 @@ class SessionZeroDesk:
             facilitator_only = data.get("facilitator_only", False)
             if type(facilitator_only) is not bool:
                 raise ValueError("Choose whether the facilitator also takes a Pilot seat.")
+            status = data.get("starting_status")
+            if status is not None and (
+                not isinstance(status, dict) or status.keys() != {"ace", "dog"}
+            ):
+                raise ValueError("Choose Ace and Dog from the Session Zero group.")
             return service.goals(
                 *args,
                 data["goals"],
@@ -171,6 +178,11 @@ class SessionZeroDesk:
                 seats,
                 facilitator=facilitator,
                 facilitator_only=facilitator_only,
+                starting_status=(
+                    StartingStatus(ace=_member(status["ace"]), dog=_member(status["dog"]))
+                    if status is not None
+                    else None
+                ),
             )
         if route == "session-zero-open" and self.channel is not None:
             return service.complete(

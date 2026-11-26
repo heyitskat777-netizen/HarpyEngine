@@ -258,6 +258,69 @@ mission.serve(service, 0, True, DiscordSessions(config, provider),
             child.communicate()
 
 
+def test_role_authorized_pilot_files_its_profile_after_starting_status(tmp_path, monkeypatch):
+    import mission_lab
+    from campaign_registry import CampaignRegistry
+
+    from girlframe.services.m2_state import load_state
+
+    with role_activity(tmp_path, bot_handler=True) as host:
+        runtime = tmp_path / "role-runtime"
+        catalog = CampaignRegistry(
+            runtime
+            / "playtest-campaigns"
+            / "discord-offline-single-role"
+            / "managed-fixture.sqlite3"
+        )
+        first = catalog.bindings(CONFIG.client_id, CONFIG.guild_id)[0]
+        monkeypatch.setattr(mission_lab, "RUNTIME", runtime)
+        service = mission_lab.open_managed_campaign(first, initialize=False)
+        try:
+            with service.store.transaction() as connection:
+                state = load_state(connection, service.store.campaign_id)
+                state.order = int(CONFIG.invited_user_id), int(CONFIG.other_user_id)
+                state.handler = int(first.handler_id)
+                service.game.event(
+                    connection,
+                    int(first.handler_id),
+                    "fixture-existing-order",
+                    "synthetic.starting_status",
+                    state,
+                )
+        finally:
+            service.store.engine.dispose()
+        nonce = request(host, "/api/discord/challenge", data={})["nonce"]
+        token = request(
+            host,
+            "/api/discord/session",
+            data={
+                "code": "role-pilot",
+                "nonce": nonce,
+                "guild_id": CONFIG.guild_id,
+            },
+        )["session"]
+        setup = "/api/player-setup"
+        selection = "?campaign=" + first.id
+        profile = request(host, setup + selection, token)
+        assert profile["stage"] == "profile"
+        request(
+            host,
+            setup + "/profile" + selection,
+            token,
+            {
+                "revision": profile["revision"],
+                "callsign": "HALCYON",
+                "girl_playbook": "AM",
+                "frame_playbook": "PROJECT ANKOU",
+            },
+        )
+        reopened = request(host, setup + selection, token)
+        assert reopened["callsign"] == "HALCYON"
+        assert reopened["options"]["girl"] == "AM"
+        assert reopened["options"]["frame"] == "PROJECT ANKOU"
+        assert "Wing placement filed" in " ".join(reopened["bot_enrollment"]["notes"])
+
+
 def test_actual_tester_id_enrolls_its_own_sheet_in_only_its_role_campaign(tmp_path):
     with role_activity(tmp_path) as host:
 

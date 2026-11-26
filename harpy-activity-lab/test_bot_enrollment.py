@@ -17,6 +17,7 @@ from girlframe.engine.creation_review import CreationRulings
 from girlframe.engine.m2 import ReleaseApproval
 from girlframe.engine.m2_registry import registry_digest
 from girlframe.engine.shared_setup import CallsignChoice
+from girlframe.services.activity_session_zero import SessionZeroDesk
 from girlframe.services.bonds import BondService
 from girlframe.services.creation import CreationService
 from girlframe.services.creation_coordination import CoordinationService
@@ -26,6 +27,7 @@ from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
+from girlframe.services.session_zero import SessionZeroService
 from girlframe.services.shared_setup import SharedSetupService
 
 ledger = ledger_fixture
@@ -71,7 +73,8 @@ def request(bot, owner=PLAYER, retry=False, key=None):
     return bot.request(owner, key or str(uuid4()), data), data
 
 
-def test_bot_assigns_status_and_both_owners_activate_and_reopen(ledger):
+@pytest.mark.parametrize("session_zero", [False, True])
+def test_bot_assigns_status_and_both_owners_activate_and_reopen(ledger, session_zero):
     bot = prepare(ledger)
     before = count(ledger, tables.creation_drafts)
     bot.reconcile()
@@ -106,6 +109,48 @@ def test_bot_assigns_status_and_both_owners_activate_and_reopen(ledger):
     review.select_bond(
         OTHER, "other-selects-own-primary", current.revision, 1, current.draft, row["id"]
     )
+    if session_zero:
+        desk = SessionZeroDesk(
+            SessionZeroService(ledger, group_owner=bot.bot.user_id, setup_organizer=ADMIN.user_id),
+            None,
+        )
+        group = desk.write(
+            ADMIN,
+            "status-group",
+            "session-zero-group",
+            {"revision": 0, "members": ["1", "2", "3"]},
+        )
+        view = desk.read(ADMIN, "session-zero")
+        assert {x["owner"] for x in view["status_recommendation"]} == {"2", "3"}
+        plan = {
+            "revision": group["revision"],
+            "goals": "Find the relay.",
+            "difficulty": "normal",
+            "facilitator": "1",
+            "facilitator_only": True,
+            "seats": {"player_count": 2, "ai_pilots": []},
+            "starting_status": {"ace": "3", "dog": "2"},
+        }
+        with pytest.raises(WorkflowError, match="distinct"):
+            desk.write(
+                ADMIN,
+                "ineligible-status",
+                "session-zero-plan",
+                plan | {"starting_status": {"ace": "1", "dog": "2"}},
+            )
+        desk.write(ADMIN, "manual-status-plan", "session-zero-plan", plan)
+        proposal = desk.read(ADMIN, "session-zero")["plan_proposal"]
+        assert not review.get(OTHER).sheet.ready_for_rules_review
+        for participant in (ADMIN, OTHER, PLAYER):
+            desk.write(
+                participant,
+                "approve-status:" + str(participant.user_id),
+                "session-zero-plan-vote",
+                {"proposal": proposal, "approve": True},
+            )
+        assert desk.read(OTHER, "session-zero")["starting_status"] == {"ace": "3", "dog": "2"}
+        assert review.get(OTHER).sheet.status == "Ace"
+        assert review.get(PLAYER).sheet.status == "Dog"
     bot.reconcile()
     game = GameService(ledger)
     with pytest.raises(WorkflowError):
@@ -129,11 +174,58 @@ def test_bot_assigns_status_and_both_owners_activate_and_reopen(ledger):
             str(OTHER.user_id),
         }
         frozen = state.order
+        assert frozen == (
+            (OTHER.user_id, PLAYER.user_id) if session_zero else (PLAYER.user_id, OTHER.user_id)
+        )
     before = count(ledger, tables.events)
     bot.reconcile()
     assert count(ledger, tables.events) == before
     with ledger.engine.connect() as c:
         assert load_state(c, ledger.campaign_id).order == frozen
+
+    late = GuildViewer(4, ledger.policy.guild_id, True, False)
+    peer = GuildViewer(5, ledger.policy.guild_id, True, False)
+    seed(ledger, late, callsign="Synthetic late pilot")
+    seed(ledger, peer, callsign="Synthetic late peer")
+    requests = handler.late_wing_requests(bot.bot)
+    assert {item["owner"] for item in requests} == {"4", "5"}
+    assert bot.reconcile(owner=late.user_id)["actions"] == ["WING PLACEMENT FILED"]
+    with ledger.engine.connect() as c:
+        assert load_state(c, ledger.campaign_id).order == frozen
+    assert bot.reconcile(owner=late.user_id)["actions"] == []
+    pending = bonds.propose(
+        late,
+        "late-starting-bond",
+        1,
+        1,
+        BondProposal(target_id=peer.user_id, prompt=0, context="Filed together after launch."),
+    )
+    bonds.decide(peer, "late-peer-accepts", pending["id"], 1, "accept")
+    creation.save(late, "late-pilot-build", 0, 1, selected("MOCKINGBIRD", "JANUS"))
+    draft = review.get(late)
+    assert draft.sheet.status == "Wings" and draft.sheet.ready_for_rules_review
+    review.save(late, "late-pilot-approves-review", draft.saved_revision, draft.fingerprint)
+    game.activate(late, "late-pilot-activates-own-sheet", draft.fingerprint)
+    ledger.engine.dispose()
+    with ledger.engine.connect() as c:
+        assert load_state(c, ledger.campaign_id).order == (frozen[0], late.user_id, frozen[-1])
+
+
+def test_status_recommendation_weights_both_playbooks_and_keeps_princess_first():
+    from girlframe.engine.playbooks import FRAME_TYPES, GIRL_TYPES
+    from girlframe.engine.starting_status import FRAME_WEIGHTS, GIRL_WEIGHTS, recommendation
+
+    assert GIRL_WEIGHTS.keys() == GIRL_TYPES.keys() and FRAME_WEIGHTS.keys() == FRAME_TYPES.keys()
+    ranked = recommendation(
+        {
+            3: ("Model Pilot", "OLDGEN", "THE PRINCE"),
+            4: ("Foundation Prototype", "AM", "PROJECT ANKOU"),
+            5: ("Model Pilot with Void equipment", "OLDGEN", "CHANGELING"),
+            6: ("Public face", "PRINCESS", "JANUS"),
+        }
+    )
+    assert [row["owner"] for row in ranked] == ["6", "3", "5", "4"]
+    assert ranked[1]["score"] == ranked[1]["girl_weight"] + ranked[1]["frame_weight"]
 
 
 @pytest.mark.parametrize(

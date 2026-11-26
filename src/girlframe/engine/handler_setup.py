@@ -26,6 +26,7 @@ class HandlerSetup(BaseModel):
     handler_id: Snowflake | None = None
     mentors: tuple[MentorAssignment, ...] = ()
     status_order: tuple[PilotRef, ...] = ()
+    late_wings: tuple[PilotRef, ...] = ()
     creation_rulings: CreationRulings | None = None
     creation_rulings_explicit: bool = False
     starting_bond_test_bypasses: tuple[PilotRef, ...] = ()
@@ -38,6 +39,8 @@ class HandlerSetup(BaseModel):
             raise ValueError("Only one starting-Bond test bypass per Pilot")
         if len({x.user_id for x in self.status_order}) != len(self.status_order):
             raise ValueError("A Pilot can hold only one position")
+        if len({x.user_id for x in self.late_wings}) != len(self.late_wings):
+            raise ValueError("A Pilot can hold only one late enrollment assignment")
         if len({x.newgirl.user_id for x in self.mentors}) != len(self.mentors):
             raise ValueError("A starting Newgirl can have only one current nomination")
         if any(x.newgirl.user_id == x.mentor.user_id for x in self.mentors):
