@@ -70,6 +70,7 @@ from p2_scene import (
 )
 from player_setup import SCENE, EnrollmentInputError, PlayerSetup, seed_players, seed_roster
 from private_battlefield import PRIVATE_BATTLEFIELD_CHANNEL, PrivateBattlefield
+from specialist_work import SpecialistWork
 
 from girlframe.config import Settings
 from girlframe.database import tables
@@ -124,6 +125,7 @@ KEY = re.compile(r"[A-Za-z0-9._-]{8,100}")
 SESSION_ZERO_PATH = "/api/campaign-opening/session-zero"
 CAMPAIGN_SAFETY_PATH = "/api/activity/safety"
 DOSSIER_PATH = "/api/facilitator-dossiers"
+SPECIALIST_WORK_PATH = "/api/specialist-work"
 FACILITATOR_ROUTE = re.compile(r"/api/facilitator-reviews(?:/([0-9a-f-]{36}))?")
 START_FRESH_PATH = "/api/activity/start-fresh"
 FRESH_JOB_ROUTE = re.compile(r"/api/activity/start-fresh/([0-9a-f]{32})")
@@ -1061,6 +1063,7 @@ def serve(
                     "/api/activity/ai-models",
                     CAMPAIGN_SAFETY_PATH,
                     DOSSIER_PATH,
+                    SPECIALIST_WORK_PATH,
                 )
                 or session_zero
                 or FACILITATOR_ROUTE.fullmatch(path)
@@ -1475,6 +1478,26 @@ def serve(
                     self.send_json(HTTPStatus.NOT_FOUND, {"error": "DM receipt unavailable."})
                 else:
                     self.send_json(HTTPStatus.OK, receipt)
+            elif path == SPECIALIST_WORK_PATH and campaign.managed:
+                try:
+                    _, viewer = self.session()
+                    query = parse_qs(request.query)
+                    kind = query.get("kind", [""])[0]
+                    identity = query.get("id", [""])[0]
+                    work = SpecialistWork(setup.game, setup.handler_rooms())
+                    if kind or identity:
+                        if not 0 < len(kind) <= 40 or not 0 < len(identity) <= 300:
+                            raise ValueError
+                        result = work.read(viewer, kind, identity)
+                    else:
+                        result = work.list(viewer)
+                    self.send_json(HTTPStatus.OK, result)
+                except SignInError as error:
+                    self.send_access_error(error)
+                except ValueError:
+                    self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Choose a specialist record."})
+                except WorkflowError as error:
+                    self.send_json(HTTPStatus.FORBIDDEN, {"error": str(error)})
             elif path == DOSSIER_PATH and campaign.managed:
                 try:
                     _, viewer = self.session()
@@ -1925,6 +1948,20 @@ def serve(
                         HTTPStatus.BAD_REQUEST,
                         {"error": "Review the trial form and its required fields."},
                     )
+                except WorkflowError as error:
+                    self.send_json(HTTPStatus.CONFLICT, {"error": str(error)})
+                return
+            if campaign.managed and path == SPECIALIST_WORK_PATH:
+                try:
+                    key = self.headers.get("Idempotency-Key", "")
+                    if not KEY.fullmatch(key):
+                        raise ValueError
+                    result = SpecialistWork(setup.game, setup.handler_rooms()).write(
+                        session[1], key, self.read_object(16384)
+                    )
+                    self.send_json(HTTPStatus.OK, result)
+                except (TypeError, ValueError):
+                    self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Use the specialist form."})
                 except WorkflowError as error:
                     self.send_json(HTTPStatus.CONFLICT, {"error": str(error)})
                 return

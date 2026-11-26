@@ -114,6 +114,7 @@
         <button id="refresh" class="workbench-action" type="button" aria-label="Synchronize terminal" hidden><span aria-hidden="true">↻</span> <span class="tool-label">Synchronize terminal</span></button>
         <button id="enrollment-trigger" class="workbench-action" type="button" aria-haspopup="dialog" hidden>Create pilot</button>
         <button id="character-files" class="workbench-action" type="button" aria-haspopup="dialog">Personnel records</button>
+        <button id="specialist-work" class="workbench-action" type="button" aria-haspopup="dialog" hidden>Specialist work</button>
         <div class="campaign-menu">
           <div class="campaign-actions">
             <select id="campaign-switch" aria-label="Switch campaign" hidden></select>
@@ -432,7 +433,7 @@ function startupFailed(error) {
   status.textContent = "Personnel terminal unavailable. " + (error?.message ?? "Reload the terminal to retry.");
   retryActivity.hidden = false;
 }
-const [{createEnrollment, renderPlayerSetup, renderScenePlays, renderOffDuty, renderHandlerPlaybook, renderHandlerSceneChoices, renderHandlerPunishments, punishmentActions, renderPilotBondSetup, renderEnrollmentChoices, startingBondStatus}, {foundationUI, playName, decisionName, focusDecision, renderRecordMetadata}, {tacticalUI}, {communicationsUI}, {artworkUI}, {mailSpool}, {renderMissions, missionStatus}] = await Promise.all([
+const [{createEnrollment, renderPlayerSetup, renderScenePlays, renderOffDuty, renderHandlerPlaybook, renderHandlerSceneChoices, renderHandlerPunishments, renderVoidOperations, punishmentActions, renderPilotBondSetup, renderEnrollmentChoices, startingBondStatus}, {foundationUI, playName, decisionName, focusDecision, renderRecordMetadata}, {tacticalUI}, {communicationsUI}, {artworkUI}, {mailSpool}, {renderMissions, missionStatus}] = await Promise.all([
   import("/player-setup.js"),
   import("/foundation-ui.js"),
   import("/battlefield-ui.js"),
@@ -647,7 +648,10 @@ function openInbox(open, assigned = false) {
   inbox.hidden = !open;
   inboxToggle.setAttribute("aria-expanded", String(open && !assigned));
   assignmentsToggle.setAttribute("aria-expanded", String(open && assigned));
-  if (open) spool.opened(assigned);
+  if (open) {
+    spool.opened(assigned);
+    refreshSpecialistMail().catch(() => {});
+  }
 }
 const facilitatorReviewPath = "/api/facilitator-reviews";
 const reviewStatus = {
@@ -687,17 +691,145 @@ function reviewDialog(title, opener) {
   dialog.setAttribute("aria-label", title);
   const contents = reviewElement("section");
   const feedback = reviewElement("p", "Retrieving record…");
+  feedback.className = "terminal-panel terminal-feedback";
   feedback.setAttribute("role", "status");
-  const close = reviewElement("button", "Close");
+  const heading = reviewElement("header");
+  heading.className = "record-heading";
+  const close = reviewElement("button", "×");
+  close.type = "button";
+  close.setAttribute("aria-label", "Close " + title.toLowerCase());
+  heading.append(reviewElement("h2", title), close);
   close.addEventListener("click", () => dialog.close());
   dialog.addEventListener("close", () => {
     dialog.remove();
     if (opener?.isConnected) opener.focus();
   }, {once:true});
-  dialog.append(reviewElement("h2", title), contents, feedback, close);
+  dialog.append(heading, contents, feedback);
   document.body.append(dialog);
   dialog.showModal();
   return {dialog, contents, feedback};
+}
+
+const specialistWorkButton = document.getElementById("specialist-work");
+const specialistWorkPath = "/api/specialist-work";
+specialistWorkButton.addEventListener("click", () => openSpecialistWork());
+
+async function refreshSpecialistMail() {
+  if (!campaignSwitcher || !session || !currentPlayer) return;
+  const mailbox = currentPlayer.mailbox;
+  const {work} = await activityFetch(specialistWorkPath).then(responseData);
+  if (mailbox !== currentPlayer?.mailbox) return;
+  const assigned = new Set([
+    "advancement_song", "advancement_gaze", "advancement_rewrite", "advancement_visions",
+    "advancement_reinstall", "advancement_reconditioning", "advancement_mask",
+    "advancement_kiss", "advancement_private",
+    "leviathan_choice", "defeat_choice",
+    "gorgon_counter", "gorgon_choice", "npc_flirt", "npc_guard",
+    "harpy_help", "harpy_physical",
+  ]);
+  spool.replace("specialist-work", work.filter(item => assigned.has(item.kind) || item.assigned)
+    .map(item => ({
+      id:"specialist:" + item.kind + ":" + item.id, title:item.title, sender:"HarpyEngine",
+      status:"Specialist record", required:true, owner:"You",
+      open() {
+        openInbox(false);
+        openSpecialistWork(item, inboxToggle);
+      },
+    })));
+}
+
+function openSpecialistWork(initialItem, opener = specialistWorkButton) {
+  const {dialog, contents, feedback} = reviewDialog("Specialist work", opener);
+  contents.classList.add("terminal-panel");
+  const source = reviewElement("p", "Foundation / Specialist assignments");
+  source.className = "terminal-line";
+  const panel = reviewElement("div");
+  contents.append(source, panel);
+  let request = 0;
+
+  async function read(suffix, render) {
+    const pending = ++request;
+    panel.replaceChildren();
+    feedback.textContent = "Retrieving record…";
+    try {
+      const data = await responseData(await activityFetch(specialistWorkPath + suffix));
+      if (!dialog.open || pending !== request) return;
+      render(data);
+      feedback.textContent = "";
+    } catch (error) {
+      if (dialog.open && pending === request) {
+        feedback.textContent = error.message;
+        if (suffix) backButton();
+      }
+    }
+  }
+
+  function backButton() {
+    const back = reviewElement("button", "← Back to assignments");
+    back.type = "button";
+    back.addEventListener("click", list);
+    panel.prepend(back);
+  }
+
+  function list() {
+    return read("", ({work}) => {
+      if (!work.length) panel.append(reviewElement("p", "No specialist work assigned."));
+      const buttons = reviewElement("div");
+      buttons.className = "actions";
+      for (const item of work) {
+        const button = reviewElement("button", item.title);
+        button.type = "button";
+        button.addEventListener("click", () => open(item));
+        buttons.append(button);
+      }
+      panel.append(buttons);
+      panel.querySelector("button")?.focus();
+    });
+  }
+
+  function open(item) {
+    const query = new URLSearchParams({kind:item.kind,id:item.id});
+    return read("?" + query, record => {
+      panel.append(reviewElement("h3", record.title));
+      if (record.text) {
+        const narrative = reviewElement("p", record.text);
+        narrative.style.whiteSpace = "pre-wrap";
+        panel.append(narrative);
+      }
+      const forms = record.operations.map(operation => ({...operation, fields:operation.fields.map(
+        field => ({...field, options:field.options.length ? field.options : null, multiple:field.maximum > 1})
+      )}));
+      let filing = false;
+      renderVoidOperations(panel, forms, async ({operation, values}) => {
+        if (filing) return;
+        filing = true;
+        const submit = panel.querySelector('form button[type="submit"]');
+        if (submit) submit.disabled = true;
+        feedback.textContent = "Filing decision…";
+        try {
+          await responseData(await activityFetch(specialistWorkPath, {
+            method:"POST", headers:{"Content-Type":"application/json", "Idempotency-Key":crypto.randomUUID()},
+            body:JSON.stringify({kind:record.kind, id:record.id, revision:record.revision, operation, values}),
+          }));
+          if (!dialog.open) return;
+          await list();
+          if (dialog.open) feedback.textContent = "Decision filed.";
+          refreshScene().catch(() => {});
+          refreshSpecialistMail().catch(() => {});
+        } catch (error) {
+          if (dialog.open) feedback.textContent = error.message;
+        } finally {
+          filing = false;
+          if (submit?.isConnected) submit.disabled = false;
+        }
+      });
+      backButton();
+      (panel.querySelector("select,input,textarea") || panel.querySelector("button"))?.focus();
+    });
+  }
+
+  if (initialItem) open(initialItem);
+  else list();
 }
 
 function reviewField(parent, label, control) {
@@ -1238,6 +1370,7 @@ async function refreshScene() {
   perspectiveToggle.textContent = player.perspective === "pilot" ? "Return to Handler desk" : "Pilot mode";
   spool.identify(player.mailbox, player.callsign || "Handler");
   currentPlayer = player;
+  specialistWorkButton.hidden = !campaignSwitcher;
   popupContext(player.mailbox);
   const sceneDialog = document.getElementById("scene-action-dialog");
   if (sceneDialog.open && ((sceneDialog.dataset.role === "handler" && player.stage !== "handler")

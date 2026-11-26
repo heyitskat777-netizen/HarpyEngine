@@ -10,6 +10,7 @@ from girlframe.services.m3_actor_plays import ActorPlayService
 from girlframe.services.m3_actors import ActorService
 from girlframe.services.m3_cast import CastService
 from girlframe.services.m3_missions import MissionService
+from girlframe.services.m3_npc_guard import GuardService
 from girlframe.services.m3_npc_orders import NpcOrderService
 from girlframe.services.onboarding import WorkflowError
 
@@ -30,6 +31,7 @@ class SceneOrders:
         self.actors = ActorService(MissionService(game.store))
         self.cast = CastService(self.actors)
         self.npcs = NpcOrderService(game)
+        self.guard = GuardService(game)
         self.plays = ActorPlayService(game)
 
     def view(self, viewer, room):
@@ -83,6 +85,37 @@ class SceneOrders:
                     [
                         field("source", "Actual issuer, recipient and source", npcs),
                         INSTRUCTION,
+                    ],
+                )
+            )
+
+        echoes = self.echoes_options(viewer, cast["game_revision"], roles)
+        if echoes:
+            forms.append(
+                operation(
+                    "echoes",
+                    "Echoes of Old Command",
+                    [field("source", "Original Harpy, recipient and voice", echoes), INSTRUCTION],
+                )
+            )
+
+        guards = self.guard_options(viewer, cast["game_revision"])
+        if guards:
+            forms.append(
+                operation(
+                    "guard_assess",
+                    "Guard · Weapon assessment",
+                    [
+                        field("source", "Guard and co-present opponent", guards),
+                        field(
+                            "weapons",
+                            "Verified weapon state",
+                            [
+                                ("unarmed", "Guard is unarmed"),
+                                ("armed", "Guard carries its weapon"),
+                            ],
+                        ),
+                        field("account", "Record the actual weapons") | {"paragraph": True},
                     ],
                 )
             )
@@ -218,6 +251,50 @@ class SceneOrders:
                     options.append((token, f"{issuer['label']} → {role['label']} · {label}"))
         return options
 
+    def echoes_options(self, viewer, revision, roles):
+        if not any(role["ref"]["kind"] == "external_pilot" and role["own"] for role in roles):
+            return []
+        choices = []
+        for role in roles:
+            ref = role["ref"]
+            if ref["kind"] != "pilot":
+                continue
+            recipient = ref["entity"]
+            try:
+                data = self.npcs.preview(
+                    viewer, self.channel, int(recipient), origin_kind="harpy_echoes"
+                )
+            except (ValueError, WorkflowError):
+                continue
+            if data["revision"] != revision:
+                continue
+            for issuer in data["issuers"]:
+                voices = [{"ref": None, "label": "Own voice"}, *data.get("voices", ())]
+                for voice in voices:
+                    source = json.dumps(
+                        {"issuer": issuer["ref"], "target": recipient, "voice": voice["ref"]}
+                    )
+                    choices.append(
+                        (source, f"{issuer['label']} → {role['label']} · {voice['label']}")
+                    )
+        return choices
+
+    def guard_options(self, viewer, revision):
+        try:
+            data = self.guard.preview(viewer, self.channel)
+        except (ValueError, WorkflowError):
+            return []
+        if data["revision"] != revision:
+            return []
+        return [
+            (
+                json.dumps({"guard": guard["ref"], "target": target["ref"]}),
+                f"{guard['label']} → {target['label']}",
+            )
+            for guard in data["guards"]
+            for target in guard["targets"]
+        ]
+
     def perform(self, viewer, key, data):
         revision, cast_revision = data["revision"], data["cast_revision"]
         if type(revision) is not int or type(cast_revision) is not int:
@@ -281,5 +358,32 @@ class SceneOrders:
                 values["instruction"],
                 origin_kind=origin,
                 source_effect=source["condition"] if origin == "stim_sex" else None,
+            )
+        if action == "echoes" and values.keys() == {"source", "instruction"}:
+            source = json.loads(values["source"])
+            return self.npcs.issue(
+                viewer,
+                key,
+                self.channel,
+                ActorRef.model_validate(source["issuer"]),
+                int(source["target"]),
+                revision,
+                values["instruction"],
+                origin_kind="harpy_echoes",
+                voice=ActorRef.model_validate(source["voice"]) if source["voice"] else None,
+            )
+        if action == "guard_assess" and values.keys() == {"source", "weapons", "account"}:
+            source = json.loads(values["source"])
+            if values["weapons"] not in ("armed", "unarmed"):
+                raise ValueError("Choose the verified weapon state.")
+            return self.guard.assess(
+                viewer,
+                key,
+                self.channel,
+                ActorRef.model_validate(source["guard"]),
+                ActorRef.model_validate(source["target"]),
+                revision,
+                values["weapons"] == "unarmed",
+                values["account"],
             )
         raise ValueError("Choose the fields for the current scene order.")

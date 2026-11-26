@@ -100,12 +100,7 @@ async def open_influence(interaction: discord.Interaction, service: ObsessionSer
     await reply(interaction, form.text(), form)
 
 
-async def open_choice(
-    interaction: discord.Interaction, service: ObsessionService, identity: str
-) -> None:
-    data = await asyncio.to_thread(
-        service.game.decision, viewer_from_interaction(interaction), identity
-    )
+def response_form(data: dict[str, Any]) -> tuple[str, list[Field]]:
     kind, detail = data["kind"], data["detail"]
     fields: list[Field] = []
     description = "Your original owned response is saved with this Play."
@@ -243,11 +238,7 @@ async def open_choice(
     elif kind.startswith("leviathan_arrival_"):
         requirement = detail["arrival"]
         if requirement["blocker"]:
-            await reply(
-                interaction,
-                "Arrival needs the existing physical prerequisite: " + requirement["blocker"],
-            )
-            return
+            return "Arrival needs the existing physical prerequisite: " + requirement["blocker"], []
         description = (
             "Confirm an actually completed journey along the influence trail. "
             "This does not grant transport, extraction or Frame control."
@@ -268,78 +259,98 @@ async def open_choice(
     else:
         raise WorkflowError("This Leviathan response is not supported by the current controls")
 
-    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
-        answer = ChoiceAnswer()
-        if kind == "tag_window":
-            selected = values["tag"][0]
-            answer = ChoiceAnswer(
-                options=(selected,),
-                number=int(values["direction"][0]) if selected != "pass" else None,
-                text=values.get("account", "") if selected != "pass" else "",
-                fields=({"marker": values["marker"][0]} if selected != "pass" else {})
-                | ({"status": values["status"][0]} if "status" in values else {}),
-            )
-        elif kind in ("leviathan_trigger_tag", "leviathan_tag_resolution"):
-            replacement = values.get("replace", ("none",))[0]
-            answer = ChoiceAnswer(
-                options=values["response"],
-                denied=(replacement,)
-                if replacement != "none" and values["response"] == ("embrace",)
-                else (),
-            )
-        elif kind == "leviathan_identity_result":
-            answer = ChoiceAnswer(options=values["result"])
-        elif kind == "leviathan_facts":
-            facts = detail["facts"]
-            imported: list[GrantedIdentity] = []
-            ordinary: tuple[str, ...] = values.get("ordinary_ids", ())
-            if facts["needs_import"]:
-                marked = {x.strip() for x in values.get("marked", "").splitlines() if x.strip()}
-                for key in ("ordinary", "protected", "paired"):
-                    for name in values.get(key, "").splitlines():
-                        if name.strip():
-                            imported.append(
-                                GrantedIdentity(
-                                    id=str(uuid4()),
-                                    name=name.strip(),
-                                    marked=name.strip() in marked,
-                                    protected=key == "protected",
-                                    paired=key == "paired",
-                                )
+    return description, fields
+
+
+def response_answer(data: dict[str, Any], values: dict[str, Any]) -> ChoiceAnswer:
+    kind, detail = data["kind"], data["detail"]
+    answer = ChoiceAnswer()
+    if kind == "tag_window":
+        selected = values["tag"][0]
+        answer = ChoiceAnswer(
+            options=(selected,),
+            number=int(values["direction"][0]) if selected != "pass" else None,
+            text=values.get("account", "") if selected != "pass" else "",
+            fields=({"marker": values["marker"][0]} if selected != "pass" else {})
+            | ({"status": values["status"][0]} if "status" in values else {}),
+        )
+    elif kind in ("leviathan_trigger_tag", "leviathan_tag_resolution"):
+        replacement = values.get("replace", ("none",))[0]
+        answer = ChoiceAnswer(
+            options=values["response"],
+            denied=(replacement,)
+            if replacement != "none" and values["response"] == ("embrace",)
+            else (),
+        )
+    elif kind == "leviathan_identity_result":
+        answer = ChoiceAnswer(options=values["result"])
+    elif kind == "leviathan_facts":
+        facts = detail["facts"]
+        imported: list[GrantedIdentity] = []
+        ordinary: tuple[str, ...] = values.get("ordinary_ids", ())
+        if facts["needs_import"]:
+            marked = {x.strip() for x in values.get("marked", "").splitlines() if x.strip()}
+            for key in ("ordinary", "protected", "paired"):
+                for name in values.get(key, "").splitlines():
+                    if name.strip():
+                        imported.append(
+                            GrantedIdentity(
+                                id=str(uuid4()),
+                                name=name.strip(),
+                                marked=name.strip() in marked,
+                                protected=key == "protected",
+                                paired=key == "paired",
                             )
-                if len({x.name for x in imported}) != len(imported) or not marked <= {
-                    x.name for x in imported
-                }:
-                    raise WorkflowError(
-                        "Use distinct existing Identity names and mark only names you listed"
-                    )
-                ordinary = tuple(x.id for x in imported if not x.protected and not x.paired)
-            mentor = next(
-                (
-                    ActorRef.model_validate(x["ref"])
-                    for x in facts["mentor_options"]
-                    if ActorRef.model_validate(x["ref"]).token == values.get("mentor", ("none",))[0]
-                ),
-                None,
-            )
-            answer = ChoiceAnswer(
-                fields={
-                    "facts": FactualIdentities(
-                        ordinary=ordinary,
-                        identities=tuple(imported),
-                        mentor=mentor,
-                        account=values["account"],
-                    ).model_dump_json()
-                }
-            )
-        elif kind == "leviathan_tag_selection":
-            answer = ChoiceAnswer(options=values["proposal"], text=values["account"])
-        elif kind == "leviathan_pair_tag":
-            answer = ChoiceAnswer(options=values["rename"])
-        elif kind == "leviathan_low_play":
-            answer = ChoiceAnswer(text=values["account"])
-        else:
-            answer = ChoiceAnswer(flag=values["approve"][0] == "yes", text=values["account"])
+                        )
+            if len({x.name for x in imported}) != len(imported) or not marked <= {
+                x.name for x in imported
+            }:
+                raise WorkflowError(
+                    "Use distinct existing Identity names and mark only names you listed"
+                )
+            ordinary = tuple(x.id for x in imported if not x.protected and not x.paired)
+        mentor = next(
+            (
+                ActorRef.model_validate(x["ref"])
+                for x in facts["mentor_options"]
+                if ActorRef.model_validate(x["ref"]).token == values.get("mentor", ("none",))[0]
+            ),
+            None,
+        )
+        answer = ChoiceAnswer(
+            fields={
+                "facts": FactualIdentities(
+                    ordinary=ordinary,
+                    identities=tuple(imported),
+                    mentor=mentor,
+                    account=values["account"],
+                ).model_dump_json()
+            }
+        )
+    elif kind == "leviathan_tag_selection":
+        answer = ChoiceAnswer(options=values["proposal"], text=values["account"])
+    elif kind == "leviathan_pair_tag":
+        answer = ChoiceAnswer(options=values["rename"])
+    elif kind == "leviathan_low_play":
+        answer = ChoiceAnswer(text=values["account"])
+    else:
+        answer = ChoiceAnswer(flag=values["approve"][0] == "yes", text=values["account"])
+    return answer
+
+
+async def open_choice(
+    interaction: discord.Interaction, service: ObsessionService, identity: str
+) -> None:
+    data = await asyncio.to_thread(
+        service.game.decision, viewer_from_interaction(interaction), identity
+    )
+    description, fields = response_form(data)
+    if not fields:
+        await reply(interaction, description)
+        return
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        answer = response_answer(data, values)
         await asyncio.to_thread(
             service.game.respond,
             viewer_from_interaction(current),

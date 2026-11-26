@@ -986,7 +986,7 @@ function renderFollowupDecision(target, fields, send) {
   }
 }
 
-function renderVoidOperations(record, operations, send, preferred = "") {
+export function renderVoidOperations(record, operations, send, preferred = "") {
   const stages = operations.map(operation => {
     const label = operation.label ?? {
       answer:"Answer Apometanoia", begin:"Enter Frame and begin Apometanoia", resist:"Prepare resistance",

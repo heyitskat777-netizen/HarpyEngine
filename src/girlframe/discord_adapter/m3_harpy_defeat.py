@@ -35,12 +35,7 @@ def one(values: dict[str, Any], key: str, default: Any = None) -> Any:
     return value[0] if isinstance(value, tuple) and value else default
 
 
-async def open_setup(
-    interaction: discord.Interaction, service: HarpyDefeatService, actor: ActorRef
-) -> None:
-    data = await asyncio.to_thread(
-        service.setup_preview_actor, viewer_from_interaction(interaction), actor
-    )
+def setup_fields(data: dict[str, Any]) -> list[Field]:
     choices = tuple((x["token"], x["label"]) for x in data["actors"])
     fields = [
         Field("linked", "Actual current link", (("yes", "Linked"), ("no", "Unlinked"))),
@@ -70,42 +65,58 @@ async def open_setup(
     for index, tag in enumerate(data["tags"]):
         fields.append(Field("setter_" + str(index), "Original setter of " + tag["label"], choices))
 
-    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
-        refs = {x["token"]: ActorRef.model_validate(x["ref"]) for x in data["actors"]}
-        tags = tuple(
-            HarpyTag(
-                id=tag["id"],
-                label=tag["label"],
-                giver_ref=refs[one(values, "setter_" + str(index))],
-                giver=int(refs[one(values, "setter_" + str(index))].entity)
-                if refs[one(values, "setter_" + str(index))].kind in ("pilot", "handler")
-                else next(
-                    x["controller"]
-                    for x in data["actors"]
-                    if x["token"] == one(values, "setter_" + str(index))
-                ),
-            )
-            for index, tag in enumerate(data["tags"])
-        )
-        facts = NativeHarpyFacts(
-            actor=actor,
-            linked=one(values, "linked") == "yes",
-            girl_cell=cell(values["girl_cell"]),
-            frame_cell=tuple(data["frame_cell"]),
-            heat=int(values["heat"]),
-            frame_shutdown=one(values, "shutdown") == "yes",
-            body_incapacitated=one(values, "incapacitated") == "yes",
-            custody=one(values, "custody"),
-            custodian=refs.get(one(values, "custodian")),
-            identities=tuple(
-                HarpyIdentity(id=str(uuid4()), name=name.strip())
-                for name in values.get("identities", "").splitlines()
-                if name.strip()
+    return fields
+
+
+def setup_facts(data: dict[str, Any], actor: ActorRef, values: dict[str, Any]) -> NativeHarpyFacts:
+    refs = {x["token"]: ActorRef.model_validate(x["ref"]) for x in data["actors"]}
+    tags = tuple(
+        HarpyTag(
+            id=tag["id"],
+            label=tag["label"],
+            giver_ref=refs[one(values, "setter_" + str(index))],
+            giver=int(refs[one(values, "setter_" + str(index))].entity)
+            if refs[one(values, "setter_" + str(index))].kind in ("pilot", "handler")
+            else next(
+                x["controller"]
+                for x in data["actors"]
+                if x["token"] == one(values, "setter_" + str(index))
             ),
-            tags=tags,
-            account=values["account"],
-            facts_confirmed=True,
         )
+        for index, tag in enumerate(data["tags"])
+    )
+    facts = NativeHarpyFacts(
+        actor=actor,
+        linked=one(values, "linked") == "yes",
+        girl_cell=cell(values["girl_cell"]),
+        frame_cell=tuple(data["frame_cell"]),
+        heat=int(values["heat"]),
+        frame_shutdown=one(values, "shutdown") == "yes",
+        body_incapacitated=one(values, "incapacitated") == "yes",
+        custody=one(values, "custody"),
+        custodian=refs.get(one(values, "custodian")),
+        identities=tuple(
+            HarpyIdentity(id=str(uuid4()), name=name.strip())
+            for name in values.get("identities", "").splitlines()
+            if name.strip()
+        ),
+        tags=tags,
+        account=values["account"],
+        facts_confirmed=True,
+    )
+    return facts
+
+
+async def open_setup(
+    interaction: discord.Interaction, service: HarpyDefeatService, actor: ActorRef
+) -> None:
+    data = await asyncio.to_thread(
+        service.setup_preview_actor, viewer_from_interaction(interaction), actor
+    )
+    fields = setup_fields(data)
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        facts = setup_facts(data, actor, values)
         await asyncio.to_thread(
             service.propose_runtime,
             viewer_from_interaction(current),
@@ -183,61 +194,27 @@ async def open_defeat(
     await reply(interaction, form.text(), form)
 
 
-async def open_choice(
-    interaction: discord.Interaction, service: HarpyDefeatService, identity: str
-) -> None:
-    viewer = viewer_from_interaction(interaction)
-    data = await asyncio.to_thread(service.decision, viewer, identity)
-    if data["state"] != "pending":
-        await reply(interaction, "This original choice already has an actual saved response.")
-        return
+def outcome_options(tier: str) -> tuple[tuple[str, str], ...]:
+    return {
+        "mid": (
+            ("message", "Send final comms; deepen Bond"),
+            ("rift", "Open a Voidspace Rift; escape"),
+        ),
+        "high": (
+            ("kidnap", "Kidnap an actually defeated Girl; escape"),
+            ("foundation", "Shut down and let the Foundation take you"),
+            ("plead", "Ask a Girl to come; escape either way"),
+        ),
+        "low": (
+            ("death", "Die; inflict a Tag on your actual killer"),
+            ("shutdown", "Frame shuts down: surrender or sever link"),
+            ("rescue", "Another actual scene Harpy rescues you"),
+        ),
+    }[tier]
+
+
+def choice_fields(data: dict[str, Any]) -> list[Field]:
     kind = data["kind"]
-    if kind == "manual_adjudication":
-        from girlframe.discord_adapter.m3_adjudication import open_adjudication
-        from girlframe.services.m3_adjudication import AdjudicationService
-
-        await open_adjudication(interaction, AdjudicationService(service.store), identity)
-        return
-    if kind == "harpy_defeat_select":
-        options = {
-            "mid": (
-                ("message", "Send final comms; deepen Bond"),
-                ("rift", "Open a Voidspace Rift; escape"),
-            ),
-            "high": (
-                ("kidnap", "Kidnap an actually defeated Girl; escape"),
-                ("foundation", "Shut down and let the Foundation take you"),
-                ("plead", "Ask a Girl to come; escape either way"),
-            ),
-            "low": (
-                ("death", "Die; inflict a Tag on your actual killer"),
-                ("shutdown", "Frame shuts down: surrender or sever link"),
-                ("rescue", "Another actual scene Harpy rescues you"),
-            ),
-        }[data["tier"]]
-
-        async def select(current: discord.Interaction, choice: str) -> None:
-            if choice == "physical":
-                from girlframe.discord_adapter.m3_harpy_physical import open_physical
-                from girlframe.services.m3_harpy_physical import HarpyPhysicalService
-
-                await open_physical(
-                    current,
-                    HarpyPhysicalService(service.store),
-                    ActorRef.model_validate(data["actor"]),
-                )
-                return
-            await outcome_form(current, service, data, choice)
-
-        if data.get("physical_controls"):
-            options += (("physical", "Actual Frame consent and physical recovery controls"),)
-
-        await reply(
-            interaction,
-            "Choose one actual printed Harpy Defeat result.",
-            Picker(viewer.user_id, "Choose your result", options, select),
-        )
-        return
     fields: list[Field] = []
     if kind == "tag_window":
         fields.append(
@@ -361,65 +338,46 @@ async def open_choice(
     else:
         raise WorkflowError("Resume this actual source-owned Harpy response from its inbox.")
 
-    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
-        if kind == "tag_window":
-            mode = one(values, "mode")
-            answer = ChoiceAnswer(
-                options=(mode,),
-                denied=(one(values, "tag"),) if mode == "tag" else (),
-                number=int(one(values, "direction")) if mode == "tag" else None,
-                text=values.get("account", "") if mode == "tag" else "",
-                fields={"marker": one(values, "marker")} if mode == "tag" else {},
-            )
-        elif kind == "harpy_tag_resolution":
-            answer = ChoiceAnswer(options=(one(values, "mode"),), denied=values.get("replace", ()))
-        elif kind == "harpy_girl_plea":
-            answer = ChoiceAnswer(
-                options=(one(values, "mode"),),
-                text=values["account"],
-                fields={"tag": values.get("tag", "")},
-            )
-        elif kind in ("harpy_killer_fact", "harpy_capture_fact", "harpy_foe_fact"):
-            field = {
-                "harpy_killer_fact": "killer",
-                "harpy_capture_fact": "captor",
-                "harpy_foe_fact": "foe",
-            }[kind]
-            selected = one(values, field, "")
-            answer = ChoiceAnswer(
-                text=values["account"], flag=True, fields={field: selected} if selected else {}
-            )
-        elif kind == "harpy_tag_select":
-            answer = ChoiceAnswer(options=(one(values, "candidate"),), text=values["account"])
-        else:
-            answer = ChoiceAnswer(flag=one(values, "agree") == "yes", text=values["account"])
-        await asyncio.to_thread(
-            service.respond,
-            viewer_from_interaction(current),
-            str(current.id),
-            identity,
-            data["revision"],
-            answer,
+    return fields
+
+
+def choice_answer(data: dict[str, Any], values: dict[str, Any]) -> ChoiceAnswer:
+    kind = data["kind"]
+    if kind == "tag_window":
+        mode = one(values, "mode")
+        answer = ChoiceAnswer(
+            options=(mode,),
+            denied=(one(values, "tag"),) if mode == "tag" else (),
+            number=int(one(values, "direction")) if mode == "tag" else None,
+            text=values.get("account", "") if mode == "tag" else "",
+            fields={"marker": one(values, "marker")} if mode == "tag" else {},
         )
-        return (
-            "Your actual source-owned response is saved. Remaining decisions stay "
-            "in their owners' inboxes."
+    elif kind == "harpy_tag_resolution":
+        answer = ChoiceAnswer(options=(one(values, "mode"),), denied=values.get("replace", ()))
+    elif kind == "harpy_girl_plea":
+        answer = ChoiceAnswer(
+            options=(one(values, "mode"),),
+            text=values["account"],
+            fields={"tag": values.get("tag", "")},
         )
+    elif kind in ("harpy_killer_fact", "harpy_capture_fact", "harpy_foe_fact"):
+        field = {
+            "harpy_killer_fact": "killer",
+            "harpy_capture_fact": "captor",
+            "harpy_foe_fact": "foe",
+        }[kind]
+        selected = one(values, field, "")
+        answer = ChoiceAnswer(
+            text=values["account"], flag=True, fields={field: selected} if selected else {}
+        )
+    elif kind == "harpy_tag_select":
+        answer = ChoiceAnswer(options=(one(values, "candidate"),), text=values["account"])
+    else:
+        answer = ChoiceAnswer(flag=one(values, "agree") == "yes", text=values["account"])
+    return answer
 
-    form = NativeForm(
-        viewer.user_id,
-        "Actual Harpy response",
-        "Only your own response is recorded. "
-        "Physical custody and Frame consent remain actual source-owned gates.",
-        fields,
-        submit,
-    )
-    await reply(interaction, form.text(), form)
 
-
-async def outcome_form(
-    interaction: discord.Interaction, service: HarpyDefeatService, data: dict[str, Any], choice: str
-) -> None:
+def outcome_fields(data: dict[str, Any], choice: str) -> list[Field]:
     fields = [Field("account", "Your actual result or comms", paragraph=True)]
     if choice in ("message", "plead", "kidnap"):
         fields.append(
@@ -454,17 +412,97 @@ async def outcome_form(
             )
         )
 
-    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
-        answer = ChoiceAnswer(
-            options=(choice,),
-            text=values["account"],
-            fields={
-                k: one(values, k) if isinstance(values[k], tuple) else values[k]
-                for k in ("girl", "rescuer", "killer", "tag")
-                if k in values
-            },
-            flag=one(values, "cut") == "yes" if choice == "shutdown" else None,
+    return fields
+
+
+def outcome_answer(choice: str, values: dict[str, Any]) -> ChoiceAnswer:
+    return ChoiceAnswer(
+        options=(choice,),
+        text=values["account"],
+        fields={
+            k: one(values, k) if isinstance(values[k], tuple) else values[k]
+            for k in ("girl", "rescuer", "killer", "tag")
+            if k in values
+        },
+        flag=one(values, "cut") == "yes" if choice == "shutdown" else None,
+    )
+
+
+async def open_choice(
+    interaction: discord.Interaction, service: HarpyDefeatService, identity: str
+) -> None:
+    viewer = viewer_from_interaction(interaction)
+    data = await asyncio.to_thread(service.decision, viewer, identity)
+    if data["state"] != "pending":
+        await reply(interaction, "This original choice already has an actual saved response.")
+        return
+    kind = data["kind"]
+    if kind == "manual_adjudication":
+        from girlframe.discord_adapter.m3_adjudication import open_adjudication
+        from girlframe.services.m3_adjudication import AdjudicationService
+
+        await open_adjudication(interaction, AdjudicationService(service.store), identity)
+        return
+    if kind == "harpy_defeat_select":
+        options = outcome_options(data["tier"])
+
+        async def select(current: discord.Interaction, choice: str) -> None:
+            if choice == "physical":
+                from girlframe.discord_adapter.m3_harpy_physical import open_physical
+                from girlframe.services.m3_harpy_physical import HarpyPhysicalService
+
+                await open_physical(
+                    current,
+                    HarpyPhysicalService(service.store),
+                    ActorRef.model_validate(data["actor"]),
+                )
+                return
+            await outcome_form(current, service, data, choice)
+
+        if data.get("physical_controls"):
+            options += (("physical", "Actual Frame consent and physical recovery controls"),)
+
+        await reply(
+            interaction,
+            "Choose one actual printed Harpy Defeat result.",
+            Picker(viewer.user_id, "Choose your result", options, select),
         )
+        return
+    fields = choice_fields(data)
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        answer = choice_answer(data, values)
+        await asyncio.to_thread(
+            service.respond,
+            viewer_from_interaction(current),
+            str(current.id),
+            identity,
+            data["revision"],
+            answer,
+        )
+        return (
+            "Your actual source-owned response is saved. Remaining decisions stay "
+            "in their owners' inboxes."
+        )
+
+    form = NativeForm(
+        viewer.user_id,
+        "Actual Harpy response",
+        "Only your own response is recorded. "
+        "Physical custody and Frame consent remain actual source-owned gates.",
+        fields,
+        submit,
+    )
+    await reply(interaction, form.text(), form)
+
+
+async def outcome_form(
+    interaction: discord.Interaction, service: HarpyDefeatService, data: dict[str, Any], choice: str
+) -> None:
+    fields = outcome_fields(data, choice)
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        answer = outcome_answer(choice, values)
         await asyncio.to_thread(
             service.respond,
             viewer_from_interaction(current),

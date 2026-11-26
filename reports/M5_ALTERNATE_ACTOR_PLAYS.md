@@ -32,13 +32,44 @@ NPC Intelligence and most Harpy rules as subsets pending independent review.
 Synthetic fixtures used exact Activity specialist approvals for candidates
 that require them. Each campaign keeps its existing rule policy.
 
-### Remaining Activity work
+### Specialist Activity controls
 
-| Remaining path | Current boundary |
+**Specialist work** opens the Foundation terminal dialog from the workbench.
+Selected owner decisions also open the exact record from the Inbox. The
+popup uses the existing terminal header, form controls, theme and Activity
+safe area. **Orders and scene cast** contains Echoes of Old Command and
+the Guard's pre-roll weapon assessment.
+
+| Family | Controls using the original engine records |
 | --- | --- |
-| Harpy Orders and advancement paths | Masked Disobey needs an engine continuation for the same body and source Order. Sparrows and an active Human Mask can affect their original engine Plays. Acquiring and starting the other Harpy advancements, Harpy-specific intimacy chains, and the full Harpy Defeat, Voidspace and repossession sequences still need dedicated Activity forms and source recovery. |
-| Gorgon counter and specialist chains | Keep Your Head and Engage can start from the original Gorgon response. Combat counter declarations, the other source-bound response Plays, Parasite excision, Leviathan obsession and some Class and Type aftermath still use their original native controls. The Activity coverage for Erratic flight and pursuit relies on the tested native service. |
-| NPC source responses | Care, a Guard counter and source-assigned Flirt retain their original jobs and initiating sources. Independent NPC Flirt still requires a native initiation rule. The Activity can refer unsupported source work to the facilitator. |
+| Harpy advancements | Learn an eligible advancement. File a Song, Gaze, Identity edit, Vision, Mask, cockpit action or Only She Matters from the eligible Harpy's scene. Reopen the assigned response, cockpit reinstall or reconditioning. Kiss Me, Darling can proceed from the original completed Flirt, with separate facilitator review and participant consent. |
+| Harpy Defeat and recovery | Resume the original Defeat and its Tag choices, physical facts, manual ruling and saved outcome. Reopen the assigned Frame consent, extraction or medical review, final comms, Voidspace passage, Rift, Invasion, and repossession stages. Each person files only their own part. |
+| Gorgon response and aftermath | File a combat counter against the original attacker and retain the assigned opening and reach review. Read and answer supported engine Class and Type decisions, Parasite Excision and Leviathan influence. The reviewed alternate scene still owns its separate Aggressive, Dormant, Sprite and Erratic controls. |
+| NPC source work | File the actual Guard counter, consent to NPC care, answer a source-assigned Flirt, and submit or judge its actual follow-through. |
+
+The tests in [test_specialist_work.py](../harpy-activity-lab/test_specialist_work.py)
+exercise the managed session, native receipts after reopening, original owner
+checks, and selected end-to-end chains. The alternate and native suites
+complement those checks. Branches exercised only by native tests still need
+a signed-in Discord acceptance pass.
+
+### Remaining engine work
+
+| Case | Required engine change |
+| --- | --- |
+| Easy Target assigns Disobey Orders | Bind the original Order to that required child while preserving the Easy Target parent and rule ownership. |
+| DoctorDoctor treats an NPC with no registered treatment resource | Represent and validate the actual NPC treatment target and resource. Preserve the admission check before rolls or costs. |
+| Earned Scrutinized on a different Girl sheet | Admit a valid learned or grafted source while retaining the actual user, target and private record authority. |
+| Earned Just Code on a different Girl sheet | Define what a learned operator can do with an actual circuit and Discovery without granting an AM body or copying its runtime. |
+| Masked Harpy Disobey Orders | Keep the actual Harpy body, active Human Mask and source Order in the same native continuation, including the original issuer and the Harpy controller. |
+| Independent NPC Flirt | Add native initiation for an eligible NPC, original target and owned choice sequence. Existing Girl-initiated NPC Flirt and NPC follow-through have their own engine paths. |
+| Ordinary Harpy private invitation | Add durable proof of the initiating Flirt to the ordinary Harpy invitation. The verified Kiss Me, Darling route already supports this provenance. |
+| Rules still marked subset or pending independent review | Complete the missing variants and independent rule review in the registry for each affected Girl, Handler, Harpy, and Gorgon Class or Type, while preserving campaign approval, consent and human adjudication. See the [Play parity checklist](../harpy-activity-lab/AI-PLAY-PARITY.md#source-and-engine-limitations). |
+
+The remaining Activity checks concern less common follow-up branches and
+bringing reviewed alternate controls into the ordinary scene desk where
+they are still confined to P2. These checks are separate from the engine
+work above.
 
 ### Rehearsal
 

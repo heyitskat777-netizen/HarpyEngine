@@ -8,6 +8,7 @@ import discord
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
+from girlframe.engine.m2 import ChoiceAnswer
 from girlframe.engine.m3_kicked_puppy import QUESTION, QUESTION_TEXT
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_npc_flirt import NpcFlirtService
@@ -22,9 +23,7 @@ QUESTIONS = {
 }
 
 
-async def open_choice(
-    interaction: discord.Interaction, game: GameService, decision: dict[str, Any]
-) -> None:
+def response_fields(decision: dict[str, Any]) -> list[Field]:
     data, kind = decision["npc_flirt"], decision["kind"]
     fields = []
     if kind == "npc_flirt_actor":
@@ -131,32 +130,44 @@ async def open_choice(
                 paragraph=True,
             )
         ]
+    return fields
+
+
+def response_answer(decision: dict[str, Any], values: dict[str, Any]) -> ChoiceAnswer:
+    data, kind = decision["npc_flirt"], decision["kind"]
+    if kind == "npc_flirt_actor":
+        answer = ChoiceAnswer(
+            options=(values["question"][0],),
+            denied=tuple(values.get("unmark", ())),
+            fields={"extra": values["extra"][0]} if data["tier"] == "high" else {},
+            text=values.get("text", ""),
+        )
+    elif kind == "npc_flirt_target":
+        answer = ChoiceAnswer(
+            text=values["text"],
+            options=tuple(values.get("question", ())),
+            flag=values["intimacy"][0] == "yes" if values.get("intimacy") else None,
+        )
+    elif kind == "npc_flirt_escape":
+        answer = ChoiceAnswer(options=(values["escape"][0],))
+    elif kind == "npc_flirt_play":
+        job = next(x for x in data["jobs"] if x["id"] == values["job"][0])
+        answer = ChoiceAnswer(
+            options=(job["id"],), fields={"move": job["move"]}, text=values["text"]
+        )
+    else:
+        answer = ChoiceAnswer(text=values["text"])
+    return answer
+
+
+async def open_choice(
+    interaction: discord.Interaction, game: GameService, decision: dict[str, Any]
+) -> None:
+    data, kind = decision["npc_flirt"], decision["kind"]
+    fields = response_fields(decision)
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
-        from girlframe.engine.m2 import ChoiceAnswer
-
-        if kind == "npc_flirt_actor":
-            answer = ChoiceAnswer(
-                options=(values["question"][0],),
-                denied=tuple(values.get("unmark", ())),
-                fields={"extra": values["extra"][0]} if data["tier"] == "high" else {},
-                text=values.get("text", ""),
-            )
-        elif kind == "npc_flirt_target":
-            answer = ChoiceAnswer(
-                text=values["text"],
-                options=tuple(values.get("question", ())),
-                flag=values["intimacy"][0] == "yes" if values.get("intimacy") else None,
-            )
-        elif kind == "npc_flirt_escape":
-            answer = ChoiceAnswer(options=(values["escape"][0],))
-        elif kind == "npc_flirt_play":
-            job = next(x for x in data["jobs"] if x["id"] == values["job"][0])
-            answer = ChoiceAnswer(
-                options=(job["id"],), fields={"move": job["move"]}, text=values["text"]
-            )
-        else:
-            answer = ChoiceAnswer(text=values["text"])
+        answer = response_answer(decision, values)
         await asyncio.to_thread(
             game.respond,
             viewer_from_interaction(current),
