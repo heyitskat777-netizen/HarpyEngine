@@ -3,7 +3,7 @@
 from types import SimpleNamespace
 
 import pytest
-from activity_records import RELAY, ActivityRecords, scene_locations
+from activity_records import RELAY, ActivityRecords, scene_activity, scene_locations
 
 from girlframe.services.onboarding import WorkflowError
 
@@ -70,6 +70,32 @@ def test_archived_room_keeps_its_location_outside_active_list(directory):
     assert room["archived_at"] is not None
     assert scene_locations([room]) == []
     assert records.directory(visitor, {}) == []
+
+
+def test_scene_activity_contains_only_open_scenes_with_current_pilots(directory):
+    records, host, visitor = directory
+    open_room = records.create_room(
+        host, "open", {"name": "Relay check", "location": "Service deck"}
+    )["room"]
+    records.create_room(visitor, "empty", {"name": "Inactive room"})
+    archived = records.create_room(host, "end", {"name": "Filed room"})["room"]
+    records.archive(host, archived, lambda *_: ({}, {}))
+    names = {str(host.user_id): "RELAY ZERO"}
+    rooms = records.directory(host, names)
+    assert scene_activity(rooms, names, [str(visitor.user_id)]) == [
+        {
+            "id": open_room,
+            "name": "Relay check",
+            "location_name": "Service deck",
+            "pilots": ["RELAY ZERO"],
+        },
+    ]
+    assert scene_activity(rooms, names, [str(host.user_id)])[0] == {
+        "id": RELAY["id"],
+        "name": RELAY["name"],
+        "location_name": RELAY["location_name"],
+        "pilots": ["RELAY ZERO"],
+    }
 
 
 def test_handover_dialogue_is_limited_and_never_exposes_private_transcripts(directory):

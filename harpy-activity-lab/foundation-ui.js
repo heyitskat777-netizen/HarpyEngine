@@ -283,16 +283,11 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
   const scenePlayFeedback = document.getElementById("scene-play-feedback");
   const enterScene = document.getElementById("enter-scene-controls");
   const locationsToggle = document.getElementById("locations-toggle");
-  const rosterToggle = document.getElementById("roster-toggle");
-  const rosterDrawer = document.getElementById("desk-rail");
-  const rosterSections = [...rosterDrawer.children];
-  const rosterAvailability = new MutationObserver(() => {
-    rosterToggle.hidden = rosterSections.every(section => section.hidden);
-  });
-  for (const section of rosterSections) rosterAvailability.observe(section, {attributeFilter:["hidden"]});
+  const communicationsToggle = document.getElementById("communications-toggle");
+  const communicationsDesk = document.getElementById("communications-desk");
   for (const [trigger,content,id] of [
     [locationsToggle,document.getElementById("location-list"),"mobile-locations"],
-    [rosterToggle,rosterDrawer,"mobile-roster"],
+    [communicationsToggle,communicationsDesk.querySelector(".terminal-panel"),"communications-desk"],
   ]) {
     const dialog = document.getElementById(id);
     trigger.addEventListener("click",() => dialog.showModal());
@@ -303,13 +298,13 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
       if (event.target.closest("button") && dialog.open) dialog.close();
     });
   }
+  communicationsToggle.addEventListener("click", () => refreshPlayer().catch(() => {}));
   const trail = [];
   const initialView = {folder:"scenes", location:"hangar", mode:"locations", room:null, pilot:null, tacticalPilot:null};
   let view = {...initialView};
   let lastRoom;
   let player;
   let tacticalRoster;
-  let battlefieldTitle;
   let notice = 0;
   let noticeFolder;
   let transcriptRoom;
@@ -718,62 +713,74 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     }
   }
 
-  function displayPilot(pilot, showStatus = false) {
-    const title = showStatus && pilot.status ? pilot.callsign + " | " + pilot.status : pilot.callsign;
-    return button(title, () => navigate({folder:"profile", pilot:pilot.id, tacticalPilot:null}), "link-button");
+  function pilotRecordButton(pilot) {
+    const title = pilot.callsign + " | " + (pilot.status || "Unassigned");
+    const card = button(title, () => navigate({folder:"profile", pilot:pilot.id, tacticalPilot:null}), "presence-file");
+    card.dataset.pilot = pilot.id;
+    card.setAttribute("aria-label", title);
+    const initials = Array.from(pilot.callsign).slice(0, 2).join("");
+    const portrait = element("span", initials, "dialogue-portrait presence-portrait");
+    portrait.setAttribute("aria-hidden", "true");
+    if (pilot.artwork) artwork.picture(portrait, pilot.artwork, {decorative:true, fallback:initials});
+    const details = element("span");
+    details.append(element("strong", title), element("small", pilot.frame_name || pilot.frame));
+    card.replaceChildren(portrait, details);
+    return card;
+  }
+
+  function renderPilotList(list, pilots) {
+    const current = new Map([...list.querySelectorAll("button[data-pilot]")].map(card => [card.dataset.pilot, card]));
+    const focused = list.contains(document.activeElement) ? document.activeElement.dataset.pilot : null;
+    list.replaceChildren(...pilots.map(pilot => {
+      const signature = JSON.stringify([pilot.callsign, pilot.status, pilot.frame_name, pilot.frame, pilot.artwork]);
+      const previous = current.get(pilot.id);
+      if (previous?.dataset.record === signature) return previous.parentElement;
+      const row = element("li");
+      const card = pilotRecordButton(pilot);
+      card.dataset.record = signature;
+      row.append(card);
+      return row;
+    }));
+    if (focused) list.querySelector(`[data-pilot="${CSS.escape(focused)}"]`)?.focus({preventScroll:true});
   }
 
   function openTacticalPilot(id) {
     if (tacticalRoster?.some(pilot => pilot.id === id)) navigate({folder:"profile", tacticalPilot:id});
   }
 
-  function renderPresentPilots() {
+  function renderScenePersonnel(room) {
     const panel = document.getElementById("present-pilots");
     const castPanel = document.getElementById("scene-cast");
-    panel.hidden = player?.stage !== "active";
-    castPanel.hidden = true;
-    if (panel.hidden) return;
-    const {cadre, directory, active_scene} = player;
-    const location = directory.locations.find(place => place.id === view.location);
-    const room = selectedRoom();
-    const tactical = battlefield.enabled() && (view.folder === "battlefield" || view.tacticalPilot);
-    const rooms = room ? [room] : directory.rooms.filter(item => item.location === location?.id);
-    const ids = new Set(rooms.flatMap(item => {
-      if (item.id === active_scene?.id) return active_scene.pilot_ids;
-      return item.id === "relay" && item.joined ? player.scene?.pilot_ids ?? [] : item.pilot_ids ?? [];
-    }));
-    const pilots = tactical ? tacticalRoster ?? [] : cadre.filter(pilot => ids.has(pilot.id));
-    document.getElementById("presence-context").textContent = tactical ? battlefieldTitle ?? "Battlefield" : room?.name ?? location?.name ?? "";
-    const list = document.getElementById("present-pilot-list");
-    const focused = list.contains(document.activeElement) ? document.activeElement.dataset.pilot : null;
-    list.replaceChildren(...pilots.map(pilot => {
-      const row = element("li");
-      const name = (tactical ? pilot.label : pilot.callsign) + " | " + (pilot.status || "Unassigned");
-      const card = button(name, () => tactical ? openTacticalPilot(pilot.id) : navigate({folder:"profile", pilot:pilot.id, tacticalPilot:null}), "presence-file");
-      card.setAttribute("aria-label", name);
-      card.dataset.pilot = pilot.id;
-      const portrait = pilot.artwork ?? pilot.portrait ?? pilot.profile?.artwork;
-      const initials = Array.from((tactical ? pilot.label : pilot.callsign) || "").slice(0, 2).join("");
-      const mark = element("span", initials, "dialogue-portrait presence-portrait");
-      mark.setAttribute("aria-hidden", "true");
-      if (portrait) artwork.picture(mark, portrait, {decorative:true, fallback:initials});
-      const details = element("span");
-      details.append(element("strong", name), element("small", pilot.frame));
-      card.replaceChildren(mark, details);
-      row.append(card);
-      return row;
-    }));
-    const cast = !tactical && room?.id === transcriptRoom ? sceneCast : [];
+    const current = player.stage === "active" && view.folder === "scenes" && room?.joined && room.archived_at == null;
+    const active = current && player.active_scene?.id === room.id ? player.active_scene : null;
+    const ids = current ? active?.pilot_ids ?? (room.id === "relay" ? player.scene?.pilot_ids : room.pilot_ids) ?? [] : [];
+    const pilots = (player.cadre ?? []).filter(pilot => ids.includes(pilot.id));
+    panel.hidden = !pilots.length;
+    renderPilotList(document.getElementById("present-pilot-list"), pilots);
+    const cast = current && room.id === transcriptRoom ? sceneCast : [];
     castPanel.hidden = !cast.length;
     document.getElementById("scene-cast-list").replaceChildren(...cast.map(actor => {
       const row = element("li",undefined,"presence-file");
       row.append(element("strong",actor.name),element("small",actor.kind === "npc" ? "NPC" : actor.kind === "gorgon" ? "Gorgon" : "External pilot"));
       return row;
     }));
-    if (focused) Array.from(list.querySelectorAll("button")).find(card => card.dataset.pilot === focused)?.focus({preventScroll:true});
-    const empty = document.getElementById("present-pilot-empty");
-    empty.hidden = Boolean(pilots.length);
-    empty.textContent = tactical && !tacticalRoster ? "Loading battlefield roster…" : "No pilots present.";
+  }
+
+  function renderCommunicationsScenes(record) {
+    const list = document.getElementById("communications-scene-list");
+    const rooms = new Map(record.directory?.rooms.map(room => [room.id, room]) ?? []);
+    const scenes = record.scene_activity ?? [];
+    list.replaceChildren(...scenes.map(scene => {
+      const row = element("li", undefined, "communications-scene");
+      const room = rooms.get(scene.id);
+      row.append(room
+        ? button(scene.name, () => openDirectoryRoom(room), "link-button")
+        : element("strong", scene.name));
+      row.append(element("span", scene.location_name || "Location unassigned", "eyebrow"));
+      row.append(element("p", "Present pilots · " + scene.pilots.join(", ")));
+      return row;
+    }));
+    if (!scenes.length) list.append(element("li", "No active scenes."));
   }
 
   function showInvite(target, label, forPlay = false) {
@@ -1200,7 +1207,7 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     }
     transcriptSnapshot = snapshot;
     sceneCast = cast;
-    renderPresentPilots();
+    renderScenePersonnel(selectedRoom());
     const scrollTop = history.scrollTop;
     const rows = entries.map(entry => {
       const row = element("li", undefined, "dialogue-entry");
@@ -1376,6 +1383,7 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     renderSceneArtwork(room);
     document.getElementById("room-name").textContent = room?.name ?? "";
     renderTranscript(room);
+    renderScenePersonnel(room);
     const hasComposer = room?.joined && room.archived_at == null && player.stage === "active" && view.folder === "scenes";
     const activeScene = hasComposer && player.active_scene?.id === room.id ? player.active_scene : null;
     scenePlayPanel.hidden = !hasComposer;
@@ -1468,17 +1476,18 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     return {pilot, profile:pilot?.own ? player.profile : null, tactical:false};
   }
 
-  function fileHeader(panel, kind, name, status, pilot, tactical) {
+  function renderDossier(panel, kind, name, status, pilot, tactical, facts) {
+    const dossier = element("div", undefined, "dossier-grid");
     const header = element("header", undefined, "dossier-header dossier-header--" + kind);
+    header.append(element("h3", name));
     if (!tactical) {
       const image = kind === "pilot" ? pilot.artwork : pilot.frame_artwork;
       const fallback = kind === "pilot" ? Array.from(name).slice(0, 2).join("") : "▣";
       recordArtwork(header, kind, pilot.id, image, pilot.own, name, fallback);
     }
-    const identity = element("div", undefined, "dossier-identity");
-    identity.append(element("h3", name), element("span", status, "file-stamp"));
-    header.append(identity);
-    panel.append(header);
+    dossier.append(header);
+    readFile(dossier, [["Status", element("span", status, "file-stamp")], ...facts]);
+    panel.append(dossier);
   }
 
   function assetStamps(asset) {
@@ -1510,10 +1519,8 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
         }
       }
       if (view.folder === "profile") {
-        const dossier = element("div", undefined, "pilot-record-grid");
-        fileHeader(dossier, "pilot", selected.callsign, "PILOT | " + (selected.status || "Unassigned"), selected, tactical);
-        readFile(dossier, records);
-        file.append(dossier);
+        renderDossier(file, "pilot", selected.callsign, "PILOT | " + (selected.status || "Unassigned"),
+          selected, tactical, records);
       } else {
         readFile(file, records);
       }
@@ -1562,12 +1569,7 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
       file.append(element("p", "Complete character setup to open this file."));
     }
     const cadre = document.getElementById("cadre-data");
-    cadre.replaceChildren();
-    for (const pilot of pilots) {
-      const entry = element("li", undefined, "record-row");
-      entry.append(displayPilot(pilot, true), element("span", pilot.frame_name || pilot.frame));
-      cadre.append(entry);
-    }
+    renderPilotList(cadre, pilots);
     if (!pilots.length) cadre.append(element("li", "No active pilots."));
   }
 
@@ -1586,13 +1588,9 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
         : pilot.frame_class[0].toUpperCase() + pilot.frame_class.slice(1);
       facts.push(["Frame class", frameClass]);
     }
-    if (!profile) {
-      if (view.folder === "frame") fileHeader(panel, "frame", name, "Assigned", pilot, tactical);
-      readFile(panel, facts);
-      return;
-    }
-    if (view.folder === "frame") fileHeader(panel, "frame", name, "Assigned", pilot, tactical);
-    readFile(panel, facts);
+    if (view.folder === "frame") renderDossier(panel, "frame", name, "Assigned", pilot, tactical, facts);
+    else readFile(panel, facts);
+    if (!profile) return;
     renderAssetRecords(panel, "Frame", profile.assets, pilot.own && !tactical);
     panel.append(element("h3", "Upgrades"));
     for (const upgrade of profile.upgrades ?? []) {
@@ -1854,6 +1852,7 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     if (folderChanged && view.folder === "campaign-setup") window.scrollTo(0, 0);
     back.hidden = !trail.length;
     locationsToggle.hidden = !player?.directory;
+    communicationsToggle.hidden = !player || (player.stage !== "active" && player.stage !== "handler");
     handover.setVisible(canHandover && view.folder === "handover");
     const handlerDesk = document.getElementById("handler-desk");
     handlerDesk.hidden = !handler || view.folder !== "scenes";
@@ -1867,7 +1866,6 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     if (handler) {
       syncPlaySelection();
       const onBattlefield = view.folder === "battlefield" && battlefield.enabled();
-      renderPresentPilots();
       deskContext.textContent = onBattlefield ? "Handler · Battlefield" : "Handler desk";
       deskContext.hidden = false;
       const onMissions = view.folder === "missions";
@@ -1895,7 +1893,6 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     directory.hidden = Boolean(room);
     if (!room) renderDirectory(data);
     renderRoom(room);
-    renderPresentPilots();
     renderPeople(pilots);
     renderFrame(pilots);
     renderBattlefield();
@@ -1928,25 +1925,10 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
       }
       player = record;
       handover.update(record);
+      renderCommunicationsScenes(record);
       render();
     },
-    updatePresence(members) {
-      const roster = document.getElementById("campaign-roster");
-      roster.hidden = !members;
-      const list = document.getElementById("campaign-roster-list");
-      const rows = (members ?? []).map(person => {
-        const row = element("li", undefined, "campaign-member");
-        const pilot = player?.cadre?.find(item => item.id === person.id);
-        const name = pilot
-          ? button(person.name, () => navigate({folder:"profile", pilot:person.id, tacticalPilot:null}), "link-button")
-          : element("strong", person.name);
-        const status = person.bot ? "Handler · Bot" : (person.handler ? "Handler · " : "") + (person.online ? "Online" : "Offline") + (person.enrolled ? "" : " · Enrollment pending");
-        row.append(name, element("small", status));
-        return row;
-      });
-      list.replaceChildren(...rows);
-    },
-    updateTacticalRoster(roster, title) { tacticalRoster = roster; battlefieldTitle = title; renderPresentPilots(); },
+    updateTacticalRoster(roster) { tacticalRoster = roster; },
     openTacticalPilot,
     openSceneInvitation,
     openOffDuty() {

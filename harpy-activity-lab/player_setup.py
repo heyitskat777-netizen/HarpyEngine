@@ -5,7 +5,7 @@ from dataclasses import replace
 
 import sqlalchemy as sa
 from activity_artwork import KINDS, frame_subject, validate_selection
-from activity_records import RELAY, ActivityRecords, profile_assets, scene_locations
+from activity_records import RELAY, ActivityRecords, profile_assets, scene_activity, scene_locations
 from am_scene_controls import am_work_channels
 from bot_enrollment import BotEnrollment
 from defeat_play import DEFEAT
@@ -956,6 +956,15 @@ class PlayerSetup:
                 "communications": self.communication_view(viewer, state),
                 "bonds": [],
             }
+            if self.records:
+                pilot_callsigns = {identity: sheet.callsign for identity, sheet in state.sheets.items()}
+                try:
+                    relay_pilots = [str(uid) for uid in self.game.scene_info(viewer, SCENE).get("pilots", ())]
+                except WorkflowError:
+                    relay_pilots = []
+                record["scene_activity"] = scene_activity(
+                    self.records.directory(viewer, pilot_callsigns), pilot_callsigns, relay_pilots
+                )
             if self.bound_roster:
                 followups = self.owned_followups.view(viewer)
                 punishments = self.handler_punishments.view(viewer)
@@ -1185,6 +1194,7 @@ class PlayerSetup:
                 else None,
                 "directory": directory,
                 "cadre": cadre,
+                "scene_activity": scene_activity(rooms, pilot_callsigns, relay["pilot_ids"]),
                 "communications": self.communication_view(viewer, game_state),
                 "intel_targets": [
                     {"id": sheet.character_id, "callsign": sheet.callsign}

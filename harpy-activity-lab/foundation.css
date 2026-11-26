@@ -61,26 +61,21 @@ body {
 .folders button[aria-current="page"]::after { content: ""; width: 6px; height: 2px; margin-block-start: 9px; background: currentColor; }
 .layout > main { min-width: 0; padding: 13px clamp(9px, 2vw, 19px) 20px; }
 #desk-context { min-width: 0; margin: 0; flex: 1 1 13ch; }
-#desk-rail h2 { font: 600 12px/1.4 var(--mono); letter-spacing: .055em; text-transform: uppercase; }
-#present-pilots + #communications { margin-block-start: 16px; }
-#present-pilots[hidden] + #communications { margin-block-start: 0; }
-#desk-rail > section:not([hidden]) ~ section:not([hidden]) { margin-block-start: 16px; }
-.campaign-member { display: grid; padding-block: 4px; border-block-end: 1px solid var(--line); overflow-wrap: anywhere; }
-.campaign-member :is(button,strong) { justify-self: start; text-align: start; }
-.campaign-member small { color: var(--quiet-ink); font: 11px/1.4 var(--mono); }
-#presence-context { margin-block-end: 3px; }
+.scene-personnel { margin-block-start: 10px; }
 #present-pilot-list { display: grid; gap: 5px; margin: 5px 0 8px; }
 .presence-file { display: flex; gap: 7px; align-items: center; width: 100%; text-align: start; }
 .presence-file strong, .presence-file small { display: block; overflow-wrap: anywhere; }
-.presence-file strong { font: 600 12px/1.4 var(--mono); }
 .presence-file small { color: var(--quiet-ink); }
-.presence-mark { flex: none; color: var(--key); font: 18px/1 var(--mono); }
-#present-pilot-empty { color: var(--quiet-ink); font-size: 13px; }
-#present-pilots-title { scroll-margin-block-start: 155px; }
 #scene-cast-list { display: grid; gap: 5px; }
 #scene-cast-list li { align-items: baseline; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--line); }
 #communications-contacts { display: grid; gap: 5px; margin-block: 8px; }
 #communications-contacts button { display: grid; text-align: start; width: 100%; }
+#communications-scenes { margin-block-start: 12px; border-block-start: 1px solid var(--line); }
+#communications-scenes h3 { font: 600 12px/1.4 var(--mono); text-transform: uppercase; }
+#communications-scene-list { display: grid; gap: 6px; }
+.communications-scene { padding: 6px 8px; border: 1px solid var(--line); }
+.communications-scene button { margin: 0; padding: 0; }
+.communications-scene p { margin: 3px 0 0; }
 .communications-notice {
   border: 1px solid var(--line);
   border-inline-start-width: 3px;
@@ -248,22 +243,21 @@ body {
 .data-list dt { color: var(--quiet-ink); }
 .data-list dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
 .dossier-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 16px;
-  padding: 10px;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  min-inline-size: 0;
+  padding: clamp(6px, 1.5vw, 12px);
   border: 1px solid var(--line);
   border-inline-start: 3px solid var(--key);
   background: var(--rail);
+  text-align: center;
 }
-.dossier-header .record-artwork { width: min(100%, 8rem); margin: 0; }
-.dossier-header .record-artwork figure { display: grid; place-items: center; aspect-ratio: 4 / 3; border: 1px solid var(--line); color: var(--quiet-ink); font: 600 18px/1 var(--mono); }
-.dossier-header .record-artwork img { aspect-ratio: 4 / 3; object-fit: cover; border: 0; }
-.dossier-header--frame .record-artwork img { object-fit: contain; }
-.dossier-header .record-artwork button { padding: 3px 0; min-height: 29px; border-color: transparent; text-align: start; color: var(--quiet-ink); font: 11px/1.35 var(--ui-font); }
-.dossier-identity { flex: 1 1 140px; min-width: 0; }
-.dossier-identity h3 { margin: 0 0 4px; font-size: clamp(19px, 3vw, 30px); overflow-wrap: anywhere; }
+.dossier-header h3 { margin: 0; font-size: clamp(16px, 3vw, 26px); overflow-wrap: anywhere; }
+.dossier-header .record-artwork { width: min(100%, 14rem); margin: 0; justify-items: center; }
+.dossier-header .record-artwork figure { display: grid; place-items: center; aspect-ratio: 4 / 5; border: 1px solid var(--line); color: var(--quiet-ink); font: 600 18px/1 var(--mono); }
+.dossier-header .record-artwork img { aspect-ratio: 4 / 5; object-fit: contain; border: 0; }
+.dossier-header .record-artwork button { padding: 3px 0; min-height: 36px; border-color: transparent; text-align: center; overflow-wrap: anywhere; color: var(--quiet-ink); font: 11px/1.35 var(--ui-font); }
 .file-stamps { display: inline-flex; flex-wrap: wrap; gap: 4px; }
 .file-stamp { display: inline-block; padding: 2px 6px; border: 1px solid var(--line); color: var(--quiet-ink); font: 600 11px/1.4 var(--mono); letter-spacing: .04em; text-transform: uppercase; }
 .file-stamp[data-condition="damaged"] { border-style: dashed; color: var(--key); }
@@ -292,10 +286,6 @@ body {
   line-height: 1.2;
   text-wrap: balance;
   overflow-wrap: anywhere;
-}
-@media (max-width: 550px) {
-  .dossier-header .record-artwork { width: min(100%, 92px); }
-  .dossier-identity { flex-basis: 115px; }
 }
 .link-button { background: transparent; text-align: left; text-decoration: underline; text-underline-offset: 3px; }
 .link-button + .link-button { margin-inline-start: 6px; }

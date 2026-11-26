@@ -50,6 +50,33 @@ def scene_locations(rooms):
     return sorted(locations.values(), key=lambda location: location["name"].casefold())
 
 
+def scene_activity(rooms, pilot_callsigns, relay_pilots=()):
+    """Project open scene locations and current pilot participants."""
+    rooms = [
+        RELAY | {"pilot_ids": relay_pilots},
+        *(room for room in rooms if room["id"] != RELAY["id"]),
+    ]
+    active = []
+    for room in rooms:
+        if room.get("archived_at") is not None:
+            continue
+        pilots = [
+            pilot_callsigns[identity]
+            for identity in room.get("pilot_ids", ())
+            if identity in pilot_callsigns
+        ]
+        if pilots:
+            active.append(
+                {
+                    "id": room["id"],
+                    "name": room["name"],
+                    "location_name": room["location_name"],
+                    "pilots": pilots,
+                }
+            )
+    return active
+
+
 def profile_assets(assets, descriptions):
     files = {"girl": [], "frame": []}
     for asset in assets:

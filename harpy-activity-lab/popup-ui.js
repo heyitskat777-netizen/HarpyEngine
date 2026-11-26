@@ -121,18 +121,18 @@ export function popupAction(title, content, key = title, {compact = false} = {})
 for (const dialog of document.querySelectorAll("dialog")) {
   let trigger;
   let label;
-  let fromDeskRail;
+  let fromComms;
   dialog.addEventListener("beforetoggle",event => {
     if (event.newState !== "open") return;
     trigger = document.activeElement;
     label = trigger?.getAttribute("aria-label") ?? trigger?.textContent;
-    fromDeskRail = Boolean(trigger?.closest("#desk-rail"));
+    fromComms = Boolean(trigger?.closest("#communications-desk"));
   });
   dialog.addEventListener("close",() => {
     if (document.querySelector("dialog[open]")) return;
     const target = trigger?.isConnected && trigger.getClientRects().length ? trigger : [...document.querySelectorAll("button")].find(
       button => button.getClientRects().length && (button.getAttribute("aria-label") ?? button.textContent) === label);
-    const fallback = fromDeskRail ? document.getElementById("roster-toggle")
+    const fallback = fromComms ? document.getElementById("communications-toggle")
       : document.querySelector('[data-folder][aria-current="page"]');
     (target ?? fallback)?.focus();
   });

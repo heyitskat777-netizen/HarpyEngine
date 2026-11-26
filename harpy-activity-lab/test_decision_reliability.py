@@ -413,6 +413,14 @@ def test_scene_invite_is_private_and_joins_only_on_owner_acceptance(tmp_path):
         peer = request(host, path + query, second)
         assert not peer["scene_invites"]
         assert next(row for row in peer["directory"]["rooms"] if row["id"] == room)["joined"]
+        active = next(row for row in peer["scene_activity"] if row["id"] == room)
+        assert active["location_name"] == "Hangar Deck"
+        assert set(active["pilots"]) == {"RELAY ZERO", "RELAY ONE"}
+        request(host, path + "/room-end" + query, first, {"room": room})
+        for participant in (first, second):
+            state = request(host, path + query, participant)
+            assert all(row["id"] != room for row in state["scene_activity"])
+            assert next(row for row in state["directory"]["rooms"] if row["id"] == room)["archived_at"]
 
 
 def local_pilot(host, label):

@@ -69,7 +69,7 @@
     <div class="ledger-filters" role="group" aria-label="Dispatch folders">
       <button type="button" id="dispatch-decisions" data-dispatch-folder="assigned" aria-pressed="true">Assigned <span id="decision-count" aria-live="polite">0</span></button>
       <button type="button" data-dispatch-folder="waiting" aria-pressed="false">Waiting <span id="waiting-count">0</span></button>
-      <button type="button" data-dispatch-folder="history" aria-pressed="false">History <span id="history-count" hidden></span></button>
+      <button type="button" data-dispatch-folder="history" aria-pressed="false">History</button>
     </div>
     <ul class="records" id="mail-entries" aria-label="Mail records"></ul>
     <section id="dm-delivery" aria-labelledby="dm-delivery-title" hidden>
@@ -108,7 +108,7 @@
       <div class="local-tools">
         <div class="rail-shortcuts">
           <button id="locations-toggle" class="workbench-action" type="button" aria-haspopup="dialog" aria-controls="mobile-locations" hidden>Locations</button>
-          <button id="roster-toggle" class="workbench-action" type="button" aria-haspopup="dialog" aria-controls="mobile-roster" hidden>Roster &amp; Comms</button>
+          <button id="communications-toggle" class="workbench-action" type="button" aria-haspopup="dialog" aria-controls="communications-desk" hidden>Comms</button>
         </div>
         <button id="refresh" class="workbench-action" type="button" aria-label="Synchronize terminal" hidden><span aria-hidden="true">↻</span> <span class="tool-label">Synchronize terminal</span></button>
         <button id="enrollment-trigger" class="workbench-action" type="button" aria-haspopup="dialog" hidden>Create pilot</button>
@@ -143,6 +143,14 @@
           <div id="room-actions" class="actions scene-room-tools"></div>
         </header>
         <div id="room-artwork"></div>
+        <section id="present-pilots" class="scene-personnel" aria-labelledby="present-pilots-title" hidden>
+          <h3 id="present-pilots-title">Present Pilots</h3>
+          <ul id="present-pilot-list" class="records"></ul>
+        </section>
+        <section id="scene-cast" class="scene-personnel" aria-labelledby="scene-cast-title" hidden>
+          <h3 id="scene-cast-title">Scene Cast</h3>
+          <ul id="scene-cast-list" class="records"></ul>
+        </section>
         <p id="scene-intel-status" class="terminal-feedback" role="status"></p>
         <div id="scene-assigned-controls" class="assigned-work actions"></div>
         <div id="scene-composer-host"></div>
@@ -236,27 +244,16 @@
     </dialog>
   </main>
 </div>
-<dialog id="mobile-roster" class="activity-dialog terminal-dialog" aria-labelledby="mobile-roster-title">
-  <header class="record-heading"><h2 id="mobile-roster-title">Pilots and Communications</h2><form method="dialog"><button aria-label="Close Pilots and Communications">×</button></form></header>
-  <div id="desk-rail" class="terminal-panel">
-    <section id="present-pilots" aria-labelledby="present-pilots-title" hidden>
-      <h2 id="present-pilots-title" tabindex="-1">Present Pilots</h2>
-      <p id="presence-context" class="eyebrow"></p>
-      <ul class="records" id="present-pilot-list"></ul>
-      <p id="present-pilot-empty"></p>
-    </section>
-    <section id="scene-cast" aria-labelledby="scene-cast-title" hidden>
-      <h2 id="scene-cast-title">Scene Cast</h2>
-      <ul id="scene-cast-list" class="records"></ul>
-    </section>
-    <section id="campaign-roster" aria-labelledby="campaign-roster-title" hidden>
-      <h2 id="campaign-roster-title">Cadre register</h2>
-      <ul class="records" id="campaign-roster-list"></ul>
-    </section>
-    <section id="communications" aria-labelledby="communications-title" hidden>
-      <h2 id="communications-title">Communications</h2>
+<dialog id="communications-desk" class="activity-dialog terminal-dialog" aria-labelledby="communications-title">
+  <header class="record-heading"><h2 id="communications-title">Communications</h2><form method="dialog"><button aria-label="Close Communications">×</button></form></header>
+  <div class="terminal-panel">
+    <section id="communications" aria-label="Direct channels" hidden>
       <p class="communications-notice">Foundation networks are monitored. The Handler may respond to transmissions.</p>
       <ul class="records" id="communications-contacts"></ul>
+    </section>
+    <section id="communications-scenes" aria-labelledby="communications-scenes-title">
+      <h3 id="communications-scenes-title">Active scenes</h3>
+      <ul class="records" id="communications-scene-list"></ul>
     </section>
   </div>
 </dialog>
@@ -607,7 +604,7 @@ const tactical = tacticalUI(
     headers:{"Content-Type":"application/json","Idempotency-Key":key},
     body:JSON.stringify(body),
   })),
-  (roster, title) => ui.updateTacticalRoster(roster, title),
+  roster => ui.updateTacticalRoster(roster),
   id => ui.openTacticalPilot(id),
   renderHandlerPunishments,
 );
@@ -1679,7 +1676,6 @@ async function refreshPresence() {
   try {
     const updates = await responseData(await activityFetch("/api/presence"));
     if (updates.mailbox !== mailbox || currentPlayer?.mailbox !== mailbox) return;
-    if (rosterEnabled) ui.updatePresence(updates.members);
     communications.update(updates.communications, mailbox);
   } catch {
     // Preserve the last presence and unread state during a temporary relay outage.

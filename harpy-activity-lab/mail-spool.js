@@ -3,7 +3,6 @@ export function mailSpool(inbox, list, reader, badge, assignmentsBadge, pictureS
   const tabs = [...inbox.querySelectorAll("[data-dispatch-folder]")];
   const decisionCount = document.getElementById("decision-count");
   const waitingCount = document.getElementById("waiting-count");
-  const historyCount = document.getElementById("history-count");
   const emptyLabels = {
     assigned: "No actions assigned to you.",
     waiting: "Nothing awaiting a response.",
@@ -30,12 +29,11 @@ export function mailSpool(inbox, list, reader, badge, assignmentsBadge, pictureS
   function render() {
     const entries = allEntries();
     const visible = entries.filter(entry => folderOf(entry) === folder);
-    const unread = entries.filter(entry => !viewed.has(entry.id));
+    const assigned = entries.filter(entry => folderOf(entry) === "assigned");
+    const unreadPending = assigned.filter(entry => !viewed.has(entry.id));
     const focused = list.contains(document.activeElement) ? document.activeElement.dataset.mailId : null;
-    decisionCount.textContent = String(entries.filter(entry => folderOf(entry) === "assigned").length);
+    decisionCount.textContent = String(assigned.length);
     waitingCount.textContent = String(entries.filter(entry => folderOf(entry) === "waiting").length);
-    historyCount.textContent = unread.filter(entry => folderOf(entry) === "history").length || "";
-    historyCount.hidden = !historyCount.textContent;
     if (assignmentsBadge) assignmentsBadge.textContent = decisionCount.textContent;
     for (const tab of tabs) tab.setAttribute("aria-pressed", String(tab.dataset.dispatchFolder === folder));
     const files = [...reader.querySelectorAll("[data-mail-file]")];
@@ -53,7 +51,8 @@ export function mailSpool(inbox, list, reader, badge, assignmentsBadge, pictureS
       if (entry.file === selected && selected) open.setAttribute("aria-current", "true");
       const assigned = folderOf(entry) === "assigned";
       row.dataset.required = String(assigned);
-      row.dataset.unread = String(!viewed.has(entry.id));
+      const unread = assigned && !viewed.has(entry.id);
+      row.dataset.unread = String(unread);
       const state = assigned ? "RESPONSE REQUIRED" : entry.status
         ?? (folder === "waiting" ? "AWAITING " + (entry.owner ?? "ASSIGNED PRINCIPAL") : undefined);
       for (const [value, role] of [[subject, "subject"], [state, "status"]]) {
@@ -98,7 +97,7 @@ export function mailSpool(inbox, list, reader, badge, assignmentsBadge, pictureS
       open.append(details);
       open.setAttribute("aria-description", [...metadata.map(([label,value]) => label + " " + value),
         entry.audience && "Distribution " + entry.audience, state,
-        viewed.has(entry.id) ? "Retrieved" : "Unretrieved"].filter(Boolean).join(". "));
+        unread && "Unretrieved"].filter(Boolean).join(". "));
       if (entry.created != null && Number.isFinite(new Date(entry.created).getTime())) {
         const date = new Date(entry.created);
         const time = document.createElement("time");
@@ -127,7 +126,7 @@ export function mailSpool(inbox, list, reader, badge, assignmentsBadge, pictureS
       empty.textContent = emptyLabels[folder];
       list.append(empty);
     }
-    badge.textContent = unread.length || "";
+    badge.textContent = unreadPending.length || "";
     if (focused) focusRow(focused);
   }
 
@@ -178,7 +177,6 @@ export function mailSpool(inbox, list, reader, badge, assignmentsBadge, pictureS
       if (!inbox.hidden) {
         const entries = allEntries();
         if (assigned || entries.some(entry => folderOf(entry) === "assigned")) folder = "assigned";
-        else if (entries.some(entry => folderOf(entry) === "history" && !viewed.has(entry.id))) folder = "history";
         else if (entries.some(entry => folderOf(entry) === "waiting")) folder = "waiting";
         else folder = entries.length ? "history" : "assigned";
         selected = undefined;
