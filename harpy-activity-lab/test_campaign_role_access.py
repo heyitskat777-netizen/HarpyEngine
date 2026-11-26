@@ -323,6 +323,7 @@ def test_role_authorized_pilot_files_its_profile_after_starting_status(tmp_path,
 
 def test_actual_tester_id_enrolls_its_own_sheet_in_only_its_role_campaign(tmp_path):
     with role_activity(tmp_path) as host:
+        assert request(host, "/api/activity/config")["director_trial"] is False
 
         def sign_in(code, status=HTTPStatus.OK, guild_id=CONFIG.guild_id):
             nonce = request(host, "/api/discord/challenge", data={})["nonce"]

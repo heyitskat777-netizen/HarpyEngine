@@ -1425,8 +1425,7 @@ def serve(
                         "reviewed_ai_trial": ai_trial is not None,
                         "campaign_setup": catalog is not None,
                         "campaign_switcher": catalog is not None,
-                        "director_trial": director is not None
-                        or bool(discord and discord.campaign_roles_only),
+                        "director_trial": director is not None,
                         "tester_role_gate": bool(
                             discord
                             and not discord.campaign_roles_only
