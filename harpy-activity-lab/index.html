@@ -631,6 +631,13 @@ const ui = foundationUI(sendRecord, readTranscript, open => {
   enabled: () => battlefieldEnabled,
 }, renderRoomPlays, refreshScene, artwork, (target, player) => renderPilotBondSetup(target, player, saveSetup), enrollment.open, openSheetReset, requestPlayCancellation);
 const inbox = document.getElementById("inbox");
+const activityHeader = inbox.closest(".activity-header");
+function sizeInbox() {
+  if (inbox.hidden) return;
+  const top = Math.max(0, Math.ceil(activityHeader.getBoundingClientRect().bottom));
+  inbox.style.setProperty("--inbox-top", top + "px");
+}
+const inboxLayout = new ResizeObserver(sizeInbox);
 document.getElementById("scene-action-refresh").addEventListener("click", () => {
   refreshScene().catch(error => {
     const feedback = document.getElementById("scene-action-feedback");
@@ -660,8 +667,14 @@ function openInbox(open, assigned = false) {
   inboxToggle.setAttribute("aria-expanded", String(open && !assigned));
   assignmentsToggle.setAttribute("aria-expanded", String(open && assigned));
   if (open) {
+    sizeInbox();
+    inboxLayout.observe(activityHeader);
+    window.addEventListener("scroll", sizeInbox, {passive:true});
     spool.opened(assigned);
     refreshSpecialistMail().catch(() => {});
+  } else {
+    inboxLayout.disconnect();
+    window.removeEventListener("scroll", sizeInbox);
   }
   refreshDmDelivery();
 }

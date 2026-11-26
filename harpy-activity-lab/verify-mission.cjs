@@ -24,6 +24,7 @@ const artworkCheck = process.argv.includes("--artwork-check");
 const pilotAssetsCheck = process.argv.includes("--pilot-assets-check");
 const dmDeliveryCheck = process.argv.includes("--dm-delivery-check");
 const campaignSetupMobileCheck = process.argv.includes("--campaign-setup-mobile-check");
+const responsiveHudCheck = process.argv.includes("--responsive-hud-check");
 const playRailCheck = process.argv.includes("--play-rail-check");
 const rosterBattlefieldCheck = process.argv.includes("--private-battlefield-check");
 const campaignSwitchCheck = process.argv.includes("--campaign-switch-check");
@@ -42,7 +43,7 @@ const p2Facility = process.argv.includes("--outpost") ? "outpost" : "hangar";
 const directorDiscordCheck = archiveCheck || intelCheck || sceneArtworkCheck || p2BattlefieldCheck || playParityCheck || rehearsalCheck || process.argv.includes("--director-discord-check");
 const enrollmentDraftCheck = process.argv.includes("--enrollment-draft-check");
 const boundRosterCheck = enrollmentDraftCheck || sceneOrdersCheck || missionDeskCheck || rosterBattlefieldCheck || campaignSwitchCheck || campaignDmCheck || handlerPlaysCheck || dmDeliveryCheck || campaignSetupMobileCheck || process.argv.includes("--bound-roster-check");
-const discordOffline = directorDiscordCheck || dmOffline || boundRosterCheck || pilotAssetsCheck || process.argv.includes("--discord-offline");
+const discordOffline = directorDiscordCheck || dmOffline || boundRosterCheck || pilotAssetsCheck || responsiveHudCheck || process.argv.includes("--discord-offline");
 const chromePath = process.argv.slice(2).find(argument => !argument.startsWith("--"));
 const tacticalTier = process.argv.slice(2).find(argument => argument.startsWith("--tactical-tier="))?.split("=")[1];
 const coreCase = process.argv.slice(2).find(argument => argument.startsWith("--core-case="))?.split("=")[1];
@@ -648,7 +649,7 @@ async function verifySceneArchive(browser, server, previous) {
 }
 
 async function openPilot(browser, server, role, failFirstMissionPost = false, campaignId, channelId, options = {}) {
-  const page = await browser.newPage(campaignSetupMobileCheck ? {
+  const page = await browser.newPage(campaignSetupMobileCheck || options.mobile ? {
     viewport:{width:390,height:740}, hasTouch:true,
   } : {});
   page.setDefaultTimeout(8000);
@@ -662,6 +663,7 @@ async function openPilot(browser, server, role, failFirstMissionPost = false, ca
   const proxy = server.discord_activity_origin;
   const guild = "222222222222222222";
   const launch = new URL(proxy);
+  if (options.mobile) launch.searchParams.set("platform", "mobile");
   if (!dmOffline && !options.dm) launch.searchParams.set("guild_id", guild);
   if (campaignId) launch.searchParams.set("campaign", campaignId);
   if (channelId) launch.searchParams.set("channel_id", channelId);
@@ -766,6 +768,7 @@ async function openPilot(browser, server, role, failFirstMissionPost = false, ca
     const message = await view.locator("#status").textContent({timeout:1000}).catch(() => "");
     throw new Error(`Discord fixture as ${role} did not open sign-in: ${message}\n${server.diagnostics()}`, {cause:error});
   }
+  if (options.inspectAuth) await options.inspectAuth(auth);
   if (process.env.HARPY_AUTH_CAPTURE && failFirstMissionPost) {
     await page.locator("iframe").screenshot({path:process.env.HARPY_AUTH_CAPTURE});
   }
@@ -990,6 +993,125 @@ async function verifyHud({view, page}) {
   await view.getByRole("button",{name:"Back",exact:true}).click();
   await view.getByRole("heading",{name:"Cadre Status",exact:true}).waitFor();
   await folder("Scenes").click();
+}
+
+async function verifyResponsiveHud(browser, server) {
+  const issues = [];
+  const checkedViews = new Set();
+  const closeEnough = (a, b) => Math.abs(a - b) <= 1;
+  for (const mobile of [false, true]) {
+    let context = mobile ? "Mobile" : "Desktop";
+    const checkPanel = async (panel, name, overlay = false) => {
+      await panel.waitFor();
+      checkedViews.add(name);
+      const geometry = await panel.evaluate(node => {
+        const {left, right, top, bottom} = node.getBoundingClientRect();
+        const {innerWidth, innerHeight} = window;
+        const close = node.querySelector(".record-heading button");
+        const closeRect = close?.getBoundingClientRect();
+        const heading = node.querySelector(".record-heading h2")?.getBoundingClientRect();
+        return {left, right, top, bottom, innerWidth, innerHeight,
+          documentWidth:document.documentElement.scrollWidth,
+          closeBelow:heading && closeRect && closeRect.top >= heading.bottom,
+          closeOutside:closeRect && (closeRect.right > right + 1 || closeRect.left < left - 1),
+        };
+      });
+      if (geometry.documentWidth > geometry.innerWidth + 1 ||
+        geometry.left < -1 || geometry.right > geometry.innerWidth + 1 ||
+        overlay && (geometry.top < (mobile ? 55 : -1) || geometry.bottom > geometry.innerHeight + 1 || geometry.closeBelow || geometry.closeOutside)) {
+        issues.push({context, name, geometry});
+      }
+    };
+    const {page, view} = await openPilot(browser, server, "invited", false, undefined, undefined, {
+      mobile, inspectAuth:auth => checkPanel(auth, "Sign-in", true),
+    });
+    const activity = await (await page.locator("iframe").elementHandle()).contentFrame();
+    const folder = name => view.getByRole("navigation", {name:"Campaign folders"}).getByRole("button", {name, exact:true});
+    const closeInbox = view.getByRole("button", {name:"Close inbox", exact:true});
+    await closeInbox.click();
+    const pane = id => view.locator(`[data-pane="${id}"]`);
+    const modal = async (trigger, selector, close, name) => {
+      await trigger.click();
+      const dialog = view.locator(selector);
+      await checkPanel(dialog, name, true);
+      if (name === "Pilot Profile asset popup") {
+        await dialog.locator(".record-heading h2").evaluate(node => {
+          node.textContent = "Adaptive Restraints with Supplemental Void Containment Harness";
+        });
+        await checkPanel(dialog, "Long asset title", true);
+      }
+      await dialog.getByRole("button", {name:close, exact:true}).click();
+    };
+    for (const [width,height] of mobile ? [[390,740],[320,640],[550,700],[480,420]] : [[1440,900],[768,800]]) {
+      await page.setViewportSize({width,height});
+      await activity.waitForFunction(expected => innerWidth === expected, width);
+      for (const theme of ["dark", "light"]) {
+        context = width + " px " + theme;
+        if (await view.locator("html").getAttribute("data-theme") !== theme) {
+          await view.getByRole("button", {name:"Toggle light and dark mode"}).click();
+        }
+        if (await view.locator("#campaign-safety").isVisible()) {
+          await modal(view.locator("#campaign-safety"), "#campaign-safety-dialog", "Close campaign safety", "Campaign safety");
+        }
+        for (const [label,id] of [
+          ["Shift Handover","handover"],["Pilot Profile","profile"],["Frame Status","frame"],
+          ["Cadre Status","cadre"],["Missions","missions"],["Battlefield","battlefield"],["Scenes","scenes"],
+        ]) {
+          await folder(label).click();
+          const current = pane(id);
+          await checkPanel(current, label);
+          if (id === "profile" || id === "frame") {
+            const buttons = current.locator('[data-popup^="girl-asset:"], [data-popup^="frame-asset:"]');
+            await buttons.first().waitFor();
+            const layout = await buttons.evaluateAll(nodes => nodes.map(button => {
+              const tags = button.parentElement.querySelector(".file-stamps");
+              const {left, bottom, top} = button.getBoundingClientRect();
+              const {left:tagLeft, top:tagTop} = tags.getBoundingClientRect();
+              return {tagLeft, under:tagTop >= bottom - 1, aligned:Math.abs(left - tagLeft) <= 1, top};
+            }));
+            const narrow = await buttons.first().evaluate(button => button.closest("ul").clientWidth <= 420);
+            if (!layout.every(row => row.under === narrow && (narrow ? row.aligned : closeEnough(row.tagLeft, layout[0].tagLeft)))) {
+              issues.push({context, name:label + " asset tag placement", layout});
+            }
+            if (process.env.HARPY_ASSET_LAYOUT_CAPTURE && id === "profile" && theme === "dark" && [390,1440].includes(width)) {
+              await current.locator(".asset-records").screenshot({path:process.env.HARPY_ASSET_LAYOUT_CAPTURE + "-" + width + ".png"});
+            }
+            await modal(buttons.first(), "#utility-dialog", "Close action", label + " asset popup");
+          } else if (id === "battlefield") {
+            await modal(current.getByRole("button", {name:"Sheet Plays",exact:true}), "#tactical-play-dialog", "Close Play menu", "Battlefield Play menu");
+          } else if (id === "scenes") {
+            const archive = current.getByRole("button", {name:"Archive", exact:true});
+            if (await archive.isVisible()) {
+              await archive.click();
+              await checkPanel(current, "Scene Archive");
+              await current.getByRole("button", {name:"Locations", exact:true}).click();
+            }
+            const start = current.getByRole("button", {name:"Start Scene", exact:true});
+            if (await start.isVisible()) await modal(start, "#start-scene-dialog", "Close Start Scene", "Start Scene");
+          }
+        }
+        await view.getByRole("button", {name:"Inbox",exact:true}).click();
+        await checkPanel(view.locator("#inbox"), "Inbox", true);
+        const missionMail = view.locator("#mail-entries").getByRole("button", {name:"Mission dispatch",exact:true}).first();
+        await modal(missionMail, "#mail-reader", "Close dispatch record", "Mission dispatch");
+        await closeInbox.click();
+        const relay = view.getByRole("button", {name:"Open Relay operations",exact:true});
+        if (await relay.isVisible()) await relay.click();
+        await checkPanel(view.locator("#room-pane"), "Scene transcript");
+        await modal(view.locator('#scene-play-options button[data-play="keep_your_head"]'), "#scene-action-dialog", "Close scene Play", "Scene Play popup");
+        const roster = view.locator("#roster-toggle");
+        if (await roster.isVisible()) await roster.click();
+        const contact = view.locator("#communications-contacts button").first();
+        if (await contact.isVisible()) await modal(contact, "#communication-dialog", "Close private communication", "Private communications");
+        if (await view.locator("#mobile-roster").isVisible()) {
+          await view.getByRole("button", {name:"Close Pilots and Communications",exact:true}).click();
+        }
+      }
+    }
+    await page.context().close();
+  }
+  assert(issues.length === 0, JSON.stringify(issues, null, 2));
+  console.log("Responsive HUD passed in both themes: " + [...checkedViews].sort().join(", "));
 }
 
 async function verifyArtwork({view}) {
@@ -2289,6 +2411,10 @@ async function mainTest() {
       executablePath: chromePath ?? chromium.executablePath(),
       headless: true, args: ["--disable-background-networking", "--disable-sync"],
     });
+    if (responsiveHudCheck) {
+      await verifyResponsiveHud(browser, server);
+      return;
+    }
     if (campaignSetupMobileCheck) {
       const {page, view} = await openPilot(browser, server, "invited");
       const closeEnrollment = view.getByRole("button", {name:"Close pilot enrollment", exact:true});
@@ -2347,8 +2473,10 @@ async function mainTest() {
       assert.equal(posts[1].notes.goal, "Find the relay.");
       assert.equal(posts[2].facilitator, discordUsers.other);
       assert.equal(posts[2].difficulty, "hard");
-      for (const width of [320,390,550]) {
+      const activity = await (await page.locator("iframe").elementHandle()).contentFrame();
+      for (const width of [320,390,550,1024,1440]) {
         await page.setViewportSize({width,height:740});
+        await activity.waitForFunction(expected => innerWidth === expected, width);
         const layout = await pane.evaluate(node => {
           const bounds = node.getBoundingClientRect();
           const overflowing = [...node.querySelectorAll("textarea, select, input[type=text]")].filter(control => {
@@ -2359,10 +2487,31 @@ async function mainTest() {
           return {width:window.innerWidth, documentWidth:document.documentElement.scrollWidth,
             overflowing, header:getComputedStyle(document.querySelector(".activity-header")).position};
         });
-        assert(layout.documentWidth <= layout.width && !layout.overflowing.length && layout.header === "relative",
+        assert(layout.documentWidth <= layout.width && !layout.overflowing.length && layout.header === (width <= 550 ? "relative" : "sticky"),
           "Unexpected Campaign Setup layout at " + width + " " + JSON.stringify(layout));
       }
-      console.log("Simulated Discord verified flat Campaign Setup, saved group, notes and plan payloads, and layout at 320, 390 and 550 px.");
+      await page.context().close();
+      const handler = await openPilot(browser, server, "handler", false, undefined, undefined, {mobile:true});
+      const closeHandlerInbox = handler.view.getByRole("button", {name:"Close inbox", exact:true});
+      if (await closeHandlerInbox.isVisible()) await closeHandlerInbox.click();
+      await handler.view.getByRole("button", {name:"Handler desk", exact:true}).click();
+      const handlerDesk = handler.view.locator("#handler-desk");
+      await handlerDesk.waitFor();
+      const handlerActivity = await (await handler.page.locator("iframe").elementHandle()).contentFrame();
+      for (const width of [320,1440]) {
+        await handler.page.setViewportSize({width,height:740});
+        await handlerActivity.waitForFunction(expected => innerWidth === expected,width);
+        await handler.view.getByRole("button", {name:"Open Handler Plays", exact:true}).click();
+        const plays = handler.view.locator("#handler-plays-dialog");
+        await plays.waitFor();
+        assert(await plays.evaluate(node => {
+          const box = node.getBoundingClientRect();
+          return box.left >= 0 && box.right <= innerWidth + 1 && box.bottom <= innerHeight + 1;
+        }), "Handler Plays overflow at " + width);
+        await plays.getByRole("button", {name:"Close Handler Plays", exact:true}).click();
+      }
+      console.log("Simulated Discord verified flat Campaign Setup, saved group, notes and plan payloads, and layout from 320 to 1440 px.");
+      console.log("Handler Desk and its Play menu fit mobile and desktop.");
       return;
     }
     if (dmDeliveryCheck) {

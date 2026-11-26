@@ -1521,14 +1521,16 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
         readFile(file, records);
       }
       if (profile) renderAssetRecords(file, "Girl", profile.girl_assets ?? [], selected.own && !tactical);
-      if (selected.own && !tactical && openPortrayal) {
-        file.append(button("Open portrayal", openPortrayal));
-      }
-      if (selected.own && !tactical) renderPilotBonds(file, player);
-      if (selected.own && !tactical && player.sheet_reset) {
-        const restart = button("Restart character", () => openSheetReset(player.sheet_reset));
-        restart.setAttribute("aria-haspopup","dialog");
-        file.append(restart);
+      if (selected.own && !tactical) {
+        const actions = element("div", undefined, "actions profile-actions");
+        if (openPortrayal) actions.append(button("Open portrayal", openPortrayal));
+        renderPilotBonds(actions, player);
+        if (player.sheet_reset) {
+          const restart = button("Restart character", () => openSheetReset(player.sheet_reset));
+          restart.setAttribute("aria-haspopup","dialog");
+          actions.append(restart);
+        }
+        if (actions.childElementCount) file.append(actions);
       }
       const specialistPlays = selected.plays?.filter(play => play.group === "girl" || play.group === "frame") ?? [];
       if (specialistPlays.length) {
@@ -1608,9 +1610,9 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
       panel.append(element("p", "No " + family + " assets listed."));
       return;
     }
-    const records = element("ul", undefined, "records");
+    const records = element("ul", undefined, "records asset-records");
     for (const asset of assets) {
-      const row = element("li", undefined, "record-row");
+      const row = element("li", undefined, "record-row asset-record");
       const key = family.toLowerCase() + "-asset:" + asset.id;
       row.append(assetPopup(asset, key, editable), assetStamps(asset));
       records.append(row);
