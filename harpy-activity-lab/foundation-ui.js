@@ -1524,6 +1524,7 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
       } else {
         readFile(file, records);
       }
+      if (profile) renderAssetRecords(file, "Girl", profile.girl_assets ?? [], selected.own && !tactical);
       if (selected.own && !tactical && openPortrayal) {
         file.append(button("Open portrayal", openPortrayal));
       }
@@ -1591,15 +1592,7 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     }
     if (view.folder === "frame") fileHeader(panel, "frame", name, "Assigned", pilot, tactical);
     readFile(panel, facts);
-    panel.append(element("h3", "Frame assets"));
-    const assets = element("ul", undefined, "records");
-    for (const asset of profile.assets) {
-      const row = element("li", undefined, "record-row");
-      row.append(frameAssetPopup(asset, pilot.own && !tactical), assetStamps(asset));
-      assets.append(row);
-    }
-    panel.append(assets);
-    if (!profile.assets.length) panel.append(element("p", "No Frame assets listed."));
+    renderAssetRecords(panel, "Frame", profile.assets, pilot.own && !tactical);
     panel.append(element("h3", "Upgrades"));
     for (const upgrade of profile.upgrades ?? []) {
       const content = element("p", upgrade.description || "No description recorded.");
@@ -1613,8 +1606,23 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     }
   }
 
-  function frameAssetPopup(asset, editable) {
-    const key = "frame-asset:" + asset.id;
+  function renderAssetRecords(panel, family, assets, editable) {
+    panel.append(element("h3", family + " assets"));
+    if (!assets.length) {
+      panel.append(element("p", "No " + family + " assets listed."));
+      return;
+    }
+    const records = element("ul", undefined, "records");
+    for (const asset of assets) {
+      const row = element("li", undefined, "record-row");
+      const key = family.toLowerCase() + "-asset:" + asset.id;
+      row.append(assetPopup(asset, key, editable), assetStamps(asset));
+      records.append(row);
+    }
+    panel.append(records);
+  }
+
+  function assetPopup(asset, key, editable) {
     const content = element("div");
     readFile(content, [["Condition", assetStamps(asset)]]);
     if (editable) {

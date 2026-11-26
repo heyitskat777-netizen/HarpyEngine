@@ -50,6 +50,25 @@ def scene_locations(rooms):
     return sorted(locations.values(), key=lambda location: location["name"].casefold())
 
 
+def profile_assets(assets, descriptions):
+    files = {"girl": [], "frame": []}
+    for asset in assets:
+        if asset["family"] not in files:
+            continue
+        description, revision = descriptions.get(asset["id"], (asset["description"], 0))
+        files[asset["family"]].append(
+            {
+                "id": asset["id"],
+                "name": asset["name"],
+                "damaged": asset["damaged"],
+                "void": asset["void"],
+                "description": description,
+                "description_revision": revision,
+            }
+        )
+    return {"girl_assets": files["girl"], "assets": files["frame"]}
+
+
 class ActivityRecords:
     def __init__(self, path, owner, *, campaign_codes=True):
         self.path = path

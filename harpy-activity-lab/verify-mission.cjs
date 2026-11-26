@@ -21,6 +21,7 @@ const roomPlaysCheck = process.argv.includes("--room-plays-check");
 const relayTier = process.argv.find(argument => argument.startsWith("--relay-tier="))?.split("=")[1] ?? "mid";
 const communicationsCheck = process.argv.includes("--communications-check");
 const artworkCheck = process.argv.includes("--artwork-check");
+const pilotAssetsCheck = process.argv.includes("--pilot-assets-check");
 const playRailCheck = process.argv.includes("--play-rail-check");
 const rosterBattlefieldCheck = process.argv.includes("--private-battlefield-check");
 const campaignSwitchCheck = process.argv.includes("--campaign-switch-check");
@@ -39,7 +40,7 @@ const p2Facility = process.argv.includes("--outpost") ? "outpost" : "hangar";
 const directorDiscordCheck = archiveCheck || intelCheck || sceneArtworkCheck || p2BattlefieldCheck || playParityCheck || rehearsalCheck || process.argv.includes("--director-discord-check");
 const enrollmentDraftCheck = process.argv.includes("--enrollment-draft-check");
 const boundRosterCheck = enrollmentDraftCheck || sceneOrdersCheck || missionDeskCheck || rosterBattlefieldCheck || campaignSwitchCheck || campaignDmCheck || handlerPlaysCheck || process.argv.includes("--bound-roster-check");
-const discordOffline = directorDiscordCheck || dmOffline || boundRosterCheck || process.argv.includes("--discord-offline");
+const discordOffline = directorDiscordCheck || dmOffline || boundRosterCheck || pilotAssetsCheck || process.argv.includes("--discord-offline");
 const chromePath = process.argv.slice(2).find(argument => !argument.startsWith("--"));
 const tacticalTier = process.argv.slice(2).find(argument => argument.startsWith("--tactical-tier="))?.split("=")[1];
 const coreCase = process.argv.slice(2).find(argument => argument.startsWith("--core-case="))?.split("=")[1];
@@ -2398,6 +2399,56 @@ async function mainTest() {
       headers: { Origin: server.discord_activity_origin ?? server.origin, "Idempotency-Key": randomUUID(), "Content-Type":"application/json" },
       body: JSON.stringify(body),
     });
+    if (pilotAssetsCheck) {
+      const profilePane = owner.view.locator("#profile-pane");
+      const initial = await playerSetup(owner);
+      const girlAssets = initial.profile.girl_assets;
+      const girl = girlAssets.find(asset => asset.void);
+      assert(girl, "The fixture must include a Void-touched Girl Asset.");
+      const [frame] = initial.profile.assets;
+      const dialog = owner.view.locator("#utility-dialog");
+      const openAsset = async (pane, asset) => {
+        await pane.getByRole("button", {name:asset.name, exact:true}).click();
+        await dialog.waitFor();
+        assert.equal(await dialog.getByRole("heading").textContent(), asset.name);
+        assert(await dialog.evaluate(node => node.classList.contains("compact-record")));
+      };
+      await owner.view.getByRole("button", {name:"Close inbox", exact:true}).click();
+      await owner.view.getByRole("button", {name:"Pilot Profile", exact:true}).click();
+      await profilePane.getByRole("heading", {name:"Girl assets", exact:true}).waitFor();
+      for (const asset of girlAssets) {
+        await profilePane.getByRole("button", {name:asset.name, exact:true}).waitFor();
+      }
+      await openAsset(profilePane, girl);
+      await dialog.getByText(girl.damaged ? "Damaged" : "Operational", {exact:true}).waitFor();
+      await dialog.getByText("Void-touched", {exact:true}).waitFor();
+      assert.equal(await dialog.getByLabel("Description").inputValue(), girl.description);
+      const description = "Private synthetic Girl Asset notes.";
+      await dialog.getByLabel("Description").fill(description);
+      await dialog.getByRole("button", {name:"Save description", exact:true}).click();
+      await dialog.waitFor({state:"hidden"});
+      const saved = (await playerSetup(owner)).profile.girl_assets.find(asset => asset.id === girl.id);
+      assert.deepEqual(saved, {...girl, description, description_revision:girl.description_revision + 1});
+      const rejected = await setupPost(other, "asset-description", {
+        asset:girl.id, description:"Attempted cross-owner edit", revision:saved.description_revision,
+      });
+      assert.equal(rejected.status, 409);
+      const peer = await playerSetup(other);
+      assert(!JSON.stringify(peer).includes(description));
+      await owner.view.getByRole("button", {name:"Frame Status", exact:true}).click();
+      await openAsset(owner.view.locator("#frame-data"), frame);
+      assert.equal(await dialog.getByLabel("Description").inputValue(), frame.description);
+      await dialog.getByRole("button", {name:"Close action", exact:true}).click();
+      await owner.page.context().close();
+      const reopened = await openPilot(browser, server, "invited");
+      assert.deepEqual((await playerSetup(reopened)).profile.girl_assets.find(asset => asset.id === girl.id), saved);
+      await reopened.view.getByRole("button", {name:"Close inbox", exact:true}).click();
+      await reopened.view.getByRole("button", {name:"Pilot Profile", exact:true}).click();
+      await reopened.view.locator("#profile-pane").getByRole("button", {name:girl.name, exact:true}).click();
+      assert.equal(await reopened.view.locator("#utility-dialog").getByLabel("Description").inputValue(), description);
+      console.log("Synthetic Discord verified Girl and Frame Asset popups, condition, private edits, and reopen.");
+      return;
+    }
     if (boundRosterCheck) {
       if (campaignSwitchCheck) {
         await verifyCampaignSwitch(browser, server, owner, other, request, playerSetup, setupPost);

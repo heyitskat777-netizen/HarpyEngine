@@ -96,6 +96,7 @@ class PrivateBattlefield(Battlefield):
             shared=True,
             channel=PRIVATE_BATTLEFIELD_CHANNEL,
             private=True,
+            records=setup.records,
         )
         self.scene = setup.scene_plays.for_channel(self.channel)
         self.physical = PhysicalService(self.store)

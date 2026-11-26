@@ -5,7 +5,7 @@ from dataclasses import replace
 
 import sqlalchemy as sa
 from activity_artwork import KINDS, frame_subject, validate_selection
-from activity_records import RELAY, ActivityRecords, scene_locations
+from activity_records import RELAY, ActivityRecords, profile_assets, scene_locations
 from am_scene_controls import am_work_channels
 from bot_enrollment import BotEnrollment
 from defeat_play import DEFEAT
@@ -1228,20 +1228,7 @@ class PlayerSetup:
                         for identity in own_sheet["identities"]
                         + own_sheet.get("additional_identities", [])
                     ],
-                    "assets": [
-                        {
-                            "id": asset["id"],
-                            "name": asset["name"],
-                            "damaged": asset["damaged"],
-                            "void": asset["void"],
-                            "description": descriptions.get(asset["id"], (asset["description"], 0))[
-                                0
-                            ],
-                            "description_revision": descriptions.get(asset["id"], ("", 0))[1],
-                        }
-                        for asset in own_sheet["assets"]
-                        if asset["family"] == "frame"
-                    ],
+                    **profile_assets(own_sheet["assets"], descriptions),
                 },
             }
         if not self.bound_roster and viewer != self.recruit:
@@ -1558,12 +1545,12 @@ class PlayerSetup:
                 (
                     item
                     for item in canonical["assets"]
-                    if item["family"] == "frame" and item["id"] == data.get("asset")
+                    if item["family"] in ("girl", "frame") and item["id"] == data.get("asset")
                 ),
                 None,
             )
             if asset is None:
-                raise WorkflowError("You can edit descriptions for your own Frame assets.")
+                raise WorkflowError("You can edit descriptions for your own Girl and Frame assets.")
             return self.records.describe_asset(viewer, canonical["character_id"], asset["id"], data)
         if self.scene_plays and step == "enter-scene":
             if data.keys() not in ({"room"}, {"room", "play"}) or data.get("play") not in (

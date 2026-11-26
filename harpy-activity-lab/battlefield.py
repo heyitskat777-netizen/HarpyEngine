@@ -4,6 +4,7 @@ import json
 from dataclasses import asdict
 
 import sqlalchemy as sa
+from activity_records import profile_assets
 from battery_play import BATTERY, BATTERY_CHOICES, battery_choice, ready_batteries
 from battlefield_frame_work import (
     INTERCEPT,
@@ -174,8 +175,10 @@ class Battlefield:
         shared=False,
         channel=CHANNEL,
         private=False,
+        records=None,
     ):
         self.store = missions.store
+        self.records = records
         self.game = GameService(self.store, dice=dice)
         self.movement = MovementService(self.game)
         self.combat = BattleService(self.store)
@@ -325,6 +328,11 @@ class Battlefield:
                     profile = None
                     if row["owned"]:
                         runtime = roster_sheet.frame_runtime
+                        descriptions = (
+                            self.records.asset_descriptions(viewer, roster_sheet.character_id)
+                            if self.records and roster_sheet.owner == viewer.user_id
+                            else {}
+                        )
                         profile = {
                             "frame": roster_sheet.frame,
                             "frame_name": runtime.frame_name
@@ -335,17 +343,9 @@ class Battlefield:
                             "upgrades": frame_upgrades(
                                 self.registry, runtime.model_dump() if runtime else None
                             ),
-                            "assets": [
-                                {
-                                    "id": asset.id,
-                                    "name": asset.name,
-                                    "damaged": asset.damaged,
-                                    "void": asset.void,
-                                    "description": asset.description,
-                                }
-                                for asset in roster_sheet.assets
-                                if asset.family == "frame"
-                            ],
+                            **profile_assets(
+                                (asset.model_dump() for asset in roster_sheet.assets), descriptions
+                            ),
                         }
                     roster.append(
                         {
