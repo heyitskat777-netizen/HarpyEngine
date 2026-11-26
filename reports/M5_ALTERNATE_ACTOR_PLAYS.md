@@ -62,6 +62,7 @@ a signed-in Discord acceptance pass.
 | Earned Scrutinized on a different Girl sheet | Admit a valid learned or grafted source while retaining the actual user, target and private record authority. |
 | Earned Just Code on a different Girl sheet | Define what a learned operator can do with an actual circuit and Discovery without granting an AM body or copying its runtime. |
 | Masked Harpy Disobey Orders | Keep the actual Harpy body, active Human Mask and source Order in the same native continuation, including the original issuer and the Harpy controller. |
+| Standalone Harpy Defeat while another scene has a pending Play | Scope the Defeat lock to its selected scene. The native standalone branch currently checks for pending actions across the campaign. |
 | Independent NPC Flirt | Add native initiation for an eligible NPC, original target and owned choice sequence. Existing Girl-initiated NPC Flirt and NPC follow-through have their own engine paths. |
 | Ordinary Harpy private invitation | Add durable proof of the initiating Flirt to the ordinary Harpy invitation. The verified Kiss Me, Darling route already supports this provenance. |
 | Rules still marked subset or pending independent review | Complete the missing variants and independent rule review in the registry for each affected Girl, Handler, Harpy, and Gorgon Class or Type, while preserving campaign approval, consent and human adjudication. See the [Play parity checklist](../harpy-activity-lab/AI-PLAY-PARITY.md#source-and-engine-limitations). |

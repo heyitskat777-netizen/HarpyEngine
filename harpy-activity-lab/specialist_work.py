@@ -577,16 +577,29 @@ class SpecialistWork:
         try:
             preview = self.defeat.setup_preview(viewer, identity)
         except WorkflowError:
+            fields = [select("confirm", "Original mandatory source", CONFIRM)]
+            with self.store.engine.connect() as connection:
+                _, source, actor = self.defeat._source(connection, identity)
+                state = load_state(connection, self.store.campaign_id)
+            if not source.get("source_action"):
+                scenes = [
+                    (str(cast.channel), self.rooms[cast.channel][1])
+                    for cast in state.scene_casts
+                    if cast.open
+                    and cast.channel in self.rooms
+                    and any(
+                        role.actor == actor and role.controller == viewer.user_id
+                        for role in cast.roles
+                    )
+                ]
+                if len(scenes) > 1:
+                    fields.append(select("scene", "Actual scene for this Defeat", scenes))
+                elif scenes:
+                    data["start_channel"] = int(scenes[0][0])
             return (
                 "Harpy Defeat",
                 "",
-                [
-                    operation(
-                        "begin",
-                        "Begin original Harpy Defeat",
-                        select("confirm", "Original mandatory source", CONFIRM),
-                    )
-                ],
+                [operation("begin", "Begin original Harpy Defeat", *fields)],
             )
         actual = ActorRef.model_validate(preview["actor"])
         setup = self.defeat.setup_preview_actor(viewer, actual)
@@ -930,7 +943,9 @@ class SpecialistWork:
         if kind == "harpy_rift" and verb == "close":
             return self.defeat.close_rift(*args)
         if kind == "harpy_defeat" and verb == "begin":
-            return self.defeat.begin(viewer, key, identity, channel=None)
+            scene = pick(values, "scene")
+            channel = int(scene) if scene else data.get("start_channel")
+            return self.defeat.begin(viewer, key, identity, channel=channel)
         if kind == "harpy_defeat" and verb == "setup":
             preview = self.defeat.setup_preview(viewer, identity)
             actor = ActorRef.model_validate(preview["actor"])

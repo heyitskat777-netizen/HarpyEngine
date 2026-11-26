@@ -185,7 +185,7 @@ def test_harpy_kiss_requires_original_flirt_and_private_consent(ledger):
 
 def test_harpy_defeat_keeps_the_original_owned_roll(ledger):
     service, game, worker, gateway, _, identity, _ = ready_defeat(ledger)
-    work = SpecialistWork(game)
+    work = SpecialistWork(game, {900: ("relay", "Relay ward")})
     assert any(item["id"] == identity for item in work.list(PLAYER)["work"])
     assert all(item["id"] != identity for item in work.list(OTHER)["work"])
     draft = work.read(PLAYER, "harpy_defeat", identity)
