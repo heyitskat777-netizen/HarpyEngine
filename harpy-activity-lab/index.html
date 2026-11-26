@@ -60,6 +60,7 @@
   <button type="button" data-folder="cadre">Cadre Status</button>
   <button type="button" data-folder="frame">Frame Status</button>
   <button type="button" data-folder="campaign-setup" hidden>Campaign Setup</button>
+  <button type="button" data-folder="dossiers" hidden>Campaign Dossiers</button>
 </nav>
 <section id="inbox" class="inbox" aria-label="Inbox" hidden>
   <header class="inbox-title"><h2>Foundation mail spool</h2><button type="button" id="close-inbox" aria-label="Close inbox">×</button></header>
@@ -195,6 +196,17 @@
       <h2 id="campaign-setup-title">Campaign Setup</h2>
       <div id="campaign-setup-panels"></div>
     </section>
+    <section data-pane="dossiers" class="record-card" aria-labelledby="dossier-page-title" hidden>
+      <h2 id="dossier-page-title">Campaign Dossiers</h2>
+      <div class="terminal-line"><span>Foundation / Campaign records</span><span class="terminal-state">FACILITATOR ACCESS</span></div>
+      <div class="actions dossier-filters">
+        <label class="field">Search dossiers<input id="dossier-search" type="search" autocomplete="off" disabled></label>
+        <label class="field">Record type<select id="dossier-kind" disabled><option value="">All record types</option></select></label>
+        <button type="button" id="dossier-refresh" disabled>Refresh dossiers</button>
+      </div>
+      <p id="dossier-feedback" role="status"></p>
+      <ul id="dossier-list" class="records"></ul>
+    </section>
     <section id="handler-desk" hidden>
       <p>Select a character in Communications to open a private thread.</p>
       <div id="handler-choices"></div>
@@ -307,6 +319,13 @@
     <div class="terminal-line"><span>Foundation / Personnel archive</span></div>
     <p id="character-files-status" role="status" hidden></p>
     <div id="character-files-content"></div>
+  </div>
+</dialog>
+<dialog id="dossier-dialog" class="activity-dialog terminal-dialog" aria-labelledby="dossier-title">
+  <header class="record-heading"><h2 id="dossier-title">Campaign dossier</h2><form method="dialog"><button aria-label="Close dossier">×</button></form></header>
+  <div class="terminal-panel">
+    <div class="terminal-line"><span>Foundation / Campaign dossier</span><span class="terminal-state">READ ONLY</span></div>
+    <div id="dossier-sheet"></div>
   </div>
 </dialog>
 <dialog id="artwork-dialog" class="activity-dialog terminal-dialog" aria-labelledby="artwork-title">
@@ -2086,6 +2105,12 @@ async function start() {
   battlefieldEnabled = Boolean(config.battlefield);
   rosterEnabled = Boolean(config.bound_roster);
   campaignSwitcher = Boolean(config.campaign_switcher);
+  if (campaignSwitcher) {
+    const {mountFacilitatorDossiers} = await import("/facilitator-dossiers.js");
+    ui.setDossierReview(mountFacilitatorDossiers(
+      async () => responseData(await activityFetch("/api/facilitator-dossiers"))
+    ));
+  }
   if (config.director_scene || config.campaign_setup) {
     const {mountDirectorDesk, mountActivityAISetup, mountActivityAITrial, mountStartFresh, openSheetPortrayal} = await import("/p2-desk.js");
     const workbench = document.querySelector(".workbench");

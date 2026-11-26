@@ -462,6 +462,10 @@ dialog:modal {
 #tactical-play-dialog { width: min(635px, calc(100vw - 22px)); }
 #profile-play-dialog { width: min(500px, calc(100vw - 22px)); }
 #character-files-dialog { width: min(680px, calc(100vw - 22px)); }
+#dossier-dialog { width: min(680px, calc(100vw - 22px)); }
+#dossier-sheet { overflow-wrap: anywhere; }
+.dossier-filters { align-items: end; flex-wrap: wrap; }
+#dossier-list li { display: flex; align-items: center; gap: 8px; margin-block: 5px; flex-wrap: wrap; }
 #director-trial-dialog { width: min(680px, calc(100vw - 22px)); }
 #director-trial-dialog pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 #director-trial-dialog textarea { width: 100%; min-height: 65px; }

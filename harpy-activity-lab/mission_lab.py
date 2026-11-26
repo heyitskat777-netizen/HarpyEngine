@@ -57,6 +57,7 @@ from campaign_registry import (
     CampaignBindingError,
     CampaignRegistry,
 )
+from facilitator_dossiers import may_review, review_dossiers
 from handler_playbook import HANDLER_PLAY_STEPS
 from mission_desk import MissionDesk
 from p2_scene import (
@@ -122,6 +123,7 @@ BATTLEFIELD_ROUTE = re.compile(
 KEY = re.compile(r"[A-Za-z0-9._-]{8,100}")
 SESSION_ZERO_PATH = "/api/campaign-opening/session-zero"
 CAMPAIGN_SAFETY_PATH = "/api/activity/safety"
+DOSSIER_PATH = "/api/facilitator-dossiers"
 FACILITATOR_ROUTE = re.compile(r"/api/facilitator-reviews(?:/([0-9a-f-]{36}))?")
 START_FRESH_PATH = "/api/activity/start-fresh"
 FRESH_JOB_ROUTE = re.compile(r"/api/activity/start-fresh/([0-9a-f]{32})")
@@ -133,6 +135,7 @@ UI_FILES = (
     "popup-ui.js",
     "rulebook-text.json",
     "foundation-ui.js",
+    "facilitator-dossiers.js",
     "facility-plans.json",
     "mail-spool.js",
     "artwork-ui.js",
@@ -1057,6 +1060,7 @@ def serve(
                     "/api/activity/ai-settings",
                     "/api/activity/ai-models",
                     CAMPAIGN_SAFETY_PATH,
+                    DOSSIER_PATH,
                 )
                 or session_zero
                 or FACILITATOR_ROUTE.fullmatch(path)
@@ -1471,6 +1475,14 @@ def serve(
                     self.send_json(HTTPStatus.NOT_FOUND, {"error": "DM receipt unavailable."})
                 else:
                     self.send_json(HTTPStatus.OK, receipt)
+            elif path == DOSSIER_PATH and campaign.managed:
+                try:
+                    _, viewer = self.session()
+                    self.send_json(HTTPStatus.OK, review_dossiers(setup.game, viewer))
+                except SignInError as error:
+                    self.send_access_error(error)
+                except WorkflowError as error:
+                    self.send_json(HTTPStatus.FORBIDDEN, {"error": str(error)})
             elif campaign.managed and (match := FACILITATOR_ROUTE.fullmatch(path)):
                 try:
                     _, viewer = self.session()
@@ -1675,6 +1687,11 @@ def serve(
 
                             state = load_state(connection, setup.store.campaign_id)
                         record["communications"] = setup.communication_view(viewer, state)
+                    if campaign.managed:
+                        with setup.store.engine.connect() as connection:
+                            record["can_review_dossiers"] = may_review(
+                                connection, setup.game, viewer
+                            )
                     self.send_json(
                         HTTPStatus.OK,
                         record

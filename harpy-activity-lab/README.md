@@ -128,6 +128,8 @@ Before starting turns, the Handler can use **Enemy deployment** to introduce an 
 
 **Campaign Roster** lists bound members even when they are away or have enrollment pending. Online presence reflects a recent check-in from a visible Activity session. Campaign access uses Discord sign-in and the saved tester settings. Invitation codes apply to scenes.
 
+The approved facilitator can open **Campaign Dossiers** for the selected campaign. Search by name, Girl, Frame, or job, or filter by record type. Pilot records respect their sheet's sharing settings. The campaign cast includes NPCs, Harpies, Gorgons, and the current Handler when they have a canonical record. Dossiers are read-only.
+
 Run `node harpy-activity-lab/verify-mission.cjs --private-battlefield-check --tactical-tier=mid` for the isolated two-pilot and Handler check, including restart recovery.
 
 Run `node harpy-activity-lab/verify-mission.cjs --bound-roster-check` from `app` for the isolated browser and engine scenario. Real Discord testers still need application test access and active membership in the configured test server.

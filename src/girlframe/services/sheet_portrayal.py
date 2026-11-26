@@ -258,7 +258,7 @@ class SheetPortrayalService:
             raise WorkflowError("PRESSURE_UNAVAILABLE: recover its known sources.")
 
     @staticmethod
-    def _character_record(canon: GameState, actor: ActorView) -> dict[str, Any] | None:
+    def native_record(canon: GameState, actor: ActorView) -> dict[str, Any] | None:
         if actor.ref.kind == "external_pilot" and actor.girl == "harpy":
             try:
                 original = harpy(canon, actor.ref)
@@ -334,7 +334,7 @@ class SheetPortrayalService:
                     if pending and draft and draft.kind == "character_setup"
                     else None
                 )
-                record = self._character_record(canon, actual)
+                record = self.native_record(canon, actual)
                 sheets.append(
                     {
                         "actor": actor.model_dump(mode="json"),

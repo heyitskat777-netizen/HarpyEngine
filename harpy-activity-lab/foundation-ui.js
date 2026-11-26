@@ -228,6 +228,8 @@ const folderNotices = {
 export function foundationUI(send, readTranscript, showBattlefield, battlefield, renderRoomPlays, refreshPlayer, artwork, renderPilotBonds, resumeEnrollment, openSheetReset, requestCancellation) {
   let openPortrayal;
   let openCampaignSetup;
+  let setDossierVisible;
+  let dossierVisible = false;
   const folders = [...document.querySelectorAll("[data-folder]")];
   const panes = [...document.querySelectorAll("[data-pane]")];
   const back = document.getElementById("back");
@@ -1815,15 +1817,23 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     const handler = player?.stage === "handler";
     const canHandover = handler || player?.stage === "active";
     const canCampaignSetup = Boolean(player && openCampaignSetup);
+    const canReviewDossiers = Boolean(player?.can_review_dossiers && setDossierVisible);
     const handlerFolders = ["handover", "scenes", "missions", ...(battlefield.enabled() ? ["battlefield"] : []),
-      ...(canCampaignSetup ? ["campaign-setup"] : [])];
+      ...(canCampaignSetup ? ["campaign-setup"] : []), ...(canReviewDossiers ? ["dossiers"] : [])];
     if (handler && !handlerFolders.includes(view.folder)) {
       view = {...view, folder:"scenes", tacticalPilot:null};
+    }
+    if (view.folder === "dossiers" && !canReviewDossiers) view = {...view, folder:"scenes"};
+    const showDossiers = view.folder === "dossiers";
+    if (showDossiers !== dossierVisible) {
+      dossierVisible = showDossiers;
+      setDossierVisible?.(showDossiers);
     }
     for (const folder of folders) {
       const name = folder.dataset.folder;
       folder.hidden = name === "handover" ? !canHandover
-        : name === "campaign-setup" ? !canCampaignSetup : handler && !handlerFolders.includes(name);
+        : name === "campaign-setup" ? !canCampaignSetup
+        : name === "dossiers" ? !canReviewDossiers : handler && !handlerFolders.includes(name);
       if (name === "scenes") folder.textContent = handler ? "Handler desk" : "Scenes";
       if (name === view.folder) folder.setAttribute("aria-current", "page");
       else folder.removeAttribute("aria-current");
@@ -1848,6 +1858,7 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
       const onMissions = view.folder === "missions";
       if (onMissions) deskContext.textContent = "Handler · Dispatch desk";
       if (view.folder === "campaign-setup") deskContext.textContent = "Handler · Campaign Setup";
+      if (showDossiers) deskContext.textContent = "Campaign Dossiers";
       for (const item of panes) item.hidden = !(item.dataset.pane === view.folder && view.folder !== "scenes");
       showBattlefield(onBattlefield);
       return;
@@ -1879,6 +1890,7 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
   return {
     setPortrayal(open) { openPortrayal = open; if (player) render(); },
     setCampaignSetup(open) { openCampaignSetup = open; if (player) render(); },
+    setDossierReview(setVisible) { setDossierVisible = setVisible; if (player) render(); },
     playSelection() { return playSelection; },
     renderCancellations(target,records) {
       target.replaceChildren(...records.filter(source => source.can_cancel).map(source =>
