@@ -215,6 +215,106 @@ dialog::backdrop { background: #0a0c0bd1; }
 }
 :is(button, summary, a[href], textarea, input, select):focus-visible { outline: 2px solid var(--key); outline-offset: 2px; }
 
+#campaign-setup-links { display: flex; flex-wrap: wrap; gap: 0 14px; }
+#campaign-setup-links a {
+  display: none;
+  min-block-size: 44px;
+  align-items: center;
+  color: var(--key);
+  font: 500 12px/1.4 var(--mono);
+  text-underline-offset: 4px;
+}
+[data-pane="campaign-setup"]:has(#campaign-setup-session-zero) a[href="#campaign-setup-session-zero"],
+[data-pane="campaign-setup"]:has(#campaign-setup-input) a[href="#campaign-setup-input"],
+[data-pane="campaign-setup"]:has(#campaign-setup-plan) a[href="#campaign-setup-plan"],
+[data-pane="campaign-setup"]:has(#campaign-setup-ai:not([hidden])) a[href="#campaign-setup-ai"] { display: inline-flex; }
+
+#campaign-setup-panels { overflow-wrap: anywhere; }
+#campaign-setup-panels :is(.campaign-setup-section, .campaign-setup-flow) section,
+#campaign-setup-panels > .campaign-setup-section {
+  display: grid;
+  align-items: start;
+  justify-items: start;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 9px;
+}
+#campaign-setup-panels .campaign-setup-section {
+  padding-block: 15px 19px;
+  border-block-start: 1px solid var(--line);
+  scroll-margin-block-start: 8rem;
+}
+#campaign-setup-panels .campaign-setup-section > h3 { font-size: 19px; }
+#campaign-setup-panels :is(.campaign-setup-flow, .campaign-setup-section) :is(h3, h4, p, dl, dd) { margin: 0; }
+#campaign-setup-panels :is(.campaign-setup-flow, .campaign-setup-section) :is(section, form, fieldset, .campaign-setup-reference, .campaign-setup-facts, .campaign-setup-roster, .campaign-setup-fact) {
+  min-inline-size: 0;
+  inline-size: 100%;
+}
+#campaign-setup-panels :is(.campaign-setup-flow, .campaign-setup-section) :is(form, fieldset, .campaign-setup-reference) {
+  display: grid;
+  justify-items: start;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+#campaign-setup-panels :is(.campaign-setup-flow, .campaign-setup-section) label {
+  display: grid;
+  gap: 4px;
+  align-items: center;
+  min-inline-size: 0;
+  inline-size: 100%;
+}
+#campaign-setup-panels :is(.campaign-setup-flow, .campaign-setup-section) label:has(input:is([type="checkbox"], [type="radio"])) {
+  display: flex;
+  min-block-size: 44px;
+  gap: 8px;
+}
+#campaign-setup-panels :is(textarea, select, input:not([type="checkbox"], [type="radio"])) {
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  min-block-size: 44px;
+  padding: 8px;
+  background: var(--screen);
+  color: var(--ink);
+  font-size: 16px;
+}
+#campaign-setup-panels textarea { min-block-size: 64px; resize: vertical; }
+#campaign-setup-panels button { min-block-size: 44px; max-inline-size: 100%; white-space: normal; }
+#campaign-setup-panels :is(.campaign-setup-reference, .campaign-setup-facts, .campaign-setup-roster) { margin-block: 3px; }
+#campaign-setup-panels .campaign-setup-fact {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  padding: 6px 8px;
+  background: var(--rail);
+  border-inline-start: 2px solid var(--key);
+}
+#campaign-setup-panels .campaign-setup-fact + .campaign-setup-fact { margin-block-start: 3px; }
+#campaign-setup-panels .campaign-setup-count { color: var(--key); font: 500 12px/1.4 var(--mono); }
+#campaign-setup-panels #campaign-setup-session-zero:has(> .campaign-setup-count) { grid-template-columns: minmax(0, 1fr) auto; }
+#campaign-setup-session-zero > .campaign-setup-count { align-self: center; }
+#campaign-setup-session-zero:has(> .campaign-setup-count) > :not(h3, output) { grid-column: 1 / -1; }
+#campaign-setup-panels .campaign-setup-roster label {
+  padding-inline: 8px;
+  border-block-start: 1px solid var(--line);
+  background: var(--rail);
+}
+#campaign-setup-panels .campaign-setup-roster label:last-child { border-block-end: 1px solid var(--line); }
+#campaign-setup-panels .campaign-setup-roster small { margin-inline-start: auto; color: var(--quiet-ink); text-align: end; }
+#campaign-setup-panels .campaign-setup-choices { border: 0; padding: 0; margin: 0; }
+#campaign-setup-panels .campaign-setup-choices > div {
+  display: grid;
+  inline-size: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+}
+#campaign-setup-panels .campaign-setup-difficulty > div { grid-template-columns: repeat(auto-fit, minmax(min(90px, 100%), 1fr)); }
+#campaign-setup-panels .campaign-setup-choices label { padding-inline: 7px; border: 1px solid var(--line); }
+#campaign-setup-panels .campaign-setup-choices label:has(input:checked) { border-color: var(--key); }
+#campaign-setup-panels :is(input[type="checkbox"], input[type="radio"]) { flex: none; accent-color: var(--key); }
+#campaign-setup-panels pre { max-inline-size: 100%; white-space: pre-wrap; overflow-wrap: anywhere; }
+
 @media (max-width: 550px) {
   .folders button { min-height: 34px; padding-inline: 3px; }
   .ova-rail-toggles { display: flex; flex: 1 1 100%; gap: 5px; }
@@ -232,4 +332,22 @@ dialog::backdrop { background: #0a0c0bd1; }
   .activity-dialog > .record-heading h2 { font-size: 16px; }
   .play-rail-list > .play-card { flex: 1 1 130px; }
   .play-category-heading { flex-basis: 100%; }
+  :root[data-activity-folder="campaign-setup"] .activity-header { position: relative; }
+  :root[data-activity-folder="campaign-setup"] .masthead { grid-template-columns: auto minmax(0, 1fr) auto; }
+  :root[data-activity-folder="campaign-setup"] .tools { grid-column: auto; max-inline-size: min(44vw, 200px); flex-wrap: wrap; justify-content: flex-end; }
+  :root[data-activity-folder="campaign-setup"] .folders {
+    display: flex;
+    overflow-x: auto;
+    padding-inline: 8px;
+  }
+  :root[data-activity-folder="campaign-setup"] .folders button {
+    flex: none;
+    min-block-size: 44px;
+    padding-inline: 9px;
+    white-space: nowrap;
+  }
+  :root[data-activity-folder="campaign-setup"] .layout { display: block; }
+  :root[data-activity-folder="campaign-setup"] .layout > .locations { display: none; }
+  #campaign-setup-panels .campaign-setup-section { scroll-margin-block-start: 12px; }
+  [data-pane="campaign-setup"].record-card { padding-inline: 11px; }
 }

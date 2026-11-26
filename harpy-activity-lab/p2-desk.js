@@ -38,6 +38,35 @@ function choiceField(label, choices, value) {
   return [row, control];
 }
 
+function setupSection(parent, title, id) {
+  const section = element("section");
+  section.className = "campaign-setup-section";
+  section.id = id;
+  section.append(element("h3", title));
+  parent.append(section);
+  return section;
+}
+
+function setupChoices(name, title, choices, selected) {
+  const group = element("fieldset");
+  group.className = "campaign-setup-choices";
+  group.append(element("legend", title));
+  const options = element("div");
+  for (const [value, label] of choices) {
+    const row = element("label");
+    const input = element("input");
+    input.type = "radio";
+    input.name = name;
+    input.value = value;
+    input.checked = value === selected;
+    input.required = true;
+    row.append(input, element("span", label));
+    options.append(row);
+  }
+  group.append(options);
+  return group;
+}
+
 export function openSheetPortrayal({activityFetch, scene, kind, actorToken}) {
   const root = scene ? "/api/director/" + encodeURIComponent(scene) + "/" : "/api/campaign-opening/";
   const dialog = element("dialog");
@@ -595,16 +624,17 @@ export function openSheetPortrayal({activityFetch, scene, kind, actorToken}) {
 }
 
 export function mountDirectorDesk(parent, scene, activityFetch, activityShadow = false, liveTrial = false, reviewOnly = false, openNativePlay) {
-  const details = element("details");
-  details.append(element("summary", scene ? "Director work" : "Campaign setup"));
+  const desk = element(scene ? "details" : "div");
+  if (scene) desk.append(element("summary", "Director work"));
   const body = element("div");
+  if (!scene) body.className = "campaign-setup-flow";
   const status = element("p");
   status.setAttribute("role", "status");
-  details.append(status, body);
-  parent.prepend(details);
+  desk.append(status, body);
+  parent.append(desk);
   const sceneHeader = element("section");
   sceneHeader.hidden = true;
-  if (scene) details.before(sceneHeader);
+  if (scene) desk.before(sceneHeader);
   const root = scene ? "/api/director/" + encodeURIComponent(scene) + "/" : "/api/campaign-opening/";
   const routeId = id => encodeURIComponent(id).replaceAll("%3A", ":");
   let briefingExpanded = false;
@@ -838,22 +868,24 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
 
   function card(container, title) {
     const row = element("section");
-    row.append(element("h4", title));
+    row.append(element(!scene && container === body ? "h3" : "h4", title));
     container.append(row);
     return row;
   }
 
   function sessionZeroSave(panel, label, route, values) {
-    panel.append(button(label, async key => {
+    const action = button(label, async key => {
       if (Array.from(panel.querySelectorAll("input, select, textarea"))
         .some(input => !input.reportValidity())) return;
       await write(route, values(), key);
       await refresh();
-    }, () => JSON.stringify(values())));
+    }, () => JSON.stringify(values()));
+    action.classList.add("primary");
+    panel.append(action);
   }
 
   function renderSessionZero(state) {
-    const row = card(body, "Session Zero");
+    const row = setupSection(body, "Session Zero", "campaign-setup-session-zero");
     if (state.owner_preview) {
       const plan = {approved:"Approved", pending:"Awaiting approval", not_filed:"Not filed"};
       row.append(
@@ -866,9 +898,16 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       return;
     }
     const revision = state.revision;
-    const member = id => state.viewer === id ? "You" : state.member_names?.[id] ?? "Discord member " + id;
+    const member = id => id === state.viewer
+      ? (state.member_names?.[id] ? state.member_names[id] + " · You" : "You")
+      : state.member_names?.[id] ?? "Discord member " + id;
     const isHandler = state.handler_ready === state.viewer;
-    if (state.bot_managed) row.append(element("p", "Handler · HarpyEngine bot"));
+    if (state.bot_managed) {
+      const handler = element("dl");
+      handler.className = "campaign-setup-fact";
+      handler.append(element("dt", "Handler"), element("dd", "HarpyEngine bot"));
+      row.append(handler);
+    }
     const profile = state.profile;
     const open = state.opening;
     const inIntro = open && state.opening_day < open.first_mission_day;
@@ -878,8 +917,14 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
         route, () => ({proposal, approve: !approved}));
     }
     if (state.can_set_group) {
-      const panel = timeForm(row, "Choose the Session Zero group");
-      if (state.bot_managed) panel.open = !state.members.length;
+      const panel = timeForm(row, "Session Zero group");
+      const roster = element("div");
+      roster.className = "campaign-setup-roster";
+      const count = element("output");
+      count.className = "campaign-setup-count";
+      count.setAttribute("aria-live", "polite");
+      row.firstElementChild.after(count);
+      panel.append(roster);
       const required = state.bot_managed ? state.required_group_member : state.appointed;
       const choices = state.group_options.map(id => {
         const label = element("label");
@@ -887,10 +932,15 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
         input.type = "checkbox";
         input.checked = state.members.includes(id) || id === required;
         input.disabled = id === required;
-        label.append(input, member(id));
-        panel.append(label);
+        label.append(input, element("span", member(id)));
+        const sheet = state.sheets[id];
+        if (!open && sheet) label.append(element("small", sheet === "attached" ? "Sheet attached" : "Sheet " + sheet));
+        roster.append(label);
         return {id, input};
       });
+      const showCount = () => { count.textContent = choices.filter(choice => choice.input.checked).length + " selected"; };
+      roster.addEventListener("change", showCount);
+      showCount();
       if (state.members.length) panel.append(element("p", "Changing the group starts a new approval round."));
       sessionZeroSave(panel, "Save group", "session-zero-group", () => ({
         revision, members: choices.filter(x => x.input.checked).map(x => x.id),
@@ -936,12 +986,14 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     if (state.handler_ready === null && !state.bot_managed) return;
     const sheets = Object.entries(state.sheets);
     if (!open) {
-      const panel = card(row, "Pilot sheets");
-      for (const [id, value] of sheets) panel.append(element("p", member(id) + " · " + value));
-      if (state.is_pilot ?? !isHandler) {
+      const separateSheets = sheets.filter(([id]) => !state.can_set_group || !state.group_options.includes(id));
+      const canAttach = state.is_pilot ?? !isHandler;
+      const panel = separateSheets.length || canAttach ? card(row, "Pilot sheets") : null;
+      for (const [id, value] of separateSheets) panel.append(element("p", member(id) + " · " + value));
+      if (canAttach) {
         sessionZeroSave(panel, "Attach my current sheet", "session-zero-attach", () => ({revision}));
         if (state.sheets[state.viewer] === "attached") {
-          const notes = timeForm(panel, "My character input");
+          const notes = setupSection(body, "My character input", "campaign-setup-input");
           const inputs = Object.fromEntries([["goal", "Character goal"], ["hook", "Story hook"],
             ["spotlight", "Desired spotlight"]].map(([key, label]) =>
             [key, textArea(notes, label, state.own_notes[key], 400, false)]));
@@ -951,7 +1003,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
         }
       }
     }
-    const plan = card(row, "Campaign plan");
+    const plan = setupSection(body, "Campaign plan", "campaign-setup-plan");
     const title = value => value[0].toUpperCase() + value.slice(1);
     const players = state.seats?.player_count ?? state.player_count;
     plan.append(
@@ -972,14 +1024,14 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       (state.facilitator === state.handler_ready ? " · Also controls the Handler" :
         state.facilitator_only ? " · Facilitator only" : " · Also plays a Pilot")));
     for (const pilot of state.seats?.ai_pilots ?? []) {
-      const details = timeForm(plan, "Planned AI Pilot · " + pilot.callsign);
-      if (pilot.concept) details.append(element("p", pilot.concept));
+      const portrayal = timeForm(plan, "Planned AI Pilot · " + pilot.callsign);
+      if (pilot.concept) portrayal.append(element("p", pilot.concept));
       const labels = {girl_playbook: "Girl playbook", frame_playbook: "Frame",
         archetype: "Archetype", vibe: "Vibe", voice: "Voice", approach: "First move", initiative: "When they step in",
         pressure: "Under pressure", repair: "After a mistake", value: "Value", fear: "Fear",
         contradiction: "Contradiction", goal: "Personal goal"};
       for (const [key, label] of Object.entries(labels)) {
-        if (pilot.portrayal?.[key]) details.append(element("p", label + " · " + pilot.portrayal[key]));
+        if (pilot.portrayal?.[key]) portrayal.append(element("p", label + " · " + pilot.portrayal[key]));
       }
     }
     if (state.plan_proposal && !open) {
@@ -990,25 +1042,26 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     }
     if ((isHandler || state.can_edit_plan) && !open) {
       const panel = timeForm(plan, "Draft campaign roles, difficulty, and goals");
-      if (state.bot_managed) panel.open = !state.plan_proposal;
-      const [facilitatorLabel, facilitator] = choiceField("Facilitator",
+      const facilitator = setupChoices("setup-facilitator", "Facilitator",
         state.members.map(id => [id, member(id) + (id === state.handler_ready ? " · Handler controller" : "")]),
         state.facilitator ?? state.handler_ready);
-      facilitator.setAttribute("aria-label", "Facilitator");
-      facilitator.required = true;
+      const facilitatorId = () => facilitator.querySelector("input:checked")?.value ?? "";
       const onlyLabel = element("label", "Facilitator only");
       const only = element("input");
       only.type = "checkbox";
       only.checked = state.facilitator_only === true;
       onlyLabel.prepend(only);
-      const [difficultyLabel, select] = choiceField("Difficulty",
-        Object.entries(state.difficulty_options).map(([key, note]) => [key, title(key) + " · " + note]),
+      const difficulty = setupChoices("setup-difficulty", "Difficulty",
+        Object.keys(state.difficulty_options).map(key => [key, title(key)]),
         state.difficulty);
-      select.required = true;
+      difficulty.classList.add("campaign-setup-difficulty");
+      const difficultyId = () => difficulty.querySelector("input:checked")?.value ?? state.difficulty;
+      const difficultyNote = element("p", state.difficulty_options[difficultyId()]);
+      difficulty.addEventListener("change", () => { difficultyNote.textContent = state.difficulty_options[difficultyId()]; });
       const seatCount = () => state.members.length - Number(!state.bot_managed && control === "ai") - Number(only.checked);
       const seatNote = element("p");
       const updateSeats = () => {
-        only.disabled = facilitator.value === state.handler_ready || state.members.length <= 2;
+        only.disabled = facilitatorId() === state.handler_ready || state.members.length <= 2;
         if (only.disabled) only.checked = false;
         onlyLabel.hidden = only.disabled;
         const count = seatCount();
@@ -1017,9 +1070,9 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       facilitator.addEventListener("change", updateSeats);
       only.addEventListener("change", updateSeats);
       updateSeats();
-      panel.append(facilitatorLabel, onlyLabel,
+      panel.append(facilitator, onlyLabel,
         element("p", "The facilitator reviews AI drafts and can also play a Pilot or control the Handler."),
-        difficultyLabel, seatNote);
+        difficulty, difficultyNote, seatNote);
       let startingStatus;
       if (!state.status_locked) {
         const status = element("fieldset");
@@ -1029,7 +1082,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
         const note = element("p");
         note.setAttribute("role", "status");
         const placement = () => state.members.filter(id => id !== state.nominee
-          && !(only.checked && id === facilitator.value));
+          && !(only.checked && id === facilitatorId()));
         const scored = () => (state.status_recommendation ?? []).filter(row => placement().includes(row.owner));
         function useRecommendation() {
           const ranked = scored();
@@ -1176,7 +1229,6 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
           slot.remove();
         }));
         list.append(slot);
-        editor.open = Boolean(saved?.portrayal);
       }
       for (const pilot of state.seats?.ai_pilots ?? []) addPilot(pilot);
       panel.append(button("Add AI Pilot", () => {
@@ -1193,7 +1245,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
         }});
       }));
       sessionZeroSave(panel, "Save campaign plan for approval", "session-zero-plan", () => ({
-        revision, difficulty: select.value, goals: goals.value, facilitator: facilitator.value,
+        revision, difficulty: difficultyId(), goals: goals.value, facilitator: facilitatorId(),
         facilitator_only: only.checked,
         seats: {player_count: seatCount(), ai_pilots: pilots.map(pilot => pilot.save())},
         ...startingStatus?.(),
@@ -1245,14 +1297,12 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     const row = card(body, "Campaign opening");
     if (opening.launched) {
       row.append(element("p", "The campaign opening has been launched."));
-      const notes = element("details");
-      notes.append(element("summary", "Facilitator opening notes"));
+      const notes = timeForm(row, "Facilitator opening notes");
       if (opening.draft.gm_pressure) notes.append(element("p", opening.draft.gm_pressure));
       for (const fact of opening.draft.facts) {
         const names = opening.roles.filter(x => fact.known_by.includes(x.id)).map(x => x.label);
         notes.append(element("p", fact.text + " · " + fact.learned_from + " · " + (names.join(", ") || "GM only")));
       }
-      row.append(notes);
       return;
     }
     const draft = opening.draft ?? {};
@@ -1262,8 +1312,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     const [pressureLabel, pressure] = field("GM-only pressure", draft.gm_pressure);
     pressure.required = false;
     row.append(locationLabel, situationLabel, choiceLabel, pressureLabel);
-    const session = element("details");
-    session.append(element("summary", "Briefing guidance"));
+    const session = timeForm(row, "Briefing guidance");
     const [toneLabel, tone] = field("Campaign tone", draft.session_zero?.tone);
     const [offscreenLabel, offscreen] = field("What stays offscreen?", draft.session_zero?.offscreen);
     const [fallbackLabel, fallback] = field("Human fallback", draft.session_zero?.human_fallback);
@@ -1278,7 +1327,6 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     }
     initiativeLabel.append(initiative);
     session.append(toneLabel, offscreenLabel, initiativeLabel, fallbackLabel);
-    row.append(session);
     const npcLabel = element("label", "NPC pilots played by their verified controllers");
     const npcPilots = element("select");
     npcPilots.multiple = true;
@@ -1362,14 +1410,12 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
           await write("opening-launch", {review: opening.review}, key);
           await refresh();
         });
-        const confirm = element("details");
-        confirm.append(element("summary", "Review & launch"),
-          element("p", "Launch publishes the saved draft to the approved cast."), launch);
+        const confirm = timeForm(preview, "Review & launch");
+        confirm.append(element("p", "Launch publishes the saved draft to the approved cast."), launch);
         // Compare the live fields with the reviewed values in their form order.
         const reviewedFields = JSON.stringify(fields());
         changed = () => { launch.disabled = JSON.stringify(fields()) !== reviewedFields; };
         row.addEventListener("input", changed);
-        preview.append(confirm);
       }
     }
   }
@@ -1416,8 +1462,8 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
   }
 
   function timeForm(parent, label) {
-    const panel = element("details");
-    panel.append(element("summary", label));
+    const panel = element(scene ? "details" : "section");
+    panel.append(element(scene ? "summary" : "h4", label));
     parent.append(panel);
     return panel;
   }
@@ -1650,12 +1696,12 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       ["When to hold back", profile.behavior.wait], ["Under pressure", profile.behavior.under_pressure],
       ["After a mistake", profile.behavior.recovery], ["Strength", profile.behavior.strength],
       ["Blind spot", profile.behavior.blind_spot]];
-    parent.append(element("summary", "Playbook guidance"));
+    parent.append(element(scene ? "summary" : "h4", "Playbook guidance"));
     for (const [label, detail] of guidance) parent.append(element("p", label + " · " + detail));
   }
 
   function renderHandlerRules(parent, rules) {
-    parent.append(element("summary", "Plays and advancement"), element("h5", "Shared Plays"));
+    parent.append(element(scene ? "summary" : "h4", "Plays and advancement"), element("h5", "Shared Plays"));
     for (const rule of rules.shared) parent.append(element("p", rule.title + " · " + rule.trigger));
     const access = {draft: "On creation", owned: "Check the native trigger", gated: "Release or ownership required"};
     for (const rule of rules.playbook) {
@@ -1672,10 +1718,8 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
   }
 
   function renderHandlerNotes(parent, sheet) {
-    const notes = element("details");
-    notes.open = sheet.editable;
-    notes.append(element("summary", "Private roleplay notes"));
-    parent.append(notes);
+    const notes = timeForm(parent, "Private roleplay notes");
+    if (scene) notes.open = sheet.editable;
     const current = sheet.draft.notes ?? {};
     const personalities = sheet.personalities ?? {};
     if (!sheet.editable && !sheet.notes_editable) {
@@ -1757,8 +1801,8 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     const sheet = setup.sheet;
     if (!sheet) return;
     const row = card(body, "Handler character sheet");
-    const guidance = element("details");
-    const rules = element("details");
+    const guidance = element(scene ? "details" : "section");
+    const rules = element(scene ? "details" : "section");
     renderHandlerProfile(guidance, sheet.playbook_profile);
     renderHandlerRules(rules, sheet.rules);
     if (sheet.activated || !sheet.editable) {
@@ -1806,9 +1850,7 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       return {kind, description};
     });
     const readNotes = renderHandlerNotes(row, sheet);
-    const relationships = element("details");
-    relationships.append(element("summary", "Starting relationships"));
-    row.append(relationships);
+    const relationships = timeForm(row, "Starting relationships");
     if (!sheet.pilots.length) relationships.append(element("p", "Pilots can be selected after they activate their sheets."));
     const bondInputs = [0, 1].map(i => {
       const rank = i === 0 ? "ace" : "dog";
@@ -1878,16 +1920,15 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
         await write("persona-propose", {revision: sheet.revision, generation: sheet.generation}, key);
         await refresh();
       });
-      const confirmation = element("details");
-      confirmation.append(element("summary", "Review Handler activation"),
-        element("p", "Activation applies the approved starting choices to the campaign."));
+      row.append(propose);
+      const confirmation = timeForm(row, "Review Handler activation");
+      confirmation.append(element("p", "Activation applies the approved starting choices to the campaign."));
       const activate = button("Activate approved Handler", async key => {
         await write("persona-activate", {revision: sheet.revision, game_revision: sheet.game_revision, confirmed: true}, key);
         await refresh();
       });
       confirmation.append(activate);
       row.addEventListener("input", () => { propose.disabled = activate.disabled = JSON.stringify(values()) !== reviewed; });
-      row.append(propose, confirmation);
     }
   }
 
@@ -3393,15 +3434,16 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
       status.textContent = error.message;
     });
   };
-  details.addEventListener("toggle", () => {
-    if (details.open) loadDesk();
+  if (!scene) return loadDesk;
+  desk.addEventListener("toggle", () => {
+    if (desk.open) loadDesk();
   });
-  if (scene) read("scene-opening", true).then(view => showSceneOpening(view?.opening)).catch(error => {
+  read("scene-opening", true).then(view => showSceneOpening(view?.opening)).catch(error => {
     status.textContent = error.message;
   });
   return () => {
-    if (details.open) loadDesk();
-    else details.open = true;
+    if (desk.open) loadDesk();
+    else desk.open = true;
   };
 }
 
@@ -3417,7 +3459,7 @@ async function activityAIRequest(activityFetch, path, options) {
 }
 
 export function mountActivityAISetup(parent, activityFetch, openReview) {
-  const panel = element("details");
+  const panel = setupSection(parent, "AI setup", "campaign-setup-ai");
   panel.hidden = true;
   const setup = element("section");
   const providerBody = element("div");
@@ -3425,8 +3467,7 @@ export function mountActivityAISetup(parent, activityFetch, openReview) {
   providerStatus.setAttribute("role", "status");
   const refresh = element("button", "Refresh AI setup");
   refresh.type = "button";
-  panel.append(element("summary", "Facilitator"), setup, providerStatus, providerBody, refresh);
-  parent.prepend(panel);
+  panel.append(setup, providerStatus, providerBody, refresh);
   const probeKeys = new Map();
   let testing = false;
   let loading = false;
@@ -3566,17 +3607,22 @@ export function mountActivityAISetup(parent, activityFetch, openReview) {
         feedback.textContent = "Campaign UUID selected. Use your copy shortcut.";
       }
     });
-    setup.replaceChildren(element("h3", "AI setup"), label, copy, feedback);
-    setup.append(element("p", "Set up AI Pilots under Session Zero → Campaign plan. The group approves their seats with the plan."));
+    setup.replaceChildren();
     providerBody.replaceChildren();
     if (view.setup_preview) {
-      setup.append(
-        element("p", "Facilitator setup status · Read only"),
-        element("p", "Handler · HarpyEngine bot"),
-        element("p", "Model provider · " + (view.configured ? "Configured" : "Unconfigured")),
-      );
-      if (view.configured) setup.append(element("p", "Handler model · " + view.handler_model),
-        element("p", view.ai_on ? "AI assistance · On" : "AI assistance · Off"));
+      setup.append(element("p", "Facilitator setup status · Read only"));
+      const facts = element("dl");
+      facts.className = "campaign-setup-facts";
+      for (const [name, value] of [
+        ["Model provider", view.configured ? "Configured" : "Unconfigured"],
+        ...(view.configured ? [["Handler model", view.handler_model], ["AI assistance", view.ai_on ? "On" : "Off"]] : []),
+      ]) {
+        const row = element("div");
+        row.className = "campaign-setup-fact";
+        row.append(element("dt", name), element("dd", value));
+        facts.append(row);
+      }
+      setup.append(facts);
     } else if (!view.configured) {
       setup.append(element("p", "Model connection needs server setup."),
         element("pre", [
@@ -3619,6 +3665,10 @@ export function mountActivityAISetup(parent, activityFetch, openReview) {
       }
       renderProviders(view.provider, enabled);
     }
+    const reference = element("div");
+    reference.className = "campaign-setup-reference";
+    reference.append(label, copy, feedback);
+    setup.append(reference);
     panel.hidden = false;
   }
 
@@ -3636,20 +3686,17 @@ export function mountActivityAISetup(parent, activityFetch, openReview) {
   }
 
   refresh.addEventListener("click", loadSetup);
-  panel.addEventListener("toggle", () => { if (panel.open) loadSetup(); });
-  return (show = false) => {
-    if (show) panel.open = true;
-    return loadSetup();
-  };
+  return loadSetup;
 }
 
 export function mountStartFresh(parent, activityFetch, openCampaign) {
   const path = "/api/activity/start-fresh";
   const launch = element("button", "Start fresh");
   launch.type = "button";
-  launch.hidden = true;
   launch.setAttribute("aria-haspopup", "dialog");
-  parent.append(launch);
+  const section = setupSection(parent, "Campaign maintenance", "campaign-setup-maintenance");
+  section.hidden = true;
+  section.append(launch);
   const dialog = element("dialog");
   dialog.setAttribute("aria-labelledby", "start-fresh-title");
   const title = element("h2", "Start fresh");
@@ -3719,10 +3766,10 @@ export function mountStartFresh(parent, activityFetch, openCampaign) {
     }
   });
   return async () => {
-    launch.hidden = true;
+    section.hidden = true;
     try {
       current = (await activityAIRequest(activityFetch, path)).current_name;
-      launch.hidden = !current;
+      section.hidden = !current;
     } catch {
       current = undefined;
     }
@@ -3730,15 +3777,15 @@ export function mountStartFresh(parent, activityFetch, openCampaign) {
 }
 
 export function mountActivityAITrial(parent, activityFetch, openNativePlay) {
-  const panel = element("details");
+  const panel = setupSection(parent, "Reviewed AI scenes", "campaign-setup-reviewed");
   const status = element("p");
   status.setAttribute("role", "status");
   const workspace = element("section");
   const [sceneLabel, scene] = choiceField("Scene", []);
   const refresh = element("button", "Refresh scenes");
   refresh.type = "button";
-  panel.append(element("summary", "Reviewed AI scenes"), sceneLabel, refresh, status, workspace);
-  parent.prepend(panel);
+  sceneLabel.hidden = true;
+  panel.append(status, sceneLabel, refresh, workspace);
   let selectedScenes = [];
   let visit = 0;
   let discovery = 0;
@@ -3854,6 +3901,7 @@ export function mountActivityAITrial(parent, activityFetch, openNativePlay) {
     const previous = scene.value;
     const result = await activityAIRequest(activityFetch, "/api/activity/review-scenes");
     if (count !== discovery) return;
+    panel.hidden = false;
     selectedScenes = result.scenes;
     scene.replaceChildren(element("option", "Choose…"));
     scene.firstChild.value = "";
@@ -3863,18 +3911,18 @@ export function mountActivityAITrial(parent, activityFetch, openNativePlay) {
       scene.append(option);
     }
     status.textContent = selectedScenes.length ? "" : "No open reviewed scenes are available to you.";
-    scene.value = selectedScenes.some(x => x.id === previous) ? previous : selectedScenes.length === 1 ? selectedScenes[0].id : "";
-    await openScene();
+    sceneLabel.hidden = !selectedScenes.length;
+    scene.value = selectedScenes.some(x => x.id === previous) ? previous
+      : selectedScenes.length === 1 ? selectedScenes[0].id : "";
+    if (scene.value !== previous) await openScene();
   }
 
-  const showError = error => { status.textContent = error.message; };
-  scene.addEventListener("change", () => openScene().catch(showError));
-  refresh.addEventListener("click", () => discover().catch(showError));
-  panel.addEventListener("toggle", () => {
-    if (panel.open) discover().catch(showError);
-  });
-  return () => {
-    panel.open = true;
-    panel.scrollIntoView({block: "nearest"});
+  const showError = error => {
+    if ([401, 403, 404].includes(error.httpStatus)) panel.hidden = true;
+    else status.textContent = error.message;
   };
+  const refreshScenes = () => discover().catch(showError);
+  scene.addEventListener("change", () => openScene().catch(showError));
+  refresh.addEventListener("click", refreshScenes);
+  return {refresh:refreshScenes, open:() => panel.scrollIntoView({block:"start"})};
 }

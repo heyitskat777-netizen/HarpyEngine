@@ -1828,6 +1828,9 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
       view = {...view, folder:"scenes", tacticalPilot:null};
     }
     if (view.folder === "dossiers" && !canReviewDossiers) view = {...view, folder:"scenes"};
+    const root = document.documentElement;
+    const enteringCampaignSetup = view.folder === "campaign-setup" && root.dataset.activityFolder !== view.folder;
+    root.dataset.activityFolder = view.folder;
     const showDossiers = view.folder === "dossiers";
     if (showDossiers !== dossierVisible) {
       dossierVisible = showDossiers;
@@ -1841,6 +1844,12 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
       if (name === "scenes") folder.textContent = handler ? "Handler desk" : "Scenes";
       if (name === view.folder) folder.setAttribute("aria-current", "page");
       else folder.removeAttribute("aria-current");
+    }
+    if (enteringCampaignSetup) {
+      const current = folders.find(folder => folder.dataset.folder === view.folder);
+      const navigation = current.parentElement;
+      navigation.scrollLeft += current.getBoundingClientRect().right - navigation.getBoundingClientRect().right;
+      window.scrollTo(0, 0);
     }
     back.hidden = !trail.length;
     handover.setVisible(canHandover && view.folder === "handover");

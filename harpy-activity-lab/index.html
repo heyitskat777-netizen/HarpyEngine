@@ -198,6 +198,12 @@
     <section data-pane="frame" class="record-card" hidden><h2>Frame Status</h2><div id="frame-data"></div></section>
     <section data-pane="campaign-setup" class="record-card" aria-labelledby="campaign-setup-title" hidden>
       <h2 id="campaign-setup-title">Campaign Setup</h2>
+      <nav id="campaign-setup-links" aria-label="Jump to campaign setup section">
+        <a href="#campaign-setup-session-zero">Session Zero</a>
+        <a href="#campaign-setup-input">My input</a>
+        <a href="#campaign-setup-plan">Plan</a>
+        <a href="#campaign-setup-ai">AI setup</a>
+      </nav>
       <div id="campaign-setup-panels"></div>
     </section>
     <section data-pane="dossiers" class="record-card" aria-labelledby="dossier-page-title" hidden>
@@ -2258,12 +2264,28 @@ async function start() {
     if (config.campaign_setup) {
       const pane = document.getElementById("campaign-setup-panels");
       const showSetup = mountDirectorDesk(pane, null, activityFetch);
-      const openReview = config.reviewed_ai_trial ? mountActivityAITrial(pane, activityFetch, openApprovedNativePlay) : null;
-      if (campaignSwitcher) refreshAiSetup = mountActivityAISetup(pane, activityFetch, openReview);
+      let review;
+      if (campaignSwitcher) {
+        const openReview = config.reviewed_ai_trial ? () => review.open() : null;
+        refreshAiSetup = mountActivityAISetup(pane, activityFetch, openReview);
+      }
+      if (config.reviewed_ai_trial) review = mountActivityAITrial(pane, activityFetch, openApprovedNativePlay);
       const refreshStartFresh = campaignSwitcher ? mountStartFresh(pane, activityFetch, switchCampaign) : null;
+      document.getElementById("campaign-setup-links").addEventListener("click", event => {
+        const link = event.target.closest("a");
+        if (!link) return;
+        const section = document.getElementById(link.hash.slice(1));
+        if (!section) return;
+        event.preventDefault();
+        const heading = section.querySelector("h3");
+        heading.tabIndex = -1;
+        heading.focus({preventScroll:true});
+        section.scrollIntoView({block:"start"});
+      });
       ui.setCampaignSetup(() => {
         showSetup();
-        refreshAiSetup?.(true);
+        refreshAiSetup?.();
+        review?.refresh();
         refreshStartFresh?.();
       });
     }
