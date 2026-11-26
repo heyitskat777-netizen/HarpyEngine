@@ -2081,11 +2081,13 @@ export function renderPlayerSetup(target, state, send, bondTarget = target, wiza
       }
     }
   }
-  renderStartingBonds(bondTarget, state, send);
+  renderStartingBonds(bondTarget, {...state, bonds:[...state.bonds, ...(state.bond_history ?? [])]}, send);
 }
 
 export function startingBondStatus(bond, active) {
   if (bond.state === "accepted") return "Countersigned";
+  if (bond.state === "declined") return "Declined";
+  if (bond.state === "withdrawn") return "Withdrawn";
   if (!bond.incoming) return "Awaiting " + (bond.counterpart || "recipient countersignature");
   return active ? "Your response required" : "Your countersignature required";
 }

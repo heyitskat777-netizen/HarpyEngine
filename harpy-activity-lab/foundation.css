@@ -315,10 +315,10 @@ body {
 .inbox-title button { min-height: 28px; background: var(--panel); color: var(--ink); }
 .inbox-body { padding: 8px 11px; }
 .inbox-body article { margin-block: 6px; }
-.ledger-filters { display: flex; flex-wrap: wrap; gap: 5px; }
-.ledger-filters button { min-height: 33px; font: 600 11px/1.35 var(--mono); }
+.ledger-filters { display: flex; flex-wrap: wrap; gap: 3px; }
+.ledger-filters button { min-height: 44px; padding-inline: 8px; font: 600 11px/1.35 var(--mono); }
 .ledger-filters button[aria-pressed="true"] { box-shadow: inset 0 -2px var(--key); color: var(--key); }
-#decision-count { margin-inline-start: 3px; }
+.ledger-filters button span { margin-inline-start: 2px; font-variant-numeric: tabular-nums; }
 #mail-entries { display: grid; gap: 4px; }
 .mail-entry {
   width: 100%;
@@ -331,7 +331,7 @@ body {
   border-inline-start: 3px solid var(--line);
   overflow-wrap: anywhere;
 }
-.mail-status { color: var(--quiet-ink); font: 600 10px/1.4 var(--mono); text-transform: uppercase; }
+.mail-status { color: var(--quiet-ink); font: 600 10px/1.4 var(--mono); text-align: end; text-transform: uppercase; }
 .mail-subject { font-weight: 650; }
 .mail-metadata { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 12px; font-weight: 400; }
 .mail-metadata > span { min-width: 0; }

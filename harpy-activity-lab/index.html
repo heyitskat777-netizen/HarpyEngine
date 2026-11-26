@@ -65,9 +65,10 @@
 <section id="inbox" class="inbox" aria-label="Inbox" hidden>
   <header class="inbox-title"><h2>Foundation mail spool</h2><button type="button" id="close-inbox" aria-label="Close inbox">×</button></header>
   <div class="inbox-body">
-    <div class="ledger-filters" role="group" aria-label="Dispatch filters">
-      <button type="button" id="dispatch-all" aria-pressed="true">All dispatches</button>
-      <button type="button" id="dispatch-decisions" aria-pressed="false">Assigned responses <span id="decision-count" aria-live="polite">0</span></button>
+    <div class="ledger-filters" role="group" aria-label="Dispatch folders">
+      <button type="button" id="dispatch-decisions" data-dispatch-folder="assigned" aria-pressed="true">Assigned <span id="decision-count" aria-live="polite">0</span></button>
+      <button type="button" data-dispatch-folder="waiting" aria-pressed="false">Waiting <span id="waiting-count">0</span></button>
+      <button type="button" data-dispatch-folder="history" aria-pressed="false">History <span id="history-count" hidden></span></button>
     </div>
     <ul class="records" id="mail-entries" aria-label="Mail records"></ul>
     <section id="dm-delivery" aria-labelledby="dm-delivery-title" hidden>
@@ -646,7 +647,7 @@ document.getElementById("scene-action-refresh").addEventListener("click", () => 
 });
 const inboxToggle = document.getElementById("inbox-toggle");
 const assignmentsToggle = document.getElementById("assignments-toggle");
-const allDispatches = document.getElementById("dispatch-all");
+const historyDispatches = inbox.querySelector('[data-dispatch-folder="history"]');
 const spool = mailSpool(inbox, document.getElementById("mail-entries"),
   document.getElementById("mail-reader"), document.getElementById("inbox-count"),
   document.getElementById("assignments-count"), entry => {
@@ -658,8 +659,9 @@ const spool = mailSpool(inbox, document.getElementById("mail-entries"),
     artwork.picture(portrait, art, {decorative:true, fallback:Array.from(entry.sender ?? "").slice(0,2).join("")});
     return portrait;
   });
-allDispatches.addEventListener("click", () => refreshDmDelivery());
-document.getElementById("dispatch-decisions").addEventListener("click", () => refreshDmDelivery());
+for (const folder of inbox.querySelectorAll("[data-dispatch-folder]")) {
+  folder.addEventListener("click", updateDmDeliveryVisibility);
+}
 function openInbox(open, assigned = false) {
   if (!open && document.getElementById("mail-reader").open) document.getElementById("mail-reader").close();
   inbox.hidden = !open;
@@ -695,7 +697,9 @@ async function refreshFacilitatorReviews() {
   spool.replace("facilitator-reviews", reviews.map(review => ({
     id:"review:" + review.id + ":" + review.revision, title:"Facilitator review",
     sender:review.own ? "You" : "Scene participant", status:reviewStatus[review.status],
-    required:review.pending, owner:review.can_rule ? "Facilitator" : "You",
+    required:review.pending,
+    waiting:!["resolved", "declined"].includes(review.status),
+    owner:review.can_rule ? "Facilitator" : review.pending ? "You" : undefined,
     open() {
       openInbox(false);
       openFacilitatorReview(review.id);
@@ -1086,12 +1090,17 @@ const dmStates = {queued:"Queued", skipped:"Skipped", unavailable:"Unavailable",
 let dmDeliveryRequest = 0;
 let dmDeliveryPoll;
 let displayedDmDelivery;
+function updateDmDeliveryVisibility() {
+  dmDelivery.hidden = inbox.hidden || historyDispatches.getAttribute("aria-pressed") !== "true"
+    || !dmDeliveryRecords.childElementCount;
+}
+
 async function refreshDmDelivery() {
   clearTimeout(dmDeliveryPoll);
   const request = ++dmDeliveryRequest;
   const mailbox = currentPlayer?.mailbox;
-  const active = () => !inbox.hidden && allDispatches.getAttribute("aria-pressed") === "true"
-    && request === dmDeliveryRequest && currentPlayer?.mailbox === mailbox;
+  const active = () => !inbox.hidden && request === dmDeliveryRequest && currentPlayer?.mailbox === mailbox;
+  updateDmDeliveryVisibility();
   if (!mailbox || !session || !rosterEnabled || !active()) {
     dmDelivery.hidden = true;
     return;
@@ -1099,9 +1108,22 @@ async function refreshDmDelivery() {
   try {
     const {deliveries} = await responseData(await activityFetch("/api/dm-receipts?view=delivery"));
     if (!active()) return;
-    const snapshot = JSON.stringify([mailbox, deliveries]);
+    const matched = new Map();
+    const otherReceipts = deliveries.flatMap(receipt => {
+      const key = receipt.kind + ":" + receipt.record;
+      const confirmed = new Set();
+      const recipients = receipt.recipients.filter(row => {
+        if (row.status !== "sent" || !spool.hasDeliveryTarget(key, row.name)) return true;
+        confirmed.add(row.name);
+        return false;
+      });
+      if (confirmed.size) matched.set(key, confirmed);
+      return recipients.length ? [{...receipt, recipients}] : [];
+    });
+    const snapshot = JSON.stringify([mailbox, deliveries, otherReceipts]);
     if (snapshot !== displayedDmDelivery) {
-      dmDeliveryRecords.replaceChildren(...deliveries.map(receipt => {
+      spool.setDeliveries(matched);
+      dmDeliveryRecords.replaceChildren(...otherReceipts.map(receipt => {
         const row = document.createElement("li");
         const subject = document.createElement("strong");
         subject.textContent = dmSubjects[receipt.kind] ?? "Inbox reminder";
@@ -1127,7 +1149,7 @@ async function refreshDmDelivery() {
       }));
       displayedDmDelivery = snapshot;
     }
-    dmDelivery.hidden = !deliveries.length;
+    updateDmDeliveryVisibility();
     if (deliveries.some(receipt => receipt.recipients.some(recipient => recipient.status === "queued"))) {
       dmDeliveryPoll = setTimeout(refreshDmDelivery, 2500);
     }
@@ -1377,6 +1399,11 @@ async function refreshScene() {
   perspectiveToggle.hidden = !player.handler_account;
   perspectiveToggle.setAttribute("aria-pressed",String(player.perspective === "pilot"));
   perspectiveToggle.textContent = player.perspective === "pilot" ? "Return to Handler desk" : "Pilot mode";
+  if (currentPlayer?.mailbox !== player.mailbox) {
+    dmDeliveryRecords.replaceChildren();
+    dmDelivery.hidden = true;
+    displayedDmDelivery = undefined;
+  }
   spool.identify(player.mailbox, player.callsign || "Handler");
   currentPlayer = player;
   specialistWorkButton.hidden = !campaignSwitcher;
@@ -1446,13 +1473,15 @@ async function refreshScene() {
   if (rosterEnabled) refreshPresence();
   communications.update(player.communications,player.mailbox);
   pilot.dataset.ready = "";
-  spool.replace("bonds", player.bonds.map(bond => ({
+  spool.replace("bonds", [...player.bonds, ...(player.bond_history ?? [])].map(bond => ({
     id:`bond:${bond.id}:${bond.revision}`, file:"bond:" + bond.id,
     title:"Starting Bond",
     sender:bond.incoming ? bond.counterpart ?? "Personnel intake" : player.callsign || "You",
     recipient:bond.incoming ? undefined : bond.counterpart,
+    deliveryKey:bond.incoming ? undefined : "bond:" + bond.id,
     status:startingBondStatus(bond, player.stage === "active"),
-    required:bond.incoming && bond.state === "pending" && (!player.bond_setup || player.stage !== "active"),
+    required:bond.incoming && bond.state === "pending",
+    waiting:!bond.incoming && bond.state === "pending",
   })));
   spool.replace("scene-invites", (player.scene_invites ?? []).map(record => ({
     id:"scene-invite:" + record.id, sender:"Scene operations", title:"Scene invitation",
@@ -1514,8 +1543,11 @@ async function refreshScene() {
     });
     if (receipt.pending.length) return receipt.pending.map(choice => letter(choice,
       `choice:${choice.id}:${choice.revision}`, `${label} · ${decisionName(choice.kind)}`));
-    if (receipt.state === "complete") return [letter(null, "receipt:" + receipt.id,
-      label + " · Receipt", receipt.archived_at != null ? "Archived" : "Filed")];
+    if (receipt.waiting_on?.length) return [{
+      ...letter(null, "waiting:" + receipt.id, label, "Awaiting " + receipt.waiting_on.join(", ")), waiting:true,
+    }];
+    if (["complete", "aborted"].includes(receipt.state)) return [letter(null, "receipt:" + receipt.id,
+      label + " · Receipt", receipt.state === "aborted" ? "Cancelled" : receipt.archived_at != null ? "Archived" : "Filed")];
     return [];
   });
   spool.replace("scene", [...sceneMail, ...(player.handler_choices ?? []).map(card => ({
@@ -1527,7 +1559,7 @@ async function refreshScene() {
   const specialty = new Map(sceneWork.filter(card => card.specialty).map(card => [card.id,card]));
   spool.replace("beneath-work", sceneWork.filter(card => !card.specialty).map(card => ({
     id:`${card.root}:${card.id}:${card.action ?? "filed"}`, sender:"Scene operations", location:card.room_name,
-    subject:card.instruction, required:Boolean(card.action),
+    subject:card.instruction, required:Boolean(card.action), waiting:Boolean(card.waiting),
     open() { openInbox(false); openBeneathWork(card); },
   })));
   const notices = player.handler_notices ?? [];
@@ -1564,6 +1596,7 @@ async function refreshScene() {
       title:"Handler notice",
       sender:"Handler operations",
       status:notice.state === "complete" ? "Filed" : "Follow-up pending",
+      waiting:notice.state !== "complete",
     })),
   ]);
   const closing = player.off_duty?.closing;
@@ -2069,8 +2102,9 @@ function renderOffers(data) {
   spool.replace("missions", data.offers.map(offer => ({
     id:`mission:${offer.id}:${offer.revision}`, file:"mission:" + offer.id, sender:"Dispatch desk",
     title:"Mission dispatch", required:offer.needs_response,
+    waiting:offer.waiting_on === "invitees" && !offer.response,
     created:offer.filed_at, timeStyle:"medium",
-    status:offer.response === "decline" ? "Declined" : missionStatus(offer),
+    status:offer.response === "decline" ? "Declined" : offer.response === "accept" ? "Accepted" : missionStatus(offer),
   })));
 }
 

@@ -1477,8 +1477,8 @@ def serve(
                         if parse_qs(request.query).get("view") == ["delivery"]:
                             names = self.dm_recipient_names(campaign, viewer) if receipts else {}
                             deliveries = [
-                                {"id": identity, "kind": kind, **delivery}
-                                for identity, kind in receipts
+                                {"id": identity, "kind": kind, "record": record, **delivery}
+                                for identity, kind, record in receipts
                                 if (
                                     delivery := self.read_dm_receipt(
                                         campaign, viewer, identity, names=names
@@ -1488,7 +1488,7 @@ def serve(
                             self.send_json(HTTPStatus.OK, {"deliveries": deliveries})
                         else:
                             self.send_json(
-                                HTTPStatus.OK, {"receipts": [identity for identity, _ in receipts]}
+                                HTTPStatus.OK, {"receipts": [identity for identity, _, _ in receipts]}
                             )
                         return
                     receipt = self.read_dm_receipt(campaign, viewer, match[1])

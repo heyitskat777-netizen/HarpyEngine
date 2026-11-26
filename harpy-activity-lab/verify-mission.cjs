@@ -23,6 +23,7 @@ const communicationsCheck = process.argv.includes("--communications-check");
 const artworkCheck = process.argv.includes("--artwork-check");
 const pilotAssetsCheck = process.argv.includes("--pilot-assets-check");
 const dmDeliveryCheck = process.argv.includes("--dm-delivery-check");
+const inboxFoldersCheck = process.argv.includes("--inbox-folders-check");
 const campaignSetupMobileCheck = process.argv.includes("--campaign-setup-mobile-check");
 const responsiveHudCheck = process.argv.includes("--responsive-hud-check");
 const playRailCheck = process.argv.includes("--play-rail-check");
@@ -43,7 +44,7 @@ const p2Facility = process.argv.includes("--outpost") ? "outpost" : "hangar";
 const directorDiscordCheck = archiveCheck || intelCheck || sceneArtworkCheck || p2BattlefieldCheck || playParityCheck || rehearsalCheck || process.argv.includes("--director-discord-check");
 const enrollmentDraftCheck = process.argv.includes("--enrollment-draft-check");
 const boundRosterCheck = enrollmentDraftCheck || sceneOrdersCheck || missionDeskCheck || rosterBattlefieldCheck || campaignSwitchCheck || campaignDmCheck || handlerPlaysCheck || dmDeliveryCheck || campaignSetupMobileCheck || process.argv.includes("--bound-roster-check");
-const discordOffline = directorDiscordCheck || dmOffline || boundRosterCheck || pilotAssetsCheck || responsiveHudCheck || process.argv.includes("--discord-offline");
+const discordOffline = directorDiscordCheck || dmOffline || boundRosterCheck || pilotAssetsCheck || responsiveHudCheck || inboxFoldersCheck || process.argv.includes("--discord-offline");
 const chromePath = process.argv.slice(2).find(argument => !argument.startsWith("--"));
 const tacticalTier = process.argv.slice(2).find(argument => argument.startsWith("--tactical-tier="))?.split("=")[1];
 const coreCase = process.argv.slice(2).find(argument => argument.startsWith("--core-case="))?.split("=")[1];
@@ -379,6 +380,7 @@ async function verifySceneIntel(browser, server, previous) {
     assert(!state.directory.rooms.some(room => room.name === name));
     assert.equal((await api(recipient,previous.transcript)).status(),403);
     const link = inbox.locator(`[data-mail-id="intel:${previous.report.id}"]`);
+    await recipient.view.locator('[data-dispatch-folder="history"]').click();
     await link.click();
     const card = recipient.view.locator(`[data-mail-file="intel:${previous.report.id}"]`);
     await card.getByRole("heading",{name:"Intel from " + previous.report.callsign}).waitFor();
@@ -500,6 +502,7 @@ async function verifySceneArchive(browser, server, previous) {
       const filed = mailbox.filter(entry => entry.id === receipt.id);
       assert.deepEqual(filed, [{...receipt, archived_at:previous.snapshot.archived_at}]);
       await owner.view.locator("#inbox-toggle").click();
+      await owner.view.locator('[data-dispatch-folder="history"]').click();
       const link = owner.view.locator(`#mail-entries [data-mail-id="receipt:${receipt.id}"]`);
       await link.getByText("Archived",{exact:true}).waitFor();
       await link.click();
@@ -604,7 +607,7 @@ async function verifySceneArchive(browser, server, previous) {
     if (context === "Hold the relay steady.") {
       await owner.view.locator("#inbox-toggle").click();
       await owner.view.locator("#dispatch-decisions").click();
-      await owner.view.locator("#mail-entries").getByText("NO RESPONSE ASSIGNED",{exact:true}).waitFor();
+      await owner.view.locator("#mail-entries").getByText("No actions assigned to you.",{exact:true}).waitFor();
       await owner.view.getByRole("button",{name:"Close inbox",exact:true}).click();
       await owner.view.locator('#scene-play-options button[data-play="keep_your_head"]').click();
       const filed = owner.view.getByRole("dialog",{name:/Keep Your Head/i});
@@ -2563,6 +2566,44 @@ async function mainTest() {
       console.log("Handler Desk and its Play menu fit mobile and desktop.");
       return;
     }
+    if (inboxFoldersCheck) {
+      const {page, view} = await openPilot(browser, server, "invited", false, undefined, undefined, {mobile:true});
+      await page.setViewportSize({width:320,height:640});
+      const inbox = view.getByRole("region", {name:"Inbox", exact:true});
+      const assigned = inbox.locator('[data-dispatch-folder="assigned"]');
+      const waiting = inbox.locator('[data-dispatch-folder="waiting"]');
+      const history = inbox.locator('[data-dispatch-folder="history"]');
+      const row = inbox.getByRole("button", {name:"Mission dispatch",exact:true});
+      const record = view.locator("#mail-reader");
+      await assigned.click();
+      await row.getByText("RESPONSE REQUIRED", {exact:true}).waitFor();
+      const before = Number(await assigned.locator("#decision-count").textContent());
+      assert(before > 0);
+      assert(await inbox.locator(".ledger-filters").evaluate(filters =>
+        [...filters.children].every(button => button.offsetTop === filters.firstElementChild.offsetTop)));
+      await waiting.click();
+      assert.equal(await row.count(),0);
+      await history.click();
+      assert.equal(await row.count(),0);
+      await assigned.click();
+      await row.click();
+      await record.getByRole("button", {name:"Accept mission",exact:true}).click();
+      await record.getByText("RESPONSE FILED · Accepted",{exact:true}).waitFor();
+      assert.equal(await record.getByRole("button", {name:"Accept mission",exact:true}).count(),0);
+      await record.getByRole("button", {name:"Close dispatch record",exact:true}).click();
+      assert.equal(await row.count(),0);
+      assert.equal(Number(await assigned.locator("#decision-count").textContent()),before - 1);
+      await waiting.click();
+      assert.equal(await row.count(),0);
+      await history.click();
+      await row.getByText("Accepted",{exact:true}).waitFor();
+      await page.context().close();
+      const reopened = await openPilot(browser, server, "invited");
+      await reopened.view.locator('[data-dispatch-folder="history"]').click();
+      await reopened.view.getByRole("button", {name:"Mission dispatch",exact:true}).getByText("Accepted",{exact:true}).waitFor();
+      console.log("The synthetic mission left Assigned when recorded, reduced the count, and survived reopening in History.");
+      return;
+    }
     if (dmDeliveryCheck) {
       const {page, view} = await openPilot(browser, server, "invited");
       const enrollment = view.getByRole("button", {name:"Close pilot enrollment", exact:true});
@@ -2570,11 +2611,24 @@ async function mainTest() {
       const closeInbox = view.getByRole("button", {name:"Close inbox", exact:true});
       if (await closeInbox.isVisible()) await closeInbox.click();
       let confirmed = false;
+      let bondState = "pending";
       let reads = 0;
+      await page.route(url => url.pathname === "/api/player-setup", async route => {
+        const request = route.request();
+        const upstream = await fetch(server.origin + new URL(request.url()).pathname, {
+          headers:{Authorization:request.headers().authorization},
+        });
+        const player = await upstream.json();
+        player.bonds = [...player.bonds, {
+          id:"delivery-bond", revision:bondState === "pending" ? 1 : 2, state:bondState,
+          incoming:false, counterpart:"EXAMPLE PILOT", prompt:"Fictional bond prompt", context:"",
+        }];
+        return route.fulfill({status:upstream.status,json:player});
+      });
       await page.route(url => url.pathname === "/api/dm-receipts" && url.searchParams.get("view") === "delivery", route => {
         reads++;
         return route.fulfill({json:{deliveries:[{
-          id:"synthetic-dispatch", kind:"bond", recipients:[
+          id:"synthetic-dispatch", kind:"bond", record:"delivery-bond", recipients:[
             {name:"EXAMPLE PILOT", status:confirmed ? "sent" : "queued"},
             {name:"EXAMPLE WING", status:"unavailable"},
           ],
@@ -2582,21 +2636,37 @@ async function mainTest() {
       });
       await view.getByRole("button", {name:"Frame Status", exact:true}).click();
       assert.equal(reads, 0);
+      await view.getByRole("button", {name:"Synchronize terminal",exact:true}).click();
       const inbox = view.getByRole("region", {name:"Inbox", exact:true});
       const delivery = inbox.getByRole("region", {name:"Discord delivery", exact:true});
-      const check = delivery.getByRole("img", {name:"Discord confirmed send", exact:true});
+      const bond = inbox.getByRole("button", {name:"Starting Bond", exact:true});
+      const check = bond.getByRole("img", {name:"Discord confirmed send", exact:true});
       await view.getByRole("button", {name:"Inbox", exact:true}).click();
+      const history = inbox.locator('[data-dispatch-folder="history"]');
+      const waiting = inbox.locator('[data-dispatch-folder="waiting"]');
+      await history.click();
       await delivery.getByText("Starting Bond", {exact:true}).waitFor();
       await delivery.getByText("Queued", {exact:true}).waitFor();
       assert.equal(await check.count(), 0);
       confirmed = true;
+      await waiting.click();
+      await bond.getByText("Awaiting EXAMPLE PILOT", {exact:true}).waitFor();
       await check.waitFor();
       assert.equal(await check.count(), 1);
       assert.match(await check.locator("..").textContent(), /EXAMPLE PILOT/);
+      await history.click();
+      assert.equal(await bond.count(), 0);
       await delivery.getByText("Unavailable", {exact:true}).waitFor();
-      await inbox.getByRole("button", {name:/Assigned responses/}).click();
+      await inbox.locator('[data-dispatch-folder="assigned"]').click();
       await delivery.waitFor({state:"hidden"});
-      await inbox.getByRole("button", {name:"All dispatches", exact:true}).click();
+      await closeInbox.click();
+      bondState = "accepted";
+      await view.getByRole("button", {name:"Synchronize terminal",exact:true}).click();
+      await view.getByRole("button", {name:"Inbox", exact:true}).click();
+      await waiting.click();
+      assert.equal(await bond.count(), 0);
+      await history.click();
+      await bond.getByText("Countersigned", {exact:true}).waitFor();
       await check.waitFor();
       await closeInbox.click();
       await view.getByRole("button", {name:"Pilot Profile", exact:true}).click();
@@ -3828,6 +3898,7 @@ async function mainTest() {
     const reopened = await openPilot(browser, server, "invited");
     await reopened.view.getByText(savedLabel).waitFor();
     if (keepReceipt) {
+      await reopened.view.locator('[data-dispatch-folder="history"]').click();
       await reopened.view.locator("#mail-entries").getByRole("button",{name:"Keep Your Head · Receipt",exact:true}).click();
       const filed = reopened.view.locator(`[data-scene-receipt="${keepReceipt.id}"]`);
       await filed.getByText("The pilot holds until the signal clears.", {exact:true}).waitFor();

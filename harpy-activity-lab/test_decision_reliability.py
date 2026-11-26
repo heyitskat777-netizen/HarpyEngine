@@ -190,6 +190,32 @@ def test_pending_bond_access_retry_and_restart(tmp_path):
         assert PRIVATE_BOND not in json.dumps(request(host, path + query, outside))
 
 
+def test_declined_bond_is_filed_privately_after_restart(tmp_path):
+    relay(tmp_path, 1000)
+    path = "/api/player-setup"
+    with role_activity(tmp_path, PILOT, bot_handler=True, decisions=True) as host:
+        first, second = [login(host, code) for code in ("role-pilot", "invited")]
+        query = "?campaign=" + request(host, "/api/campaigns", first)["campaigns"][0]["id"]
+        bond = prepare_bond(host, first, second, query)
+        request(
+            host,
+            path + "/bond-decision" + query,
+            second,
+            {"id": bond["id"], "revision": bond["revision"], "decision": "decline"},
+        )
+
+    with role_activity(tmp_path, PILOT, bot_handler=True, decisions=True) as host:
+        for code, incoming in (("role-pilot", False), ("invited", True)):
+            state = request(host, path + query, login(host, code))
+            assert not state["bonds"]
+            (record,) = state["bond_history"]
+            assert (record["id"], record["state"], record["context"], record["incoming"]) == (
+                bond["id"], "declined", PRIVATE_BOND, incoming,
+            )
+        outsider = request(host, path + query, login(host, "other"))
+        assert PRIVATE_BOND not in json.dumps(outsider)
+
+
 def test_mission_decisions_are_private_and_revision_checked_across_restarts(tmp_path):
     relay(tmp_path, 1000)
     path = "/api/mission-offers"
@@ -323,7 +349,12 @@ def test_scene_invite_is_private_and_joins_only_on_owner_acceptance(tmp_path):
         request(host, proof, outsider, status=HTTPStatus.NOT_FOUND)
         queued = {"name": "RELAY ONE", "online": False, "status": "queued"}
         assert request(host, proof, first) == {"recipients": [queued]}
-        delivery = {"id": issued["dm_receipt"], "kind": "scene_invite", "recipients": [queued]}
+        delivery = {
+            "id": issued["dm_receipt"],
+            "kind": "scene_invite",
+            "record": issued["id"],
+            "recipients": [queued],
+        }
         assert request(host, delivery_log, first)["deliveries"][-1] == delivery
         assert request(host, delivery_log, second) == {"deliveries": []}
         assert request(host, delivery_log, outsider) == {"deliveries": []}

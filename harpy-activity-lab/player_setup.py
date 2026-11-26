@@ -1015,8 +1015,9 @@ class PlayerSetup:
             return record
         profile = self.store.draft(viewer)
         bonds = []
+        bond_history = []
         for item in self.bonds.list(viewer):
-            if item["stale"] or item["state"] not in ("pending", "accepted"):
+            if item["stale"] or item["state"] not in ("pending", "accepted", "declined", "withdrawn"):
                 continue
             if not self.bound_roster and str(self.recruit.user_id) not in (
                 item["source_id"],
@@ -1036,7 +1037,8 @@ class PlayerSetup:
                 counterpart = int(item["source_id"] if incoming else item["target_id"])
                 peer = self.store.draft(viewer, counterpart)
                 bond["counterpart"] = peer["callsign"] if peer else None
-            bonds.append(bond)
+            records = bonds if item["state"] in ("pending", "accepted") else bond_history
+            records.append(bond)
         creation_choices = (
             self.enrollment_choices.view(viewer, bonds) if self.bound_roster else None
         )
@@ -1196,6 +1198,7 @@ class PlayerSetup:
                 if intel_pilot and self.records
                 else [],
                 "bonds": bonds,
+                "bond_history": bond_history,
                 "creation_choices": creation_choices,
                 "bond_setup": bond_setup,
                 "scene": relay,
@@ -1259,6 +1262,7 @@ class PlayerSetup:
                 "revision": profile["revision"] if profile else 0,
                 "options": options,
                 "bonds": bonds,
+                "bond_history": bond_history,
                 "creation_choices": creation_choices,
                 "directory": directory,
                 "scene_invites": scene_invites,
@@ -1293,6 +1297,7 @@ class PlayerSetup:
                 "revision": profile["revision"],
                 "options": options | {"frame": "JANUS"},
                 "bonds": bonds,
+                "bond_history": bond_history,
                 "creation_choices": creation_choices,
                 "directory": directory,
                 "enrollment": enrollment,
@@ -1346,6 +1351,7 @@ class PlayerSetup:
             if enrollment
             else None,
             "bonds": bonds,
+            "bond_history": bond_history,
             "creation_choices": creation_choices,
             "review": {
                 "ready": review.sheet.ready_for_rules_review,

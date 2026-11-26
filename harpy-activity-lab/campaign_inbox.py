@@ -214,7 +214,7 @@ class InboxNotices:
     def recent_receipts(self, campaign, sender):
         with closing(sqlite3.connect(self.path)) as db:
             rows = db.execute(
-                """SELECT id, kind FROM notice_receipts WHERE (campaign, sender)=(?, ?)
+                """SELECT id, kind, record FROM notice_receipts WHERE (campaign, sender)=(?, ?)
                    ORDER BY rowid DESC LIMIT 3""",
                 (str(campaign), str(sender)),
             ).fetchall()
