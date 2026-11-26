@@ -214,11 +214,11 @@ class InboxNotices:
     def recent_receipts(self, campaign, sender):
         with closing(sqlite3.connect(self.path)) as db:
             rows = db.execute(
-                """SELECT id FROM notice_receipts WHERE (campaign, sender)=(?, ?)
+                """SELECT id, kind FROM notice_receipts WHERE (campaign, sender)=(?, ?)
                    ORDER BY rowid DESC LIMIT 3""",
                 (str(campaign), str(sender)),
             ).fetchall()
-        return [identity for (identity,) in reversed(rows)]
+        return list(reversed(rows))
 
     def bond(self, setup, sender, receipt):
         record = setup.bonds.get(sender, receipt["id"])

@@ -351,6 +351,11 @@ body {
 [data-unread="true"] > .mail-entry { border-inline-start-color: var(--key); }
 [data-required="true"] .mail-status { color: var(--key); }
 .mail-entry[aria-current="true"] { background: var(--rail); border-color: var(--key); }
+#dm-delivery { border-block-start: 1px solid var(--line); margin-block-start: 10px; padding-block-start: 7px; }
+#dm-delivery h3 { margin: 0 0 4px; color: var(--quiet-ink); font: 600 11px/1.4 var(--mono); }
+#dm-delivery-records li { display: flex; flex-wrap: wrap; gap: 3px 10px; padding-block: 3px; font-size: 12px; }
+.dm-delivery-mark { color: var(--quiet-ink); font: 600 10px/1.4 var(--mono); }
+.dm-delivery-mark[data-confirmed="true"] { color: var(--key); font-size: 13px; }
 #mail-reader { background: var(--panel); }
 #mail-reader :is(article,h2) { margin-block: 4px; }
 #mail-reader article p { white-space: pre-wrap; overflow-wrap: anywhere; }

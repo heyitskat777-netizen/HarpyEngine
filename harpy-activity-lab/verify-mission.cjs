@@ -22,6 +22,7 @@ const relayTier = process.argv.find(argument => argument.startsWith("--relay-tie
 const communicationsCheck = process.argv.includes("--communications-check");
 const artworkCheck = process.argv.includes("--artwork-check");
 const pilotAssetsCheck = process.argv.includes("--pilot-assets-check");
+const dmDeliveryCheck = process.argv.includes("--dm-delivery-check");
 const playRailCheck = process.argv.includes("--play-rail-check");
 const rosterBattlefieldCheck = process.argv.includes("--private-battlefield-check");
 const campaignSwitchCheck = process.argv.includes("--campaign-switch-check");
@@ -39,7 +40,7 @@ const playParityCheck = process.argv.includes("--play-parity-check");
 const p2Facility = process.argv.includes("--outpost") ? "outpost" : "hangar";
 const directorDiscordCheck = archiveCheck || intelCheck || sceneArtworkCheck || p2BattlefieldCheck || playParityCheck || rehearsalCheck || process.argv.includes("--director-discord-check");
 const enrollmentDraftCheck = process.argv.includes("--enrollment-draft-check");
-const boundRosterCheck = enrollmentDraftCheck || sceneOrdersCheck || missionDeskCheck || rosterBattlefieldCheck || campaignSwitchCheck || campaignDmCheck || handlerPlaysCheck || process.argv.includes("--bound-roster-check");
+const boundRosterCheck = enrollmentDraftCheck || sceneOrdersCheck || missionDeskCheck || rosterBattlefieldCheck || campaignSwitchCheck || campaignDmCheck || handlerPlaysCheck || dmDeliveryCheck || process.argv.includes("--bound-roster-check");
 const discordOffline = directorDiscordCheck || dmOffline || boundRosterCheck || pilotAssetsCheck || process.argv.includes("--discord-offline");
 const chromePath = process.argv.slice(2).find(argument => !argument.startsWith("--"));
 const tacticalTier = process.argv.slice(2).find(argument => argument.startsWith("--tactical-tier="))?.split("=")[1];
@@ -2282,6 +2283,48 @@ async function mainTest() {
       executablePath: chromePath ?? chromium.executablePath(),
       headless: true, args: ["--disable-background-networking", "--disable-sync"],
     });
+    if (dmDeliveryCheck) {
+      const {page, view} = await openPilot(browser, server, "invited");
+      const enrollment = view.getByRole("button", {name:"Close pilot enrollment", exact:true});
+      if (await enrollment.isVisible()) await enrollment.click();
+      const closeInbox = view.getByRole("button", {name:"Close inbox", exact:true});
+      if (await closeInbox.isVisible()) await closeInbox.click();
+      let confirmed = false;
+      let reads = 0;
+      await page.route(url => url.pathname === "/api/dm-receipts" && url.searchParams.get("view") === "delivery", route => {
+        reads++;
+        return route.fulfill({json:{deliveries:[{
+          id:"synthetic-dispatch", kind:"bond", recipients:[
+            {name:"EXAMPLE PILOT", status:confirmed ? "sent" : "queued"},
+            {name:"EXAMPLE WING", status:"unavailable"},
+          ],
+        }]}});
+      });
+      await view.getByRole("button", {name:"Frame Status", exact:true}).click();
+      assert.equal(reads, 0);
+      const inbox = view.getByRole("region", {name:"Inbox", exact:true});
+      const delivery = inbox.getByRole("region", {name:"Discord delivery", exact:true});
+      const check = delivery.getByRole("img", {name:"Discord confirmed send", exact:true});
+      await view.getByRole("button", {name:"Inbox", exact:true}).click();
+      await delivery.getByText("Starting Bond", {exact:true}).waitFor();
+      await delivery.getByText("Queued", {exact:true}).waitFor();
+      assert.equal(await check.count(), 0);
+      confirmed = true;
+      await check.waitFor();
+      assert.equal(await check.count(), 1);
+      assert.match(await check.locator("..").textContent(), /EXAMPLE PILOT/);
+      await delivery.getByText("Unavailable", {exact:true}).waitFor();
+      await inbox.getByRole("button", {name:/Assigned responses/}).click();
+      await delivery.waitFor({state:"hidden"});
+      await inbox.getByRole("button", {name:"All dispatches", exact:true}).click();
+      await check.waitFor();
+      await closeInbox.click();
+      await view.getByRole("button", {name:"Pilot Profile", exact:true}).click();
+      assert.equal(await view.locator("#dm-status").count(), 0);
+      assert.equal(await check.isVisible(), false);
+      console.log("Simulated Discord verified Inbox-only deliveries and a checkmark for the confirmed recipient.");
+      return;
+    }
     if (enrollmentDraftCheck) {
       await verifyPartialEnrollment(browser, server);
       console.log("Partial enrollment survived a fresh synthetic Discord sign-in and stayed pending.");

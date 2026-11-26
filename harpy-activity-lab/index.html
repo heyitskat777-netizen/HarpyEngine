@@ -70,6 +70,10 @@
       <button type="button" id="dispatch-decisions" aria-pressed="false">Assigned responses <span id="decision-count" aria-live="polite">0</span></button>
     </div>
     <ul class="records" id="mail-entries" aria-label="Mail records"></ul>
+    <section id="dm-delivery" aria-labelledby="dm-delivery-title" hidden>
+      <h3 id="dm-delivery-title">Discord delivery</h3>
+      <ul id="dm-delivery-records" class="records" aria-live="polite"></ul>
+    </section>
   </div>
 </section>
 </div>
@@ -124,7 +128,6 @@
       </div>
     </div>
     <p id="status" role="status">Mounting campaign file…</p>
-    <div id="dm-status" class="terminal-feedback" role="status"></div>
     <button class="primary" id="retry-activity" type="button" hidden>Reload terminal</button>
     <button class="primary" id="open-auth" type="button" hidden>Open access terminal</button>
     <button id="open-off-duty" type="button" aria-haspopup="dialog" hidden>Off-Duty assignments</button>
@@ -296,7 +299,6 @@
     <div class="enrollment-footer-status">
       <p id="enrollment-feedback" role="status"></p>
       <ul id="enrollment-errors" aria-live="polite" aria-label="Enrollment errors"></ul>
-      <p id="enrollment-dm-status" class="terminal-feedback" role="status"></p>
     </div>
     <div id="enrollment-submit"></div>
   </footer>
@@ -632,6 +634,7 @@ document.getElementById("scene-action-refresh").addEventListener("click", () => 
 });
 const inboxToggle = document.getElementById("inbox-toggle");
 const assignmentsToggle = document.getElementById("assignments-toggle");
+const allDispatches = document.getElementById("dispatch-all");
 const spool = mailSpool(inbox, document.getElementById("mail-entries"),
   document.getElementById("mail-reader"), document.getElementById("inbox-count"),
   document.getElementById("assignments-count"), entry => {
@@ -643,6 +646,8 @@ const spool = mailSpool(inbox, document.getElementById("mail-entries"),
     artwork.picture(portrait, art, {decorative:true, fallback:Array.from(entry.sender ?? "").slice(0,2).join("")});
     return portrait;
   });
+allDispatches.addEventListener("click", () => refreshDmDelivery());
+document.getElementById("dispatch-decisions").addEventListener("click", () => refreshDmDelivery());
 function openInbox(open, assigned = false) {
   if (!open && document.getElementById("mail-reader").open) document.getElementById("mail-reader").close();
   inbox.hidden = !open;
@@ -652,6 +657,7 @@ function openInbox(open, assigned = false) {
     spool.opened(assigned);
     refreshSpecialistMail().catch(() => {});
   }
+  refreshDmDelivery();
 }
 const facilitatorReviewPath = "/api/facilitator-reviews";
 const reviewStatus = {
@@ -1055,57 +1061,61 @@ async function responseData(response) {
   return data;
 }
 
-function formatDmReceipt({name, status, online}) {
-  if (status === "sent") return `Discord DM sent to ${name}${online ? "" : " (offline in the Activity)"}.`;
-  if (status === "queued") return `Discord DM queued for ${name}.`;
-  if (status === "skipped") return `Discord DM skipped for ${name}.`;
-  if (status === "unavailable") return `The bot could not send a Discord DM to ${name}.`;
-  return `Discord did not confirm a DM to ${name}.`;
-}
-
-const watchedDmReceipts = new Map();
-function watchDmReceipt(receipt, local) {
-  const id = receipt.dm_receipt;
-  if (!id) return;
-  const existing = watchedDmReceipts.get(id);
-  if (existing) {
-    if (local) {
-      existing.local = local;
-      local.textContent = existing.line.textContent;
-    }
+const dmDelivery = document.getElementById("dm-delivery");
+const dmDeliveryRecords = document.getElementById("dm-delivery-records");
+const dmSubjects = {bond:"Starting Bond", mission:"Mission dispatch", scene_invite:"Scene invitation"};
+const dmStates = {queued:"Queued", skipped:"Skipped", unavailable:"Unavailable", unconfirmed:"Unconfirmed"};
+let dmDeliveryRequest = 0;
+let dmDeliveryPoll;
+let displayedDmDelivery;
+async function refreshDmDelivery() {
+  clearTimeout(dmDeliveryPoll);
+  const request = ++dmDeliveryRequest;
+  const mailbox = currentPlayer?.mailbox;
+  const active = () => !inbox.hidden && allDispatches.getAttribute("aria-pressed") === "true"
+    && request === dmDeliveryRequest && currentPlayer?.mailbox === mailbox;
+  if (!mailbox || !session || !rosterEnabled || !active()) {
+    dmDelivery.hidden = true;
     return;
   }
-  const target = document.getElementById("dm-status");
-  const line = document.createElement("p");
-  target.append(line);
-  if (target.children.length > 3) target.firstElementChild.remove();
-  const entry = {line, local};
-  watchedDmReceipts.set(id, entry);
-  const report = text => {
-    line.textContent = text;
-    if (entry.local?.isConnected) entry.local.textContent = text;
-  };
-  report("Checking Discord DM status…");
-  void (async () => {
-    let latest;
-    try {
-      for (let attempt = 0; attempt <= 75; attempt++) {
-        if (attempt) await new Promise(resolve => setTimeout(resolve, 2000));
-        const response = await activityFetch("/api/dm-receipts/" + encodeURIComponent(id));
-        if (response.status >= 500) continue;
-        const {recipients} = await responseData(response);
-        latest = recipients;
-        report(recipients.map(formatDmReceipt).join(" "));
-        if (recipients.every(recipient => recipient.status !== "queued")) return;
-      }
-      report(latest?.map(recipient => formatDmReceipt(recipient.status === "queued"
-        ? {...recipient, status:"unconfirmed"} : recipient)).join(" ") || "Discord DM status is unavailable.");
-    } catch {
-      report("Discord DM status is unavailable.");
-    } finally {
-      watchedDmReceipts.delete(id);
+  try {
+    const {deliveries} = await responseData(await activityFetch("/api/dm-receipts?view=delivery"));
+    if (!active()) return;
+    const snapshot = JSON.stringify([mailbox, deliveries]);
+    if (snapshot !== displayedDmDelivery) {
+      dmDeliveryRecords.replaceChildren(...deliveries.map(receipt => {
+        const row = document.createElement("li");
+        const subject = document.createElement("strong");
+        subject.textContent = dmSubjects[receipt.kind] ?? "Inbox reminder";
+        row.append(subject);
+        for (const {name, status} of receipt.recipients) {
+          const recipient = document.createElement("span");
+          recipient.className = "dm-delivery-recipient";
+          const mark = document.createElement("span");
+          mark.className = "dm-delivery-mark";
+          if (status === "sent") {
+            mark.dataset.confirmed = "true";
+            mark.setAttribute("role", "img");
+            mark.setAttribute("aria-label", "Discord confirmed send");
+            mark.title = "Discord confirmed send";
+            mark.textContent = "✓";
+          } else {
+            mark.textContent = dmStates[status] ?? dmStates.unconfirmed;
+          }
+          recipient.append(name + " ", mark);
+          row.append(recipient);
+        }
+        return row;
+      }));
+      displayedDmDelivery = snapshot;
     }
-  })();
+    dmDelivery.hidden = !deliveries.length;
+    if (deliveries.some(receipt => receipt.recipients.some(recipient => recipient.status === "queued"))) {
+      dmDeliveryPoll = setTimeout(refreshDmDelivery, 2500);
+    }
+  } catch {
+    if (active()) dmDeliveryPoll = setTimeout(refreshDmDelivery, 5000);
+  }
 }
 
 async function saveSetup(step, payload) {
@@ -1159,13 +1169,7 @@ async function saveSetup(step, payload) {
       headers:{"Content-Type":"application/json","Idempotency-Key":key},
       body,
     }));
-    if (receipt.dm_receipt && controls === enrollmentDialog) {
-      const delivery = document.createElement("span");
-      document.getElementById("enrollment-dm-status").replaceChildren(delivery);
-      watchDmReceipt(receipt, delivery);
-    } else {
-      watchDmReceipt(receipt);
-    }
+    if (receipt.dm_receipt) refreshDmDelivery();
     if (creating) {
       await refreshScene();
       feedback.textContent = "Enrollment choice filed.";
@@ -1300,14 +1304,13 @@ function intentKey(offer, choice) {
   return key;
 }
 
-async function sendRecord(step, data, key = crypto.randomUUID(), refresh = true, dmFeedback) {
+async function sendRecord(step, data, key = crypto.randomUUID(), refresh = true) {
   const result = await responseData(await activityFetch("/api/player-setup/" + step, {
     method:"POST",
     headers:{"Content-Type":"application/json","Idempotency-Key":key},
     body:JSON.stringify(data),
   }));
-  watchDmReceipt(result, dmFeedback);
-  for (const invite of result.invitations ?? []) watchDmReceipt(invite);
+  if (result.dm_receipt || result.invitations?.some(invite => invite.dm_receipt)) refreshDmDelivery();
   if (refresh && step !== "invite-issue" && step !== "room-post") await refreshScene();
   return result;
 }
@@ -1328,19 +1331,7 @@ async function refresh() {
   }
   await refreshOffers();
   await refreshFacilitatorReviews().catch(() => {});
-  restoreDmReceipts();
-}
-
-let dmReceiptsLoaded = false;
-async function restoreDmReceipts() {
-  if (dmReceiptsLoaded || !session || !rosterEnabled) return;
-  dmReceiptsLoaded = true;
-  try {
-    const {receipts} = await responseData(await activityFetch("/api/dm-receipts"));
-    for (const id of receipts) watchDmReceipt({dm_receipt:id});
-  } catch {
-    dmReceiptsLoaded = false;
-  }
+  refreshDmDelivery();
 }
 
 function playerSetupRequest(room) {
@@ -1948,7 +1939,7 @@ async function sendMission(payload, control) {
       headers:{"Content-Type":"application/json","Idempotency-Key":pendingMission.key},
       body,
     }));
-    watchDmReceipt(receipt);
+    if (receipt.dm_receipt) refreshDmDelivery();
     await refreshOffers();
     await refreshScene();
     try { sessionStorage.removeItem(signature); } catch {}

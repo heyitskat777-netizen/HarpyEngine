@@ -316,11 +316,17 @@ def test_scene_invite_is_private_and_joins_only_on_owner_acceptance(tmp_path):
             == issued
         )
         proof = "/api/dm-receipts/" + issued["dm_receipt"] + query
+        delivery_log = "/api/dm-receipts" + query + "&view=delivery"
         request(host, proof, status=HTTPStatus.UNAUTHORIZED)
+        request(host, delivery_log, status=HTTPStatus.UNAUTHORIZED)
         request(host, proof, second, status=HTTPStatus.NOT_FOUND)
         request(host, proof, outsider, status=HTTPStatus.NOT_FOUND)
         queued = {"name": "RELAY ONE", "online": False, "status": "queued"}
         assert request(host, proof, first) == {"recipients": [queued]}
+        delivery = {"id": issued["dm_receipt"], "kind": "scene_invite", "recipients": [queued]}
+        assert request(host, delivery_log, first)["deliveries"][-1] == delivery
+        assert request(host, delivery_log, second) == {"deliveries": []}
+        assert request(host, delivery_log, outsider) == {"deliveries": []}
         outbox = (
             tmp_path
             / "role-runtime"
@@ -334,6 +340,9 @@ def test_scene_invite_is_private_and_joins_only_on_owner_acceptance(tmp_path):
         InboxNotices(outbox).finish(item, "sent")
         sent = queued | {"status": "sent"}
         assert request(host, proof, first) == {"recipients": [sent]}
+        assert request(host, delivery_log, first)["deliveries"][-1] == delivery | {
+            "recipients": [sent]
+        }
         request(host, "/api/presence" + query, second)
         assert request(host, proof, first) == {"recipients": [sent | {"online": True}]}
         decision = {"id": issued["id"], "decision": "accept"}
@@ -356,6 +365,9 @@ def test_scene_invite_is_private_and_joins_only_on_owner_acceptance(tmp_path):
         assert listed[-1] == issued["dm_receipt"]
         assert request(host, "/api/dm-receipts" + query, second) == {"receipts": []}
         assert request(host, proof, first) == {"recipients": [sent]}
+        assert request(host, delivery_log, first)["deliveries"][-1] == delivery | {
+            "recipients": [sent]
+        }
         assert request(host, path + query, second)["scene_invites"] == peer["scene_invites"]
         saved = request(host, path + "/scene-invite-decision" + query, second, decision)
         assert saved == {"room": room, "decision": "accept"}

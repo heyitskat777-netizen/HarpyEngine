@@ -940,7 +940,12 @@ def serve(
                 discord_log.warning("Could not file an Inbox DM for a saved decision.")
             return receipt
 
-        def read_dm_receipt(self, campaign, viewer, identity):
+        def dm_recipient_names(self, campaign, viewer):
+            return {
+                member["id"]: member["name"] for member in campaign.setup.campaign_members(viewer)
+            }
+
+        def read_dm_receipt(self, campaign, viewer, identity, *, names=None):
             if inbox_notices is None:
                 return None
             rows = inbox_notices.read_receipt(
@@ -948,9 +953,8 @@ def serve(
             )
             if not rows:
                 return None
-            names = {
-                member["id"]: member["name"] for member in campaign.setup.campaign_members(viewer)
-            }
+            if names is None:
+                names = self.dm_recipient_names(campaign, viewer)
             now = monotonic()
             with campaign.presence_lock:
                 return {
@@ -1469,7 +1473,22 @@ def serve(
                             if inbox_notices
                             else []
                         )
-                        self.send_json(HTTPStatus.OK, {"receipts": receipts})
+                        if parse_qs(request.query).get("view") == ["delivery"]:
+                            names = self.dm_recipient_names(campaign, viewer) if receipts else {}
+                            deliveries = [
+                                {"id": identity, "kind": kind, **delivery}
+                                for identity, kind in receipts
+                                if (
+                                    delivery := self.read_dm_receipt(
+                                        campaign, viewer, identity, names=names
+                                    )
+                                )
+                            ]
+                            self.send_json(HTTPStatus.OK, {"deliveries": deliveries})
+                        else:
+                            self.send_json(
+                                HTTPStatus.OK, {"receipts": [identity for identity, _ in receipts]}
+                            )
                         return
                     receipt = self.read_dm_receipt(campaign, viewer, match[1])
                 except SignInError as error:

@@ -794,19 +794,15 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     field.append(pilot);
     const submit = element("button", "File scene invitation", "primary");
     submit.disabled = candidates.length === 0;
-    const delivery = element("p", "", "terminal-feedback");
-    delivery.setAttribute("role", "status");
-    form.append(field, submit, delivery);
+    form.append(field, submit);
     let intent;
     form.addEventListener("submit", async event => {
       event.preventDefault();
       if (submit.disabled || !pilot.value) return;
       if (intent?.recipient !== pilot.value) intent = {recipient:pilot.value, key:crypto.randomUUID()};
       submit.disabled = pilot.disabled = true;
-      const update = element("span");
-      delivery.replaceChildren(update);
       try {
-        await send("scene-invite", {room:target,recipient:intent.recipient}, intent.key, true, update);
+        await send("scene-invite", {room:target,recipient:intent.recipient}, intent.key);
         feedback.textContent = "Invitation filed in the recipient’s Inbox.";
       } catch (error) {
         feedback.textContent = error.message;
