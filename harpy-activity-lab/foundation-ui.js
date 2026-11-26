@@ -1519,8 +1519,14 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
       }
       if (profile) renderAssetRecords(file, "Girl", profile.girl_assets ?? [], selected.own && !tactical);
       if (selected.own && !tactical) {
-        const actions = element("div", undefined, "actions profile-actions");
-        if (openPortrayal) actions.append(button("Open portrayal", openPortrayal));
+        const actions = element("div", undefined, "profile-actions");
+        actions.setAttribute("role", "group");
+        actions.setAttribute("aria-label", "Pilot file actions");
+        if (openPortrayal) {
+          const portrayal = button("Open portrayal", openPortrayal);
+          portrayal.setAttribute("aria-haspopup", "dialog");
+          actions.append(portrayal);
+        }
         renderPilotBonds(actions, player);
         if (player.sheet_reset) {
           const restart = button("Restart character", () => openSheetReset(player.sheet_reset));

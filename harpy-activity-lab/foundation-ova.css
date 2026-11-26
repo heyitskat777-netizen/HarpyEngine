@@ -10,7 +10,6 @@
   --key-ink: light-dark(#fffcf3, #142c26);
 }
 
-body { font-family: "Instrument Sans", system-ui, sans-serif; }
 .masthead {
   border-block-start: 3px solid var(--key);
   background-image: none;

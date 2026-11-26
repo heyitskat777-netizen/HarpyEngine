@@ -761,6 +761,15 @@ async function openPilot(browser, server, role, failFirstMissionPost = false, ca
     if (campaignSetupMobileCheck && file === "/api/activity/config" && upstream.ok) {
       return route.fulfill({json:{...JSON.parse(body), reviewed_ai_trial:true}});
     }
+    if (options.profileActions && upstream.ok && file === "/api/activity/config") {
+      return route.fulfill({json:{...JSON.parse(body), campaign_setup:true}});
+    }
+    if (options.profileActions && upstream.ok && file === "/api/player-setup") {
+      const player = JSON.parse(body);
+      player.bond_setup = {slots:0, targets:[]};
+      player.sheet_reset = {callsign:player.callsign, character:"synthetic-sheet", revision:1};
+      return route.fulfill({json:player});
+    }
     return route.fulfill({
       status:upstream.status, contentType:upstream.headers.get("content-type"), body,
     });
@@ -1023,9 +1032,16 @@ async function verifyResponsiveHud(browser, server) {
         overlay && (geometry.top < (mobile ? 55 : -1) || geometry.bottom > geometry.innerHeight + 1 || geometry.closeBelow || geometry.closeOutside)) {
         issues.push({context, name, geometry});
       }
+      const fonts = await panel.evaluate(node => {
+        const expected = getComputedStyle(document.body).fontFamily;
+        return [...node.querySelectorAll("button, input, select, textarea")]
+          .filter(control => control.getClientRects().length && getComputedStyle(control).fontFamily !== expected)
+          .map(control => [control.id || control.getAttribute("aria-label") || control.textContent, getComputedStyle(control).fontFamily]);
+      });
+      if (fonts.length) issues.push({context, name:name + " control fonts", fonts});
     };
     const {page, view} = await openPilot(browser, server, "invited", false, undefined, undefined, {
-      mobile, inspectAuth:auth => checkPanel(auth, "Sign-in", true),
+      mobile, profileActions:true, inspectAuth:auth => checkPanel(auth, "Sign-in", true),
     });
     const activity = await (await page.locator("iframe").elementHandle()).contentFrame();
     const folderBar = view.getByRole("navigation", {name:"Campaign folders"});
@@ -1041,11 +1057,12 @@ async function verifyResponsiveHud(browser, server) {
           rowCount:new Set(tabs.map(button => Math.round(button.getBoundingClientRect().top))).size,
           active:active?.textContent,
           activeVisible:tab && tab.left >= left - 1 && tab.right <= right + 1,
+          uniformFont:tabs.every(button => getComputedStyle(button).fontFamily === getComputedStyle(document.body).fontFamily),
           position:getComputedStyle(header).position,
         };
       });
       const expected = mobile ? "relative" : "sticky";
-      if (chrome.rowCount !== 1 || chrome.active !== name || !chrome.activeVisible || chrome.position !== expected) {
+      if (chrome.rowCount !== 1 || chrome.active !== name || !chrome.activeVisible || !chrome.uniformFont || chrome.position !== expected) {
         issues.push({context, name:name + " folder bar", chrome});
       }
     };
@@ -1095,6 +1112,22 @@ async function verifyResponsiveHud(browser, server) {
           assert.equal(await view.locator(".layout > aside, #pilot-footer").count(), 0);
           assert.equal(await view.getByRole("button", {name:"Personnel records",exact:true}).count(), id === "profile" ? 1 : 0);
           if (id === "profile") {
+            const actions = current.getByRole("group", {name:"Pilot file actions"});
+            const buttons = actions.getByRole("button");
+            assert.deepEqual(await buttons.allTextContents(), ["Open portrayal", "Starting Bonds", "Restart character"]);
+            const row = await actions.evaluate(group => {
+              const outer = group.getBoundingClientRect();
+              return [...group.children].map(button => {
+                const {left,right,top,height} = button.getBoundingClientRect();
+                const label = document.createRange();
+                label.selectNodeContents(button);
+                return {top,height,lines:label.getClientRects().length,fits:left >= outer.left && right <= outer.right + 1 &&
+                  button.scrollWidth <= button.clientWidth + 1};
+              });
+            });
+            if (row.some(button => !button.fits || button.lines !== 1 || button.height < 44 || !closeEnough(button.top,row[0].top))) {
+              issues.push({context, name:"Pilot file action row", row});
+            }
             await modal(current.getByRole("button", {name:"Personnel records",exact:true}), "#character-files-dialog", "Close Personnel records", "Personnel records");
           }
           if (id === "profile" || id === "frame") {

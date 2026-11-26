@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="/foundation.css">
 <link rel="stylesheet" href="/artwork.css">
 <style>
-  :root { color-scheme: light dark; font: 15px/1.5 "Inter", system-ui, sans-serif; color: var(--ink); background: var(--screen); }
+  :root { color-scheme: light dark; font: 15px/1.5 var(--ui-font); color: var(--ink); background: var(--screen); }
   * { box-sizing: border-box; }
   body { margin:0; }
   [hidden] { display:none !important; }
@@ -22,7 +22,7 @@
   p { margin:0 0 9px; overflow-wrap:anywhere; }
   article { margin:11px 0; padding:11px; background:light-dark(#f6f8f8,#202c33); border:1px solid light-dark(#9cadb4,#536872); }
   .actions { display:flex; flex-wrap:wrap; gap:7px; }
-  button { color:inherit; font:inherit; font-weight:650; padding:5px 10px; min-height:39px; border:1px solid var(--line); background:var(--control); border-radius:2px; }
+  button { color:inherit; font:inherit; font-family:var(--ui-font); font-weight:650; padding:5px 10px; min-height:39px; border:1px solid var(--line); background:var(--control); border-radius:2px; }
   button.primary { color:var(--key-ink); background:var(--key); }
   button:disabled { opacity:.6; }
   #status:empty { display:none; }
@@ -30,6 +30,7 @@
   form { display:grid; gap:8px; margin:12px 0; padding-bottom:12px; border-bottom:1px solid #758d98; }
   .field { display:grid; gap:2px; }
   input, select { min-height:35px; font:inherit; color:inherit; }
+  input, select, textarea { font-family:var(--ui-font); }
   input[type=checkbox] { min-height:0; width:20px; height:20px; }
   form button { justify-self:start; }
   details { padding:4px 0; }
