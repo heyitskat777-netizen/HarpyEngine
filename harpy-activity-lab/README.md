@@ -147,6 +147,7 @@ The Windows Activity task also enables the DM version of `/activity-campaign lau
 Open **Safety** in the Activity header or **Campaign safety** in the enrollment window. It works before character creation and without joining a scene. It pauses the same campaign as the scene safety controls. Anyone signed into that campaign can pause without a reason, and each person can clear only their own pause. If the Activity cannot confirm a pause, stop play and tell the group out of character.
 
 Discord DM notifications use the bot's own Discord requests. Before sending a queued notice, the bot checks that the recipient still holds the campaign role. Checking the Activity Inbox uses the signed-in Activity session.
+The bot records the Discord message reference for each new reminder. It clears the exact reminder once the assigned decision closes. The Activity keeps the underlying Inbox and delivery records. Reminders sent before this version have no saved Discord message reference.
 
 Run `node harpy-activity-lab/verify-mission.cjs --campaign-switch-check` to switch between two active sheets in separate role-bound campaigns.
 Run `node harpy-activity-lab/verify-mission.cjs --campaign-dm-check` to check both DM selection paths with synthetic accounts.

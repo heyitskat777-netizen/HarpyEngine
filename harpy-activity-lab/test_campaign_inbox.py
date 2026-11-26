@@ -7,12 +7,31 @@ from types import SimpleNamespace
 import campaign_inbox
 import discord
 import pytest
-from campaign_inbox import InboxNotices, deliver_one, pending_interactions, send_notice
+from campaign_inbox import (
+    NOTICES,
+    InboxNotices,
+    SentDM,
+    deliver_one,
+    pending_interactions,
+    retire_one,
+    send_notice,
+)
+from test_ledger import OTHER, PLAYER, seed
+from test_ledger import ledger as ledger
+
+from girlframe.engine.bonds import BondProposal
+from girlframe.services.bonds import BondService
+from girlframe.services.onboarding import WorkflowError
 
 CAMPAIGN = "9af87500-1f24-4ebd-98cf-8753e97806c5"
 FIRST = "333333333333333333"
 SECOND = "444444444444444444"
 ROLE = 12345
+DM = SentDM("555555555555555555", "666666666666666666")
+
+
+def sent_message():
+    return SimpleNamespace(channel=SimpleNamespace(id=int(DM.channel)), id=int(DM.message))
 
 
 def test_queue_uses_authoritative_recipient_and_deduplicates(tmp_path, monkeypatch):
@@ -71,6 +90,7 @@ def test_delivery_rechecks_role_and_reuses_discord_nonce():
 
     async def send(message, **options):
         calls.append((message, options))
+        return sent_message()
 
     member.send = send
 
@@ -180,6 +200,7 @@ def test_projection_excludes_observers_and_optional_actions():
         ("closed", "unavailable"),
         ("timeout", "unconfirmed"),
         ("closed-action", "skipped"),
+        ("unknown-action", "sent"),
     ],
 )
 def test_sender_receipt_reports_only_confirmed_dm_outcomes(tmp_path, monkeypatch, failure, outcome):
@@ -201,6 +222,7 @@ def test_sender_receipt_reports_only_confirmed_dm_outcomes(tmp_path, monkeypatch
             raise discord.Forbidden(SimpleNamespace(status=403, reason="Forbidden"), "Closed DMs")
         if failure == "timeout":
             raise TimeoutError
+        return sent_message()
 
     member = SimpleNamespace(bot=False, pending=False, get_role=lambda _: ROLE, send=send)
 
@@ -222,9 +244,223 @@ def test_sender_receipt_reports_only_confirmed_dm_outcomes(tmp_path, monkeypatch
             asyncio.run(deliver_one(bot, registry, outbox, lambda *_: True, item))
         assert outbox.read_receipt(CAMPAIGN, FIRST, proof) == [(SECOND, "queued")]
         clock[0] += 121
+    elif failure == "unknown-action":
+        asyncio.run(deliver_one(bot, registry, outbox, lambda *_: None, item))
+        assert outbox.read_receipt(CAMPAIGN, FIRST, proof) == [(SECOND, "queued")]
+        clock[0] += 30
+        assert outbox.claim() == item
+        asyncio.run(deliver_one(bot, registry, outbox, lambda *_: True, item))
     else:
         asyncio.run(deliver_one(bot, registry, outbox, lambda *_: failure != "closed-action", item))
-    assert InboxNotices(path).read_receipt(CAMPAIGN, FIRST, proof) == [(SECOND, outcome)]
+    reopened = InboxNotices(path)
+    assert reopened.read_receipt(CAMPAIGN, FIRST, proof) == [(SECOND, outcome)]
+    assert reopened.claim_cleanup() == ((item, DM) if outcome == "sent" else None)
+
+
+def cleanup_bot(campaign, calls, failure=None):
+    registry = SimpleNamespace(bindings=lambda *_: [SimpleNamespace(id=str(campaign))])
+
+    def channel(channel_id, *, type):
+        assert type is discord.ChannelType.private
+
+        def message(message_id):
+            async def delete():
+                calls.append((channel_id, message_id))
+                if failure == "missing":
+                    raise discord.NotFound(SimpleNamespace(status=404, reason="Missing"), "")
+                if failure == "forbidden":
+                    raise discord.Forbidden(SimpleNamespace(status=403, reason="Forbidden"), "")
+                if failure == "timeout":
+                    raise TimeoutError
+
+            return SimpleNamespace(delete=delete)
+
+        return SimpleNamespace(get_partial_message=message)
+
+    bot = SimpleNamespace(
+        activity_id=111, target=SimpleNamespace(id=222), get_partial_messageable=channel
+    )
+    return bot, registry
+
+
+@pytest.mark.parametrize("kind", list(NOTICES))
+def test_cleanup_uses_only_the_exact_sent_reminder_after_reopening(tmp_path, monkeypatch, kind):
+    clock = [1000]
+    monkeypatch.setattr(campaign_inbox, "time", lambda: clock[0])
+    path = tmp_path / "inbox.sqlite3"
+    notices = InboxNotices(path)
+    notices.file(CAMPAIGN, kind, "record", [SECOND])
+    item = notices.claim()
+    notices.finish(item, "sent", DM)
+    receipt = notices.sender_receipt(CAMPAIGN, FIRST, kind, "record")
+    notices = InboxNotices(path)
+    calls = []
+    bot, registry = cleanup_bot(CAMPAIGN, calls)
+
+    for pending in (True, None, False):
+        claim = notices.claim_cleanup()
+        assert claim == (item, DM)
+        asyncio.run(retire_one(bot, registry, notices, lambda *_, pending=pending: pending, *claim))
+        if pending is not False:
+            assert calls == []
+        clock[0] += campaign_inbox.CLEANUP_INTERVAL
+
+    assert calls == [(int(DM.channel), int(DM.message))]
+    assert not InboxNotices(path).claim_cleanup()
+    assert notices.read_receipt(CAMPAIGN, FIRST, receipt) == [(SECOND, "sent")]
+
+
+@pytest.mark.parametrize("failure", ("missing", "timeout", "forbidden"))
+def test_cleanup_handles_discord_deletion_failures(tmp_path, monkeypatch, failure):
+    clock = [1000]
+    monkeypatch.setattr(campaign_inbox, "time", lambda: clock[0])
+    notices = InboxNotices(tmp_path / "inbox.sqlite3")
+    notices.file(CAMPAIGN, "bond", "bond-a", [SECOND])
+    notices.finish(notices.claim(), "sent", DM)
+    calls = []
+    bot, registry = cleanup_bot(CAMPAIGN, calls, failure)
+    claim = notices.claim_cleanup()
+    if failure == "timeout":
+        with pytest.raises(TimeoutError):
+            asyncio.run(retire_one(bot, registry, notices, lambda *_: False, *claim))
+    else:
+        asyncio.run(retire_one(bot, registry, notices, lambda *_: False, *claim))
+    assert notices.claim_cleanup() is None
+    clock[0] += campaign_inbox.CLEANUP_INTERVAL
+    assert notices.claim_cleanup() == (claim if failure == "timeout" else None)
+
+
+def test_cleanup_waits_for_a_readable_campaign_binding(tmp_path):
+    notices = InboxNotices(tmp_path / "inbox.sqlite3")
+    notices.file(CAMPAIGN, "bond", "bond-a", [SECOND])
+    notices.finish(notices.claim(), "sent", DM)
+    calls = []
+    bot, registry = cleanup_bot(CAMPAIGN, calls)
+    registry.bindings = lambda *_: []
+
+    def pending(*_):
+        pytest.fail("Cannot read an assignment without its campaign binding.")
+
+    asyncio.run(retire_one(bot, registry, notices, pending, *notices.claim_cleanup()))
+    assert calls == []
+
+
+def test_countersigning_the_native_bond_clears_its_reminder_only(ledger, monkeypatch, tmp_path):
+    clock = [1000]
+    monkeypatch.setattr(campaign_inbox, "time", lambda: clock[0])
+    seed(ledger, PLAYER, "TEST SUBJECT")
+    seed(ledger, OTHER, "TEST COUNTERPART")
+    bonds = BondService(ledger)
+    proposal = bonds.propose(
+        PLAYER,
+        "file-native-bond",
+        1,
+        1,
+        BondProposal(target_id=OTHER.user_id, prompt=0, context="PRIVATE PROMPT"),
+    )
+    notices = InboxNotices(tmp_path / "inbox.sqlite3")
+    setup = SimpleNamespace(store=ledger, bonds=bonds)
+    notices.bond(setup, PLAYER, proposal)
+    notices.finish(notices.claim(), "sent", DM)
+    other_dm = SentDM(DM.channel, "999999999999999999")
+    notices.file(ledger.campaign_id, "mission", "still-pending", [OTHER.user_id])
+    notices.finish(notices.claim(), "sent", other_dm)
+    calls = []
+    bot, registry = cleanup_bot(ledger.campaign_id, calls)
+
+    def pending(_binding, item):
+        _, kind, identity, recipient = item
+        assert recipient == str(OTHER.user_id)
+        key = kind, identity
+        if kind == "mission":
+            return True
+        return key in pending_interactions(setup, None, None, OTHER, lookup=key)
+
+    async def sweep():
+        while claim := notices.claim_cleanup():
+            await retire_one(bot, registry, notices, pending, *claim)
+
+    asyncio.run(sweep())
+    assert not calls
+    bonds.decide(OTHER, "countersign-native-bond", proposal["id"], 1, "accept")
+    ledger.engine.dispose()
+    clock[0] += campaign_inbox.CLEANUP_INTERVAL
+    asyncio.run(sweep())
+    assert calls == [(int(DM.channel), int(DM.message))]
+    assert bonds.get(OTHER, proposal["id"])["state"] == "accepted"
+    assert b"PRIVATE PROMPT" not in notices.path.read_bytes()
+
+
+def test_cleanup_rechecks_owned_invites_missions_and_choices_individually():
+    viewer = SimpleNamespace(user_id=int(SECOND))
+    invites = [{"id": "invitation"}]
+    missions = [{"id": "offer", "needs_response": True}]
+    choices = [{"id": "choice", "revision": 1}]
+    setup = SimpleNamespace(
+        records=SimpleNamespace(scene_invites=lambda _: invites),
+        game=SimpleNamespace(choices=lambda _: choices),
+    )
+    desk = SimpleNamespace(list=lambda _: missions)
+
+    def is_pending(kind, identity):
+        key = kind, identity
+        return key in pending_interactions(setup, desk, None, viewer, lookup=key)
+
+    assert is_pending("scene_invite", "invitation")
+    assert is_pending("mission", "offer")
+    assert is_pending("play", "choice:1")
+    invites.clear()
+    missions[0]["needs_response"] = False
+    choices[0]["revision"] = 2
+    assert not is_pending("scene_invite", "invitation")
+    assert not is_pending("mission", "offer")
+    assert not is_pending("play", "choice:1")
+    assert is_pending("play", "choice:2")
+
+
+def test_cleanup_keeps_the_current_turn_during_a_temporary_battlefield_lock():
+    viewer = SimpleNamespace(user_id=int(SECOND))
+    encounter = {"turn": "epoch:4", "yours": True, "can_end_turn": False}
+    arena = SimpleNamespace(view=lambda _: {"encounter": encounter})
+    key = "battlefield", "epoch:4"
+    assert key in pending_interactions(None, None, arena, viewer, lookup=key)
+    encounter["turn"] = "epoch:5"
+    assert key not in pending_interactions(None, None, arena, viewer, lookup=key)
+
+
+def test_cleanup_keeps_known_work_and_defers_when_a_projection_is_unavailable():
+    viewer = SimpleNamespace(user_id=int(SECOND))
+
+    def unavailable(_):
+        raise WorkflowError("The projection is temporarily unavailable.")
+
+    followup = {"id": "card", "action": "confirm", "work_revision": 1}
+    setup = SimpleNamespace(
+        owned_followups=SimpleNamespace(view=unavailable),
+        handler_punishments=SimpleNamespace(view=lambda _: [followup]),
+        beneath_work=SimpleNamespace(view=lambda _: []),
+    )
+    missions = SimpleNamespace(owned_work=lambda _: [])
+    key = "play_work", "card:confirm:1"
+    assert key in pending_interactions(setup, missions, None, viewer, lookup=key)
+    with pytest.raises(WorkflowError, match="temporarily unavailable"):
+        pending_interactions(setup, missions, None, viewer, lookup=("play_work", "other"))
+
+
+def test_cleanup_retires_off_duty_recovery_while_the_group_period_continues():
+    viewer = SimpleNamespace(user_id=int(SECOND))
+    period = {"period": "period-a", "reason": "Another assignment is blocking recovery."}
+    off_duty = SimpleNamespace(
+        view=lambda _: period,
+        periods=SimpleNamespace(current=lambda _: {"id": "period-a", "phase": "active"}),
+    )
+    setup = SimpleNamespace(off_duty=off_duty)
+    key = "off_duty", "period-a:recovery"
+    assert key in pending_interactions(setup, None, None, viewer, lookup=key)
+    period["recovered"] = True
+    assert key not in pending_interactions(setup, None, None, viewer, lookup=key)
+    period.clear()
+    assert key not in pending_interactions(setup, None, None, viewer, lookup=key)
 
 
 def test_legacy_finished_notice_is_not_reported_as_a_confirmed_send(tmp_path):
@@ -242,3 +478,7 @@ def test_legacy_finished_notice_is_not_reported_as_a_confirmed_send(tmp_path):
     outbox = InboxNotices(path)
     proof = outbox.sender_receipt(CAMPAIGN, FIRST, "bond", "bond-a")
     assert outbox.read_receipt(CAMPAIGN, FIRST, proof) == [(SECOND, "unconfirmed")]
+    assert outbox.claim_cleanup() is None
+    outbox.file(CAMPAIGN, "bond", "bond-b", (SECOND,))
+    outbox.finish(outbox.claim(), "sent")
+    assert outbox.claim_cleanup() is None

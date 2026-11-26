@@ -1,10 +1,11 @@
-"""Best-effort Discord DMs for newly filed, recipient-owned Inbox items."""
+"""Best-effort Discord reminders for pending, recipient-owned Inbox items."""
 
 import asyncio
 import logging
 import secrets
 import sqlite3
 from contextlib import closing
+from dataclasses import dataclass
 from hashlib import sha256
 from time import time
 from uuid import UUID
@@ -16,6 +17,7 @@ from girlframe.services.onboarding import WorkflowError
 
 logger = logging.getLogger("harpy_activity.discord")
 DELIVERY_WINDOW = 120
+CLEANUP_INTERVAL = 30
 NOTICES = {
     "bond": "A pilot filed a starting Bond proposal for your response.",
     "mission": "The Handler filed a mission offer for your response.",
@@ -35,6 +37,12 @@ DESTINATIONS = {
 }
 
 
+@dataclass(frozen=True)
+class SentDM:
+    channel: str
+    message: str
+
+
 class InboxNotices:
     def __init__(self, path):
         self.path = path
@@ -48,8 +56,10 @@ class InboxNotices:
 
             db.execute("CREATE TABLE IF NOT EXISTS observed_campaigns (campaign TEXT PRIMARY KEY)")
             db.execute("BEGIN IMMEDIATE")
-            if "outcome" not in {column[1] for column in db.execute("PRAGMA table_info(notices)")}:
-                db.execute("ALTER TABLE notices ADD COLUMN outcome TEXT")
+            columns = {column[1] for column in db.execute("PRAGMA table_info(notices)")}
+            for column in ("outcome", "dm_channel", "dm_message", "cleanup_outcome"):
+                if column not in columns:
+                    db.execute(f"ALTER TABLE notices ADD COLUMN {column} TEXT")
             db.execute("""CREATE TABLE IF NOT EXISTS notice_receipts (
                 id TEXT PRIMARY KEY, campaign TEXT NOT NULL, sender TEXT NOT NULL,
                 kind TEXT NOT NULL, record TEXT NOT NULL,
@@ -66,7 +76,9 @@ class InboxNotices:
                 "INSERT OR IGNORE INTO observed_campaigns VALUES (?)", (campaign,)
             ).rowcount
             db.executemany(
-                "INSERT OR IGNORE INTO notices VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                """INSERT OR IGNORE INTO notices
+                   (campaign, kind, record, recipient, created, next_attempt, finished, outcome)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     (
                         campaign,
@@ -88,7 +100,9 @@ class InboxNotices:
         stamp = time()
         with closing(sqlite3.connect(self.path)) as db, db:
             db.executemany(
-                "INSERT OR IGNORE INTO notices VALUES (?, ?, ?, ?, ?, ?, 0, NULL)",
+                """INSERT OR IGNORE INTO notices
+                   (campaign, kind, record, recipient, created, next_attempt)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
                 (
                     (str(campaign), kind, record, str(recipient), stamp, stamp)
                     for recipient in recipients
@@ -113,12 +127,44 @@ class InboxNotices:
                 )
             return item
 
-    def finish(self, item, outcome):
+    def finish(self, item, outcome, dm=None):
         with closing(sqlite3.connect(self.path)) as db, db:
             db.execute(
-                """UPDATE notices SET finished=1, outcome=?
+                """UPDATE notices SET finished=1, outcome=?, dm_channel=?, dm_message=?,
+                       next_attempt=?
+                   WHERE (campaign, kind, record, recipient)=(?, ?, ?, ?) AND finished=0""",
+                (outcome, dm.channel if dm else None, dm.message if dm else None, time(), *item),
+            )
+
+    def claim_cleanup(self):
+        stamp = time()
+        with closing(sqlite3.connect(self.path)) as db, db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute(
+                """SELECT campaign, kind, record, recipient, dm_channel, dm_message
+                   FROM notices
+                   WHERE outcome='sent' AND dm_message IS NOT NULL AND dm_channel IS NOT NULL
+                       AND cleanup_outcome IS NULL AND next_attempt<=?
+                   ORDER BY next_attempt, created LIMIT 1""",
+                (stamp,),
+            ).fetchone()
+            if row is None:
+                return None
+            *item, channel, message = row
+            db.execute(
+                """UPDATE notices SET next_attempt=?
                    WHERE (campaign, kind, record, recipient)=(?, ?, ?, ?)""",
-                (outcome, *item),
+                (stamp + CLEANUP_INTERVAL, *item),
+            )
+            return tuple(item), SentDM(channel, message)
+
+    def finish_cleanup(self, item, dm, outcome):
+        with closing(sqlite3.connect(self.path)) as db, db:
+            db.execute(
+                """UPDATE notices SET cleanup_outcome=?
+                   WHERE (campaign, kind, record, recipient, dm_channel, dm_message)
+                       =(?, ?, ?, ?, ?, ?)""",
+                (outcome, *item, dm.channel, dm.message),
             )
 
     def sender_receipt(self, campaign, sender, kind, record):
@@ -193,51 +239,49 @@ class InboxNotices:
             )
 
 
-def pending_interactions(setup, missions, battlefield, viewer):
-    """Build notice keys from owner-scoped HarpyEngine views."""
+def pending_interactions(setup, missions, battlefield, viewer, *, lookup=None):
+    """Project owned work. A lookup also retains assignments temporarily blocked by other work."""
+
+    problem = None
 
     def read(operation):
+        nonlocal problem
         try:
             return operation()
-        except WorkflowError:
+        except WorkflowError as error:
+            problem = error
             return None
 
+    def wants(kind):
+        return lookup is None or lookup[0] == kind
+
     items = set()
-    own = read(lambda: setup.game.choices(viewer))
-    if own is None:
-        return items
 
     def add(kind, identity):
         items.add((kind, str(identity)))
 
-    for row in own:
-        add("play", f"{row['id']}:{row['revision']}")
-    work = set()
-    for row in read(lambda: missions.owned_work(viewer)) or ():
-        if row["owner_id"] == str(viewer.user_id) and row["state"] == "pending":
-            work.add(row["id"])
-            add("play_work", f"{row['id']}:{row['revision']}")
-    for row in read(lambda: missions.list(viewer)) or ():
-        if row["needs_response"]:
-            add("mission", row["id"])
-    if viewer == setup.handler:
-        from mission_desk import MissionDesk
+    def retain(kind, prefix):
+        if lookup and lookup[0] == kind and lookup[1].startswith(prefix):
+            items.add(lookup)
 
-        from girlframe.services.m3_careers import CareerService
+    if wants("play"):
+        own = read(lambda: setup.game.choices(viewer))
+        if own is None and lookup is None:
+            return items
+        for row in own or ():
+            add("play", f"{row['id']}:{row['revision']}")
 
-        career = CareerService(setup.store)
-        for request in read(lambda: career.status_requests(viewer)) or ():
-            if request["position"] is None:
-                add("enrollment", f"status:{request['character']}")
-        desk = MissionDesk(missions)
-        for row in (read(lambda: desk.view(viewer, "Handler", lifecycle=True)) or {}).get(
-            "offers", ()
-        ):
-            for action in ("dispatch", "advance"):
-                if action in row.get("actions", ()):
-                    add("mission_review", f"{row['id']}:{action}")
-    else:
-        for row in read(lambda: setup.bonds.list(viewer)) or ():
+    if wants("scene_invite") and lookup is not None:
+        for card in setup.records.scene_invites(viewer):
+            add("scene_invite", card["id"])
+
+    if wants("bond"):
+        if lookup is None:
+            bonds = read(lambda: setup.bonds.list(viewer)) or ()
+        else:
+            # A pending Bond outside the recent Inbox page is still pending.
+            bonds = (setup.bonds.get(viewer, lookup[1]),)
+        for row in bonds:
             if (
                 row["target_id"] == str(viewer.user_id)
                 and row["state"] == "pending"
@@ -245,48 +289,100 @@ def pending_interactions(setup, missions, battlefield, viewer):
             ):
                 add("bond", row["id"])
 
-    choices = read(lambda: setup.enrollment_choices.view(viewer, ())) or {}
-    for row in choices.get("requests", ()):
-        if row["incoming"] and row["state"] == "pending":
-            add("enrollment", row["id"])
+    if wants("mission"):
+        for row in read(lambda: missions.list(viewer)) or ():
+            if row["needs_response"]:
+                add("mission", row["id"])
 
-    # Some specialist follow-ups live outside the shared required-work ledger.
-    for view in (
-        setup.owned_followups.view,
-        setup.handler_punishments.view,
-        setup.beneath_work.view,
-    ):
-        for card in read(lambda view=view: view(viewer)) or ():
-            if card.get("action") and card["id"] not in work:
-                add("play_work", f"{card['id']}:{card['action']}:{card.get('work_revision', '')}")
+    if wants("mission_review") and viewer == setup.handler:
+        from mission_desk import MissionDesk
 
-    period = read(lambda: setup.off_duty.view(viewer)) or {}
-    if period:
-        for invitation in period.get("invitations", ()):
-            if not invitation["confirmed"]:
-                add("off_duty", f"{period['period']}:scene:{invitation['owner']}")
-        if not period.get("reason"):
+        desk = MissionDesk(missions)
+        for row in (read(lambda: desk.view(viewer, "Handler", lifecycle=True)) or {}).get(
+            "offers", ()
+        ):
+            for action in ("dispatch", "advance"):
+                if action in row.get("actions", ()):
+                    add("mission_review", f"{row['id']}:{action}")
+
+    if wants("enrollment"):
+        if viewer == setup.handler:
+            from girlframe.services.m3_careers import CareerService
+
+            career = CareerService(setup.store)
+            for request in read(lambda: career.status_requests(viewer)) or ():
+                if request["position"] is None:
+                    add("enrollment", f"status:{request['character']}")
+        choices = read(lambda: setup.enrollment_choices.view(viewer, ())) or {}
+        for row in choices.get("requests", ()):
+            if row["incoming"] and row["state"] == "pending":
+                add("enrollment", row["id"])
+
+    if wants("play_work"):
+        work = set()
+        for row in read(lambda: missions.owned_work(viewer)) or ():
+            if row["owner_id"] == str(viewer.user_id) and row["state"] == "pending":
+                work.add(row["id"])
+                add("play_work", f"{row['id']}:{row['revision']}")
+        # Some specialist follow-ups live outside the shared required-work ledger.
+        for view in (
+            setup.owned_followups.view,
+            setup.handler_punishments.view,
+            setup.beneath_work.view,
+        ):
+            for card in read(lambda view=view: view(viewer)) or ():
+                if card.get("action") and card["id"] not in work:
+                    add(
+                        "play_work",
+                        f"{card['id']}:{card['action']}:{card.get('work_revision', '')}",
+                    )
+                elif card.get("waiting"):
+                    retain("play_work", f"{card['id']}:")
+
+    if wants("off_duty"):
+        period = read(lambda: setup.off_duty.view(viewer)) or {}
+        if period:
+            for invitation in period.get("invitations", ()):
+                if not invitation["confirmed"]:
+                    add("off_duty", f"{period['period']}:scene:{invitation['owner']}")
             for step in ("scene", "recovery"):
-                if period.get(step):
-                    add("off_duty", f"{period['period']}:{step}")
-        closing = period.get("closing") or {}
-        for card in (closing.get("strain") or {}).get("cards", ()):
-            if card.get("action"):
-                add("off_duty", f"{card['id']}:{card['action']}")
-        if closing.get("attendance") and not closing["attendance"]["confirmed"]:
-            add("off_duty", f"{period['period']}:handler-scene")
-        if closing.get("handler") and closing.get("status_ready"):
-            step = "finish" if closing.get("finish") else "status"
-            add("off_duty", f"{period['period']}:{step}")
+                identity = f"{period['period']}:{step}"
+                if not period.get("reason") and period.get(step):
+                    add("off_duty", identity)
+                elif (
+                    period.get("reason")
+                    and not period.get("recovered")
+                    and not (step == "scene" and period.get("declined"))
+                    and lookup == ("off_duty", identity)
+                ):
+                    items.add(lookup)
+            closing = period.get("closing") or {}
+            for card in (closing.get("strain") or {}).get("cards", ()):
+                if card.get("action"):
+                    add("off_duty", f"{card['id']}:{card['action']}")
+            if closing.get("attendance") and not closing["attendance"]["confirmed"]:
+                add("off_duty", f"{period['period']}:handler-scene")
+            if closing.get("handler") and closing.get("status_ready"):
+                step = "finish" if closing.get("finish") else "status"
+                add("off_duty", f"{period['period']}:{step}")
+        elif lookup:
+            # The view can hide a failed authorization. Let the source report it on lookup.
+            read(lambda: setup.off_duty.periods.current(viewer))
 
-    # Battlefield's view already checks the active actor, lock and Handler ownership.
-    arena = read(lambda: battlefield.view(viewer)) if battlefield else None
-    if arena:
-        encounter = arena["encounter"]
-        if encounter["can_end_turn"]:
-            add("battlefield", encounter["turn"])
-        for review in (*encounter.get("reviews", ()), *encounter.get("attack_reviews", ())):
-            add("battlefield", review["id"])
+    if wants("battlefield") and battlefield:
+        arena = read(lambda: battlefield.view(viewer))
+        if arena:
+            encounter = arena["encounter"]
+            if encounter["can_end_turn"] or (lookup and encounter.get("yours")):
+                add("battlefield", encounter["turn"])
+            for review in (*encounter.get("reviews", ()), *encounter.get("attack_reviews", ())):
+                add("battlefield", review["id"])
+            if lookup and arena.get("busy") and encounter["handler"]:
+                for review in read(lambda: battlefield.combat.tasks(viewer)) or ():
+                    if review["incoming"]:
+                        add("battlefield", review["id"])
+    if lookup is not None and lookup not in items and problem is not None:
+        raise problem
     return items
 
 
@@ -302,10 +398,14 @@ async def scan_notices(bot, scan):
         await asyncio.sleep(5)
 
 
+async def notice_binding(bot, registry, campaign):
+    bindings = await asyncio.to_thread(registry.bindings, str(bot.activity_id), str(bot.target.id))
+    return next((row for row in bindings if UUID(row.id) == UUID(campaign)), None)
+
+
 async def send_notice(bot, registry, item, pending):
     campaign, kind, _, recipient = item
-    bindings = await asyncio.to_thread(registry.bindings, str(bot.activity_id), str(bot.target.id))
-    binding = next((row for row in bindings if UUID(row.id) == UUID(campaign)), None)
+    binding = await notice_binding(bot, registry, campaign)
     if binding is None:
         return "unavailable"
     try:
@@ -315,16 +415,19 @@ async def send_notice(bot, registry, item, pending):
         member = await guild.fetch_member(int(recipient))
         if member.bot or member.pending or member.get_role(int(binding.role_id)) is None:
             return "unavailable"
-        if not await asyncio.to_thread(pending, binding, item):
+        still_pending = await asyncio.to_thread(pending, binding, item)
+        if still_pending is None:
+            return None
+        if not still_pending:
             return "skipped"
         nonce = sha256(":".join(item).encode()).hexdigest()[:25]
         destination = DESTINATIONS.get(kind, "Open HarpyEngine and check your Inbox.")
-        await member.send(
+        message = await member.send(
             f"{NOTICES[kind]} {destination}",
             allowed_mentions=discord.AllowedMentions.none(),
             nonce=nonce,
         )
-        return "sent"
+        return SentDM(str(message.channel.id), str(message.id))
     except (discord.Forbidden, discord.NotFound):
         # A former member or closed DMs should not cause repeated alerts.
         return "unavailable"
@@ -332,7 +435,25 @@ async def send_notice(bot, registry, item, pending):
 
 async def deliver_one(bot, registry, notices, pending, item):
     outcome = await asyncio.wait_for(send_notice(bot, registry, item, pending), timeout=20)
-    await asyncio.to_thread(notices.finish, item, outcome)
+    if isinstance(outcome, SentDM):
+        await asyncio.to_thread(notices.finish, item, "sent", outcome)
+    elif outcome is not None:
+        await asyncio.to_thread(notices.finish, item, outcome)
+
+
+async def retire_one(bot, registry, notices, pending, item, dm):
+    binding = await notice_binding(bot, registry, item[0])
+    if binding is None or await asyncio.to_thread(pending, binding, item) is not False:
+        return
+    try:
+        channel = bot.get_partial_messageable(int(dm.channel), type=discord.ChannelType.private)
+        await asyncio.wait_for(channel.get_partial_message(int(dm.message)).delete(), timeout=20)
+    except discord.NotFound:
+        pass  # The exact reminder was already deleted.
+    except discord.Forbidden:
+        await asyncio.to_thread(notices.finish_cleanup, item, dm, "unavailable")
+        return
+    await asyncio.to_thread(notices.finish_cleanup, item, dm, "removed")
 
 
 async def deliver_notices(bot, registry, notices, pending):
@@ -340,10 +461,13 @@ async def deliver_notices(bot, registry, notices, pending):
     while True:
         try:
             item = await asyncio.to_thread(notices.claim)
+            if item is not None:
+                await deliver_one(bot, registry, notices, pending, item)
+            cleanup = await asyncio.to_thread(notices.claim_cleanup)
+            if cleanup is not None:
+                await retire_one(bot, registry, notices, pending, *cleanup)
             if item is None:
                 await asyncio.sleep(2)
-                continue
-            await deliver_one(bot, registry, notices, pending, item)
         except (
             discord.DiscordException,
             OSError,
@@ -353,6 +477,6 @@ async def deliver_notices(bot, registry, notices, pending):
             RuntimeError,
         ) as error:
             logger.warning(
-                "An Activity Inbox DM could not be delivered (%s).", type(error).__name__
+                "An Activity Inbox DM could not be delivered or cleared (%s).", type(error).__name__
             )
             await asyncio.sleep(2)

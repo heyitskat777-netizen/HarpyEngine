@@ -759,6 +759,14 @@ def serve(
 
     scanned = {}
 
+    def ledger_sequence(store):
+        with store.engine.connect() as connection:
+            return connection.scalar(
+                sa.select(sa.func.max(tables.events.c.seq)).where(
+                    tables.events.c.campaign_id == store.campaign_id
+                )
+            )
+
     def scan_interactions():
         from campaign_inbox import pending_interactions
 
@@ -766,12 +774,7 @@ def serve(
             active = tuple(campaign for campaign in runtimes.values() if not campaign.retired)
         for campaign in active:
             store = campaign.service.store
-            with store.engine.connect() as connection:
-                version = connection.scalar(
-                    sa.select(sa.func.max(tables.events.c.seq)).where(
-                        tables.events.c.campaign_id == store.campaign_id
-                    )
-                )
+            version = ledger_sequence(store)
             if store.campaign_id in scanned and scanned[store.campaign_id] == version:
                 continue
             items = []
@@ -806,13 +809,18 @@ def serve(
                 players = PlayerSetup(source.store, handler, handler, handler, bound_roster=True)
                 players.enable_activity_records()
                 arena = PrivateBattlefield(source, players)
-            if kind == "scene_invite":
-                with source.store.engine.connect() as connection:
-                    players.game.authorize(connection, owner, game=False)
-                return any(card["id"] == identity for card in players.records.scene_invites(owner))
-            return (kind, identity) in pending_interactions(players, source, arena, owner)
+            with source.store.engine.connect() as connection:
+                players.game.authorize(connection, owner, game=False)
+                if kind in ("mission_review", "play_work", "off_duty", "battlefield"):
+                    players.game.unpaused(connection)
+            original = ledger_sequence(source.store)
+            key = (kind, identity)
+            current = pending_interactions(players, source, arena, owner, lookup=key)
+            if ledger_sequence(source.store) != original:
+                return None  # A changing projection is not evidence of a completed assignment.
+            return key in current
         except WorkflowError:
-            return False
+            return None
         finally:
             if not active:
                 source.store.engine.dispose()
