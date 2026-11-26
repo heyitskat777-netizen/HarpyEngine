@@ -52,10 +52,9 @@ button.play-card small { display: none; }
 #utility-fields > form, #utility-fields > div > form { margin-block: 0; }
 .layout > main { padding-block-start: 15px; }
 #desk-rail { padding-inline: 12px; }
-.locations .notice { border: 0; border-block-start: 1px solid var(--line); background: transparent; }
+#mobile-locations .notice { border: 0; border-block-start: 1px solid var(--line); background: transparent; }
 .notice-header span { background: transparent; color: var(--quiet-ink); }
 .notice-header { align-items: center; }
-.mobile-foundation-notice { margin: 0 12px 12px; }
 .insignia.notice-insignia {
   display: inline-block;
   inline-size: 15px;
@@ -86,11 +85,10 @@ button.play-card small { display: none; }
 #location-list .location-scene:hover { border-inline-start-color: var(--key); }
 .location-count { display: block; margin-block-end: 7px; }
 .location-start { inline-size: 100%; }
-.ova-rail-toggles { display: none; }
 .workbench { padding-block-end: 8px; }
 .record-card { background: var(--panel); }
 .record-row, article { background: var(--panel); border-color: var(--line); }
-.record-card > h2, .scene-room-heading > h2, #directory .record-heading h2 {
+.record-card > h2, #pilot-profile-title, .scene-room-heading > h2, #directory .record-heading h2 {
   font-size: clamp(19px, 2.2vw, 26px);
   font-weight: 630;
   letter-spacing: .01em;
@@ -318,12 +316,6 @@ dialog::backdrop { background: #0a0c0bd1; }
 @media (max-width: 550px) {
   .folders { padding-inline: 8px; }
   .folders button { min-block-size: 44px; padding-inline: 9px; }
-  .ova-rail-toggles { display: flex; flex: 1 1 100%; gap: 5px; }
-  .ova-rail-toggles button { min-height: 32px; font: 600 11px/1.4 var(--mono); }
-  .layout:not(:has(#desk-rail > section:not([hidden]))) #roster-toggle,
-  .layout #desk-rail, .locations :is(#location-list, .notice),
-  .locations > .eyebrow, #presence-jump { display: none; }
-  #desk-rail { scroll-margin-block-start: 10rem; }
   .layout > main { padding-block-start: 8px; }
   .scene-room-heading, .record-card { padding-inline: 8px; }
   .scene-room-tools { gap: 4px; }
@@ -333,8 +325,6 @@ dialog::backdrop { background: #0a0c0bd1; }
   .activity-dialog > .record-heading h2 { font-size: 16px; }
   .play-rail-list > .play-card { flex: 1 1 130px; }
   .play-category-heading { flex-basis: 100%; }
-  :root[data-activity-folder="campaign-setup"] .layout { display: block; }
-  :root[data-activity-folder="campaign-setup"] .layout > .locations { display: none; }
   #campaign-setup-panels .campaign-setup-section { scroll-margin-block-start: 12px; }
   [data-pane="campaign-setup"].record-card { padding-inline: 11px; }
 }

@@ -346,6 +346,7 @@ async function verifySceneArtworkStability(browser, server) {
   await save();
   await frame.waitForFunction(() => window.sceneArtworkDecoding);
   await view.locator('[data-folder="scenes"]').click();
+  await view.locator("#locations-toggle").click();
   await view.getByRole("button",{name:"Start Scene",exact:true}).click();
   const start = view.getByRole("dialog",{name:"Start Scene",exact:true});
   await start.getByLabel("Scene name").fill("Unillustrated room");
@@ -391,6 +392,7 @@ async function verifySceneIntel(browser, server, previous) {
   const owner = await openPilot(browser, server, "invited");
   const handler = await openPilot(browser, server, "handler");
   await owner.view.getByRole("button",{name:"Close inbox",exact:true}).click();
+  await owner.view.locator("#locations-toggle").click();
   await owner.view.getByRole("button",{name:"Start Scene",exact:true}).click();
   const start = owner.view.getByRole("dialog",{name:"Start Scene",exact:true});
   await start.getByLabel("Scene name").fill(name);
@@ -460,6 +462,7 @@ async function verifySceneArchive(browser, server, previous) {
   const setup = "/api/player-setup";
   const privateName = "Supply seal inspection";
   if (previous) {
+    await owner.view.locator("#locations-toggle").click();
     await archive.click();
     const search = owner.view.getByRole("searchbox",{name:"Search archive"});
     const mainEntry = owner.view.getByRole("button",{name:"Open " + name,exact:true});
@@ -510,6 +513,7 @@ async function verifySceneArchive(browser, server, previous) {
     }
     return;
   }
+  await owner.view.locator("#locations-toggle").click();
   await owner.view.getByRole("button",{name:"Start Scene",exact:true}).click();
   const start = owner.view.getByRole("dialog",{name:"Start Scene",exact:true});
   await start.getByLabel("Scene name").fill(name);
@@ -941,7 +945,9 @@ async function verifyHud({view, page}) {
     assert.equal(await folder(label).getAttribute("aria-current"),"page");
     assert.equal(await view.locator("#desk-context").textContent(),context);
     assert.equal(await view.locator("html").getAttribute("data-theme"),newTheme);
+    await view.locator("#roster-toggle").click();
     await present.getByRole("button",{name:/^SYNTH \| /}).waitFor();
+    await view.getByRole("button",{name:"Close Pilots and Communications",exact:true}).click();
     await inboxButton.click();
     await inbox.waitFor();
     await inbox.getByText("Response saved · Accepted",{exact:true}).waitFor();
@@ -963,14 +969,8 @@ async function verifyHud({view, page}) {
         return rect.left >= 0 && rect.right <= document.documentElement.clientWidth + 1;
       })),`Header controls overflow at ${width}px`);
     if (width === 320) assert((await header.boundingBox()).height <= 150, "Narrow masthead is taller than it needs to be");
-    const {locations, work, communications} = await view.locator(".layout").evaluate(layout => {
-      const bounds = selector => layout.querySelector(selector).getBoundingClientRect().toJSON();
-      return {locations:bounds(".locations"), work:bounds("main"), communications:bounds("#desk-rail")};
-    });
-    const aligned = width === 1024 ? locations.right <= work.left + 1 && work.right <= communications.left + 1
-      : width === 736 ? locations.bottom <= work.top + 1 && work.right <= communications.left + 1
-      : locations.bottom <= work.top + 1 && work.bottom <= communications.top + 1;
-    assert(aligned,`Desk panels overlap at ${width}px: ${JSON.stringify({locations, work, communications})}`);
+    assert(await view.locator(".rail-shortcuts").evaluate(row => row.scrollWidth <= row.clientWidth),
+      `Desk shortcuts overflow at ${width}px`);
   }
   await inboxButton.click();
   await inbox.waitFor();
@@ -981,12 +981,11 @@ async function verifyHud({view, page}) {
   await closeInbox.click();
   if (originalSize) await page.setViewportSize(originalSize);
   await theme.click();
-  await view.locator("#location-list").getByRole("button",{name:/Outpost K-12/}).click();
-  await view.getByRole("heading",{name:"Outpost K-12",exact:true}).waitFor();
-  assert.equal(await present.locator("#presence-context").textContent(),"Outpost K-12");
-  await present.getByText("No pilots present.",{exact:true}).waitFor();
-  await view.locator("#location-list").getByRole("button",{name:/Hangar Deck/}).click();
+  await view.locator("#locations-toggle").click();
+  await view.locator("#location-list").getByRole("button",{name:/Relay operations/}).click();
+  await view.locator("#roster-toggle").click();
   await present.getByRole("button",{name:/^SYNTH \| /}).waitFor();
+  await view.getByRole("button",{name:"Close Pilots and Communications",exact:true}).click();
   await folder("Cadre Status").click();
   await view.locator("#cadre-data").getByRole("button",{name:/^SYNTH \| /}).click();
   await view.locator("#profile-pane").getByText("SYNTH",{exact:true}).waitFor();
@@ -1067,6 +1066,7 @@ async function verifyResponsiveHud(browser, server) {
       await activity.waitForFunction(expected => innerWidth === expected, width);
       for (const theme of ["dark", "light"]) {
         context = width + " px " + theme;
+        let shortcutSpacing;
         if (await view.locator("html").getAttribute("data-theme") !== theme) {
           await view.getByRole("button", {name:"Toggle light and dark mode"}).click();
         }
@@ -1081,6 +1081,19 @@ async function verifyResponsiveHud(browser, server) {
           await checkFolderBar(label);
           const current = pane(id);
           await checkPanel(current, label);
+          const shortcuts = await view.locator(".rail-shortcuts").evaluate(row => {
+            const [locations, roster] = [...row.querySelectorAll("button")].map(button => button.getBoundingClientRect());
+            return {gap:roster.left - locations.right, top:roster.top - locations.top, height:row.getBoundingClientRect().height};
+          });
+          shortcutSpacing ??= shortcuts;
+          if (Object.keys(shortcuts).some(key => !closeEnough(shortcuts[key], shortcutSpacing[key]))) {
+            issues.push({context, name:label + " shortcut spacing", shortcuts});
+          }
+          assert.equal(await view.locator(".layout > aside, #pilot-footer").count(), 0);
+          assert.equal(await view.getByRole("button", {name:"Personnel records",exact:true}).count(), id === "profile" ? 1 : 0);
+          if (id === "profile") {
+            await modal(current.getByRole("button", {name:"Personnel records",exact:true}), "#character-files-dialog", "Close Personnel records", "Personnel records");
+          }
           if (id === "profile" || id === "frame") {
             const buttons = current.locator('[data-popup^="girl-asset:"], [data-popup^="frame-asset:"]');
             await buttons.first().waitFor();
@@ -1118,8 +1131,12 @@ async function verifyResponsiveHud(browser, server) {
               await checkPanel(current, "Scene Archive");
               await current.getByRole("button", {name:"Locations", exact:true}).click();
             }
-            const start = current.getByRole("button", {name:"Start Scene", exact:true});
+            const locations = view.locator("#mobile-locations");
+            await view.locator("#locations-toggle").click();
+            await checkPanel(locations, "Locations", true);
+            const start = locations.getByRole("button", {name:"Start Scene", exact:true});
             if (await start.isVisible()) await modal(start, "#start-scene-dialog", "Close Start Scene", "Start Scene");
+            if (await locations.isVisible()) await locations.getByRole("button", {name:"Close Locations",exact:true}).click();
           }
         }
         await view.getByRole("button", {name:"Inbox",exact:true}).click();
@@ -2667,8 +2684,10 @@ async function mainTest() {
       assert.equal(roster.find(person => person.id === discordUsers.invited).online,true);
       assert.equal(roster.find(person => person.id === discordUsers.other).online,false);
       assert.equal(roster.find(person => person.id === discordUsers.other).enrolled,false);
+      await owner.view.locator("#roster-toggle").click();
       await owner.view.locator("#desk-rail")
         .getByText("Offline · Enrollment pending",{exact:true}).waitFor({state:"attached"});
+      await owner.view.getByRole("button",{name:"Close Pilots and Communications",exact:true}).click();
     }
     if (playRailCheck) {
       await verifyPlayRail(owner);
@@ -2909,10 +2928,11 @@ async function mainTest() {
         await pilot.view.getByRole("heading", {name:"Scene Plays",exact:true}).waitFor();
       };
       if (communicationsCheck) {
+        await sender.view.locator("#roster-toggle").click();
         const desk = sender.view.locator("#communications");
         await desk.getByText("Foundation networks are monitored. The Handler may respond to DMs.").waitFor();
         assert.equal(await sender.view.locator("#pilot").textContent(), "SYNTH | Ace");
-        assert(await desk.evaluate(node => node.closest("aside").getBoundingClientRect().left >= document.querySelector("main").getBoundingClientRect().right - 1));
+        assert(await desk.evaluate(node => node.closest("dialog")?.open === true));
         const senderRecord = await playerSetup(sender);
         const toFallow = senderRecord.communications.find(item => item.label === "FALLOW");
         const toSynth = joined.communications.find(item => item.label === "SYNTH");
@@ -2956,6 +2976,7 @@ async function mainTest() {
         assert.deepEqual(await read(handler,toSynth),[]);
         assert.equal((await request(handler,"/api/battlefield")).status,403);
         assert.equal((await send(sender,toHandler,"May I review the relay report?",randomUUID())).status,200);
+        await handler.view.locator("#roster-toggle").click();
         await handler.view.locator("#communications").getByRole("button",{name:/^SYNTH/}).click();
         const handlerThread = handler.view.getByRole("dialog",{name:"Private communication · SYNTH"});
         await handlerThread.getByText("May I review the relay report?",{exact:true}).waitFor();
@@ -3150,12 +3171,14 @@ async function mainTest() {
         assert(now.available_play_ids.includes("flirt"));
         await sender.view.getByRole("button",{name:"Back",exact:true}).click();
         await sender.view.getByRole("button",{name:"Check for updates"}).click();
+        await sender.view.locator("#roster-toggle").click();
         const cast = sender.view.getByRole("region",{name:"Present Pilots",exact:true});
         const expectedCast = current.cadre.filter(pilot => current.active_scene.pilot_ids.includes(pilot.id));
         assert.equal(expectedCast.length,2);
         for (const pilot of expectedCast) {
           await cast.getByRole("button",{name:pilot.callsign + " | " + pilot.status,exact:true}).waitFor();
         }
+        await sender.view.getByRole("button",{name:"Close Pilots and Communications",exact:true}).click();
         assert.equal((await setupPost(refreshedRecruit,"enter-scene",{room:"relay"})).status,200);
         assert.equal((await setupPost(sender,"enter-scene",{room:"relay"})).status,200);
         assert.equal((await playerSetup(sender)).active_scene.options.check_sensors.current,null);
@@ -3571,6 +3594,7 @@ async function mainTest() {
     if (dmOffline) {
       await owner.view.getByRole("button", {name:"Scenes", exact:true}).click();
       await owner.view.getByRole("button", {name:"Open Relay operations"}).click();
+      await owner.view.locator("#roster-toggle").click();
       await owner.view.getByRole("region",{name:"Present Pilots",exact:true}).getByRole("button", {name:/^SYNTH \| /}).click();
       await owner.view.locator("#profile-pane").getByText("SYNTH", {exact:true}).waitFor();
       await owner.view.getByRole("button", {name:"Back", exact:true}).click();

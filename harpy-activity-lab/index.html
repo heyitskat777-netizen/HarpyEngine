@@ -99,25 +99,17 @@
   </div>
 </dialog>
 <div class="layout">
-  <aside class="locations" aria-label="Locations">
-    <div class="ova-rail-toggles">
-      <button id="locations-toggle" type="button" aria-expanded="false" aria-controls="location-list">Locations</button>
-      <button id="roster-toggle" type="button" aria-expanded="false" aria-controls="desk-rail">Roster &amp; Comms</button>
-    </div>
-    <strong id="pilot-footer"></strong>
-    <span class="eyebrow">Locations</span>
-    <div id="location-list"></div>
-    <button id="presence-jump" type="button" aria-controls="present-pilots" hidden>Present Pilots</button>
-    <div class="notice"><div class="notice-header"><i class="insignia notice-insignia" aria-hidden="true"></i><span class="eyebrow">Foundation notice</span><button id="next-notice" type="button" aria-label="Next Foundation notice">›</button></div><p id="notice">Record all deviations before shift handover.</p></div>
-  </aside>
   <main>
     <div class="workbench">
       <button id="back" class="workbench-action" type="button" hidden><span aria-hidden="true">←</span> Back</button>
       <p id="desk-context" class="eyebrow" hidden></p>
       <div class="local-tools">
+        <div class="rail-shortcuts">
+          <button id="locations-toggle" class="workbench-action" type="button" aria-haspopup="dialog" aria-controls="mobile-locations" hidden>Locations</button>
+          <button id="roster-toggle" class="workbench-action" type="button" aria-haspopup="dialog" aria-controls="mobile-roster" hidden>Roster &amp; Comms</button>
+        </div>
         <button id="refresh" class="workbench-action" type="button" aria-label="Synchronize terminal" hidden><span aria-hidden="true">↻</span> <span class="tool-label">Synchronize terminal</span></button>
         <button id="enrollment-trigger" class="workbench-action" type="button" aria-haspopup="dialog" hidden>Create pilot</button>
-        <button id="character-files" class="workbench-action" type="button" aria-haspopup="dialog">Personnel records</button>
         <button id="specialist-work" class="workbench-action" type="button" aria-haspopup="dialog" hidden>Specialist work</button>
         <div class="campaign-menu">
           <div class="campaign-actions">
@@ -162,7 +154,13 @@
       </section>
       <section id="setup" aria-label="Character and scene"></section>
     </section>
-    <section data-pane="profile" id="profile-pane" class="record-card" hidden><h2>Pilot Profile</h2><div id="profile-data"></div></section>
+    <section data-pane="profile" id="profile-pane" class="record-card" aria-labelledby="pilot-profile-title" hidden>
+      <div class="record-heading">
+        <h2 id="pilot-profile-title">Pilot Profile</h2>
+        <button id="character-files" type="button" aria-haspopup="dialog" aria-controls="character-files-dialog">Personnel records</button>
+      </div>
+      <div id="profile-data"></div>
+    </section>
     <section data-pane="battlefield" class="record-card" hidden>
       <div class="record-heading"><h2>Battlefield</h2></div>
       <div id="briefing-panel">
@@ -235,7 +233,10 @@
       </div>
     </dialog>
   </main>
-  <aside id="desk-rail" aria-label="Pilot roster and communications" tabindex="-1">
+</div>
+<dialog id="mobile-roster" class="activity-dialog terminal-dialog" aria-labelledby="mobile-roster-title">
+  <header class="record-heading"><h2 id="mobile-roster-title">Pilots and Communications</h2><form method="dialog"><button aria-label="Close Pilots and Communications">×</button></form></header>
+  <div id="desk-rail" class="terminal-panel">
     <section id="present-pilots" aria-labelledby="present-pilots-title" hidden>
       <h2 id="present-pilots-title" tabindex="-1">Present Pilots</h2>
       <p id="presence-context" class="eyebrow"></p>
@@ -255,8 +256,8 @@
       <p class="communications-notice">Foundation networks are monitored. The Handler may respond to transmissions.</p>
       <ul class="records" id="communications-contacts"></ul>
     </section>
-  </aside>
-</div>
+  </div>
+</dialog>
 <dialog id="communication-dialog" class="activity-dialog terminal-dialog" aria-labelledby="communication-title">
   <header class="record-heading"><h2 id="communication-title">Direct channel</h2><form method="dialog"><button aria-label="Close private communication">×</button></form></header>
   <div class="terminal-panel">
@@ -279,12 +280,10 @@
 </dialog>
 <dialog id="mobile-locations" class="activity-dialog terminal-dialog" aria-labelledby="mobile-locations-title">
   <header class="record-heading"><h2 id="mobile-locations-title">Locations</h2><form method="dialog"><button aria-label="Close Locations">×</button></form></header>
-  <div class="terminal-panel"></div>
-  <div class="notice mobile-foundation-notice"><div class="notice-header"><i class="insignia notice-insignia" aria-hidden="true"></i><span class="eyebrow">Foundation notice</span></div><p id="mobile-notice">Record all deviations before shift handover.</p></div>
-</dialog>
-<dialog id="mobile-roster" class="activity-dialog terminal-dialog" aria-labelledby="mobile-roster-title">
-  <header class="record-heading"><h2 id="mobile-roster-title">Pilots and Communications</h2><form method="dialog"><button aria-label="Close Pilots and Communications">×</button></form></header>
-  <div class="terminal-panel"></div>
+  <div class="terminal-panel">
+    <div id="location-list"></div>
+    <div class="notice"><div class="notice-header"><i class="insignia notice-insignia" aria-hidden="true"></i><span class="eyebrow">Foundation notice</span><button id="next-notice" type="button" aria-label="Next Foundation notice">›</button></div><p id="notice">Record all deviations before shift handover.</p></div>
+  </div>
 </dialog>
 <dialog id="enrollment-dialog" class="activity-dialog terminal-dialog" aria-labelledby="enrollment-title">
   <header class="record-heading"><h2 id="enrollment-title">Pilot enrollment</h2><form method="dialog"><button aria-label="Close pilot enrollment">×</button></form></header>

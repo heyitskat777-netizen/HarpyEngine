@@ -282,37 +282,27 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
   const scenePlayOptions = document.getElementById("scene-play-options");
   const scenePlayFeedback = document.getElementById("scene-play-feedback");
   const enterScene = document.getElementById("enter-scene-controls");
-  const presenceJump = document.getElementById("presence-jump");
   const locationsToggle = document.getElementById("locations-toggle");
   const rosterToggle = document.getElementById("roster-toggle");
   const rosterDrawer = document.getElementById("desk-rail");
+  const rosterSections = [...rosterDrawer.children];
+  const rosterAvailability = new MutationObserver(() => {
+    rosterToggle.hidden = rosterSections.every(section => section.hidden);
+  });
+  for (const section of rosterSections) rosterAvailability.observe(section, {attributeFilter:["hidden"]});
   for (const [trigger,content,id] of [
     [locationsToggle,document.getElementById("location-list"),"mobile-locations"],
     [rosterToggle,rosterDrawer,"mobile-roster"],
   ]) {
     const dialog = document.getElementById(id);
-    const marker = document.createComment(id);
-    content.before(marker);
-    trigger.setAttribute("aria-haspopup","dialog");
-    trigger.setAttribute("aria-controls",id);
-    trigger.removeAttribute("aria-expanded");
-    trigger.addEventListener("click",() => {
-      dialog.querySelector(".terminal-panel").append(content);
-      dialog.showModal();
-    });
+    trigger.addEventListener("click",() => dialog.showModal());
     dialog.addEventListener("close",() => {
-      marker.after(content);
       if (!document.querySelector("dialog[open]")) trigger.focus();
     });
     content.addEventListener("click",event => {
       if (event.target.closest("button") && dialog.open) dialog.close();
     });
   }
-  const presentPilotsTitle = document.getElementById("present-pilots-title");
-  presenceJump.addEventListener("click", () => {
-    presentPilotsTitle.focus({preventScroll:true});
-    presentPilotsTitle.scrollIntoView({block:"start"});
-  });
   const trail = [];
   const initialView = {folder:"scenes", location:"hangar", mode:"locations", room:null, pilot:null, tacticalPilot:null};
   let view = {...initialView};
@@ -373,7 +363,6 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
 
   function showNotice(text) {
     document.getElementById("notice").textContent = text;
-    document.getElementById("mobile-notice").textContent = text;
   }
 
   document.getElementById("next-notice").addEventListener("click", nextNotice);
@@ -742,7 +731,6 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     const panel = document.getElementById("present-pilots");
     const castPanel = document.getElementById("scene-cast");
     panel.hidden = player?.stage !== "active";
-    presenceJump.hidden = panel.hidden;
     castPanel.hidden = true;
     if (panel.hidden) return;
     const {cadre, directory, active_scene} = player;
@@ -755,7 +743,6 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
       return item.id === "relay" && item.joined ? player.scene?.pilot_ids ?? [] : item.pilot_ids ?? [];
     }));
     const pilots = tactical ? tacticalRoster ?? [] : cadre.filter(pilot => ids.has(pilot.id));
-    presenceJump.textContent = `Present Pilots (${pilots.length})`;
     document.getElementById("presence-context").textContent = tactical ? battlefieldTitle ?? "Battlefield" : room?.name ?? location?.name ?? "";
     const list = document.getElementById("present-pilot-list");
     const focused = list.contains(document.activeElement) ? document.activeElement.dataset.pilot : null;
@@ -1860,6 +1847,7 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     if (folderChanged) revealActiveFolder();
     if (folderChanged && view.folder === "campaign-setup") window.scrollTo(0, 0);
     back.hidden = !trail.length;
+    locationsToggle.hidden = !player?.directory;
     handover.setVisible(canHandover && view.folder === "handover");
     const handlerDesk = document.getElementById("handler-desk");
     handlerDesk.hidden = !handler || view.folder !== "scenes";
@@ -1905,7 +1893,6 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     renderPeople(pilots);
     renderFrame(pilots);
     renderBattlefield();
-    document.getElementById("pilot-footer").textContent = player.callsign ?? "";
   }
 
   return {
