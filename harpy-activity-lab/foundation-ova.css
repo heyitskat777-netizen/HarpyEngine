@@ -316,7 +316,8 @@ dialog::backdrop { background: #0a0c0bd1; }
 #campaign-setup-panels pre { max-inline-size: 100%; white-space: pre-wrap; overflow-wrap: anywhere; }
 
 @media (max-width: 550px) {
-  .folders button { min-height: 34px; padding-inline: 3px; }
+  .folders { padding-inline: 8px; }
+  .folders button { min-block-size: 44px; padding-inline: 9px; }
   .ova-rail-toggles { display: flex; flex: 1 1 100%; gap: 5px; }
   .ova-rail-toggles button { min-height: 32px; font: 600 11px/1.4 var(--mono); }
   .layout:not(:has(#desk-rail > section:not([hidden]))) #roster-toggle,
@@ -332,20 +333,6 @@ dialog::backdrop { background: #0a0c0bd1; }
   .activity-dialog > .record-heading h2 { font-size: 16px; }
   .play-rail-list > .play-card { flex: 1 1 130px; }
   .play-category-heading { flex-basis: 100%; }
-  :root[data-activity-folder="campaign-setup"] .activity-header { position: relative; }
-  :root[data-activity-folder="campaign-setup"] .masthead { grid-template-columns: auto minmax(0, 1fr) auto; }
-  :root[data-activity-folder="campaign-setup"] .tools { grid-column: auto; max-inline-size: min(44vw, 200px); flex-wrap: wrap; justify-content: flex-end; }
-  :root[data-activity-folder="campaign-setup"] .folders {
-    display: flex;
-    overflow-x: auto;
-    padding-inline: 8px;
-  }
-  :root[data-activity-folder="campaign-setup"] .folders button {
-    flex: none;
-    min-block-size: 44px;
-    padding-inline: 9px;
-    white-space: nowrap;
-  }
   :root[data-activity-folder="campaign-setup"] .layout { display: block; }
   :root[data-activity-folder="campaign-setup"] .layout > .locations { display: none; }
   #campaign-setup-panels .campaign-setup-section { scroll-margin-block-start: 12px; }

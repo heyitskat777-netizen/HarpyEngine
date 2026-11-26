@@ -230,7 +230,17 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
   let openCampaignSetup;
   let setDossierVisible;
   let dossierVisible = false;
-  const folders = [...document.querySelectorAll("[data-folder]")];
+  const folderBar = document.querySelector(".folders");
+  const folders = [...folderBar.querySelectorAll("[data-folder]")];
+  function revealActiveFolder() {
+    const active = folderBar.querySelector('[aria-current="page"]:not([hidden])');
+    if (!active) return;
+    const tab = active.getBoundingClientRect();
+    const bar = folderBar.getBoundingClientRect();
+    const delta = tab.left < bar.left ? tab.left - bar.left : Math.max(0, tab.right - bar.right);
+    if (delta) folderBar.scrollLeft += delta;
+  }
+  new ResizeObserver(revealActiveFolder).observe(folderBar);
   const panes = [...document.querySelectorAll("[data-pane]")];
   const back = document.getElementById("back");
   const directory = document.getElementById("directory");
@@ -1831,7 +1841,7 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
     }
     if (view.folder === "dossiers" && !canReviewDossiers) view = {...view, folder:"scenes"};
     const root = document.documentElement;
-    const enteringCampaignSetup = view.folder === "campaign-setup" && root.dataset.activityFolder !== view.folder;
+    const folderChanged = root.dataset.activityFolder !== view.folder;
     root.dataset.activityFolder = view.folder;
     const showDossiers = view.folder === "dossiers";
     if (showDossiers !== dossierVisible) {
@@ -1847,12 +1857,8 @@ export function foundationUI(send, readTranscript, showBattlefield, battlefield,
       if (name === view.folder) folder.setAttribute("aria-current", "page");
       else folder.removeAttribute("aria-current");
     }
-    if (enteringCampaignSetup) {
-      const current = folders.find(folder => folder.dataset.folder === view.folder);
-      const navigation = current.parentElement;
-      navigation.scrollLeft += current.getBoundingClientRect().right - navigation.getBoundingClientRect().right;
-      window.scrollTo(0, 0);
-    }
+    if (folderChanged) revealActiveFolder();
+    if (folderChanged && view.folder === "campaign-setup") window.scrollTo(0, 0);
     back.hidden = !trail.length;
     handover.setVisible(canHandover && view.folder === "handover");
     const handlerDesk = document.getElementById("handler-desk");

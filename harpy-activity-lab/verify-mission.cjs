@@ -1026,7 +1026,27 @@ async function verifyResponsiveHud(browser, server) {
       mobile, inspectAuth:auth => checkPanel(auth, "Sign-in", true),
     });
     const activity = await (await page.locator("iframe").elementHandle()).contentFrame();
-    const folder = name => view.getByRole("navigation", {name:"Campaign folders"}).getByRole("button", {name, exact:true});
+    const folderBar = view.getByRole("navigation", {name:"Campaign folders"});
+    const folder = name => folderBar.getByRole("button", {name, exact:true});
+    const checkFolderBar = async name => {
+      const chrome = await folderBar.evaluate(bar => {
+        const tabs = [...bar.querySelectorAll("button:not([hidden])")];
+        const active = tabs.find(button => button.getAttribute("aria-current") === "page");
+        const {left, right} = bar.getBoundingClientRect();
+        const tab = active?.getBoundingClientRect();
+        const header = bar.closest(".activity-header");
+        return {
+          rowCount:new Set(tabs.map(button => Math.round(button.getBoundingClientRect().top))).size,
+          active:active?.textContent,
+          activeVisible:tab && tab.left >= left - 1 && tab.right <= right + 1,
+          position:getComputedStyle(header).position,
+        };
+      });
+      const expected = mobile ? "relative" : "sticky";
+      if (chrome.rowCount !== 1 || chrome.active !== name || !chrome.activeVisible || chrome.position !== expected) {
+        issues.push({context, name:name + " folder bar", chrome});
+      }
+    };
     const closeInbox = view.getByRole("button", {name:"Close inbox", exact:true});
     await closeInbox.click();
     const pane = id => view.locator(`[data-pane="${id}"]`);
@@ -1042,7 +1062,7 @@ async function verifyResponsiveHud(browser, server) {
       }
       await dialog.getByRole("button", {name:close, exact:true}).click();
     };
-    for (const [width,height] of mobile ? [[390,740],[320,640],[550,700],[480,420]] : [[1440,900],[768,800]]) {
+    for (const [width,height] of mobile ? [[390,740],[320,640],[550,700],[480,420],[760,420]] : [[1440,900],[768,800]]) {
       await page.setViewportSize({width,height});
       await activity.waitForFunction(expected => innerWidth === expected, width);
       for (const theme of ["dark", "light"]) {
@@ -1058,6 +1078,7 @@ async function verifyResponsiveHud(browser, server) {
           ["Cadre Status","cadre"],["Missions","missions"],["Battlefield","battlefield"],["Scenes","scenes"],
         ]) {
           await folder(label).click();
+          await checkFolderBar(label);
           const current = pane(id);
           await checkPanel(current, label);
           if (id === "profile" || id === "frame") {
@@ -1077,6 +1098,17 @@ async function verifyResponsiveHud(browser, server) {
               await current.locator(".asset-records").screenshot({path:process.env.HARPY_ASSET_LAYOUT_CAPTURE + "-" + width + ".png"});
             }
             await modal(buttons.first(), "#utility-dialog", "Close action", label + " asset popup");
+            if (id === "profile" && mobile && width === 390 && theme === "dark") {
+              await activity.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+              await activity.waitForFunction(() => document.querySelector(".activity-header").getBoundingClientRect().bottom < 1);
+              await folderBar.evaluate(bar => { bar.scrollLeft = 0; });
+              await current.locator(".data-list .link-button").first().click();
+              await checkFolderBar("Frame Status");
+              await folderBar.evaluate(bar => { bar.scrollLeft = bar.scrollWidth; });
+              await view.getByRole("button", {name:"Back", exact:true}).click();
+              await checkFolderBar("Pilot Profile");
+              await activity.evaluate(() => window.scrollTo(0, 0));
+            }
           } else if (id === "battlefield") {
             await modal(current.getByRole("button", {name:"Sheet Plays",exact:true}), "#tactical-play-dialog", "Close Play menu", "Battlefield Play menu");
           } else if (id === "scenes") {
