@@ -214,7 +214,14 @@ bot_token = None
 if inbox:
     from contextlib import nullcontext
     import campaign_bot
-    campaign_bot.serve_commands = lambda *_, **__: nullcontext()
+
+    def offline_commands(*_, notice_pending, **__):
+        bound = catalog.bindings(CONFIG.client_id, CONFIG.guild_id)[1]
+        item = (bound.id, 'scene_invite', 'unused-invite', bound.handler_id)
+        assert notice_pending(bound, item) is False
+        return nullcontext()
+
+    campaign_bot.serve_commands = offline_commands
     bot_token = 'synthetic-bot-token'
 mission.serve(service, 0, True, DiscordSessions(config, provider),
               bound_roster=True, campaign_registry=catalog, campaign_roles_only=True,

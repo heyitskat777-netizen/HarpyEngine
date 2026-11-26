@@ -808,6 +808,7 @@ def serve(
                 handler = GuildViewer(int(binding.handler_id), int(binding.guild_id), True, False)
                 players = PlayerSetup(source.store, handler, handler, handler, bound_roster=True)
                 players.enable_activity_records()
+                players.enable_scene_plays(extra_channels=(PRIVATE_BATTLEFIELD_CHANNEL,))
                 arena = PrivateBattlefield(source, players)
             with source.store.engine.connect() as connection:
                 players.game.authorize(connection, owner, game=False)
