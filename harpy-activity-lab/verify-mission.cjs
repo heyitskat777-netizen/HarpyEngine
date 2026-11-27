@@ -1222,8 +1222,22 @@ async function verifyResponsiveHud(browser, server) {
         await active.getByRole("button", {name:"Relay operations",exact:true}).waitFor();
         await active.getByText(/Present pilots · SYNTH/).waitFor();
         assert.equal(await desk.getByText("Cadre register",{exact:true}).count(),0);
-        const contact = view.locator("#communications-contacts button").first();
-        if (await contact.isVisible()) await modal(contact, "#communication-dialog", "Close private communication", "Private communications");
+        const contacts = desk.locator("#communications-contacts button");
+        await contacts.first().waitFor();
+        const contactRows = await contacts.evaluateAll(buttons => buttons.map((button,index) => {
+          const {left,right,top,bottom} = button.getBoundingClientRect();
+          const [portrait,name,role] = [...button.children].map(element => element.getBoundingClientRect());
+          const middle = (top + bottom) / 2;
+          return {
+            order: left <= portrait.left && portrait.right <= name.left && name.right <= role.left && role.right <= right,
+            singleLine: [portrait,name,role].every(cell => Math.abs((cell.top + cell.bottom) / 2 - middle) <= 1),
+            stacked: index === 0 || top >= buttons[index - 1].getBoundingClientRect().bottom,
+          };
+        }));
+        if (contactRows.some(row => !row.order || !row.singleLine || !row.stacked)) {
+          issues.push({context,name:"Communications contact rows",contactRows});
+        }
+        await modal(contacts.first(), "#communication-dialog", "Close private communication", "Private communications");
         if (await desk.isVisible()) {
           await desk.getByRole("button", {name:"Close Communications",exact:true}).click();
         }

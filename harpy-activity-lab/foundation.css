@@ -68,8 +68,18 @@ body {
 .presence-file small { color: var(--quiet-ink); }
 #scene-cast-list { display: grid; gap: 5px; }
 #scene-cast-list li { align-items: baseline; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--line); }
-#communications-contacts { display: grid; gap: 5px; margin-block: 8px; }
-#communications-contacts button { display: grid; text-align: start; width: 100%; }
+#communications-contacts { display: grid; grid-template-columns: minmax(0, 1fr); gap: 5px; margin-block: 8px; }
+#communications-contacts button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-block-size: 44px;
+  inline-size: 100%;
+  text-align: start;
+}
+#communications-contacts .contact-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#communications-contacts .eyebrow { white-space: nowrap; }
 #communications-scenes { margin-block-start: 12px; border-block-start: 1px solid var(--line); }
 #communications-scenes h3 { font: 600 12px/1.4 var(--mono); text-transform: uppercase; }
 #communications-scene-list { display: grid; gap: 6px; }
@@ -105,7 +115,7 @@ body {
   .tools :is(.tool-label, #theme-label), #refresh .tool-label { display: none; }
   .folders button { justify-content: center; font-size: 11px; }
   .folders button::before, .folders button[aria-current="page"]::after { display: none; }
-  #communications-contacts, #present-pilot-list { grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr)); }
+  #present-pilot-list { grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr)); }
 }
 .workbench,
 .local-tools,

@@ -153,8 +153,6 @@ button.play-card small { display: none; }
   inline-size: 27px;
   block-size: 27px;
 }
-#communications-contacts button { display: flex; align-items: center; gap: 8px; text-align: start; }
-#communications-contacts button strong { display: block; }
 .play-rail-nav button { text-align: start; }
 .play-card {
   --accent: var(--key);
