@@ -16,6 +16,7 @@ from girlframe.engine.creation_details import InitialConditions
 from girlframe.engine.creation_review import CreationRulings
 from girlframe.engine.m2 import ReleaseApproval
 from girlframe.engine.m2_registry import registry_digest
+from girlframe.engine.session_zero import CHARACTER_NOTES_LIMIT
 from girlframe.engine.shared_setup import CallsignChoice
 from girlframe.services.activity_session_zero import SessionZeroDesk
 from girlframe.services.bonds import BondService
@@ -321,11 +322,23 @@ def test_frame_court_and_missing_owner_approval_are_not_fabricated(ledger):
 
 
 def test_two_discord_pilots_complete_bot_enrollment_and_reopen_after_server_restart(tmp_path):
+    from http import HTTPStatus
+
     from player_setup import OWNER_CREATION_FIELDS
-    from test_campaign_role_access import CONFIG, request, role_activity
+    from test_campaign_role_access import CONFIG, TESTER, request, role_activity
     from test_handler_pilot_view import login
 
-    with role_activity(tmp_path, bot_handler=True) as host:
+    zero = "/api/campaign-opening/session-zero"
+    unfiled = {TESTER: "pending", CONFIG.invited_user_id: "pending"}
+    filed = unfiled | {TESTER: "filed"}
+    # Four full fields of supplementary characters exercise the escaped JSON byte limit.
+    notes = {
+        "goal": "🧭" * CHARACTER_NOTES_LIMIT,
+        "hook": "🔧" * CHARACTER_NOTES_LIMIT,
+        "spotlight": "📝" * CHARACTER_NOTES_LIMIT,
+        "relationships": "🤝" * CHARACTER_NOTES_LIMIT,
+    }
+    with role_activity(tmp_path, bot_handler=True, session_zero_setup=True) as host:
         first = login(host, "role-pilot")
         second = login(host, "invited")
         campaign = request(host, "/api/campaigns", first)["campaigns"][0]["id"]
@@ -416,6 +429,44 @@ def test_two_discord_pilots_complete_bot_enrollment_and_reopen_after_server_rest
             )
         assert request(host, "/api/player-setup" + query, first)["callsign"] == "BOT ZERO"
         assert request(host, "/api/player-setup" + query, second)["callsign"] == "BOT ONE"
+        organizer = login(host, "handler")
+        request(host, "/api/player-setup" + query, organizer)
+        state = request(host, zero + query, organizer)
+        request(
+            host,
+            zero + "-group" + query,
+            organizer,
+            {"revision": state["revision"], "members": [CONFIG.handler_user_id, *unfiled]},
+        )
+        state = request(host, zero + query, organizer)
+        request(
+            host,
+            zero + "-plan" + query,
+            organizer,
+            {
+                "revision": state["revision"],
+                "difficulty": "normal",
+                "goals": "Make contact with the relay.",
+                "facilitator": CONFIG.handler_user_id,
+                "facilitator_only": True,
+                "seats": {"player_count": 2},
+            },
+        )
+        state = request(host, zero + query, first)
+        assert state["input_status"] == unfiled
+        assert state["character_notes_limit"] == CHARACTER_NOTES_LIMIT
+        request(host, zero + "-attach" + query, first, {"revision": state["revision"]})
+        state = request(host, zero + query, first)
+        payload = {"revision": state["revision"], "notes": notes}
+        request(
+            host, zero + "-notes" + query, first,
+            payload | {"notes": notes | {"goal": notes["goal"] + "x"}},
+            HTTPStatus.BAD_REQUEST,
+        )
+        request(host, zero + "-notes" + query, first, payload)
+        assert request(host, zero + query, first)["own_notes"] == notes
+        peer = request(host, zero + query, second)
+        assert peer["input_status"] == filed and peer["own_notes"] == {}
     with role_activity(tmp_path, bot_handler=True) as reopened:
         for code, callsign in (("role-pilot", "BOT ZERO"), ("invited", "BOT ONE")):
             token = login(reopened, code)
@@ -424,6 +475,9 @@ def test_two_discord_pilots_complete_bot_enrollment_and_reopen_after_server_rest
             own = next(pilot for pilot in record["cadre"] if pilot["own"])
             assert (own["frame"], own["frame_class"]) == ("JANUS", "priestess")
             assert not record["bot_enrollment"]["can_request"]
+            session_zero = request(reopened, zero + query, token)
+            assert session_zero["input_status"] == filed
+            assert session_zero["own_notes"] == (notes if code == "role-pilot" else {})
 
 
 def test_native_princess_priority_and_conflict_are_preserved(ledger):

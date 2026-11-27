@@ -10,8 +10,13 @@ from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger
 from test_m2_game import setup_game, state
 
-from girlframe.discord_adapter.session_zero import HandlerModal, SessionZeroView, open_panel
-from girlframe.engine.session_zero import CharacterNotes, HandlerProfile
+from girlframe.discord_adapter.session_zero import (
+    HandlerModal,
+    NotesModal,
+    SessionZeroView,
+    open_panel,
+)
+from girlframe.engine.session_zero import CHARACTER_NOTES_LIMIT, CharacterNotes, HandlerProfile
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 from girlframe.services.session_zero import SessionZeroService
@@ -120,6 +125,7 @@ def test_saved_sheets_gate_generation_and_private_notes_reach_only_group_downloa
     service = SessionZeroService(ledger)
     approve(service, group(service))
     prepared = service.view(PLAYER)
+    assert prepared["input_status"] == {"2": "pending", "3": "pending"}
     with pytest.raises(WorkflowError, match="Every listed Pilot"):
         service.generate(PLAYER, prepared["revision"])
     with pytest.raises(WorkflowError, match="Attach your current"):
@@ -133,6 +139,7 @@ def test_saved_sheets_gate_generation_and_private_notes_reach_only_group_downloa
             goal="Recover a missing teammate",
             hook="A divisive rescue request",
             spotlight="A sincere talk with the Handler",
+            relationships="I knew the lookout from <training>.",
         ),
     )
     service.attach(OTHER, "second-sheet", service.view(OTHER)["revision"])
@@ -144,12 +151,15 @@ def test_saved_sheets_gate_generation_and_private_notes_reach_only_group_downloa
     )
     approved = service.view(PLAYER)
     assert approved["can_generate"]
+    assert approved["input_status"] == {"2": "filed", "3": "pending"}
+    assert service.view(OTHER)["own_notes"].get("relationships", "") == ""
     # A private source edit invalidates its exact live review fingerprint.
     progress = creation.get(PLAYER)
     creation.save(
         PLAYER, "changed-source", progress.revision, progress.character_revision, progress.draft
     )
-    assert service.view(OTHER)["sheets"][2] == "refresh"
+    other = service.view(OTHER)
+    assert other["sheets"][2] == "refresh" and other["input_status"]["2"] == "filed"
     with pytest.raises(WorkflowError, match="current character sheet"):
         service.generate(OTHER, approved["revision"])
     changed = review.get(PLAYER)
@@ -164,6 +174,7 @@ def test_saved_sheets_gate_generation_and_private_notes_reach_only_group_downloa
     assert "Patient, curious, stubborn" in sheet
     assert sheet.count("Saved character review") == 2
     assert "Recover a missing teammate" in sheet and "A divisive rescue request" in sheet
+    assert "Relationships with other characters" in sheet and "&lt;training&gt;" in sheet
     assert "Find who abandoned the rescue attempt" in sheet
     assert "OWNER_PROFILE_SECRET" not in sheet and "SHARED_BOND_CONTEXT" not in sheet
     assert not any(label in sheet for label in ("sheets_json", "dependency_tokens", "notes_json"))
@@ -171,7 +182,12 @@ def test_saved_sheets_gate_generation_and_private_notes_reach_only_group_downloa
         with pytest.raises(WorkflowError):
             restarted.generate(viewer, exact_revision)
     assert "Recover a missing teammate" not in str(restarted.store.public_export())
-    restarted.set_group(ADMIN, "change-group", exact_revision, (1, 3, 4))
+    restarted.notes(PLAYER, "save-old-form", exact_revision, CharacterNotes(goal="  "))
+    own = restarted.view(PLAYER)
+    assert own["input_status"]["2"] == "filed" and "training" in own["own_notes"]["relationships"]
+    restarted.notes(PLAYER, "clear-input", own["revision"], CharacterNotes(relationships=""))
+    assert restarted.view(PLAYER)["input_status"]["2"] == "pending"
+    restarted.set_group(ADMIN, "change-group", restarted.view(ADMIN)["revision"], (1, 3, 4))
     assert "Recover a missing teammate" not in str(restarted.view(OUTSIDE))
     with pytest.raises(WorkflowError, match="group"):
         restarted.generate(PLAYER, exact_revision)
@@ -208,6 +224,10 @@ def test_native_generate_button_sends_private_file_from_real_active_sheets(ledge
             4,
             4,
         ]
+        components = NotesModal(view).to_components()
+        lengths = [item["component"]["max_length"] for item in components]
+        assert lengths == [CHARACTER_NOTES_LIMIT] * 4
+        assert components[-1]["label"] == "Relationships with other characters"
         click = interaction(PLAYER.user_id, 502)
         delivered = {}
 

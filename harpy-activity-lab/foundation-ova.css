@@ -299,6 +299,9 @@ dialog::backdrop { background: #0a0c0bd1; }
   border-inline-start: 2px solid var(--key);
 }
 #campaign-setup-panels .campaign-setup-fact + .campaign-setup-fact { margin-block-start: 3px; }
+#campaign-setup-panels .campaign-setup-fact dt { overflow-wrap: anywhere; min-inline-size: 0; }
+#campaign-setup-panels .campaign-setup-input-status { color: var(--quiet-ink); font: 500 12px/1.4 var(--mono); }
+#campaign-setup-panels .campaign-setup-input-status[data-status="filed"] { color: var(--key); }
 #campaign-setup-panels .campaign-setup-count { color: var(--key); font: 500 12px/1.4 var(--mono); }
 #campaign-setup-panels #campaign-setup-session-zero:has(> .campaign-setup-count) { grid-template-columns: minmax(0, 1fr) auto; }
 #campaign-setup-session-zero > .campaign-setup-count { align-self: center; }

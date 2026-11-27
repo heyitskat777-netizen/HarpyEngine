@@ -137,6 +137,7 @@ def role_activity(
     inbox=False,
     local=False,
     rolls=None,
+    session_zero_setup=False,
 ):
     candidate = Path(__file__).resolve().parent
     runtime = tmp_path / "role-runtime"
@@ -151,7 +152,7 @@ from dataclasses import replace
 from pathlib import Path
 candidate, runtime = map(Path, sys.argv[1:3])
 tester = sys.argv[3]
-bot_mode, decisions, inbox, local, rolls = sys.argv[4:]
+bot_mode, decisions, inbox, local, rolls, session_zero_setup = sys.argv[4:]
 sys.argv = [str(candidate / 'mission_lab.py')]
 sys.path.insert(0, str(candidate))
 import mission_lab as mission
@@ -174,6 +175,10 @@ if bot_mode == 'bot-handler' and binding.handler_id != CONFIG.client_id:
     from bot_handler_assignment import assign_bot_handler
     binding = catalog.bindings(CONFIG.client_id, CONFIG.guild_id)[0]
     assign_bot_handler(service,catalog,binding,bot_id=binding.application_id,expected_handler=binding.handler_id,actor_id=binding.handler_id,key='synthetic-bot-handler')
+if session_zero_setup:
+    (runtime / "activity-owner-setup-preview.json").write_text(
+        json.dumps({"campaign_id": binding.id, "owner_id": CONFIG.handler_user_id}), encoding="utf-8"
+    )
 config = replace(
     CONFIG, invited_user_id=None, other_user_id=None, handler_user_id=None, allow_dm=True
 )
@@ -241,6 +246,7 @@ mission.serve(service, 0, True, DiscordSessions(config, provider),
             "notices" if inbox else "",
             "local" if local else "",
             json.dumps(rolls) if rolls else "",
+            "session-zero" if session_zero_setup else "",
         ],
         cwd=candidate,
         stdin=subprocess.PIPE,

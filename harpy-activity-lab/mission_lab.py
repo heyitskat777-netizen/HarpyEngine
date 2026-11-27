@@ -77,6 +77,7 @@ from girlframe.database import tables
 from girlframe.database.connection import create_database_engine
 from girlframe.discord_adapter.config import BotPolicy
 from girlframe.engine.rules_registry import Registry
+from girlframe.engine.session_zero import CHARACTER_NOTES_LIMIT, CharacterNotes
 from girlframe.services.ledger import CampaignLedger
 from girlframe.services.m3_access import digest, load_registry
 from girlframe.services.m3_missions import MissionService
@@ -116,6 +117,11 @@ SETUP_WRITE = {
     "portrayal-draft",
     "portrayal-confirm",
 } | SESSION_ZERO_WRITES.keys()
+SETUP_WRITE_LIMITS = {
+    "opening-save": 96_000,
+    # A supplementary character can use twelve bytes when escaped in JSON.
+    "session-zero-notes": len(CharacterNotes.model_fields) * CHARACTER_NOTES_LIMIT * 12 + 1024,
+}
 TRANSCRIPT_ROUTE = re.compile(r"/api/rooms/(relay|[0-9a-f]{16})/transcript")
 COMMUNICATION_ROUTE = re.compile(r"/api/communications/((?:pilot|handler)-[0-9a-z-]{1,80})")
 BATTLEFIELD_ROUTE = re.compile(
@@ -2081,7 +2087,7 @@ def serve(
                     key = self.headers.get("Idempotency-Key", "")
                     if not KEY.fullmatch(key):
                         raise ValueError
-                    data = self.read_object(96_000 if match[1] == "opening-save" else 16384)
+                    data = self.read_object(SETUP_WRITE_LIMITS.get(match[1], 16384))
                     if (
                         match[1] == "session-zero-briefing-offer"
                         and data.get("enable_ai") is True
@@ -2174,7 +2180,7 @@ def serve(
                     key = self.headers.get("Idempotency-Key", "")
                     if not KEY.fullmatch(key):
                         raise ValueError
-                    data = self.read_object(96_000 if match[2] == "opening-save" else 16384)
+                    data = self.read_object(SETUP_WRITE_LIMITS.get(match[2], 16384))
                     value = adapter.write(session[1], key, match[1], match[2], data)
                     self.send_json(HTTPStatus.OK, value)
                 except (TypeError, ValueError, UnicodeError):

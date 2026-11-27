@@ -10,7 +10,13 @@ from girlframe.engine.identity import Snowflake
 from girlframe.engine.m3_handler_state import PLAYBOOKS
 from girlframe.engine.pilot_portrayal import PILOT_CALLSIGNS, PILOT_PORTRAYALS
 from girlframe.engine.playbooks import FRAME_TYPES, GIRL_TYPES
-from girlframe.engine.session_zero import MAX_GROUP, CharacterNotes, HandlerProfile, StartingStatus
+from girlframe.engine.session_zero import (
+    CHARACTER_NOTES_LIMIT,
+    MAX_GROUP,
+    CharacterNotes,
+    HandlerProfile,
+    StartingStatus,
+)
 from girlframe.services.first_mission_briefing import FirstMissionBriefing
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.read_only_bot import GuildViewer
@@ -77,6 +83,8 @@ class SessionZeroDesk:
                 if key in state["opening"]:
                     state["opening"][key] = str(state["opening"][key])
         state.update(viewer=str(viewer.user_id), playbooks=PLAYBOOKS, limit=MAX_GROUP)
+        if state["in_group"]:
+            state["character_notes_limit"] = CHARACTER_NOTES_LIMIT
         if state.get("opening") is None and (
             state["handler_ready"] == state["viewer"] or state.get("can_edit_plan")
         ):

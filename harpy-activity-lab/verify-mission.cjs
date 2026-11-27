@@ -2603,6 +2603,7 @@ async function mainTest() {
         bot_managed:true, in_group:true, can_set_group:true, can_edit_plan:true,
         facilitator:viewer, facilitator_only:false, is_pilot:true, player_count:3,
         sheets:{[viewer]:"attached", [discordUsers.other]:"missing"}, own_notes:{},
+        character_notes_limit:4000, input_status:{[viewer]:"pending", [discordUsers.other]:"pending"},
         status_locked:true, difficulty:"normal", difficulty_options:{normal:"Use campaign rules.", hard:"Brief one extra obstacle."},
       };
       const posts = [];
@@ -2610,7 +2611,10 @@ async function mainTest() {
         if (route.request().method() === "POST") {
           posts.push(route.request().postDataJSON());
           if (route.request().url().includes("session-zero-group")) state.members = posts.at(-1).members;
-          if (route.request().url().includes("session-zero-notes")) state.own_notes = posts.at(-1).notes;
+          if (route.request().url().includes("session-zero-notes")) {
+            state.own_notes = posts.at(-1).notes;
+            state.input_status[viewer] = "filed";
+          }
         }
         return route.fulfill({json:state});
       });
@@ -2642,15 +2646,30 @@ async function mainTest() {
       const notes = pane.getByRole("heading", {name:"My character input", exact:true});
       assert(await notes.evaluate(node => document.activeElement === node));
       const goal = pane.getByLabel("Character goal");
-      await goal.fill("Find the relay.");
+      const relationships = pane.getByLabel("Relationships with other characters", {exact:true});
+      const longGoal = "Find the relay. ".repeat(100);
+      const openingLine = "RELAY TWO and I shared a watch near the old relay. ";
+      const sharedHistory = openingLine + "🤝".repeat(4000 - openingLine.length);
+      await relationships.fill("x".repeat(4001));
+      assert.equal(await relationships.evaluate(input => input.validity.valid), false);
+      await goal.fill(longGoal);
+      await relationships.fill(sharedHistory);
+      await pane.getByText("Unsaved changes", {exact:true}).waitFor();
       await save("Save my input", "/session-zero-notes");
+      await pane.getByText("✓ Saved", {exact:true}).waitFor();
+      const checklist = pane.getByRole("heading", {name:"Character input status", exact:true}).locator("..");
+      await checklist.getByText("✓ Filed", {exact:true}).waitFor();
+      await checklist.locator("div").filter({hasText:"RELAY TWO"})
+        .getByText("Pending", {exact:true}).waitFor();
+      assert.equal(await relationships.inputValue(), sharedHistory);
       await pane.getByRole("radio", {name:"RELAY TWO", exact:true}).check();
       await pane.getByRole("radio", {name:"Hard", exact:true}).check();
       await pane.getByText("Brief one extra obstacle.").waitFor();
       await pane.getByLabel("Shared short-term goals").fill("Map the relay perimeter.");
       await save("Save campaign plan for approval", "/session-zero-plan");
       assert.deepEqual(posts[0].members, [viewer, discordUsers.other]);
-      assert.equal(posts[1].notes.goal, "Find the relay.");
+      assert.equal(posts[1].notes.goal, longGoal);
+      assert.equal(posts[1].notes.relationships, sharedHistory);
       assert.equal(posts[2].facilitator, discordUsers.other);
       assert.equal(posts[2].difficulty, "hard");
       const activity = await (await page.locator("iframe").elementHandle()).contentFrame();

@@ -1015,6 +1015,22 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
     }
     if (state.handler_ready === null && !state.bot_managed) return;
     const sheets = Object.entries(state.sheets);
+    const filings = Object.entries(state.input_status ?? {});
+    if (filings.length) {
+      const checklist = card(row, "Character input status");
+      const list = element("dl");
+      list.className = "campaign-setup-facts";
+      for (const [id, filing] of filings) {
+        const entry = element("div");
+        entry.className = "campaign-setup-fact";
+        const stamp = element("dd", filing === "filed" ? "✓ Filed" : "Pending");
+        stamp.className = "campaign-setup-input-status";
+        stamp.dataset.status = filing;
+        entry.append(element("dt", state.status_names?.[id] ?? member(id)), stamp);
+        list.append(entry);
+      }
+      checklist.append(list);
+    }
     if (!open) {
       const separateSheets = sheets.filter(([id]) => !state.can_set_group || !state.group_options.includes(id));
       const canAttach = state.is_pilot ?? !isHandler;
@@ -1024,11 +1040,37 @@ export function mountDirectorDesk(parent, scene, activityFetch, activityShadow =
         sessionZeroSave(panel, "Attach my current sheet", "session-zero-attach", () => ({revision}));
         if (state.sheets[state.viewer] === "attached") {
           const notes = setupSection(body, "My character input", "campaign-setup-input");
-          const inputs = Object.fromEntries([["goal", "Character goal"], ["hook", "Story hook"],
-            ["spotlight", "Desired spotlight"]].map(([key, label]) =>
-            [key, textArea(notes, label, state.own_notes[key], 400, false)]));
+          const limit = state.character_notes_limit ?? 400;
+          notes.append(element("p", "Up to " + limit.toLocaleString() + " characters per field. "
+            + "These notes appear in your group’s Session Zero worksheet."));
+          const inputs = [
+            ["goal", "Character goal"], ["hook", "Story hook"], ["spotlight", "Desired spotlight"],
+            ["relationships", "Relationships with other characters"],
+          ].map(([key, label]) => {
+            // HTML counts UTF-16 units. Validate Unicode characters against the engine's limit.
+            const input = textArea(notes, label, state.own_notes?.[key], limit * 2, false);
+            input.rows = 4;
+            const validate = () => input.setCustomValidity([...input.value].length > limit
+              ? "Use " + limit.toLocaleString() + " characters or fewer." : "");
+            input.addEventListener("input", validate);
+            validate();
+            return [key, input];
+          });
+          const values = () => Object.fromEntries(inputs.map(([key, input]) => [key, input.value]));
+          const saved = JSON.stringify(values());
+          const feedback = element("output");
+          feedback.className = "campaign-setup-input-status";
+          const updateStatus = () => {
+            const dirty = JSON.stringify(values()) !== saved;
+            const filed = state.input_status?.[state.viewer] === "filed";
+            feedback.textContent = dirty ? "Unsaved changes" : filed ? "✓ Saved" : "Pending";
+            feedback.dataset.status = !dirty && filed ? "filed" : "pending";
+          };
+          notes.append(feedback);
+          notes.addEventListener("input", updateStatus);
+          updateStatus();
           sessionZeroSave(notes, "Save my input", "session-zero-notes", () => ({
-            revision, notes: Object.fromEntries(Object.entries(inputs).map(([key, input]) => [key, input.value])),
+            revision, notes: values(),
           }));
         }
       }

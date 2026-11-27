@@ -18,7 +18,12 @@ from girlframe.engine.campaign_opening import (
     DIFFICULTY_DESCRIPTIONS,
 )
 from girlframe.engine.m3_handler_state import PLAYBOOKS, Playbook
-from girlframe.engine.session_zero import MAX_GROUP, CharacterNotes, HandlerProfile
+from girlframe.engine.session_zero import (
+    CHARACTER_NOTES_LIMIT,
+    MAX_GROUP,
+    CharacterNotes,
+    HandlerProfile,
+)
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.session_zero import SessionZeroService
 from girlframe.services.session_zero_opening import DEFAULT_ROLEPLAY_DAYS
@@ -71,6 +76,14 @@ def panel_text(data: dict[str, Any], feedback: str) -> str:
             "**Pilot sheets** · "
             + "  ·  ".join(f"<@{uid}> {status[state]}" for uid, state in data["sheets"].items())
         )
+        if data.get("input_status"):
+            lines.append(
+                "**Character input** · "
+                + "  ·  ".join(
+                    f"<@{uid}> " + ("✓ Filed" if state == "filed" else "Pending")
+                    for uid, state in data["input_status"].items()
+                )
+            )
         lines.append(
             "Attach your current sheet to share its callsign and playbooks. "
             "Add character input to guide the campaign goals."
@@ -450,20 +463,26 @@ class NotesModal(SessionZeroModal):
         saved = panel.data.get("own_notes", {})
         self.goal: discord.ui.TextInput[Any] = discord.ui.TextInput(
             style=discord.TextStyle.paragraph,
-            max_length=400,
+            max_length=CHARACTER_NOTES_LIMIT,
             default=saved.get("goal"),
             required=False,
         )
         self.hook: discord.ui.TextInput[Any] = discord.ui.TextInput(
             style=discord.TextStyle.paragraph,
-            max_length=400,
+            max_length=CHARACTER_NOTES_LIMIT,
             default=saved.get("hook"),
             required=False,
         )
         self.spotlight: discord.ui.TextInput[Any] = discord.ui.TextInput(
             style=discord.TextStyle.paragraph,
-            max_length=400,
+            max_length=CHARACTER_NOTES_LIMIT,
             default=saved.get("spotlight"),
+            required=False,
+        )
+        self.relationships: discord.ui.TextInput[Any] = discord.ui.TextInput(
+            style=discord.TextStyle.paragraph,
+            max_length=CHARACTER_NOTES_LIMIT,
+            default=saved.get("relationships"),
             required=False,
         )
         self.add_item(discord.ui.Label(text="What does your character want?", component=self.goal))
@@ -471,8 +490,11 @@ class NotesModal(SessionZeroModal):
             discord.ui.Label(text="What trouble or story hook can we use?", component=self.hook)
         )
         self.add_item(
+            discord.ui.Label(text="What spotlight would you like?", component=self.spotlight)
+        )
+        self.add_item(
             discord.ui.Label(
-                text="What scene or relationship interests you?", component=self.spotlight
+                text="Relationships with other characters", component=self.relationships
             )
         )
 
@@ -486,7 +508,10 @@ class NotesModal(SessionZeroModal):
                 str(interaction.id),
                 self.panel.data["revision"],
                 CharacterNotes(
-                    goal=self.goal.value, hook=self.hook.value, spotlight=self.spotlight.value
+                    goal=self.goal.value,
+                    hook=self.hook.value,
+                    spotlight=self.spotlight.value,
+                    relationships=self.relationships.value,
                 ),
             ),
             "Your character input is saved for the group worksheet.",

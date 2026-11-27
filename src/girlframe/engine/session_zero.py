@@ -15,6 +15,7 @@ from girlframe.engine.m2 import Model
 from girlframe.engine.m3_handler_state import Playbook
 
 MAX_GROUP = 15
+CHARACTER_NOTES_LIMIT = 4_000
 
 
 def nonblank(value: str) -> str:
@@ -25,6 +26,7 @@ def nonblank(value: str) -> str:
 
 Name = Annotated[str, Field(max_length=100), AfterValidator(nonblank)]
 Description = Annotated[str, Field(max_length=400), AfterValidator(nonblank)]
+CharacterNote = Annotated[str, Field(max_length=CHARACTER_NOTES_LIMIT)]
 
 
 class HandlerProfile(Model):
@@ -38,9 +40,15 @@ class HandlerProfile(Model):
 
 
 class CharacterNotes(Model):
-    goal: str = Field(default="", max_length=400)
-    hook: str = Field(default="", max_length=400)
-    spotlight: str = Field(default="", max_length=400)
+    goal: CharacterNote = ""
+    hook: CharacterNote = ""
+    spotlight: CharacterNote = ""
+    relationships: CharacterNote = Field(default="", exclude_if=lambda value: not value)
+
+    @property
+    def filed(self) -> bool:
+        values = (self.goal, self.hook, self.spotlight, self.relationships)
+        return any(value.strip() for value in values)
 
 
 class SheetReference(Model):

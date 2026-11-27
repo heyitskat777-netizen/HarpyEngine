@@ -323,6 +323,15 @@ class SessionZeroService:
             return current.facilitator if current.plan_approved else None
         return handler
 
+    def _draft_character_id(self, c: Connection, owner: int) -> str | None:
+        identity = c.scalar(
+            sa.select(t.characters.c.id).where(
+                t.characters.c.campaign_id == self.store.campaign_id,
+                t.characters.c.user_id == str(owner),
+            )
+        )
+        return str(identity) if identity is not None else None
+
     def _sheet(self, c: Connection, game: GameState, owner: int) -> SheetReference:
         active = game.sheets.get(str(owner))
         if active is not None:
@@ -338,12 +347,7 @@ class SessionZeroService:
         review = self.reviews._current_for_owner(c, owner)
         if not review.saved_current or not review.sheet.ready_for_rules_review:
             raise WorkflowError("Finish and save your current /character review before attaching.")
-        character = c.scalar(
-            sa.select(t.characters.c.id).where(
-                t.characters.c.campaign_id == self.store.campaign_id,
-                t.characters.c.user_id == str(owner),
-            )
-        )
+        character = self._draft_character_id(c, owner)
         if character is None:
             raise WorkflowError("Save your character before attaching its review.")
         return SheetReference(
@@ -380,7 +384,11 @@ class SessionZeroService:
     def notes(
         self, viewer: GuildViewer, key: str, expected: int, notes: CharacterNotes
     ) -> dict[str, Any]:
+        includes_relationships = "relationships" in notes.model_fields_set
         notes = CharacterNotes.model_validate_json(notes.model_dump_json())
+        payload = notes.model_dump(mode="json")
+        if includes_relationships:
+            payload["relationships"] = notes.relationships
 
         def update(c: Connection, current: SessionZero) -> SessionZero:
             self._expect(current, expected)
@@ -389,14 +397,18 @@ class SessionZeroService:
             sheet = self._sheet(c, load_state(c, self.store.campaign_id), viewer.user_id)
             if submission is None or submission.sheet != sheet:
                 raise WorkflowError("Attach your current character sheet before adding input.")
-            submission.notes = notes
+            submission.notes = (
+                notes
+                if includes_relationships
+                else notes.model_copy(update={"relationships": submission.notes.relationships})
+            )
             return current
 
         return self._write(
             viewer,
             key,
             "notes",
-            {"expected": expected, "notes": notes.model_dump(mode="json")},
+            {"expected": expected, "notes": payload},
             update,
         )
 
@@ -718,6 +730,26 @@ class SessionZeroService:
                 statuses[uid] = "attached" if sheet == submission.sheet else "refresh"
         return statuses
 
+    def _input_status(
+        self, c: Connection, current: SessionZero, game: GameState
+    ) -> dict[str, str]:
+        statuses = {}
+        for uid in current.pilots:
+            owner = str(uid)
+            statuses[owner] = "pending"
+            submission = current.submissions.get(owner)
+            if submission is None or not submission.notes.filed:
+                continue
+            active = game.sheets.get(owner)
+            character = (
+                active.character_id or active.source_fingerprint
+                if active is not None
+                else self._draft_character_id(c, uid)
+            )
+            if submission.sheet.character == character:
+                statuses[owner] = "filed"
+        return statuses
+
     def view(self, viewer: GuildViewer) -> dict[str, Any]:
         self.store.guild_member(viewer)
         admin = viewer.is_administrator and self.store.policy.allow_guild_administrators
@@ -786,6 +818,7 @@ class SessionZeroService:
                 result.update(
                     profile=proposal.model_dump() if proposal else None,
                     sheets=submissions,
+                    input_status=self._input_status(c, current, campaign),
                     own_notes=own.notes.model_dump() if own else {},
                     goals=current.goals,
                     difficulty=current.difficulty,
@@ -912,6 +945,7 @@ def _worksheet(
             ("Character goal", item.notes.goal),
             ("Story hook", item.notes.hook),
             ("Desired spotlight", item.notes.spotlight),
+            ("Relationships with other characters", item.notes.relationships),
         ):
             if value.strip():
                 lines.append(f"**{label}**\n\n{_text(value)}")
