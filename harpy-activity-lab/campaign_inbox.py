@@ -23,6 +23,7 @@ NOTICES = {
     "mission": "The Handler filed a mission offer for your response.",
     "mission_review": "A mission is ready for your Handler review.",
     "scene_invite": "A scene host invited you to join a scene.",
+    "communication": "A new private transmission is available.",
     "play": "HarpyEngine assigned you a Play choice.",
     "play_work": "HarpyEngine assigned you a Play follow-up.",
     "enrollment": "An enrollment choice needs your response.",
@@ -34,6 +35,7 @@ DESTINATIONS = {
     "battlefield": "Open the Battlefield tab in HarpyEngine.",
     "off_duty": "Open Off-Duty in HarpyEngine.",
     "mission_review": "Open the Missions tab in HarpyEngine.",
+    "communication": "Open Comms in HarpyEngine to read it.",
 }
 
 
@@ -144,6 +146,7 @@ class InboxNotices:
                 """SELECT campaign, kind, record, recipient, dm_channel, dm_message
                    FROM notices
                    WHERE outcome='sent' AND dm_message IS NOT NULL AND dm_channel IS NOT NULL
+                       AND kind <> 'communication'
                        AND cleanup_outcome IS NULL AND next_attempt<=?
                    ORDER BY next_attempt, created LIMIT 1""",
                 (stamp,),
@@ -228,6 +231,9 @@ class InboxNotices:
     def scene_invite(self, setup, sender, receipt):
         self.file(setup.store.campaign_id, "scene_invite", receipt["id"], [receipt["recipient"]])
 
+    def communication(self, setup, sender, receipt):
+        self.file(setup.store.campaign_id, "communication", receipt["id"], [receipt["recipient"]])
+
     def mission(self, service, handler, receipt):
         record = service.get(handler, receipt["id"])["mission"]
         if record["phase"] == "offered":
@@ -274,6 +280,11 @@ def pending_interactions(setup, missions, battlefield, viewer, *, lookup=None):
     if wants("scene_invite") and lookup is not None:
         for card in setup.records.scene_invites(viewer):
             add("scene_invite", card["id"])
+
+    if lookup and wants("communication") and setup.can_notify_communication(
+        viewer, lookup[1], since=int(time()) - DELIVERY_WINDOW
+    ):
+        add("communication", lookup[1])
 
     if wants("bond"):
         if lookup is None:

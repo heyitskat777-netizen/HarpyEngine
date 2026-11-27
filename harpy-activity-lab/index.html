@@ -1083,7 +1083,10 @@ async function responseData(response) {
 
 const dmDelivery = document.getElementById("dm-delivery");
 const dmDeliveryRecords = document.getElementById("dm-delivery-records");
-const dmSubjects = {bond:"Starting Bond", mission:"Mission dispatch", scene_invite:"Scene invitation"};
+const dmSubjects = {
+  bond:"Starting Bond", mission:"Mission dispatch", scene_invite:"Scene invitation",
+  communication:"Private transmission",
+};
 const dmStates = {queued:"Queued", skipped:"Skipped", unavailable:"Unavailable", unconfirmed:"Unconfirmed"};
 let dmDeliveryRequest = 0;
 let dmDeliveryPoll;

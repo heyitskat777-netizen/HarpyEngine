@@ -359,6 +359,13 @@ class PlayerSetup:
 
         return self.records.archive(viewer, target, freeze)
 
+    @staticmethod
+    def _communication_ids(uid, profile):
+        identities = [f"pilot-account-{uid}", f"handler-{uid}"]
+        if profile:
+            identities.append(f"pilot-{profile['id']}")
+        return identities
+
     def communication_contacts(self, viewer, state, *, members=None):
         if self.bound_roster:
             people = {}
@@ -366,15 +373,14 @@ class PlayerSetup:
             for member in members if members is not None else self.campaign_members(viewer):
                 uid = int(member["id"])
                 profile = self.store.draft(viewer, uid)
-                aliases = [f"pilot-account-{uid}", f"handler-{uid}"]
-                if profile:
-                    aliases.append(f"pilot-{profile['id']}")
+                aliases = self._communication_ids(uid, profile)
                 contact_id = (
                     f"handler-{uid}"
                     if member["handler"]
                     else (f"pilot-{profile['id']}" if profile else f"pilot-account-{uid}")
                 )
                 people[uid] = {
+                    "notice_recipient": None if member.get("bot") else str(uid),
                     "id": contact_id,
                     "aliases": [item for item in aliases if item != contact_id],
                     "label": member["name"],
@@ -421,7 +427,7 @@ class PlayerSetup:
         actor, contacts = self.communication_contacts(viewer, state, members=members)
         latest = self.records.private_updates(actor["id"], actor.get("aliases", ()))
         return [
-            contact
+            {k: v for k, v in contact.items() if k != "notice_recipient"}
             | {
                 "latest_message": max(
                     (
@@ -440,10 +446,10 @@ class PlayerSetup:
             self.game.authorize(connection, viewer, game=False)
             state = load_state(connection, self.store.campaign_id)
             actor, contacts = self.communication_contacts(viewer, state)
-        if not self.records or not any(contact["id"] == target for contact in contacts):
+        contact = next((item for item in contacts if item["id"] == target), None)
+        if not self.records or contact is None:
             raise WorkflowError("This communication is unavailable.")
         if message is None:
-            contact = next(contact for contact in contacts if contact["id"] == target)
             thread = self.records.private_thread(
                 actor["id"], target, actor.get("aliases", ()), contact.get("aliases", ())
             )
@@ -456,12 +462,20 @@ class PlayerSetup:
                 party = parties[entry["sender"]]
                 entry["portrait"] = party.get("portrait")
                 entry["author_id"] = party["id"]
+            internal = {"aliases", "notice_recipient"}
             return thread | {
-                "sender": {k: v for k, v in actor.items() if k != "aliases"},
-                "recipient": {k: v for k, v in contact.items() if k != "aliases"},
+                "sender": {k: v for k, v in actor.items() if k not in internal},
+                "recipient": {k: v for k, v in contact.items() if k not in internal},
             }
         key, text = message
-        return self.records.send_private(key, actor, target, text)
+        saved = self.records.send_private(key, actor, target, text)
+        return saved | {"notice_recipient": contact.get("notice_recipient")}
+
+    def can_notify_communication(self, viewer, entry, *, since):
+        if not self.bound_roster or not self.records:
+            return False
+        identities = self._communication_ids(viewer.user_id, self.store.draft(viewer))
+        return self.records.private_message_for(entry, identities, since=since)
 
     def intel_pilots(self, connection, state):
         members = tables.members

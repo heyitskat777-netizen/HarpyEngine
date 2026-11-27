@@ -938,7 +938,7 @@ def serve(
                 if token:
                     return receipt | {"dm_receipt": token}
             except (WorkflowError, sa.exc.SQLAlchemyError, sqlite3.Error, OSError):
-                discord_log.warning("Could not file an Inbox DM for a saved decision.")
+                discord_log.warning("Could not file an Inbox DM for a saved Activity record.")
             return receipt
 
         def dm_recipient_names(self, campaign, viewer):
@@ -2180,6 +2180,16 @@ def serve(
                     receipt = setup.communication(
                         session[1], match[1], message=(key, request["text"])
                     )
+                    recipient = receipt.pop("notice_recipient", None)
+                    if recipient:
+                        notice = self.queue_notice(
+                            "communication",
+                            setup,
+                            session[1],
+                            {"id": str(receipt["entry"]), "recipient": recipient},
+                        )
+                        if token := notice.get("dm_receipt"):
+                            receipt["dm_receipt"] = token
                     self.send_json(HTTPStatus.OK, receipt)
                 except (TypeError, ValueError, UnicodeError):
                     self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Invalid message."})

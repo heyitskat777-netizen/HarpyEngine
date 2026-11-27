@@ -83,7 +83,21 @@ def test_queue_uses_authoritative_recipient_and_deduplicates(tmp_path, monkeypat
     assert b"restricted mission objective" not in path.read_bytes()
 
 
-def test_delivery_rechecks_role_and_reuses_discord_nonce():
+@pytest.mark.parametrize(
+    ("kind", "content"),
+    [
+        (
+            "bond",
+            "A pilot filed a starting Bond proposal for your response. Open HarpyEngine and "
+            "check your Inbox.",
+        ),
+        (
+            "communication",
+            "A new private transmission is available. Open Comms in HarpyEngine to read it.",
+        ),
+    ],
+)
+def test_delivery_rechecks_role_and_reuses_discord_nonce(kind, content):
     calls = []
     recipients = []
     member = SimpleNamespace(bot=False, pending=False, get_role=lambda role: role == ROLE)
@@ -106,7 +120,7 @@ def test_delivery_rechecks_role_and_reuses_discord_nonce():
         target=SimpleNamespace(id=222),
         get_guild=lambda _: SimpleNamespace(fetch_member=fetch_member),
     )
-    item = CAMPAIGN, "bond", "bond-a", SECOND
+    item = CAMPAIGN, kind, "record-a", SECOND
 
     def pending(*_):
         return True
@@ -115,10 +129,7 @@ def test_delivery_rechecks_role_and_reuses_discord_nonce():
     asyncio.run(send_notice(bot, registry, item, pending))
     assert recipients == [int(SECOND), int(SECOND)]
     assert len(calls) == 2
-    assert calls[0][0] == (
-        "A pilot filed a starting Bond proposal for your response. Open HarpyEngine and "
-        "check your Inbox."
-    )
+    assert calls[0][0] == content
     assert calls[0][1]["allowed_mentions"].to_dict() == {"parse": []}
     assert calls[0][1]["nonce"] == calls[1][1]["nonce"]
     asyncio.run(send_notice(bot, registry, item, lambda *_: False))
@@ -283,7 +294,7 @@ def cleanup_bot(campaign, calls, failure=None):
     return bot, registry
 
 
-@pytest.mark.parametrize("kind", list(NOTICES))
+@pytest.mark.parametrize("kind", [kind for kind in NOTICES if kind != "communication"])
 def test_cleanup_uses_only_the_exact_sent_reminder_after_reopening(tmp_path, monkeypatch, kind):
     clock = [1000]
     monkeypatch.setattr(campaign_inbox, "time", lambda: clock[0])

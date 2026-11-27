@@ -2,10 +2,15 @@
 
 import io
 import json
+from http import HTTPStatus
 from urllib.error import HTTPError
+from uuid import UUID
 
+import activity_records
 import discord_session as oauth
 import pytest
+from activity_records import ActivityRecords
+from campaign_inbox import InboxNotices, SentDM
 from test_campaign_role_access import CONFIG, TESTER, request, role_activity
 from test_handler_pilot_view import login
 
@@ -142,6 +147,68 @@ def test_pending_members_can_message_with_owner_private_history_after_profile_sa
             ]
             == "A private enrollment transmission."
         )
+
+
+def test_new_comms_alert_is_once_per_saved_message_and_sender_private(tmp_path):
+    body = "Private lock-screen text fixture."
+    with role_activity(tmp_path, bot_handler=True, inbox=True) as host:
+        sender = login(host, "role-pilot")
+        recipient = login(host, "invited")
+        outsider = login(host, "other")
+        campaign = request(host, "/api/campaigns", sender)["campaigns"][0]["id"]
+        query = "?campaign=" + campaign
+        request(host, "/api/player-setup" + query, recipient)
+        setup = request(host, "/api/player-setup" + query, sender)
+        contacts = setup["communications"]
+        contact = next(
+            row
+            for row in contacts
+            if f"pilot-account-{CONFIG.invited_user_id}" in (row["id"], *row["aliases"])
+        )
+        assert "notice_recipient" not in contact
+        route = "/api/communications/" + contact["id"] + query
+        sent = request(host, route, sender, {"text": body}, key="comms-dm")
+        assert request(host, route, sender, {"text": body}, key="comms-dm") == sent
+        assert set(sent) == {"entry", "dm_receipt"}
+        assert "notice_recipient" not in request(host, route, sender)["recipient"]
+        proof = "/api/dm-receipts/" + sent["dm_receipt"] + query
+        request(host, proof, recipient, status=HTTPStatus.NOT_FOUND)
+        request(host, proof, outsider, status=HTTPStatus.NOT_FOUND)
+        record = request(host, proof, sender)["recipients"][0]
+        assert record["status"] == "queued"
+        bot = next(row for row in contacts if row["bot"])
+        saved_to_bot = request(
+            host, "/api/communications/" + bot["id"] + query, sender, {"text": "Message to bot."}
+        )
+        assert set(saved_to_bot) == {"entry"}
+
+        outbox_path = (
+            tmp_path
+            / "role-runtime"
+            / f"activity-inbox-notices-{CONFIG.client_id}-{CONFIG.guild_id}.sqlite3"
+        )
+        outbox = InboxNotices(outbox_path)
+        item = (str(UUID(campaign)), "communication", str(sent["entry"]), CONFIG.invited_user_id)
+        assert outbox.claim() == item
+        outbox.finish(item, "sent", SentDM("123456", "123457"))
+        assert outbox.claim() is None
+        assert outbox.claim_cleanup() is None
+        assert request(host, proof, sender)["recipients"] == [record | {"status": "sent"}]
+        delivery = request(host, "/api/dm-receipts" + query + "&view=delivery", sender)
+        assert [row["kind"] for row in delivery["deliveries"]] == ["communication"]
+        assert body.encode() not in outbox_path.read_bytes()
+
+
+def test_comms_alert_rechecks_message_recipient_and_age(tmp_path, monkeypatch):
+    monkeypatch.setattr(activity_records, "time", lambda: 1000)
+    records = ActivityRecords(tmp_path / "comms.sqlite3", 1)
+    receipt = records.send_private(
+        "source", {"id": "pilot-account-1", "label": "SENDER"}, "pilot-account-2", "Private."
+    )
+    entry = str(receipt["entry"])
+    assert records.private_message_for(entry, ["pilot-account-2"], since=1000)
+    assert not records.private_message_for(entry, ["pilot-account-1", "handler-1"], since=1000)
+    assert not records.private_message_for(entry, ["pilot-account-2"], since=1001)
 
 
 def test_explicit_bot_assignment_preserves_the_former_handlers_own_draft(tmp_path, monkeypatch):

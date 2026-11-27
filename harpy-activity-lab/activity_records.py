@@ -542,6 +542,15 @@ class ActivityRecords:
             ).fetchall()
         return {"entries": [dict(row) for row in reversed(rows)]}
 
+    def private_message_for(self, entry, recipients, *, since):
+        placeholders = ",".join("?" for _ in recipients)
+        with closing(sqlite3.connect(self.path)) as db:
+            return db.execute(
+                f"""SELECT 1 FROM private_messages
+                    WHERE id = ? AND recipient IN ({placeholders}) AND created >= ?""",
+                (entry, *recipients, since),
+            ).fetchone() is not None
+
     def send_private(self, key, sender, contact, text):
         if not isinstance(text, str) or not 1 <= len(text.strip()) <= 1200:
             raise WorkflowError("Enter a message of 1 to 1200 characters.")
